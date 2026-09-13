@@ -178,7 +178,7 @@ be an int in `[1, max_subgraph_edges]`; `total_describable` counts the
 population before the cut and `truncated` says whether a cut happened.
 Read-only.
 
-### `recall(user_id, query=None, *, token_budget=None, principal=None, as_of=None, **filters) -> Recall`
+### `recall(user_id, query=None, *, token_budget=None, principal=None, as_of=None, policy=None, **filters) -> Recall`
 
 Assemble grounded memory context for a query (curated wiki + per-query subgraph).
 
@@ -239,6 +239,23 @@ note in [concepts](concepts.md).
 r = mem.recall("alice", "suggest a lunch spot")
 prompt = f"{r.context}\n\nUser: suggest a lunch spot"   # drop into your own call
 ```
+
+
+**A host policy and its receipt (spec 0027 §4g).** `policy=PolicyLane(policy_id, policy_version,
+ranks, tags_matched=())` applies one versioned, host-supplied ranking policy to this call: `ranks`
+maps edge ids to ranks (≥ 1) and feeds a third fusion lane that can reorder what is returned and
+can never decide what is protected (the reserve), what is a member, or what counts as covered.
+When the lane fires — a rank lands on a candidate the lexical or semantic lane holds — the result
+carries `policy_receipt: PolicyReceipt`: `baseline_order` (what this call would have returned with
+no policy), `adjusted_order` (what it returned), `displaced` and `admitted` (the difference within
+the returned length), `delta_fused` per ranked edge (at most 1/61 per lane), `budget_state`
+(candidates, the cap, whether it truncated, the coverage share), the reserved ids under both
+orders with `reserve_unchanged`, the policy's identity and tags, a minted `recall_id` to join
+to your own logs, and `recorded_at`. Ids only: never content, never the query or a digest of it. The receipt is written on
+the non-semantic path too (`semantic=False`), where `recalled_edges` is empty. An inert policy (no
+rank on a held id) leaves `policy_receipt` as `None`; `policy` cannot be combined with `as_of`. The
+receipt is not yet stored durably: a host that turns a policy on persists `Recall.policy_receipt`
+itself — read the receipts before judging the policy, because `displaced` is the measurement.
 
 ### `answer(user_id, query, *, principal=None, **filters) -> str`
 

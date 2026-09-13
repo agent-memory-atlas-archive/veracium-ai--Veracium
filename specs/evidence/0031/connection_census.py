@@ -591,15 +591,18 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: (2026-09-13: the round-2 return — the grounding DELETED for a derived gloss,
 #: the directive/second-person/sentence-boundary refusals, `str.translate` on
 #: the tokenizer) moved dotted/dataflow 5,804 -> 5,807, module-plain 310 -> 312
-#: and module-machinery 20 -> 19, the rest unchanged.
+#: and module-machinery 20 -> 19, the rest unchanged; 0027 v13 (2026-09-13: the
+#: policy receipt — `policy.ranks`/`policy_id`/`policy_version`/`tags_matched`
+#: reads in recall, the receipt dict's edge-id reads in graph.py) moved
+#: dotted/dataflow 5,807 -> 5,824, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5807,
+    "dotted/dataflow": 5824,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 312,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6219
+SRC_ATTRIBUTE_TOTAL = 6236
 SRC_DATA_DUNDERS_IN_DATAFLOW = 123
 
 

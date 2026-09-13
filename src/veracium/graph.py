@@ -818,7 +818,8 @@ def semantic_duplicate_of(m: Edge, survivor: Edge) -> bool:
 def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
                    coverage_share: float = 0.25,
                    relations: Optional[dict[str, Relation]] = None,
-                   assertable=None, policy_rank: Optional[dict] = None):
+                   assertable=None, policy_rank: Optional[dict] = None,
+                   receipt_out: Optional[list] = None):
     """specs/0027 §4a Stages 2-5 — the one total ordered retrieval-and-budget
     construction, over prepared inputs: `scored`/`relevant_ids`/`by_id` from
     `_lexical_scored` (Stage 0-1, already scoped/shaped), `sm` the semantic
@@ -840,7 +841,9 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
     `1/(RRF_K + rank)` to fused_score and NOTHING ELSE — never to `rel_ext`
     (the reserve's relevance set), never to Stage 3 membership: a policy id
     outside `Lx ∪ Sm` gets no term and no membership. Inert when None (V10).
-    A policy is not to be APPLIED before the receipt exists (§4a bullet 6)."""
+    `receipt_out` (v13, §4c): a list the caller passes to receive the policy
+    receipt — appended exactly once, with None when the lane did not fire; the
+    return shape is unchanged for every existing caller."""
     relations = relations if relations is not None else DEFAULT_RELATIONS
     lx_edges = [e for _sc, _ov, e in scored]
     lx_rank = {e.id: i + 1 for i, e in enumerate(lx_edges)}       # 1-indexed
@@ -913,27 +916,40 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
     # judges day-novelty against the days the BASELINE head covered (v12, R4-1,
     # research's construction B) — so one promotion evicts at most the head's
     # marginal record and cannot redefine which periods look uncovered.
-    is_assertable = assertable if assertable is not None else _asserted_today
-    if len(stage3) <= max_edges:
-        ordered = stage3
-    else:
-        assertable = [e for e in stage3_base if is_assertable(e) and e.id in rel_ext]
-        reserve_n = min(len(assertable), -(-max_edges // 4))
-        reserved = assertable[:reserve_n]
-        rid = {e.id for e in reserved}
-        budget = max_edges - len(reserved)
-        rest_base = [e for e in stage3_base if e.id not in rid]
-        head_n = budget - int(budget * coverage_share)
-        head_days = {e.valid_from.date() for e in rest_base[:head_n]}
-        rest_pairs = [(0, e) for e in stage3 if e.id not in rid]
-        rest = _cover(rest_pairs, budget, coverage_share,
-                      seed_days={e.valid_from.date() for e in reserved},
-                      head_days=head_days)
-        rest_ids = {e.id for e in rest}
-        ordered = reserved + [e for e in stage3 if e.id in rest_ids]
-
     # Stage 5 — functional-contention permutation, unchanged; position only.
-    ordered = _permute_contention_groups(ordered, relations)
+    is_assertable = assertable if assertable is not None else _asserted_today
+    ordered, reserved_ids = _stage4_and_5(stage3, stage3_base, is_assertable, rel_ext,
+                                          max_edges, coverage_share, relations)
+
+    # THE RECEIPT (specs/0027 v13 §4c; research T1): written only when the
+    # policy lane FIRED — a rank landed on a candidate the membership lanes
+    # hold. It records the COUNTERFACTUAL: the selection the same inputs give
+    # with the policy term removed (Stages 4-5 over the baseline order alone),
+    # `displaced` = baseline[:n] - adjusted[:n], `admitted` the converse, the
+    # per-edge score delta (bounded by 1/(K+1)), whether the budget could
+    # displace anything at all, and that the reserve is the same set either way.
+    receipt = None
+    if pl_rank:
+        base_ordered, base_reserved = _stage4_and_5(stage3_base, stage3_base, is_assertable, rel_ext,
+                                                    max_edges, coverage_share, relations)
+        adj_ids = [e.id for e in ordered]
+        base_ids = [e.id for e in base_ordered]
+        n = len(adj_ids)
+        receipt = {"baseline_order": base_ids,
+                   "adjusted_order": adj_ids,
+                   "displaced": [i for i in base_ids[:n] if i not in set(adj_ids[:n])],
+                   "admitted": [i for i in adj_ids[:n] if i not in set(base_ids[:n])],
+                   "delta_fused": {eid: fused_score[eid] - base_score[eid] for eid in pl_rank},
+                   "budget_state": {"candidates": len(stage3), "max_edges": max_edges,
+                                    "truncated": len(stage3) > max_edges,
+                                    "coverage_share": coverage_share},
+                   # the reserved ids under both orders (research: the evidence
+                   # for the boolean, so `reserve_unchanged` is DERIVABLE from
+                   # the receipt rather than declared by it)
+                   "reserved_baseline": list(base_reserved),
+                   "reserved_adjusted": list(reserved_ids),
+                   "reserve_unchanged": reserved_ids == base_reserved,
+                   "ranks_applied": dict(pl_rank)}
 
     meta = {}
     for e in ordered:
@@ -946,7 +962,43 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
                      "fused_rank": fused_rank[eid],
                      "fused_score": fused_score[eid],
                      "route": route}
+    if receipt_out is not None:
+        receipt_out.append(receipt)
     return ordered, meta
+
+
+def fused_subgraph_with_receipt(*args, **kwargs):
+    """`fused_subgraph`, returning `(ordered, meta, receipt)` — the receipt is
+    None unless the policy lane FIRED on this call (specs/0027 v13 §4c)."""
+    sink: list = []
+    ordered, meta = fused_subgraph(*args, receipt_out=sink, **kwargs)
+    return ordered, meta, sink[0]
+
+
+def _stage4_and_5(order_adj, order_base, is_assertable, rel_ext, max_edges, coverage_share, relations):
+    """Stages 4-5 over an ADJUSTED order (what is returned) and a BASELINE
+    order (what is protected and what counts as covered). Returns the ordered
+    selection and the reserved ids (in order). With order_adj is order_base
+    this is the construction with no policy at all."""
+    if len(order_adj) <= max_edges:
+        ordered, reserved_ids = list(order_adj), []
+    else:
+        assertable = [e for e in order_base if is_assertable(e) and e.id in rel_ext]
+        reserve_n = min(len(assertable), -(-max_edges // 4))
+        reserved = assertable[:reserve_n]
+        rid = {e.id for e in reserved}
+        budget = max_edges - len(reserved)
+        rest_base = [e for e in order_base if e.id not in rid]
+        head_n = budget - int(budget * coverage_share)
+        head_days = {e.valid_from.date() for e in rest_base[:head_n]}
+        rest_pairs = [(0, e) for e in order_adj if e.id not in rid]
+        rest = _cover(rest_pairs, budget, coverage_share,
+                      seed_days={e.valid_from.date() for e in reserved},
+                      head_days=head_days)
+        rest_ids = {e.id for e in rest}
+        ordered = reserved + [e for e in order_adj if e.id in rest_ids]
+        reserved_ids = [e.id for e in reserved]
+    return _permute_contention_groups(ordered, relations), reserved_ids
 
 
 def _cover(scored: list[tuple[int, Edge]], max_edges: int,

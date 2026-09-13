@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Recall accepts a host policy and returns its receipt** (specs/0027 v13; the owner's word,
+  2026-09-13, "Do the A1 receipt"). `recall(..., policy=PolicyLane(policy_id, policy_version, ranks,
+  tags_matched))` feeds the policy lane landed at v11, whose use had been forbidden until a receipt
+  existed. When the lane fires, `Recall.policy_receipt` records the counterfactual: the order this
+  call would have returned with no policy, the order it returned, the records displaced and
+  admitted within the returned length, the per-edge score delta, whether the budget could truncate
+  at all and at what coverage share, the protected reserve's ids under both orders, and a minted
+  `recall_id` to join to the host's own logs. Written on the
+  non-semantic path too; ids only; an inert policy leaves no receipt; not combinable with
+  `as_of`. The receipt is not yet stored durably — hosts persist it themselves until the store
+  table lands with its migration. No shipped code passes a policy, so nothing changes for a host
+  that does not.
 - **Procedural capture: the stored summary is now DERIVED from the user's quoted span; requests,
   second-person and multi-sentence spans are refused** (specs/0037 v21, specs/0038 v6.3; the
   amendments review package, round 2, returned 2026-09-13; the owner's word on derivation the same

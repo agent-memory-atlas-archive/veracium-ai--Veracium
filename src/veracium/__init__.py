@@ -36,7 +36,7 @@ from .config import MemoryConfig
 # selfcheck's and under-counted abstentions.
 from .gate import ABSTAINED as _ABSTAINED  # noqa: E402
 from .graph import subgraph_for_query, render_edges
-from .graph import _lexical_scored, fused_subgraph
+from .graph import _lexical_scored, fused_subgraph, fused_subgraph_with_receipt
 from .graph import _asserted_today
 from .asof.resolve import AsOfAnswer, AsOfFact, FutureAsOfRefused
 from . import semantic as _semantic_mod
@@ -58,7 +58,7 @@ from .usage import (ATTRIBUTED_PAIRS, ROLE_FIELDS, ArmingComplete,
                     active_call as _active_call,
                     routing_frame as _routing_frame)
 
-__all__ = ["Memory", "MemoryConfig", "Recall", "FutureAsOfRefused", "AsOfAnswer",
+__all__ = ["Memory", "MemoryConfig", "Recall", "PolicyLane", "PolicyReceipt", "FutureAsOfRefused", "AsOfAnswer",
            "AsOfFact", "Store", "SqliteStore",
            "Complete", "Embed", "EvidenceAuthor", "EvidenceContext"]
 
@@ -106,6 +106,15 @@ class Recall:
     # and a resolution per returned edge (interval, reason, tag, 0030 status,
     # disclosed cause, pointer). APPENDED WITH A DEFAULT (V-COMPAT).
     as_of: Optional["AsOfAnswer"] = None
+    # specs/0027 v13 §4c — the POLICY RECEIPT: None unless the call passed a
+    # `policy` whose lane FIRED (a rank landed on a candidate the membership
+    # lanes hold). It records the counterfactual — the selection the same
+    # inputs give with the policy term removed — so `displaced` is the event
+    # `recalled_edges` structurally cannot hold. Written on the non-semantic
+    # path too (research C1: a trace that exists only when another feature is
+    # on reproduces the defect it was built to expose). APPENDED WITH A
+    # DEFAULT (V-COMPAT).
+    policy_receipt: Optional["PolicyReceipt"] = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +129,66 @@ class RecalledEdge:
     fused_rank: int
     fused_score: float
     route: str          # "lexical" | "semantic" | "both"
+
+
+@dataclass(frozen=True)
+class PolicyLane:
+    """specs/0027 v13 §4c — a host-supplied policy application for ONE recall:
+    which rule acted (`policy_id`, `policy_version` — the versioned policy the
+    #12 prerequisite asks for), which host tags fired it (`tags_matched`, §2:
+    opaque strings the host passes, never inferred), and the ranks it assigns
+    (`ranks`: edge id → rank ≥ 1, the third RRF lane of §4a Stage 2). The lane
+    contributes to `fused_score` only; a rank on an id the membership lanes do
+    not hold contributes nothing. The library does not learn, choose or store
+    policies: the host is the policy controller (C1)."""
+    policy_id: str
+    policy_version: str
+    ranks: dict
+    tags_matched: tuple = ()
+
+    def __post_init__(self):
+        if not isinstance(self.policy_id, str) or not self.policy_id.strip():
+            raise ValueError("PolicyLane.policy_id must be a non-empty string")
+        if not isinstance(self.policy_version, str) or not self.policy_version.strip():
+            raise ValueError("PolicyLane.policy_version must be a non-empty string")
+        if not isinstance(self.ranks, dict):
+            raise TypeError("PolicyLane.ranks must be a dict of edge id -> rank")
+
+
+@dataclass(frozen=True)
+class PolicyReceipt:
+    """specs/0027 v13 §4c (research T1) — the receipt of one recall in which a
+    policy lane FIRED. `baseline_order` is the ranking WITHOUT the lane (Stages
+    4-5 over the unadjusted order — the counterfactual); `adjusted_order` is
+    what was returned; `displaced` = baseline[:n] − adjusted[:n], the event
+    `recalled_edges` cannot record; `admitted` the converse; `delta_fused` the
+    per-edge score change (bounded by 1/(K+1) per lane); `budget_state` proves
+    whether displacement was possible at all (below `max_edges` nothing is
+    truncated); `reserve_unchanged` asserts V-RESERVE-UNADJUSTED held on this
+    call, with the reserved ids under both orders as its evidence (so the
+    boolean is derivable, not declared); `budget_state.coverage_share` is the
+    deployment's share, without which R4-1's displacement bound cannot be
+    recomputed from the receipt; `recall_id` is a minted opaque correlation
+    key (no content, no oracle) the host joins to its own logs. Ids only — no
+    content, no query, no digest of the query (a digest of user prose is a
+    confirmation oracle, 0040 §4); a receipt naming a record later redacted
+    becomes unreadable, which is the correct degradation."""
+    recall_id: str
+    policy_id: str
+    policy_version: str
+    tags_matched: tuple
+    baseline_order: list
+    adjusted_order: list
+    displaced: list
+    admitted: list
+    delta_fused: dict
+    budget_state: dict
+    reserved_baseline: list
+    reserved_adjusted: list
+    reserve_unchanged: bool
+    ranks_applied: dict
+    semantic_status: str
+    recorded_at: str
 
 
 # specs/0027 §4b (V-STATUS) — the CLOSED semantic_status vocabulary.
@@ -629,8 +698,18 @@ class Memory:
 
     def recall(self, user_id: str, query: Optional[str] = None, *,
                token_budget: Optional[int] = None,
-               principal=None, semantic="auto", as_of=None, **filters) -> Recall:
+               principal=None, semantic="auto", as_of=None, policy=None,
+               **filters) -> Recall:
         """Assemble grounded memory context for answering `query`.
+
+        `policy` (specs/0027 v13 §4c): a `PolicyLane` the host built for THIS
+        call. Its ranks feed the third RRF lane of §4a Stage 2 — order only,
+        never the reserve, never membership — and when the lane FIRES the
+        result carries a `PolicyReceipt` recording the counterfactual. With a
+        policy the fused construction is used on every path, including
+        `semantic=False` (it is byte-identical to the legacy projection with
+        the semantic lane empty), so the receipt exists on the non-semantic
+        path too. Not combinable with `as_of`.
 
         Combines the LLM-curated wiki (the grounded, verified working view,
         recompiled after N writes) with a per-query entity-matched subgraph for
@@ -717,7 +796,7 @@ class Memory:
                 return self._recall(user_id, query, token_budget,
                                     op_llm, usage_finish,
                                     principal=principal, filters=filters,
-                                    semantic=semantic, as_of=as_of)
+                                    semantic=semantic, as_of=as_of, policy=policy)
         except Exception as e:
             self._on_error("recall", e, user_id)
             raise
@@ -776,7 +855,7 @@ class Memory:
                 token_budget: Optional[int] = None,
                 op_llm=None, usage_finish=dict,
                 *, principal=None, filters: Optional[dict] = None,
-                semantic="auto", as_of=None) -> Recall:
+                semantic="auto", as_of=None, policy=None) -> Recall:
         # specs/0017: op_llm is the operation's arming provider proxy (or the
         # raw llm when unmetered); usage_finish merges the token buffer into
         # the terminal _record exactly once.
@@ -818,6 +897,10 @@ class Memory:
         # specs/0020 §4f — THE PRINCIPAL BOUNDARY. Built once per call; None
         # when unscoped, and then not one line of scope code runs (V1).
         view = self._scope_view(user_id, principal, filters)
+        if policy is not None and not isinstance(policy, PolicyLane):
+            raise TypeError("policy must be a veracium.PolicyLane")
+        if policy is not None and as_of is not None:
+            raise ValueError("recall(policy=...) is not combinable with as_of= (specs/0027 v13 §4c: the as-of path carries no receipt)")
         if as_of is not None:
             # specs/0028 §4c — the as-of branch: the §4a resolution is the
             # pre-filter; ranking and budget run over its candidates with the
@@ -846,7 +929,8 @@ class Memory:
         # same way, reporting status); False disables it. Every degrade path
         # is a STATUS, never an exception (V6).
         sem_status, sm_pairs, sem_meta = "disabled", [], {}
-        if view is None and semantic is False:
+        receipt_raw = None
+        if view is None and semantic is False and policy is None:
             # today's path, literally (V10 byte-identity by construction)
             edges = subgraph_for_query(
                 self.store, user_id, query,
@@ -861,7 +945,7 @@ class Memory:
                 sem_status, sm_pairs = self._semantic_lane(
                     user_id, query,
                     visible_ids=set(by_id) if view is not None else None)
-            if view is None and sem_status != "ok":
+            if view is None and sem_status != "ok" and policy is None:
                 # §4a degenerate identity: the construction collapses to
                 # subgraph_for_query — taken literally, so the no-embedder /
                 # invalid-output / no-storage / timeout paths reproduce the
@@ -872,12 +956,16 @@ class Memory:
                     coverage_share=self.config.subgraph_coverage_share,
                     relations=self.config.relations)
             else:
-                edges, raw_meta = fused_subgraph(
+                # v13 §4c: with a policy the fused construction runs on EVERY
+                # path (the legacy projection is its degenerate identity, V10),
+                # so the receipt exists on the non-semantic path too (C1)
+                edges, raw_meta, receipt_raw = fused_subgraph_with_receipt(
                     scored, relevant_ids, by_id,
                     sm_pairs if sem_status == "ok" else [],
                     max_edges=self.config.max_subgraph_edges,
                     coverage_share=self.config.subgraph_coverage_share,
-                    relations=self.config.relations)
+                    relations=self.config.relations,
+                    policy_rank=(policy.ranks if policy is not None else None))
                 sem_meta = {k: RecalledEdge(**v) for k, v in raw_meta.items()}
         # outcome events are structured records, not narrative — they'd crowd
         # out interaction history for high-volume consumers; their signal
@@ -988,11 +1076,19 @@ class Memory:
         # entry, and a filter-narrowed edge leaves none behind
         _final_ids = {e.id for e in edges}
         sem_meta = {k: v for k, v in sem_meta.items() if k in _final_ids}
+        policy_receipt = None
+        if receipt_raw is not None:
+            policy_receipt = PolicyReceipt(recall_id=uuid4().hex,     # minted here, never by the caller
+                                           policy_id=policy.policy_id, policy_version=policy.policy_version,
+                                           tags_matched=tuple(policy.tags_matched),
+                                           semantic_status=sem_status,
+                                           recorded_at=utcnow().isoformat(), **receipt_raw)
         return Recall(context=context, grounded=grounded, unverified=unverified,
                       edges=edges, episodes=episodes,
                       tokens_estimated=self._est_tokens(context), truncated=truncated,
                       contested=contested,
-                      recalled_edges=sem_meta, semantic_status=sem_status)
+                      recalled_edges=sem_meta, semantic_status=sem_status,
+                      policy_receipt=policy_receipt)
 
     def _contested_line(self, g: "ContestedGroup",
                         line_budget: Optional[int] = None):
