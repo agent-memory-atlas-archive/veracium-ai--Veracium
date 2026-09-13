@@ -1,4 +1,4 @@
-"""specs/0037 v19/v20 §4a-iii — the gates a procedural CAPTURE must pass, as pure
+"""specs/0037 v19–v21 §4a-iii — the gates a procedural CAPTURE must pass, as pure
 functions over strings (no store, no model, no I/O), so the spec's order of
 operations is the code's: NORMALISE → SUBSTRING → GRAMMAR (over the span plus
 its left context) → DERIVE (the stored gloss from the span, v21: one cut) → the
@@ -6,14 +6,16 @@ summary contract on the derived text. Every gate is
 RESTRICT-ONLY: it can refuse a capture, never admit one the previous gate
 refused, and a refusal is counted by the caller (`procedural_refused`).
 
-Why each gate exists is the round-1 return and research's red team of its
-closure (2026-09-13): the quote gate proved that words APPEARED in a
-user-authored event and nothing more — not who the routine belongs to
-(V-ACTOR-PRESENT), not whether the gloss describes the quoted words
-(V-GLOSS-GROUNDED), not whether the span was lifted from inside a quoted
-third party speaking in the first person (the left-context frame check).
-The residual of each gate is named in the spec with the measured rate; a
-false REFUSAL is the safe direction and the feature's cost.
+Why each gate exists is the round-1 and round-2 returns and research's red
+teams of their closures (2026-09-13): the quote gate proved that words
+APPEARED in a user-authored event and nothing more — not who the routine
+belongs to (V-ACTOR-PRESENT), not whether the span was lifted from inside a
+quoted third party speaking in the first person (the left-context frame
+check); and a model's summary of the span could not be trusted to describe it
+(V-GLOSS-GROUNDED, v19, RETIRED at v21 — the summary is now DERIVED from the
+span, V-GLOSS-DERIVED, so there is nothing to ground). The residual of each
+gate is named in the spec with the measured rate; a false REFUSAL is the safe
+direction and the feature's cost.
 
 v20 (the owner's word, 2026-09-13, on research's reading of the held-out failure):
 the grammar is POSITIVE-FORM. A marker list enumerates surface forms of a
@@ -109,7 +111,7 @@ def _inside_open_quote(left: str) -> bool:
 # The head verb is the SPAN's head, never a later clause's (research: clause-any
 # reopens the complement construction "I'm thinking of dedicating a day each
 # week…", the form that defeated v19). The excluded verb class is matched by
-# CLASS through the same symmetric stem the grounding uses, so every inflection
+# CLASS through the symmetric light stem `_stem`, so every inflection
 # of "think" meets "think".
 _ADV = r"(?:always|usually|typically|often|regularly|routinely|generally|normally|habitually|never|rarely|sometimes|mostly|frequently|occasionally)"
 _PS = re.compile(r"^" + _LEAD + r"I\s+(?:(?:don't|do not|never|" + _ADV + r")\s+)?([A-Za-z]+)\b", re.I)
@@ -206,8 +208,8 @@ _SUBORD = {"when", "whenever", "if", "unless", "before", "after", "while", "duri
 
 
 def _stem(tok: str) -> str:
-    """A SYMMETRIC light stem: both sides of the grounding check pass through
-    it, so what matters is that inflections of one word meet, not that the
+    """A SYMMETRIC light stem (v19 served the grounding; v21 serves the grammar's
+    verb classes): both sides of a comparison pass through it, so what matters is that inflections of one word meet, not that the
     result is a dictionary form (deletes/delete -> delet; merging/merges ->
     merg; committing/commit -> commit; invoices/invoice -> invoic)."""
     t = tok
@@ -246,7 +248,7 @@ def tokens(text: str) -> list:
     """Lowercased word tokens with a light suffix strip; contractions split.
     v21 (round-2 F1): curly and typographic apostrophes are normalised to the
     straight one FIRST — "don’t" tokenised as `don` + `t` lost the negation the
-    grounding is matched against (the normaliser class: a haystack transform
+    grammar is matched against (the normaliser class: a haystack transform
     that rewrites a literal a pattern names makes the pattern unfirable)."""
     raw = re.findall(r"[a-z0-9]+(?:'[a-z]+)?", str(text).lower().translate(_APOSTROPHES))
     out = []
@@ -271,7 +273,8 @@ _CONTRACTED_AUX = {"don": "do", "doesn": "does", "didn": "did", "won": "will", "
 
 
 _COORD = {"and", "or", "but", "then", "plus", "also"}
-# v21 (research's attack on predicate grounding): a RELATIVE or commentary clause
+# v21 (research's attack, first on the retired predicate grounding, then on the
+# derived gloss itself): a RELATIVE or commentary clause
 # ("…, which has been a great way to … and make progress on my book") is a
 # predicate too, and a gloss built from it ("Makes progress on my book") is a
 # fabrication with perfect provenance. Relative pronouns key their predicate
@@ -312,7 +315,7 @@ def derive_gloss(span: str) -> str:
 # ------------------------------------------------ the normaliser preserves its literals
 def literals_survive_normalisation() -> list:
     """v21 (research, round-2 F1 generalised): every literal the grammar or the
-    grounding matches against must come back from `tokens()` as itself — a
+    grammar matches against must come back from `tokens()` as itself — a
     tokenizer that rewrites a literal makes the pattern naming it unfirable
     (the curly apostrophe made "don’t" unfirable as a negation). Returns the
     literals that do NOT survive; the test asserts it is empty."""

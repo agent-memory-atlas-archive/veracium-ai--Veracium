@@ -533,8 +533,8 @@ REFUSED and counted in `procedural_refused`, nothing written, never filed as
 5. **Gate 2 — the summary contract, ONE for both producers (V-SUMMARY-CONTRACT;
    round-1 finding 3).** The gloss is whitespace-normalised, non-empty and at
    most `MAX_SUMMARY_CHARS` (512) — the rules `record_procedure` has always
-   applied to a host summary — applied BEFORE the grammar and the grounding so
-   the string they judge is the string that is stored.
+   applied to a host summary — applied (v21) to the DERIVED gloss after the
+   grammar, so the string judged is the string that is stored.
 6. **Gate 3 — the user as the ACTOR, now (V-ACTOR-PRESENT; round-1 finding 2,
    research's nine constructions and its red team).** The span must OPEN with the
    user asserting a CURRENT, REPEATED performance of their own (v20, the
@@ -550,7 +550,7 @@ REFUSED and counted in `procedural_refused`, nothing written, never filed as
    stated cost), and not in the cognitive/volitional class (think, mean, hope,
    plan, consider, want, intend, wish, try, aim, like, love, prefer, need,
    feel, believe, guess, suppose, wonder, decide, figure, imagine, dream, …),
-   which is matched BY CLASS through the grounding's symmetric stem so every
+   which is matched BY CLASS through a symmetric light stem (`_stem`) so every
    inflection meets it; and (v21, round-2 finding 2) not a DIRECTIVE head
    (request, ask, suggest, recommend, tell, remind, urge, order, insist, propose,
    advise, instruct, demand, require, invite, encourage, beg, …) — "I request
@@ -613,7 +613,7 @@ REFUSED and counted in `procedural_refused`, nothing written, never filed as
    "I've been listening to it during my morning walks with my dog" (its ", which
    has been a great way to get some exercise and make progress on my book"
    cut); "I've been keeping track of the birds I've seen"; "I use it to play
-   music, set reminders, and make hands-free calls"; entirely the user's. NAMED RESIDUAL of rule (iii), one instance in the sixteen:
+   music, set reminders, and make hands-free calls"; entirely the user's. NAMED RESIDUAL of rule (ii), the cut, one instance in the sixteen:
    commentary introduced by a COORDINATOR rather than a relative pronoun is
    kept — d1#14 stores "I've been testing them out on my friends and family, and
    it's been great to see what works and what doesn't". Research's
@@ -1112,7 +1112,7 @@ bar) and BEFORE any implementation line.
   corpus edited without its spec line cannot either. At acceptance the
   same digest moves into `## Review closure`.
 
-corpus sha256: b516388588e575aa0bc229419dac912ac072bf53223e64fb1db2facdb47233bd
+corpus sha256: 83df2a087246366f784189b665376e3c58458b1e65e4be1acc57e96b059de1f9
 
 - **Cells — GENERATED, not enumerated here (round-2 fold, research's
   finding on v11's first draft):** the corpus generates its product cells

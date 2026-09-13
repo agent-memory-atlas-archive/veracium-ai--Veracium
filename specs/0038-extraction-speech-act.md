@@ -139,8 +139,9 @@ fixed two of those (dev read 1, B1).* The episode still records that the instruc
 
 *v1 said "DROPPED, not coerced" and §2c-i called it structural — "removes an
 emission path". Dev's F1: **nothing in the store could tell that a triple came
-from an instruction.** 0037's V-EXTRACTOR-BLIND filters procedural RELATIONS
-from the vocabulary; here there is nothing to filter, `prefers` stays legal, and
+from an instruction.** 0037's V-EXTRACTOR-BLIND kept procedural RELATIONS out of
+the vocabulary (v1–v6.0; measured then — since 0037 v16 they are rendered and
+gated, §0); here there was nothing to filter, `prefers` stays legal, and
 the only thing producing the outcome was a sentence in the RULES block that
 gpt-4.1 at T=0 happened to obey. **That is an outcome asserted as if the code
 provided it — the class 0037 was externally returned for twice, written into
@@ -278,7 +279,7 @@ absent.
 The manifest's sha256 is carried on **one** line of this spec:
 
 ```
-corpus sha256: 2993bcf89f411e5fd0e4bdc8d3042bd8f789f383948ce2668f48ccedbaaa0bc8
+corpus sha256: 6e64b033b716a45c4070d84139d3eee33ff5e4d1f1c0b8efb40a8953db4cd292
 ```
 
 and the manifest carries `spec_version` and
@@ -495,7 +496,7 @@ manifest's — and the manifest carries every file's.** Fifteen digests in prose
 would be fifteen things going stale independently, which this document has
 already demonstrated twice today at a smaller scale.
 
-oracle manifest sha256: d9812c35f7fe0af8123766c8732ff281a9171f0c98515d33f7a62f02ca654937
+oracle manifest sha256: 5074509d917934d5f4bbfa848455bae1ce646294abf1be16ee7bab55276a730b
 
 **The binding is bidirectional and neither direction depends on the other's
 token** (the corpus pin's protocol): the line above is `sha256(MANIFEST.json)`;

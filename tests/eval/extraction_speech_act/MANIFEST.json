@@ -168,11 +168,18 @@
     "supersedes_pin": "60c6eba04c0f9784f95363d44592e026b737f8f10844d7381e8dc8cf16770aab",
     "utc": "2026-09-13",
     "what": "Re-pinned to v6.3 (the amendments round-2 RETURN folded, 2026-09-13; with 0037 v21): \u00a70's prerequisite sentence rewritten, \u00a72b names the v20/v21 gates and the first-person request, V-NO-PROCEDURAL-IN-PROMPT-VOCAB names the positive-form mechanism with the directive/second-person refusals and carries the residual in full. Design content moved; the pin moved BY DESIGN; re-derived from the bytes in the frozen serialisation. The corpus sets are untouched. Re-pinned again within the same unlanded fold after \u00a72b took the derivation wording; pin 9c48bfe7 superseded within the fold. And once more within the fold for a renamed test node in the \u00a76 row; pin c2a95bc4 superseded within the fold. ORDER LESSON, recorded: the corpus pin excludes only its own line, so the oracle-manifest line is part of the text it pins \u2014 the oracle manifest is re-pinned and its line bound FIRST, the corpus pin computed LAST."
+   },
+   {
+    "by": "dev (veracium-61)",
+    "method": "SHA-256 over the spec's UTF-8 bytes with exactly the one column-0 `corpus sha256: ` line removed (spec_pin.rule)",
+    "supersedes_pin": "324c7759fc6573b78d44628aa90233b056377daaa1c0ec7508a5b0416f971461",
+    "utc": "2026-09-13",
+    "what": "Re-pinned after research's second-seat doc sweep of v6.3 (\u00a72c-i's historical sentence), the oracle manifest re-pinned first and this pin computed last over the final text. Prose only; the corpus sets are untouched."
    }
   ],
   "rule": "Remove EXACTLY the lines beginning at column 0 with \"corpus sha256: \" (the line and its terminator, nothing else), assert there is exactly ONE, then sha256 the remaining bytes.",
   "spec": "specs/0038-extraction-speech-act.md (on placement)",
-  "spec_text_sha256_excluding_the_corpus_digest_line": "324c7759fc6573b78d44628aa90233b056377daaa1c0ec7508a5b0416f971461",
+  "spec_text_sha256_excluding_the_corpus_digest_line": "a17508dceb94759bb44087ee53ce4d007eaac7dc1d7c7bd9947eb40758dcbb37",
   "spec_version": "accepted (closing cell)",
   "status": "BOUND"
  },
