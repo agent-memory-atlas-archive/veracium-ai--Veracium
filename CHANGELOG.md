@@ -2,15 +2,24 @@
 
 ## Unreleased
 
-- **Recall's policy lane can no longer decide what is protected or what is a member** (specs/0027
-  v12; the owner's word, 2026-09-13, on research's A1-replay round-4 findings). With `policy_rank`
-  passed to `fused_subgraph`, the I6 assertable reserve is now taken from the UNADJUSTED fused order
-  (a promoted record can no longer enter the protected slice), Stage-3 membership among duplicate
-  semantic-only candidates is decided on the unadjusted order, and the coverage tail judges
-  day-novelty against the unadjusted head — so one promotion displaces at most one record (the
-  head's marginal one) instead of two. With no policy passed, nothing changes: the two orders are
-  one list. No shipped policy exists; hosts passing their own `policy_rank` see the reserve and
-  the coverage tail stop moving under it.
+- **Procedural capture: the stored summary is now DERIVED from the user's quoted span; requests,
+  second-person and multi-sentence spans are refused** (specs/0037 v21, specs/0038 v6.3; the
+  amendments review package, round 2, returned 2026-09-13; the owner's word on derivation the same
+  day). Until now the extractor supplied a summary and ingest checked it against the quote by word
+  order — a curly apostrophe lost a negation ("I don’t review invoices" stored as "Reviews
+  invoices") and a coordination lent its object ("I review invoices and archive receipts" stored as
+  "Reviews receipts"). The model's summary is no longer used for a procedural triple at all: the
+  stored `object` is the quoted span itself, whitespace-normalised, with a comma-introduced
+  relative clause cut and nothing else ("I've been misting my fern every other day"; "I go to the
+  gym on Tuesdays, Thursdays, and Saturdays."); `describe_procedures` renders it after "recorded
+  from something you said:". A first-person request ("I request that you review
+  invoices today"), any span addressed in the second person, and a span crossing a sentence
+  boundary are refused. The record guarantee is now exact: `object` is the derived span, `note` is
+  empty, no digest is stored, and the render exclusion is the whole protection — the grammar is
+  the only filter between a user's sentence and stored text. Measured with thresholds fixed first:
+  the grammar's admissions on the three prior draws unchanged; on a fourth held-out draw of 120
+  (sessions 301–400), 0 of 115 must-refuse spans admitted and 2 of 3 routines (a stative "I've
+  got … down to a science" refused, a stated cost). 16 clean routines in 400 sessions.
 - **Procedural capture: the actor-present gate is now POSITIVE-FORM** (specs/0037 v20; the owner's
   word, 2026-09-13, on research's reading of the held-out failure recorded under v19). A capture is
   admitted only when the quoted span opens with an explicit assertion of the user's current,
@@ -37,8 +46,8 @@
   the verbatim quote — so the quote rendered into recall context after one host action. Now
   `correct()` on a procedural record refuses with the named reason `correction_of_procedure`
   (retire it and restate the procedure), the store refuses any successor that would drop the
-  markers, and a captured procedure stores NO copy of the quoted span at all (its note is
-  empty; the span is verified and discarded). Capture itself is gated in order: the event's
+  markers, and a captured procedure keeps no separate copy of the quoted span (its note is
+  empty; no digest is stored; the span is verified and discarded — `object` holds the gloss). Capture itself is gated in order: the event's
   author is the user; the quote is a verbatim span; the summary meets the same contract as
   `record_procedure` (normalised, at most 512 characters); the span opens with the user as the
   actor in the present or habitual and carries no report, rejection, aspect, norm, request,

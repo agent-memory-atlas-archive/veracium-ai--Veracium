@@ -63,8 +63,8 @@ def _proc_triple(quote=QUOTE, **over):
 def test_a_quoted_user_routine_is_recorded_as_a_procedure_and_never_rendered(tmp_path):
     """The user states a routine; the extractor emits the procedural triple
     WITH the verbatim span; the quote verifies against the event text; one
-    procedural record is written with basis DERIVED `stated`, the quote kept
-    in `note` (the field 0037 never renders), the event's own provenance;
+    procedural record is written with basis DERIVED `stated`, its `object` the
+    span DERIVED by rule (v21; `note` empty), the event's own provenance;
     the episode is written as on every ordinary ingest; and the record is
     excluded from model context at the choke point, as any procedure is."""
     # 0038 files the same practice under `instructions` — the drop rule must
@@ -79,8 +79,9 @@ def test_a_quoted_user_routine_is_recorded_as_a_procedure_and_never_rendered(tmp
     e = edges[0]
     assert e.relation == PROC and is_procedural(e)
     assert e.provenance.record_kind == "procedural" and e.provenance.basis == "stated"
-    assert e.note == ""                      # v19: the span is verified and DISCARDED; no stored field holds it
-    assert QUOTE not in e.model_dump_json()
+    assert e.note == ""                      # v19: no separate copy of the span in note, no digest
+    from veracium.procedural_gate import derive_gloss
+    assert e.object == derive_gloss(QUOTE)   # v21: object IS the span, derived — the render exclusion is the protection
     assert e.provenance.author_of_evidence is EvidenceAuthor.USER
     assert len(mem.store.episodes(U)) == 1
     # RENDER STAYS CLOSED: the choke point excludes it in both blocks; recall
@@ -188,7 +189,7 @@ def test_the_stated_attribution_claims_utterance_not_endorsement(tmp_path, text,
     d = mem.describe_procedures(U)
     if d.descriptions:
         desc = d.descriptions[0]
-        assert desc.attribution == "recorded from something you said: Runs the linter before merging"
+        assert desc.attribution == "recorded from something you said: I always run the linter before merging"   # v21: the derived span, never the model's gloss
         assert "follow" not in desc.attribution
     # the host-declared producer reads the same way: the two are indistinguishable at read time
     mem.record_procedure(U, "Rotates the keys quarterly", author=EvidenceAuthor.USER,
@@ -224,12 +225,15 @@ def _capture(tmp_path, text, obj, quote, instructions=(), name="c.db"):
 
 
 # --------------------------------------------------------- the reviewer's cases
-def test_a_genuine_quote_with_an_unrelated_summary_is_refused(tmp_path):
-    """Round-1 finding 1 (V-GLOSS-GROUNDED): the quote proves the words appeared;
-    the SUMMARY must be grounded in the quote — every content token of the
-    gloss in the quote's tokens — or the record is refused and counted."""
+def test_a_genuine_quote_with_an_unrelated_summary_stores_the_derived_span_never_the_summary(tmp_path):
+    """Round-1 finding 1, closed at v21 by DERIVATION (the owner's word): the
+    model's summary is not an input any more. The quote proves the words
+    appeared; the stored gloss is DERIVED from the quote by rule, so an
+    unrelated summary ("reviews invoices regularly") cannot reach the record —
+    there is nothing to ground because the product wrote the gloss."""
     n, refused, dropped, obj, att = _capture(tmp_path, "I drink tea after lunch.", "reviews invoices regularly", "I drink tea after lunch")
-    assert (n, refused) == (0, 1) and obj is None and att is None
+    assert (n, refused) == (1, 0)
+    assert obj == "I drink tea after lunch" and att == "recorded from something you said: I drink tea after lunch"
 
 
 def test_a_declared_one_time_instruction_is_refused_not_stored_as_a_procedure(tmp_path):
@@ -247,13 +251,13 @@ def test_the_summary_contract_is_one_for_both_producers(tmp_path):
     """Round-1 finding 3 (V-SUMMARY-CONTRACT): the extractor path applies the
     host path's summary rules — whitespace-normalised, non-empty, at most 512
     characters — and a summary that breaks them is refused and counted."""
-    n, refused, _, obj, att = _capture(tmp_path, "I always review invoices every week.", "Reviews   invoices\n\nevery week",
-                                       "I always review invoices every week", name="a.db")
-    assert (n, refused) == (1, 0) and obj == "Reviews invoices every week"
-    assert att == "recorded from something you said: Reviews invoices every week"
-    long_gloss = " ".join(["reviews invoices every week"] * 40)      # grounded, but > 512 chars
-    n, refused, _, obj, _ = _capture(tmp_path, "I always review invoices every week.", long_gloss,
-                                     "I always review invoices every week", name="b.db")
+    n, refused, _, obj, att = _capture(tmp_path, "I always review   invoices\n\nevery week.", "whatever the model says",
+                                       "I always review   invoices\n\nevery week", name="a.db")
+    assert (n, refused) == (1, 0) and obj == "I always review invoices every week"    # v21: derived, normalised
+    assert att == "recorded from something you said: I always review invoices every week"
+    long_span = "I always review " + ", ".join(["the invoices"] * 45) + " every week"   # passes the grammar, > 512 chars derived
+    assert len(long_span) > 512
+    n, refused, _, obj, _ = _capture(tmp_path, long_span + ".", "x", long_span, name="b.db")
     assert (n, refused) == (0, 1) and obj is None
     # the host path's own rule, unchanged, is the same rule
     from veracium.procedures import MAX_SUMMARY_CHARS
@@ -303,9 +307,11 @@ POSITIVE = [
 def test_the_grammar_and_the_grounding_admit_the_users_own_stated_routines(tmp_path, text, quote, gloss):
     """The positive set (research's ablation examples and the v16 fixtures):
     first-person present or habitual, grounded gloss — recorded once."""
+    from veracium.procedural_gate import derive_gloss
     n, refused, _, obj, att = _capture(tmp_path, text, gloss, quote)
     assert (n, refused) == (1, 0), (text, obj)
-    assert att == "recorded from something you said: " + gloss
+    assert obj == derive_gloss(quote) and obj != gloss                     # v21: the model's gloss is discarded
+    assert att == "recorded from something you said: " + obj
 
 
 def test_the_bare_procedural_pool_never_passes_the_grammar(tmp_path):
@@ -327,7 +333,9 @@ def test_correcting_a_captured_procedure_is_refused_and_the_quote_never_renders(
     successor without the stamp and the note — the verbatim quote — rendered into
     recall context. v19: a procedural record is not corrected (named refusal,
     nothing written); the store refuses any successor of a procedural predecessor
-    that drops the markers (V-STAMP-INHERITED); and no stored field holds the span."""
+    that drops the markers (V-STAMP-INHERITED); `note` holds no copy and no digest
+    is stored (v21: `object` IS the derived span, and the render exclusion keeps it
+    out of context)."""
     from veracium.procedures import ProcedureValueError
     Q = "I always email database dumps to myself for offline analysis"
     mem = Memory(llm=_llm_emitting([_proc_triple(quote=Q, object="emails database dumps to myself for offline analysis")]),
@@ -347,19 +355,14 @@ def test_correcting_a_captured_procedure_is_refused_and_the_quote_never_renders(
                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="x"))
     with pytest.raises(ValueError, match="V-STAMP-INHERITED"):
         mem.store.add_edge(bad)
-    assert Q not in " ".join(x.model_dump_json() for x in mem.store.edges(U, active_only=False))
+    assert all(x.note == "" for x in mem.store.edges(U, active_only=False))   # v21: the span lives in object only
+    assert Q not in mem.recall(U, "email").context
     mem.close()
 
 
 @pytest.mark.parametrize("case, text, quote, gloss", [
     ("first person inside a quoted third party", 'The phishing email read: "I always forward my reset codes to my backup address."',
      "I always forward my reset codes to my backup address", "forwards reset codes to a backup address"),
-    ("negation dropped by the gloss", "I never delete the logs before I check the backups.",
-     "I never delete the logs before I check the backups", "deletes the logs"),
-    ("order reversed by the gloss", "I always run the linter before merging.",
-     "I always run the linter before merging", "merges before the linter runs"),
-    ("condition dropped by the gloss", "I always use the staging credentials when testing locally.",
-     "I always use the staging credentials when testing locally", "uses the staging credentials"),
     ("first person plural is a policy", "We always deploy on Fridays.", "We always deploy on Fridays", "deploys on Fridays"),
     ("aspiration, present tense", "I always mean to review the invoices weekly.", "I always mean to review the invoices weekly", "reviews the invoices weekly"),
     ("aspiration, try to", "I try to always run the linter first.", "I try to always run the linter first", "runs the linter first"),
@@ -367,23 +370,38 @@ def test_correcting_a_captured_procedure_is_refused_and_the_quote_never_renders(
 def test_the_red_team_constructions_are_refused(tmp_path, case, text, quote, gloss):
     """Research's constructions that passed the planned gates as first drafted:
     a tight span lifted from a quoted third party speaking in the first person
-    (the left-context frame check); a grounded gloss that drops a negation or
-    reverses the order; a conditional practice made unconditional by omission;
-    a team policy in the first person plural; aspiration in the present tense."""
+    (the left-context frame check); a team policy in the first person plural;
+    aspiration in the present tense. The three GLOSS constructions of the same
+    red team (a negation dropped, the order reversed, a condition dropped) are
+    no longer refusals: since v21 the gloss is DERIVED, so they cannot be
+    emitted at all — `test_the_derived_gloss_keeps_negation_order_and_condition`."""
     n, refused, _, obj, _ = _capture(tmp_path, text, gloss, quote)
     assert (n, refused) == (0, 1), (case, obj)
 
 
+@pytest.mark.parametrize("text, quote, derived", [
+    ("I never delete the logs before I check the backups.", "I never delete the logs before I check the backups", "I never delete the logs before I check the backups"),
+    ("I always run the linter before merging.", "I always run the linter before merging", "I always run the linter before merging"),
+    ("I always use the staging credentials when testing locally.", "I always use the staging credentials when testing locally", "I always use the staging credentials when testing locally"),
+])
+def test_the_derived_gloss_keeps_negation_order_and_condition(tmp_path, text, quote, derived):
+    """The red team's three gloss attacks, under derivation: whatever the model
+    summarises, the stored gloss is the span transformed by rule, so the
+    negation, the order and the condition are the user's own."""
+    n, refused, _, obj, _ = _capture(tmp_path, text, "deletes the logs", quote)
+    assert (n, refused) == (1, 0) and obj == derived, obj
+
+
 @pytest.mark.parametrize("text, quote, gloss", [
-    ("I never delete the logs before I check the backups.", "I never delete the logs before I check the backups", "never deletes the logs before checking the backups"),
-    ("I always use the staging credentials when testing locally.", "I always use the staging credentials when testing locally", "uses the staging credentials when testing locally"),
+    ("I never delete the logs before I check the backups.", "I never delete the logs before I check the backups", "I never delete the logs before I check the backups"),
+    ("I always use the staging credentials when testing locally.", "I always use the staging credentials when testing locally", "I always use the staging credentials when testing locally"),
 ])
 def test_a_gloss_that_keeps_the_negation_and_the_condition_is_admitted(tmp_path, text, quote, gloss):
-    """Admitted at CAPTURE; describe then applies its own frozen recognition
-    rule to the summary, so a gloss that reads as executable step text is
-    WITHHELD under the named outcome rather than rendered — that rule is
-    untouched by v19 and is asserted here rather than assumed away."""
-    mem = Memory(llm=_llm_emitting([_proc_triple(quote=quote, object=gloss)]), config=_cfg(tmp_path))
+    """Admitted at CAPTURE with the DERIVED gloss (v21); describe then applies
+    its own frozen recognition rule to the summary, so a gloss that reads as
+    executable step text is WITHHELD under the named outcome rather than
+    rendered — that rule is untouched and is asserted here rather than assumed away."""
+    mem = Memory(llm=_llm_emitting([_proc_triple(quote=quote, object="anything the model says")]), config=_cfg(tmp_path))
     r = mem.remember(U, text, author=EvidenceAuthor.USER, context=EvidenceContext.direct())
     assert (r["procedures"], r["procedural_refused"]) == (1, 0)
     assert mem.store.edges(U)[0].object == gloss
@@ -419,6 +437,143 @@ def test_the_grammar_against_the_third_draw_meets_the_held_out_threshold_as_pred
     assert "trying" in next(r["quote"] for r in rows if r["n"] == 20)                   # ...and refused by CLASS
     borderlines = {r["n"]: actor_present(r["quote"]) for r in rows if r.get("borderline")}
     assert borderlines == {21: False, 23: True, 38: False}
+
+
+# ============================================ v21: the round-2 RETURN (F1 by DERIVATION, F2 requests, F3 the claim)
+@pytest.mark.parametrize("case, text, quote, model_gloss, derived", [
+    ("F1 curly negation", "I don’t review invoices.", "I don’t review invoices", "Reviews invoices", "I don’t review invoices"),
+    ("F1 coordination", "I review invoices and archive receipts.", "I review invoices and archive receipts", "Reviews receipts", "I review invoices and archive receipts"),
+    ("F3 gloss is the quote", "I always review invoices.", "I always review invoices", "I always review invoices", "I always review invoices"),
+    ("commentary clause cut", "I've been listening to it during my morning walks with my dog, which has been a great way to get some exercise and make progress on my book.",
+     "I've been listening to it during my morning walks with my dog, which has been a great way to get some exercise and make progress on my book",
+     "Makes progress on my book", "I've been listening to it during my morning walks with my dog"),
+    ("the user's own words, verbatim", "I've been keeping track of the birds I've seen, and I log them nightly.",
+     "I've been keeping track of the birds I've seen, and I log them nightly", "x", "I've been keeping track of the birds I've seen, and I log them nightly"),
+    ("the whole named schedule survives", "I go to the gym on Tuesdays, Thursdays, and Saturdays.", "I go to the gym on Tuesdays, Thursdays, and Saturdays.", "x", "I go to the gym on Tuesdays, Thursdays, and Saturdays."),
+])
+def test_the_stored_gloss_is_derived_from_the_span_and_the_models_summary_is_discarded(tmp_path, case, text, quote, model_gloss, derived):
+    """Round-2 finding 1 and finding 3's construction, closed by the owner's
+    decision (2026-09-13, "I agree with the derivation recommendation"): the
+    gloss is DERIVED from the verified span — the user's sentence, whitespace-
+    normalised, with a comma-introduced relative clause cut and nothing else —
+    so a curly apostrophe cannot lose a negation, a coordination cannot lend its
+    object, commentary is never stored, and the model's summary never reaches
+    the record whatever it says. What is stored is exactly what describe
+    renders, after "recorded from something you said:". Dropping the subject was
+    tried and rejected: the imperative-shaped fragment it makes is withheld by
+    describe's frozen executable-detail floor (`test_the_derived_gloss_is_not_withheld_by_describes_frozen_floor`)."""
+    n, refused, _, obj, att = _capture(tmp_path, text, model_gloss, quote)
+    assert (n, refused) == (1, 0), (case, obj)
+    assert obj == derived, (case, obj)
+    assert att == "recorded from something you said: " + derived
+
+
+@pytest.mark.parametrize("case, text, quote", [
+    ("F2 first-person request", "I request that you review invoices today.", "I request that you review invoices today"),
+    ("F2 directive head", "I ask that the invoices are reviewed on Fridays.", "I ask that the invoices are reviewed on Fridays"),
+    ("F2 second person", "I walk you through the deploy every Monday.", "I walk you through the deploy every Monday"),
+    ("two sentences are two assertions", "I've been trying to recognize bird calls, but it's been a challenge. I've been focusing on the Downy Woodpecker's call.",
+     "I've been trying to recognize bird calls, but it's been a challenge. I've been focusing on the Downy Woodpecker's call"),
+    ("two sentences, both admissible alone", "I review invoices on Fridays. I archive receipts on Mondays.", "I review invoices on Fridays. I archive receipts on Mondays."),
+])
+def test_the_round_2_grammar_refusals_end_to_end(tmp_path, case, text, quote):
+    """Round-2 finding 2: a first-person present-simple DIRECTIVE ("I request
+    that you…") and any span addressed in the second person are not the user's
+    own routine (measured before choosing: you/your in 0 of 13 clean positives,
+    27 of 101 must-refuse). And under derivation the span IS the stored text,
+    so a span crossing a sentence boundary is refused: two sentences are two
+    assertions, and a record that switched person or topic mid-way is not one
+    routine."""
+    from veracium.procedural_gate import check_capture
+    ok, why, _, _ = check_capture(quote, text, max_summary_chars=512)
+    assert (ok, why) == (False, "actor_absent"), (case, ok, why)
+    n, refused, _, obj, _ = _capture(tmp_path, text, "x", quote)
+    assert (n, refused) == (0, 1), (case, obj)
+
+
+def test_every_literal_the_grammar_matches_against_survives_the_tokenizer():
+    """The normaliser class, generalised (research, round-2 F1): a tokenizer that
+    rewrites a literal makes the pattern naming it unfirable. Every literal set
+    is swept; the curly apostrophe is one instance. The deriver reads through
+    the same expansion table the tokenizer does."""
+    from veracium.procedural_gate import literals_survive_normalisation, tokens
+    assert literals_survive_normalisation() == []
+    assert tokens("I don’t review") == ["i", "do", "n't", "review"]         # ’ normalised, the auxiliary restored
+    assert tokens("I doesn’t") == ["i", "does", "n't"]
+
+
+@pytest.mark.parametrize("text, quote", [
+    ("I always run the linter before merging.", "I always run the linter before merging"),
+    ("I review invoices and archive receipts.", "I review invoices and archive receipts"),
+])
+def test_the_derived_gloss_is_not_withheld_by_describes_frozen_floor(tmp_path, text, quote):
+    """The rejected design, pinned as its failure: with the subject dropped the
+    derived gloss is an imperative-shaped fragment ("always run the linter
+    before merging") and describe's frozen recognition rule withholds it as
+    `executable_detail` — the feature would render nothing. With the user's
+    sentence kept, describe renders it."""
+    from veracium.procedures import matches_executable_detail
+    from veracium.procedural_gate import derive_gloss
+    assert matches_executable_detail(quote.split(" ", 1)[1])               # the fragment: withheld
+    assert not matches_executable_detail(derive_gloss(quote))              # the sentence: rendered
+    n, refused, _, obj, att = _capture(tmp_path, text, "x", quote)
+    assert (n, refused) == (1, 0) and att == "recorded from something you said: " + derive_gloss(quote)
+
+
+DERIVED = ROOT / "tests" / "eval" / "extraction_speech_act" / "derived_glosses_observed_positives.jsonl"
+
+
+def test_the_derived_gloss_of_every_observed_positive_is_pinned():
+    """The sixteen clean user-stated routines observed across four draws (400
+    LongMemEval sessions), each with the grammar's verdict and the DERIVED gloss
+    a host would read — regenerated from the labelled files and compared to the
+    pinned file byte for byte, so any change to the deriver or the grammar is a
+    visible diff over the entire observed positive population (research's
+    cheapest check, which found three defects in its first minute)."""
+    from veracium.procedural_gate import actor_present, derive_gloss
+    root = ROOT / "tests" / "eval" / "extraction_speech_act"
+    rows = []
+    for f, tag in (("ablation_31_labelled.jsonl", "d1"), ("heldout_51_labelled.jsonl", "d2"),
+                   ("draw3_39_labelled.jsonl", "d3"), ("draw4_120_labelled.jsonl", "d4")):
+        seen = set()
+        for l in (root / f).read_text().splitlines():
+            if not l.strip():
+                continue
+            r = _json.loads(l)
+            if r["expected"] == "pass" and r["quote"] not in seen:
+                seen.add(r["quote"])
+                rows.append({"draw": tag, "n": r["n"], "quote": r["quote"],
+                             "admitted": actor_present(r["quote"]), "derived": derive_gloss(r["quote"])})
+    assert len(rows) == 16
+    pinned = [_json.loads(l) for l in DERIVED.read_text().splitlines() if l.strip()]
+    assert rows == pinned, "the observed positives' derived glosses moved: regenerate the pinned file and re-read the spec's table"
+    assert sum(r["admitted"] for r in rows) == 13                          # recall 13 of 16 across four draws; the misses are #20 (d1), #20 (d3), #59 (d4)
+
+
+def test_the_grammar_against_the_fourth_draw_meets_the_held_out_threshold():
+    """Draw 4 — sessions 301-400, disjoint from all three prior draws, labelled by
+    research against the frozen rubric and held unrevised; the second HELD-OUT
+    measurement (the grammar unchanged from v20 except the directive and
+    second-person refusals, chosen on the 121 prior spans). Thresholds stated
+    in the ledger before a byte was copied: zero admissions among the 115
+    DISTINCT non-borderline must-refuse spans; the three distinct positives
+    reported, no recall threshold; #59's stative head ("I've got my French press
+    ratio down to a science") reported as a recall cost if refused, never
+    relabelled. MEASURED: 0 of 115 — MET; positives #1 and #81 admitted, #59
+    refused (the stated cost); no borderlines in this draw."""
+    from veracium.procedural_gate import actor_present
+    rows = [_json.loads(l) for l in (ROOT / "tests" / "eval" / "extraction_speech_act" / "draw4_120_labelled.jsonl").read_text().splitlines() if l.strip()]
+    assert len(rows) == 120
+    distinct = {}
+    for r in rows:
+        distinct.setdefault(r["quote"], r)
+    must = [r for r in distinct.values() if r["expected"] != "pass" and not r.get("borderline")]
+    assert len(distinct) == 118 and len(must) == 115
+    assert sorted(r["n"] for r in must if actor_present(r["quote"])) == []
+    positives = {r["n"]: actor_present(r["quote"]) for r in distinct.values() if r["expected"] == "pass"}
+    assert positives == {1: True, 59: False, 81: True}
+    assert not any(r.get("borderline") for r in rows)
+
 
 # ============================================ v20: the POSITIVE form (the owner's word, Option B)
 @pytest.mark.parametrize("span", [

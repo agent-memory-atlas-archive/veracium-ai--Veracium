@@ -40,7 +40,7 @@ def _instruction_key(text: str) -> str:
     return " ".join(str(text).casefold().split()).strip(" \t\r\n.,;:!?\"'`“”‘’()[]{}")
 
 
-from .procedural_gate import check_capture as _check_capture, norm_ws as _norm_ws   # specs/0037 v19 §4a-iii
+from .procedural_gate import check_capture as _check_capture, norm_ws as _norm_ws   # specs/0037 v19–v21 §4a-iii
 
 
 def _uid(prefix: str) -> str:
@@ -504,12 +504,12 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
             # kept (V-GLOSS-GROUNDED). Any failure: refused and counted, never filed.
             from .procedures import MAX_SUMMARY_CHARS
             ok, _reason, g_n, q_n = (False, "author", None, None) if author != EvidenceAuthor.USER else \
-                _check_capture(t.get("object", ""), t.get("quote"), event_text, max_summary_chars=MAX_SUMMARY_CHARS)
+                _check_capture(t.get("quote"), event_text, max_summary_chars=MAX_SUMMARY_CHARS)   # v21: the model's `object` is not an input
             if not ok:
                 n_procedural_refused += 1
                 continue
             quote = q_n
-            t = dict(t, object=g_n)          # the normalised gloss is what is stored
+            t = dict(t, object=g_n)          # v21: the DERIVED gloss is what is stored; the model's summary is discarded
         # V-THIRD-PARTY-UNTOUCHED: a `third_party_claim` is a RECEIPT record
         # (0001/0023 — "received an unverified notice that …"), never a speech
         # act attributed to the user; refusing one because the extractor also

@@ -142,13 +142,16 @@ the author is the user; the quote is a whitespace-normalised substring of the ev
 summary meets `record_procedure`'s contract (normalised, at most 512 characters); the span opens
 with the user asserting a current, repeated performance of their own — present simple, present
 perfect continuous, or present progressive with a frequency marker, with an action verb at the
-head (not a modal, an auxiliary, or a cognitive/volitional verb such as "thinking of") — carries
+head (not a modal, an auxiliary, a cognitive/volitional verb such as "thinking of", or a
+directive such as "request"), is one sentence, is not addressed to anyone in the second person, carries
 no report, rejection, aspect, norm, request, aspiration, one-time or past marker, and has no
 quotation frame to its left; every form not enumerated is refused; and the
-summary describes the span (every content word contained, in order clause by clause, negations
-and conditions kept). Any failure is counted in the result's `procedural_refused` and nothing
-is written; a capture counts in `procedures`. A captured procedure stores NO copy of the quoted
-span (its note is empty) and derives `basis="stated"`. The measured residual is stated in the
+stored summary is DERIVED from the span by rule (the user's sentence, whitespace-normalised, with a
+comma-introduced relative clause cut and nothing else) — the extractor's own summary for a
+procedural triple is discarded, so it cannot misdescribe the span. Any failure is counted in the result's `procedural_refused` and nothing
+is written; a capture counts in `procedures`. A captured procedure's `object` IS the derived span (its
+note is empty, no digest is stored; describe renders the derived text after "recorded from
+something you said:") and it derives `basis="stated"`. The measured residual is stated in the
 spec: a span grammar cannot tell a single ongoing project from a repeating practice.
 
 ### `describe_procedures(user_id, *, query=None, principal=None, limit=None) -> DescribeResult`

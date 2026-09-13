@@ -498,4 +498,11 @@ WITHDRAWN = [
      "description ('an optional auxiliary … a word'), the queued lexicon extension and the "
      "held-out test's 'records_the_failed_threshold' name describe the withdrawn design.",
      "specs/0037 §4a-iii Gate 3, §6 V-ACTOR-PRESENT; tests/test_0037_capture.py"),
+    ("0037-v19-clause-wise-grounding",
+     r"in order clause by clause|clause-wise in order|No stored field holds the payload, by construction|stores NO copy of the quoted span at all|every content token of the gloss occurs in the span",
+     "0037 v21 (the amendments round-2 RETURN and the owner's word on DERIVATION, 2026-09-13): the stored "
+     "gloss is DERIVED from the span by a closed rule and the model's summary is discarded — there is no "
+     "grounding to describe; an ordered subsequence across clauses had admitted a meaning change; and the "
+     "record claim is EXACT: object IS the derived span, no separate copy in note, no digest.",
+     "specs/0037 §4a-iii Gate 4, item 9; docs/api.md; CHANGELOG"),
 ]

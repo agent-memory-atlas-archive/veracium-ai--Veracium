@@ -1,7 +1,8 @@
 """specs/0037 v19/v20 §4a-iii — the gates a procedural CAPTURE must pass, as pure
 functions over strings (no store, no model, no I/O), so the spec's order of
 operations is the code's: NORMALISE → SUBSTRING → GRAMMAR (over the span plus
-its left context) → GROUNDING (the gloss against the span). Every gate is
+its left context) → DERIVE (the stored gloss from the span, v21: one cut) → the
+summary contract on the derived text. Every gate is
 RESTRICT-ONLY: it can refuse a capture, never admit one the previous gate
 refused, and a refusal is counted by the caller (`procedural_refused`).
 
@@ -156,6 +157,10 @@ def positive_form(span: str) -> bool:
     low = v.lower()
     if low in _AUX:
         return False
+    if _stem(low) in _DIRECTIVE:              # v21 (round-2 F2): "I request that you…" is a request
+        return False
+    if any(tok in _SECOND_PERSON for tok in tokens(span)):   # v21: a span addressed to someone is not the user's own routine
+        return False
     return _stem(low) not in _COGNITIVE
 
 
@@ -165,6 +170,8 @@ def actor_present(span: str, event_text: Optional[str] = None, left_window: int 
     or attribution frame (research §2: containment is not position)."""
     s = norm_ws(span)
     if not s or not _HEAD.match(s) or _MARKERS.search(s) or _PAST_VERB.match(s):
+        return False
+    if _SENTENCE_BOUNDARY.search(s):          # v21: a span is ONE sentence — a second sentence is not the same assertion
         return False
     if not positive_form(s):                  # v20: fail CLOSED on every unenumerated form
         return False
@@ -179,7 +186,17 @@ def actor_present(span: str, event_text: Optional[str] = None, left_window: int 
     return True
 
 
-# ------------------------------------------------------ V-GLOSS-GROUNDED (grounding)
+# ------------------------------------------------ the tokenizer and its literal sets
+# v21 (the owner's word, 2026-09-13: "I agree with the derivation recommendation"):
+# there is NO grounding gate any more. v19 checked the model's gloss as an ordered
+# subsequence of the span; the round-2 reviewer showed order is not meaning
+# (a negation dropped by a curly apostrophe; "Reviews receipts" from "I review
+# invoices and archive receipts"); v21's predicate-level grounding was built,
+# measured and DELETED before landing, because each of substring → markers →
+# positive form → predicates was a better syntactic approximation of a semantic
+# property and none would be the last. The product now DERIVES the gloss from the
+# span (`derive_gloss`), so there is nothing to ground. The tokenizer below is
+# the one normaliser the grammar's literal sets AND the deriver read through.
 _STOP = {"a", "an", "the", "my", "our", "your", "his", "her", "their", "its", "i", "we", "me", "us", "it", "them",
          "to", "of", "in", "on", "at", "by", "for", "with", "from", "into", "onto", "and", "or", "then",
          "is", "are", "am", "be", "been", "being", "do", "does", "did", "have", "has", "had", "ve", "m",
@@ -209,106 +226,119 @@ def _stem(tok: str) -> str:
 
 
 _COGNITIVE = frozenset(_stem(w) for w in _COGNITIVE_WORDS)
+# v21 (round-2 F2): DIRECTIVE heads — a first-person present-simple verb of
+# requesting or directing is a speech act aimed at the addressee, not a routine
+# of the speaker's; refused by class. And SECOND PERSON anywhere in the span:
+# measured across the 121 labelled spans of three draws, you/your occurs in 0
+# of 13 clean positives and 27 of 101 must-refuse spans, so the refusal costs
+# nothing observed and closes the whole "I <verb> that you …" family.
+_DIRECTIVE_WORDS = ("request", "ask", "suggest", "recommend", "tell", "remind", "urge", "order", "insist",
+                    "propose", "advise", "instruct", "demand", "require", "invite", "encourage", "beg",
+                    "command", "direct", "forbid", "permit", "allow", "authorise", "authorize")
+_DIRECTIVE = frozenset(_stem(w) for w in _DIRECTIVE_WORDS)
+_SECOND_PERSON = frozenset({"you", "your", "yours", "yourself", "yourselves", "u"})
+
+
+_APOSTROPHES = str.maketrans({"\u2019": "'", "\u2018": "'", "\u02bc": "'", "`": "'"})
 
 
 def tokens(text: str) -> list:
-    """Lowercased word tokens with a light suffix strip; contractions split."""
-    raw = re.findall(r"[a-z0-9]+(?:'[a-z]+)?", str(text).lower())
+    """Lowercased word tokens with a light suffix strip; contractions split.
+    v21 (round-2 F1): curly and typographic apostrophes are normalised to the
+    straight one FIRST — "don’t" tokenised as `don` + `t` lost the negation the
+    grounding is matched against (the normaliser class: a haystack transform
+    that rewrites a literal a pattern names makes the pattern unfirable)."""
+    raw = re.findall(r"[a-z0-9]+(?:'[a-z]+)?", str(text).lower().translate(_APOSTROPHES))
     out = []
     for r in raw:
         if "'" in r:
             base, tail = r.split("'", 1)
-            out.append(base)
-            out.append("n't" if tail == "t" else tail)
+            if tail == "t":
+                out.append(_CONTRACTED_AUX.get(base, base))    # doesn't -> does + n't
+                out.append("n't")
+            else:
+                out.append(base)
+                out.append(tail)
         else:
             out.append(r)
     return out
 
 
-def _content(toks: list) -> list:
-    return [_stem(t) for t in toks if t not in _STOP and t != "n't"]
+_CONTRACTED_AUX = {"don": "do", "doesn": "does", "didn": "did", "won": "will", "can": "can", "isn": "is",
+                   "aren": "are", "wasn": "was", "weren": "were", "haven": "have", "hasn": "has", "hadn": "had",
+                   "wouldn": "would", "couldn": "could", "shouldn": "should", "mustn": "must", "needn": "need",
+                   "ain": "is", "shan": "shall", "mightn": "might"}
 
 
-def gloss_grounded(gloss: str, span: str) -> bool:
-    """The gloss must DESCRIBE the quoted span: every content token of the
-    gloss occurs in the span (containment), in the SAME ORDER (a subsequence,
-    research §3), the gloss carries every negation the span carries and every
-    subordinator the span carries (research §3/§4: a gloss may not drop a
-    'never', nor a 'when …' that made the practice conditional), and the gloss
-    is not empty of content."""
-    g_toks, s_toks = tokens(gloss), tokens(span)
-    g, s = _content(g_toks), _content(s_toks)
-    if not g:
-        return False
-    # FREQUENCY PHRASES ("every Friday", "each morning") are position-free
-    # adverbials: checked by CONTAINMENT only, then removed before the order
-    # check, so "Every Friday I review the invoices" grounds "Reviews the invoices
-    # every Friday".
-    def split_freq(toks):
-        bag, rest, i = [], [], 0
-        while i < len(toks):
-            if toks[i] in ("every", "each") and i + 1 < len(toks):
-                bag += [toks[i], toks[i + 1]]; i += 2
-            else:
-                rest.append(toks[i]); i += 1
-        return bag, rest
-    g_freq, g = split_freq(g); s_freq, s = split_freq(s)
-    if not all(tok in s_freq for tok in g_freq):
-        return False
-    # containment + ORDER, CLAUSE-WISE: both texts are split into segments at
-    # punctuation (a comma returns to the main clause, so a FRONTED clause is
-    # not swallowed) and at subordinators, keyed by the subordinator (the main
-    # clause keyed None); each gloss clause must be a subsequence of the span
-    # clause with the same key. "Before committing, I run the formatter" and
-    # "Runs the formatter before committing" are the same clauses in another
-    # order and pass; a reversal INSIDE a clause ("merges before the linter
-    # runs") fails.
-    def clauses(text):
-        out = {}
-        for seg in re.split(r"[,;:.!?]", str(text).lower()):
-            key, cur = None, []
-            raw = [x for x in tokens(seg) if x not in _STOP and x != "n't"]
-            for tok in raw:                      # subordinators are matched RAW, before the stem
-                if tok in ("every", "each"):
-                    continue                     # the frequency bag, handled above
-                if tok in _SUBORD:
-                    out.setdefault(key, []).extend(cur); key, cur = tok, []
-                else:
-                    cur.append(_stem(tok))
-            out.setdefault(key, []).extend(cur)
-        return out
-    gc, sc = clauses(gloss), clauses(span)
-    for key, g_seq in gc.items():
-        g_seq = [x for x in g_seq if x not in {y for y in g_freq}]
-        if not g_seq:
-            continue
-        s_seq = sc.get(key)
-        if s_seq is None:
-            return False
-        j = 0
-        for tok in g_seq:
-            while j < len(s_seq) and s_seq[j] != tok:
-                j += 1
-            if j == len(s_seq):
-                return False
-            j += 1
-    # negation coverage (on raw tokens, before stemming/stopword removal)
-    if any(t in _NEG for t in s_toks) and not any(t in _NEG for t in g_toks):
-        return False
-    # subordinator coverage: the clause that scoped the practice survives in the gloss
-    s_sub = {t for t in s_toks if t in _SUBORD}
-    g_sub = {t for t in g_toks if t in _SUBORD}
-    if not s_sub <= g_sub:
-        return False
-    return True
+_COORD = {"and", "or", "but", "then", "plus", "also"}
+# v21 (research's attack on predicate grounding): a RELATIVE or commentary clause
+# ("…, which has been a great way to … and make progress on my book") is a
+# predicate too, and a gloss built from it ("Makes progress on my book") is a
+# fabrication with perfect provenance. Relative pronouns key their predicate
+# like a subordinator, so a gloss's main-clause predicate can never match one.
+_RELATIVE = {"which", "who", "whom", "whose", "where", "that"}
+_FREQ_ADV = {"always", "usually", "typically", "often", "regularly", "routinely", "generally", "normally",
+             "habitually", "sometimes", "mostly", "frequently", "occasionally", "daily", "weekly", "monthly",
+             "nightly", "hourly", "everyday"}
+
+
+# ----------------------------------------------------------- the DERIVED gloss (v21)
+# The stored gloss is the user's sentence, whitespace-normalised, with ONE
+# transformation: a comma-introduced RELATIVE clause is cut from its comma to
+# the end ("…, which has been a great way to get some exercise and make
+# progress on my book"), because printing the sixteen observed positives showed
+# the commentary a paraphrase used to drop is otherwise ALWAYS stored. Nothing
+# else: no contraction expanded, no subject dropped, no inflection. Two
+# rejected designs, measured before choosing: dropping the subject "I" turns
+# "I always run the linter before merging" into an IMPERATIVE-shaped fragment
+# that describe's frozen executable-detail floor WITHHOLDS (the reviewer's
+# cases and the present-simple positives all vanished from describe), and
+# expanding contractions was only ever needed to repair that dropping. describe
+# prefixes "recorded from something you said:", so the first-person sentence
+# reads as the quotation it is.
+_COMMENTARY = re.compile(r",\s+(?:which|who|whom|whose|where)\b.*$", re.I)
+_SENTENCE_BOUNDARY = re.compile(r"[.!?]\s+[A-Z\"'“‘(]")
+
+
+def derive_gloss(span: str) -> str:
+    """specs/0037 v21 §4a-iii Gate 4 — the stored gloss is DERIVED from the
+    verified span by rule: whitespace-normalise; cut a comma-introduced relative
+    clause from its comma to the end; whitespace-normalise again. Empty only for
+    an empty span. The grammar refuses a span that crosses a sentence boundary
+    (`actor_present`), so a stored gloss is one sentence."""
+    return norm_ws(_COMMENTARY.sub("", norm_ws(span)))
+
+
+# ------------------------------------------------ the normaliser preserves its literals
+def literals_survive_normalisation() -> list:
+    """v21 (research, round-2 F1 generalised): every literal the grammar or the
+    grounding matches against must come back from `tokens()` as itself — a
+    tokenizer that rewrites a literal makes the pattern naming it unfirable
+    (the curly apostrophe made "don’t" unfirable as a negation). Returns the
+    literals that do NOT survive; the test asserts it is empty."""
+    bad = []
+    sets = [_NEG, _STOP, _SUBORD, _COORD, _FREQ_ADV, _RELATIVE, _SECOND_PERSON,
+            set(_COGNITIVE_WORDS), set(_DIRECTIVE_WORDS), set(_ADV.strip("(?:)").split("|"))]
+    for s in sets:
+        for lit in s:
+            if lit == "n't":
+                if tokens("don't")[-1] != "n't" or tokens("don’t")[-1] != "n't":
+                    bad.append(lit)
+                continue
+            if not lit.isalpha():
+                continue
+            if tokens(lit) != [lit]:
+                bad.append(lit)
+    return bad
 
 
 # --------------------------------------------------------- the gate, in spec order
-def check_capture(gloss: str, span, event_text: str, *, max_summary_chars: int) -> tuple:
+def check_capture(span, event_text: str, *, max_summary_chars: int) -> tuple:
     """Runs the gates in the spec's order and returns (accepted, reason,
-    normalised_gloss, normalised_span). `reason` names the first failing gate:
-    no_quote | quote_not_in_event | summary_contract | actor_absent |
-    gloss_ungrounded; None when accepted."""
+    derived_gloss, normalised_span). `reason` names the first failing gate:
+    no_quote | quote_not_in_event | actor_absent | summary_contract; None when
+    accepted. The model's own gloss is not an input: v21 derives the stored
+    gloss from the span."""
     if not isinstance(span, str):
         return (False, "no_quote", None, None)
     s = norm_ws(span)
@@ -317,11 +347,9 @@ def check_capture(gloss: str, span, event_text: str, *, max_summary_chars: int) 
     ev = norm_ws(event_text)
     if s not in ev:
         return (False, "quote_not_in_event", None, s)
-    g = norm_ws(gloss)
-    if not g or len(g) > max_summary_chars:
-        return (False, "summary_contract", g, s)
     if not actor_present(s, ev):
-        return (False, "actor_absent", g, s)
-    if not gloss_grounded(g, s):
-        return (False, "gloss_ungrounded", g, s)
+        return (False, "actor_absent", None, s)
+    g = derive_gloss(s)
+    if not g or len(g) > max_summary_chars:          # the summary contract, applied to the DERIVED gloss
+        return (False, "summary_contract", g, s)
     return (True, None, g, s)
