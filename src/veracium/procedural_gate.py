@@ -1,4 +1,4 @@
-"""specs/0037 v19 §4a-iii — the gates a procedural CAPTURE must pass, as pure
+"""specs/0037 v19/v20 §4a-iii — the gates a procedural CAPTURE must pass, as pure
 functions over strings (no store, no model, no I/O), so the spec's order of
 operations is the code's: NORMALISE → SUBSTRING → GRAMMAR (over the span plus
 its left context) → GROUNDING (the gloss against the span). Every gate is
@@ -13,6 +13,16 @@ user-authored event and nothing more — not who the routine belongs to
 third party speaking in the first person (the left-context frame check).
 The residual of each gate is named in the spec with the measured rate; a
 false REFUSAL is the safe direction and the feature's cost.
+
+v20 (the owner's word, 2026-09-13, on research's reading of the held-out failure):
+the grammar is POSITIVE-FORM. A marker list enumerates surface forms of a
+semantic property and lags a criterion permanently (the held-out draw's three
+"I'm thinking of" intentions were not in any list, including the rater's own
+rubric); so the gate now REQUIRES an explicit assertion of current repeated
+performance — an enumerated head shape with an ACTION verb at the head of the
+SPAN — and every form nobody enumerated fails CLOSED. The negative markers are
+kept as defence in depth; removing working code to make a point is not an
+improvement.
 """
 from __future__ import annotations
 
@@ -83,12 +93,80 @@ def _inside_open_quote(left: str) -> bool:
     return (straight % 2 == 1) or (curly_open > curly_close)
 
 
+# ------------------------------------------- V-ACTOR-PRESENT, v20: the POSITIVE form
+# The span must OPEN (after the optional lead clause) with one of THREE enumerated
+# head shapes, each ending in a lexical verb whose STEM is an ACTION head:
+#   PS   present simple            I [don't|do not|never|ADV] V        "I use it to…"
+#   PPC  present perfect continuous I've|I have been [ADV] V-ing         "I've been using…"
+#   PROG present progressive        I'm|I am [ADV] V-ing  + a FREQUENCY marker anywhere
+#                                                                      "I'm walking the dog every morning"
+# Anything else — a modal or auxiliary head ("I can", "I will", "I have a…", "I do
+# the dishes"), a bare progressive ("I'm building a deck": one ongoing activity),
+# a present perfect without "been" ("I've always run…"), a cognitive or
+# volitional head ("I'm thinking of…", "I've been trying to…", "I want to…") —
+# is NOT an explicit assertion of current repeated performance and FAILS CLOSED.
+# The head verb is the SPAN's head, never a later clause's (research: clause-any
+# reopens the complement construction "I'm thinking of dedicating a day each
+# week…", the form that defeated v19). The excluded verb class is matched by
+# CLASS through the same symmetric stem the grounding uses, so every inflection
+# of "think" meets "think".
+_ADV = r"(?:always|usually|typically|often|regularly|routinely|generally|normally|habitually|never|rarely|sometimes|mostly|frequently|occasionally)"
+_PS = re.compile(r"^" + _LEAD + r"I\s+(?:(?:don't|do not|never|" + _ADV + r")\s+)?([A-Za-z]+)\b", re.I)
+_PPC = re.compile(r"^" + _LEAD + r"I(?:'ve|\s+have)\s+been\s+(?:" + _ADV + r"\s+)?([A-Za-z]+ing)\b", re.I)
+_PROG = re.compile(r"^" + _LEAD + r"I(?:'m|\s+am)\s+(?:" + _ADV + r"\s+)?([A-Za-z]+ing)\b", re.I)
+_FREQ = re.compile(r"\b(?:every \w+|each \w+|daily|weekly|monthly|nightly|hourly|twice a|once a|three times a|always|usually|regularly|routinely|often|whenever|"
+                   r"on (?:mon|tues|wednes|thurs|fri|satur|sun)days|(?:most |all |some )?(?:mornings|afternoons|evenings|nights|weekends|weekdays))\b", re.I)
+# Modals and auxiliaries can head a sentence but never assert a performed action.
+_AUX = {"am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did",
+        "can", "could", "will", "would", "shall", "should", "may", "might", "must", "ought", "ll", "d"}
+# Cognitive / volitional heads: the class, excluded by class (each entry stemmed
+# at import so the comparison is stem-to-stem).
+_COGNITIVE_WORDS = ("think", "mean", "hope", "plan", "consider", "want", "intend", "wish", "try", "aim",
+                    "like", "love", "prefer", "need", "feel", "believe", "guess", "suppose", "wonder",
+                    "decide", "figure", "imagine", "dream", "expect", "assume", "reckon", "contemplate",
+                    "toy", "debate", "ponder", "muse",
+                    "thought", "felt", "meant", "dreamt")   # irregular pasts of the class, which no stem reaches
+
+
+def _head_verb(span: str):
+    """The span-head lexical verb under one of the three enumerated shapes, or
+    None. PROG requires a frequency marker somewhere in the span."""
+    m = _PPC.match(span)
+    if m:
+        return m.group(1)
+    m = _PROG.match(span)
+    if m:
+        return m.group(1) if _FREQ.search(span) else None
+    m = _PS.match(span)
+    if m:
+        v = m.group(1)
+        if v.lower().endswith("ing"):            # "I running" is no shape; "I'm" was PROG
+            return None
+        return v
+    return None
+
+
+def positive_form(span: str) -> bool:
+    """v20: True only when the span opens with an enumerated head shape whose
+    head verb is a lexical ACTION verb — not an auxiliary or modal, not in the
+    cognitive/volitional class."""
+    v = _head_verb(norm_ws(span))
+    if v is None:
+        return False
+    low = v.lower()
+    if low in _AUX:
+        return False
+    return _stem(low) not in _COGNITIVE
+
+
 def actor_present(span: str, event_text: Optional[str] = None, left_window: int = 120) -> bool:
     """The grammar. `span` is the (normalised) quoted span; when `event_text`
     is given the span's LEFT CONTEXT in the event is checked for a quotation
     or attribution frame (research §2: containment is not position)."""
     s = norm_ws(span)
     if not s or not _HEAD.match(s) or _MARKERS.search(s) or _PAST_VERB.match(s):
+        return False
+    if not positive_form(s):                  # v20: fail CLOSED on every unenumerated form
         return False
     if event_text is not None:
         ev = norm_ws(event_text)
@@ -128,6 +206,9 @@ def _stem(tok: str) -> str:
     if len(t) >= 4 and t.endswith("e"):                             # delete/merge -> delet/merg
         t = t[:-1]
     return t
+
+
+_COGNITIVE = frozenset(_stem(w) for w in _COGNITIVE_WORDS)
 
 
 def tokens(text: str) -> list:

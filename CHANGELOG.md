@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- **Procedural capture: the actor-present gate is now POSITIVE-FORM** (specs/0037 v20; the owner's
+  word, 2026-09-13, on research's reading of the held-out failure recorded under v19). A capture is
+  admitted only when the quoted span opens with an explicit assertion of the user's current,
+  repeated performance: present simple ("I use it to…", "I don't eat meat", "I always run…"),
+  present perfect continuous ("I've been using…"), or present progressive with a frequency
+  marker ("I'm walking the dog every morning"), with an action verb at the head — not a modal or
+  auxiliary, not a cognitive or volitional verb (think, mean, hope, plan, consider, want, try, …).
+  Every form not enumerated is refused; the v19 markers stay as a second gate. Re-measured with
+  the thresholds fixed first: on the labelled 31, 8 of 9 routines admitted and 0 of 20 must-refuse
+  spans; on the 51, 0 of 45 (the three "thinking of" intentions v19 admitted now refuse by
+  class) and both positives kept; on a third, HELD-OUT draw of 39 (sessions 201–300) with the
+  threshold stated before the run, 0 of 34 must-refuse spans admitted and 1 of 2 positives (the
+  miss predicted before the run: "I've been trying to…" is refused by class). Stated cost:
+  "I do the dishes every night" and "I've always run the linter" are refused (a lexical "do", a
+  present perfect without "been") — zero occurrences in 121 labelled spans, so unmeasured here.
+  Caveat on every recall figure: 11 of the 13 clean positives across three draws are
+  present-perfect-continuous, and that may be the probe's distribution rather than users';
+  recall on present-simple habituals is essentially unmeasured. EXPECT FEW CAPTURES, as before
+  (~13 clean routines in 300 sessions); `record_procedure` remains the explicit path.
 - **Procedural capture: the gates the external return and research's red team demanded; a
   render defeat on 0.24.0 closed** (specs/0037 v19, specs/0038 v6.2; the amendments review
   package, round 1, returned 2026-09-13). On 0.24.0 a captured procedure could be CORRECTED
@@ -23,8 +42,8 @@
   frozen before labelling, 3 of 45 must-refuse spans admitted, all intentions phrased "I'm
   thinking of", a form the aspiration lexicon does not carry — left as measured, not patched
   after the score. Whether to extend the lexicon or require a positive assertion of current
-  performance is the owner's open decision. EXPECT FEW CAPTURES: the corpus shows ~11 clean
-  user-stated routines per 200 sessions, before a gate that must refuse aspirations. Also: the `mcp` extra
+  performance was the owner's decision (v20, above). EXPECT FEW CAPTURES: the corpus shows ~13
+  clean user-stated routines per 300 sessions, before a gate that must refuse aspirations. Also: the `mcp` extra
   is bounded to `<2` (2.x broke the server import in the reviewer's environment). **Hosts on
   0.24.0 that capture procedures should upgrade**; an erratum on 0.24.0's notes is the owner's
   call.

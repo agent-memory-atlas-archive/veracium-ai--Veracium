@@ -395,13 +395,95 @@ def test_a_gloss_that_keeps_the_negation_and_the_condition_is_admitted(tmp_path,
     mem.close()
 
 
+
+def test_the_grammar_against_the_third_draw_meets_the_held_out_threshold_as_predicted():
+    """Draw 3 — sessions 201-300, disjoint from both prior draws, labelled by
+    research against the rubric frozen before draw 2, HELD unrevised and unsent
+    until dev reported the v20 run done (research had read the v20 design,
+    including the excluded verb list, before labelling — stated). The one
+    genuinely HELD-OUT measurement of v20. Threshold stated in the ledger before
+    the run: zero admissions among the 34 distinct non-borderline must-refuse
+    spans; no recall threshold (two positives); research's prediction registered
+    before the run: #20 ("I've been trying to post at least 5-7 tweets per day",
+    a clean positive by the rubric's criterion) refuses BY CLASS, so recall 1 of
+    2. MEASURED: 0 of 34 — MET; 1 of 2 exactly as predicted; borderlines #21
+    refused, #23 admitted, #38 refused. Asserted exactly so drift is visible."""
+    from veracium.procedural_gate import actor_present
+    rows = [_json.loads(l) for l in (ROOT / "tests" / "eval" / "extraction_speech_act" / "draw3_39_labelled.jsonl").read_text().splitlines() if l.strip()]
+    assert len(rows) == 39 and len({r["quote"] for r in rows}) == 39
+    must = [r for r in rows if r["expected"] != "pass" and not r.get("borderline")]
+    assert len(must) == 34
+    assert sorted(r["n"] for r in must if actor_present(r["quote"])) == []             # the held-out threshold, met
+    positives = {r["n"]: actor_present(r["quote"]) for r in rows if r["expected"] == "pass"}
+    assert positives == {20: False, 22: True}                                          # 1 of 2, the miss predicted before the run
+    assert "trying" in next(r["quote"] for r in rows if r["n"] == 20)                   # ...and refused by CLASS
+    borderlines = {r["n"]: actor_present(r["quote"]) for r in rows if r.get("borderline")}
+    assert borderlines == {21: False, 23: True, 38: False}
+
+# ============================================ v20: the POSITIVE form (the owner's word, Option B)
+@pytest.mark.parametrize("span", [
+    "I'm thinking of using a combination of washes and drybrushing",          # the held-out class: cognitive head, progressive
+    "I've been thinking about pruning my rose bush",                           # cognitive head, present perfect continuous
+    "I've been contemplating a move to the coast",                             # the CLASS, not the surface form: no marker names it
+    "I'm thinking of dedicating a specific day each week to doing laundry",    # SPAN HEAD decides: the action verb is a complement
+    "I can run the linter before merging",                                     # modal head
+    "I will run the linter before merging",                                    # modal head
+    "I have a routine of running the linter",                                  # auxiliary/possession head
+    "I'm building a deck",                                                     # bare progressive: one ongoing activity
+    "I've always run the linter before merging",                               # present perfect without "been": not enumerated
+    "I do the dishes every night",                                             # the stated COST: a lexical "do" head is refused
+])
+def test_the_positive_form_refuses_every_unenumerated_head(span):
+    """v20: the gate admits ONLY an explicit assertion of current repeated
+    performance — an enumerated head shape with an ACTION head. Everything
+    else fails CLOSED, including forms no list names (the third case) and the
+    complement construction (the fourth), and including the honest cost (the
+    last: "do" cannot be told from its auxiliary use by form, so it is refused)."""
+    from veracium.procedural_gate import actor_present, positive_form
+    assert not positive_form(span), span
+    assert not actor_present(span), span
+
+
+@pytest.mark.parametrize("span", [
+    "I use it to play music, set reminders, and make hands-free calls",       # present simple (the cleanest positive of the first draw)
+    "I've been using a plant tracking app to keep track of my watering schedule",  # present perfect continuous, no frequency marker
+    "I've been misting my fern every other day",                               # present perfect continuous + frequency
+    "I'm walking the dog every morning",                                       # progressive + frequency marker
+    "I don't eat meat",                                                        # a stated abstention is a routine
+    "I never merge when the linter fails",
+    "When the build is red, I usually rerun it",                               # lead clause, adverb
+])
+def test_the_positive_form_admits_the_enumerated_shapes_with_an_action_head(span):
+    from veracium.procedural_gate import actor_present, positive_form
+    assert positive_form(span), span
+    assert actor_present(span), span
+
+
+def test_the_positive_form_is_a_second_gate_not_a_replacement_of_the_markers():
+    """Defence in depth: a span that passes the positive form but carries a
+    negative marker still refuses (the markers were kept, not deleted), and
+    the excluded class is matched by STEM, so an inflection no list spelled out
+    meets its class."""
+    from veracium.procedural_gate import actor_present, positive_form, _stem, _COGNITIVE
+    assert positive_form("I run the linter, Marcus told me")            # positive form alone would admit
+    assert not actor_present("I run the linter, Marcus told me")        # the report marker still refuses
+    for w in ("thinks", "thinking", "thought", "considers", "considering", "hopes", "hoping", "tries", "trying", "plans", "planning"):
+        assert _stem(w) in _COGNITIVE, w
+
+
 def test_the_grammar_against_the_labelled_ablation_quotes_meets_the_threshold_fixed_beforehand():
     """The false-negative DENOMINATOR (not a held-out set: the designer has read
     these; a held-out set is a fresh labelled draw, research's to make). Research's
     labels over the ablation's 31 quotes: 9 clean user routines expected to pass,
     22 expected to refuse (17 assistant instructions, 2 one-time actions, 1
     intention, 2 borderlines). THRESHOLD FIXED BEFORE MEASURING and recorded in the
-    ledger: at least 7 of the 9 admitted; 0 of the 22 admitted."""
+    ledger: at least 7 of the 9 admitted; 0 of the 20 non-borderline admitted (v19
+    wrote "0 of the 22", counting the two borderlines the rule reports without a
+    threshold — research's correction, 2026-09-13). v20 re-measured under the
+    positive form with the same thresholds fixed first: identical figures, and
+    the one miss (#20) is now refused BY CLASS ("I've been trying" — a volitional
+    head), as research predicted before the run, where v19 refused it by the
+    "trying to" marker; 8/9 is the ceiling under a span-head grammar."""
     from veracium.procedural_gate import actor_present
     rows = [_json.loads(l) for l in (ROOT / "tests" / "eval" / "extraction_speech_act" / "ablation_31_labelled.jsonl").read_text().splitlines() if l.strip()]
     assert len(rows) == 31
@@ -421,10 +503,10 @@ def test_the_grammar_against_the_labelled_ablation_quotes_meets_the_threshold_fi
     assert false_admits <= borderline, sorted(false_admits)
     assert false_admits == borderline, "the residual moved: re-measure and restate the spec's figure"
     assert len(admitted & expected_pass) >= 7, sorted(expected_pass - admitted)      # the recall floor, met
-    assert (expected_pass - admitted) == {20}, sorted(expected_pass - admitted)      # the one false negative: "trying to" is an aspiration marker
+    assert (expected_pass - admitted) == {20}, sorted(expected_pass - admitted)      # the one false negative: a volitional head ("trying"), refused by class
 
 
-def test_the_grammar_against_the_held_out_draw_records_the_failed_threshold():
+def test_the_grammar_against_the_held_out_draw_meets_the_threshold_under_the_positive_form():
     """Research's HELD-OUT draw (sessions 101-200, disjoint; rubric frozen before a
     quote was read; one non-blind rater, no second labelling, no inter-rater
     ceiling): 51 quotes, 49 distinct spans; 45 distinct non-borderline must-refuse
@@ -432,13 +514,19 @@ def test_the_grammar_against_the_held_out_draw_records_the_failed_threshold():
     positives, 2 borderlines. THRESHOLD FIXED BEFORE THE LABELS ARRIVED and
     recorded in the ledger: zero admissions among the 45; no recall threshold
     (two positives cannot measure one); the borderlines reported, not
-    thresholded. MEASURED: the threshold is FAILED — three of the 45 are
+    thresholded. MEASURED AT v19: the threshold FAILED — three of the 45 were
     admitted, all one class, intentions phrased "I'm thinking of …" / "I've
-    been thinking about …", a surface form the aspiration lexicon does not
-    carry. By the rule stated before measuring, no marker is added to close an
-    observed case; the class is named in the spec and the extension is queued
-    for a fresh draw. This test asserts the outcome exactly so any drift, in
-    either direction, is a visible change."""
+    been thinking about …", a surface form no marker list carried (not even
+    the rater's rubric); no marker was added to close them. v20 (the owner's
+    word, Option B): the grammar is POSITIVE-FORM — an enumerated head shape
+    with an ACTION head, the cognitive class excluded by stem — so those three
+    refuse by CLASS, not by a new entry. Re-measured with the thresholds fixed
+    and recorded before the run (0 of 45; the two positives as a REGRESSION
+    GUARD, not a recall rate): MET. This draw is no longer held-out for v20
+    (research's cost note named its positives; the design has seen them) — a
+    regression measurement; the third draw is the held-out one. This test
+    asserts the outcome exactly so any drift, in either direction, is a
+    visible change."""
     from veracium.procedural_gate import actor_present
     rows = [_json.loads(l) for l in (ROOT / "tests" / "eval" / "extraction_speech_act" / "heldout_51_labelled.jsonl").read_text().splitlines() if l.strip()]
     assert len(rows) == 51
@@ -448,10 +536,10 @@ def test_the_grammar_against_the_held_out_draw_records_the_failed_threshold():
     must = [r for r in distinct.values() if r["expected"] != "pass" and not r.get("borderline")]
     assert len(distinct) == 49 and len(must) == 45
     admitted = sorted(r["n"] for r in must if actor_present(r["quote"]))
-    assert admitted == [1, 5, 13], admitted                                        # the failed threshold, as measured
-    assert all(r["label"] == "user_intention" for r in must if r["n"] in admitted)   # one class
-    assert all("thinking" in r["quote"] for r in must if r["n"] in admitted)        # one surface form
+    assert admitted == [], admitted                                                # v20: 0 of 45 — the v19 three (#1, #5, #13) refuse by class
+    thinking = {r["n"] for r in must if "thinking" in r["quote"]}
+    assert thinking == {1, 5, 13} and not (thinking & set(admitted))                # the class v19 could not name, refused without an entry for it
     positives = {r["n"]: actor_present(r["quote"]) for r in rows if r["expected"] == "pass"}
-    assert positives == {10: True, 11: True}                                       # descriptive, not a threshold
+    assert positives == {10: True, 11: True}                                       # the regression guard (two positives are not a rate), held
     borderlines = {r["n"]: actor_present(r["quote"]) for r in rows if r.get("borderline")}
     assert borderlines == {12: True, 31: False}

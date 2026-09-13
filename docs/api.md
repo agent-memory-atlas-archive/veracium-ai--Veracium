@@ -140,8 +140,11 @@ extractor may emit a `follows_procedure` triple carrying `quote`, the verbatim s
 user states a routine of their own. Ingest admits it only through ordered, refuse-only gates:
 the author is the user; the quote is a whitespace-normalised substring of the event text; the
 summary meets `record_procedure`'s contract (normalised, at most 512 characters); the span opens
-with the user as the actor in the present or habitual, with no report, rejection, aspect,
-norm, request, aspiration, one-time or past marker and no quotation frame to its left; and the
+with the user asserting a current, repeated performance of their own — present simple, present
+perfect continuous, or present progressive with a frequency marker, with an action verb at the
+head (not a modal, an auxiliary, or a cognitive/volitional verb such as "thinking of") — carries
+no report, rejection, aspect, norm, request, aspiration, one-time or past marker, and has no
+quotation frame to its left; every form not enumerated is refused; and the
 summary describes the span (every content word contained, in order clause by clause, negations
 and conditions kept). Any failure is counted in the result's `procedural_refused` and nothing
 is written; a capture counts in `procedures`. A captured procedure stores NO copy of the quoted

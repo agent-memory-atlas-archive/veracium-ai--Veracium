@@ -582,15 +582,18 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: store's successor guard, correct()'s refusal) moved dotted/dataflow
 #: 5,744 -> 5,790, module-plain 291 -> 302 (`re.compile`/`re.I`/`re.split`/
 #: `re.findall` in the new module) and module-machinery 19 -> 20, the rest
-#: unchanged.
+#: unchanged; 0037 v20 (2026-09-13: the positive-form head in
+#: `procedural_gate` — three head regexes, the frequency regex, the class set)
+#: moved dotted/dataflow 5,790 -> 5,800 and module-plain 302 -> 310
+#: (`re.compile`/`re.I` for the new patterns), the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5790,
+    "dotted/dataflow": 5800,
     "dotted/module-machinery": 20,
-    "dotted/module-plain": 302,
+    "dotted/module-plain": 310,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6193
+SRC_ATTRIBUTE_TOTAL = 6211
 SRC_DATA_DUNDERS_IN_DATAFLOW = 123
 
 

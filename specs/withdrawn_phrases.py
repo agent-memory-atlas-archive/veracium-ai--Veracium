@@ -491,4 +491,11 @@ WITHDRAWN = [
      "producer, 'upgrading changes no extractor outcome' — are withdrawn with the design they "
      "described; the reviewer found each still stated as live text.",
      "specs/0037 §2 rows, §4a-iii, §4b, §8, §6; specs/0038 §2b, §6"),
+    ("0037-v19-negative-marker-grammar",
+     r"an optional auxiliary \(\"I've\", \"I'm\", \"I have\", \"I am\"\), optional \"been\", an optional frequency adverb, a word|the extension of the aspiration class to that form is queued|records_the_failed_threshold",
+     "0037 v20 (the owner's word, 2026-09-13): V-ACTOR-PRESENT is POSITIVE-FORM — three enumerated "
+     "head shapes with an action head, every unenumerated form failing closed; the v19 head "
+     "description ('an optional auxiliary … a word'), the queued lexicon extension and the "
+     "held-out test's 'records_the_failed_threshold' name describe the withdrawn design.",
+     "specs/0037 §4a-iii Gate 3, §6 V-ACTOR-PRESENT; tests/test_0037_capture.py"),
 ]
