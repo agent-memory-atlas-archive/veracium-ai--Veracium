@@ -1,5 +1,7 @@
 # 0039 answer-shape transcript — DEV's instrument (specs/evidence/0039/answer_shapes.py)
-# generated 2026-09-12 against veracium @ b003c7f4da01a030cb05ad677a4ec5178376caf1
+# generated 2026-09-12 against veracium @ 9b121c275e3b19c894c25cfd36ce6041c93da5c6
+# RE-PINNED 2026-09-13 after 0027 v13 (the policy receipt: graph.py's Stage 4-5 helper and receipt_out, recall's
+# policy parameter; these answers pass no policy): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-13 after the v21 doc sweep (procedural_gate.py docstrings only): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-13 after 0037 v21 (ingest derives a captured procedure's gloss; the grammar's new refusals; no
 # procedural triple in these answers): body BYTE-IDENTICAL again.
