@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Recall's policy lane can no longer decide what is protected or what is a member** (specs/0027
+  v12; the owner's word, 2026-09-13, on research's A1-replay round-4 findings). With `policy_rank`
+  passed to `fused_subgraph`, the I6 assertable reserve is now taken from the UNADJUSTED fused order
+  (a promoted record can no longer enter the protected slice), Stage-3 membership among duplicate
+  semantic-only candidates is decided on the unadjusted order, and the coverage tail judges
+  day-novelty against the unadjusted head — so one promotion displaces at most one record (the
+  head's marginal one) instead of two. With no policy passed, nothing changes: the two orders are
+  one list. No shipped policy exists; hosts passing their own `policy_rank` see the reserve and
+  the coverage tail stop moving under it.
 - **Procedural capture: the actor-present gate is now POSITIVE-FORM** (specs/0037 v20; the owner's
   word, 2026-09-13, on research's reading of the held-out failure recorded under v19). A capture is
   admitted only when the quoted span opens with an explicit assertion of the user's current,

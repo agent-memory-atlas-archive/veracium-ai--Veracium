@@ -199,23 +199,120 @@ def test_the_policy_lane_is_inert_when_absent_and_bounded_per_lane():
 
 
 def test_a_policy_promotion_displaces_only_the_record_at_the_budget_boundary():
-    """The marginal-record property (research's census: 1,309 of 1,309
-    displacing configurations displaced exactly the last record kept): under
-    truncation, promoting one record that was not already returned removes
-    exactly the previous last record and nothing else — every other member and
-    its relative order survive. The policy makes the recall drop record 40
-    instead of 41; it never reaches into the middle."""
+    """The marginal-record property, as v12 states it (v11's version said "the
+    previous LAST record", from a census whose fixture had one distinct
+    valid_from, so the coverage tail never ran — research's R4-1 instrument
+    finding): under truncation, promoting one record that was not already
+    returned removes exactly ONE record — the pure-rank HEAD's marginal record —
+    and nothing else; the coverage tail's pick survives because novelty is
+    judged against the BASELINE head's days (v12), and every other member keeps
+    its relative order. Here: reserve x00,x01; head x02..x06; tail x07 (day 7,
+    novel). The promotion evicts x06 and leaves x07 in place."""
     edges, scored, relevant, by_id, max_edges = _lexical_fixture()
     target = _edge("pol", "user", "enjoys", "harbor walks", days=30)
     scored = scored + [(0.0, 0, target)]             # bottom of the lexical lane, not returned today
     by_id["pol"] = target
     base, _ = fused_subgraph(scored, relevant, by_id, [], max_edges=max_edges)
     base_ids = [e.id for e in base]
-    assert len(base_ids) == max_edges and "pol" not in base_ids, base_ids   # truncates; target not returned
+    assert base_ids == ["x00", "x01", "x02", "x03", "x04", "x05", "x06", "x07"], base_ids
+    assert "pol" not in base_ids
     out, _ = fused_subgraph(scored, relevant, by_id, [], max_edges=max_edges, policy_rank={"pol": 1})
     got = [e.id for e in out]
     displaced = [i for i in base_ids if i not in got]
-    assert displaced == [base_ids[-1]], f"displaced {displaced}, expected only the boundary record {base_ids[-1]!r}"
+    assert displaced == ["x06"], f"displaced {displaced}, expected only the head's marginal record 'x06'"
     kept = [i for i in got if i != "pol"]
-    assert kept == base_ids[:-1], "a surviving record moved relative to the others"
+    assert kept == [i for i in base_ids if i != "x06"], "a surviving record moved relative to the others"
 
+
+# ------------------------------------------------ v12: the owner's R4-2 / R4-1 rulings ----
+# "Confirm R4-2; R4-1 too" (the dev session, 2026-09-13; R4-2 first relayed as
+# "Option 1 is my decision"). Written RED against v11's code before the change
+# that satisfies them, research's order: the property must be seen to fail.
+
+def _eligible_promotion_fixture():
+    """The reviewer's R4-2 case: the promoted record is ELIGIBLE for the reserve
+    (assertable, lexically relevant — it carries query overlap) and ranked
+    beneath every distractor, so a policy promotion can only reach the reserve
+    by reordering. Research's first fixture gave the target rank 1 already and
+    produced a null in 256/256 configurations; here it is last."""
+    edges, scored, relevant, by_id, max_edges = _lexical_fixture()
+    target = _edge("tgt", "user", "likes", "boat topic tgt", days=40)
+    scored = scored + [(0.1, 1, target)]              # relevant (overlap 1), lowest lexical score
+    relevant = relevant | {"tgt"}
+    by_id["tgt"] = target
+    return scored, relevant, by_id, max_edges
+
+
+def test_the_reserve_is_identical_with_the_policy_lane_present_and_absent():
+    """R4-2 (v12): the I6 reserve is computed on the UNADJUSTED fused order. The
+    v11 ruling kept the policy out of the reserve's MEMBERSHIP set (rel_ext) but
+    the reserved SLICE was a prefix of the policy-adjusted order, so an eligible
+    record promoted to rank 1 took a protected slot. The property the owner
+    bought: with the policy lane active, the reserved set is IDENTICAL to the
+    reserved set with policy_rank absent — the policy may reorder what is
+    returned and may not decide which records are protected from the budget."""
+    scored, relevant, by_id, max_edges = _eligible_promotion_fixture()
+    n = _reserve_size(max_edges)
+    base, _ = fused_subgraph(scored, relevant, by_id, [], max_edges=max_edges)
+    out, _ = fused_subgraph(scored, relevant, by_id, [], max_edges=max_edges, policy_rank={"tgt": 1})
+    base_reserve = [e.id for e in base[:n]]
+    pol_reserve = [e.id for e in out[:n]]
+    assert "tgt" not in base_reserve
+    assert pol_reserve == base_reserve, f"the protected slice moved under the policy: {pol_reserve} != {base_reserve}"
+    assert "tgt" in [e.id for e in out]              # the promotion still admits the record — through the remainder
+
+
+def _coverage_fixture():
+    """R4-1's mechanism, at the unit seam: two reserved records (days 0, 1), a
+    five-record relevance head (days 2, 3, 4, 5, 5 — the boundary record shares
+    its day with its neighbour), a coverage tail of one (day 6 novel), one more
+    candidate (day 7), and a promoted record OUTSIDE the relevance set whose day
+    equals the tail pick's (6). max_edges=8, share=0.25: reserve 2, then
+    _cover(rest, 6, 0.25) = head 5 + tail 1. Under v11 the promotion evicts the
+    boundary record AND makes day 6 look covered, so the tail re-picks day 7:
+    TWO departures from one promotion (the reviewer's finding, reproduced by
+    research in 46 of 3,402 configurations)."""
+    days = {"x00": 0, "x01": 1, "r1": 2, "r2": 3, "r3": 4, "r4": 5, "r5": 5, "t": 6, "u": 7}
+    edges = [_edge(k, "user", "likes", f"boat topic {k}", days=d) for k, d in days.items()]
+    scored = [(10 - i * 0.1, 1, e) for i, e in enumerate(edges)]
+    relevant = {e.id for e in edges}
+    by_id = {e.id: e for e in edges}
+    p = _edge("p", "user", "enjoys", "harbor walks", days=6)      # not relevant: overlap 0, outside rel_ext
+    scored.append((0.0, 0, p)); by_id["p"] = p
+    return scored, relevant, by_id, 8
+
+
+def test_a_policy_promotion_displaces_at_most_one_record_even_across_the_coverage_tail():
+    """R4-1 (v12, research's construction B): `_cover` judges day-novelty against
+    the days the BASELINE head covered, never the adjusted head's, so a promotion
+    can enter through the pure-rank head and evict its marginal record, and
+    cannot redefine which periods look uncovered. Bound: ONE departure per
+    promotion; the promoted record is still admitted (research measured B at
+    0 of 2,560 configurations displacing more than one, 2,092 of 2,092
+    admissions kept)."""
+    scored, relevant, by_id, max_edges = _coverage_fixture()
+    base, _ = fused_subgraph(scored, relevant, by_id, [], max_edges=max_edges)
+    base_ids = [e.id for e in base]
+    assert base_ids == ["x00", "x01", "r1", "r2", "r3", "r4", "r5", "t"], base_ids   # head 5 + the day-6 tail pick
+    out, _ = fused_subgraph(scored, relevant, by_id, [], max_edges=max_edges, policy_rank={"p": 1})
+    got = [e.id for e in out]
+    assert "p" in got, got
+    displaced = [i for i in base_ids if i not in got]
+    assert len(displaced) <= 1, f"one promotion displaced {displaced}"
+    assert displaced == ["r5"], displaced                       # the head's marginal record, and only it
+
+
+def test_stage_3_membership_never_depends_on_the_policy_order():
+    """A probe, not a ruling: Stage 3 adds semantic-only candidates in fused
+    order and suppresses a pure duplicate of an already-kept edge, so two
+    mutually-duplicate semantic-only records are decided by ORDER. If the policy
+    order decided which of the pair survives, membership would be the policy's,
+    against v11's own sentence. Asserted so the answer is measured."""
+    edges, scored, relevant, by_id, max_edges = _lexical_fixture(n=4, max_edges=8)
+    d1 = _edge("d1", "user", "visits", "the harbor cafe", days=20)
+    d2 = _edge("d2", "user", "visits", "the harbor cafe", days=21)
+    by_id.update({"d1": d1, "d2": d2})
+    sm = [("d1", 0.9), ("d2", 0.8)]
+    base, _ = fused_subgraph(scored, relevant, by_id, sm, max_edges=max_edges)
+    out, _ = fused_subgraph(scored, relevant, by_id, sm, max_edges=max_edges, policy_rank={"d2": 1})
+    assert {e.id for e in out} == {e.id for e in base}, (sorted(e.id for e in out), sorted(e.id for e in base))

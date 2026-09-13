@@ -863,19 +863,28 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
     # recency tiebreak, then id for full determinism. fused_rank is recorded
     # HERE and is immutable thereafter (Stage 5 permutes position only).
     fused_score: dict[str, float] = {}
+    base_score: dict[str, float] = {}     # v12: the UNADJUSTED order — no policy term
     for eid in set(lx_rank) | set(sm_rank):
         f = 0.0
         if eid in lx_rank:
             f += 1.0 / (RRF_K + lx_rank[eid])
         if eid in sm_rank:
             f += 1.0 / (RRF_K + sm_rank[eid])
+        base_score[eid] = f
         if eid in pl_rank:
             f += 1.0 / (RRF_K + pl_rank[eid])       # the policy lane: fused_score only
         fused_score[eid] = f
-    fused_ids = sorted(fused_score, key=lambda i: (
-        -fused_score[i], -by_id[i].provenance.observed_at.timestamp(), i))
+    def _order(score):
+        return sorted(score, key=lambda i: (-score[i], -by_id[i].provenance.observed_at.timestamp(), i))
+    fused_ids = _order(fused_score)
     fused_order = [by_id[i] for i in fused_ids]
     fused_rank = {eid: i + 1 for i, eid in enumerate(fused_ids)}
+    # v12 (the owner's rulings R4-2 and R4-1, 2026-09-13): Stage 3 MEMBERSHIP and
+    # the Stage 4 RESERVE and coverage-novelty are computed on the BASELINE
+    # order, so a learned adjustment reorders what is RETURNED and never decides
+    # what is PROTECTED or what is a MEMBER. With no policy the two orders are
+    # one list (V10 holds by identity).
+    base_order = [by_id[i] for i in _order(base_score)]
     # the EXTENDED relevance set: a semantic hit counts as relevance for the
     # I6 reserve, not just eligibility (§4a Stage 2). The policy lane is NOT
     # here, by the owner's ruling (v11): a learned adjustment never decides
@@ -887,28 +896,39 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
     survivors, _info = collapse_for_render(lx_edges)
     kept = {e.id for e in survivors}
     kept_edges = list(survivors)
-    for e in fused_order:
-        if e.id in lx_ids:
-            continue                       # lexical membership already decided
+    for e in base_order:                   # v12: membership walks the BASELINE order —
+        if e.id in lx_ids:                 # which of two mutual duplicates survives is
+            continue                       # lexical membership already decided; never the policy's
         if any(semantic_duplicate_of(e, k) for k in kept_edges):
             continue                       # a pure duplicate of a kept edge
         kept_edges.append(e)
         kept.add(e.id)
-    stage3 = [e for e in fused_order if e.id in kept]
+    stage3 = [e for e in fused_order if e.id in kept]       # the ADJUSTED order: what is returned
+    stage3_base = [e for e in base_order if e.id in kept]   # the BASELINE order: what is protected
 
-    # Stage 4 — the SINGLE I6 reserve, byte-for-byte today's construction over
-    # the fused order and the extended relevance set.
+    # Stage 4 — the SINGLE I6 reserve over the extended relevance set, taken in
+    # the BASELINE order (v12, R4-2: the protected slice is a prefix of an
+    # ordering the policy never wrote); the remainder's pure-rank HEAD is filled
+    # from the ADJUSTED order (the policy's one channel), and the coverage TAIL
+    # judges day-novelty against the days the BASELINE head covered (v12, R4-1,
+    # research's construction B) — so one promotion evicts at most the head's
+    # marginal record and cannot redefine which periods look uncovered.
     is_assertable = assertable if assertable is not None else _asserted_today
     if len(stage3) <= max_edges:
         ordered = stage3
     else:
-        assertable = [e for e in stage3 if is_assertable(e) and e.id in rel_ext]
+        assertable = [e for e in stage3_base if is_assertable(e) and e.id in rel_ext]
         reserve_n = min(len(assertable), -(-max_edges // 4))
         reserved = assertable[:reserve_n]
         rid = {e.id for e in reserved}
+        budget = max_edges - len(reserved)
+        rest_base = [e for e in stage3_base if e.id not in rid]
+        head_n = budget - int(budget * coverage_share)
+        head_days = {e.valid_from.date() for e in rest_base[:head_n]}
         rest_pairs = [(0, e) for e in stage3 if e.id not in rid]
-        rest = _cover(rest_pairs, max_edges - len(reserved), coverage_share,
-                      seed_days={e.valid_from.date() for e in reserved})
+        rest = _cover(rest_pairs, budget, coverage_share,
+                      seed_days={e.valid_from.date() for e in reserved},
+                      head_days=head_days)
         rest_ids = {e.id for e in rest}
         ordered = reserved + [e for e in stage3 if e.id in rest_ids]
 
@@ -930,7 +950,8 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
 
 
 def _cover(scored: list[tuple[int, Edge]], max_edges: int,
-           coverage_share: float, seed_days: set | None = None) -> list[Edge]:
+           coverage_share: float, seed_days: set | None = None,
+           head_days: set | None = None) -> list[Edge]:
     """Fill most of the budget by pure relevance, reserve the tail for time
     coverage.
 
@@ -969,8 +990,13 @@ def _cover(scored: list[tuple[int, Edge]], max_edges: int,
     reserve = int(max_edges * coverage_share)
     head, tail = max_edges - reserve, []
     chosen = [e for _, e in scored[:head]]
-    # specs/0001 I6 (candidate): reserved records count as covered days
-    seen_days = {e.valid_from.date() for e in chosen} | (seed_days or set())
+    # specs/0001 I6 (candidate): reserved records count as covered days.
+    # specs/0027 v12 (R4-1): when the caller passes `head_days` — the days the
+    # BASELINE head covered — novelty is judged against THOSE, not against the
+    # head actually chosen from an adjusted order; with no adjustment the two
+    # sets are the same set.
+    covered = set(head_days) if head_days is not None else {e.valid_from.date() for e in chosen}
+    seen_days = covered | (seed_days or set())
     rest = scored[head:]
     # first pass: highest-scoring candidate from each period not yet present
     for _, e in rest:

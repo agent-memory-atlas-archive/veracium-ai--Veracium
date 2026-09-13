@@ -585,15 +585,17 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: unchanged; 0037 v20 (2026-09-13: the positive-form head in
 #: `procedural_gate` — three head regexes, the frequency regex, the class set)
 #: moved dotted/dataflow 5,790 -> 5,800 and module-plain 302 -> 310
-#: (`re.compile`/`re.I` for the new patterns), the rest unchanged.
+#: (`re.compile`/`re.I` for the new patterns), the rest unchanged; 0027 v12
+#: (2026-09-13: graph.py's baseline order — `e.id`/`e.valid_from` reads in
+#: Stage 3/4) moved dotted/dataflow 5,800 -> 5,804, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5800,
+    "dotted/dataflow": 5804,
     "dotted/module-machinery": 20,
     "dotted/module-plain": 310,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6211
+SRC_ATTRIBUTE_TOTAL = 6215
 SRC_DATA_DUNDERS_IN_DATAFLOW = 123
 
 
