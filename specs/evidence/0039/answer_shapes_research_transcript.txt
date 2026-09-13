@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ e291638
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ b21bbb4
+# RE-PINNED 2026-09-13 after 0037 v20 (procedural_gate's positive form; no procedural triple here): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-13 after 0037 v19 / 0038 v6.2 (ingest's capture gates, correct(), the store guard; no procedural triple here): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-13 after 0037 v18 (the describe attribution; ingest untouched): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-12 after 0006 v9 / 0037 v17 (procedures, mcp_server; ingest untouched): body BYTE-IDENTICAL again.
