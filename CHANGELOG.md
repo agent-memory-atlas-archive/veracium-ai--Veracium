@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- **Procedural capture: the gates the external return and research's red team demanded; a
+  render defeat on 0.24.0 closed** (specs/0037 v19, specs/0038 v6.2; the amendments review
+  package, round 1, returned 2026-09-13). On 0.24.0 a captured procedure could be CORRECTED
+  (`correct()`), and the successor lost the procedural stamp while keeping the note that held
+  the verbatim quote — so the quote rendered into recall context after one host action. Now
+  `correct()` on a procedural record refuses with the named reason `correction_of_procedure`
+  (retire it and restate the procedure), the store refuses any successor that would drop the
+  markers, and a captured procedure stores NO copy of the quoted span at all (its note is
+  empty; the span is verified and discarded). Capture itself is gated in order: the event's
+  author is the user; the quote is a verbatim span; the summary meets the same contract as
+  `record_procedure` (normalised, at most 512 characters); the span opens with the user as the
+  actor in the present or habitual and carries no report, rejection, aspect, norm, request,
+  aspiration, one-time or past marker, with no quotation frame to its left; and the summary
+  describes the span (contained, in order, negation and conditions kept). Any failure is
+  refused and counted in `procedural_refused`. The residual is MEASURED in the spec with the
+  thresholds fixed before the runs, and one threshold FAILED: on research's labelled 31
+  (designed-from), recall 8/9 and the two borderlines admitted — a span grammar cannot tell a
+  single ongoing project from a repeating practice; on a held-out draw of 51 with the rubric
+  frozen before labelling, 3 of 45 must-refuse spans admitted, all intentions phrased "I'm
+  thinking of", a form the aspiration lexicon does not carry — left as measured, not patched
+  after the score. Whether to extend the lexicon or require a positive assertion of current
+  performance is the owner's open decision. EXPECT FEW CAPTURES: the corpus shows ~11 clean
+  user-stated routines per 200 sessions, before a gate that must refuse aspirations. Also: the `mcp` extra
+  is bounded to `<2` (2.x broke the server import in the reviewer's environment). **Hosts on
+  0.24.0 that capture procedures should upgrade**; an erratum on 0.24.0's notes is the owner's
+  call.
 - **`describe_procedures` no longer says "you said you follow"** (specs/0037 v18; the owner's word,
   2026-09-13, on research's pre-dispatch read of the amendments review package). The 0.24.0
   quote gate proves that a routine's words appeared in the user's own message — not who the

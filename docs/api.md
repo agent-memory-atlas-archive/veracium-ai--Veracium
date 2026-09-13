@@ -135,6 +135,19 @@ mem.record_procedure("alice", "Credentials are rotated quarterly.",
                      note="step 1: … (never rendered)")
 ```
 
+**Procedures captured from `remember` (specs/0037 v16–v19).** On a user-authored event the
+extractor may emit a `follows_procedure` triple carrying `quote`, the verbatim span in which the
+user states a routine of their own. Ingest admits it only through ordered, refuse-only gates:
+the author is the user; the quote is a whitespace-normalised substring of the event text; the
+summary meets `record_procedure`'s contract (normalised, at most 512 characters); the span opens
+with the user as the actor in the present or habitual, with no report, rejection, aspect,
+norm, request, aspiration, one-time or past marker and no quotation frame to its left; and the
+summary describes the span (every content word contained, in order clause by clause, negations
+and conditions kept). Any failure is counted in the result's `procedural_refused` and nothing
+is written; a capture counts in `procedures`. A captured procedure stores NO copy of the quoted
+span (its note is empty) and derives `basis="stated"`. The measured residual is stated in the
+spec: a span grammar cannot tell a single ongoing project from a repeating practice.
+
 ### `describe_procedures(user_id, *, query=None, principal=None, limit=None) -> DescribeResult`
 
 Describe the user's recorded procedures. Every visible procedural record is
@@ -426,6 +439,13 @@ accumulation).
 
 Outcome tracking — *did conclusions built on memory survive contact with
 reality?* Engine-written surfaces (never MCP tools):
+
+**A procedural record is not corrected** (specs/0037 v19): `correct()` on an edge that
+carries the procedural stamp refuses with `ProcedureValueError` (`correction_of_procedure`)
+and writes nothing — a correction's successor would carry the host's text under the user's
+`stated` basis. Retire the record and restate the procedure through `record_procedure`, or
+let the user state it again. The store also refuses any successor of a procedural record
+that would drop the procedural markers, on every path.
 
 - **`record_outcome`** judges a **use** of a fact. Outcomes:
   `unreviewed` (used, no judgment — the default; most stay here) ·

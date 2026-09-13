@@ -295,11 +295,11 @@ def test_the_two_producers_are_exactly_the_host_surface_and_the_quote_gated_extr
         "forget_user": "erasure",
     }
     assert set(EDGE_WRITE_SITE_RULINGS) == set(classified)
-    def _stamps(path):                       # a CALL passing record_kind="procedural" (not prose)
-        tree = ast.parse(path.read_text())
-        return any(isinstance(n, ast.Call) and any(
-            k.arg == "record_kind" and isinstance(k.value, ast.Constant) and k.value.value == "procedural"
-            for k in n.keywords) for n in ast.walk(tree))
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("tests_support_0037", ROOT / "tests" / "tests_support_0037.py")
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    def _stamps(path):                       # a CALL passing record_kind="procedural" (not prose); the v19 helper
+        return mod.stamp_forms(path)["literal"]
     stampers = sorted(p.relative_to(SRC).as_posix() for p in SRC.rglob("*.py") if _stamps(p))
     assert stampers == ["ingest.py", "procedures.py"], stampers
     assert "--basis" not in (SRC / "cli.py").read_text() and "basis" not in (SRC / "cli.py").read_text()
@@ -997,3 +997,21 @@ def test_the_named_cells_hold(tmp_path):
         "restore_both_absence_dimensions": test_restore_round_trips_procedural_records_with_basis,
     }
     assert set(named) == set(covered), set(named) ^ set(covered)
+
+
+def test_the_producer_sweep_refuses_non_literal_stamp_forms(tmp_path):
+    """Round-1 package note: the two-producer sweep recognised only a literal
+    `record_kind="procedural"` keyword, so a variable or dict-expanded stamp
+    would have escaped it. The sweep now REFUSES those forms wherever they
+    appear in src — a non-literal `record_kind=` keyword, a `Provenance(**x)`
+    call, or a dict literal carrying a "record_kind" key — and this test plants
+    each form in a throwaway file to prove the detector fires."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("tests_support_0037", ROOT / "tests" / "tests_support_0037.py")
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    for f in sorted(SRC.rglob("*.py")):
+        assert mod.stamp_forms(f)["suspicious"] == [], (f.name, mod.stamp_forms(f)["suspicious"])
+    planted = tmp_path / "planted.py"
+    planted.write_text("kind = 'procedural'\nProvenance(record_kind=kind)\nProvenance(**d)\nx = {'record_kind': 'procedural'}\n")
+    got = mod.stamp_forms(planted)["suspicious"]
+    assert len(got) == 3 and got[0].endswith("record_kind=<non-literal>") and "Provenance(**...)" in got[1] and "dict literal" in got[2], got

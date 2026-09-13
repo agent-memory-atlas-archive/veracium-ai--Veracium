@@ -24,7 +24,7 @@ Issues = "https://github.com/veracium-ai/Veracium/issues"
 # Optional extras add a reference LLM provider and the MCP server.
 [project.optional-dependencies]
 anthropic = ["anthropic>=0.40"]
-mcp = ["mcp>=1.0"]
+mcp = ["mcp>=1.0,<2"]   # the server imports FastMCP's 1.x surface; 2.x broke it (amendments round 1)
 dev = ["pytest>=8", "pytest-randomly>=3"]
 
 [project.scripts]

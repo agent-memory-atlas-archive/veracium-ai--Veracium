@@ -40,11 +40,7 @@ def _instruction_key(text: str) -> str:
     return " ".join(str(text).casefold().split()).strip(" \t\r\n.,;:!?\"'`“”‘’()[]{}")
 
 
-def _norm_ws(text) -> str:
-    """specs/0037 v16 §4a-iii: inner-whitespace collapse ONLY — the quote check
-    tolerates line wrapping and nothing else (no casefold, no punctuation strip:
-    verbatim means verbatim)."""
-    return " ".join(str(text).split())
+from .procedural_gate import check_capture as _check_capture, norm_ws as _norm_ws   # specs/0037 v19 §4a-iii
 
 
 def _uid(prefix: str) -> str:
@@ -498,13 +494,22 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
         procedural = is_procedural_relation(reg, original)
         quote = None
         if procedural:
-            q = t.get("quote")
-            q_n = _norm_ws(q) if isinstance(q, str) else ""
-            if not (q_n and q_n in _norm_ws(event_text)
-                    and author == EvidenceAuthor.USER):
+            # specs/0037 v19 §4a-iii, the gates IN THE SPEC'S ORDER over one normalised
+            # string: the event's author is the user; the quote is a verbatim span of
+            # the event; the gloss meets the summary contract shared with
+            # record_procedure; the span opens with the user as the actor in the
+            # present/habitual with no report/rejection/aspect/norm/request/aspiration
+            # marker and no quotation frame to its left (V-ACTOR-PRESENT); the gloss
+            # describes the span — contained, in order, negation and subordinators
+            # kept (V-GLOSS-GROUNDED). Any failure: refused and counted, never filed.
+            from .procedures import MAX_SUMMARY_CHARS
+            ok, _reason, g_n, q_n = (False, "author", None, None) if author != EvidenceAuthor.USER else \
+                _check_capture(t.get("object", ""), t.get("quote"), event_text, max_summary_chars=MAX_SUMMARY_CHARS)
+            if not ok:
                 n_procedural_refused += 1
                 continue
-            quote = str(q).strip()
+            quote = q_n
+            t = dict(t, object=g_n)          # the normalised gloss is what is stored
         # V-THIRD-PARTY-UNTOUCHED: a `third_party_claim` is a RECEIPT record
         # (0001/0023 — "received an unverified notice that …"), never a speech
         # act attributed to the user; refusing one because the extractor also
@@ -724,7 +729,13 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
         # no record, no floor, byte-identical edge (V2/V7).
         note_str = str(t.get("note", "")).strip()
         if row.get("procedural"):
-            note_str = row["quote"]          # specs/0037 v16 §4a-iii: the verified span, never rendered
+            # specs/0037 v19 §4a-iii (research's red team, 2026-09-13): the verified span
+            # is NOT stored — `note` is the one field every non-procedural record renders,
+            # and a successor that dropped the stamp rendered it; a digest of the span
+            # would be a confirmation oracle (0040 §4's content-digest carrier). The span
+            # is verified and DISCARDED; the record's evidence is the event's own
+            # evidence_ref, and no stored field holds the payload, by construction.
+            note_str = ""
         # the FLOOR first (restrict-only: MENTIONABLE -> USE_ONLY, never
         # raise), keyed on whether a restricting match exists; then THE
         # one derivation site builds the record from the FINAL

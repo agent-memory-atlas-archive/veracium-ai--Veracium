@@ -44,7 +44,7 @@ from .ingest import _event_dt, ingest_event
 from .llm.base import Complete, Embed
 from .authority import edge_effective as _edge_effective
 from .graph import _value_key as _value_key
-from .schema import (CONFIRMATION_RULE_VERSION, ConfirmationActor,
+from .schema import (CONFIRMATION_RULE_VERSION, ConfirmationActor, is_procedural,
                      ConfirmationCallPath, ContestedGroup, ContestedLinkage,
                      Disclosure, Edge,
                      Episode, EvidenceAuthor, EvidenceContext,
@@ -1790,6 +1790,18 @@ class Memory:
             # as ingest and import — a correction updates the VALUE,
             # never launders the relay out of the note
             from . import agreement as _agreement
+            # specs/0037 v19 (V-NO-CORRECTION-OF-PROCEDURES; research's red team): a
+            # correction mints a successor whose OBJECT is the host's text, so
+            # inheriting the stamp would attribute that text to the user, and
+            # dropping it rendered the record. Neither is honest: a procedural
+            # record is not corrected — it is retired and restated through the
+            # producer that can attest it (record_procedure, or the user again).
+            if is_procedural(edge):
+                from .procedures import ProcedureValueError
+                raise ProcedureValueError(
+                    "correction_of_procedure",
+                    f"edge {edge_id!r} is a procedural record; correct() does not mint a successor for one "
+                    "(specs/0037 §4a-iii, V-NO-CORRECTION-OF-PROCEDURES) — retire it and restate the procedure")
             _disc = Disclosure.MENTIONABLE
             if _agreement.relay_markers(edge.note, corrected_value):
                 _disc = Disclosure.USE_ONLY

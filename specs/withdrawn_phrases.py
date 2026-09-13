@@ -481,4 +481,14 @@ WITHDRAWN = [
      "The §1 rejected-alternatives bullet keeps the v1 sentence as HISTORY, immediately "
      "followed by the v16 reversal note, which the first alternative's lookahead exempts.",
      "specs/0037 §1, §4a, §4a-iii, §4b, §6, §8; specs/0038 §1a, §2b, Spec-Requires"),
+    ("0037-v18-capture-claims",
+     r"the ONLY producer of procedural records|(?-i:upgrading changes no extractor outcome)|the verified quote \(the field describe never renders\)|`note` = the verified quote|whose quote VERIFIED — keyed on the relation's KIND|is written iff its `quote` verifies verbatim against the event text on a user-authored event, else refused and counted",
+     "0037 v19 / 0038 v6.2 (the amendments round-1 RETURN, 2026-09-13): the capture path has "
+     "ORDERED gates (author, substring, summary contract, actor-present grammar, grounding), the "
+     "span is verified and DISCARDED (never in note), record_procedure is the host-declared "
+     "producer of two, and 0038's exemption reaches only a carrier that passed every gate. The "
+     "v16/v18 forms — a quote that 'verified' as the whole test, the quote in note, the sole "
+     "producer, 'upgrading changes no extractor outcome' — are withdrawn with the design they "
+     "described; the reviewer found each still stated as live text.",
+     "specs/0037 §2 rows, §4a-iii, §4b, §8, §6; specs/0038 §2b, §6"),
 ]

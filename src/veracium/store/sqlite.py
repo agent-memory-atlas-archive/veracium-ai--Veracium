@@ -461,6 +461,22 @@ class SqliteStore(Store):
                     f"{edge.provenance.record_kind!r}) on edge {edge.id!r} — a stored "
                     f"procedural marker is immutable in both directions "
                     f"(specs/0037 §3, V-BASIS-IMMUTABLE)")
+        # specs/0037 v19 (V-STAMP-INHERITED; research's red team, 2026-09-13): a
+        # SUCCESSOR of a procedural record must itself be procedural. correct()
+        # minted one without the stamp and the note rendered; correct() now refuses
+        # a procedural prior, and this choke point refuses any path that would
+        # drop the markers across a `supersedes` link — keyed on the PERSISTED
+        # predecessor's own stamp/basis, never on the registry.
+        if edge.supersedes:
+            pred = self._conn.execute("SELECT json FROM edges WHERE id=?", (edge.supersedes,)).fetchone()
+            if pred is not None:
+                pp = (json.loads(pred[0]).get("provenance") or {})
+                if (pp.get("record_kind") == "procedural" or pp.get("basis") is not None) and not (
+                        edge.provenance.record_kind == "procedural" or edge.provenance.basis is not None):
+                    raise ValueError(
+                        f"edge {edge.id!r} would supersede procedural record {edge.supersedes!r} without the "
+                        f"procedural markers — a successor of a procedural record is procedural "
+                        f"(specs/0037 §4a-iii, V-STAMP-INHERITED); nothing written")
         new_json = edge.model_dump_json()
         self._conn.execute(
             "INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "

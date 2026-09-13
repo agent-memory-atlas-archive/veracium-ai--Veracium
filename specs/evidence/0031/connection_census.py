@@ -577,15 +577,20 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 289 -> 291 (`re.compile`, `re.I` for the screen), the rest unchanged; 0006
 #: v9 / 0037 v17 (2026-09-12: the procedure path's source-id refusal reads
 #: `context.derived_from`, the author and the config flag) moved
-#: dotted/dataflow 5,739 -> 5,744, the rest unchanged.
+#: dotted/dataflow 5,739 -> 5,744, the rest unchanged; 0037 v19 (2026-09-13: the
+#: `procedural_gate` module's regex/list/dict reads, ingest's gate call, the
+#: store's successor guard, correct()'s refusal) moved dotted/dataflow
+#: 5,744 -> 5,790, module-plain 291 -> 302 (`re.compile`/`re.I`/`re.split`/
+#: `re.findall` in the new module) and module-machinery 19 -> 20, the rest
+#: unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5744,
-    "dotted/module-machinery": 19,
-    "dotted/module-plain": 291,
+    "dotted/dataflow": 5790,
+    "dotted/module-machinery": 20,
+    "dotted/module-plain": 302,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6135
+SRC_ATTRIBUTE_TOTAL = 6193
 SRC_DATA_DUNDERS_IN_DATAFLOW = 123
 
 
