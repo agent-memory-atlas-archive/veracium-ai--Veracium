@@ -56,7 +56,12 @@ def test_disabled_and_noninteractive_never_sends():
     assert sent == []
 
 
-def test_advance_permission_sends_redacted_payload():
+def test_advance_permission_sends_redacted_payload(monkeypatch):
+    # the fake sender is installed BEFORE reporting is enabled: with reporting on,
+    # `record_error` may auto-send through `_post` before the explicit `send(poster=)`
+    # below (the round-6 reviewer's run blocked this test's outbound request; the
+    # round-5 repair had fixed the neighbouring test only)
+    monkeypatch.setattr(D, "_post", lambda url, payload: None)
     cfg = D.set_report_enabled(True, endpoint="https://example/report")
     r = D.Reporter(cfg)
     r.record_error("remember", _boom("secret bob@corp.com"))

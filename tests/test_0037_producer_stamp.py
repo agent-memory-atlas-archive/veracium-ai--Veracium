@@ -459,3 +459,47 @@ def test_inheritance_is_checked_against_an_existing_destination_predecessor_on_b
     assert rep3["edges"] == 1 and rep3["procedural_refused"] == 0
     assert {e.id for e in dst.store.edges(U, active_only=False)} == {"e-pred", "e-decl", "e-decl-2"}
     dst.close()
+
+
+# ------------------------------ v24.2 (round-6 finding 2): the lookup sees REFUSED predecessors
+@pytest.mark.parametrize("order", ["predecessor first", "successors first"])
+def test_the_default_path_keeps_a_refused_predecessor_for_its_successors_inheritance(tmp_path, order):
+    """The round-6 reviewer: on the default path a procedural predecessor was refused
+    (as procedural) and its marker-stripped declarative successor imported, reaching
+    model context as `use_only` — the inheritance lookup was built from the records
+    that SURVIVED the procedural filter. Now the lookup is built from the RAW records
+    before any refusal, procedural-ness is by LINEAGE (a chain that drops the markers
+    one hop later is refused one hop later too), and the result is the same in either
+    file order: nothing of the lineage imports, each successor refused and counted."""
+    src = Memory(llm=_quiet, config=_cfg(tmp_path, "src.db"))
+    src.store.add_edge(_proc_edge("Rotate keys.", "e-pred", "host"))
+    src.store.add_edge(_proc_edge("Rotate keys monthly.", "e-succ", "host", supersedes="e-pred"))
+    src.store.add_edge(_proc_edge("Rotate keys yearly.", "e-succ2", "host", supersedes="e-succ"))
+    header, recs = _file_from(src, tmp_path / "e.jsonl")
+    src.close()
+    for r in recs:
+        if r["id"] in ("e-succ", "e-succ2"):                 # the markers stripped, the relation declarative
+            r["provenance"].pop("record_kind"); r["provenance"].pop("basis"); r["provenance"].pop("producer")
+            r["relation"] = "located_at"
+    if order == "successors first":
+        recs = list(reversed(recs))
+    f = tmp_path / f"chain-{order}.jsonl"
+    _write_lines(f, header, recs)
+    dst = Memory(llm=_quiet, config=_cfg(tmp_path, f"dst-{order}.db"))
+    rep = dst.import_memory(str(f))
+    assert [e.id for e in dst.store.edges(U, active_only=False)] == []
+    got = {x["id"]: (x["refusal"], x["signal"]) for x in rep["procedural_refusals"]}
+    assert got == {"e-pred": ("procedural_import_refused", "stamp"),
+                   "e-succ": ("inheritance_violation", "stamp"),
+                   "e-succ2": ("inheritance_violation", "stamp")}, got
+    assert rep["procedural_refused"] == 3
+    # the control: a declarative lineage imports whole on the default path
+    ok = Memory(llm=_quiet, config=_cfg(tmp_path, f"ok-{order}.db"))
+    ok.store.add_edge(_edge("Porto", relation="located_at", eid="d-1"))
+    ok.store.add_edge(_edge("Lisbon", relation="located_at", eid="d-2", supersedes="d-1"))
+    header2, recs2 = _file_from(ok, tmp_path / "decl.jsonl")
+    ok.close()
+    dst2 = Memory(llm=_quiet, config=_cfg(tmp_path, f"dst2-{order}.db"))
+    rep2 = dst2.import_memory(str(tmp_path / "decl.jsonl"))
+    assert rep2["edges"] == 2 and rep2["procedural_refused"] == 0
+    dst2.close()

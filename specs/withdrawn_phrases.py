@@ -510,6 +510,11 @@ WITHDRAWN = [
      "0037 v22 (the amendments round-3 RETURN, 2026-09-13): the stored gloss IS the normalised span with NO "
      "transformation; v21's relative-clause cut removed a mid-sentence clause and the condition after it.",
      "specs/0037 §4a-iii Gate 4; docs/api.md; CHANGELOG"),
+    ("0037-v24.2-chunks-not-positions",
+     r"about half of sentence positions|about half the sentence positions|54% of sentence positions|53\.6% of sentence positions|\(53\.6%\) carry\s+two or more, where it is not — sentence POSITIONS",
+     "0037 v24.2 (the amendments round-6 RETURN, 2026-09-14): 53.6% is the fraction of CHUNKS holding more than one "
+     "sentence; those chunks contain 76.3% of sentence positions; neither is a capture-loss figure.",
+     "specs/0037 §8; docs/api.md; CHANGELOG (an erratum under 0.25.0)"),
     ("0037-v24.1-list-and-live-reading",
      r"listed abbreviation|vowel-less short token|the abbreviation list carries|live reading that something wrote past|a user turn that ends in a question to the assistant still yields its routine sentence|the first of two sentences that start like sentences|a routine before a question to the assistant, and a sentence in the middle of a paragraph admit",
      "0037 v24.1 / 0038 v6.6 (the amendments round-5 RETURN, 2026-09-14; the owner's word \"Fail closed\"): no list "

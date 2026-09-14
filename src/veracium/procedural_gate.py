@@ -404,25 +404,27 @@ def boundary_kind(text: str, i: int) -> str:
                   start."""
     j = _run_end(text, i)
     run_terms = text[i:j].rstrip(_CLOSERS)
-    if "?" in run_terms:
-        return "question"
     if run_terms.count(".") >= 2:
         return "ambiguous"
     if (text[i] == "." and len(run_terms) == 1 and i + 1 < len(text) and text[i + 1].isdigit()
             and i > 0 and text[i - 1].isdigit()):
         return "inside"
+    # v24.2 (round-6 finding 1): what FOLLOWS the run decides whether it establishes
+    # the next start, whatever the run's marks — the question branch used to return
+    # before looking ("Any tips?I review…" admitted; the `!` form refused)
     if j >= len(text):
-        return "boundary"
-    if "." in run_terms:
-        return "ambiguous"                        # v24.1: a mid-text period establishes nothing
-    if not text[j].isspace():
-        return "ambiguous"
-    while j < len(text) and text[j].isspace():
-        j += 1
-    if j >= len(text):
-        return "boundary"
-    c = text[j]
-    return "boundary" if (c.isupper() or c.isdigit() or c in _OPENERS) else "ambiguous"
+        established = True
+    elif "." in run_terms or not text[j].isspace():
+        established = False                       # a mid-text period establishes nothing; no separator, no start
+    else:
+        k = j
+        while k < len(text) and text[k].isspace():
+            k += 1
+        c = text[k] if k < len(text) else ""
+        established = (k >= len(text)) or c.isupper() or c.isdigit() or c in _OPENERS
+    if "?" in run_terms:
+        return "question" if established else "ambiguous"
+    return "boundary" if established else "ambiguous"
 
 
 def sentence_segments(text: str):
@@ -435,7 +437,16 @@ def sentence_segments(text: str):
     context and is not a valid start — `whole_sentence` reads `start_kind`.
     `start` skips leading whitespace."""
     segs, start, start_kind, i, n = [], 0, "sot", 0, len(text)
-    while i < n:
+    depth = 0                                     # v24.2 (round-6 finding 1): a terminator INSIDE an
+    while i < n:                                  # enclosing parenthetical/bracket is inside its sentence
+        ch = text[i]                              # — "(ready?)" ends nothing; the run is skipped
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth = max(0, depth - 1)
+        if ch in _TERMINAL and depth > 0:
+            i += 1
+            continue
         if text[i] in _TERMINAL and (i == 0 or text[i - 1] not in _TERMINAL):
             kind = boundary_kind(text, i)
             if kind == "inside":

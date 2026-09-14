@@ -147,9 +147,11 @@ closed): the start or end of the user's turn, or a `?`/`!` followed by a sentenc
 boundary; a decimal point is inside a sentence; a sentence ending in `?` is a question and
 refused; a mid-text period establishes nothing — it may end a sentence or an abbreviation ("in
 env. Prod only after approval") and no list can tell — so a routine sentence before or after a
-period-terminated neighbour is declined (the stated cost: about half the sentence positions in
-real turns; extractor capture reaches a routine stated as the whole turn or separated by `?`/`!`,
-and `record_procedure` remains the explicit path); a fragment lifted from inside "Imagine I
+period-terminated neighbour is declined (the stated cost, specs/0037 §8: 53.6% of `?`/`!`-delimited
+chunks in real turns hold more than one sentence and those chunks contain 76.3% of sentence
+positions — neither a capture-loss figure; the held-out draw captured 0 of 6 positive rows —
+so extractor capture reaches a routine stated as the whole turn or separated by `?`/`!`, and
+`record_procedure` remains the explicit path; a parenthetical's punctuation ends nothing); a fragment lifted from inside "Imagine I
 always review invoices" or after "e.g." is refused, and so are two sentences; the
 summary meets `record_procedure`'s contract (normalised, at most 512 characters); the span opens
 with the user asserting a current, repeated performance of their own — present simple, present

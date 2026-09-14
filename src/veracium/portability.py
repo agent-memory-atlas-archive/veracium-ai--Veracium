@@ -348,6 +348,42 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
     reg = relations if relations is not None else DEFAULT_RELATIONS
     procedural_refusals: list = []
     admitted: list = []
+    # specs/0037 v24.2 (round-6 finding 2): the inheritance lookup is built from the
+    # RAW records BEFORE any refusal, so a predecessor refused as procedural on the
+    # default path keeps constraining its successors — refusing a predecessor must
+    # not erase its successors' requirements. Also the destination's existing
+    # records, so the lookup is independent of file order and of what is already
+    # stored. Procedural-ness is by LINEAGE: a record whose predecessor is
+    # procedural by lineage is procedural whatever markers it carries (a chain
+    # that drops the markers one hop later is the same laundering, one hop later).
+    raw_by_id = {rec.get("id"): rec for rec in edge_recs}
+    existing_by_id = {e.id: e for e in store.edges(target_uid, active_only=False,
+                                                    include_quarantined=True)}
+    _lineage: dict = {}
+
+    def _raw_markers(rec):
+        prov = rec.get("provenance") if isinstance(rec.get("provenance"), dict) else {}
+        return (prov.get("record_kind") == "procedural" or prov.get("basis") is not None,
+                prov.get("producer"))
+
+    def procedural_by_lineage(rid, _seen=()):
+        if rid in _lineage:
+            return _lineage[rid]
+        if rid in _seen:                                   # a cycle: fail closed
+            return True
+        if rid in raw_by_id:
+            own, _ = _raw_markers(raw_by_id[rid])
+            pred = raw_by_id[rid].get("supersedes")
+        elif rid in existing_by_id:
+            e = existing_by_id[rid]
+            own, pred = e.provenance.procedural, e.supersedes
+        else:
+            _lineage[rid] = False
+            return False
+        result = own or (pred is not None and procedural_by_lineage(pred, _seen + (rid,)))
+        _lineage[rid] = result
+        return result
+
     for rec in edge_recs:
         prov = rec.get("provenance")
         prov = prov if isinstance(prov, dict) else {}
@@ -405,22 +441,18 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
     # The predecessor is looked up by id among the incoming records OR the
     # destination's existing records, so the check is independent of file
     # order; a violating successor is refused PER RECORD and counted.
-    incoming = {rec.get("id"): rec for rec in edge_recs}
-    existing_by_id = {e.id: e for e in store.edges(target_uid, active_only=False,
-                                                    include_quarantined=True)}
     kept: list = []
     for rec in edge_recs:
         sid = rec.get("supersedes")
         if sid is None:
             kept.append(rec)
             continue
-        if sid in incoming:
-            pp = incoming[sid].get("provenance") or {}
-            pred_proc = pp.get("record_kind") == "procedural" or pp.get("basis") is not None
-            pred_producer = pp.get("producer")
+        if sid in raw_by_id:                                     # RAW, whether or not it was refused above
+            pred_proc = procedural_by_lineage(sid)
+            _, pred_producer = _raw_markers(raw_by_id[sid])
         elif sid in existing_by_id:
             pe = existing_by_id[sid].provenance
-            pred_proc, pred_producer = pe.procedural, pe.producer
+            pred_proc, pred_producer = procedural_by_lineage(sid), pe.producer
         else:
             kept.append(rec)                                     # no predecessor to inherit from
             continue

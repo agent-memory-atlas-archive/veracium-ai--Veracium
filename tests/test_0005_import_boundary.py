@@ -664,6 +664,10 @@ _CALLSITE_DISPOSITIONS = {
      "test_restore_applies_the_inheritance_rules_the_store_applies_to_a_write"): "restore",
     ("test_0037_producer_stamp.py",
      "test_inheritance_is_checked_against_an_existing_destination_predecessor_on_both_paths"): "both",
+    # specs/0037 v24.2 (round-6 finding 2): the DEFAULT path's lookup sees a refused
+    # procedural predecessor, so its marker-stripped successors are refused by lineage
+    ("test_0037_producer_stamp.py",
+     "test_the_default_path_keeps_a_refused_predecessor_for_its_successors_inheritance"): "default",
     # specs/0026 V6a: the accepted import decision table driven over
     # BOTH modes deliberately — default-recompute (forged discarded,
     # counted) and restore (verbatim-valid, foreign-opaque,

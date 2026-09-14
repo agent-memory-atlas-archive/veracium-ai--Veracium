@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- **Procedural capture: a parenthetical's punctuation ends nothing, a `?` establishes the next
+  start only with a separator, and the import boundary's inheritance check sees refused
+  predecessors; the capture-cost figures relabelled** (specs/0037 v24.2, specs/0038 v6.7; the
+  amendments review package, round 6, returned 2026-09-14). "For illustration only (ready?) I
+  review invoices daily." stored the last sentence with its framing stripped — a terminator
+  inside an enclosing parenthetical or bracket is now inside its sentence; "Any tips?I review
+  invoices daily." admitted while the `!` form refused — a run now establishes the next start
+  only by what follows it, whatever marks it carries. On the default import path a procedural
+  predecessor refused as procedural no longer erases its marker-stripped successor's
+  requirement: the inheritance lookup is built from the raw records before any refusal,
+  procedural-ness is read by lineage, and a chain that drops the markers one hop later is
+  refused one hop later too, in either file order. The 0.25.0 notes said the fail-closed
+  contract costs "about half of sentence positions"; that was the fraction of chunks holding
+  more than one sentence (53.6%, 1,809 of 3,372) — those chunks contain 76.3% of sentence
+  positions (5,045 of 6,608), and neither is a capture-loss figure; the measured capture
+  result is the held-out draw's 0 of 6 positive rows. The counting script ships in the
+  evidence tree. Two fixture and wording cleanups the reviewer named.
+
 ## 0.25.0 — 2026-09-14
 
 **Upgrade recommendation — BREAKING on three narrow surfaces; every other host upgrades
@@ -33,6 +53,14 @@ rollback to 0.24.0 is safe for a store holding no producer-stamped record; a sto
 one still opens on 0.24.0 (its `Provenance` ignores the unknown key, so the stamp is read
 past and shed on any rewrite of that record — verified against the v0.24.0 tag), and its
 export is stamped format 12, which 0.24.0 refuses to import.
+
+**Erratum (2026-09-14, the round-6 review).** These notes say the fail-closed capture contract
+costs "about half of sentence positions in real turns", and the entry below repeats it. The
+53.6% was the fraction of `?`/`!`-delimited chunks holding more than one sentence (1,809 of
+3,372); those chunks contain 76.3% of sentence positions (5,045 of 6,608). Neither figure
+measures routine capture; the measured result is the held-out draw's 0 of 6 positive rows.
+The direction of the trade is unchanged — the corrected figure makes the contract more costly,
+not less — and the release's behaviour is exactly as described.
 
 - **Procedural capture: a boundary is established or the passage is declined — no abbreviation
   list; restore enforces the inheritance rules; the doctor claims nothing about why a producer

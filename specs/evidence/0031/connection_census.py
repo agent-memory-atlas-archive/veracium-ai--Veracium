@@ -609,15 +609,18 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: and its word scan removed, the start-kind read in `whole_sentence`; the
 #: import boundary's inheritance check reads `.provenance`, `.procedural`,
 #: `.producer` on existing records) moved dotted/dataflow 5,870 -> 5,885, the
-#: rest unchanged.
+#: rest unchanged; 0037 v24.2 (2026-09-14: the parenthetical depth in
+#: `sentence_segments`, the lineage lookup's `.supersedes`/`.provenance` reads
+#: on existing records) moved dotted/dataflow 5,885 -> 5,889, the rest
+#: unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5885,
+    "dotted/dataflow": 5889,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 309,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6294
+SRC_ATTRIBUTE_TOTAL = 6298
 SRC_DATA_DUNDERS_IN_DATAFLOW = 125   # 2026-09-14: +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)
 
 

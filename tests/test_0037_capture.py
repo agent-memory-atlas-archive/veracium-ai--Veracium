@@ -898,6 +898,13 @@ from veracium.procedural_gate import boundary_kind, sentence_segments, has_inter
     ("v24.1 the cost: a routine before a question to the assistant", "I review invoices every Monday. Can you recommend a tool?", "I review invoices every Monday."),
     ("v24.1 the cost: a sentence in the middle of a paragraph", "Thanks for the notes. I always run the linter before merging. Let me know.", "I always run the linter before merging"),
     ("v24.1 the cost: a short last word before another sentence (gym)", "I go to the gym. Then I shower.", "I go to the gym."),
+    ("R6-1 a `?` inside a parenthetical is not an outer boundary", "For illustration only (ready?) I review invoices daily.", "I review invoices daily."),
+    ("R6-1 a `!` inside a parenthetical is not an outer boundary", "For illustration only (ready!) I review invoices daily.", "I review invoices daily."),
+    ("R6-1 a `.` inside a parenthetical is not an outer boundary", "For illustration only (ready.) I review invoices daily.", "I review invoices daily."),
+    ("R6-1 a `?` with no separator establishes nothing (the `!` form already refused)", "Any tips?I review invoices daily.", "I review invoices daily."),
+    ("R6-1 the `!` form, no separator", "Any tips!I review invoices daily.", "I review invoices daily."),
+    ("R6-1 a bracketed question then the routine", "[Any tips?] I review invoices daily.", "I review invoices daily."),
+    ("R6-1 an unbalanced closer before the routine", "Any tips) I review invoices daily.", "I review invoices daily."),
     ("the epistemic siblings: deny", "I deny I review invoices daily.", "I deny I review invoices daily."),
     ("the epistemic siblings: suspect", "I suspect I review invoices daily.", "I suspect I review invoices daily."),
     ("the epistemic siblings: presume", "I presume I review invoices daily.", "I presume I review invoices daily."),
@@ -920,6 +927,9 @@ def test_the_round_4_boundary_and_head_cases_are_refused_end_to_end(tmp_path, ca
     ("research's control: `bet` is a routine sense, not added to the class", "I bet on horses every Saturday.", "I bet on horses every Saturday.", "I bet on horses every Saturday."),
     ("research's control: `question` is a routine sense, not added to the class", "I question every invoice over $500.", "I question every invoice over $500.", "I question every invoice over $500."),
     ("a whole single-sentence turn", "I go to the gym every Tuesday.", "I go to the gym every Tuesday.", "I go to the gym every Tuesday."),
+    ("R6-1 control: a parenthetical inside the routine is inside its sentence", "I review invoices (all of them) daily.", "I review invoices (all of them) daily.", "I review invoices (all of them) daily."),
+    ("R6-1 control: a parenthetical at the end of the turn", "I review invoices daily (really).", "I review invoices daily (really).", "I review invoices daily (really)."),
+    ("R6-1 control: a question with its separator still establishes the next start", "Any tips? I review invoices daily.", "I review invoices daily.", "I review invoices daily."),
 ])
 def test_the_round_4_controls_admit_and_store_the_sentence_as_written(tmp_path, case, text, quote, stored):
     n, refused, dropped, obj, attribution = _capture(tmp_path, text, "x", quote)
@@ -966,7 +976,15 @@ def test_the_boundary_kinds_are_total_and_fail_closed():
         ("Love this! then I review.", 9, "ambiguous"),                 # a `!` before a lowercase word
         ("Love this!- then", 9, "ambiguous"),                          # a symbol right after
         ("it doesn't drain.", 16, "boundary"),                         # a contraction before the final period
+        ("Any tips?I review daily.", 8, "ambiguous"),                  # v24.2: a `?` with no separator establishes nothing
+        ("Any tips? I review daily.", 8, "question"),                  # … with one, it does (the sentence it ends still refuses)
+        ("Any tips? i review daily.", 8, "ambiguous"),                 # … but not before a lowercase word
     ]
+    # v24.2 (round-6 finding 1): a terminator INSIDE an enclosing parenthetical or bracket
+    # is inside its sentence — the segments do not cut there
+    assert [seg[3] for seg in sentence_segments("For illustration only (ready?) I review invoices daily.")] == ["boundary"]
+    assert [seg[3] for seg in sentence_segments("[Any tips?] I review daily.")] == ["boundary"]
+    assert [seg[3] for seg in sentence_segments("I review (all of them) daily. Then I file.")] == ["ambiguous", "boundary"]
     for text, i, kind in rows:
         assert text[i] in ".!?", (text, i)
         assert boundary_kind(text, i) == kind, (text, i, boundary_kind(text, i))
