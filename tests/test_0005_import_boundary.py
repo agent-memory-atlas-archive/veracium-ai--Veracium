@@ -656,6 +656,14 @@ _CALLSITE_DISPOSITIONS = {
      "test_the_export_stamps_12_only_for_a_producer_bearing_store_and_old_readers_refuse"): "both",
     ("test_0037_producer_stamp.py",
      "test_a_producer_in_a_pre_12_envelope_is_stripped_and_a_raw_producer_is_a_refusal_signal"): "both",
+    # specs/0037 v24.1 §6 V-INHERITANCE-AT-IMPORT (round-5 finding 3): the restore
+    # path applies the store's inheritance rules before committing (both file orders),
+    # and the existing-predecessor test drives BOTH paths on purpose — restore for a
+    # mismatched producer, default for a declarative successor of a procedural record
+    ("test_0037_producer_stamp.py",
+     "test_restore_applies_the_inheritance_rules_the_store_applies_to_a_write"): "restore",
+    ("test_0037_producer_stamp.py",
+     "test_inheritance_is_checked_against_an_existing_destination_predecessor_on_both_paths"): "both",
     # specs/0026 V6a: the accepted import decision table driven over
     # BOTH modes deliberately — default-recompute (forged discarded,
     # counted) and restore (verbatim-valid, foreign-opaque,

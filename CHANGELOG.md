@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- **Procedural capture: a boundary is established or the passage is declined — no abbreviation
+  list; restore enforces the inheritance rules; the doctor claims nothing about why a producer
+  is unknown** (specs/0037 v24.1, specs/0038 v6.6; the amendments review package, round 5,
+  returned 2026-09-14; the owner's word "Fail closed"). v24's list-based rule let a passage start
+  after an ambiguous separator ("For illustration only, e.g. I review invoices daily." stored the
+  last sentence with its framing stripped) and let an abbreviation outside the list end one early
+  ("I review invoices in env. Prod only after approval." stored "I review invoices in env"); the
+  reviewer ruled that no list can establish the guarantee. Now a boundary is established only at
+  the start or end of the user's turn or at a `?`/`!` followed by a sentence start; a mid-text
+  period establishes nothing in either direction, and the abbreviation list is gone. THE COST,
+  stated: a routine sentence before or after a period-terminated neighbour is no longer
+  captured — about half of sentence positions in real turns (research: 1,809 of 3,372 chunks in
+  500 sessions carry two or more sentences); the held-out draw's two admissions fall to 0 of 4;
+  `record_procedure` remains the explicit path. Restore (and the default import) now apply the
+  store's inheritance rules before committing — a successor that drops the procedural markers or
+  names a different producer than its predecessor, in the file or already in the store, is
+  refused per record as `inheritance_violation` in either file order. `veracium doctor`'s
+  `procedural_unstamped` names every cause of an unknown producer (written before the stamp;
+  restored from an older export or a sub-12 envelope; written outside `Memory`) and no longer
+  claims a write past `Memory` on a new store. The event-aware labelling rubric v2 ships beside
+  v1 in the evidence tree with its digest.
 - **Procedural capture: sentence boundaries are read from the complete event as kinds, total
   and fail-closed; the claimed refusal of "I doubt I…" is real** (specs/0037 v24, specs/0038
   v6.5; the amendments review package, round 4, returned 2026-09-14). The v22 rule tested
@@ -32,9 +53,9 @@
   do. New `Provenance.producer` (`"host"` from `record_procedure`, `"extractor"` from the
   quote-gated capture) on every procedural record written from this release; absent on every
   declarative record (bytes unchanged) and on procedural records written earlier or written
-  through a path other than `Memory`, which `veracium doctor` reports as `procedural_unstamped`
-  (on a store created after this release, a non-zero count means something wrote past the
-  `Memory` boundary) beside the split it can now make —
+  through a path other than `Memory` — or restored from an older export or a sub-12 envelope,
+  where the field is stripped — which `veracium doctor` reports as `procedural_unstamped`
+  (the producer is unknown; the count does not say why) beside the split it can now make —
   `procedural_declared` and `procedural_captured` were one merged number before, and the
   check's own docstring called them declared. The stamp is immutable on a same-id replace and
   inherited across a supersession. Export format 11 → 12, stamped only when a producer-bearing

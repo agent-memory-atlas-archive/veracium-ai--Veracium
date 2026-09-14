@@ -70,9 +70,11 @@ def test_advance_permission_sends_redacted_payload():
 
 
 def test_auto_send_on_error_when_pre_authorized(monkeypatch):
-    D.set_report_enabled(True, endpoint="https://example/report")
+    # the fake sender is installed BEFORE reporting is enabled (the round-5 reviewer's
+    # environment saw an outbound request from the window between the two lines)
     sent = []
     monkeypatch.setattr(D, "_post", lambda url, payload: sent.append(payload))
+    D.set_report_enabled(True, endpoint="https://example/report")
     r = D.Reporter()                     # picks up the enabled config
     r.record_error("maintain", _boom("auto"))
     assert len(sent) == 1 and sent[0]["reason"] == "auto:maintain"

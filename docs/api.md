@@ -142,13 +142,15 @@ mem.record_procedure("alice", "Credentials are rotated quarterly.",
 extractor may emit a `follows_procedure` triple carrying `quote`, the verbatim span in which the
 user states a routine of their own. Ingest admits it only through ordered, refuse-only gates:
 the author is the user; the quote is a whitespace-normalised substring of the event text AND one
-whole sentence of it — its boundaries read from the complete event as kinds (specs/0037 v24): a
-terminator followed by whitespace and an uppercase letter, digit or opening quote is a boundary, a
-decimal point is inside a sentence, a sentence ending in `?` is a question and refused, and
-anything the rule cannot resolve (an ellipsis, an abbreviation before the period, two sentences
-with no space between them, a lowercase continuation) is an ambiguous join and refused — so a
-fragment lifted from inside "Imagine I always review invoices" is refused, a span that stops
-before its own `?` or at the `.` of `$100.50` is refused, and so are two sentences; the
+whole sentence of it whose boundaries are ESTABLISHED at both ends (specs/0037 v24.1, fail
+closed): the start or end of the user's turn, or a `?`/`!` followed by a sentence start, is a
+boundary; a decimal point is inside a sentence; a sentence ending in `?` is a question and
+refused; a mid-text period establishes nothing — it may end a sentence or an abbreviation ("in
+env. Prod only after approval") and no list can tell — so a routine sentence before or after a
+period-terminated neighbour is declined (the stated cost: about half the sentence positions in
+real turns; extractor capture reaches a routine stated as the whole turn or separated by `?`/`!`,
+and `record_procedure` remains the explicit path); a fragment lifted from inside "Imagine I
+always review invoices" or after "e.g." is refused, and so are two sentences; the
 summary meets `record_procedure`'s contract (normalised, at most 512 characters); the span opens
 with the user asserting a current, repeated performance of their own — present simple, present
 perfect continuous, or present progressive with a frequency marker, with an action verb at the
@@ -437,12 +439,12 @@ a third party is not checked, because the stored payload cannot tell a declared
 derivation from the default every undeclared ingest receives; the procedural
 tripwire — numbers never merged: `procedural_declared` (procedural records
 whose producer stamp is `host`), `procedural_captured` (producer `extractor`),
-`procedural_unstamped` (procedural records with no producer stamp: written
-before the stamp existed, or after it through a path other than `Memory` —
-specs/0037 v23 — declared and captured cannot be told apart there, and the
-doctor says so rather than guessing; on a store created after the stamp
-existed, a non-zero count is the live reading that something wrote past the
-`Memory` boundary) and `procedural_shaped`
+`procedural_unstamped` (procedural records with no producer stamp — the
+producer is unknown: written before the stamp existed, restored from an older
+export or from an envelope below format 12 where the field is stripped at
+import, or written through a path other than `Memory`; specs/0037 v24.1 —
+the count says the producer is unknown, not why, and declared and captured
+cannot be told apart there) and `procedural_shaped`
 (declarative records whose `note` matches research's census marker screen, a
 screen result and never a count of procedures; notes only, never `summary`;
 informational, it cannot fail the build) — there to notice an extractor that starts producing procedure-shaped

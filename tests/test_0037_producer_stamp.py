@@ -45,8 +45,8 @@ U = "u"
 NOW = utcnow()
 D = timedelta(days=1)
 PROC = "follows_procedure"
-TEXT = ("I run the formatter before committing, every time. "
-        "Unrelated: I like tea.")
+TEXT = ("Any tips for keeping a repo tidy? "                       # v24.1: the routine follows a `?` (an established boundary)
+        "I run the formatter before committing, every time.")
 QUOTE = "I run the formatter before committing, every time"
 
 
@@ -320,9 +320,9 @@ def test_a_producer_in_a_pre_12_envelope_is_stripped_and_a_raw_producer_is_a_ref
 def test_the_doctor_reports_declared_captured_and_unstamped_as_three_numbers_never_merged(tmp_path):
     mem = _capture(tmp_path, "d.db")                       # one captured
     pid = _declare(mem)                                     # one declared
-    # one unstamped — and this is ALSO the route the boundary names: a record
-    # hand-minted at Store.add_edge with no producer, on a store created after
-    # the stamp existed, so the doctor's count is the live reading of that route
+    # one unstamped — here a record hand-minted at Store.add_edge with no
+    # producer; a restored older export or a sub-12 envelope produces the same
+    # count (round-5 finding 4), so the count says "producer unknown", not why
     mem.store.add_edge(_edge("Archive receipts weekly.", record_kind="procedural", basis="stated"))
     db = mem.config.db_path
     mem.close()
@@ -333,7 +333,8 @@ def test_the_doctor_reports_declared_captured_and_unstamped_as_three_numbers_nev
             rep.counts["procedural_unstamped"]) == (1, 1, 1)
     assert rep.counts["procedural_shaped"] == 0
     for phrase in ("procedural_declared 1", "procedural_captured 1", "procedural_unstamped 1",
-                   "cannot be told apart", "a path other than Memory", "live reading", "never merged"):
+                   "cannot be told apart", "a path other than Memory", "restored from an older export",
+                   "producer is unknown", "never merged"):
         assert phrase in f[0].message, phrase
     assert pid not in f[0].ids                                       # ids: the shaped screen only
     # the negative control for the split: a store with only legacy procedural
@@ -363,3 +364,98 @@ def test_the_store_boundary_is_stated_in_both_specs_and_the_host_documentation()
     section = docs[docs.index("## Providing a store"):]
     section = section[:section.index("\n## ", 1)]
     assert BOUNDARY in section and "add_edge" in section
+
+
+# ------------------------------------ v24.1 (round-5 finding 3): inheritance on import
+def _proc_edge(obj, eid, producer, supersedes=None):
+    return _edge(obj, record_kind="procedural", basis="stated", producer=producer, eid=eid, supersedes=supersedes)
+
+
+def _file_from(mem, path):
+    mem.export_memory(U, str(path))
+    lines = path.read_text().splitlines()
+    return json.loads(lines[0]), [json.loads(l) for l in lines[1:]]
+
+
+def _write_lines(path, header, recs):
+    path.write_text("\n".join([json.dumps(header)] + [json.dumps(r) for r in recs]) + "\n")
+
+
+@pytest.mark.parametrize("order", ["predecessor first", "successor first"])
+def test_restore_applies_the_inheritance_rules_the_store_applies_to_a_write(tmp_path, order):
+    """The round-5 reviewer: a format-12 file with a `host` predecessor and an
+    `extractor` successor linked through `supersedes` restored both, and so did
+    a successor with no producer, while a direct write refuses both — the
+    restore commit wrote rows directly. Now the boundary applies V-PRODUCER-
+    INHERITED and V-STAMP-INHERITED to every incoming record against its
+    predecessor, incoming or existing, in either file order; the violating
+    successor is refused per record and counted, the predecessor restores."""
+    src = Memory(llm=_quiet, config=_cfg(tmp_path, "src.db"))
+    src.store.add_edge(_proc_edge("Rotate keys.", "e-pred", "host"))
+    src.store.add_edge(_proc_edge("Rotate keys monthly.", "e-succ", "host", supersedes="e-pred"))
+    header, recs = _file_from(src, tmp_path / "e.jsonl")
+    src.close()
+    assert header["version"] == 12
+    if order == "successor first":
+        recs = sorted(recs, key=lambda r: r["id"] != "e-succ")
+    for case, mutate, signal in [
+        ("a different producer", lambda r: r["provenance"].__setitem__("producer", "extractor"), "producer"),
+        ("no producer", lambda r: r["provenance"].pop("producer"), "producer"),
+        ("the markers dropped", lambda r: (r["provenance"].pop("record_kind"), r["provenance"].pop("basis"),
+                                           r["provenance"].pop("producer"), r.__setitem__("relation", "located_at")), "stamp"),
+    ]:
+        bad = json.loads(json.dumps(recs))
+        mutate(next(r for r in bad if r["id"] == "e-succ"))
+        f = tmp_path / f"{case}-{order}.jsonl"
+        _write_lines(f, header, bad)
+        dst = Memory(llm=_quiet, config=_cfg(tmp_path, f"dst-{case}-{order}.db"))
+        rep = dst.import_memory(str(f), restore=True)
+        got = {e.id: e.provenance.producer for e in dst.store.edges(U, active_only=False)}
+        assert got == {"e-pred": "host"}, (case, order, got)
+        assert rep["procedural_refused"] == 1 and rep["procedural_refusals"][0] == {
+            "id": "e-succ", "refusal": "inheritance_violation", "signal": signal, "predecessor": "e-pred", "raw": False}, (case, order, rep)
+        dst.close()
+    # matching producers restore in either order
+    f = tmp_path / f"ok-{order}.jsonl"
+    _write_lines(f, header, recs)
+    ok = Memory(llm=_quiet, config=_cfg(tmp_path, f"ok-{order}.db"))
+    rep = ok.import_memory(str(f), restore=True)
+    assert rep["edges"] == 2 and rep["procedural_refused"] == 0
+    assert {e.id: e.provenance.producer for e in ok.store.edges(U, active_only=False)} == {"e-pred": "host", "e-succ": "host"}
+    ok.close()
+
+
+def test_inheritance_is_checked_against_an_existing_destination_predecessor_on_both_paths(tmp_path):
+    """The predecessor already in the destination: a restored successor naming
+    another producer is refused; on the DEFAULT path a declarative successor of
+    an existing procedural predecessor — the only successor shape that path
+    admits — is refused as a marker drop (V-STAMP-INHERITED reaches the import
+    commit); a declarative successor of a declarative predecessor imports."""
+    dst = Memory(llm=_quiet, config=_cfg(tmp_path, "dst.db"))
+    dst.store.add_edge(_proc_edge("Rotate keys.", "e-pred", "host"))
+    dst.store.add_edge(_edge("Porto", relation="located_at", eid="e-decl"))
+    src = Memory(llm=_quiet, config=_cfg(tmp_path, "src.db"))
+    src.store.add_edge(_proc_edge("Rotate keys.", "e-pred", "host"))
+    src.store.add_edge(_proc_edge("Rotate keys monthly.", "e-succ", "host", supersedes="e-pred"))   # the store refuses a direct mismatch; the FILE is where it is forged
+    header, recs = _file_from(src, tmp_path / "s.jsonl")
+    src.close()
+    only_succ = [r for r in recs if r["id"] == "e-succ"]
+    only_succ[0]["provenance"]["producer"] = "extractor"
+    _write_lines(tmp_path / "succ.jsonl", header, only_succ)
+    rep = dst.import_memory(str(tmp_path / "succ.jsonl"), restore=True)
+    assert rep["edges"] == 0 and rep["procedural_refusals"][0]["refusal"] == "inheritance_violation"
+    assert rep["procedural_refusals"][0]["signal"] == "producer" and rep["procedural_refusals"][0]["predecessor"] == "e-pred"
+    # the default path: a declarative successor of the existing procedural predecessor
+    decl_succ = json.loads(json.dumps(only_succ[0]))
+    decl_succ["provenance"].pop("record_kind"); decl_succ["provenance"].pop("basis"); decl_succ["provenance"].pop("producer")
+    decl_succ["relation"] = "located_at"; decl_succ["id"] = "e-decl-succ"
+    _write_lines(tmp_path / "decl.jsonl", header, [decl_succ])
+    rep2 = dst.import_memory(str(tmp_path / "decl.jsonl"))
+    assert rep2["edges"] == 0 and rep2["procedural_refusals"][0]["signal"] == "stamp"
+    # the control: a declarative successor of a declarative predecessor imports on the default path
+    ctrl = json.loads(json.dumps(decl_succ)); ctrl["supersedes"] = "e-decl"; ctrl["id"] = "e-decl-2"
+    _write_lines(tmp_path / "ctrl.jsonl", header, [ctrl])
+    rep3 = dst.import_memory(str(tmp_path / "ctrl.jsonl"))
+    assert rep3["edges"] == 1 and rep3["procedural_refused"] == 0
+    assert {e.id for e in dst.store.edges(U, active_only=False)} == {"e-pred", "e-decl", "e-decl-2"}
+    dst.close()

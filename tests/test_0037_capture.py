@@ -29,8 +29,11 @@ from veracium.schema import (DEFAULT_RELATIONS, EvidenceAuthor, EvidenceContext,
 
 U = "u"
 PROC = "follows_procedure"
-TEXT = ("I run the formatter before committing, every time. "
-        "Unrelated: I like tea.")
+# v24.1: the routine sentence follows a `?` — an ESTABLISHED boundary; the v16–v24 fixture
+# ("… every time. Unrelated: I like tea.") put the routine before a period-terminated
+# neighbour, which the fail-closed rule cannot establish as a boundary (round-5 finding 2)
+TEXT = ("Any tips for keeping a repo tidy? "
+        "I run the formatter before committing, every time.")
 QUOTE = "I run the formatter before committing, every time"
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -606,12 +609,11 @@ def test_the_round_3_passage_selections_are_refused_end_to_end(tmp_path, case, t
 @pytest.mark.parametrize("case, text, quote, stored", [
     ("F1 a mid-sentence relative clause and its condition, kept whole", "I review invoices, which arrive daily, only after approval.",
      "I review invoices, which arrive daily, only after approval.", "I review invoices, which arrive daily, only after approval."),
-    # v24: the second sentence must START LIKE ONE — an uppercase letter, a digit or an opening
-    # quote after the terminator; a lowercase continuation is an ambiguous join and refuses
-    # (the v22 lowercase form of these two cases moved to the refused list below)
-    ("the first of two sentences, with its terminal", "I review invoices daily. Archive receipts immediately.", "I review invoices daily.", "I review invoices daily."),
-    ("the first of two sentences, terminal omitted", "I review invoices daily. Archive receipts immediately.", "I review invoices daily", "I review invoices daily"),
-    ("a sentence in the middle of a paragraph", "Thanks for the notes. I always run the linter before merging. Let me know.", "I always run the linter before merging", "I always run the linter before merging"),
+    # v24.1 (fail closed): a `!` or `?` run establishes a boundary; a period between two
+    # sentences does not, so the v22/v24 "first of two sentences" and "middle of a paragraph"
+    # admissions moved to the refused list below — the stated structural cost
+    ("the second of two sentences, after an exclamation", "Love this workflow! I review invoices daily.", "I review invoices daily.", "I review invoices daily."),
+    ("the last sentence, after a question", "Thanks for the notes? I always run the linter before merging", "I always run the linter before merging", "I always run the linter before merging"),
     ("a frequency lead needs no comma", "Every Friday I review the invoices.", "Every Friday I review the invoices", "Every Friday I review the invoices"),
     ("a subordinate lead with its comma", "When the build is red, I usually rerun it.", "When the build is red, I usually rerun it", "When the build is red, I usually rerun it"),
 ])
@@ -634,13 +636,16 @@ def test_the_first_sentence_admits_while_the_declared_second_instruction_is_not_
     v24: with the second sentence LOWERCASE the join is ambiguous and the first
     sentence refuses too — nothing is stored and nothing is carried either way
     (round-4 finding 2's correction: ambiguous joins are refused, not admitted)."""
-    n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices daily. Archive receipts immediately.", "x",
-                                           "I review invoices daily.", instructions=["Archive receipts immediately."])
-    assert (n, refused) == (1, 0) and obj == "I review invoices daily."
-    assert "archive" not in obj.lower()
-    n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices daily. archive receipts immediately.", "x",
-                                           "I review invoices daily.", instructions=["archive receipts immediately."], name="lower.db")
-    assert (n, refused, dropped) == (0, 1, 0) and obj is None
+    # v24.1 (fail closed): the first sentence's period is a mid-text period and establishes
+    # nothing, so the first sentence refuses in BOTH readings now; the declared instruction is
+    # carried in neither. A `!`-separated pair keeps the first sentence admissible.
+    for second in ("Archive receipts immediately.", "archive receipts immediately."):
+        n, refused, dropped, obj, _ = _capture(tmp_path, f"I review invoices daily. {second}", "x",
+                                               "I review invoices daily.", instructions=[second], name=f"{second[:2]}.db")
+        assert (n, refused, dropped) == (0, 1, 0) and obj is None
+    n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices daily! Archive receipts immediately.", "x",
+                                           "I review invoices daily!", instructions=["Archive receipts immediately."], name="bang.db")
+    assert (n, refused, dropped) == (1, 0, 0) and obj == "I review invoices daily!" and "archive" not in obj.lower()
 
 
 def test_the_fifth_draw_is_the_full_path_evaluation_the_reviewer_asked_for(tmp_path):
@@ -701,8 +706,12 @@ def test_the_fifth_draw_is_the_full_path_evaluation_the_reviewer_asked_for(tmp_p
         if ok:
             assert g == q                                                             # (d)
         else:
-            assert why == "actor_absent" and ", so " in ev[:ev.find(q)][-6:]           # the four: mid-sentence clauses after ", so "
-    assert sum(1 for ok, _ in verdicts.values() if ok) == 2 and len(verdicts) == 4      # (b): 2 of 2 whole-sentence positives; the six pass rows are four distinct quotes
+            before, rest = ev[:ev.find(q)], ev[ev.find(q) + len(q):]
+            # the four: mid-sentence clauses after ", so "; the two (v24.1): whole sentences
+            # with a period-terminated neighbour on one side or the other — the fail-closed
+            # rule declines them because a mid-text period establishes no boundary (the cost)
+            assert why == "actor_absent" and (", so " in before[-6:] or "." in before or rest.lstrip(". ").strip() != ""), (l["quote"][:60], before[-12:], rest[:12])
+    assert sum(1 for ok, _ in verdicts.values() if ok) == 0 and len(verdicts) == 4      # (b) under v24.1's fail-closed rule: 0 of 4 distinct positive passages — both v22 admissions sat before a period-terminated neighbour; the STATED COST, thresholds fixed 2026-09-14T14:05Z
     assert all("which has been" in q for q, (ok, _) in verdicts.items() if ok)       # F1's case, live: trailing clauses kept
 
 
@@ -873,14 +882,22 @@ from veracium.procedural_gate import boundary_kind, sentence_segments, has_inter
     ("R4-2 the first of them, the join ambiguous", "I review invoices daily.archive receipts immediately.", "I review invoices daily."),
     ("R4-3 the claimed cognitive refusal, now real", "I doubt I review invoices daily.", "I doubt I review invoices daily."),
     ("research: an abbreviation before the run (a.m.)", "I review invoices at 9 a.m. every day.", "I review invoices at 9 a.m"),
-    ("research: a listed abbreviation (approx.)", "I review invoices approx. every morning.", "I review invoices approx"),
+    ("research: an abbreviation before the run (approx.)", "I review invoices approx. every morning.", "I review invoices approx"),
     ("research: an ellipsis", "I review invoices... daily.", "I review invoices"),
     ("a lowercase continuation after a terminator (v22 admitted the first sentence)", "I review invoices daily. archive receipts immediately.", "I review invoices daily."),
     ("a start mid-token", "I pay $100.50 daily.", "50 daily."),
-    ("research: a listed business abbreviation (reqs.), fails closed", "I review invoices per reqs. Every week I archive them.", "I review invoices per reqs"),
-    ("research: the same shape with the period carried (eng.)", "I sync with eng. Mondays are the busy day.", "I sync with eng."),
-    ("a vowel-less short token is an abbreviation by shape (mgmt.)", "I bill by mgmt. Every week I archive.", "I bill by mgmt"),
-    ("research: a lowercase product name opens the next sentence (fails closed)", "I run the linter every commit. npm test follows.", "I run the linter every commit."),
+    ("research: an abbreviation before a period (reqs.) — no list needed, a mid-text period establishes nothing", "I review invoices per reqs. Every week I archive them.", "I review invoices per reqs"),
+    ("the same shape with the period carried (eng.)", "I sync with eng. Mondays are the busy day.", "I sync with eng."),
+    ("a short token without a vowel (mgmt.)", "I bill by mgmt. Every week I archive.", "I bill by mgmt"),
+    ("a lowercase product name opens the next sentence", "I run the linter every commit. npm test follows.", "I run the linter every commit."),
+    ("R5-1 an ambiguous separator does not establish a START (e.g.)", "For illustration only, e.g. I review invoices daily.", "I review invoices daily."),
+    ("R5-1 an ellipsis does not establish a START", "I am only imagining that... I review invoices daily.", "I review invoices daily."),
+    ("R5-2 the disclosed residual, closed: an unabbreviation (env.)", "I review invoices in env. Prod only after approval.", "I review invoices in env"),
+    ("R5-2 the former open residual (sched.), closed", "I review invoices per sched. Every week I archive them.", "I review invoices per sched"),
+    ("v24.1 the cost: the first of two period-separated sentences", "I review invoices daily. Archive receipts immediately.", "I review invoices daily."),
+    ("v24.1 the cost: a routine before a question to the assistant", "I review invoices every Monday. Can you recommend a tool?", "I review invoices every Monday."),
+    ("v24.1 the cost: a sentence in the middle of a paragraph", "Thanks for the notes. I always run the linter before merging. Let me know.", "I always run the linter before merging"),
+    ("v24.1 the cost: a short last word before another sentence (gym)", "I go to the gym. Then I shower.", "I go to the gym."),
     ("the epistemic siblings: deny", "I deny I review invoices daily.", "I deny I review invoices daily."),
     ("the epistemic siblings: suspect", "I suspect I review invoices daily.", "I suspect I review invoices daily."),
     ("the epistemic siblings: presume", "I presume I review invoices daily.", "I presume I review invoices daily."),
@@ -894,17 +911,15 @@ def test_the_round_4_boundary_and_head_cases_are_refused_end_to_end(tmp_path, ca
 @pytest.mark.parametrize("case, text, quote, stored", [
     ("R4-1b the whole sentence, the decimal inside it", "I review invoices above $100.50 only after approval.",
      "I review invoices above $100.50 only after approval.", "I review invoices above $100.50 only after approval."),
-    ("a second sentence that starts like one", "I review invoices daily. Archive receipts immediately.", "I review invoices daily.", "I review invoices daily."),
-    ("per SENTENCE, never per event: a routine before a question to the assistant",
-     "I review invoices every Monday. Can you recommend a tool?", "I review invoices every Monday.", "I review invoices every Monday."),
-    ("a plain period omitted by the span (type preserved)", "I run the formatter before committing, every time. Unrelated: I like tea.",
+    ("a routine AFTER a question — a `?` run establishes the next start", "Any tips for keeping a repo tidy? I run the formatter before committing, every time.",
+     "I run the formatter before committing, every time.", "I run the formatter before committing, every time."),
+    ("a routine after an exclamation", "Love this workflow! I review invoices daily.", "I review invoices daily.", "I review invoices daily."),
+    ("a plain period omitted by the span at the END of the text (type preserved)", "Any tips? I run the formatter before committing, every time.",
      "I run the formatter before committing, every time", "I run the formatter before committing, every time"),
     ("a contraction before the period is a word, not a letter", "I check the queue whenever it doesn't drain.", "I check the queue whenever it doesn't drain.", "I check the queue whenever it doesn't drain."),
     ("research's control: `bet` is a routine sense, not added to the class", "I bet on horses every Saturday.", "I bet on horses every Saturday.", "I bet on horses every Saturday."),
     ("research's control: `question` is a routine sense, not added to the class", "I question every invoice over $500.", "I question every invoice over $500.", "I question every invoice over $500."),
-    ("a second sentence opening with a digit", "I review invoices daily. 3 of them are late.", "I review invoices daily.", "I review invoices daily."),
-    ("a second sentence opening with a quote", "I review invoices daily. \"Late\" is anything past noon.", "I review invoices daily.", "I review invoices daily."),
-    ("a short last word before another sentence is NOT refused (the broad narrowing was not taken)", "I go to the gym. Then I shower.", "I go to the gym.", "I go to the gym."),
+    ("a whole single-sentence turn", "I go to the gym every Tuesday.", "I go to the gym every Tuesday.", "I go to the gym every Tuesday."),
 ])
 def test_the_round_4_controls_admit_and_store_the_sentence_as_written(tmp_path, case, text, quote, stored):
     n, refused, dropped, obj, attribution = _capture(tmp_path, text, "x", quote)
@@ -912,17 +927,17 @@ def test_the_round_4_controls_admit_and_store_the_sentence_as_written(tmp_path, 
     assert obj == stored and attribution.endswith(stored)
 
 
-def test_the_open_residual_is_pinned_so_a_change_is_noticed(tmp_path):
-    """Finding 1's class REMAINS REACHABLE through an abbreviation outside the list
-    that carries a vowel (`sched.`): the span ends at what the rule reads as a
-    boundary and "Every week I archive them" is lost. Named in 0037 §8 as an OPEN
-    residual — a hand-list stands in for a property and lags the language — and
-    pinned here at the storage level so the day it closes (or widens) is noticed.
-    (describe's frozen floor happens to withhold this particular text; the
-    residual is about what is STORED.)"""
+def test_the_former_open_residual_is_closed_and_no_list_remains(tmp_path):
+    """v24 pinned "I review invoices per sched. Every week I archive them." →
+    stored "I review invoices per sched" as the OPEN residual of a hand-list.
+    v24.1 (round-5 finding 2; the owner's word "Fail closed"): a mid-text period
+    establishes nothing, so the span refuses, nothing is stored — and the list
+    is GONE from the module, so no future entry can reopen the class."""
     n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices per sched. Every week I archive them.", "x",
                                            "I review invoices per sched")
-    assert (n, refused) == (1, 0) and obj == "I review invoices per sched"
+    assert (n, refused) == (0, 1) and obj is None
+    import veracium.procedural_gate as pg
+    assert not hasattr(pg, "_ABBREVIATIONS") and not hasattr(pg, "_SHORT_WORD") and not hasattr(pg, "_word_before")
 
 
 def test_the_boundary_kinds_are_total_and_fail_closed():
@@ -930,43 +945,35 @@ def test_the_boundary_kinds_are_total_and_fail_closed():
     shapes are AMBIGUOUS (refused), never a boundary by default. Each row: the text,
     the index of the run, the kind."""
     rows = [
-        ("I review invoices daily.", 23, "boundary"),                  # end of text
-        ("I review daily. Then I archive.", 14, "boundary"),           # whitespace + uppercase
-        ("I review daily. 3 are late.", 14, "boundary"),               # whitespace + digit
-        ("I review daily. \"Late\" is noon.", 14, "boundary"),         # whitespace + opening quote
-        ("I review daily. archive them.", 14, "ambiguous"),            # whitespace + lowercase
-        ("I review daily.archive them.", 14, "ambiguous"),             # a letter right after
+        ("I review invoices daily.", 23, "boundary"),                  # end of text: ESTABLISHED
+        ("He said \"I run daily.\"", 20, "boundary"),                 # end of text through a closer
+        ("I review daily. Then I archive.", 14, "ambiguous"),          # a MID-TEXT PERIOD establishes nothing (v24.1)
+        ("I review daily. 3 are late.", 14, "ambiguous"),
+        ("I review daily. \"Late\" is noon.", 14, "ambiguous"),
+        ("I review daily. archive them.", 14, "ambiguous"),
+        ("I review daily.archive them.", 14, "ambiguous"),
         ("above $100.50 only", 10, "inside"),                          # a decimal point
         ("I review invoices... daily.", 17, "ambiguous"),              # an ellipsis
-        ("at 9 a.m. every day.", 6, "ambiguous"),                      # a single letter before (a.)
-        ("at 9 a.m. every day.", 8, "ambiguous"),                      # a single letter before (m.)
-        ("invoices approx. every morning.", 15, "ambiguous"),          # a listed abbreviation
-        ("I see Dr. Smith weekly.", 8, "ambiguous"),                   # a listed title, even before uppercase
+        ("I review invoices...", 17, "ambiguous"),                     # an ellipsis at the end
+        ("at 9 a.m. every day.", 6, "ambiguous"),                      # an abbreviation — no list needed
+        ("in env. Prod only after approval.", 6, "ambiguous"),         # the round-5 case, closed
+        ("per sched. Every week", 9, "ambiguous"),                     # the former open residual, closed
         ("I review invoices daily?", 23, "question"),                  # a question
         ("I review invoices daily?! Then", 23, "question"),            # a run carrying `?`
-        ("it doesn't drain.", 16, "boundary"),                         # a contraction is a word
-        ("He said \"I run daily.\" Then", 20, "boundary"),             # a closer belongs to the run
-        ("I review daily. Then", 14, "boundary"),                 # any whitespace
-        ("I review daily.- then", 14, "ambiguous"),                    # a symbol right after
-        # research's narrowing, in its narrow form: an UNLISTED abbreviation before the period
-        # and an uppercase word is where a hand-list fails OPEN into the meaning-loss class —
-        # listed tokens and vowel-less short tokens are ambiguous; the broad form (every short
-        # word) was measured and refused "every time. Unrelated…", so it was not taken
-        ("I review invoices per reqs. Every week", 26, "ambiguous"),   # `reqs.` — listed
-        ("I sync with eng. Mondays", 15, "ambiguous"),                 # `eng.` — listed
-        ("I bill by mgmt. Every week", 14, "ambiguous"),               # vowel-less short token, unlisted
-        ("I go to the gym. Then I shower.", 15, "boundary"),           # NOT taken: a short last word stays a boundary
-        ("every time. Unrelated: I like tea.", 10, "boundary"),        # the canonical routine shape
-        ("I review invoices per sched. Every week", 27, "boundary"),   # the OPEN residual: unlisted, carries a vowel
-        ("I go to the gym.", 15, "boundary"),                          # end of text: nothing to lose
+        ("Love this! I review daily.", 9, "boundary"),                 # a `!` run before a sentence start: ESTABLISHED
+        ("Love this! 3 tips follow.", 9, "boundary"),
+        ("Love this! \"Late\" is noon.", 9, "boundary"),
+        ("Love this! then I review.", 9, "ambiguous"),                 # a `!` before a lowercase word
+        ("Love this!- then", 9, "ambiguous"),                          # a symbol right after
+        ("it doesn't drain.", 16, "boundary"),                         # a contraction before the final period
     ]
     for text, i, kind in rows:
         assert text[i] in ".!?", (text, i)
         assert boundary_kind(text, i) == kind, (text, i, boundary_kind(text, i))
     # the segments: a decimal does not cut, an ambiguous join does, a final segment
     # without a terminator is "eot"
-    segs = sentence_segments("I pay $100.50 daily. Then I file. and rest")
-    assert [(s[3]) for s in segs] == ["boundary", "ambiguous", "eot"]
+    segs = sentence_segments("I pay $100.50 daily! Then I file. and rest")
+    assert [(s[3], s[4]) for s in segs] == [("boundary", "sot"), ("ambiguous", "boundary"), ("eot", "ambiguous")]
     assert has_internal_boundary("I review daily. Then I archive.") is True
     assert has_internal_boundary("I review invoices above $100.50 only after approval.") is False
     assert has_internal_boundary("I review invoices daily?") is True          # a question is not a plain sentence
@@ -1032,4 +1039,4 @@ def test_the_draw_5_labelled_pairs_through_the_full_path(tmp_path):
     # ROWS = 2 of 4 distinct positive PASSAGES admitted, 0 of the must-refuse rows
     positives = [r for r in lab if r["expected"] == "pass"]
     assert len(positives) == 6 and len({norm_ws(r["quote"]).strip() for r in positives}) == 4
-    assert admitted == 2 and len(passages) == 2 and refused_total == 9
+    assert admitted == 0 and len(passages) == 0 and refused_total == 11     # v24.1 fail closed: the two admissions fell to the mid-text-period rule (the cost, stated); every pair refused and counted

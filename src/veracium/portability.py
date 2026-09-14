@@ -397,6 +397,46 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
             if isinstance(prov, dict):
                 prov.pop("producer", None)
 
+    # specs/0037 v24.1 (round-5 finding 3): the INHERITANCE rules the store's
+    # choke point applies to an ordinary write — a successor of a procedural
+    # predecessor is procedural (V-STAMP-INHERITED) and carries the SAME
+    # producer (V-PRODUCER-INHERITED) — are applied here, at the boundary and
+    # before anything commits, because the import commit writes rows directly.
+    # The predecessor is looked up by id among the incoming records OR the
+    # destination's existing records, so the check is independent of file
+    # order; a violating successor is refused PER RECORD and counted.
+    incoming = {rec.get("id"): rec for rec in edge_recs}
+    existing_by_id = {e.id: e for e in store.edges(target_uid, active_only=False,
+                                                    include_quarantined=True)}
+    kept: list = []
+    for rec in edge_recs:
+        sid = rec.get("supersedes")
+        if sid is None:
+            kept.append(rec)
+            continue
+        if sid in incoming:
+            pp = incoming[sid].get("provenance") or {}
+            pred_proc = pp.get("record_kind") == "procedural" or pp.get("basis") is not None
+            pred_producer = pp.get("producer")
+        elif sid in existing_by_id:
+            pe = existing_by_id[sid].provenance
+            pred_proc, pred_producer = pe.procedural, pe.producer
+        else:
+            kept.append(rec)                                     # no predecessor to inherit from
+            continue
+        prov = rec.get("provenance") or {}
+        succ_proc = prov.get("record_kind") == "procedural" or prov.get("basis") is not None
+        signal = ("stamp" if pred_proc and not succ_proc
+                  else "producer" if pred_producer is not None and prov.get("producer") != pred_producer
+                  else None)
+        if signal is not None:
+            procedural_refusals.append(
+                {"id": rec.get("id"), "refusal": "inheritance_violation", "signal": signal,
+                 "predecessor": sid, "raw": src_version < _PROCEDURAL_VERSION})
+            continue
+        kept.append(rec)
+    edge_recs = kept
+
     # (1b) specs/0020 §4a-iii — the LINKAGE SNAPSHOT, taken over the file's
     # OWN id universe BEFORE the cross-user remap mutates ids (winner
     # resolution is defined in the file's universe; `id_remap` translates

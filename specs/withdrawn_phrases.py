@@ -510,6 +510,12 @@ WITHDRAWN = [
      "0037 v22 (the amendments round-3 RETURN, 2026-09-13): the stored gloss IS the normalised span with NO "
      "transformation; v21's relative-clause cut removed a mid-sentence clause and the condition after it.",
      "specs/0037 §4a-iii Gate 4; docs/api.md; CHANGELOG"),
+    ("0037-v24.1-list-and-live-reading",
+     r"listed abbreviation|vowel-less short token|the abbreviation list carries|live reading that something wrote past|a user turn that ends in a question to the assistant still yields its routine sentence|the first of two sentences that start like sentences|a routine before a question to the assistant, and a sentence in the middle of a paragraph admit",
+     "0037 v24.1 / 0038 v6.6 (the amendments round-5 RETURN, 2026-09-14; the owner's word \"Fail closed\"): no list "
+     "establishes a period boundary — a mid-text period establishes nothing and the list is gone; the doctor claims "
+     "nothing about why a producer is unknown; a routine before a period-terminated neighbour is declined.",
+     "specs/0037 §4a-iii Gate 1, §6, §8; specs/0038 §2b; docs/api.md; CHANGELOG"),
     ("0037-v24-character-boundary-rule",
      r"immediately before sentence-final punctuation it omitted|no internal terminator followed by whitespace|contains no terminator followed by whitespace, whatever follows|whatever the case of the second",
      "0037 v24 / 0038 v6.5 (the amendments round-4 RETURN, 2026-09-14): boundaries are KINDS read from the "
