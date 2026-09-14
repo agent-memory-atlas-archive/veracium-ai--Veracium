@@ -14,6 +14,20 @@ policy lane — the store must add `write_policy_receipt`, `policy_receipts` and
 recall on which a lane fires raises `NotImplementedError` against a store without
 them. Library and MCP callers that pass no `policy` change nothing.
 
+- **Import boundary: conflicting record ids are resolved before inheritance is derived**
+  (specs/0037 v24.4; the amendments review package, round 8, returned 2026-09-14 with the
+  design accepted and frozen). A refused incomplete copy of a stored procedural predecessor
+  could hide the stored producer and let a successor with another producer restore, and a
+  file naming one id twice gave a file-order-dependent result. Now every copy of an id the
+  file names more than once is refused (`duplicate_id`), the lineage lookup reads the stored
+  record first and every incoming copy together (a rejected copy never erases a persisted
+  constraint), and copies that disagree about a constraint leave it unresolved, which no
+  successor satisfies. Both file orders give one disposition. A file that repeats an id was
+  previously imported last-copy-wins, silently; it is now refused per copy and counted.
+  Also closed before the seal (research's red team of the fix): a stored predecessor that is
+  procedural only by the receiving registry's kind now constrains its successors on the
+  default path exactly as an incoming one does, and a stored record with no predecessor no
+  longer shadows an incoming copy's claim to one.
 - **Added: the policy receipt is durable.** When a policy lane fires, `Memory.recall`
   writes the receipt to the store as one row keyed by its minted `recall_id` — the
   receipt's JSON verbatim beside the identity columns a reader lists by — BEFORE it

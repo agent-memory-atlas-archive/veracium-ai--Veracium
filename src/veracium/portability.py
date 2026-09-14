@@ -356,46 +356,109 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
     # stored. Procedural-ness is by LINEAGE: a record whose predecessor is
     # procedural by lineage is procedural whatever markers it carries (a chain
     # that drops the markers one hop later is the same laundering, one hop later).
-    raw_by_id = {rec.get("id"): rec for rec in edge_recs}
+    # specs/0037 v24.4 (round-8 finding 1): CONFLICTING IDS ARE RESOLVED BEFORE
+    # LINEAGE IS DERIVED. `raw_by_id` kept the LAST incoming record per id and
+    # the lineage helper preferred it over the destination's stored record, so
+    # (a) a REFUSED incomplete copy of a stored procedural predecessor hid the
+    # stored producer and a successor with another producer restored, and (b)
+    # a file naming one id twice gave a file-order-dependent disposition. Now:
+    # every incoming copy of an id the file names more than once is refused
+    # (`duplicate_id` — a file cannot say two things about one record, and
+    # both orders refuse the same copies); the lineage helper reads EVERY copy
+    # of an id together with the destination's stored record, the stored
+    # record's constraints taking precedence (a persisted stamp or producer is
+    # never erased by an incoming copy, admitted or refused), and copies that
+    # disagree about a constraint leave it UNRESOLVED, which fails every
+    # successor's check (fail closed, order-independent by construction —
+    # sets, never "the last one seen").
+    raw_copies: dict = {}
+    for rec in edge_recs:
+        raw_copies.setdefault(rec.get("id"), []).append(rec)
+    duplicate_ids = {rid for rid, copies in raw_copies.items() if len(copies) > 1}
     existing_by_id = {e.id: e for e in store.edges(target_uid, active_only=False,
                                                     include_quarantined=True)}
     _lineage: dict = {}
+    # a constraint the file's copies disagree about: a UNIQUE object, never a
+    # value a record could carry (research's pre-seal red team, 2026-09-14: a
+    # string sentinel shared the producer's value space and was held out of
+    # the check only by the closed producer lexicon — an accident, not a rule)
+    _UNRESOLVED = object()
+
+    def _signals(stamp, basis, producer, relation):
+        """v24.3 (round-7 finding 2) / v24.4 (research's pre-seal red team,
+        finding A): ONE reading of procedural-ness for BOTH custody states —
+        the SAME four signals the filter above reads: stamp, basis, producer,
+        and on the default path the receiving registry's kind for the
+        relation. The stored record's `Provenance.procedural` is stamp-or-basis
+        only; reading it for the destination's record gave a registry-only
+        predecessor opposite dispositions depending on whether it was stored
+        or incoming. A shared helper is what stops the two sides disagreeing a
+        third time."""
+        own = (stamp == "procedural" or basis is not None or producer is not None
+               or (not restore and is_procedural_relation(reg, relation)))
+        return own, producer
 
     def _raw_markers(rec):
-        """v24.3 (round-7 finding 2): the SAME signals the filter above reads —
-        stamp, basis, producer, and on the default path the receiving registry's
-        kind for the relation — so the lineage helper is never narrower than the
-        filter it mirrors."""
         prov = rec.get("provenance") if isinstance(rec.get("provenance"), dict) else {}
-        own = (prov.get("record_kind") == "procedural" or prov.get("basis") is not None
-               or prov.get("producer") is not None
-               or (not restore and is_procedural_relation(reg, rec.get("relation"))))
-        return own, prov.get("producer")
+        return _signals(prov.get("record_kind"), prov.get("basis"), prov.get("producer"),
+                        rec.get("relation"))
+
+    def _stored_markers(e):
+        return _signals(e.provenance.record_kind, e.provenance.basis, e.provenance.producer,
+                        e.relation)
+
+    def _one_or_unresolved(values):
+        """The single agreed value of a constraint over a set of readings, None
+        when no reading names one, `_UNRESOLVED` when readings disagree (or any
+        reading is itself unresolved)."""
+        named = [v for v in values if v is not None]
+        if not named:
+            return None
+        if any(v is _UNRESOLVED for v in named) or len(set(named)) > 1:
+            return _UNRESOLVED
+        return named[0]
 
     def lineage(rid, _seen=()):
-        """(procedural_by_lineage, validated_producer) for record `rid`. The
-        validated producer is INHERITED down the chain: a record whose own
-        producer disagrees with its predecessor's validated producer is a
-        rejected intermediate, and the constraint it violated carries on to its
-        successors unchanged (round-7 finding 2: the raw field of a rejected
-        intermediate must never substitute for validated inheritance)."""
+        """(procedural_by_lineage, validated_producer) for record `rid`, read
+        from the RESOLVED description of the id: the destination's stored
+        record when there is one (its stamp and producer take precedence —
+        v24.4), together with EVERY incoming copy (a copy's markers can only
+        add procedural-ness; a copy's producer counts only where nothing is
+        stored). The validated producer is INHERITED down the chain: a record
+        whose own producer disagrees with its predecessor's validated producer
+        is a rejected intermediate, and the constraint it violated carries on
+        to its successors unchanged (round-7 finding 2: the raw field of a
+        rejected intermediate must never substitute for validated
+        inheritance). A constraint the copies disagree about, or a cycle, is
+        `_UNRESOLVED`, which no successor can satisfy."""
         if rid in _lineage:
             return _lineage[rid]
         if rid in _seen:                                   # a cycle: fail closed
-            return True, None
-        if rid in raw_by_id:
-            own, own_producer = _raw_markers(raw_by_id[rid])
-            pred = raw_by_id[rid].get("supersedes")
-        elif rid in existing_by_id:
-            e = existing_by_id[rid]
-            own, own_producer, pred = e.provenance.procedural, e.provenance.producer, e.supersedes
-        else:
+            return True, _UNRESOLVED
+        e = existing_by_id.get(rid)
+        copies = raw_copies.get(rid, [])
+        if e is None and not copies:
             _lineage[rid] = (False, None)
             return _lineage[rid]
-        if pred is None:
+        marks = [_raw_markers(c) for c in copies]
+        stored_own, stored_producer = _stored_markers(e) if e is not None else (False, None)
+        own = stored_own or any(m[0] for m in marks)
+        if stored_producer is not None:
+            own_producer = stored_producer
+        else:
+            own_producer = _one_or_unresolved(m[1] for m in marks)
+        # ADDS, NEVER REMOVES, for the predecessor set too (research's pre-seal
+        # red team, finding C): a stored declarative X must not shadow an
+        # incoming X's claim to a procedural predecessor — X's own successor
+        # would inherit from the shadow instead of the chain.
+        preds = ({e.supersedes} if e is not None and e.supersedes is not None else set()) | {
+            c.get("supersedes") for c in copies if c.get("supersedes") is not None}
+        if not preds:
             result = (own, own_producer)
         else:
-            pred_proc, pred_producer = lineage(pred, _seen + (rid,))
+            chain = [lineage(pr, _seen + (rid,)) for pr in sorted(preds)]
+            pred_proc = any(pp for pp, _ in chain)
+            pred_producer = _one_or_unresolved(pv for _, pv in chain)
             validated = pred_producer if pred_producer is not None else own_producer
             result = (own or pred_proc, validated)
         _lineage[rid] = result
@@ -408,6 +471,10 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         basis = prov.get("basis")
         producer = prov.get("producer")
         raw = src_version < _PROCEDURAL_VERSION
+        if rec.get("id") in duplicate_ids:                 # v24.4: resolved before anything else
+            procedural_refusals.append(
+                {"id": rec.get("id"), "refusal": "duplicate_id", "signal": "id", "raw": raw})
+            continue
         if not restore:
             # specs/0037 v23: the producer stamp is a FOURTH independent
             # signal — a record carrying one is procedural by its own word
@@ -464,13 +531,14 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         if sid is None:
             kept.append(rec)
             continue
-        if sid in raw_by_id or sid in existing_by_id:          # RAW, whether or not it was refused above
+        if sid in raw_copies or sid in existing_by_id:         # RAW copies, refused or not, AND the stored record
             pred_proc, pred_producer = lineage(sid)              # …and the VALIDATED inherited producer
         else:
             kept.append(rec)                                     # no predecessor to inherit from
             continue
         prov = rec.get("provenance") or {}
         succ_proc = prov.get("record_kind") == "procedural" or prov.get("basis") is not None
+        # an UNRESOLVED inherited producer is one no successor can match (v24.4)
         signal = ("stamp" if pred_proc and not succ_proc
                   else "producer" if pred_producer is not None and prov.get("producer") != pred_producer
                   else None)

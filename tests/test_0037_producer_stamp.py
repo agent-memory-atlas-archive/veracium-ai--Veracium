@@ -567,3 +567,167 @@ def test_lineage_reads_every_import_signal_and_carries_validated_inheritance(tmp
                                                              ("e-succ2", "inheritance_violation", "producer")])
     # the control: the intact lineage restores whole
     assert run(base, "intact", restore=True) == (["e-pred", "e-succ", "e-succ2"], [])
+
+
+@pytest.mark.parametrize("order", ["predecessor first", "successor first"])
+def test_conflicting_ids_are_resolved_before_lineage_in_both_orders(tmp_path, order):
+    """The round-8 reviewer (0037 v24.4 — the contract frozen at round 8, this is
+    its implementation): `raw_by_id` kept the LAST incoming record per id and the
+    lineage helper preferred it over the stored record, so (a) a REFUSED
+    incomplete copy of a stored procedural predecessor (stamp only — no basis, no
+    producer) hid the stored `host` producer and an `extractor` successor
+    restored; (b) a file naming `P` twice (procedural and ordinary) plus an
+    ordinary successor gave a file-order-dependent disposition. Now every copy of
+    a duplicated id is refused (`duplicate_id`), the lineage helper reads the
+    stored record FIRST and every copy together (a copy adds procedural-ness,
+    never removes a stored constraint), and copies that disagree about a
+    constraint leave it unresolved, which no successor satisfies. Both orders,
+    the same disposition and the same stored rows; the reviewer's valid
+    re-import control restores."""
+    src = Memory(llm=_quiet, config=_cfg(tmp_path, "src.db"))
+    src.store.add_edge(_proc_edge("Rotate keys.", "e-pred", "host"))
+    src.store.add_edge(_proc_edge("Rotate keys monthly.", "e-succ", "host", supersedes="e-pred"))
+    header, base = _file_from(src, tmp_path / "e.jsonl")
+    src.close()
+    by = {r["id"]: r for r in base}
+
+    def copy(rid, **prov):
+        r = json.loads(json.dumps(by[rid]))
+        for k, v in prov.items():
+            if v is None:
+                r["provenance"].pop(k, None)
+            else:
+                r["provenance"][k] = v
+        return r
+
+    def ordinary(rid):
+        r = copy(rid, record_kind=None, basis=None, producer=None)
+        r["relation"] = "located_at"
+        return r
+
+    def run(recs, name, restore=False, first=None):
+        """`first` restores a seed file into the destination before `recs`."""
+        recs = list(recs) if order == "predecessor first" else list(reversed(recs))
+        m = Memory(llm=_quiet, config=_cfg(tmp_path, f"{name}-{order}.db"))
+        if first is not None:
+            f0 = tmp_path / f"{name}-seed-{order}.jsonl"
+            _write_lines(f0, header, first)
+            m.import_memory(str(f0), restore=True)
+        f = tmp_path / f"{name}-{order}.jsonl"
+        _write_lines(f, header, recs)
+        rep = m.import_memory(str(f), restore=restore)
+        got = ({e.id: (e.provenance.procedural, e.provenance.producer, e.supersedes)
+                for e in m.store.edges(U, active_only=False)},
+               sorted((x["id"], x["refusal"], x["signal"]) for x in rep["procedural_refusals"]))
+        m.close()
+        return got
+
+    P = by["e-pred"]; S_host = by["e-succ"]
+    S_ext = copy("e-succ", producer="extractor")
+    stored_P = {"e-pred": (True, "host", None)}
+    # (a) the reviewer's first form: stored P (host); the file's copy of P is stamp-only
+    # (refused as malformed) and S carries `extractor` — S is REFUSED on the stored producer
+    P_incomplete = copy("e-pred", basis=None, producer=None)
+    assert run([P_incomplete, S_ext], "a", restore=True, first=[P]) == (
+        stored_P, [("e-pred", "malformed_procedural_marker", "stamp"),
+                   ("e-succ", "inheritance_violation", "producer")])
+    # (b) the reviewer's second form: P twice (procedural, ordinary) + an ordinary successor,
+    # default path — both copies refused as duplicates, S refused on the procedural reading
+    assert run([P, ordinary("e-pred"), ordinary("e-succ")], "b") == (
+        {}, [("e-pred", "duplicate_id", "id"), ("e-pred", "duplicate_id", "id"),
+             ("e-succ", "inheritance_violation", "stamp")])
+    # the reviewer's valid re-import control: the identical P already stored, the file
+    # carries P and its host successor — S restores, nothing refused
+    assert run([P, S_host], "control", restore=True, first=[P]) == (
+        {**stored_P, "e-succ": (True, "host", "e-pred")}, [])
+    # ...and the same control with the successor's producer changed refuses it
+    assert run([P, S_ext], "control-x", restore=True, first=[P]) == (
+        stored_P, [("e-succ", "inheritance_violation", "producer")])
+    # copies that AGREE are still duplicates (refused), and the constraint they agree on holds
+    assert run([P, copy("e-pred"), S_host], "agree", restore=True) == (
+        {"e-succ": (True, "host", "e-pred")},
+        [("e-pred", "duplicate_id", "id"), ("e-pred", "duplicate_id", "id")])
+    # copies that DISAGREE on the producer leave it unresolved: no successor satisfies it
+    assert run([P, copy("e-pred", producer="extractor"), S_host], "disagree", restore=True) == (
+        {}, [("e-pred", "duplicate_id", "id"), ("e-pred", "duplicate_id", "id"),
+             ("e-succ", "inheritance_violation", "producer")])
+    # with P STORED, disagreeing copies cannot move the stored constraint: host restores, extractor refuses
+    assert run([P, copy("e-pred", producer="extractor"), S_host], "stored-agree", restore=True, first=[P]) == (
+        {**stored_P, "e-succ": (True, "host", "e-pred")},
+        [("e-pred", "duplicate_id", "id"), ("e-pred", "duplicate_id", "id")])
+    assert run([P, copy("e-pred", producer="extractor"), S_ext], "stored-x", restore=True, first=[P]) == (
+        stored_P, [("e-pred", "duplicate_id", "id"), ("e-pred", "duplicate_id", "id"),
+                   ("e-succ", "inheritance_violation", "producer")])
+    # a duplicated INTERMEDIATE (S twice, host and extractor) under a stored host P: the
+    # grandchild inherits host through the refused intermediate and its `extractor` refuses
+    S2 = copy("e-succ", producer="extractor"); S2["id"] = "e-succ2"; S2["supersedes"] = "e-succ"
+    assert run([S_host, S_ext, S2], "intermediate", restore=True, first=[P]) == (
+        stored_P, [("e-succ", "duplicate_id", "id"), ("e-succ", "duplicate_id", "id"),
+                   ("e-succ2", "inheritance_violation", "producer")])
+    # ordinary duplicates carry no constraint: the copies are refused, the ordinary successor imports
+    P_ord, P_ord2 = ordinary("e-pred"), ordinary("e-pred"); P_ord2["object"] = "other text"
+    assert run([P_ord, P_ord2, ordinary("e-succ")], "ordinary") == (
+        {"e-succ": (False, None, "e-pred")},
+        [("e-pred", "duplicate_id", "id"), ("e-pred", "duplicate_id", "id")])
+
+
+@pytest.mark.parametrize("order", ["predecessor first", "successor first"])
+def test_stored_and_incoming_custody_read_one_procedural_signal_set(tmp_path, order):
+    """Research's pre-seal red team of v24.4 (2026-09-14), two findings in the
+    lineage helper, reproduced before the fix. A: the stored record's own-ness
+    read `Provenance.procedural` (stamp-or-basis only), so a REGISTRY-only
+    procedural predecessor got opposite dispositions by custody — refused with
+    its successor when incoming, its marker-free successor LANDING when stored.
+    C: `own` unioned stored and incoming readings but the predecessor set was
+    REPLACED by the stored record's, so a stored declarative X with no
+    predecessor shadowed an incoming X claiming a procedural predecessor and
+    X's own successor inherited from the shadow. Now one helper reads the four
+    signals for both custody states, and the predecessor set adds and never
+    removes. B (not a finding): the unresolved sentinel is a unique object, not
+    a value a record could carry."""
+    src = Memory(llm=_quiet, config=_cfg(tmp_path, "src.db"))
+    src.store.add_edge(_edge("Rotate keys.", relation=PROC, eid="e-pred"))                 # registry-only: no markers
+    src.store.add_edge(_edge("Porto", relation="located_at", eid="e-succ", supersedes="e-pred"))
+    header, base = _file_from(src, tmp_path / "a.jsonl")
+    src.close()
+    by = {r["id"]: r for r in base}
+
+    def run(recs, name, seed=(), restore=False):
+        recs = list(recs) if order == "predecessor first" else list(reversed(recs))
+        m = Memory(llm=_quiet, config=_cfg(tmp_path, f"{name}-{order}.db"))
+        for e in seed:
+            m.store.add_edge(e)
+        f = tmp_path / f"{name}-{order}.jsonl"
+        _write_lines(f, header, recs)
+        rep = m.import_memory(str(f), restore=restore)
+        got = (sorted(e.id for e in m.store.edges(U, active_only=False, include_quarantined=True)),
+               sorted((x["id"], x["refusal"], x["signal"]) for x in rep["procedural_refusals"]))
+        m.close()
+        return got
+
+    # A — the predecessor incoming (round 7's fixed path) and STORED give the same answer
+    assert run([by["e-pred"], by["e-succ"]], "a-incoming") == (
+        [], [("e-pred", "procedural_import_refused", "registry"), ("e-succ", "inheritance_violation", "stamp")])
+    assert run([by["e-succ"]], "a-stored", seed=[_edge("Rotate keys.", relation=PROC, eid="e-pred")]) == (
+        ["e-pred"], [("e-succ", "inheritance_violation", "stamp")])
+    # C — a procedural P, its successor X and X's successor Y in the file; a stored
+    # declarative X with no predecessor must not shadow the file's chain
+    chain = Memory(llm=_quiet, config=_cfg(tmp_path, "chain.db"))
+    chain.store.add_edge(_proc_edge("Rotate keys.", "e-P", "host"))
+    chain.store.add_edge(_edge("Porto", relation="located_at", eid="e-X"))
+    chain.store.add_edge(_edge("Lisbon", relation="located_at", eid="e-Y", supersedes="e-X"))
+    header2, base2 = _file_from(chain, tmp_path / "c.jsonl")
+    chain.close()
+    recs = json.loads(json.dumps(base2))
+    for r in recs:
+        if r["id"] == "e-X":
+            r["supersedes"] = "e-P"                       # forged in the file: add_edge refuses to build it
+    header = header2
+    expect_refused = [("e-P", "procedural_import_refused", "stamp"), ("e-X", "inheritance_violation", "stamp"),
+                      ("e-Y", "inheritance_violation", "stamp")]
+    assert run(recs, "c-empty") == ([], expect_refused)                                  # the control
+    assert run(recs, "c-shadow", seed=[_edge("Porto", relation="located_at", eid="e-X")]) == (["e-X"], expect_refused)
+    # B — the sentinel is not a value; a successor carrying the old string is refused by the lexicon anyway
+    from veracium import portability as _p
+    src_text = pathlib.Path(_p.__file__).read_text()
+    assert "_UNRESOLVED = object()" in src_text and '_UNRESOLVED = "unresolved"' not in src_text

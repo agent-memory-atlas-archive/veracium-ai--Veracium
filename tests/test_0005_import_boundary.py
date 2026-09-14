@@ -677,6 +677,15 @@ _CALLSITE_DISPOSITIONS = {
     # lineages, restore for the changed-producer chain and the intact control
     ("test_0037_producer_stamp.py",
      "test_lineage_reads_every_import_signal_and_carries_validated_inheritance"): "both",
+    # specs/0037 v24.4 (round-8 finding 1): the id-conflict regression drives BOTH
+    # paths on purpose — restore for the stored-predecessor forms and the re-import
+    # control, default for the duplicate-id forms; both file orders
+    ("test_0037_producer_stamp.py",
+     "test_conflicting_ids_are_resolved_before_lineage_in_both_orders"): "both",
+    # specs/0037 v24.4 (research's pre-seal red team, A and C): the registry-only
+    # predecessor by custody and the shadowed chain, default path, both orders
+    ("test_0037_producer_stamp.py",
+     "test_stored_and_incoming_custody_read_one_procedural_signal_set"): "default",
     ("test_0037_producer_stamp.py", "run"): "both",          # that test's helper: default for the lineages, restore for the chains
     # specs/0026 V6a: the accepted import decision table driven over
     # BOTH modes deliberately — default-recompute (forged discarded,
