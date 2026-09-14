@@ -664,6 +664,17 @@ third-party record through its `sources` check; a procedural record hand-minted
 at `add_edge` renders like a declared one — that is the stated limit, and the
 reason to write through `Memory`.
 
+A second stated limit, beside the first because both are about what the store
+can and cannot vouch for: **Veracium does not witness its own history.** The
+`edge_event` journal lives in the same SQLite file as the rows it describes,
+with no hash chain, no `prev_digest` and no signature, and `forget_user` erases
+it with the user's rows; it is a history, not a tamper-evident record. Veracium
+detects inconsistency, faults and changes made outside its own interfaces, but
+not changes made by the party who operates the store, who can alter both the
+records and the journal. Independent witnessing is not part of v1 (specs/0036,
+the owner's ruling of 2026-09-12). A deployment that needs tamper evidence keeps
+its own witness outside the file Veracium writes.
+
 ## Migrating a store (`veracium migrate`)
 
 Release migrations are **offline** and operator-driven (specs/0013 §5b,

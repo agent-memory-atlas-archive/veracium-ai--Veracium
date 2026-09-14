@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Stated limit, published: Veracium does not witness its own history** (specs/0036; the
+  owner's ruling of 2026-09-12 took journal witnessing off the critical path on condition that
+  the limit be published, and the owner's word of 2026-09-14 puts it in the docs). The
+  `edge_event` journal lives in the same SQLite file as the rows it describes, with no hash
+  chain, no `prev_digest` and no signature, and `forget_user` erases it with the user's rows —
+  a history, not a tamper-evident record. Veracium detects inconsistency, faults and changes
+  made outside its own interfaces, but not changes made by the party who operates the store.
+  The sentence has stood under `veracium why` in the API reference and in the release notes
+  that introduced it (2026-09-12); it is now also in the concepts page's "What Veracium does
+  not do" and in "Providing a store" beside the store-boundary statement, where a host reads
+  limits, and a test reads all three. No behaviour change.
 - **Procedural capture: a parenthetical's punctuation ends nothing, a `?` establishes the next
   start only with a separator, and the import boundary's inheritance check sees refused
   predecessors; the capture-cost figures relabelled** (specs/0037 v24.2, specs/0038 v6.7; the

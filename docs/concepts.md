@@ -164,6 +164,17 @@ received email is refused. Provenance-by-authorship, doing its job.
   hands you grounded context to drop into your own prompt.
 - It isn't multi-user-leaky: memory is scoped by `user_id`; one user's memory can
   never reach another's.
+- **It does not witness its own history.** The `edge_event` journal that
+  `veracium why` and the doctor read is a history, not a tamper-evident record:
+  it lives in the same SQLite file as the rows it describes, with no hash chain,
+  no `prev_digest` and no signature, and `forget_user` erases it with the user's
+  rows. So Veracium detects inconsistency, faults and changes made outside its
+  own interfaces, but **not changes made by the party who operates the store**,
+  who can alter both the records and the journal. Independent witnessing is not
+  part of v1 (specs/0036, the owner's ruling of 2026-09-12: the limit is
+  published rather than left silent). A deployment that needs tamper evidence
+  keeps its own witness — an append-only copy of exports, or a store
+  implementation that signs — outside the file Veracium writes.
 - **It labels; it does not enforce.** Veracium is the *store* half of a split
   reference monitor: it governs retention, retrieval, description and
   recommendation, and every decision on that half is a conjunction of typed
