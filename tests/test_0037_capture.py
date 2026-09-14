@@ -606,8 +606,11 @@ def test_the_round_3_passage_selections_are_refused_end_to_end(tmp_path, case, t
 @pytest.mark.parametrize("case, text, quote, stored", [
     ("F1 a mid-sentence relative clause and its condition, kept whole", "I review invoices, which arrive daily, only after approval.",
      "I review invoices, which arrive daily, only after approval.", "I review invoices, which arrive daily, only after approval."),
-    ("the first of two sentences, with its terminal", "I review invoices daily. archive receipts immediately.", "I review invoices daily.", "I review invoices daily."),
-    ("the first of two sentences, terminal omitted", "I review invoices daily. archive receipts immediately.", "I review invoices daily", "I review invoices daily"),
+    # v24: the second sentence must START LIKE ONE — an uppercase letter, a digit or an opening
+    # quote after the terminator; a lowercase continuation is an ambiguous join and refuses
+    # (the v22 lowercase form of these two cases moved to the refused list below)
+    ("the first of two sentences, with its terminal", "I review invoices daily. Archive receipts immediately.", "I review invoices daily.", "I review invoices daily."),
+    ("the first of two sentences, terminal omitted", "I review invoices daily. Archive receipts immediately.", "I review invoices daily", "I review invoices daily"),
     ("a sentence in the middle of a paragraph", "Thanks for the notes. I always run the linter before merging. Let me know.", "I always run the linter before merging", "I always run the linter before merging"),
     ("a frequency lead needs no comma", "Every Friday I review the invoices.", "Every Friday I review the invoices", "Every Friday I review the invoices"),
     ("a subordinate lead with its comma", "When the build is red, I usually rerun it.", "When the build is red, I usually rerun it", "When the build is red, I usually rerun it"),
@@ -625,13 +628,19 @@ def test_a_whole_sentence_of_the_event_is_admitted_and_stored_as_written(tmp_pat
 
 def test_the_first_sentence_admits_while_the_declared_second_instruction_is_not_carried(tmp_path):
     """The reviewer's F3 event with the CORRECT selection: the extractor quotes
-    the first sentence only; the declared instruction "archive receipts
+    the first sentence only; the declared instruction "Archive receipts
     immediately." is not part of the carrier, so 0038's exemption never sees
-    it; one procedure is recorded and its text is the first sentence alone."""
-    n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices daily. archive receipts immediately.", "x",
-                                           "I review invoices daily.", instructions=["archive receipts immediately."])
+    it; one procedure is recorded and its text is the first sentence alone.
+    v24: with the second sentence LOWERCASE the join is ambiguous and the first
+    sentence refuses too — nothing is stored and nothing is carried either way
+    (round-4 finding 2's correction: ambiguous joins are refused, not admitted)."""
+    n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices daily. Archive receipts immediately.", "x",
+                                           "I review invoices daily.", instructions=["Archive receipts immediately."])
     assert (n, refused) == (1, 0) and obj == "I review invoices daily."
-    assert "archive" not in obj
+    assert "archive" not in obj.lower()
+    n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices daily. archive receipts immediately.", "x",
+                                           "I review invoices daily.", instructions=["archive receipts immediately."], name="lower.db")
+    assert (n, refused, dropped) == (0, 1, 0) and obj is None
 
 
 def test_the_fifth_draw_is_the_full_path_evaluation_the_reviewer_asked_for(tmp_path):
@@ -842,3 +851,185 @@ def test_the_grammar_against_the_held_out_draw_meets_the_threshold_under_the_pos
     assert positives == {10: True, 11: True}                                       # the regression guard (two positives are not a rate), held
     borderlines = {r["n"]: actor_present(r["quote"]) for r in rows if r.get("borderline")}
     assert borderlines == {12: True, 31: False}
+
+
+# ================================================================ v24 — the round-4 return
+# The reviewer (round 4, 2026-09-14): "the boundary rules still permit meaning changes" —
+# a `?` omitted from the span turned a question into a statement; the `.` in `$100.50`
+# counted as sentence-final and the stored text lost part of the amount and the
+# condition after it; `daily.archive` carried two sentences as one; and §4a-iii CLAIMED
+# "I doubt I review invoices daily." refuses on its cognitive head while `doubt` was not in
+# the class. One root cause for the first three: the v22 rule tested CHARACTERS, not
+# boundaries. v24 reads boundary KINDS from the complete event, total over what can
+# follow a terminal run, ambiguous joins refused rather than guessed.
+from veracium.procedural_gate import boundary_kind, sentence_segments, has_internal_boundary, check_capture, norm_ws  # noqa: E402
+
+
+@pytest.mark.parametrize("case, text, quote", [
+    ("R4-1a the omitted question mark", "I review invoices daily?", "I review invoices daily"),
+    ("R4-1a the question mark kept", "I review invoices daily?", "I review invoices daily?"),
+    ("R4-1b the decimal point as a boundary", "I review invoices above $100.50 only after approval.", "I review invoices above $100"),
+    ("R4-2 two sentences with no space between", "I review invoices daily.archive receipts immediately.", "I review invoices daily.archive receipts immediately."),
+    ("R4-2 the first of them, the join ambiguous", "I review invoices daily.archive receipts immediately.", "I review invoices daily."),
+    ("R4-3 the claimed cognitive refusal, now real", "I doubt I review invoices daily.", "I doubt I review invoices daily."),
+    ("research: an abbreviation before the run (a.m.)", "I review invoices at 9 a.m. every day.", "I review invoices at 9 a.m"),
+    ("research: a listed abbreviation (approx.)", "I review invoices approx. every morning.", "I review invoices approx"),
+    ("research: an ellipsis", "I review invoices... daily.", "I review invoices"),
+    ("a lowercase continuation after a terminator (v22 admitted the first sentence)", "I review invoices daily. archive receipts immediately.", "I review invoices daily."),
+    ("a start mid-token", "I pay $100.50 daily.", "50 daily."),
+    ("research: a listed business abbreviation (reqs.), fails closed", "I review invoices per reqs. Every week I archive them.", "I review invoices per reqs"),
+    ("research: the same shape with the period carried (eng.)", "I sync with eng. Mondays are the busy day.", "I sync with eng."),
+    ("a vowel-less short token is an abbreviation by shape (mgmt.)", "I bill by mgmt. Every week I archive.", "I bill by mgmt"),
+    ("research: a lowercase product name opens the next sentence (fails closed)", "I run the linter every commit. npm test follows.", "I run the linter every commit."),
+    ("the epistemic siblings: deny", "I deny I review invoices daily.", "I deny I review invoices daily."),
+    ("the epistemic siblings: suspect", "I suspect I review invoices daily.", "I suspect I review invoices daily."),
+    ("the epistemic siblings: presume", "I presume I review invoices daily.", "I presume I review invoices daily."),
+])
+def test_the_round_4_boundary_and_head_cases_are_refused_end_to_end(tmp_path, case, text, quote):
+    n, refused, dropped, obj, attribution = _capture(tmp_path, text, "x", quote)
+    assert (n, refused) == (0, 1), (case, obj)
+    assert obj is None and attribution is None
+
+
+@pytest.mark.parametrize("case, text, quote, stored", [
+    ("R4-1b the whole sentence, the decimal inside it", "I review invoices above $100.50 only after approval.",
+     "I review invoices above $100.50 only after approval.", "I review invoices above $100.50 only after approval."),
+    ("a second sentence that starts like one", "I review invoices daily. Archive receipts immediately.", "I review invoices daily.", "I review invoices daily."),
+    ("per SENTENCE, never per event: a routine before a question to the assistant",
+     "I review invoices every Monday. Can you recommend a tool?", "I review invoices every Monday.", "I review invoices every Monday."),
+    ("a plain period omitted by the span (type preserved)", "I run the formatter before committing, every time. Unrelated: I like tea.",
+     "I run the formatter before committing, every time", "I run the formatter before committing, every time"),
+    ("a contraction before the period is a word, not a letter", "I check the queue whenever it doesn't drain.", "I check the queue whenever it doesn't drain.", "I check the queue whenever it doesn't drain."),
+    ("research's control: `bet` is a routine sense, not added to the class", "I bet on horses every Saturday.", "I bet on horses every Saturday.", "I bet on horses every Saturday."),
+    ("research's control: `question` is a routine sense, not added to the class", "I question every invoice over $500.", "I question every invoice over $500.", "I question every invoice over $500."),
+    ("a second sentence opening with a digit", "I review invoices daily. 3 of them are late.", "I review invoices daily.", "I review invoices daily."),
+    ("a second sentence opening with a quote", "I review invoices daily. \"Late\" is anything past noon.", "I review invoices daily.", "I review invoices daily."),
+    ("a short last word before another sentence is NOT refused (the broad narrowing was not taken)", "I go to the gym. Then I shower.", "I go to the gym.", "I go to the gym."),
+])
+def test_the_round_4_controls_admit_and_store_the_sentence_as_written(tmp_path, case, text, quote, stored):
+    n, refused, dropped, obj, attribution = _capture(tmp_path, text, "x", quote)
+    assert (n, refused) == (1, 0), case
+    assert obj == stored and attribution.endswith(stored)
+
+
+def test_the_open_residual_is_pinned_so_a_change_is_noticed(tmp_path):
+    """Finding 1's class REMAINS REACHABLE through an abbreviation outside the list
+    that carries a vowel (`sched.`): the span ends at what the rule reads as a
+    boundary and "Every week I archive them" is lost. Named in 0037 §8 as an OPEN
+    residual — a hand-list stands in for a property and lags the language — and
+    pinned here at the storage level so the day it closes (or widens) is noticed.
+    (describe's frozen floor happens to withhold this particular text; the
+    residual is about what is STORED.)"""
+    n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices per sched. Every week I archive them.", "x",
+                                           "I review invoices per sched")
+    assert (n, refused) == (1, 0) and obj == "I review invoices per sched"
+
+
+def test_the_boundary_kinds_are_total_and_fail_closed():
+    """Every shape that can follow a terminal run has a kind, and the unrecognised
+    shapes are AMBIGUOUS (refused), never a boundary by default. Each row: the text,
+    the index of the run, the kind."""
+    rows = [
+        ("I review invoices daily.", 23, "boundary"),                  # end of text
+        ("I review daily. Then I archive.", 14, "boundary"),           # whitespace + uppercase
+        ("I review daily. 3 are late.", 14, "boundary"),               # whitespace + digit
+        ("I review daily. \"Late\" is noon.", 14, "boundary"),         # whitespace + opening quote
+        ("I review daily. archive them.", 14, "ambiguous"),            # whitespace + lowercase
+        ("I review daily.archive them.", 14, "ambiguous"),             # a letter right after
+        ("above $100.50 only", 10, "inside"),                          # a decimal point
+        ("I review invoices... daily.", 17, "ambiguous"),              # an ellipsis
+        ("at 9 a.m. every day.", 6, "ambiguous"),                      # a single letter before (a.)
+        ("at 9 a.m. every day.", 8, "ambiguous"),                      # a single letter before (m.)
+        ("invoices approx. every morning.", 15, "ambiguous"),          # a listed abbreviation
+        ("I see Dr. Smith weekly.", 8, "ambiguous"),                   # a listed title, even before uppercase
+        ("I review invoices daily?", 23, "question"),                  # a question
+        ("I review invoices daily?! Then", 23, "question"),            # a run carrying `?`
+        ("it doesn't drain.", 16, "boundary"),                         # a contraction is a word
+        ("He said \"I run daily.\" Then", 20, "boundary"),             # a closer belongs to the run
+        ("I review daily. Then", 14, "boundary"),                 # any whitespace
+        ("I review daily.- then", 14, "ambiguous"),                    # a symbol right after
+        # research's narrowing, in its narrow form: an UNLISTED abbreviation before the period
+        # and an uppercase word is where a hand-list fails OPEN into the meaning-loss class —
+        # listed tokens and vowel-less short tokens are ambiguous; the broad form (every short
+        # word) was measured and refused "every time. Unrelated…", so it was not taken
+        ("I review invoices per reqs. Every week", 26, "ambiguous"),   # `reqs.` — listed
+        ("I sync with eng. Mondays", 15, "ambiguous"),                 # `eng.` — listed
+        ("I bill by mgmt. Every week", 14, "ambiguous"),               # vowel-less short token, unlisted
+        ("I go to the gym. Then I shower.", 15, "boundary"),           # NOT taken: a short last word stays a boundary
+        ("every time. Unrelated: I like tea.", 10, "boundary"),        # the canonical routine shape
+        ("I review invoices per sched. Every week", 27, "boundary"),   # the OPEN residual: unlisted, carries a vowel
+        ("I go to the gym.", 15, "boundary"),                          # end of text: nothing to lose
+    ]
+    for text, i, kind in rows:
+        assert text[i] in ".!?", (text, i)
+        assert boundary_kind(text, i) == kind, (text, i, boundary_kind(text, i))
+    # the segments: a decimal does not cut, an ambiguous join does, a final segment
+    # without a terminator is "eot"
+    segs = sentence_segments("I pay $100.50 daily. Then I file. and rest")
+    assert [(s[3]) for s in segs] == ["boundary", "ambiguous", "eot"]
+    assert has_internal_boundary("I review daily. Then I archive.") is True
+    assert has_internal_boundary("I review invoices above $100.50 only after approval.") is False
+    assert has_internal_boundary("I review invoices daily?") is True          # a question is not a plain sentence
+    assert has_internal_boundary("I review invoices daily.archive") is True
+
+
+def test_the_epistemic_class_is_what_the_spec_says_and_its_costs_are_pinned():
+    """`doubt`, `deny`, `suspect`, `presume` are in the class (round-4 finding 3 was
+    a claim with no code behind it); `question` and `bet` are NOT (research's
+    constructed routine senses); `figure`, `guess`, `reckon` were already in the
+    class and their routine senses refuse — a stated cost, pinned so a change is
+    noticed rather than discovered."""
+    from veracium.procedural_gate import _COGNITIVE, _stem
+    for w in ("doubt", "deny", "suspect", "presume", "figure", "guess", "reckon", "wonder", "suppose", "assume"):
+        assert _stem(w) in _COGNITIVE, w
+    for w in ("question", "bet"):
+        assert _stem(w) not in _COGNITIVE, w
+    assert not check_capture("I figure out the totals every morning.", "I figure out the totals every morning.", max_summary_chars=512)[0]
+    assert check_capture("I bet on horses every Saturday.", "I bet on horses every Saturday.", max_summary_chars=512)[0]
+
+
+def test_the_draw_5_labelled_pairs_through_the_full_path(tmp_path):
+    """The reviewer's ask (round 4): "extend it to verify stored text and
+    descriptions for the labelled pairs" — research's assertions, lifted. Every
+    one of the eleven labelled user-turn pairs is driven through the REAL path
+    (`Memory.remember` with a controlled extractor output → the store →
+    `describe_procedures`), with the context DECLARED (`EvidenceContext.direct()`
+    — without it ingest takes the third-party floor, every captured record lands
+    USE_ONLY and describe returns nothing: an instrument that could not exhibit
+    the phenomenon; research's harness caught that on itself). ADMITTED: the
+    stored object is exactly norm_ws(quote), the note is empty, the description's
+    summary is the quote and its attribution the prefixed form. REFUSED: nothing
+    procedural written and the refusal counted. The admitted count is asserted
+    beside the verdicts so an empty result cannot pass as true."""
+    from veracium.procedures import _attribution
+    from veracium.schema import is_procedural
+    root = ROOT / "tests" / "eval" / "extraction_speech_act"
+    lab = [_json.loads(l) for l in (root / "draw5_11_labelled.jsonl").read_text().splitlines() if l.strip()]
+    assert len(lab) == 11
+    admitted, refused_total, passages = 0, 0, set()
+    for i, row in enumerate(lab):
+        mem = Memory(llm=_llm_emitting([_proc_triple(quote=row["quote"], object="a routine")]), config=_cfg(tmp_path, f"d5-{i}.db"))
+        res = mem.remember(U, row["event_text"], author=EvidenceAuthor.USER, context=EvidenceContext.direct())
+        q = norm_ws(row["quote"]).strip()
+        procs = [e for e in mem.store.edges(U, active_only=False) if is_procedural(e)]
+        if res["procedures"]:
+            admitted += 1
+            passages.add(q)
+            assert res["procedures"] == 1 and len(procs) == 1, row
+            e = procs[0]
+            assert e.object == q and e.note == "" and e.provenance.basis == "stated" and e.provenance.producer == "extractor"
+            d = mem.describe_procedures(U)
+            assert len(d.descriptions) == 1
+            one = d.descriptions[0]
+            assert one.summary == q and one.attribution == _attribution("stated", q)
+            assert row["expected"] == "pass", row                       # nothing labelled must-refuse is admitted
+        else:
+            refused_total += res["procedural_refused"]
+            assert res["procedural_refused"] == 1 and procs == [], row
+            assert mem.describe_procedures(U).descriptions == []
+        mem.close()
+    # the thresholds fixed before the run (ledger 2026-09-14T11:21Z): 2 of 6 positive
+    # ROWS = 2 of 4 distinct positive PASSAGES admitted, 0 of the must-refuse rows
+    positives = [r for r in lab if r["expected"] == "pass"]
+    assert len(positives) == 6 and len({norm_ws(r["quote"]).strip() for r in positives}) == 4
+    assert admitted == 2 and len(passages) == 2 and refused_total == 9

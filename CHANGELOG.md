@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- **Procedural capture: sentence boundaries are read from the complete event as kinds, total
+  and fail-closed; the claimed refusal of "I doubt I…" is real** (specs/0037 v24, specs/0038
+  v6.5; the amendments review package, round 4, returned 2026-09-14). The v22 rule tested
+  characters, not boundaries: a span could stop one character short of its own `?` ("I review
+  invoices daily?" stored as a statement), the `.` in `$100.50` counted as sentence-final (the
+  stored text lost part of the amount and the condition after it), and two sentences with no
+  space between them passed as one carrier. Now a terminator's kind is read from the event —
+  a boundary (end of text, or whitespace then an uppercase letter, digit or opening quote), a
+  decimal point (inside), a question (`?` in the run — refused, per sentence: a routine before a
+  question to the assistant still admits), or an ambiguous join (an ellipsis, an abbreviation
+  before the period, a letter right after it, a lowercase continuation — refused, never
+  guessed). `doubt`, `deny`, `suspect` and `presume` join the cognitive class; `question` and
+  `bet` deliberately do not. Re-measured with thresholds fixed first: every pinned figure
+  unchanged. Two stated costs: a lowercase continuation ("daily. archive"; "commit. npm test
+  follows") now refuses the first sentence too, and an abbreviation outside the gate's list that
+  carries a vowel ("per sched. Every week…") still reads as a boundary — the open residual,
+  named in the spec and pinned by a test. The draw-5 labelled pairs run through the full path
+  in the packaged test.
 - **The store boundary stated; `Provenance` frozen; every new procedural record says which
   path wrote it** (specs/0006 v10, specs/0037 v23; the owner's word, 2026-09-14). `Store` and
   `Store.add_edge` are an interface a host IMPLEMENTS, not a write API a host CALLS: every
@@ -30,7 +48,8 @@
   mid-sentence clause and the condition after it ("I review invoices, which arrive daily, only after
   approval" stored as "I review invoices"); it is withdrawn — the user's sentence is stored as
   written. A quote that is a fragment of a sentence ("I always review invoices" lifted from
-  "Imagine I always review invoices.") or that spans two sentences (whatever the case of the second)
+  "Imagine I always review invoices.") or that spans two sentences (v24 reads the join as a kind: a
+  lowercase continuation is ambiguous and refuses the first sentence too)
   is refused: the span's boundaries are validated against the event. A conditional whose lead
   clause carries the routine ("If I review invoices daily, the queue stays short.") is refused.
   Re-measured on all four labelled draws with thresholds fixed first: admissions unchanged. Packages

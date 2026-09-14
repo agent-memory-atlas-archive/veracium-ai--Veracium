@@ -182,11 +182,18 @@
     "supersedes_pin": "a17508dceb94759bb44087ee53ce4d007eaac7dc1d7c7bd9947eb40758dcbb37",
     "utc": "2026-09-13",
     "what": "Re-pinned to v6.4 (the round-3 RETURN folded), the oracle manifest re-pinned first and this pin computed last over the final text. Prose only; the corpus sets are untouched."
+   },
+   {
+    "by": "dev (veracium-61)",
+    "method": "SHA-256 over the spec's UTF-8 bytes with exactly the one column-0 `corpus sha256: ` line removed (spec_pin.rule)",
+    "supersedes_pin": "e83ffd01b4f3e38957c1b33fa25b50e2f4c7660cd98c5c97f9753fd836be8aeb",
+    "utc": "2026-09-14",
+    "what": "Re-pinned to v6.5 (the round-4 RETURN folded), the oracle manifest re-pinned first and this pin computed last over the final text. Prose only; the corpus sets are untouched."
    }
   ],
   "rule": "Remove EXACTLY the lines beginning at column 0 with \"corpus sha256: \" (the line and its terminator, nothing else), assert there is exactly ONE, then sha256 the remaining bytes.",
   "spec": "specs/0038-extraction-speech-act.md (on placement)",
-  "spec_text_sha256_excluding_the_corpus_digest_line": "e83ffd01b4f3e38957c1b33fa25b50e2f4c7660cd98c5c97f9753fd836be8aeb",
+  "spec_text_sha256_excluding_the_corpus_digest_line": "f331c9eb58ba6efb91f50a557b7e58f07bbd573085affb4e95625d9747de1bae",
   "spec_version": "accepted (closing cell)",
   "status": "BOUND"
  },

@@ -142,8 +142,13 @@ mem.record_procedure("alice", "Credentials are rotated quarterly.",
 extractor may emit a `follows_procedure` triple carrying `quote`, the verbatim span in which the
 user states a routine of their own. Ingest admits it only through ordered, refuse-only gates:
 the author is the user; the quote is a whitespace-normalised substring of the event text AND one
-whole sentence of it (it starts where a sentence starts and ends where one ends, so a fragment
-lifted from inside "Imagine I always review invoices" is refused, and so are two sentences); the
+whole sentence of it — its boundaries read from the complete event as kinds (specs/0037 v24): a
+terminator followed by whitespace and an uppercase letter, digit or opening quote is a boundary, a
+decimal point is inside a sentence, a sentence ending in `?` is a question and refused, and
+anything the rule cannot resolve (an ellipsis, an abbreviation before the period, two sentences
+with no space between them, a lowercase continuation) is an ambiguous join and refused — so a
+fragment lifted from inside "Imagine I always review invoices" is refused, a span that stops
+before its own `?` or at the `.` of `$100.50` is refused, and so are two sentences; the
 summary meets `record_procedure`'s contract (normalised, at most 512 characters); the span opens
 with the user asserting a current, repeated performance of their own — present simple, present
 perfect continuous, or present progressive with a frequency marker, with an action verb at the

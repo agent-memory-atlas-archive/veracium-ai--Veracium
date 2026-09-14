@@ -510,6 +510,12 @@ WITHDRAWN = [
      "0037 v22 (the amendments round-3 RETURN, 2026-09-13): the stored gloss IS the normalised span with NO "
      "transformation; v21's relative-clause cut removed a mid-sentence clause and the condition after it.",
      "specs/0037 §4a-iii Gate 4; docs/api.md; CHANGELOG"),
+    ("0037-v24-character-boundary-rule",
+     r"immediately before sentence-final punctuation it omitted|no internal terminator followed by whitespace|contains no terminator followed by whitespace, whatever follows|whatever the case of the second",
+     "0037 v24 / 0038 v6.5 (the amendments round-4 RETURN, 2026-09-14): boundaries are KINDS read from the "
+     "complete event — an omitted `?` never admits, a decimal point is inside a sentence, a terminator with "
+     "no following space or a lowercase continuation is an ambiguous join and refuses.",
+     "specs/0037 §4a-iii Gate 1, §6 V-WHOLE-SENTENCE; specs/0038 §2b; docs/api.md; CHANGELOG"),
     ("0037-v23-attribute-chain-residual",
      r"a stamp minted through an attribute chain the sweep cannot see, named here rather than claimed away|outside the sweep's grammar\. No src site does it today",
      "0037 v23 (the owner's word, 2026-09-14): Provenance is a frozen model, so the attribute-chain route "

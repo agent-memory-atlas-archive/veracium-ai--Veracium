@@ -601,15 +601,18 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: the frozen Provenance — eight mutation sites now read the stamp's fields to
 #: build a copy — the producer stamp's reads at the store choke point, the
 #: import boundary and the doctor's split) moved dotted/dataflow 5,828 -> 5,856,
-#: the rest unchanged.
+#: the rest unchanged; 0037 v24 (2026-09-14: the boundary kinds — `text[i]`,
+#: `.isupper()`/`.isdigit()`/`.isspace()` reads in `boundary_kind` and
+#: `sentence_segments`; the compiled `_SENTENCE_BOUNDARY.search` gone) moved
+#: dotted/dataflow 5,856 -> 5,870 and module-plain 310 -> 309, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5856,
+    "dotted/dataflow": 5870,
     "dotted/module-machinery": 19,
-    "dotted/module-plain": 310,
+    "dotted/module-plain": 309,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6266
+SRC_ATTRIBUTE_TOTAL = 6279
 SRC_DATA_DUNDERS_IN_DATAFLOW = 125   # 2026-09-14: +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)
 
 

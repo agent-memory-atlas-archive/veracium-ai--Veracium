@@ -140,6 +140,14 @@ _COGNITIVE_WORDS = ("think", "mean", "hope", "plan", "consider", "want", "intend
                     "like", "love", "prefer", "need", "feel", "believe", "guess", "suppose", "wonder",
                     "decide", "figure", "imagine", "dream", "expect", "assume", "reckon", "contemplate",
                     "toy", "debate", "ponder", "muse",
+                    # v24 (round-4 finding 3: "I doubt I review invoices daily." was a CLAIMED
+                    # refusal with no code behind it): the epistemic heads that qualify rather
+                    # than assert — doubt, deny, suspect, presume — join the class. NOT added,
+                    # on research's constructed controls: "question" ("I question every invoice
+                    # over $500."), "bet" ("I bet on horses every Saturday.") — ordinary routine
+                    # senses; "figure"/"guess"/"reckon" were already here (a stated cost:
+                    # "I figure out the totals every morning." refuses).
+                    "doubt", "deny", "suspect", "presume",
                     "thought", "felt", "meant", "dreamt")   # irregular pasts of the class, which no stem reaches
 
 
@@ -185,8 +193,8 @@ def actor_present(span: str, event_text: Optional[str] = None, left_window: int 
     s = norm_ws(span)
     if not s or not _HEAD.match(s) or _MARKERS.search(s) or _PAST_VERB.match(s):
         return False
-    if _SENTENCE_BOUNDARY.search(s):          # v21: a span is ONE sentence — a second sentence is not the same assertion
-        return False
+    if has_internal_boundary(s):              # v21/v24: a span is ONE plain sentence — a second sentence, an ambiguous
+        return False                          # join or a question is not the same assertion (the kinds, gate-only)
     if not positive_form(s):                  # v20: fail CLOSED on every unenumerated form
         return False
     if event_text is not None:
@@ -208,17 +216,31 @@ def whole_sentence(span: str, event: str, at: int) -> bool:
     be exactly one whole sentence of it — it begins at the start of the event
     or immediately after sentence-final punctuation, and it ends at the end of
     the event, or at sentence-final punctuation it carries itself, or
-    immediately before sentence-final punctuation it omitted. A fragment inside
-    a framing sentence ("Imagine I always review invoices." → "I always review
+    immediately before a plain `.`/`!` it omitted. v24 (round-4 findings 1a/1b/2):
+    the boundaries are the KINDS of `boundary_kind`, read from the complete
+    event — a decimal point is inside a sentence, `daily.archive` is an
+    ambiguous join, an omitted `?` is never allowed and a sentence ending in
+    `?` is a question and refuses whatever the span carries; the rule is
+    per SENTENCE, never per event (a user turn that ends in a question to the
+    assistant still yields its routine sentence). A fragment inside a framing
+    sentence ("Imagine I always review invoices." → "I always review
     invoices") is not a sentence, whatever the frame says; two sentences are
-    not one. Case plays no part."""
-    before = event[:at].rstrip()
-    if before and before[-1] not in _TERMINAL:
-        return False
-    after = event[at + len(span):].lstrip()
-    if after and span[-1] not in _TERMINAL and after[0] not in _TERMINAL:
-        return False
-    return True
+    not one. Case decides nothing about admission; it only tells a boundary
+    from an ambiguous join, and the ambiguous side refuses."""
+    end = at + len(span)
+    for s, run_start, run_end, kind in sentence_segments(event):
+        if s <= at < run_end or (kind == "eot" and s <= at):
+            if at != s:                                   # a fragment, or a start mid-token ("$100.|50 daily")
+                return False
+            if kind in ("question", "ambiguous"):          # a question is not an assertion; a join the rule
+                return False                              # cannot resolve is refused, never guessed
+            if kind == "eot":
+                return end == run_end                     # the sentence has no terminator: the span is all of it
+            if end == run_end:                            # the span carries its own terminal run
+                return True
+            run = event[run_start:run_end]
+            return end == run_start and run in (".", "!")  # the span may omit a plain `.`/`!` — never `?`, never a closer
+    return False
 
 
 # ------------------------------------------------ the tokenizer and its literal sets
@@ -335,8 +357,144 @@ _FREQ_ADV = {"always", "usually", "typically", "often", "regularly", "routinely"
 # v22 (round-3 F3): a sentence terminator followed by whitespace and ANY
 # character is a boundary — the v21 pattern required an uppercase letter or an
 # opening quote after it, so "daily. archive receipts" read as one sentence.
-_SENTENCE_BOUNDARY = re.compile(r"[.!?]\s+\S")
 _TERMINAL = ".!?"
+# v24 (round-4 findings 1a, 1b, 2 — one root cause: the v22 rule tested CHARACTERS,
+# `[.!?]`, not sentence boundaries; a decimal point counted as sentence-final, a
+# terminator with no following space did not, and a span could stop one character
+# short of its own `?`). A boundary is now a KIND read from the complete event, and
+# the kinds are TOTAL over what can follow a terminator run — anything unrecognised
+# is AMBIGUOUS and refuses (fail closed), never a boundary by default.
+_CLOSERS = "\"')]\u201d\u2019"
+_OPENERS = "\"'([\u201c\u2018"
+#: tokens whose trailing period is an abbreviation, not a sentence end (research's
+#: constructed cases: "9 a.m. every day", "approx. every morning" — each would have
+#: LOST its frequency marker under a whitespace-only rule); single letters are
+#: covered by shape. A title before an uppercase name ("Dr. Smith") is the named
+#: residual: an abbreviation OUTSIDE this list followed by an uppercase word reads
+#: as a boundary, so a span ending there refuses only by the list.
+_ABBREVIATIONS = frozenset({
+    "etc", "approx", "vs", "no", "dr", "mr", "mrs", "ms", "prof", "cf", "al", "st", "jr", "sr",
+    "inc", "ltd", "co", "fig", "dept", "est", "ca", "circa",
+    "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec",
+    "mon", "tue", "tues", "wed", "thu", "thur", "thurs", "fri", "sat", "sun",
+    # the business and developer registers this product is aimed at (research's cases,
+    # 2026-09-14): tokens that are rarely a sentence's last WORD — `min`, `max`, `dev`,
+    # `ops`, `doc`, `docs`, `spec`, and on research's second read `prod`, `misc`, `temp`
+    # ("I log the temp. Every hour…"), are left out because they often are
+    "reqs", "req", "eng", "mgmt", "acct", "org", "std", "config", "admin", "info",
+    "ref", "refs", "sec", "hr", "hrs", "wk", "wks", "mo", "yr", "yrs", "avg", "mgr", "asst",
+    "assoc", "corp", "govt", "intl", "natl", "univ", "tel", "ext", "msg", "fyi", "eta", "tbd",
+    "asap", "pls", "thx", "pymt", "qty", "amt"})
+
+
+#: a token of this many letters or fewer, vowel-less, before a period and an uppercase
+#: word, is an abbreviation by shape (`mgmt.`, `acct.`, `std.`); everything else the
+#: list does not name reads as a boundary — the OPEN residual, named in the spec
+_SHORT_WORD = 4
+
+
+def _run_end(text: str, i: int) -> int:
+    """`text[i]` is a terminator: the index just past the terminal run — the
+    terminators, then any closing quotes/brackets that belong to the sentence."""
+    j = i
+    while j < len(text) and text[j] in _TERMINAL:
+        j += 1
+    while j < len(text) and text[j] in _CLOSERS:
+        j += 1
+    return j
+
+
+def _word_before(text: str, i: int) -> str:
+    """The word ending at `text[i]`, apostrophes included — "doesn't." ends in
+    the word "doesn't", not in the single letter "t" (the first measurement
+    against draw 1 refused a pinned positive on exactly that)."""
+    k = i
+    while k > 0 and (text[k - 1].isalpha() or text[k - 1] in "'\u2019"):
+        k -= 1
+    return text[k:i].strip("'\u2019")
+
+
+def boundary_kind(text: str, i: int) -> str:
+    """The KIND of the terminal run starting at `text[i]` (a terminator):
+      question  — the run carries `?`: the sentence is a question, whatever follows
+      inside    — a `.` between two digits (a decimal point), no run at all
+      boundary  — the run ends the text, or is followed by whitespace and then an
+                  uppercase letter, a digit or an opening quote/bracket
+      ambiguous — everything else: an ellipsis (`...`), a single-letter or listed
+                  abbreviation before the run (`a.m.`, `approx.`), a letter or other
+                  character right after it (`daily.archive`), whitespace followed by a
+                  lowercase letter (`daily. archive`, `Sept. every year`) — a join the
+                  rule cannot resolve, refused rather than guessed."""
+    run_terms = text[i:_run_end(text, i)].rstrip(_CLOSERS)
+    if "?" in run_terms:
+        return "question"
+    if run_terms.count(".") >= 2:
+        return "ambiguous"
+    if (text[i] == "." and len(run_terms) == 1 and i + 1 < len(text) and text[i + 1].isdigit()
+            and i > 0 and text[i - 1].isdigit()):
+        return "inside"
+    w = _word_before(text, i)
+    if w and (len(w) == 1 or w.lower() in _ABBREVIATIONS):
+        return "ambiguous"
+    j = _run_end(text, i)
+    if j >= len(text):
+        return "boundary"
+    if not text[j].isspace():
+        return "ambiguous"
+    while j < len(text) and text[j].isspace():
+        j += 1
+    if j >= len(text):
+        return "boundary"
+    c = text[j]
+    if c.isupper() and text[i] == "." and w and len(w) <= _SHORT_WORD and not any(ch in "aeiouy" for ch in w.lower()):
+        # research's narrowing (2026-09-14), taken in its NARROW form: "I review invoices
+        # per reqs. Every week I archive them." is where an UNLISTED abbreviation before
+        # a period and an uppercase word fails OPEN into the meaning-loss class. A short
+        # token with no vowel (`mgmt.`, `acct.`, `std.`, `pymt.`) is an abbreviation by
+        # shape and is ambiguous here. The BROAD form — every short unlisted word — was
+        # built and measured first: it refused "every time. Unrelated…" (the canonical
+        # routine shape ends in `day.`/`time.`/`week.`), so the open residual stays
+        # open and is NAMED in the spec as finding 1's class, reachable through an
+        # unlisted abbreviation that carries a vowel (`sched.`, `reqs.` if unlisted).
+        return "ambiguous"
+    return "boundary" if (c.isupper() or c.isdigit() or c in _OPENERS) else "ambiguous"
+
+
+def sentence_segments(text: str):
+    """The text cut at every terminal run that is not `inside`: a list of
+    (start, run_start, run_end, kind) — `kind` is the run's kind, or "eot" for
+    a final segment with no terminator. `start` skips leading whitespace."""
+    segs, start, i, n = [], 0, 0, len(text)
+    while i < n:
+        if text[i] in _TERMINAL and (i == 0 or text[i - 1] not in _TERMINAL):
+            kind = boundary_kind(text, i)
+            if kind == "inside":
+                i += 1
+                continue
+            end = _run_end(text, i)
+            s = start
+            while s < i and text[s].isspace():
+                s += 1
+            segs.append((s, i, end, kind))
+            start, i = end, end
+            continue
+        i += 1
+    s = start
+    while s < n and text[s].isspace():
+        s += 1
+    if s < n:
+        segs.append((s, n, n, "eot"))
+    return segs
+
+
+def has_internal_boundary(span: str) -> bool:
+    """v24: the gate-only reading of the same kinds — any terminal run before
+    the span's own last one, or an ambiguous/question last run, means the span
+    is not one plain sentence."""
+    segs = sentence_segments(span)
+    if len(segs) > 1:
+        return True
+    return bool(segs) and segs[0][3] in ("ambiguous", "question")
 
 
 def derive_gloss(span: str) -> str:

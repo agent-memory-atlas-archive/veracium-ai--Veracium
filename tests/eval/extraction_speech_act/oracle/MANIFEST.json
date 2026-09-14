@@ -95,7 +95,7 @@
  },
  "spec_pin": {
   "spec": "specs/0038-extraction-speech-act.md",
-  "spec_text_sha256_excluding_both_pin_lines": "8eb6d079552bcbbf75794bd63874741bc80459301e263383a1a11a914fc28047",
+  "spec_text_sha256_excluding_both_pin_lines": "57d620195f49b20ca249fc926ddbebbd52ce447b68dae94d6944fbf9edf0e033",
   "excluded_lines": [
    "oracle manifest sha256: ",
    "corpus sha256: "
@@ -151,6 +151,12 @@
     "utc": "2026-09-13",
     "supersedes_pin": "8769bdcf82ed7e33b82a337464f8ff77122dfdaef273051f82306cb25c4eece5",
     "what": "Re-pinned to v6.4 (the amendments round-3 RETURN folded, 2026-09-13; with 0037 v22): the exemption reaches only a whole-sentence carrier. Prose only; the pin moved BY DESIGN; the oracle files are untouched."
+   },
+   {
+    "by": "dev (veracium-61)",
+    "utc": "2026-09-14",
+    "supersedes_pin": "8eb6d079552bcbbf75794bd63874741bc80459301e263383a1a11a914fc28047",
+    "what": "Re-pinned to v6.5 (the amendments round-4 RETURN folded, 2026-09-14; with 0037 v24): the exemption reaches only a whole-sentence carrier under the boundary KINDS — an ambiguous join is refused, never admitted as one carrier. Prose only; the pin moved BY DESIGN; the oracle files are untouched."
    }
   ],
   "rule": "the sha256 of the spec text with exactly the one column-0 'oracle manifest sha256:' line AND the one column-0 'corpus sha256:' line removed (each line + terminator). Two single-line pins on one document: this one excludes both so the corpus pin — 0037's rule, inherited verbatim, excluding only its own line — can be re-pinned second over the final oracle line."
