@@ -270,7 +270,9 @@ the non-semantic path too (`semantic=False`), where `recalled_edges` is empty. A
 rank on a held id) leaves `policy_receipt` as `None`; `policy` cannot be combined with `as_of`. The
 receipt is DURABLE (schema v14): before `recall` returns, the receipt is written to the store as a
 row keyed by its `recall_id`, and `memory.policy_receipts(user_id, limit=None)` (newest first) or
-`memory.policy_receipt(user_id, recall_id)` reads it back field-equal to what `recall` returned. A
+`memory.policy_receipt(user_id, recall_id)` reads it back field-equal to what `recall` returned (the
+`recall_id` lives on `Recall.policy_receipt`, not on `Recall` itself). A store whose `policy_receipt`
+table has been dropped refuses to open (the table is required by the schema manifest). A
 receipt write that fails raises out of `recall` — the answer is not returned as if its trace
 existed. Receipts are not part of `export_memory` (they are deployment audit, not memory) and
 `forget_user` erases them with the user. Read the receipts before judging the policy, because

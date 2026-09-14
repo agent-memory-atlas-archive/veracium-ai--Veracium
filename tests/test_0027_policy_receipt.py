@@ -398,3 +398,27 @@ def test_a_v13_store_migrates_to_v14_with_its_rows_intact(tmp_path):
     rc = reopened.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt
     assert rc is not None and reopened.policy_receipt(U, rc.recall_id) == rc
     reopened.close()
+
+
+def test_a_removed_receipt_table_refuses_to_open_the_store(tmp_path):
+    """Research's round of behavioural verification (2026-09-14), a result
+    stronger than the write's loudness: the table is REQUIRED in the shape
+    manifest, so a store whose `policy_receipt` table was dropped to silence
+    receipts does not reach `recall` at all — it refuses to OPEN as a
+    stamped-shape mismatch naming the missing objects. The write's raise is
+    the propagation path for a failure INSIDE an intact store; this is the
+    guarantee for a store made incomplete."""
+    from veracium.store.schema_version import StoreVersionError
+    path = str(tmp_path / "dropped.db")
+    mem = _memory(tmp_path, "dropped.db")
+    assert mem.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt is not None
+    mem.close()
+    c = sqlite3.connect(path)
+    c.execute("DROP TABLE policy_receipt")                                      # the index goes with it
+    c.commit(); c.close()
+    with pytest.raises(StoreVersionError) as e:
+        SqliteStore(path)
+    assert e.value.reason == "stamped-shape-mismatch"
+    assert "table:policy_receipt" in str(e.value) and "ix_policy_receipt_time" in str(e.value)
+    with pytest.raises(StoreVersionError):                                        # through Memory too
+        Memory(llm=lambda *a, **k: "", config=MemoryConfig(db_path=path, require_source_id=False))

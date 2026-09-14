@@ -610,7 +610,13 @@ class's refusal at the first firing recall, not a silent drop. The row is
 written once: the key `(user_id, recall_id)` refuses a second. The table is
 `REQUIRED` in 0013's policy (an audit record is not derivable from current
 state; its absence is damage, not drift — the `edge_event` argument) and its
-time index `REBUILDABLE`. Crossing v13 → v14 is DDL only: no receipt exists
+time index `REBUILDABLE` — which carries a guarantee stronger than the
+write's loudness (research's behavioural verification, 2026-09-14): a store
+whose `policy_receipt` table was DROPPED to silence receipts never reaches
+`recall`; it refuses to OPEN as a stamped-shape mismatch naming the missing
+objects. The write's raise is the propagation path for a failure inside an
+intact store; the shape manifest is the guarantee against a store made
+incomplete. Crossing v13 → v14 is DDL only: no receipt exists
 before the table does, so the migration carries nothing and mints nothing.
 Ids only at rest as in flight (V-RECEIPT-IDS-ONLY holds of the row's text).
 Not exported: `export_memory` is the user's memory and a receipt is
@@ -815,7 +821,7 @@ CREATE INDEX ix_edge_embedding_lookup ON edge_embedding(user_id, embedder_id, di
 | **V-RECEIPT-NON-SEMANTIC-PATH** (v13; correction C1) with `semantic=False` and a policy, the receipt exists, `semantic_status` is "disabled", the displaced id has no `recalled_edges` entry and is absent from `edges` yet is named in the receipt; with an inert policy on that path the returned selection is the legacy selection edge for edge (V10 through `recall`) | `test_the_receipt_is_written_on_the_non_semantic_path_and_carries_ids_only`, `test_no_policy_no_receipt_and_an_inert_policy_returns_the_legacy_selection` | CI |
 | **V-RECEIPT-IDS-ONLY** (v13) every list and key in the receipt is an edge id; no field carries an edge's object or note | `test_the_receipt_is_written_on_the_non_semantic_path_and_carries_ids_only` | CI |
 | **V-RECEIPT-DURABLE** (v14) the receipt `recall` returned is read back from the store field-equal by `recall_id` and listed newest first; the row's text is the sorted-key JSON of the receipt, ids only; it survives close and reopen | `test_the_receipt_is_durable_and_reads_back_field_equal`, `test_receipts_list_newest_first_with_a_limit_and_survive_reopening`, `test_no_firing_writes_no_row` | CI |
-| **V-RECEIPT-DURABLE-OR-LOUD** (v14) a receipt write that fails raises out of `recall` (the answer is not returned as if recorded); a store without the receipt methods refuses at the first firing recall through the base class, and a non-firing recall on it is unaffected; a second row for a `recall_id` is refused by the key; a row not carrying the receipt's fields, or whose columns disagree with its text, is refused at read | `test_a_failed_receipt_write_raises_out_of_recall`, `test_a_store_without_receipt_support_refuses_the_first_firing_recall`, `test_a_receipt_row_is_written_once_and_a_foreign_row_is_refused` | CI |
+| **V-RECEIPT-DURABLE-OR-LOUD** (v14) a receipt write that fails raises out of `recall` (the answer is not returned as if recorded); a store without the receipt methods refuses at the first firing recall through the base class, and a non-firing recall on it is unaffected; a second row for a `recall_id` is refused by the key; a row not carrying the receipt's fields, or whose columns disagree with its text, is refused at read; a store whose `policy_receipt` table was dropped refuses to OPEN (stamped-shape mismatch naming the table and its index) before any recall | `test_a_failed_receipt_write_raises_out_of_recall`, `test_a_store_without_receipt_support_refuses_the_first_firing_recall`, `test_a_receipt_row_is_written_once_and_a_foreign_row_is_refused`, `test_a_removed_receipt_table_refuses_to_open_the_store` | CI |
 | **V-RECEIPT-ERASE** (v14) `forget_user` removes the user's receipts and no other user's; `policy_receipt` is in the erase-table set | `test_forget_user_erases_the_users_receipts_and_no_others` | CI |
 | **V-RECEIPT-NOT-EXPORTED** (v14) no field of a receipt reaches the export file and a store built from the export holds no receipt | `test_receipts_are_not_exported_and_an_import_carries_none` | CI |
 | **V-RECEIPT-SCHEMA-14** (v14) schema 14 = schema 13 + `policy_receipt` (REQUIRED) + `ix_policy_receipt_time` (REBUILDABLE), the head stamps 14 and the table's columns are the six named; a stamped v13 store migrates to 14 with its edges and journal untouched (no second baseline) and then records receipts | `test_schema_14_declares_the_receipt_table_required_and_its_index_rebuildable`, `test_a_v13_store_migrates_to_v14_with_its_rows_intact` | CI |
