@@ -17,6 +17,8 @@ quarantined. Memory is per-user; one user's memory never reaches another's.
 from __future__ import annotations
 
 import hashlib
+import dataclasses
+import json
 import re
 import threading
 import time
@@ -189,6 +191,38 @@ class PolicyReceipt:
     ranks_applied: dict
     semantic_status: str
     recorded_at: str
+
+
+_RECEIPT_FIELDS = tuple(f.name for f in dataclasses.fields(PolicyReceipt))
+
+
+def receipt_row(receipt: "PolicyReceipt") -> dict:
+    """specs/0027 §4g (v14): the store row for one receipt — the identity
+    columns a reader lists by, and `receipt`: the receipt's JSON, keys sorted,
+    the ONLY serialisation (V-RECEIPT-DURABLE reads it back field-equal).
+    `tags_matched` travels as a JSON list and returns as a tuple."""
+    return {"recall_id": receipt.recall_id, "policy_id": receipt.policy_id,
+            "policy_version": receipt.policy_version, "recorded_at": receipt.recorded_at,
+            "receipt": json.dumps(dataclasses.asdict(receipt), sort_keys=True,
+                                  separators=(",", ":"))}
+
+
+def receipt_from_row(row: dict) -> "PolicyReceipt":
+    """The inverse of `receipt_row`: the verbatim text parsed back; a row whose
+    text does not name exactly the receipt's fields is REFUSED (a store that
+    hands back something else is not handing back the receipt)."""
+    d = json.loads(row["receipt"])
+    if not isinstance(d, dict) or set(d) != set(_RECEIPT_FIELDS):
+        raise ValueError(
+            f"policy receipt row {row.get('recall_id')!r} does not carry the receipt's fields "
+            f"(has {sorted(d) if isinstance(d, dict) else type(d).__name__}, "
+            f"wants {sorted(_RECEIPT_FIELDS)})")
+    d["tags_matched"] = tuple(d["tags_matched"])
+    for key in ("recall_id", "policy_id", "policy_version", "recorded_at"):
+        if d[key] != row[key]:
+            raise ValueError(f"policy receipt row {row.get('recall_id')!r}: column {key} "
+                             f"disagrees with the receipt text")
+    return PolicyReceipt(**d)
 
 
 # specs/0027 §4b (V-STATUS) — the CLOSED semantic_status vocabulary.
@@ -1083,6 +1117,12 @@ class Memory:
                                            tags_matched=tuple(policy.tags_matched),
                                            semantic_status=sem_status,
                                            recorded_at=utcnow().isoformat(), **receipt_raw)
+            # specs/0027 §4g (v14): the receipt is DURABLE — written to the
+            # store before this call returns, as the row the store reads back
+            # (V-RECEIPT-DURABLE). A write failure raises out of recall
+            # (V-RECEIPT-DURABLE-OR-LOUD): the answer is not returned as if
+            # its trace existed.
+            self.store.write_policy_receipt(user_id, receipt_row(policy_receipt))
         return Recall(context=context, grounded=grounded, unverified=unverified,
                       edges=edges, episodes=episodes,
                       tokens_estimated=self._est_tokens(context), truncated=truncated,
@@ -1964,6 +2004,20 @@ class Memory:
         return r
 
     # -- portability (see veracium.portability for the format) --------------
+    # -- specs/0027 §4g (v14): reading the durable receipts -------------------
+    def policy_receipts(self, user_id: str, *, limit: Optional[int] = None) -> list:
+        """The user's stored `PolicyReceipt`s, newest first — every recall in
+        which a policy lane fired on this store, exactly as each was returned
+        (the row's verbatim JSON, parsed back; V-RECEIPT-DURABLE). Not part of
+        the export (the receipt is deployment audit, not memory) and erased
+        with the user (V-RECEIPT-ERASE)."""
+        return [receipt_from_row(r) for r in self.store.policy_receipts(user_id, limit=limit)]
+
+    def policy_receipt(self, user_id: str, recall_id: str) -> Optional["PolicyReceipt"]:
+        """One stored receipt by the `recall_id` `recall` minted, or `None`."""
+        row = self.store.policy_receipt(user_id, recall_id)
+        return None if row is None else receipt_from_row(row)
+
     def export_memory(self, user_id: str, path) -> dict:
         """Write `user_id`'s complete memory to `path` as portable JSONL —
         full provenance/disclosure/history included, nothing summarized.

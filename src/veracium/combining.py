@@ -173,6 +173,11 @@ COMBINING_SITES = {
     (_STORE, "add_episode"): SiteSpec(
         False, why="one episode from one turn; derives nothing from any "
                    "other record"),
+    (_STORE, "write_policy_receipt"): SiteSpec(
+        False, why="specs/0027 §4g (v14): one receipt row from one recall; "
+                   "it names the ids the recall already computed and derives "
+                   "nothing from any other record — an audit row, not a "
+                   "synthesis"),
     (_STORE, "delete_episode"): SiteSpec(
         False, why="removes one record"),
     (_STORE, "forget_user"): SiteSpec(

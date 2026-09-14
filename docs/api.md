@@ -268,8 +268,13 @@ orders with `reserve_unchanged`, the policy's identity and tags, a minted `recal
 to your own logs, and `recorded_at`. Ids only: never content, never the query or a digest of it. The receipt is written on
 the non-semantic path too (`semantic=False`), where `recalled_edges` is empty. An inert policy (no
 rank on a held id) leaves `policy_receipt` as `None`; `policy` cannot be combined with `as_of`. The
-receipt is not yet stored durably: a host that turns a policy on persists `Recall.policy_receipt`
-itself — read the receipts before judging the policy, because `displaced` is the measurement.
+receipt is DURABLE (schema v14): before `recall` returns, the receipt is written to the store as a
+row keyed by its `recall_id`, and `memory.policy_receipts(user_id, limit=None)` (newest first) or
+`memory.policy_receipt(user_id, recall_id)` reads it back field-equal to what `recall` returned. A
+receipt write that fails raises out of `recall` — the answer is not returned as if its trace
+existed. Receipts are not part of `export_memory` (they are deployment audit, not memory) and
+`forget_user` erases them with the user. Read the receipts before judging the policy, because
+`displaced` is the measurement.
 
 ### `answer(user_id, query, *, principal=None, **filters) -> str`
 
@@ -655,8 +660,11 @@ gate, that its stamps were minted by the product — holds for records written
 THROUGH `Memory`. `memory.store` is reachable and `Store.add_edge` is public
 because a host implementing a store needs both; a record a host writes by
 calling `add_edge` directly carries exactly what that host minted, and nothing
-in the store re-derives or checks the `Memory`-level facts about it. The store's
-own rules still hold there (a stored stamp, basis or producer never changes on a
+in the store re-derives or checks the `Memory`-level facts about it. A store used
+with a policy lane must implement `write_policy_receipt`, `policy_receipts` and
+`policy_receipt` (schema v14): the base class refuses rather than drops, so the
+first recall on which a lane fires raises `NotImplementedError` against a store
+that lacks them. The store's own rules still hold there (a stored stamp, basis or producer never changes on a
 same-id replace; a successor of a procedural record stays procedural, with the
 same producer). Provenance is a frozen model: a stamp cannot be flipped on a
 built record, only minted at construction. The `doctor` sees an unsourced

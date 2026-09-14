@@ -238,6 +238,11 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
         now_iso = datetime.now(timezone.utc).isoformat()   # ONE clock read
         journal_baselines(conn, now_iso)
         mint_store_epoch(conn, now_iso, 13)
+    # specs/0027 §4g (v14): crossing INTO v14 adds the `policy_receipt` table
+    # and its index through the generic additive apply above and NOTHING else
+    # — a receipt is written only by a recall on an open v14 store, so there is
+    # no pre-existing data to carry and no row to mint. Stated here so the
+    # absence of a v14 step reads as a decision, not an omission.
     conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
 

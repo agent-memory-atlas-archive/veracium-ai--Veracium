@@ -510,6 +510,11 @@ WITHDRAWN = [
      "0037 v22 (the amendments round-3 RETURN, 2026-09-13): the stored gloss IS the normalised span with NO "
      "transformation; v21's relative-clause cut removed a mid-sentence clause and the condition after it.",
      "specs/0037 §4a-iii Gate 4; docs/api.md; CHANGELOG"),
+    ("0027-v14-receipt-not-yet-durable",
+     r"not yet stored durably|not yet DURABLE in the store|persists `Recall\.policy_receipt` itself|persists the receipt itself",
+     "0027 v14 (2026-09-14): the policy receipt is DURABLE — written to the `policy_receipt` table (schema v14) "
+     "before recall returns and read back by `Memory.policy_receipts` / `policy_receipt`; a host no longer persists it.",
+     "specs/0027 §4g; docs/api.md; CHANGELOG"),
     ("0037-v24.2-chunks-not-positions",
      r"about half of sentence positions|about half the sentence positions|54% of sentence positions|53\.6% of sentence positions|\(53\.6%\) carry\s+two or more, where it is not — sentence POSITIONS",
      "0037 v24.2 (the amendments round-6 RETURN, 2026-09-14): 53.6% is the fraction of CHUNKS holding more than one "

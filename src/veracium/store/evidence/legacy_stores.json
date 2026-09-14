@@ -1,7 +1,7 @@
 {
   "manifest_algorithm": 13,
-  "head_digest": "ee2e1e869ddc320d0e53315de751cc7126dd6bdf3746ec0419638c0b4fd39dfa",
-  "head_schema_version": 12,
+  "head_digest": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
+  "head_schema_version": 14,
   "legacy_base_versions": [
     1
   ],
@@ -316,6 +316,62 @@
       "on_disk_user_version": 12,
       "store_schema_version": 12,
       "digest": "ee2e1e869ddc320d0e53315de751cc7126dd6bdf3746ec0419638c0b4fd39dfa",
+      "result": "ok"
+    },
+    {
+      "tag": "v0.20.0",
+      "commit": "1c5a0e97d9b934ecafac87502a2d7f901e42b91e",
+      "on_disk_user_version": 13,
+      "store_schema_version": 13,
+      "digest": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
+      "result": "ok"
+    },
+    {
+      "tag": "v0.20.1",
+      "commit": "fb42e2ea393d938025967332c3a87b968b966cd7",
+      "on_disk_user_version": 13,
+      "store_schema_version": 13,
+      "digest": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
+      "result": "ok"
+    },
+    {
+      "tag": "v0.21.0",
+      "commit": "0c0a72b0fa3e2da761bb9ba8498915bb7c7dc683",
+      "on_disk_user_version": 13,
+      "store_schema_version": 13,
+      "digest": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
+      "result": "ok"
+    },
+    {
+      "tag": "v0.22.0",
+      "commit": "fb7279139e1654bf501012a8ba6a70ba20b53aae",
+      "on_disk_user_version": 13,
+      "store_schema_version": 13,
+      "digest": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
+      "result": "ok"
+    },
+    {
+      "tag": "v0.23.0",
+      "commit": "c60eb2ac0ec1f445fa2685e3022dce5cbc88ec86",
+      "on_disk_user_version": 13,
+      "store_schema_version": 13,
+      "digest": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
+      "result": "ok"
+    },
+    {
+      "tag": "v0.24.0",
+      "commit": "be918907ba35f1745af342a1bfc80ef30edcb951",
+      "on_disk_user_version": 13,
+      "store_schema_version": 13,
+      "digest": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
+      "result": "ok"
+    },
+    {
+      "tag": "v0.25.0",
+      "commit": "caae87e6c38200bf9d43be53a51c7228f88fedff",
+      "on_disk_user_version": 13,
+      "store_schema_version": 13,
+      "digest": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
       "result": "ok"
     }
   ]

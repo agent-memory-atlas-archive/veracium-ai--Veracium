@@ -557,7 +557,9 @@ def test_events_are_store_local_and_required():
     assert objs["edge_event"].policy == sv.REQUIRED
     assert objs["ix_edge_event_lookup"].policy == sv.REBUILDABLE
     assert objs["ix_edge_event_txn"].policy == sv.REBUILDABLE
-    assert sv.SCHEMA_VERSION == 13
+    # v13's objects are asserted above by version; the HEAD moved to 14 at
+    # specs/0027 v14 (the durable policy receipt), which adds and removes nothing here.
+    assert 13 in sv.SCHEMAS and sv.SCHEMA_VERSION >= 13
 
 
 # The pre-feature oracle's identity: captured at main 1fc357f4 (the tree BEFORE

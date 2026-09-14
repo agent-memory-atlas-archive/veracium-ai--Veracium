@@ -5,7 +5,7 @@
 
 # specs/0021 §3 — combining-site manifest
 
-**26 record-mutating code paths**, enumerated by **parsing the store's SQL**
+**27 record-mutating code paths**, enumerated by **parsing the store's SQL**
 rather than by reading the spec's prose matrix. **11 of them COMBINE**:
 they write a record derived from, or mutate a record because of, MORE THAN
 ONE existing record — the definition §3 gives the registry.
@@ -65,3 +65,4 @@ outside the boundary by construction.
 | `src/veracium/store/sqlite.py` | `set_wiki` | `INSERT OR REPLACE INTO wiki` | **yes** | wiki-compilation | v1: the store-wide compile is UNCHANGED, and the wiki never reaches a principal-bearing response (0020 §4d excludes it). Per-scope compilation is the recorded widening (Q2), not a silent one |
 | `src/veracium/store/sqlite.py` | `upsert_embedding` | `INSERT INTO edge_embedding` | no | — | 0027 §4f: writes ONE derived-index row (a vector bound to one edge's content digest) — regenerable, trust-inert, never evidence; digest-conditional against the SINGLE live edge it derives from, so nothing is combined and no scope rule applies (visibility is enforced at read by semantic_candidates' visible-id filter, 0027 §4a Stage 1) |
 | `src/veracium/store/sqlite.py` | `write_consolidation_output_if_current` | `INSERT INTO episodes` | **yes** | consolidation | the derivative, written from the whole claimed set. Its identity is CLEARED (origin=None/source_id=None — §4a/W8): store-authored means store-identified, and membership travels through the ledger, never through a copied identity |
+| `src/veracium/store/sqlite.py` | `write_policy_receipt` | `INSERT INTO policy_receipt` | no | — | specs/0027 §4g (v14): one receipt row from one recall; it names the ids the recall already computed and derives nothing from any other record — an audit row, not a synthesis |

@@ -503,12 +503,39 @@ SCHEMA_V13 = SCHEMA_V12 + (
 )""", REQUIRED),
 )
 
+# specs/0027 §4g (v14, research T1's durability half) — the additive v14: the
+# `policy_receipt` table. One row per recall in which a policy lane FIRED,
+# keyed by the minted `recall_id`; the identity columns (policy, version,
+# recorded_at) are what a reader lists by, and `receipt` is the receipt's
+# JSON VERBATIM as `Memory.recall` returned it — ids only, never content
+# (V-RECEIPT-IDS-ONLY), so the table is a new carrier of nothing 0040's
+# enumeration does not already reach. Policies: the table REQUIRED (an audit
+# record is not derivable from current state — the 0029 `edge_event`
+# argument; its absence is damage, not drift); the time index REBUILDABLE
+# (a lookup accelerator; the PK is the identity). DDL only: crossing INTO
+# v14 adds the objects and nothing else — no receipt exists before the table
+# does — so `migrate_store` needs no data step and the constructor no row.
+SCHEMA_V14 = SCHEMA_V13 + (
+    SchemaObject("table", "policy_receipt", """CREATE TABLE policy_receipt (
+    user_id        TEXT NOT NULL,
+    recall_id      TEXT NOT NULL,
+    policy_id      TEXT NOT NULL,
+    policy_version TEXT NOT NULL,
+    recorded_at    TEXT NOT NULL,
+    receipt        TEXT NOT NULL,
+    PRIMARY KEY (user_id, recall_id)
+)""", REQUIRED),
+    SchemaObject("index", "ix_policy_receipt_time",
+                 "CREATE INDEX ix_policy_receipt_time ON policy_receipt(user_id, recorded_at)",
+                 REBUILDABLE),
+)
+
 SCHEMAS = {1: SCHEMA_V1, 2: SCHEMA_V2, 3: SCHEMA_V3, 4: SCHEMA_V4, 5: SCHEMA_V5,
            6: SCHEMA_V6, 7: SCHEMA_V7, 8: SCHEMA_V8, 9: SCHEMA_V9,
            10: SCHEMA_V10,
-           11: SCHEMA_V11, 12: SCHEMA_V12, 13: SCHEMA_V13}
+           11: SCHEMA_V11, 12: SCHEMA_V12, 13: SCHEMA_V13, 14: SCHEMA_V14}
 
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 """**Declared, not inferred.**
 
 v6 used `max(SCHEMAS)`, so adding or removing a registry entry silently changed

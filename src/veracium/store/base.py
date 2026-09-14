@@ -282,6 +282,34 @@ class Store(ABC):
         cutoff REFUSES. A single lookup — no delta replay, no fabrication."""
         ...
 
+    # -- specs/0027 §4g (v14): the durable policy receipt ----------------------
+
+    def write_policy_receipt(self, user_id: str, row: dict) -> None:
+        """Persist ONE receipt row — `{recall_id, policy_id, policy_version,
+        recorded_at, receipt}` with `receipt` the JSON text `Memory` serialised
+        — in its own committed write. `Memory.recall` calls this whenever the
+        policy lane FIRED, and a failure here RAISES through `recall`
+        (V-RECEIPT-DURABLE-OR-LOUD): a recall whose receipt could not be
+        written must not return as if it had been recorded, because a trace
+        that silently does not exist is the defect the receipt was built to
+        close (correction C1). The default refuses rather than drops."""
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement write_policy_receipt "
+            f"(specs/0027 §4g v14: a store used with a policy lane must persist "
+            f"the receipt)")
+
+    def policy_receipts(self, user_id: str, *, limit: Optional[int] = None) -> list:
+        """The user's receipt rows, NEWEST first by `recorded_at` then
+        `recall_id`; `limit` caps the count. Rows are the dicts
+        `write_policy_receipt` took, `receipt` still the verbatim text."""
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement policy_receipts")
+
+    def policy_receipt(self, user_id: str, recall_id: str):
+        """One receipt row by its minted key, or `None`."""
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement policy_receipt")
+
     @abstractmethod
     def current_state(self, user_id: str, edge_id: str, *, principal=None, policy=None):
         """specs/0030 §4a-i: `CurrentState` — the edge's current row VERBATIM,

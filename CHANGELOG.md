@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+**BREAKING for existing stores — schema 13 → 14 (specs/0027 v14, the durable policy
+receipt).** One additive table (`policy_receipt`) and its time index; no data step — a
+receipt is written only by a recall on an open v14 store, so there is nothing to carry.
+A store created by ≤ 0.25.0 must be migrated offline before this build opens it —
+`veracium migrate --db X --i-have-quiesced --backup REF` (specs/0013's operation; a
+below-head store refuses to open otherwise). **Who must act:** every operator with an
+on-disk store; and every host that IMPLEMENTS `veracium.store.base.Store` and uses a
+policy lane — the store must add `write_policy_receipt`, `policy_receipts` and
+`policy_receipt`, because the base class refuses rather than drops and the first
+recall on which a lane fires raises `NotImplementedError` against a store without
+them. Library and MCP callers that pass no `policy` change nothing.
+
+- **Added: the policy receipt is durable.** When a policy lane fires, `Memory.recall`
+  writes the receipt to the store as one row keyed by its minted `recall_id` — the
+  receipt's JSON verbatim beside the identity columns a reader lists by — BEFORE it
+  returns, and `Memory.policy_receipts(user_id, limit=None)` (newest first) and
+  `Memory.policy_receipt(user_id, recall_id)` read it back field-equal to what `recall`
+  returned (0027 §4g, V-RECEIPT-DURABLE). A receipt write that fails raises out of
+  `recall` (V-RECEIPT-DURABLE-OR-LOUD): the answer is not returned as if its trace
+  existed, which is the defect the receipt was built to close (correction C1). A
+  receipt is written once — a second row for a `recall_id` is refused by the key.
+  Receipts are ids only, as before; they are not part of `export_memory` (deployment
+  audit, not memory) and `forget_user` erases them with the user's rows in the same
+  transaction (V-RECEIPT-ERASE). Retention is not in this release: the table grows by
+  one row per firing recall (research's T10 priced ≈2.3 KB per row, linear in the
+  budget); erasure is per user.
+- **Regenerated: the schema evidence** (`src/veracium/store/evidence/*.json`,
+  `specs/generated/schema_policy.json`) at the new head — it had been stale since
+  schema 13 (recorded head 12; the 0.20.0–0.25.0 tags absent), which no shipped
+  check enforced; the regeneration records all 46 released tags and the qualified
+  runtime.
+
 - **Procedural capture: the enclosure structure is typed, quote-aware and established or the
   passage is declined; import inheritance reads every signal and validates the inherited
   producer** (specs/0037 v24.3, specs/0038 v6.8; the amendments review package, round 7,

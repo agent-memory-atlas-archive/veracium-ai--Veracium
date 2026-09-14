@@ -641,6 +641,10 @@ _CALLSITE_DISPOSITIONS = {
     # is the positive leg (a store's own procedures round-trip with their
     # basis; inconsistent markers refused per record); the old-reader test
     # imports on the default path under a reader held at format 10
+    # specs/0027 v14 §4g (V-RECEIPT-NOT-EXPORTED): a default-path import of an
+    # export taken after a firing recall — the destination holds no receipt
+    ("test_0027_policy_receipt.py",
+     "test_receipts_are_not_exported_and_an_import_carries_none"): "default",
     ("test_0037_procedural.py", "run"): "default",
     ("test_0037_procedural.py",
      "test_default_import_refuses_procedural_records_on_any_signal"): "default",

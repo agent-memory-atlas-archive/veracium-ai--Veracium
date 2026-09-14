@@ -5,7 +5,7 @@
 
 # specs/0020 §4f — public read-surface manifest
 
-**30 public surfaces** — every public method of `Memory` plus every public
+**32 public surfaces** — every public method of `Memory` plus every public
 `*_impl` in `mcp_server` — enumerated by **parsing the AST**, not by reading
 the spec's prose inventory. **5 of them return record objects.**
 
@@ -47,6 +47,8 @@ and 0020's claim is about the surfaces named here.
 | `Memory.introspect` | no | none | counts by relation / author / disclosure, lifecycle state, the wiki compile record (mode="categories" adds rendered facts) | UNSCOPED IN v1 BY DECISION, not by omission. This is the OPERATOR's (and the data subject's) right-to-know surface, not a principal surface: it answers "what do you know about me", which a per-principal view would answer falsely. Per-principal introspection is a RECORDED WIDENING (§4f), and `test_operator_surfaces_take_no_principal` fails if a `principal` parameter appears here without that widening. |
 | `Memory.list_entities` | no | none | per-user id + edge/episode counts | UNSCOPED operator/admin surface, cross-USER by nature and deliberately not an MCP tool. Carries no record content and no per-record identity. |
 | `Memory.maintain` | no | none | the maintenance report | MAINTAIN path. Policy is READ-SIDE ONLY (§2, external F5): no host policy can widen or narrow what the store merges. 0021 rules maintenance. |
+| `Memory.policy_receipt` | no | none | one `PolicyReceipt` by recall_id, or None — the same ids-only shape | UNSCOPED IN v1 BY DECISION — the single-row form of `policy_receipts`, same class, same reasoning; the recall_id is a minted opaque key the host already holds from the recall it audits. |
+| `Memory.policy_receipts` | no | none | `list[PolicyReceipt]` — ids only (baseline/adjusted orders, displaced/admitted, per-id deltas, reserved ids), the policy's identity and tags, the minted recall_id; never content | UNSCOPED IN v1 BY DECISION (specs/0027 §4g, v14). This is the HOST's audit surface over its own policy lane — it reads every receipt the user's recalls wrote, including recalls made under other principals' views (each receipt's ids were themselves computed under that call's scoped scan, Stage 0-1), so the list is cross-principal by nature: operator material in `edges_since`'s class, carrying per-record IDENTITY and no content, deliberately not an MCP tool and never a principal response carrier. A per-principal receipt view is a recorded widening; a host that serves principals keeps receipts on its side of the boundary. |
 | `Memory.recall` | **yes** | `principal=` **threaded** | rendered `context` + `Recall.edges` / `.episodes` / `.contested` (and each group's `.exposed`) | SCOPED. The visibility relation is applied to the EDGE and EPISODE sets before rendering, and every structured carrier is built from its output; the §4e filters run after scope, within the visible set. Queryless (the proactive briefing) takes the same lens on the same code path, before assembly. The compiled wiki is EXCLUDED from a principal-bearing response (§4d). |
 | `Memory.record_outcome` | no | none | `{edge_id, outcome, upgraded, times_used}` | WRITE path (engine-written, never MCP); no record set leaves. |
 | `Memory.record_procedure` | no | none | the new edge id | WRITE path (specs/0037 §4b) — the sole producer of a procedural record; returns an id, renders nothing. Disclosure is derived (quarantine-at-birth, then the three-axis rule), never host-supplied. |

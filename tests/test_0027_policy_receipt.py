@@ -194,3 +194,207 @@ def test_a_malformed_rank_is_refused_before_anything_is_computed(tmp_path):
     with pytest.raises(ValueError, match="policy_rank"):
         mem.recall(U, "boat topic", semantic=False, policy=PolicyLane(policy_id="demo", policy_version="1", ranks={"p": 0}))
     mem.close()
+
+
+# ------------------------------------------------------- v14: durability ----
+# specs/0027 v14 §4g — the receipt is DURABLE: written to the `policy_receipt`
+# table before `recall` returns, read back field-equal, erased with the user,
+# absent from the export, and a failed write is LOUD (raises out of recall)
+# rather than a silent gap — correction C1's class, now closed at the store.
+import json
+import sqlite3
+
+from veracium import receipt_from_row, receipt_row
+from veracium.store import schema_version as sv
+from veracium.store.base import Store
+from veracium.store.migration import migrate_store
+from veracium.store.sqlite import SqliteStore
+
+
+def test_the_receipt_is_durable_and_reads_back_field_equal(tmp_path):
+    """V-RECEIPT-DURABLE: the receipt `recall` returned is the receipt the store
+    reads back by `recall_id` — every field equal (dataclass equality), the
+    row's text is the sorted-key JSON of the receipt and carries ids only."""
+    mem = _memory(tmp_path, "d.db")
+    rc = mem.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt
+    assert isinstance(rc, PolicyReceipt)
+    back = mem.policy_receipt(U, rc.recall_id)
+    assert back == rc and back is not rc
+    assert mem.policy_receipts(U) == [rc]
+    row = mem.store.policy_receipt(U, rc.recall_id)
+    assert row["receipt"] == json.dumps(json.loads(row["receipt"]), sort_keys=True, separators=(",", ":"))
+    assert json.loads(row["receipt"])["tags_matched"] == ["language-relevant"]     # a JSON list, back as a tuple
+    assert "boat" not in row["receipt"] and "harbor" not in row["receipt"]        # ids only, at rest
+    assert row["policy_id"] == LANE.policy_id and row["recorded_at"] == rc.recorded_at
+    assert mem.policy_receipt(U, "no-such-id") is None
+    mem.close()
+
+
+def test_receipts_list_newest_first_with_a_limit_and_survive_reopening(tmp_path):
+    mem = _memory(tmp_path, "l.db")
+    ids = [mem.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt.recall_id
+           for _ in range(3)]
+    listed = mem.policy_receipts(U)
+    assert [r.recall_id for r in listed] == sorted(ids, key=lambda i: (next(r.recorded_at for r in listed if r.recall_id == i), i), reverse=True)
+    assert len(mem.policy_receipts(U, limit=2)) == 2 and mem.policy_receipts(U, limit=2) == listed[:2]
+    with pytest.raises(ValueError):
+        mem.store.policy_receipts(U, limit=0)
+    assert mem.policy_receipts("someone-else") == []
+    mem.close()
+    again = Memory(llm=lambda *a, **k: "",
+                   config=MemoryConfig(db_path=str(tmp_path / "l.db"), require_source_id=False))
+    assert [r.recall_id for r in again.policy_receipts(U)] == [r.recall_id for r in listed]   # durable across open/close
+    again.close()
+
+
+def test_no_firing_writes_no_row(tmp_path):
+    """An inert policy or no policy is not an event: no receipt, no row (V-RECEIPT-ON-FIRING at the store)."""
+    mem = _memory(tmp_path, "n.db")
+    inert = PolicyLane(policy_id="inert", policy_version="1", ranks={"absent-id": 1}, tags_matched=())
+    assert mem.recall(U, "boat topic", semantic=False).policy_receipt is None
+    assert mem.recall(U, "boat topic", semantic=False, policy=inert).policy_receipt is None
+    assert mem.policy_receipts(U) == []
+    assert mem.store._conn.execute("SELECT COUNT(*) FROM policy_receipt").fetchone()[0] == 0
+    mem.close()
+
+
+def test_a_failed_receipt_write_raises_out_of_recall(tmp_path, monkeypatch):
+    """V-RECEIPT-DURABLE-OR-LOUD: a recall whose receipt could not be written does
+    not return as if it had been recorded; a recall without a policy is untouched."""
+    mem = _memory(tmp_path, "f.db")
+
+    def boom(user_id, row):
+        raise sqlite3.OperationalError("database is locked (injected)")
+    monkeypatch.setattr(mem.store, "write_policy_receipt", boom)
+    with pytest.raises(sqlite3.OperationalError, match="injected"):
+        mem.recall(U, "boat topic", semantic=False, policy=LANE)
+    assert mem.recall(U, "boat topic", semantic=False).policy_receipt is None       # no policy: no write, no raise
+    assert mem.policy_receipts(U) == []
+    mem.close()
+
+
+def test_a_store_without_receipt_support_refuses_the_first_firing_recall(tmp_path):
+    """A host store that predates v14: the base class REFUSES rather than drops,
+    so the first recall on which a lane fires raises, and a non-firing recall works."""
+    class _NoReceipts(SqliteStore):
+        write_policy_receipt = Store.write_policy_receipt
+        policy_receipts = Store.policy_receipts
+        policy_receipt = Store.policy_receipt
+
+    store = _NoReceipts(str(tmp_path / "h.db"))
+    mem = Memory(llm=lambda *a, **k: "", store=store,
+                 config=MemoryConfig(db_path=str(tmp_path / "h.db"), max_subgraph_edges=8,
+                                     require_source_id=False))
+    for i in range(12):
+        mem.store.add_edge(_edge(f"x{i:02d}", "user", "likes", f"boat topic{i}", days=i))
+    mem.store.add_edge(_edge("p", "user", "enjoys", "harbor walks", days=30))
+    assert mem.recall(U, "boat topic", semantic=False).policy_receipt is None
+    with pytest.raises(NotImplementedError, match="write_policy_receipt"):
+        mem.recall(U, "boat topic", semantic=False, policy=LANE)
+    with pytest.raises(NotImplementedError):
+        mem.policy_receipts(U)
+    mem.close()
+
+
+def test_a_receipt_row_is_written_once_and_a_foreign_row_is_refused(tmp_path):
+    mem = _memory(tmp_path, "o.db")
+    rc = mem.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt
+    with pytest.raises(sqlite3.IntegrityError):                               # written once, never replaced
+        mem.store.write_policy_receipt(U, receipt_row(rc))
+    with pytest.raises(ValueError, match="lacks"):
+        mem.store.write_policy_receipt(U, {"recall_id": "x"})
+    row = receipt_row(rc)
+    with pytest.raises(ValueError, match="fields"):
+        receipt_from_row({**row, "receipt": json.dumps({"recall_id": rc.recall_id})})
+    with pytest.raises(ValueError, match="disagrees"):
+        receipt_from_row({**row, "policy_id": "another"})
+    assert receipt_from_row(row) == rc
+    mem.close()
+
+
+def test_forget_user_erases_the_users_receipts_and_no_others(tmp_path):
+    """V-RECEIPT-ERASE: the receipt is per-user erasable data, gone with the
+    user's rows in the same statement set; another user's receipts stay."""
+    mem = _memory(tmp_path, "e.db")
+    mine = mem.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt
+    other = "other-user"
+    for i in range(12):
+        mem.store.add_edge(_edge(f"o{i:02d}", "user", "likes", f"boat topic{i}", days=i).model_copy(update={"user_id": other}))
+    mem.store.add_edge(_edge("p", "user", "enjoys", "harbor walks", days=30).model_copy(update={"id": "op", "user_id": other}))
+    theirs = mem.recall(other, "boat topic", semantic=False,
+                        policy=PolicyLane(policy_id=LANE.policy_id, policy_version=LANE.policy_version,
+                                          ranks={"op": 1}, tags_matched=LANE.tags_matched)).policy_receipt
+    assert theirs is not None and mine is not None
+    mem.forget(U)
+    assert mem.policy_receipts(U) == [] and mem.policy_receipt(U, mine.recall_id) is None
+    assert [r.recall_id for r in mem.policy_receipts(other)] == [theirs.recall_id]
+    assert mem.store._conn.execute("SELECT COUNT(*) FROM policy_receipt WHERE user_id=?", (U,)).fetchone()[0] == 0
+    assert "policy_receipt" in __import__("veracium.store.sqlite", fromlist=["_ERASE_TABLES"])._ERASE_TABLES
+    mem.close()
+
+
+def test_receipts_are_not_exported_and_an_import_carries_none(tmp_path):
+    """The receipt is deployment audit, not memory: `export_memory` writes no
+    receipt (no field of it appears in the file) and a store built from the
+    export holds none."""
+    mem = _memory(tmp_path, "x.db")
+    rc = mem.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt
+    out = tmp_path / "export.jsonl"
+    mem.export_memory(U, out)
+    text = out.read_text()
+    assert rc.recall_id not in text and "policy_receipt" not in text and "baseline_order" not in text
+    dest = Memory(llm=lambda *a, **k: "",
+                  config=MemoryConfig(db_path=str(tmp_path / "y.db"), require_source_id=False))
+    dest.import_memory(out, user_id=U)
+    assert dest.policy_receipts(U) == []
+    assert dest.store._conn.execute("SELECT COUNT(*) FROM policy_receipt").fetchone()[0] == 0
+    dest.close()
+    mem.close()
+
+
+def test_schema_14_declares_the_receipt_table_required_and_its_index_rebuildable(tmp_path):
+    objs = {o.name: o for o in sv.SCHEMAS[14]}
+    assert objs["policy_receipt"].policy == sv.REQUIRED
+    assert objs["ix_policy_receipt_time"].policy == sv.REBUILDABLE
+    assert {o.key for o in sv.SCHEMAS[14]} - {o.key for o in sv.SCHEMAS[13]} == {
+        ("table", "policy_receipt"), ("index", "ix_policy_receipt_time")}
+    assert sv.SCHEMA_VERSION == 14
+    mem = _memory(tmp_path, "s.db")
+    assert mem.store._conn.execute("PRAGMA user_version").fetchone()[0] == 14
+    cols = [r[1] for r in mem.store._conn.execute("PRAGMA table_info(policy_receipt)")]
+    assert cols == ["user_id", "recall_id", "policy_id", "policy_version", "recorded_at", "receipt"]
+    mem.close()
+
+
+def test_a_v13_store_migrates_to_v14_with_its_rows_intact(tmp_path):
+    """The v13→v14 cross is DDL only: the table and index appear, the edges and
+    the journal are untouched (no second baseline), the stamp moves to 14."""
+    src = _memory(tmp_path, "src.db")                       # a v14 store with real rows
+    n_edges = len(src.store.edges(U, active_only=False, include_quarantined=True))
+    src.close()
+    old = str(tmp_path / "old13.db")
+    c = sqlite3.connect(old)
+    c.execute("BEGIN")
+    sv.create(c, 13)
+    c.execute(f"ATTACH DATABASE '{tmp_path / 'src.db'}' AS v14")
+    c.execute("INSERT INTO edges SELECT * FROM v14.edges")
+    c.execute("INSERT INTO edge_event SELECT * FROM v14.edge_event")
+    c.execute("PRAGMA user_version = 13")
+    c.commit()
+    n_events = c.execute("SELECT COUNT(*) FROM edge_event").fetchone()[0]
+    assert c.execute("PRAGMA user_version").fetchone()[0] == 13
+    assert not c.execute("SELECT name FROM sqlite_master WHERE name='policy_receipt'").fetchall()
+    c.close()
+    result = migrate_store(old)
+    assert result == "migrated" and result.resulting_version == 14 and result.transaction_committed, result
+    c = sqlite3.connect(old)
+    assert c.execute("PRAGMA user_version").fetchone()[0] == 14
+    assert c.execute("SELECT COUNT(*) FROM edges").fetchone()[0] == n_edges
+    assert c.execute("SELECT COUNT(*) FROM edge_event").fetchone()[0] == n_events    # no re-baseline
+    assert c.execute("SELECT COUNT(*) FROM policy_receipt").fetchone()[0] == 0
+    c.close()
+    reopened = Memory(llm=lambda *a, **k: "",
+                      config=MemoryConfig(db_path=old, max_subgraph_edges=8, require_source_id=False))
+    rc = reopened.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt
+    assert rc is not None and reopened.policy_receipt(U, rc.recall_id) == rc
+    reopened.close()

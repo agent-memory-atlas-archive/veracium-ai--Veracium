@@ -57,7 +57,7 @@ _ERASE_TABLES = ("contribution_ledger",
                  "edges", "episodes", "wiki", "write_counter",
                  "confirmations", "consolidation_ops",
                  "supersession_refusals", "supersession_operations",
-                 "edge_embedding", "edge_event")
+                 "edge_embedding", "edge_event", "policy_receipt")
 EDGE_WRITE_SITE_RULINGS = {
     "_upsert_edge_row": {
         "ruling": "reads the persisted prior, upserts, journals through the choke "
@@ -2187,6 +2187,45 @@ class SqliteStore(Store):
                     continue                      # deleted above, by name
                 self._conn.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
         return {"edges": n_edges, "episodes": n_eps, "confirmations": n_conf}
+
+    # -- the durable policy receipt (specs/0027 §4g, v14) -------------------
+    _RECEIPT_COLUMNS = ("recall_id", "policy_id", "policy_version", "recorded_at", "receipt")
+
+    def write_policy_receipt(self, user_id, row) -> None:
+        """One committed INSERT under the instance lock. Not an edge write:
+        nothing is journaled and `_write_txn`'s allocation discipline does not
+        apply; the 0007 §4c busy-timeout discipline does, and a lock that
+        cannot be taken raises through `recall` (V-RECEIPT-DURABLE-OR-LOUD).
+        The PK refuses a second row for a minted `recall_id` — a receipt is
+        written once, never replaced."""
+        missing = [c for c in self._RECEIPT_COLUMNS if c not in row]
+        if missing:
+            raise ValueError(f"write_policy_receipt: row lacks {missing}")
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO policy_receipt(user_id,recall_id,policy_id,policy_version,"
+                "recorded_at,receipt) VALUES(?,?,?,?,?,?)",
+                (user_id, row["recall_id"], row["policy_id"], row["policy_version"],
+                 row["recorded_at"], row["receipt"]))
+            self._conn.commit()
+
+    def policy_receipts(self, user_id, *, limit=None) -> list:
+        sql = ("SELECT recall_id,policy_id,policy_version,recorded_at,receipt FROM policy_receipt "
+               "WHERE user_id=? ORDER BY recorded_at DESC, recall_id DESC")
+        params = [user_id]
+        if limit is not None:
+            if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+                raise ValueError(f"policy_receipts: limit must be a positive int, got {limit!r}")
+            sql += " LIMIT ?"
+            params.append(limit)
+        return [dict(zip(self._RECEIPT_COLUMNS, r))
+                for r in self._conn.execute(sql, params).fetchall()]
+
+    def policy_receipt(self, user_id, recall_id):
+        r = self._conn.execute(
+            "SELECT recall_id,policy_id,policy_version,recorded_at,receipt FROM policy_receipt "
+            "WHERE user_id=? AND recall_id=?", (user_id, recall_id)).fetchone()
+        return None if r is None else dict(zip(self._RECEIPT_COLUMNS, r))
 
     # -- semantic lane (specs/0027 §4f) -------------------------------------
     def upsert_embedding(self, *, edge_id, user_id, embedder_id,

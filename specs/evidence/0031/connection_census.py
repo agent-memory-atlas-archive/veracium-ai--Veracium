@@ -614,16 +614,20 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: on existing records) moved dotted/dataflow 5,885 -> 5,889, the rest
 #: unchanged; 0037 v24.3 (2026-09-14: `enclosure_structure`'s reads and the
 #: lineage helper's `.provenance.producer` on existing records) moved
-#: dotted/dataflow 5,889 -> 5,893, the rest unchanged.
+#: dotted/dataflow 5,889 -> 5,893, the rest unchanged; 0027 v14 (2026-09-14:
+#: the durable policy receipt — the store's receipt methods, the `Store`
+#: base's refusing defaults, `receipt_row`/`receipt_from_row` and the write
+#: in `recall`) moved dotted/dataflow 5,893 -> 5,925 and module-plain
+#: 309 -> 313 (`json`/`dataclasses` uses), the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5893,
+    "dotted/dataflow": 5925,
     "dotted/module-machinery": 19,
-    "dotted/module-plain": 309,
+    "dotted/module-plain": 313,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6302
-SRC_DATA_DUNDERS_IN_DATAFLOW = 125   # 2026-09-14: +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)
+SRC_ATTRIBUTE_TOTAL = 6338
+SRC_DATA_DUNDERS_IN_DATAFLOW = 129   # 2026-09-14: +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row
 
 
 def _classify_attribute(base, attr, ctx):

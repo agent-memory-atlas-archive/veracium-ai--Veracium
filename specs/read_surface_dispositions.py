@@ -149,6 +149,32 @@ DISPOSITIONS: dict[str, dict] = {
                     "deliberately not an MCP tool. Carries no record content "
                     "and no per-record identity."),
 
+    "Memory.policy_receipts": dict(
+        returns_records=False, principal="none",
+        carriers="`list[PolicyReceipt]` — ids only (baseline/adjusted orders, "
+                 "displaced/admitted, per-id deltas, reserved ids), the policy's "
+                 "identity and tags, the minted recall_id; never content",
+        disposition="UNSCOPED IN v1 BY DECISION (specs/0027 §4g, v14). This is "
+                    "the HOST's audit surface over its own policy lane — it "
+                    "reads every receipt the user's recalls wrote, including "
+                    "recalls made under other principals' views (each receipt's "
+                    "ids were themselves computed under that call's scoped scan, "
+                    "Stage 0-1), so the list is cross-principal by nature: "
+                    "operator material in `edges_since`'s class, carrying "
+                    "per-record IDENTITY and no content, deliberately not an "
+                    "MCP tool and never a principal response carrier. A "
+                    "per-principal receipt view is a recorded widening; a host "
+                    "that serves principals keeps receipts on its side of the "
+                    "boundary."),
+    "Memory.policy_receipt": dict(
+        returns_records=False, principal="none",
+        carriers="one `PolicyReceipt` by recall_id, or None — the same ids-only "
+                 "shape",
+        disposition="UNSCOPED IN v1 BY DECISION — the single-row form of "
+                    "`policy_receipts`, same class, same reasoning; the "
+                    "recall_id is a minted opaque key the host already holds "
+                    "from the recall it audits."),
+
     # ---- surfaces that return no records ----------------------------------
     "Memory.remember": dict(
         returns_records=False, principal="none",
