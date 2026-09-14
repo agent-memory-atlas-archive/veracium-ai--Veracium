@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ a929d3d
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 61fa6c5
+# RE-PINNED 2026-09-14 after 0037 v23.1 (wording only): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0037 v23 / 0006 v10 (Provenance frozen; the producer stamp; no procedural triple here): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0037 v22 (the whole-sentence rule; no procedural triple here): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-13 after 0027 v13 (the policy receipt; no policy passed here): body BYTE-IDENTICAL again.
