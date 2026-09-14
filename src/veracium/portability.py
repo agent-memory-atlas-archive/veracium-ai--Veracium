@@ -362,25 +362,42 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
     _lineage: dict = {}
 
     def _raw_markers(rec):
+        """v24.3 (round-7 finding 2): the SAME signals the filter above reads —
+        stamp, basis, producer, and on the default path the receiving registry's
+        kind for the relation — so the lineage helper is never narrower than the
+        filter it mirrors."""
         prov = rec.get("provenance") if isinstance(rec.get("provenance"), dict) else {}
-        return (prov.get("record_kind") == "procedural" or prov.get("basis") is not None,
-                prov.get("producer"))
+        own = (prov.get("record_kind") == "procedural" or prov.get("basis") is not None
+               or prov.get("producer") is not None
+               or (not restore and is_procedural_relation(reg, rec.get("relation"))))
+        return own, prov.get("producer")
 
-    def procedural_by_lineage(rid, _seen=()):
+    def lineage(rid, _seen=()):
+        """(procedural_by_lineage, validated_producer) for record `rid`. The
+        validated producer is INHERITED down the chain: a record whose own
+        producer disagrees with its predecessor's validated producer is a
+        rejected intermediate, and the constraint it violated carries on to its
+        successors unchanged (round-7 finding 2: the raw field of a rejected
+        intermediate must never substitute for validated inheritance)."""
         if rid in _lineage:
             return _lineage[rid]
         if rid in _seen:                                   # a cycle: fail closed
-            return True
+            return True, None
         if rid in raw_by_id:
-            own, _ = _raw_markers(raw_by_id[rid])
+            own, own_producer = _raw_markers(raw_by_id[rid])
             pred = raw_by_id[rid].get("supersedes")
         elif rid in existing_by_id:
             e = existing_by_id[rid]
-            own, pred = e.provenance.procedural, e.supersedes
+            own, own_producer, pred = e.provenance.procedural, e.provenance.producer, e.supersedes
         else:
-            _lineage[rid] = False
-            return False
-        result = own or (pred is not None and procedural_by_lineage(pred, _seen + (rid,)))
+            _lineage[rid] = (False, None)
+            return _lineage[rid]
+        if pred is None:
+            result = (own, own_producer)
+        else:
+            pred_proc, pred_producer = lineage(pred, _seen + (rid,))
+            validated = pred_producer if pred_producer is not None else own_producer
+            result = (own or pred_proc, validated)
         _lineage[rid] = result
         return result
 
@@ -447,12 +464,8 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         if sid is None:
             kept.append(rec)
             continue
-        if sid in raw_by_id:                                     # RAW, whether or not it was refused above
-            pred_proc = procedural_by_lineage(sid)
-            _, pred_producer = _raw_markers(raw_by_id[sid])
-        elif sid in existing_by_id:
-            pe = existing_by_id[sid].provenance
-            pred_proc, pred_producer = procedural_by_lineage(sid), pe.producer
+        if sid in raw_by_id or sid in existing_by_id:          # RAW, whether or not it was refused above
+            pred_proc, pred_producer = lineage(sid)              # …and the VALIDATED inherited producer
         else:
             kept.append(rec)                                     # no predecessor to inherit from
             continue

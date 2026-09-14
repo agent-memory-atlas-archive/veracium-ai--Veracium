@@ -668,6 +668,12 @@ _CALLSITE_DISPOSITIONS = {
     # procedural predecessor, so its marker-stripped successors are refused by lineage
     ("test_0037_producer_stamp.py",
      "test_the_default_path_keeps_a_refused_predecessor_for_its_successors_inheritance"): "default",
+    # specs/0037 v24.3 (round-7 finding 2): the lineage helper's signals and the validated
+    # inherited producer — the default path for the registry-only and producer-only
+    # lineages, restore for the changed-producer chain and the intact control
+    ("test_0037_producer_stamp.py",
+     "test_lineage_reads_every_import_signal_and_carries_validated_inheritance"): "both",
+    ("test_0037_producer_stamp.py", "run"): "both",          # that test's helper: default for the lineages, restore for the chains
     # specs/0026 V6a: the accepted import decision table driven over
     # BOTH modes deliberately — default-recompute (forged discarded,
     # counted) and restore (verbatim-valid, foreign-opaque,

@@ -427,6 +427,48 @@ def boundary_kind(text: str, i: int) -> str:
     return "boundary" if established else "ambiguous"
 
 
+_PAIRS = {")": "(", "]": "[", "}": "{"}
+_QUOTES = {'"': '"', "\u201c": "\u201d"}
+
+
+def enclosure_structure(text: str):
+    """v24.3 (round-7 finding 1): the enclosure structure of `text`, or None when it
+    cannot be ESTABLISHED. Parentheses, brackets and braces must nest and match
+    by type (a `]` closing a `(` is a mismatch); characters inside a quoted literal
+    (`"…"` or curly quotes) are inert — a quoted `"]"` or `")"` closes nothing; an
+    unclosed opener or an unbalanced double quote leaves the structure
+    unestablished. Returns a list of booleans, one per character: True where the
+    character sits inside an enclosure or a quoted literal (a terminator there ends
+    nothing)."""
+    inside = [False] * len(text)
+    stack: list = []
+    quote_close = None
+    for i, ch in enumerate(text):
+        if quote_close is not None:
+            inside[i] = True
+            if ch == quote_close:
+                quote_close = None
+            continue
+        if ch in _QUOTES:
+            quote_close = _QUOTES[ch]
+            inside[i] = True
+            continue
+        if ch in "([{":
+            stack.append(ch)
+            inside[i] = True
+            continue
+        if ch in _PAIRS:
+            if not stack or stack[-1] != _PAIRS[ch]:
+                return None                                   # a mismatch or a stray closer
+            stack.pop()
+            inside[i] = True
+            continue
+        inside[i] = bool(stack)
+    if stack or quote_close is not None:
+        return None                                           # an unclosed opener or quote
+    return inside
+
+
 def sentence_segments(text: str):
     """The text cut at every terminal run that is not `inside`: a list of
     (start, run_start, run_end, kind, start_kind) — `kind` is the run's kind,
@@ -435,16 +477,19 @@ def sentence_segments(text: str):
     (round-5 finding 1): a segment that follows an ambiguous run ("e.g. I
     review…", "imagining that... I review…") is cut off from its qualifying
     context and is not a valid start — `whole_sentence` reads `start_kind`.
-    `start` skips leading whitespace."""
+    v24.2/v24.3: a terminator inside an enclosure or a quoted literal ends
+    nothing; when the enclosure structure cannot be established (a mismatch,
+    a stray closer, an unclosed opener or quote) EVERY segment is returned
+    ambiguous with an ambiguous start — the passage is declined, never
+    guessed. `start` skips leading whitespace."""
     segs, start, start_kind, i, n = [], 0, "sot", 0, len(text)
-    depth = 0                                     # v24.2 (round-6 finding 1): a terminator INSIDE an
-    while i < n:                                  # enclosing parenthetical/bracket is inside its sentence
-        ch = text[i]                              # — "(ready?)" ends nothing; the run is skipped
-        if ch in "([{":
-            depth += 1
-        elif ch in ")]}":
-            depth = max(0, depth - 1)
-        if ch in _TERMINAL and depth > 0:
+    inside = enclosure_structure(text)
+    established = inside is not None
+    if not established:
+        inside = [False] * n
+    while i < n:
+        ch = text[i]
+        if ch in _TERMINAL and inside[i]:         # inside "(…)" or "…": the run is inert
             i += 1
             continue
         if text[i] in _TERMINAL and (i == 0 or text[i - 1] not in _TERMINAL):
@@ -465,6 +510,8 @@ def sentence_segments(text: str):
         s += 1
     if s < n:
         segs.append((s, n, n, "eot", start_kind))
+    if not established:                           # v24.3: unestablished structure declines every segment
+        segs = [(a, b, c, "ambiguous", "ambiguous") for (a, b, c, _k, _sk) in segs]
     return segs
 
 

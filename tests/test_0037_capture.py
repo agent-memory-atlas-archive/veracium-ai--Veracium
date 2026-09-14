@@ -905,6 +905,12 @@ from veracium.procedural_gate import boundary_kind, sentence_segments, has_inter
     ("R6-1 the `!` form, no separator", "Any tips!I review invoices daily.", "I review invoices daily."),
     ("R6-1 a bracketed question then the routine", "[Any tips?] I review invoices daily.", "I review invoices daily."),
     ("R6-1 an unbalanced closer before the routine", "Any tips) I review invoices daily.", "I review invoices daily."),
+    ("R7-1 a quoted closing bracket does not close the parenthetical", 'For illustration only (press "]" when ready?) I review invoices daily.', "I review invoices daily."),
+    ("R7-1 a quoted closing parenthesis does not close it either", 'For illustration only (press ")" when ready?) I review invoices daily.', "I review invoices daily."),
+    ("R7-1 mismatched enclosure types: the structure cannot be established", "For illustration only (ready?] I review invoices daily.", "I review invoices daily."),
+    ("R7-1 an unclosed opener: unestablished, the whole passage declined", "I review invoices (all of them daily.", "I review invoices (all of them daily."),
+    ("R7-1 an unbalanced double quote: unestablished (a stated cost)", 'I use 5" screens daily.', 'I use 5" screens daily.'),
+    ("R7-1 a terminator inside a quoted literal ends nothing", 'He said "go daily." I review invoices daily.', "I review invoices daily."),
     ("the epistemic siblings: deny", "I deny I review invoices daily.", "I deny I review invoices daily."),
     ("the epistemic siblings: suspect", "I suspect I review invoices daily.", "I suspect I review invoices daily."),
     ("the epistemic siblings: presume", "I presume I review invoices daily.", "I presume I review invoices daily."),
@@ -930,6 +936,8 @@ def test_the_round_4_boundary_and_head_cases_are_refused_end_to_end(tmp_path, ca
     ("R6-1 control: a parenthetical inside the routine is inside its sentence", "I review invoices (all of them) daily.", "I review invoices (all of them) daily.", "I review invoices (all of them) daily."),
     ("R6-1 control: a parenthetical at the end of the turn", "I review invoices daily (really).", "I review invoices daily (really).", "I review invoices daily (really)."),
     ("R6-1 control: a question with its separator still establishes the next start", "Any tips? I review invoices daily.", "I review invoices daily.", "I review invoices daily."),
+    ("R7-1 control: a balanced quoted literal inside the routine", 'I run "make test" every commit.', 'I run "make test" every commit.', 'I run "make test" every commit.'),
+    ("R7-1 control: nested enclosures that match", "I file (see [the list]) weekly.", "I file (see [the list]) weekly.", "I file (see [the list]) weekly."),
 ])
 def test_the_round_4_controls_admit_and_store_the_sentence_as_written(tmp_path, case, text, quote, stored):
     n, refused, dropped, obj, attribution = _capture(tmp_path, text, "x", quote)
@@ -985,6 +993,14 @@ def test_the_boundary_kinds_are_total_and_fail_closed():
     assert [seg[3] for seg in sentence_segments("For illustration only (ready?) I review invoices daily.")] == ["boundary"]
     assert [seg[3] for seg in sentence_segments("[Any tips?] I review daily.")] == ["boundary"]
     assert [seg[3] for seg in sentence_segments("I review (all of them) daily. Then I file.")] == ["ambiguous", "boundary"]
+    # v24.3 (round-7 finding 1): the enclosure structure — typed, quote-aware, or unestablished
+    from veracium.procedural_gate import enclosure_structure
+    assert enclosure_structure("x (y) z") == [False, False, True, True, True, False, False]
+    assert enclosure_structure('(press "]" ok?) I') is not None                # the quoted closer is inert
+    assert enclosure_structure('(press ")" ok?) I') is not None
+    for bad in ("(a]", "a) b", "(a b", 'a "b', "{a)"):
+        assert enclosure_structure(bad) is None, bad                          # mismatch, stray, unclosed, unbalanced
+    assert all(seg[3] == "ambiguous" and seg[4] == "ambiguous" for seg in sentence_segments("(ready?] I review daily."))
     for text, i, kind in rows:
         assert text[i] in ".!?", (text, i)
         assert boundary_kind(text, i) == kind, (text, i, boundary_kind(text, i))

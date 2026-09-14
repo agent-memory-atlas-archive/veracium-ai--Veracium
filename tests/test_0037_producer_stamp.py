@@ -503,3 +503,67 @@ def test_the_default_path_keeps_a_refused_predecessor_for_its_successors_inherit
     rep2 = dst2.import_memory(str(tmp_path / "decl.jsonl"))
     assert rep2["edges"] == 2 and rep2["procedural_refused"] == 0
     dst2.close()
+
+
+# ---------------- v24.3 (round-7 finding 2): the lineage helper reads the filter's signals and validates inheritance
+@pytest.mark.parametrize("order", ["predecessor first", "successors first"])
+def test_lineage_reads_every_import_signal_and_carries_validated_inheritance(tmp_path, order):
+    """The round-7 reviewer, both orders: a REGISTRY-only predecessor (procedural
+    relation, no markers) was refused but its marker-free successors imported — the
+    lineage helper read stamp and basis only; a PRODUCER-only predecessor's grandchild
+    imported; and on restore a `host` lineage with an intermediate changed to
+    `extractor` (refused) let a further `extractor` successor restore — the raw
+    field of a rejected intermediate stood in for validated inheritance. Now the
+    helper reads the filter's four signals (stamp, basis, producer, the registry on
+    the default path) and the inherited producer is VALIDATED down the chain: a
+    rejected intermediate's constraint carries on unchanged."""
+    src = Memory(llm=_quiet, config=_cfg(tmp_path, "src.db"))
+    src.store.add_edge(_proc_edge("Rotate keys.", "e-pred", "host"))
+    src.store.add_edge(_proc_edge("Rotate keys monthly.", "e-succ", "host", supersedes="e-pred"))
+    src.store.add_edge(_proc_edge("Rotate keys yearly.", "e-succ2", "host", supersedes="e-succ"))
+    header, base = _file_from(src, tmp_path / "e.jsonl")
+    src.close()
+
+    def strip(r):
+        for k in ("record_kind", "basis", "producer"):
+            r["provenance"].pop(k, None)
+
+    def run(recs, name, restore=False):
+        recs = list(recs) if order == "predecessor first" else list(reversed(recs))
+        f = tmp_path / f"{name}-{order}.jsonl"
+        _write_lines(f, header, recs)
+        m = Memory(llm=_quiet, config=_cfg(tmp_path, f"{name}-{order}.db"))
+        rep = m.import_memory(str(f), restore=restore)
+        got = (sorted(e.id for e in m.store.edges(U, active_only=False)),
+               sorted((x["id"], x["refusal"], x["signal"]) for x in rep["procedural_refusals"]))
+        m.close()
+        return got
+    # registry-only predecessor: procedural by the receiving registry's kind, no markers
+    a = json.loads(json.dumps(base))
+    for r in a:
+        strip(r)
+        if r["id"] != "e-pred":
+            r["relation"] = "located_at"
+    assert run(a, "registry") == ([], [("e-pred", "procedural_import_refused", "registry"),
+                                        ("e-succ", "inheritance_violation", "stamp"),
+                                        ("e-succ2", "inheritance_violation", "stamp")])
+    # producer-only predecessor
+    b = json.loads(json.dumps(base))
+    for r in b:
+        strip(r)
+        if r["id"] == "e-pred":
+            r["provenance"]["producer"] = "host"
+        else:
+            r["relation"] = "located_at"
+    assert run(b, "producer") == ([], [("e-pred", "procedural_import_refused", "producer"),
+                                        ("e-succ", "inheritance_violation", "stamp"),
+                                        ("e-succ2", "inheritance_violation", "stamp")])
+    # restore: a host lineage with the intermediate AND its successor changed to extractor
+    c = json.loads(json.dumps(base))
+    for r in c:
+        if r["id"] in ("e-succ", "e-succ2"):
+            r["provenance"]["producer"] = "extractor"
+    assert run(c, "changed", restore=True) == (["e-pred"], [("e-succ", "inheritance_violation", "producer"),
+                                                             ("e-succ2", "inheritance_violation", "producer")])
+    # the control: the intact lineage restores whole
+    assert run(base, "intact", restore=True) == (["e-pred", "e-succ", "e-succ2"], [])

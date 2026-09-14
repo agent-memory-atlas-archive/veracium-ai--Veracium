@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Procedural capture: the enclosure structure is typed, quote-aware and established or the
+  passage is declined; import inheritance reads every signal and validates the inherited
+  producer** (specs/0037 v24.3, specs/0038 v6.8; the amendments review package, round 7,
+  returned 2026-09-14). A quoted closing character — `(press "]" when ready?)` — had ended a
+  parenthetical early and let the sentence after it through with its framing stripped, and
+  mismatched enclosure types were accepted; now parentheses, brackets and braces must nest and
+  match by type, characters inside a quoted literal are inert, and a passage whose structure
+  cannot be established (a mismatch, a stray closer, an unclosed opener, an unbalanced double
+  quote) is declined. On import, a predecessor that was procedural only by the receiving
+  registry's kind, or only by its producer stamp, no longer lets its marker-free descendants
+  through, and a rejected intermediate's producer no longer stands in for the lineage's
+  validated one — the constraint carries through it to every successor, on both paths and in
+  either file order. The cost figures' histogram ships as an emitted file beside the counting
+  script, and a test recomputes both figures from it without the dataset.
 - **Stated limit, published: Veracium does not witness its own history** (specs/0036; the
   owner's ruling of 2026-09-12 took journal witnessing off the critical path on condition that
   the limit be published, and the owner's word of 2026-09-14 puts it in the docs). The

@@ -1,0 +1,64 @@
+{
+  "artifact": "chunk_sentence_census",
+  "purpose": "the per-chunk sentence-count histogram behind 0037 section 8's cost arithmetic, emitted so both figures can be recomputed WITHOUT the dataset",
+  "chunking_rule": "a chunk is a `?`/`!`-delimited run of one user turn (norm_ws applied); sentences within a chunk are split on a period followed by whitespace. Under the fail-closed capture contract only the text start/end and a `?`/`!` run establish a boundary, so a routine is capturable only when it IS the whole chunk",
+  "corpus": {
+    "dataset": "longmemeval_s_cleaned.json",
+    "dataset_sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "sessions": 500,
+    "role_filter": "user"
+  },
+  "generated_by": {
+    "script": "chunk_sentence_census.py",
+    "script_sha256": "15c91f076c094e5a991d27a9e0e19c8fbe9c1bbb17a1fdb1e668a489ffea1d99"
+  },
+  "histogram": [
+    {
+      "sentences_per_chunk": "1",
+      "chunks": 1563,
+      "sentences": 1563
+    },
+    {
+      "sentences_per_chunk": "2",
+      "chunks": 1087,
+      "sentences": 2174
+    },
+    {
+      "sentences_per_chunk": "3",
+      "chunks": 445,
+      "sentences": 1335
+    },
+    {
+      "sentences_per_chunk": "4",
+      "chunks": 165,
+      "sentences": 660
+    },
+    {
+      "sentences_per_chunk": "5",
+      "chunks": 49,
+      "sentences": 245
+    },
+    {
+      "sentences_per_chunk": "6+",
+      "chunks": 63,
+      "sentences": 631
+    }
+  ],
+  "totals": {
+    "chunks": 3372,
+    "sentences": 6608,
+    "multi_sentence_chunks": 1809,
+    "sentences_in_multi_sentence_chunks": 5045
+  },
+  "figures": {
+    "A_multi_sentence_chunk_fraction": 0.5365,
+    "B_sentence_positions_in_multi_sentence_chunks": 0.7635
+  },
+  "recompute": {
+    "chunks": "sum(b.chunks for b in histogram)",
+    "sentences": "sum(b.sentences for b in histogram)",
+    "A": "(chunks - histogram['1'].chunks) / chunks",
+    "B": "(sentences - histogram['1'].sentences) / sentences"
+  },
+  "NOT_a_capture_loss_figure": "neither A nor B measures capture loss: routines are not uniformly distributed over sentence positions, and the only measured capture result is draw 5's"
+}
