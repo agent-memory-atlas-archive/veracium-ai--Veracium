@@ -731,3 +731,77 @@ def test_stored_and_incoming_custody_read_one_procedural_signal_set(tmp_path, or
     from veracium import portability as _p
     src_text = pathlib.Path(_p.__file__).read_text()
     assert "_UNRESOLVED = object()" in src_text and '_UNRESOLVED = "unresolved"' not in src_text
+
+
+@pytest.mark.parametrize("order", ["predecessor first", "successor first"])
+@pytest.mark.parametrize("q_where", ["stored", "incoming"])
+def test_a_persisted_producer_is_never_replaced_by_claimed_ancestry(tmp_path, order, q_where):
+    """The round-9 reviewer (0037 v24.5, the contract frozen at round 8): stored P
+    (`host`, no predecessor) and Q (`extractor`); the file carries a copy of P
+    CLAIMING Q as its predecessor (refused) and S (`extractor`, supersedes P). S
+    restored, because the lineage helper preserved P's stored producer and then
+    replaced it with the producer derived from the claimed chain. Now a
+    persisted producer IS the constraint: a claimed ancestry — from an admitted
+    or a refused copy — can add procedural-ness and never replace it. Q stored
+    or arriving in the file, both orders; the control without the copy; the
+    mutants: an agreeing claim lets a `host` successor restore, and an
+    UNSTAMPED stored predecessor takes the claimed chain's producer (a claim can
+    only add a constraint)."""
+    src = Memory(llm=_quiet, config=_cfg(tmp_path, "src.db"))
+    src.store.add_edge(_proc_edge("Rotate keys.", "e-P", "host"))
+    src.store.add_edge(_proc_edge("Rotate keys often.", "e-Q", "extractor"))
+    src.store.add_edge(_proc_edge("Rotate keys monthly.", "e-S", "host", supersedes="e-P"))
+    header, base = _file_from(src, tmp_path / "e.jsonl")
+    src.close()
+    by = {r["id"]: r for r in base}
+
+    def copy(rid, **over):
+        r = json.loads(json.dumps(by[rid]))
+        for k, v in over.items():
+            if k == "producer":
+                r["provenance"]["producer"] = v
+            else:
+                r[k] = v
+        return r
+
+    def run(recs, name, seed):
+        recs = list(recs) if order == "predecessor first" else list(reversed(recs))
+        m = Memory(llm=_quiet, config=_cfg(tmp_path, f"{name}-{order}-{q_where}.db"))
+        for e in seed:
+            m.store.add_edge(e)
+        f = tmp_path / f"{name}-{order}-{q_where}.jsonl"
+        _write_lines(f, header, recs)
+        rep = m.import_memory(str(f), restore=True)
+        got = ({e.id: (e.provenance.producer, e.supersedes) for e in m.store.edges(U, active_only=False)},
+               sorted((x["id"], x["refusal"], x["signal"]) for x in rep["procedural_refusals"]))
+        m.close()
+        return got
+
+    P_host, Q_ext = _proc_edge("Rotate keys.", "e-P", "host"), _proc_edge("Rotate keys often.", "e-Q", "extractor")
+    seed = [P_host, Q_ext] if q_where == "stored" else [P_host]
+    file_q = [] if q_where == "stored" else [by["e-Q"]]
+    P_claim = copy("e-P", supersedes="e-Q")                       # forged ancestry: P claims Q
+    S_ext = copy("e-S", producer="extractor")                     # forged in the file: the store refuses to build it
+    stored = {"e-P": ("host", None), "e-Q": ("extractor", None)}
+    # the reviewer's case: the copy is refused AND S is refused on the PERSISTED producer
+    assert run(file_q + [P_claim, S_ext], "f1", seed) == (
+        stored, [("e-P", "inheritance_violation", "producer"), ("e-S", "inheritance_violation", "producer")])
+    # the control: without the copy, S is refused the same way
+    assert run(file_q + [S_ext], "ctl", seed) == (stored, [("e-S", "inheritance_violation", "producer")])
+    # mutant: a claim that AGREES with the persisted producer passes the lineage check and
+    # then meets the store's same-id rule at commit — the copy's content differs from the
+    # stored row by its link, so the WHOLE import refuses (0009 §4c), loudly, nothing written
+    Q2 = _proc_edge("Rotate keys often.", "e-Q2", "host")
+    with pytest.raises(ValueError, match="already exists with different content"):
+        run(file_q + [copy("e-P", supersedes="e-Q2"), by["e-S"]], "agree", seed + [Q2])
+    # mutant: an UNSTAMPED stored predecessor (no producer) takes the claimed chain's producer —
+    # a claim can only ADD a constraint: the extractor successor restores, the host one refuses
+    P_unstamped = _proc_edge("Rotate keys.", "e-P", None)
+    seed3 = [P_unstamped] + ([Q_ext] if q_where == "stored" else [])
+    P_claim_unstamped = copy("e-P", supersedes="e-Q"); P_claim_unstamped["provenance"].pop("producer", None)
+    assert run(file_q + [P_claim_unstamped, S_ext], "unstamped-x", seed3) == (
+        {"e-P": (None, None), "e-Q": ("extractor", None), "e-S": ("extractor", "e-P")},
+        [("e-P", "inheritance_violation", "producer")])
+    assert run(file_q + [P_claim_unstamped, by["e-S"]], "unstamped-h", seed3) == (
+        {"e-P": (None, None), "e-Q": ("extractor", None)},
+        [("e-P", "inheritance_violation", "producer"), ("e-S", "inheritance_violation", "producer")])

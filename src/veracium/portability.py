@@ -459,7 +459,18 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
             chain = [lineage(pr, _seen + (rid,)) for pr in sorted(preds)]
             pred_proc = any(pp for pp, _ in chain)
             pred_producer = _one_or_unresolved(pv for _, pv in chain)
-            validated = pred_producer if pred_producer is not None else own_producer
+            if stored_producer is not None:
+                # v24.5 (round-9 F1): a PERSISTED producer is the constraint.
+                # The store enforced inheritance when the row was written, so
+                # the stored record is never a "rejected intermediate" — a
+                # claimed ancestry, from an admitted or a refused copy, can add
+                # procedural-ness and never replace the persisted producer
+                # (round 9: a refused copy of stored P claiming Q as its
+                # predecessor had let an `extractor` successor of a `host` P
+                # restore, because the chain's producer overrode the stored one).
+                validated = stored_producer
+            else:
+                validated = pred_producer if pred_producer is not None else own_producer
             result = (own or pred_proc, validated)
         _lineage[rid] = result
         return result

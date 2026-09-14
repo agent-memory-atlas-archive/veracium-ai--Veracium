@@ -154,6 +154,16 @@ INVENTORY = [
     # with the D1 warning surface it exercised — Field(deprecated=...) is gone)
     ("tests/test_robustness.py", "skipif", "VERACIUM_ROBUSTNESS",
      "env-flag", "live robustness tier"),
+    # (0037 v24.5, the round-9 reviewer's F2: the omitted-date default. The
+    # regression runs under a zone fourteen hours ahead of UTC and one twelve
+    # behind; at any hour at least one of the two carries the local/UTC date
+    # boundary, and the OTHER skips with this token when its local date
+    # happens to equal the UTC date. One of the two parametrizations skips
+    # for up to twelve hours a day; never both.)
+    ("tests/test_omitted_date_defaults_to_utc.py", "skip", "local date equals the UTC date",
+     "host-conditional", "the local/UTC date-boundary regression — the zone that "
+                         "does not carry the boundary at this hour skips; the other "
+                         "runs (at most 1 of the 2 parametrizations, never both)"),
     ("tests/test_spec_gate.py", "skip", "COORDINATION.md not present",
      "host-conditional", "reads a HOME-anchored local-only coordination file — "
                          "1 test, PASS in the measured line (the file exists "

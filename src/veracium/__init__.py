@@ -196,6 +196,17 @@ class PolicyReceipt:
 _RECEIPT_FIELDS = tuple(f.name for f in dataclasses.fields(PolicyReceipt))
 
 
+def _today_utc() -> str:
+    """The date an omitted event date defaults to — the UTC calendar date,
+    the clock ingestion reads a bare date in (`_event_dt`: a date is UTC
+    midnight). The amendments reviewer, round 9 (F2): the default was the
+    host's LOCAL calendar date, so at 22:01 UTC on a runtime whose local date
+    was already tomorrow a routine was stored with valid_from = tomorrow 00:00
+    UTC and withheld as not_yet_valid until then. One clock for the default
+    and the reading, so an omitted date can never be in the future."""
+    return utcnow().date().isoformat()
+
+
 def receipt_row(receipt: "PolicyReceipt") -> dict:
     """specs/0027 §4g (v14): the store row for one receipt — the identity
     columns a reader lists by, and `receipt`: the receipt's JSON, keys sorted,
@@ -500,8 +511,7 @@ class Memory:
         is DIAGNOSTIC: it groups records for inspection/dedup/attribution but
         grants no trust and changes no answer (I5). It is host-supplied only,
         never model-derived (I1)."""
-        from datetime import date as _date
-        date = date or _date.today().isoformat()
+        date = date or _today_utc()
         t0 = time.perf_counter()
         with self._usage_operation(user_id, "ingest") as (op_llm, usage_finish):
             try:
@@ -1706,8 +1716,7 @@ class Memory:
         if not edge.active:
             raise ValueError(f"edge {edge_id!r} is not active (already "
                              f"{edge.invalidation_reason or 'invalidated'})")
-        from datetime import date as _date
-        today = _date.today().isoformat()
+        today = _today_utc()
         self.store.invalidate_edge(edge_id, utcnow(), "disputed")
         note = f" — {reason}" if reason else ""
         self.store.add_episode(Episode(
@@ -1757,8 +1766,7 @@ class Memory:
         request_digest = hashlib.sha256("\x1f".join(
             [user_id, edge_id, call_path.value, actor.value,
              CONFIRMATION_RULE_VERSION, caller_date]).encode()).hexdigest()
-        from datetime import date as _date
-        when = _event_dt(date or _date.today().isoformat())
+        when = _event_dt(date or _today_utc())
         conf = self.store.confirm_edge(
             user_id, edge_id, actor=actor, call_path=call_path,
             correlation_id=correlation_id, request_digest=request_digest,
@@ -1808,8 +1816,7 @@ class Memory:
         if outcome in (Outcome.CHALLENGED, Outcome.CONCURRED) and actor != "system":
             raise ValueError(f"{outcome.value} is a system judgment (actor='system')")
         edge = self._find_edge(user_id, edge_id)
-        from datetime import date as _date
-        date = _event_dt(date or _date.today().isoformat()).date().isoformat()
+        date = _event_dt(date or _today_utc()).date().isoformat()
 
         # specs/0009: NEVER mutate a prior judgment — append a new chain link.
         # The head is the max-`seq` outcome episode for (edge_id, evidence_ref);
@@ -1900,11 +1907,10 @@ class Memory:
         principal. §4b applies to corrections: a bare self-assertion cannot
         retire an OTHER-subject prior — that raises `graph.CorrectionRefused`
         after the durable refusal row commits."""
-        from datetime import date as _date
         from . import authority, graph
         from .schema import CorrectionAuthorisation, correction_digest
         from .store.base import PLAN_STALE
-        date = date or _date.today().isoformat()
+        date = date or _today_utc()
         when = _event_dt(date)
         date = when.date().isoformat()          # normalise once, as confirm()
         # specs/0011 §4e (E5, closes M7-correct): storage is reached ONLY

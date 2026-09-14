@@ -14,6 +14,21 @@ policy lane — the store must add `write_policy_receipt`, `policy_receipts` and
 recall on which a lane fires raises `NotImplementedError` against a store without
 them. Library and MCP callers that pass no `policy` change nothing.
 
+- **Import boundary: a persisted producer is the constraint** (specs/0037 v24.5; the amendments
+  review package, round 9, returned 2026-09-14 with the design acceptances in force). A copy of a
+  stored procedural record that claimed a different predecessor was refused, but the claim had
+  replaced the stored producer in the inheritance lookup, so a successor with the claimed
+  producer restored under a predecessor that carries another. Now a stored producer is never
+  replaced by claimed ancestry, admitted or refused; a stored record without a producer takes
+  the claimed chain's (a claim adds a constraint, never removes one).
+- **Fixed: an omitted event date defaults to the UTC calendar date** (the round-9 reviewer's
+  F2, a pre-existing defect). `remember`, `record_procedure`, `correct` and the other paths that
+  default a missing date used the host's LOCAL calendar date, while ingestion reads a bare date
+  as UTC midnight; on a runtime whose local date runs ahead of UTC (the reviewer's, at 22:01
+  UTC), a new record was stored with tomorrow's `valid_from` and withheld as `not_yet_valid`
+  until UTC midnight. One clock now: the default is the UTC date the reading uses. **Who
+  should act:** hosts on runtimes east of UTC that saw new records unavailable late in the
+  local day; nothing changes for a host that passes dates explicitly.
 - **Import boundary: conflicting record ids are resolved before inheritance is derived**
   (specs/0037 v24.4; the amendments review package, round 8, returned 2026-09-14 with the
   design accepted and frozen). A refused incomplete copy of a stored procedural predecessor

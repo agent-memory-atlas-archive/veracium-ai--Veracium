@@ -49,7 +49,8 @@ claims.
   the minimum of author and content class — quoted material can never become
   an assertable fact. See
   [concepts → Mixed provenance](concepts.md#mixed-provenance-derived_from).
-- `date` — ISO date the event occurred (`"2026-06-01"`); defaults to today. Drives
+- `date` — ISO date the event occurred (`"2026-06-01"`); defaults to today's UTC calendar
+  date (a bare date is read as UTC midnight, so the default uses the same clock). Drives
   fact timestamps **and** anchors the calendar used to resolve relative dates in the
   text ("Friday" → a real date), so pass an accurate value for historical or dated
   content. See [concepts → A note on dates](concepts.md#a-note-on-dates).

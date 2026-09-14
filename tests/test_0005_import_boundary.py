@@ -686,6 +686,10 @@ _CALLSITE_DISPOSITIONS = {
     # predecessor by custody and the shadowed chain, default path, both orders
     ("test_0037_producer_stamp.py",
      "test_stored_and_incoming_custody_read_one_procedural_signal_set"): "default",
+    # specs/0037 v24.5 (round-9 F1): the persisted-producer regression, restore path,
+    # Q stored and incoming, both orders
+    ("test_0037_producer_stamp.py",
+     "test_a_persisted_producer_is_never_replaced_by_claimed_ancestry"): "restore",
     ("test_0037_producer_stamp.py", "run"): "both",          # that test's helper: default for the lineages, restore for the chains
     # specs/0026 V6a: the accepted import decision table driven over
     # BOTH modes deliberately — default-recompute (forged discarded,
