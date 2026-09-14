@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 11308c0
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 249fd15
+# RE-PINNED 2026-09-14 after 0037 v24.4: body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0027 v14: body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0037 v24.3: body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0037 v24.2: body BYTE-IDENTICAL again.
