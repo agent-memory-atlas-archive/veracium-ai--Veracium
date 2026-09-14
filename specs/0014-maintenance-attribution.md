@@ -549,6 +549,29 @@ both sites, a no-op transfer visible in the values). The identity is
 > separate cross-spec sign-off, granted with the rider-verification
 > executable passing.)*
 
+> **Amended by 0037 v23 (same-commit with 0037 v23 / 0006 v10; the owner's
+> word, dev session 2026-09-14):** `Provenance.producer` — which product path
+> minted a procedural record, `host` (`record_procedure`) or `extractor` (the
+> quote-gated capture) — joins the verification partition as **EXACT-EQUAL**
+> (`EXACT_EQUAL_PROV_FIELDS` gains it, beside `record_kind`, whose membership
+> 0037 v16 added in code without a line here; this block records both). The
+> reason is the same as `record_kind`'s: the raw-request snapshot is taken at
+> its one call site (`graph.py`, before any planning) over the edge `Memory`
+> itself built, so a producer is legitimately IN the raw submission and
+> absorption never recomputes it; a FORBIDDEN-on-request class was
+> considered and not taken — its non-default → abort check would refuse the
+> product's own writes, and a host writing through `Store.add_edge` directly
+> never reaches the snapshot at all (0006 v10 rule 10). The field is absent
+> (key omitted) on every declarative record and on procedural records written
+> before the stamp, so it binds only the digests of the records it is set on
+> and every existing request digest is unchanged: **no digest-domain
+> rotation** (the v1→v2 era of 0025 §4b-v is the last). The totality test
+> (`test_raw_request_field_partition_is_total`) is the gate that refuses an
+> unclassified field; the partition in code is four Edge classes (exact-equal
+> / recomputed / forbidden-on-request / structural, the last being
+> `provenance` itself, which partitions through its own sub-fields) and two
+> Provenance classes (exact-equal / recomputed).
+
 The contributor whose attribution we record may itself be adversarial (a compromised feed
 is the motivating case). The record must therefore be **fail-closed and content-free**: it records
 *that* a contributor was consumed and *what state, if any,* moved, keyed on a **digest** of

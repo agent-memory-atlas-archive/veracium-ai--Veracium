@@ -68,10 +68,15 @@ The checks, each named in the output:
                 party is not checked, because the stored payload cannot tell a
                 declared derivation from the 0011 §4d floor every undeclared
                 ingest receives (the owner's staged ruling, option C, 2026-09-12)
-  procedural    TWO numbers, never merged (research's census, the owner's word
-                2026-09-12): `procedural_declared` — records stamped
-                `record_kind="procedural"`, EXACT, the record's own stamp —
-                and `procedural_shaped` — DECLARATIVE records whose `note`
+  procedural    numbers never merged (research's census, the owner's word
+                2026-09-12; the producer split, specs/0037 v23):
+                `procedural_declared` — procedural records whose producer
+                stamp is `host` (record_procedure), `procedural_captured` —
+                producer `extractor` (the quote-gated capture),
+                `procedural_unstamped` — procedural records written before
+                the producer stamp existed (the two cannot be told apart
+                there, and the doctor says so) — each EXACT, the record's
+                own stamps — and `procedural_shaped` — DECLARATIVE records whose `note`
                 matches the census marker SCREEN, a TRIPWIRE and never a
                 count of procedures (specs/0037 §4a: kind is the stamp, never
                 the text). Notes only: `summary` is never read (specs/0022
@@ -402,26 +407,44 @@ PROCEDURAL_MARKERS = re.compile(
 
 def _check_procedural(rep: Report, edges: dict) -> None:
     """Research's census as a standing check (the owner's word, 2026-09-12).
-    Two numbers, deliberately separated and never added: what hosts DECLARED
-    (the stamp, exact) and what declarative notes LOOK like (the screen, a
+    Numbers deliberately separated and never added: what hosts DECLARED and
+    what the extractor CAPTURED (the producer stamp, exact — specs/0037 v23;
+    a procedural record from before that stamp is reported as UNSTAMPED, not
+    guessed into either), and what declarative notes LOOK like (the screen, a
     tripwire). Notes only — specs/0022 §7a forbids reading `summary`; this is
     the doctor's one read of `note`, for the screen, and it reports counts
     and ids, never the text. Informational on every outcome."""
     rep.checks_run.append("procedural")
-    declared, shaped = [], []
+    # specs/0037 v23 §4a-iii: the kind stamp says WHAT a record is; the
+    # PRODUCER stamp says WHICH product path wrote it. Until v23 the two
+    # producers wrote byte-identical stamps, so the "declared" count here
+    # merged host-declared and extractor-captured records (research's
+    # finding, 2026-09-14). Now three numbers by the record's own stamps,
+    # never added: declared (producer host), captured (producer extractor),
+    # unstamped (a procedural record written before the producer stamp
+    # existed — the two cannot be told apart there, and the doctor says so
+    # rather than guessing).
+    declared, captured, unstamped, shaped = [], [], [], []
     for (_u, eid), (_row, d) in edges.items():
         prov = d.get("provenance") or {}
         if prov.get("record_kind") == "procedural":
-            declared.append(eid)
+            producer = prov.get("producer")
+            (declared if producer == "host" else captured if producer == "extractor"
+             else unstamped).append(eid)
         elif PROCEDURAL_MARKERS.search(str(d.get("note") or "")):
             shaped.append(eid)
     rep.counts["procedural_declared"] = len(declared)
+    rep.counts["procedural_captured"] = len(captured)
+    rep.counts["procedural_unstamped"] = len(unstamped)
     rep.counts["procedural_shaped"] = len(shaped)
     rep.add("procedural", "info",
-            f"procedural_declared {len(declared)} (records stamped procedural — exact, the record's own "
-            f"stamp) · procedural_shaped {len(shaped)} (declarative records whose note matches the census "
+            f"procedural_declared {len(declared)} (host-declared through record_procedure — exact, the record's "
+            f"own producer stamp) · procedural_captured {len(captured)} (extractor-captured behind the quote gate "
+            f"— exact, the producer stamp) · procedural_unstamped {len(unstamped)} (stamped procedural before the "
+            f"producer stamp existed; declared and captured cannot be told apart there) · procedural_shaped "
+            f"{len(shaped)} (declarative records whose note matches the census "
             f"marker screen — a SCREEN RESULT, never a count of procedures; the baseline is 13 screen hits "
-            f"in 312 notes with 0 genuine on reading, so only a CHANGE in the hit rate means anything; the two "
+            f"in 312 notes with 0 genuine on reading, so only a CHANGE in the hit rate means anything; the "
             f"numbers are never merged)",
             shaped)
 

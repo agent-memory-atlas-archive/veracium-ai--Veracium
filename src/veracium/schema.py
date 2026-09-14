@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Literal, Optional
 
-from pydantic import (BaseModel, Field, field_validator,
+from pydantic import (BaseModel, Field, field_validator, model_validator,
                       model_serializer, StrictBool)
 
 
@@ -187,6 +187,26 @@ class Provenance(BaseModel):
     # MINIMUM on absorption, immutable on same-id replace (V-BASIS-CAP-ONLY,
     # V-BASIS-IMMUTABLE).
     basis: Optional[Literal["stated", "observed"]] = None
+    # specs/0037 v23 §4a-iii — WHICH PRODUCT PATH minted a procedural record:
+    # `host` (Memory.record_procedure — the host's own declaration) or
+    # `extractor` (the quote-gated capture in ingest). A write-time fact the
+    # product stamps, never a host input; absent on every declarative record
+    # (key omitted below, so declarative bytes are unchanged) and absent on a
+    # procedural record written before the stamp existed (the pre-producer
+    # era; the doctor counts those as `procedural_unstamped`). Frozen with the
+    # model: no stamp can be flipped on a built Provenance (V-PROVENANCE-FROZEN).
+    producer: Optional[Literal["host", "extractor"]] = None
+    model_config = {"frozen": True}
+
+    @model_validator(mode="after")
+    def _producer_only_on_procedural(self):
+        # specs/0037 v23: a producer names the path that wrote a PROCEDURAL
+        # record; a declarative record has no producer to name. Refused at
+        # construction so no stored or imported record carries the pair.
+        if self.producer is not None and self.record_kind != "procedural":
+            raise ValueError("producer is set only on a procedural record "
+                             "(record_kind='procedural'); specs/0037 v23 §4a-iii")
+        return self
 
     @model_serializer(mode="wrap")
     def _omit_absent_procedural_markers(self, handler):
@@ -200,6 +220,8 @@ class Provenance(BaseModel):
             d.pop("record_kind", None)
         if d.get("basis") is None:
             d.pop("basis", None)
+        if d.get("producer") is None:
+            d.pop("producer", None)
         return d
 
     @property

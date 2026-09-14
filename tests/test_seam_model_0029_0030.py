@@ -255,7 +255,7 @@ def scope_view():
 
 def _edge_with_source(source_id, eid="e1"):
     e = _edge(eid=eid)
-    e.provenance.source_id = source_id
+    e.provenance = e.provenance.model_copy(update={"source_id": source_id})
     return e
 
 

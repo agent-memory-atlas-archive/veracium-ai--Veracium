@@ -648,6 +648,14 @@ _CALLSITE_DISPOSITIONS = {
      "test_restore_round_trips_procedural_records_with_basis"): "restore",
     ("test_0037_procedural.py",
      "test_old_reader_refuses_a_procedural_export"): "default",
+    # specs/0037 v23 §4e: the producer era — each test drives BOTH paths on
+    # purpose (an older reader refusing a 12 file on the default path and
+    # restore round-tripping the producer; a raw producer as the fourth
+    # default-path signal and the restore consistency rule on the same file)
+    ("test_0037_producer_stamp.py",
+     "test_the_export_stamps_12_only_for_a_producer_bearing_store_and_old_readers_refuse"): "both",
+    ("test_0037_producer_stamp.py",
+     "test_a_producer_in_a_pre_12_envelope_is_stripped_and_a_raw_producer_is_a_refusal_signal"): "both",
     # specs/0026 V6a: the accepted import decision table driven over
     # BOTH modes deliberately — default-recompute (forged discarded,
     # counted) and restore (verbatim-valid, foreign-opaque,

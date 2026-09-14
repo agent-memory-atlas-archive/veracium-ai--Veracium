@@ -433,7 +433,7 @@ def v02_supersede():
 def v03_confirm(cell):
     s, _ = _fresh()
     if cell.startswith("a"):
-        e = _edge("E1", "Porto"); e.provenance.confidence = 0.5; s.add_edge(e)   # confirm raises it to 0.9
+        e = _edge("E1", "Porto"); e.provenance = e.provenance.model_copy(update={"confidence": 0.5}); s.add_edge(e)   # confirm raises it to 0.9
     else:
         e = _edge("E1", "Porto", valid_from=_at(10)); s.add_edge(e)            # observed_at 10d ≥ confirmed_at
     n = len(s.edge_events(U)); _confirm(s, "E1", _at(5))

@@ -1,0 +1,360 @@
+"""specs/0037 v23 / specs/0006 v10 — the store boundary STATED, `Provenance`
+FROZEN, and the PRODUCER stamp (the owner's word, dev session 2026-09-14:
+"Confirm as relayed", on research's recommendation ruled 02:06Z).
+
+Three facts this file binds, each with the mutant the reviewer would try:
+
+1. `Provenance` is frozen: no ordinary assignment changes a built stamp, so
+   the attribute-chain route V-TWO-PRODUCERS' sweep could not see
+   (`prov.record_kind = "procedural"` on an already-built model) no longer
+   exists — the sweep's grammar is now the WHOLE grammar (V-PROVENANCE-FROZEN).
+2. Every procedural record written by this version carries WHICH product path
+   minted it — `producer="host"` from `record_procedure`, `"extractor"` from
+   the quote-gated capture — a write-time fact absorption never touches,
+   immutable on same-id replace, inherited across a supersession, absent on
+   every declarative record (bytes unchanged) and on procedural records from
+   before the stamp (V-PRODUCER-STAMPED / -IMMUTABLE / -INHERITED).
+3. The doctor's procedural tripwire no longer merges the two populations it
+   exists to separate: declared, captured and unstamped are three numbers,
+   never added (research's finding, 2026-09-14).
+
+The boundary statement itself (`Store.add_edge` is an interface a host
+IMPLEMENTS, not a write API it CALLS; a record written through it carries what
+the caller minted) is a carrier check here — the sentence must stand in
+0006, 0037 and the host documentation — and a stated limit, not a gate.
+"""
+from __future__ import annotations
+import ast
+import importlib.util
+import json
+import pathlib
+import uuid
+from datetime import timedelta
+
+import pytest
+from pydantic import ValidationError
+
+from veracium import Memory, MemoryConfig, doctor, portability
+from veracium.contribution import EXACT_EQUAL_PROV_FIELDS, RECOMPUTED_PROV_FIELDS
+from veracium.ingest import _disclosure_for
+from veracium.schema import Edge, EvidenceAuthor, EvidenceContext, Provenance, utcnow
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SRC = ROOT / "src" / "veracium"
+U = "u"
+NOW = utcnow()
+D = timedelta(days=1)
+PROC = "follows_procedure"
+TEXT = ("I run the formatter before committing, every time. "
+        "Unrelated: I like tea.")
+QUOTE = "I run the formatter before committing, every time"
+
+
+def _cfg(tmp_path, name="m.db"):
+    return MemoryConfig(db_path=str(tmp_path / name), wiki_recompile_after_writes=0,
+                        scope_groups={}, require_source_id=False)
+
+
+def _llm_emitting(triples):
+    def llm(prompt, *, system=None, role="compile", json_schema=None):
+        if role == "distill":
+            return json.dumps({"triples": triples, "episode": "The user described a routine.",
+                               "instructions": []})
+        if role == "distill-retry":
+            return json.dumps({"triples": []})
+        return "## USER MODEL\n- test wiki"
+    return llm
+
+
+def _quiet(prompt, *, system=None, role="compile", json_schema=None):
+    return json.dumps({"triples": [], "episode": "we talked", "instructions": []})
+
+
+def _capture(tmp_path, name="c.db"):
+    """One extractor-captured procedure through the real path: the quote is a
+    whole sentence of the event, the user is the author."""
+    mem = Memory(llm=_llm_emitting([{"subject": "user", "relation": PROC,
+                                     "object": "Runs the formatter", "quote": QUOTE}]),
+                 config=_cfg(tmp_path, name))
+    r = mem.remember(U, TEXT, context=EvidenceContext.direct(), date="2026-09-01")
+    assert r["procedures"] == 1 and r["procedural_refused"] == 0, r
+    return mem
+
+
+def _declare(mem, summary="Rotate service credentials every quarter."):
+    return mem.record_procedure(U, summary, author=EvidenceAuthor.USER,
+                                context=EvidenceContext.direct(basis="stated"))
+
+
+def _edge(obj, *, relation=PROC, record_kind=None, basis=None, producer=None, eid=None,
+          supersedes=None):
+    """A hand-minted edge: exactly what a host reaches by calling `add_edge`
+    directly — the boundary this change states rather than gates."""
+    prov = Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref=f"ev-{uuid.uuid4().hex[:6]}",
+                      disclosure=_disclosure_for(EvidenceAuthor.USER, relation, None),
+                      source_id="mb-a", observed_at=NOW - 10 * D, record_kind=record_kind,
+                      basis=basis, producer=producer)
+    return Edge(id=eid or f"e-{uuid.uuid4().hex[:12]}", user_id=U, subject="user",
+                relation=relation, object=obj, valid_from=NOW - 10 * D, supersedes=supersedes,
+                provenance=prov)
+
+
+# ------------------------------------------------------------ V-PROVENANCE-FROZEN
+def test_provenance_is_frozen_after_construction():
+    """Every field, including the two procedural markers and the producer:
+    ordinary assignment raises; the value is unchanged; a copy with an update
+    is the only way to a different stamp, and it is a NEW object."""
+    p = Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev")
+    for field in Provenance.model_fields:
+        with pytest.raises(ValidationError):
+            setattr(p, field, "procedural" if field in ("record_kind",) else "host")
+    assert p.record_kind is None and p.producer is None and p.basis is None
+    q = p.model_copy(update={"confidence": 0.5})
+    assert q is not p and p.confidence == 0.9 and q.confidence == 0.5
+    # the negative control: the OTHER frozen model in schema behaves the same,
+    # and an unfrozen model would not — a frozen config is what the test reads
+    assert Provenance.model_config.get("frozen") is True
+
+
+def test_no_src_site_assigns_to_a_provenance_attribute():
+    """The seven sites the freeze converted (graph absorption ×3, the store's
+    confirmation ×2 and recompute ×2) and any future one: an AST sweep of src
+    for `<expr>.provenance.<field> = …` finds nothing — a test now, not a grep."""
+    hits = []
+    for path in SRC.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for n in ast.walk(tree):
+            targets = (n.targets if isinstance(n, ast.Assign)
+                       else [n.target] if isinstance(n, (ast.AugAssign, ast.AnnAssign)) else [])
+            for t in targets:
+                if (isinstance(t, ast.Attribute) and isinstance(t.value, ast.Attribute)
+                        and t.value.attr == "provenance"):
+                    hits.append(f"{path.relative_to(SRC)}:{n.lineno}")
+    assert hits == [], hits
+    # the control: the sweep sees the shape when it exists
+    planted = ast.parse("e.provenance.confidence = 1.0")
+    assign = next(n for n in ast.walk(planted) if isinstance(n, ast.Assign))
+    t = assign.targets[0]
+    assert isinstance(t, ast.Attribute) and t.value.attr == "provenance"
+
+
+# ------------------------------------------------------------ V-PRODUCER-STAMPED
+def test_the_producer_stamp_is_written_at_exactly_the_two_producer_sites():
+    """The same two files V-TWO-PRODUCERS names, each with its literal: the
+    host surface writes `producer="host"`, the quote-gated extractor path
+    writes `producer="extractor"`; no other src site passes the keyword, and
+    no site passes it as a non-literal."""
+    found, suspicious = {}, []
+    for path in SRC.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Call):
+                for k in n.keywords:
+                    if k.arg == "producer":
+                        if isinstance(k.value, ast.Constant):
+                            found[path.relative_to(SRC).as_posix()] = k.value.value
+                        else:
+                            suspicious.append(f"{path.name}:{n.lineno}")
+    assert found == {"procedures.py": "host", "ingest.py": "extractor"}, found
+    assert suspicious == [], suspicious
+
+
+def test_record_procedure_stamps_host_and_the_capture_path_stamps_extractor(tmp_path):
+    mem = _capture(tmp_path)
+    pid = _declare(mem)
+    edges = {e.id: e for e in mem.store.edges(U, active_only=False)}
+    captured = [e for e in edges.values() if e.id != pid and e.provenance.procedural]
+    assert len(captured) == 1
+    assert captured[0].provenance.producer == "extractor"
+    assert captured[0].provenance.record_kind == "procedural" and captured[0].provenance.basis == "stated"
+    assert edges[pid].provenance.producer == "host"
+    # round-trips the store: what was read back is what was stamped
+    assert json.loads(mem.store.export_edge_json(pid) if hasattr(mem.store, "export_edge_json")
+                      else edges[pid].model_dump_json())["provenance"]["producer"] == "host"
+    mem.close()
+
+
+def test_a_declarative_record_carries_no_producer_and_a_legacy_procedural_record_needs_none():
+    """Absent on every declarative record — the key is OMITTED, so declarative
+    bytes are the pre-feature 8 keys (V-DECLARATIVE-UNCHANGED) — and refused
+    on one at construction; a procedural record from before the stamp
+    validates with producer None (the unstamped era), and the model
+    validator refuses nothing else."""
+    decl = Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev")
+    assert "producer" not in decl.model_dump() and "producer" not in decl.model_dump_json()
+    assert sorted(decl.model_dump()) == ["author_of_evidence", "confidence", "derived_from",
+                                         "disclosure", "evidence_ref", "observed_at", "origin",
+                                         "source_id"]
+    with pytest.raises(ValidationError, match="producer is set only on a procedural record"):
+        Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev", producer="host")
+    legacy = Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
+                        record_kind="procedural", basis="stated")
+    assert legacy.producer is None and legacy.procedural
+    assert "producer" not in legacy.model_dump()
+    with pytest.raises(ValidationError):
+        Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
+                   record_kind="procedural", basis="stated", producer="model")
+
+
+def test_the_0014_partition_places_the_producer_with_the_kind_stamp():
+    """EXACT_EQUAL, beside `record_kind`: a write-time fact the raw submission
+    carries and absorption never recomputes; the totality test in
+    test_0014_receipt_split.py is the gate that would have failed unclassified."""
+    assert "producer" in EXACT_EQUAL_PROV_FIELDS and "producer" not in RECOMPUTED_PROV_FIELDS
+    assert "record_kind" in EXACT_EQUAL_PROV_FIELDS
+
+
+# --------------------------------------- V-PRODUCER-IMMUTABLE / V-PRODUCER-INHERITED
+def test_producer_is_immutable_on_same_id_replace_and_inherited_across_a_supersession(tmp_path):
+    mem = Memory(llm=_quiet, config=_cfg(tmp_path))
+    st = mem.store
+    st.add_edge(_edge("Rotate keys quarterly.", record_kind="procedural", basis="stated",
+                      producer="host", eid="e-host"))
+    for other in ("extractor", None):
+        with pytest.raises(ValueError, match="cannot change producer"):
+            st.add_edge(_edge("Rotate keys quarterly.", record_kind="procedural", basis="stated",
+                              producer=other, eid="e-host"))
+    # a legacy unstamped record cannot GAIN a producer on replace either
+    st.add_edge(_edge("Archive receipts weekly.", record_kind="procedural", basis="stated",
+                      eid="e-legacy"))
+    with pytest.raises(ValueError, match="cannot change producer"):
+        st.add_edge(_edge("Archive receipts weekly.", record_kind="procedural", basis="stated",
+                          producer="host", eid="e-legacy"))
+    # the successor of a producer-stamped record carries the SAME producer
+    with pytest.raises(ValueError, match="V-PRODUCER-INHERITED"):
+        st.add_edge(_edge("Rotate keys monthly.", record_kind="procedural", basis="stated",
+                          producer="extractor", supersedes="e-host"))
+    with pytest.raises(ValueError, match="V-PRODUCER-INHERITED"):
+        st.add_edge(_edge("Rotate keys monthly.", record_kind="procedural", basis="stated",
+                          producer=None, supersedes="e-host"))
+    st.add_edge(_edge("Rotate keys monthly.", record_kind="procedural", basis="stated",
+                      producer="host", supersedes="e-host", eid="e-host-2"))
+    # a legacy predecessor constrains nothing about the producer (it has none)
+    st.add_edge(_edge("Archive receipts monthly.", record_kind="procedural", basis="stated",
+                      producer="host", supersedes="e-legacy", eid="e-legacy-2"))
+    ids = {e.id: e.provenance.producer for e in st.edges(U, active_only=False)}
+    assert ids == {"e-host": "host", "e-legacy": None, "e-host-2": "host", "e-legacy-2": "host"}
+    mem.close()
+
+
+# ---------------------------------------------------- the export era (0037 v23 §4e)
+def _export(mem, path):
+    mem.export_memory(U, str(path))
+    lines = path.read_text().splitlines()
+    return json.loads(lines[0]), [json.loads(l) for l in lines[1:]]
+
+
+def _write(path, header, recs):
+    path.write_text("\n".join([json.dumps(header)] + [json.dumps(r) for r in recs]) + "\n")
+
+
+def test_the_export_stamps_12_only_for_a_producer_bearing_store_and_old_readers_refuse(tmp_path, monkeypatch):
+    # a store whose only procedural record predates the stamp exports 11, as before
+    legacy = Memory(llm=_quiet, config=_cfg(tmp_path, "legacy.db"))
+    legacy.store.add_edge(_edge("Rotate keys quarterly.", record_kind="procedural", basis="stated"))
+    h, _ = _export(legacy, tmp_path / "legacy.jsonl")
+    assert h["version"] == 11
+    legacy.close()
+    # a host-declared record carries the producer → 12; the 0.24.0 reader refuses it outright
+    mem = Memory(llm=_quiet, config=_cfg(tmp_path, "new.db"))
+    pid = _declare(mem)
+    h, recs = _export(mem, tmp_path / "new.jsonl")
+    assert h["version"] == 12 and portability.FORMAT_VERSION == 12
+    assert next(r for r in recs if r["id"] == pid)["provenance"]["producer"] == "host"
+    mem.close()
+    monkeypatch.setattr(portability, "FORMAT_VERSION", 11)
+    old = Memory(llm=_quiet, config=_cfg(tmp_path, "old.db"))
+    with pytest.raises(ValueError, match="newer than this Veracium understands"):
+        old.import_memory(str(tmp_path / "new.jsonl"))
+    assert old.store.edges(U, active_only=False) == []
+    old.close()
+    monkeypatch.undo()
+    # restore round-trips the producer verbatim
+    back = Memory(llm=_quiet, config=_cfg(tmp_path, "back.db"))
+    rep = back.import_memory(str(tmp_path / "new.jsonl"), restore=True)
+    assert rep["edges"] == 1
+    assert back.store.edges(U, active_only=False)[0].provenance.producer == "host"
+    back.close()
+
+
+def test_a_producer_in_a_pre_12_envelope_is_stripped_and_a_raw_producer_is_a_refusal_signal(tmp_path):
+    mem = Memory(llm=_quiet, config=_cfg(tmp_path, "src.db"))
+    pid = _declare(mem)
+    h, recs = _export(mem, tmp_path / "e.jsonl")
+    mem.close()
+    # (a) an envelope that declares 11 but carries the producer: I10 — the field is
+    # newer than the declared version, never trusted; the record restores UNSTAMPED
+    below = dict(h, version=11)
+    _write(tmp_path / "below.jsonl", below, recs)
+    dst = Memory(llm=_quiet, config=_cfg(tmp_path, "below.db"))
+    assert dst.import_memory(str(tmp_path / "below.jsonl"), restore=True)["edges"] == 1
+    got = dst.store.edges(U, active_only=False)[0].provenance
+    assert got.procedural and got.producer is None
+    dst.close()
+    # (b) on the default path a raw producer is the FOURTH independent signal, named
+    stripped = json.loads(json.dumps(recs))
+    for r in stripped:
+        r["provenance"].pop("record_kind", None); r["provenance"].pop("basis", None)
+        r["relation"] = "likes"                     # off the registry's procedural kinds
+    _write(tmp_path / "prod-only.jsonl", h, stripped)
+    dst2 = Memory(llm=_quiet, config=_cfg(tmp_path, "prod.db"))
+    rep = dst2.import_memory(str(tmp_path / "prod-only.jsonl"))
+    assert rep["edges"] == 0 and rep["procedural_refused"] == 1
+    assert rep["procedural_refusals"][0]["signal"] == "producer"
+    # (c) on restore a producer without the stamp is MALFORMED, named by its signal
+    rep2 = dst2.import_memory(str(tmp_path / "prod-only.jsonl"), restore=True)
+    assert rep2["edges"] == 0 and rep2["procedural_refusals"][0]["refusal"] == "malformed_procedural_marker"
+    assert rep2["procedural_refusals"][0]["signal"] == "producer"
+    # (d) a producer outside the domain is malformed too
+    bad = json.loads(json.dumps(recs))
+    bad[0]["provenance"]["producer"] = "model"
+    _write(tmp_path / "bad.jsonl", h, bad)
+    rep3 = dst2.import_memory(str(tmp_path / "bad.jsonl"), restore=True)
+    assert rep3["edges"] == 0 and rep3["procedural_refusals"][0]["signal"] == "producer"
+    dst2.close()
+
+
+# ------------------------------------------------------ the doctor's split
+def test_the_doctor_reports_declared_captured_and_unstamped_as_three_numbers_never_merged(tmp_path):
+    mem = _capture(tmp_path, "d.db")                       # one captured
+    pid = _declare(mem)                                     # one declared
+    mem.store.add_edge(_edge("Archive receipts weekly.", record_kind="procedural", basis="stated"))  # one unstamped
+    db = mem.config.db_path
+    mem.close()
+    rep = doctor.diagnose(db)
+    f = [x for x in rep.findings if x.check == "procedural"]
+    assert len(f) == 1 and f[0].level == "info" and rep.exit_code == 0
+    assert (rep.counts["procedural_declared"], rep.counts["procedural_captured"],
+            rep.counts["procedural_unstamped"]) == (1, 1, 1)
+    assert rep.counts["procedural_shaped"] == 0
+    for phrase in ("procedural_declared 1", "procedural_captured 1", "procedural_unstamped 1",
+                   "cannot be told apart", "never merged"):
+        assert phrase in f[0].message, phrase
+    assert pid not in f[0].ids                                       # ids: the shaped screen only
+    # the negative control for the split: a store with only legacy procedural
+    # records reports the unstamped bucket and zeros elsewhere — nothing is guessed
+    m2 = Memory(llm=_quiet, config=_cfg(tmp_path, "d2.db"))
+    m2.store.add_edge(_edge("Rotate keys quarterly.", record_kind="procedural", basis="stated"))
+    db2 = m2.config.db_path
+    m2.close()
+    rep2 = doctor.diagnose(db2)
+    assert (rep2.counts["procedural_declared"], rep2.counts["procedural_captured"],
+            rep2.counts["procedural_unstamped"]) == (0, 0, 1)
+
+
+# ------------------------------------- the boundary STATEMENT (0006 v10, 0037 v23)
+BOUNDARY = "an interface a host IMPLEMENTS, not a write API a host CALLS"
+
+
+def test_the_store_boundary_is_stated_in_both_specs_and_the_host_documentation():
+    """The ruling gives the `require_source_id` bypass at `add_edge` a
+    STATEMENT and no gate: the sentence must stand, verbatim, where a host
+    reads (docs/api.md, "Providing a store") and in the two accepted specs
+    that carry the invariants it bounds."""
+    for rel in ("docs/api.md", "specs/0006-source-identity.md", "specs/0037-procedural-basis.md"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert BOUNDARY in text, rel
+    docs = (ROOT / "docs" / "api.md").read_text(encoding="utf-8")
+    section = docs[docs.index("## Providing a store"):]
+    section = section[:section.index("\n## ", 1)]
+    assert BOUNDARY in section and "add_edge" in section

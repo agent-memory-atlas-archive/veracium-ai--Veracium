@@ -275,7 +275,7 @@ def test_downgrade_export_fails_cleanly(tmp_path, monkeypatch):
     # marker-free, so its export still stamps the pre-agreement 9 and
     # every assertion below holds unchanged; 0037 moved the reader to 11
     # (the procedural era, conditionally stamped the same way)
-    assert port.FORMAT_VERSION == 11
+    assert port.FORMAT_VERSION == 12
     assert port._PRE_AGREEMENT_VERSION == 9
     s = SqliteStore(str(tmp_path / "a.db"))
     e = _assistant_edge("model claim")

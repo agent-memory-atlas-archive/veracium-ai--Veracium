@@ -49,7 +49,14 @@ from .store.base import DESTINATION_CHANGED, NON_QUIESCENT
 # field bumps the format 4→5 per accepted 0010's refuse-don't-drop rule — an
 # older importer REFUSES a v5 export rather than silently dropping the field.
 # specs/0019: v6 added the `ungrounded` flag (same refuse-don't-drop rule).
-FORMAT_VERSION = 11  # specs/0037 §4e: the PROCEDURAL era — `Provenance.record_kind` /
+FORMAT_VERSION = 12  # specs/0037 v23 §4e: the PRODUCER era — `Provenance.producer`
+# (which product path minted a procedural record). Stamped CONDITIONALLY at
+# write, the same rule as every era below: an export from a store holding ANY
+# producer-stamped record is 12, which every older reader REFUSES ("newer than
+# this Veracium understands" — the refuse-don't-drop rule of 0010/0019/0026,
+# V-OLD-READER-REFUSES); a store whose procedural records all predate the
+# stamp exports 11 exactly as before.
+_PROCEDURAL_VERSION = 11  # specs/0037 §4e: the PROCEDURAL era — `Provenance.record_kind` /
 # `Provenance.basis`. Stamped CONDITIONALLY at write exactly as 0026 stamps 10:
 # an export from a store holding ANY procedural record (stamp or basis) is 11,
 # which every older reader REFUSES ("newer than this Veracium understands" —
@@ -147,6 +154,8 @@ def export_memory(store, user_id: str, path) -> dict:
         # specs/0026 §3d / specs/0037 §4e: the conditional stamp (see
         # FORMAT_VERSION) — the highest era any record in the file needs
         _version = (FORMAT_VERSION
+                    if any(e.provenance.producer is not None for e in edges)
+                    else _PROCEDURAL_VERSION
                     if any(is_procedural(e) for e in edges)
                     else _PRE_PROCEDURAL_VERSION
                     if any(e.agreement is not None for e in edges)
@@ -344,10 +353,14 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         prov = prov if isinstance(prov, dict) else {}
         stamp = prov.get("record_kind")
         basis = prov.get("basis")
-        raw = src_version < FORMAT_VERSION
+        producer = prov.get("producer")
+        raw = src_version < _PROCEDURAL_VERSION
         if not restore:
+            # specs/0037 v23: the producer stamp is a FOURTH independent
+            # signal — a record carrying one is procedural by its own word
             signal = ("stamp" if stamp == "procedural"
                       else "basis" if basis is not None
+                      else "producer" if producer is not None
                       else "registry" if is_procedural_relation(reg, rec.get("relation"))
                       else None)
             if signal is not None:
@@ -356,21 +369,33 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                      "signal": signal, "raw": raw})
                 continue
         else:
-            consistent = ((stamp is None and basis is None)
-                          or (stamp == "procedural" and basis in ("stated", "observed")))
+            consistent = ((stamp is None and basis is None and producer is None)
+                          or (stamp == "procedural" and basis in ("stated", "observed")
+                              and producer in (None, "host", "extractor")))
             if not consistent:
+                # the signal names the marker that is out of place: a producer
+                # outside its domain or without the kind stamp; otherwise the
+                # present half of a stamp/basis pair (or the invalid one)
+                producer_bad = producer is not None and (
+                    producer not in ("host", "extractor") or stamp != "procedural")
                 procedural_refusals.append(
                     {"id": rec.get("id"), "refusal": "malformed_procedural_marker",
-                     "signal": ("stamp" if stamp is not None else "basis"), "raw": raw})
+                     "signal": ("producer" if producer_bad
+                                else "stamp" if stamp is not None else "basis"), "raw": raw})
                 continue
         admitted.append(rec)
     edge_recs = admitted
-    if src_version < FORMAT_VERSION:
+    if src_version < _PROCEDURAL_VERSION:
         for rec in edge_recs:             # I10: nothing procedural left, by construction
             prov = rec.get("provenance")
             if isinstance(prov, dict):
                 prov.pop("record_kind", None)
                 prov.pop("basis", None)
+    if src_version < FORMAT_VERSION:
+        for rec in edge_recs:             # I10: a producer in a pre-12 envelope is never trusted
+            prov = rec.get("provenance")  # (the record imports as pre-stamp: `procedural_unstamped`)
+            if isinstance(prov, dict):
+                prov.pop("producer", None)
 
     # (1b) specs/0020 §4a-iii — the LINKAGE SNAPSHOT, taken over the file's
     # OWN id universe BEFORE the cross-user remap mutates ids (winner

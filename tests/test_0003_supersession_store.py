@@ -154,7 +154,7 @@ def test_a_lost_reinforcement_response_replays_via_the_durable_receipt(tmp_path)
     prior = _edge("p", EvidenceAuthor.USER, "CFO")
     s.add_edge(prior)
     refreshed = prior.model_copy(deep=True)
-    refreshed.provenance.confidence = 0.99
+    refreshed.provenance = refreshed.provenance.model_copy(update={"confidence": 0.99})
     plan = SupersessionPlan(incoming_edge=_edge("i", EvidenceAuthor.USER, "CFO"),
                             insert_incoming=False, operation_id="op-reinforce",
                             expected_state=_fp(s), prior_upserts=[refreshed])
@@ -312,8 +312,8 @@ def test_a_differing_resubmission_conflicts_field_by_field(tmp_path):
     # mints fresh default timestamps per construction, and a verbatim retry means the
     # caller re-sends the SAME logical request, not a re-minted lookalike.
     inc0 = _edge("i", EvidenceAuthor.USER, "CEO")
-    inc0.provenance.source_id = "mailbox:A"
-    inc0.provenance.confidence = 0.4
+    inc0.provenance = inc0.provenance.model_copy(update={"source_id": "mailbox:A"})
+    inc0.provenance = inc0.provenance.model_copy(update={"confidence": 0.4})
 
     plan = SupersessionPlan(incoming_edge=inc0.model_copy(deep=True), insert_incoming=True,
                             operation_id="op-f4", expected_state=_fp(s))
@@ -337,12 +337,12 @@ def test_a_differing_resubmission_conflicts_field_by_field(tmp_path):
         assert kept.model_dump() == committed.model_dump(), (
             f"a rejected {field} resubmission must leave the committed edge untouched")
 
-    mutate("source_id", lambda e: setattr(e.provenance, "source_id", "mailbox:B"))
-    mutate("evidence_ref", lambda e: setattr(e.provenance, "evidence_ref", "ev-other"))
-    mutate("confidence", lambda e: setattr(e.provenance, "confidence", 0.99))
+    mutate("source_id", lambda e: setattr(e, "provenance", e.provenance.model_copy(update={"source_id": "mailbox:B"})))
+    mutate("evidence_ref", lambda e: setattr(e, "provenance", e.provenance.model_copy(update={"evidence_ref": "ev-other"})))
+    mutate("confidence", lambda e: setattr(e, "provenance", e.provenance.model_copy(update={"confidence": 0.99})))
     mutate("observed_at", lambda e: setattr(
-        e.provenance, "observed_at", e.provenance.observed_at + timedelta(days=200)))
-    mutate("disclosure", lambda e: setattr(e.provenance, "disclosure", Disclosure.USE_ONLY))
+        e, "provenance", e.provenance.model_copy(update={"observed_at": e.provenance.observed_at + timedelta(days=200)})))
+    mutate("disclosure", lambda e: setattr(e, "provenance", e.provenance.model_copy(update={"disclosure": Disclosure.USE_ONLY})))
     mutate("valid_from", lambda e: setattr(e, "valid_from", e.valid_from - timedelta(days=400)))
     mutate("note", lambda e: setattr(e, "note", "smuggled"))
     mutate("needs_confirmation", lambda e: setattr(e, "needs_confirmation", True))

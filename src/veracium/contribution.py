@@ -182,7 +182,14 @@ EXACT_EQUAL_PROV_FIELDS = ("author_of_evidence", "evidence_ref",
                            # specs/0037: the kind STAMP is a write-time fact
                            # absorption never touches (absent when None, as
                            # `original_relation` is — compared with .get)
-                           "record_kind")
+                           "record_kind",
+                           # specs/0037 v23 §4a-iii: the PRODUCER stamp is the
+                           # same shape — a write-time fact minted by the
+                           # product path that built the raw submission (never
+                           # a host input), absent when None, absorption never
+                           # touches it; it binds the digest of the records it
+                           # is set on and leaves every other digest unchanged
+                           "producer")
 # EXACTLY the fields the shipped C' absorption inherits (graph.py absorption
 # loop): the three winner-inheritance maxima/minima PLUS `ungrounded` — the
 # 0019 rider's RECOMPUTED class: absorption may change it from the raw

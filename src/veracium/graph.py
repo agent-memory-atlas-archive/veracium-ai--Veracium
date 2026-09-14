@@ -480,16 +480,21 @@ def _build_supersession_plan(store, edge: Edge, relations: dict[str, Relation],
                               # candidacy IS refusing renewal
         if _subsumes(same, _value_key(prior.object)) and same_scope(prior):
             incoming.valid_from = min(incoming.valid_from, prior.valid_from)
-            incoming.provenance.observed_at = max(incoming.provenance.observed_at,
-                                                  prior.provenance.observed_at)
-            incoming.provenance.confidence = max(incoming.provenance.confidence,
-                                                 prior.provenance.confidence)
+            # Provenance is FROZEN (specs/0037 v23, V-PROVENANCE-FROZEN): the
+            # three RECOMPUTED fields are inherited by REPLACING the survivor's
+            # provenance with a copy — the edge keeps its identity, the
+            # provenance object never mutates after construction.
             # specs/0037 §3 (V-BASIS-CAP-ONLY): `basis` is carried like
             # disclosure — the WHOLE-SET MINIMUM under observed ≤ stated, so
             # an `observed` member makes the survivor `observed`; nothing
             # here can promote, and declarative pairs (both None) stay None
-            incoming.provenance.basis = _min_basis(incoming.provenance.basis,
-                                                   prior.provenance.basis)
+            incoming.provenance = incoming.provenance.model_copy(update={
+                "observed_at": max(incoming.provenance.observed_at,
+                                   prior.provenance.observed_at),
+                "confidence": max(incoming.provenance.confidence,
+                                  prior.provenance.confidence),
+                "basis": _min_basis(incoming.provenance.basis,
+                                    prior.provenance.basis)})
             # specs/0019 §4d (R2-3/R2-4): the winner's flag is the N-ary OR
             # over {incoming} ∪ absorbed — accumulated per contributor here,
             # order-independent, computed PRE-PERSIST before the survivor row

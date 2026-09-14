@@ -324,7 +324,7 @@ def test_default_import_refuses_procedural_records_on_any_signal(tmp_path):
     eid = _record(src, "Rotate service credentials every quarter.", basis="stated")
     src.store.add_edge(_edge("Porto", relation="located_at", eid="e-decl"))
     header, recs = _export_lines(src, tmp_path / "e.jsonl")
-    assert header["version"] == 11
+    assert header["version"] == 12          # v23: the host-declared record carries a producer stamp
     proc = next(r for r in recs if r["id"] == eid)
     host = dict(DEFAULT_RELATIONS)
     host["runs_playbook"] = Relation(name="runs_playbook", relation_kind="procedural", desc="p")
@@ -341,13 +341,17 @@ def test_default_import_refuses_procedural_records_on_any_signal(tmp_path):
     def strip(k):
         def f(r): r["provenance"].pop(k, None)
         return f
-    def both(r): r["provenance"].pop("record_kind"); r["provenance"].pop("basis")
+    def both(r):
+        r["provenance"].pop("record_kind"); r["provenance"].pop("basis")
+        r["provenance"].pop("producer")         # v23: the producer is a FOURTH signal (cell below)
+    def only_producer(r): r["provenance"].pop("record_kind"); r["provenance"].pop("basis")
     def relation(name):
         def f(r): r["relation"] = name; both(r)
         return f
-    # the six cells
+    # the six cells, plus v23's producer cell
     for mut, signal in [(strip("record_kind"), "basis"), (strip("basis"), "stamp"),
-                        (both, "registry"), (lambda r: None, "stamp")]:
+                        (both, "registry"), (lambda r: None, "stamp"),
+                        (only_producer, "producer")]:
         rep, got = run(mut)
         assert rep["procedural_refused"] == 1 and rep["procedural_refusals"][0]["signal"] == signal
         assert got == {"e-decl"}, signal
@@ -413,8 +417,8 @@ def test_old_reader_refuses_a_procedural_export(tmp_path, monkeypatch):
     src.store.add_edge(_edge("Porto", relation="located_at"))
     f = tmp_path / "p.jsonl"
     src.export_memory(U, str(f))
-    assert json.loads(f.read_text().splitlines()[0])["version"] == 11
-    monkeypatch.setattr(portability, "FORMAT_VERSION", 10)         # the shipped reader, held at 10
+    assert json.loads(f.read_text().splitlines()[0])["version"] == 12
+    monkeypatch.setattr(portability, "FORMAT_VERSION", 11)         # the 0.24.0 reader, held at 11
     dst = _mem(tmp_path, "old.db")
     with pytest.raises(ValueError, match="newer than this Veracium understands"):
         dst.import_memory(str(f))

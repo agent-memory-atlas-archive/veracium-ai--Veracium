@@ -52,7 +52,11 @@ def expire(store, user_id: str, config, *, now: Optional[datetime] = None) -> di
         if behavior == ExpiryBehavior.LAPSE:
             store.invalidate_edge(e.id, now, "lapsed"); lapsed += 1
         elif behavior == ExpiryBehavior.DECAY:
-            e.provenance.confidence *= config.decay_factor
+            # frozen Provenance (specs/0037 v23): decay REPLACES the stamp
+            # with a copy — the eighth mutation site, an augmented assignment
+            # the seven-site count missed (found by the AST sweep, not a grep)
+            e.provenance = e.provenance.model_copy(update={
+                "confidence": e.provenance.confidence * config.decay_factor})
             if e.provenance.confidence < config.confidence_floor:
                 store.invalidate_edge(e.id, now, "decayed"); decayed += 1
             else:

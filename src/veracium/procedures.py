@@ -178,7 +178,11 @@ def build_procedure_edge(store, relations, user_id: str, summary: str, *, author
         object=summary_n, note=note or "", valid_from=valid_from,
         provenance=Provenance(
             author_of_evidence=author, derived_from=context.derived_from,
-            basis=context.basis, record_kind="procedural",
+            basis=context.basis, record_kind="procedural", producer="host",
+            # the fallback names the record ITSELF as its evidence when the
+            # host cites none: no external evidence exists. It is not a
+            # producer signal (a host may pass any ref; `producer` is the
+            # stamp) and nothing in src reads the prefix back.
             evidence_ref=evidence_ref or f"procedure:{edge_id}",
             observed_at=valid_from, source_id=source_id, disclosure=disclosure))
     return edge, revoked_at_birth, birth_digest

@@ -123,10 +123,13 @@ the new edge id.
   quarantines the record at birth, exactly as `remember` does.
 - Every argument refuses its empty or malformed form before any write
   (`TypeError` for a wrong type, `ValueError` for a wrong value). No episode
-  is written. Exports holding any procedural record are stamped format 11,
-  which older readers refuse; the default `import_memory` path refuses
+  is written. Exports holding any procedural record are stamped format 11 —
+  format 12 once any of them carries the producer stamp (specs/0037 v23: every
+  procedural record written from that version says which path wrote it,
+  `producer="host"` here, `"extractor"` from the quote-gated capture) — which
+  older readers refuse; the default `import_memory` path refuses
   procedural records (another host's basis is its declaration) and
-  `restore=True` round-trips a store's own.
+  `restore=True` round-trips a store's own, producer included.
 
 ```python
 mem.record_procedure("alice", "Credentials are rotated quarterly.",
@@ -427,11 +430,14 @@ episode carrying a `source_id` (specs/0006), since one without it has no
 source identity and cannot be revoked by source — content merely derived from
 a third party is not checked, because the stored payload cannot tell a declared
 derivation from the default every undeclared ingest receives; the procedural
-tripwire — two numbers never merged, `procedural_declared` (records stamped
-procedural, exact) and `procedural_shaped` (declarative records whose `note`
-matches research's census marker screen, a screen result and never a count of
-procedures; notes only, never `summary`; informational, it cannot fail the
-build) — there to notice an extractor that starts producing procedure-shaped
+tripwire — numbers never merged: `procedural_declared` (procedural records
+whose producer stamp is `host`), `procedural_captured` (producer `extractor`),
+`procedural_unstamped` (procedural records written before the producer stamp
+existed, specs/0037 v23 — declared and captured cannot be told apart there,
+and the doctor says so rather than guessing) and `procedural_shaped`
+(declarative records whose `note` matches research's census marker screen, a
+screen result and never a count of procedures; notes only, never `summary`;
+informational, it cannot fail the build) — there to notice an extractor that starts producing procedure-shaped
 notes or hosts feeding procedures down the declarative path; and, for every
 standing revocation (specs/0022), the reference sweep run over the store as it
 is with no proposed action — a pending effect means the revocation is not
@@ -626,6 +632,25 @@ falls back to a plain call — no error — if the endpoint doesn't support it.
 The default `SqliteStore` is embedded and zero-dependency. To back memory with
 Neo4j/Postgres, implement `veracium.store.base.Store` (all methods are per-`user_id`)
 and pass it as `store=`.
+
+**The store is an interface a host IMPLEMENTS, not a write API a host CALLS**
+(specs/0006 v10, specs/0037 v23; the owner's ruling, 2026-09-14). `Memory` is
+the write API: `remember`, `record_procedure`, `correct`, `retire`, the import
+boundary. Every guarantee this documentation makes about a record — that a
+third-party record carries a `source_id` when `require_source_id` is on, that a
+procedural record was declared by the host or captured behind the verbatim-quote
+gate, that its stamps were minted by the product — holds for records written
+THROUGH `Memory`. `memory.store` is reachable and `Store.add_edge` is public
+because a host implementing a store needs both; a record a host writes by
+calling `add_edge` directly carries exactly what that host minted, and nothing
+in the store re-derives or checks the `Memory`-level facts about it. The store's
+own rules still hold there (a stored stamp, basis or producer never changes on a
+same-id replace; a successor of a procedural record stays procedural, with the
+same producer). Provenance is a frozen model: a stamp cannot be flipped on a
+built record, only minted at construction. The `doctor` sees an unsourced
+third-party record through its `sources` check; a procedural record hand-minted
+at `add_edge` renders like a declared one — that is the stated limit, and the
+reason to write through `Memory`.
 
 ## Migrating a store (`veracium migrate`)
 

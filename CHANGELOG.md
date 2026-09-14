@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- **The store boundary stated; `Provenance` frozen; every new procedural record says which
+  path wrote it** (specs/0006 v10, specs/0037 v23; the owner's word, 2026-09-14). `Store` and
+  `Store.add_edge` are an interface a host IMPLEMENTS, not a write API a host CALLS: every
+  guarantee in this documentation is about records written through `Memory`, and a record a
+  host writes by calling `add_edge` directly carries exactly what that host minted — a stated
+  limit, not a gate (`docs/api.md`, "Providing a store"). `Provenance` is now a frozen model:
+  a stamp cannot be flipped on a built record, only minted at construction; hosts that mutated
+  `edge.provenance.<field>` must build a copy (`edge.provenance =
+  edge.provenance.model_copy(update={...})`) — the eight places the library itself did so now
+  do. New `Provenance.producer` (`"host"` from `record_procedure`, `"extractor"` from the
+  quote-gated capture) on every procedural record written from this release; absent on every
+  declarative record (bytes unchanged) and on procedural records written earlier, which
+  `veracium doctor` reports as `procedural_unstamped` beside the split it can now make —
+  `procedural_declared` and `procedural_captured` were one merged number before, and the
+  check's own docstring called them declared. The stamp is immutable on a same-id replace and
+  inherited across a supersession. Export format 11 → 12, stamped only when a producer-bearing
+  record exists; an older reader refuses such a file rather than shedding the field; a
+  producer-free store exports as before. BREAKING for a host that assigned to provenance
+  attributes or pinned the export version; nothing changes for a host that writes through
+  `Memory` and reads exports with the current release.
 - **Procedural capture: the quoted span must be one whole sentence of the event, and the stored
   text is that sentence with no transformation** (specs/0037 v22, specs/0038 v6.4; the amendments
   review package, round 3, returned 2026-09-13). The relative-clause cut added at v21 removed a

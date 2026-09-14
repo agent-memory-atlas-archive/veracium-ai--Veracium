@@ -56,7 +56,7 @@ def _plan_for(store, incoming):
 def _seed(store, subject, obj, author, derived=None, source_id=None):
     e = _edge(f"p-{obj[:6]}", subject, obj, author, derived)
     if source_id is not None:
-        e.provenance.source_id = source_id
+        e.provenance = e.provenance.model_copy(update={"source_id": source_id})
     store.add_edge(e)
     return e
 
@@ -489,7 +489,7 @@ def test_history_partition_is_total():
                     if not active:      # active is DERIVED from invalidated_at
                         e.invalidated_at = NOW
                         e.invalidation_reason = "superseded"
-                    e.provenance.disclosure = disclosure
+                    e.provenance = e.provenance.model_copy(update={"disclosure": disclosure})
                     e.ungrounded = ungrounded
                     got = history_label(e, contested=contested)
                     assert got in HISTORY_LABELS
@@ -503,7 +503,7 @@ def test_history_partition_is_total():
         "every label must be REACHABLE from the cross-product")
     # R1-5's two executed cells, by name
     q = _edge("q", "user", "v", A.USER)
-    q.provenance.disclosure = Disclosure.QUARANTINED
+    q.provenance = q.provenance.model_copy(update={"disclosure": Disclosure.QUARANTINED})
     assert history_label(q, contested=False) == "QUARANTINED_CLAIM"
     m = _edge("m", "user", "v", A.USER)
     assert history_label(m, contested=True) == "CONTESTED_CURRENT"
@@ -590,7 +590,7 @@ def test_contested_is_derived_and_total_over_readers(tmp_path):
     old = _edge("exp", "user's sister", "berlin", A.SYSTEM,
                 derived=A.THIRD_PARTY, relation="located_at")
     old.volatility = "transient"
-    old.provenance.observed_at = _dt(2026, 1, 1, tzinfo=_tz.utc)
+    old.provenance = old.provenance.model_copy(update={"observed_at": _dt(2026, 1, 1, tzinfo=_tz.utc)})
     mem.store.add_edge(old)
     challenger = _edge("exp2", "user's sister", "lisbon", A.USER,
                        relation="located_at")

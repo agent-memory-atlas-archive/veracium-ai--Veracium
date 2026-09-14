@@ -514,7 +514,7 @@ def test_transactional_read_is_one_world__both_journal_modes(tmp_path, monkeypat
         import veracium.store.current_state as cs_mod
         real = cs_mod.standing_revocations
         outcome = {}
-        moved = Edge.model_validate_json(before); moved.provenance.source_id = "src:bad"
+        moved = Edge.model_validate_json(before); moved.provenance = moved.provenance.model_copy(update={"source_id": "src:bad"})
         def interleave(conn, user_id):
             # INSIDE the reader's window: the writer commits on its own connection
             def w():

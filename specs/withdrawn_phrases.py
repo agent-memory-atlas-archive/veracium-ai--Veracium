@@ -510,4 +510,9 @@ WITHDRAWN = [
      "0037 v22 (the amendments round-3 RETURN, 2026-09-13): the stored gloss IS the normalised span with NO "
      "transformation; v21's relative-clause cut removed a mid-sentence clause and the condition after it.",
      "specs/0037 §4a-iii Gate 4; docs/api.md; CHANGELOG"),
+    ("0037-v23-attribute-chain-residual",
+     r"a stamp minted through an attribute chain the sweep cannot see, named here rather than claimed away|outside the sweep's grammar\. No src site does it today",
+     "0037 v23 (the owner's word, 2026-09-14): Provenance is a frozen model, so the attribute-chain route "
+     "no longer exists (V-PROVENANCE-FROZEN); the residual is closed, not named.",
+     "specs/0037 §6 V-TWO-PRODUCERS; the round READMEs"),
 ]

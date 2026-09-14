@@ -765,7 +765,8 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
                 Provenance(author_of_evidence=author, evidence_ref=evidence_ref,
                            disclosure=disclosure, derived_from=derived_from,
                            source_id=source_id, observed_at=when,
-                           record_kind="procedural", basis="stated")
+                           record_kind="procedural", basis="stated",
+                           producer="extractor")
                 if row.get("procedural") else
                 Provenance(author_of_evidence=author, evidence_ref=evidence_ref,
                            disclosure=disclosure, derived_from=derived_from,

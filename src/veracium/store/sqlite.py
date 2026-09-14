@@ -461,6 +461,15 @@ class SqliteStore(Store):
                     f"{edge.provenance.record_kind!r}) on edge {edge.id!r} — a stored "
                     f"procedural marker is immutable in both directions "
                     f"(specs/0037 §3, V-BASIS-IMMUTABLE)")
+            # specs/0037 v23 (V-PRODUCER-IMMUTABLE): the producer stamp is a
+            # write-time fact; a same-id replace that names a different
+            # producer — or drops or adds one — is refused the same way.
+            if prior_edge.provenance.producer != edge.provenance.producer:
+                raise ValueError(
+                    f"cannot change producer ({prior_edge.provenance.producer!r} → "
+                    f"{edge.provenance.producer!r}) on edge {edge.id!r} — a stored "
+                    f"producer stamp is immutable in both directions "
+                    f"(specs/0037 v23 §4a-iii, V-PRODUCER-IMMUTABLE)")
         # specs/0037 v19 (V-STAMP-INHERITED; research's red team, 2026-09-13): a
         # SUCCESSOR of a procedural record must itself be procedural. correct()
         # minted one without the stamp and the note rendered; correct() now refuses
@@ -477,6 +486,17 @@ class SqliteStore(Store):
                         f"edge {edge.id!r} would supersede procedural record {edge.supersedes!r} without the "
                         f"procedural markers — a successor of a procedural record is procedural "
                         f"(specs/0037 §4a-iii, V-STAMP-INHERITED); nothing written")
+                # specs/0037 v23 (V-PRODUCER-INHERITED): the successor of a
+                # producer-stamped record carries the SAME producer — the path
+                # that minted the predecessor is a fact about the lineage, and
+                # a successor naming another producer (or none) would let the
+                # doctor's split drift across a supersession.
+                if pp.get("producer") is not None and edge.provenance.producer != pp.get("producer"):
+                    raise ValueError(
+                        f"edge {edge.id!r} would supersede procedural record {edge.supersedes!r} with a "
+                        f"different producer ({pp.get('producer')!r} → {edge.provenance.producer!r}) — "
+                        f"the producer stamp is inherited across a supersession "
+                        f"(specs/0037 v23 §4a-iii, V-PRODUCER-INHERITED); nothing written")
         new_json = edge.model_dump_json()
         self._conn.execute(
             "INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
@@ -530,8 +550,9 @@ class SqliteStore(Store):
                 out = self._confirmation_from_row(prior)
                 return out.model_copy(update={"replayed": True})
             edge.needs_confirmation = False
-            edge.provenance.observed_at = max(edge.provenance.observed_at, confirmed_at)
-            edge.provenance.confidence = max(edge.provenance.confidence, 0.9)
+            edge.provenance = edge.provenance.model_copy(update={      # frozen Provenance (0037 v23)
+                "observed_at": max(edge.provenance.observed_at, confirmed_at),
+                "confidence": max(edge.provenance.confidence, 0.9)})
             cid = f"c-{uuid.uuid4().hex[:12]}"
             # ONE id for the confirmation episode, derived from the confirmation's:
             # the row and the payload it stores must agree, because every read
@@ -716,8 +737,9 @@ class SqliteStore(Store):
             return
         edge = Edge.model_validate_json(row[0])
         edge.valid_from = _parse(values["valid_from"])
-        edge.provenance.observed_at = _parse(values["observed_at"])
-        edge.provenance.confidence = float(values["confidence"])
+        edge.provenance = edge.provenance.model_copy(update={          # frozen Provenance (0037 v23)
+            "observed_at": _parse(values["observed_at"]),
+            "confidence": float(values["confidence"])})
         new_json = edge.model_dump_json()
         self._conn.execute("UPDATE edges SET json=? WHERE id=?",
                            (new_json, edge_id))
