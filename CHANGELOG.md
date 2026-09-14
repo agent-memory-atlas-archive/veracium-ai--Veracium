@@ -1,6 +1,38 @@
 # Changelog
 
-## Unreleased
+## 0.25.0 — 2026-09-14
+
+**Upgrade recommendation — BREAKING on three narrow surfaces; every other host upgrades
+without acting. Hosts on 0.24.0 that capture procedures should take this release.** Who
+must act, per surface: (1) a host that MUTATED a record's provenance in place
+(`edge.provenance.confidence = …`, `setattr(edge.provenance, …)`) builds a copy instead
+(`edge.provenance = edge.provenance.model_copy(update={...})`) — `Provenance` is a frozen
+model now, and assignment raises a `ValidationError`; (2) an MCP deployment whose model
+passed `source_id` on the served `record_procedure` tool sets `VERACIUM_MCP_SOURCE_ID`
+instead (none known; the tool shipped 2026-09-08), and a host calling
+`Memory.record_procedure` with a third-party author and no `source_id` now gets
+`SourceIdRequired` with `require_source_id` on; (3) a host that pinned the export format
+at 11 reads 12 — stamped only when a producer-bearing procedural record exists, refused by
+older readers rather than shed. Why 0.24.0 hosts capturing procedures should upgrade: on
+0.24.0 a captured procedure could be corrected and its successor rendered the verbatim
+quote into recall context after one host action (closed at 0037 v19 — `correct()` refuses a
+procedural record, the store refuses a successor that drops the markers, and a captured
+procedure keeps no separate copy of the span); the erratum under 0.24.0 below records it.
+What else changed, all additive for a host writing through `Memory`: the extractor's
+capture gate is stricter and stated — one whole sentence of the event whose boundaries are
+ESTABLISHED (the start or end of the user's turn, or a `?`/`!` before a sentence start; a
+mid-text period establishes nothing, so a routine sentence beside a period-terminated
+neighbour is declined — about half of sentence positions in real turns, the stated cost of
+the assertion-preservation contract the external review holds this line to), positive
+present form, no transformation: EXPECT VERY FEW CAPTURES, and `record_procedure` remains
+the explicit path; `describe_procedures` attributes with
+"recorded from something you said"; `recall(policy=)` returns a receipt; every new
+procedural record says which path wrote it and `veracium doctor` reports the split. No
+schema change (`SCHEMA_VERSION` stays 13); no stored byte changes for existing records;
+rollback to 0.24.0 is safe for a store holding no producer-stamped record; a store holding
+one still opens on 0.24.0 (its `Provenance` ignores the unknown key, so the stamp is read
+past and shed on any rewrite of that record — verified against the v0.24.0 tag), and its
+export is stamped format 12, which 0.24.0 refuses to import.
 
 - **Procedural capture: a boundary is established or the passage is declined — no abbreviation
   list; restore enforces the inheritance rules; the doctor claims nothing about why a producer
@@ -188,6 +220,15 @@ and `procedural_refused`; the served MCP `remember` tool strips them with the ot
 extractor counters. `veracium doctor` gains an informational check that cannot fail a run.
 No schema, export-format or stored-byte change for existing records; `require_source_id`
 stays on (0.23.0); rollback to 0.23.0 is safe.
+
+**Erratum (2026-09-14, the owner's call).** These notes said a captured procedure "changes
+nothing about what is RENDERED". On 0.24.0 that held for the record as written and not
+after one host action: `correct()` on a captured procedure produced a successor without the
+procedural stamp that kept the note holding the verbatim quote, and that note rendered into
+recall context (found by the external amendments review, round 1, 2026-09-13). Closed in
+0.25.0 (0037 v19: `correct()` refuses a procedural record; the store refuses a successor
+that drops the markers; a captured procedure keeps no separate copy of the span). Hosts on
+0.24.0 that capture procedures should upgrade.
 
 - **`veracium doctor` gains a `procedural` tripwire** (research's census as a standing check;
   the owner's word, 2026-09-12). Two numbers, never merged: `procedural_declared`, records
