@@ -22,8 +22,9 @@ them. Library and MCP callers that pass no `policy` change nothing.
   replaced by claimed ancestry, admitted or refused; a stored record without a producer takes
   the claimed chain's (a claim adds a constraint, never removes one).
 - **Fixed: an omitted event date defaults to the UTC calendar date** (the round-9 reviewer's
-  F2, a pre-existing defect). `remember`, `record_procedure`, `correct` and the other paths that
-  default a missing date used the host's LOCAL calendar date, while ingestion reads a bare date
+  F2, a pre-existing defect). `remember`, `dispute`, `confirm`, `record_outcome` and `correct` — the
+  five paths that default a missing date (the round-10 reviewer corrected an earlier wording here
+  that named `record_procedure`, whose default was already UTC, and omitted three of the five) — used the host's LOCAL calendar date, while ingestion reads a bare date
   as UTC midnight; on a runtime whose local date runs ahead of UTC (the reviewer's, at 22:01
   UTC), a new record was stored with tomorrow's `valid_from` and withheld as `not_yet_valid`
   until UTC midnight. One clock now: the default is the UTC date the reading uses. **Who
@@ -57,6 +58,17 @@ them. Library and MCP callers that pass no `policy` change nothing.
   transaction (V-RECEIPT-ERASE). Retention is not in this release: the table grows by
   one row per firing recall (research's T10 priced ≈2.3 KB per row, linear in the
   budget); erasure is per user.
+- **Changed (before release, v14.1): the policy's identity strings are bounded.** `PolicyLane.policy_id`,
+  `policy_version` and every `tags_matched` entry must be identifiers (letters, digits and `._:-`,
+  1–64 characters, no whitespace; at most 64 tags) and are refused at construction otherwise —
+  the receipt persists them verbatim, and v14 had accepted a sentence or a 400-character tag into
+  the `policy_receipt` row while its schema comment claimed the row carried no content. Bounded,
+  not content-free: an identifier can still name a person, which specs/0040 records as the same
+  class as `evidence_ref` and `source_id` — and the identifier alphabet is the alphabet of
+  structured personal data (`ssn:123-45-6789`, `dob:1974-03-02`, `dx:C50.9` all pass). **Who must
+  act:** a host whose policy ids, versions or tags carry spaces or punctuation beyond `._:-`, or
+  exceed 64 characters, must rename them; and every host must apply the rule no validator can:
+  a policy tag names a policy, not a subject.
 - **Regenerated: the schema evidence** (`src/veracium/store/evidence/*.json`,
   `specs/generated/schema_policy.json`) at the new head — it had been stale since
   schema 13 (recorded head 12; the 0.20.0–0.25.0 tags absent), which no shipped

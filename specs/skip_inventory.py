@@ -158,12 +158,13 @@ INVENTORY = [
     # regression runs under a zone fourteen hours ahead of UTC and one twelve
     # behind; at any hour at least one of the two carries the local/UTC date
     # boundary, and the OTHER skips with this token when its local date
-    # happens to equal the UTC date. One of the two parametrizations skips
-    # for up to twelve hours a day; never both.)
+    # happens to equal the UTC date. Two tests × two zones: at most one zone
+    # per test skips at any hour, never both zones of a test.)
     ("tests/test_omitted_date_defaults_to_utc.py", "skip", "local date equals the UTC date",
      "host-conditional", "the local/UTC date-boundary regression — the zone that "
                          "does not carry the boundary at this hour skips; the other "
-                         "runs (at most 1 of the 2 parametrizations, never both)"),
+                         "runs (at most 1 of each test's 2 zones; 2 tests, so at "
+                         "most 2 skips, never a whole test)"),
     ("tests/test_spec_gate.py", "skip", "COORDINATION.md not present",
      "host-conditional", "reads a HOME-anchored local-only coordination file — "
                          "1 test, PASS in the measured line (the file exists "

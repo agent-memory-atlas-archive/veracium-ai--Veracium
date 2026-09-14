@@ -624,16 +624,19 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: moved dotted/dataflow 5,925 -> 5,937, the rest unchanged; 0037 v24.5
 #: (2026-09-14: the persisted producer read in `lineage`; the five local
 #: `_date.today()` defaults replaced by one `_today_utc` helper) moved
-#: dotted/dataflow 5,937 -> 5,929, the rest unchanged.
+#: dotted/dataflow 5,937 -> 5,929, the rest unchanged; 0027 v14.1 (2026-09-14:
+#: the identifier constraint at `PolicyLane` — `IDENTIFIER_RE.match`, the
+#: `tags_matched` reads) moved dotted/dataflow 5,929 -> 5,933 and module-plain
+#: 313 -> 314, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5929,
+    "dotted/dataflow": 5933,
     "dotted/module-machinery": 19,
-    "dotted/module-plain": 313,
+    "dotted/module-plain": 314,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6342
-SRC_DATA_DUNDERS_IN_DATAFLOW = 129   # 2026-09-14: +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row
+SRC_ATTRIBUTE_TOTAL = 6347
+SRC_DATA_DUNDERS_IN_DATAFLOW = 130   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row
 
 
 def _classify_attribute(base, attr, ctx):

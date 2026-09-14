@@ -422,3 +422,45 @@ def test_a_removed_receipt_table_refuses_to_open_the_store(tmp_path):
     assert "table:policy_receipt" in str(e.value) and "ix_policy_receipt_time" in str(e.value)
     with pytest.raises(StoreVersionError):                                        # through Memory too
         Memory(llm=lambda *a, **k: "", config=MemoryConfig(db_path=path, require_source_id=False))
+
+
+# ---------------------------------------------- v14.1: bounded identifiers ----
+@pytest.mark.parametrize("field, value, why", [
+    ("policy_id", "a whole sentence, with spaces and punctuation.", "spaces and punctuation"),
+    ("policy_id", "x" * 65, "65 characters"),
+    ("policy_id", "", "empty"),
+    ("policy_id", True, "a bool"),
+    ("policy_version", "diagnosis: hiv-positive, disclosed here", "spaces"),
+    ("policy_version", 3, "not a string"),
+    ("tags_matched", ("ok", "x" * 400), "a 400-character tag"),
+    ("tags_matched", ("ok", ""), "an empty tag"),
+    ("tags_matched", ("ok", "has space"), "whitespace in a tag"),
+    ("tags_matched", ("ok", 7), "a non-string tag"),
+    ("tags_matched", ("ok", True), "a bool tag"),
+    ("tags_matched", tuple(f"t{i}" for i in range(65)), "65 tags"),
+    ("tags_matched", "not-a-tuple", "a bare string"),
+])
+def test_policy_identity_strings_are_bounded_to_identifier_shape_and_the_limit_is_stated(field, value, why):
+    """specs/0027 v14.1 (research's pre-adoption read of 0040): the policy's
+    identity strings are persisted VERBATIM in the receipt row, so they are
+    bounded to identifier shape at construction — before any recall — and a
+    sentence, whitespace, an over-long or empty value, a bool, a non-string or
+    too many tags are refused. The stated LIMIT is asserted below, not hidden:
+    an identifier-shaped disclosure passes every rule and is persisted."""
+    from veracium import PolicyLane
+    kwargs = dict(policy_id="demo", policy_version="1", ranks={"p": 1}, tags_matched=("ok",))
+    kwargs[field] = value
+    with pytest.raises((ValueError, TypeError)):
+        PolicyLane(**kwargs)
+
+
+def test_an_identifier_shaped_disclosure_is_accepted_and_persisted_the_stated_limit(tmp_path):
+    from veracium import PolicyLane
+    lane = PolicyLane(policy_id="diagnosis:hiv-positive", policy_version="2026-09-14.1",
+                      ranks={"p": 1}, tags_matched=["diagnosis:hiv-positive", "a" * 64])  # a list is taken as a tuple
+    assert lane.tags_matched == ("diagnosis:hiv-positive", "a" * 64)
+    mem = _memory(tmp_path, "lim.db")
+    rc = mem.recall(U, "boat topic", semantic=False, policy=lane).policy_receipt
+    row = mem.store.policy_receipt(U, rc.recall_id)
+    assert "diagnosis:hiv-positive" in row["receipt"] and row["policy_id"] == "diagnosis:hiv-positive"   # bounded, not content-free
+    mem.close()

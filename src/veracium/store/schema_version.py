@@ -507,9 +507,15 @@ SCHEMA_V13 = SCHEMA_V12 + (
 # `policy_receipt` table. One row per recall in which a policy lane FIRED,
 # keyed by the minted `recall_id`; the identity columns (policy, version,
 # recorded_at) are what a reader lists by, and `receipt` is the receipt's
-# JSON VERBATIM as `Memory.recall` returned it — ids only, never content
-# (V-RECEIPT-IDS-ONLY), so the table is a new carrier of nothing 0040's
-# enumeration does not already reach. Policies: the table REQUIRED (an audit
+# JSON VERBATIM as `Memory.recall` returned it. Its ranking fields are record
+# ids only (V-RECEIPT-IDS-ONLY); its policy identity fields (`policy_id`,
+# `policy_version`, `tags_matched`) are HOST-SUPPLIED strings, bounded to
+# identifier shape at `PolicyLane` (v14.1) and persisted verbatim — bounded,
+# not content-free, 0040's class for `evidence_ref` and `source_id`; the
+# `receipt` column is therefore a second blob carrier beside `edges.json`
+# that 0040's enumeration must reach as such (research's pre-adoption read
+# of 0040, 2026-09-14: the earlier wording here claimed "never content" of a
+# column that held whatever the host passed). Policies: the table REQUIRED (an audit
 # record is not derivable from current state — the 0029 `edge_event`
 # argument; its absence is damage, not drift); the time index REBUILDABLE
 # (a lookup accelerator; the PK is the identity). DDL only: crossing INTO

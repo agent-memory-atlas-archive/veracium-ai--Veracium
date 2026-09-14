@@ -257,7 +257,14 @@ prompt = f"{r.context}\n\nUser: suggest a lunch spot"   # drop into your own cal
 
 
 **A host policy and its receipt (spec 0027 §4g).** `policy=PolicyLane(policy_id, policy_version,
-ranks, tags_matched=())` applies one versioned, host-supplied ranking policy to this call: `ranks`
+ranks, tags_matched=())` applies one versioned, host-supplied ranking policy to this call. `policy_id`,
+`policy_version` and each tag are identifiers (letters, digits and `._:-`, 1–64 characters, no
+whitespace; at most 64 tags), refused otherwise — the receipt stores them verbatim, so their shape is
+bounded; it is not content-free. Bounded to WHAT: letters, digits and `._:-` is the alphabet of
+structured identifiers, which is the alphabet of most structured personal data — `ssn:123-45-6789`,
+`dob:1974-03-02`, `dx:C50.9`, `phone:555-123-4567` all pass and are persisted verbatim in the
+receipt. The rule the alphabet cannot enforce, stated in words: **a policy tag names a policy, not a
+subject.** Redaction reach over the receipt is specs/0040's. `ranks`
 maps edge ids to ranks (≥ 1) and feeds a third fusion lane that can reorder what is returned and
 can never decide what is protected (the reserve), what is a member, or what counts as covered.
 When the lane fires — a rank lands on a candidate the lexical or semantic lane holds — the result

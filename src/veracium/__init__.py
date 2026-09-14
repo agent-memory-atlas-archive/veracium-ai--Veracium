@@ -133,6 +133,21 @@ class RecalledEdge:
     route: str          # "lexical" | "semantic" | "both"
 
 
+IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
+MAX_POLICY_TAGS = 64
+
+
+def _require_identifier(field: str, value) -> None:
+    """specs/0027 v14.1: a host-supplied policy identity string is an
+    IDENTIFIER — letters, digits and `._:-`, 1–64 characters, no whitespace —
+    refused otherwise (a `bool` is not a string). The shape bounds what the
+    receipt row can carry; it does not make the string content-free."""
+    if not isinstance(value, str) or isinstance(value, bool) or not IDENTIFIER_RE.match(value):
+        raise ValueError(
+            f"{field} must be an identifier (letters, digits and ._:- only, 1-64 "
+            f"characters, no whitespace); got {value!r:.80}")
+
+
 @dataclass(frozen=True)
 class PolicyLane:
     """specs/0027 v13 §4c — a host-supplied policy application for ONE recall:
@@ -149,10 +164,27 @@ class PolicyLane:
     tags_matched: tuple = ()
 
     def __post_init__(self):
-        if not isinstance(self.policy_id, str) or not self.policy_id.strip():
-            raise ValueError("PolicyLane.policy_id must be a non-empty string")
-        if not isinstance(self.policy_version, str) or not self.policy_version.strip():
-            raise ValueError("PolicyLane.policy_version must be a non-empty string")
+        # specs/0027 v14.1 (research's pre-adoption read of 0040, 2026-09-14):
+        # the policy's identity fields are HOST-SUPPLIED strings that the
+        # receipt persists VERBATIM, so they are bounded to identifier shape
+        # — IDENTIFIER_RE, at most 64 characters each, at most 64 tags — and
+        # refused otherwise; the receipt's blob column then carries nothing a
+        # host did not shape as an identifier. Bounded, not content-free: an
+        # identifier can still be a label about a person
+        # (`diagnosis:hiv-positive` passes every rule here), which is 0040's
+        # class for `evidence_ref`, `source_id` and `correlation_id`, and is
+        # stated as the limit rather than claimed away.
+        _require_identifier("PolicyLane.policy_id", self.policy_id)
+        _require_identifier("PolicyLane.policy_version", self.policy_version)
+        if isinstance(self.tags_matched, list):
+            object.__setattr__(self, "tags_matched", tuple(self.tags_matched))
+        if not isinstance(self.tags_matched, tuple):
+            raise TypeError("PolicyLane.tags_matched must be a tuple of identifiers")
+        if len(self.tags_matched) > MAX_POLICY_TAGS:
+            raise ValueError(f"PolicyLane.tags_matched carries {len(self.tags_matched)} tags; "
+                             f"at most {MAX_POLICY_TAGS}")
+        for i, tag in enumerate(self.tags_matched):
+            _require_identifier(f"PolicyLane.tags_matched[{i}]", tag)
         if not isinstance(self.ranks, dict):
             raise TypeError("PolicyLane.ranks must be a dict of edge id -> rank")
 
