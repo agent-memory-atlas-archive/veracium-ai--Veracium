@@ -192,8 +192,9 @@ class Provenance(BaseModel):
     # `extractor` (the quote-gated capture in ingest). A write-time fact the
     # product stamps, never a host input; absent on every declarative record
     # (key omitted below, so declarative bytes are unchanged) and absent on a
-    # procedural record written before the stamp existed (the pre-producer
-    # era; the doctor counts those as `procedural_unstamped`). Frozen with the
+    # procedural record written before the stamp existed OR written after it
+    # through a path other than Memory (a hand-minted record at Store.add_edge;
+    # the doctor counts both as `procedural_unstamped`). Frozen with the
     # model: no stamp can be flipped on a built Provenance (V-PROVENANCE-FROZEN).
     producer: Optional[Literal["host", "extractor"]] = None
     model_config = {"frozen": True}

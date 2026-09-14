@@ -73,9 +73,12 @@ The checks, each named in the output:
                 `procedural_declared` — procedural records whose producer
                 stamp is `host` (record_procedure), `procedural_captured` —
                 producer `extractor` (the quote-gated capture),
-                `procedural_unstamped` — procedural records written before
-                the producer stamp existed (the two cannot be told apart
-                there, and the doctor says so) — each EXACT, the record's
+                `procedural_unstamped` — procedural records with no
+                producer: written before the stamp existed, or after it
+                through a path other than `Memory` (the two cannot be told
+                apart there, and the doctor says so; on a store created
+                after the stamp existed a non-zero count is the live reading
+                that something wrote past the `Memory` boundary) — each EXACT, the record's
                 own stamps — and `procedural_shaped` — DECLARATIVE records whose `note`
                 matches the census marker SCREEN, a TRIPWIRE and never a
                 count of procedures (specs/0037 §4a: kind is the stamp, never
@@ -421,9 +424,13 @@ def _check_procedural(rep: Report, edges: dict) -> None:
     # merged host-declared and extractor-captured records (research's
     # finding, 2026-09-14). Now three numbers by the record's own stamps,
     # never added: declared (producer host), captured (producer extractor),
-    # unstamped (a procedural record written before the producer stamp
-    # existed — the two cannot be told apart there, and the doctor says so
-    # rather than guessing).
+    # unstamped (a procedural record with NO producer: written before the
+    # producer stamp existed, OR written after it through a path other than
+    # Memory — a hand-minted record at Store.add_edge, the boundary 0006 v10
+    # rule 10 states rather than gates; the two cannot be told apart there,
+    # and the doctor says so rather than guessing. On a store created after
+    # the stamp existed only the second cause remains, so a non-zero count is
+    # the live detector for that boundary — research's read, 2026-09-14).
     declared, captured, unstamped, shaped = [], [], [], []
     for (_u, eid), (_row, d) in edges.items():
         prov = d.get("provenance") or {}
@@ -440,8 +447,10 @@ def _check_procedural(rep: Report, edges: dict) -> None:
     rep.add("procedural", "info",
             f"procedural_declared {len(declared)} (host-declared through record_procedure — exact, the record's "
             f"own producer stamp) · procedural_captured {len(captured)} (extractor-captured behind the quote gate "
-            f"— exact, the producer stamp) · procedural_unstamped {len(unstamped)} (stamped procedural before the "
-            f"producer stamp existed; declared and captured cannot be told apart there) · procedural_shaped "
+            f"— exact, the producer stamp) · procedural_unstamped {len(unstamped)} (stamped procedural with NO producer: "
+            f"written before the producer stamp existed, OR written after it through a path other than Memory — "
+            f"declared and captured cannot be told apart there; on a store created after the stamp existed, a "
+            f"non-zero count is the live reading that something wrote past the Memory boundary) · procedural_shaped "
             f"{len(shaped)} (declarative records whose note matches the census "
             f"marker screen — a SCREEN RESULT, never a count of procedures; the baseline is 13 screen hits "
             f"in 312 notes with 0 genuine on reading, so only a CHANGE in the hit rate means anything; the "

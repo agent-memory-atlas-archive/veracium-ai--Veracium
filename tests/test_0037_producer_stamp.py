@@ -117,9 +117,11 @@ def test_provenance_is_frozen_after_construction():
 
 
 def test_no_src_site_assigns_to_a_provenance_attribute():
-    """The seven sites the freeze converted (graph absorption ×3, the store's
-    confirmation ×2 and recompute ×2) and any future one: an AST sweep of src
-    for `<expr>.provenance.<field> = …` finds nothing — a test now, not a grep."""
+    """The eight sites the freeze converted (graph absorption ×3, the store's
+    confirmation ×2 and recompute ×2, the decay path's augmented assignment —
+    the one a `=`-only regex missed) and any future one: an AST sweep of src
+    for every `<expr>.provenance.<field> = / op= …` form finds nothing — a test
+    now, not a grep."""
     hits = []
     for path in SRC.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -318,7 +320,10 @@ def test_a_producer_in_a_pre_12_envelope_is_stripped_and_a_raw_producer_is_a_ref
 def test_the_doctor_reports_declared_captured_and_unstamped_as_three_numbers_never_merged(tmp_path):
     mem = _capture(tmp_path, "d.db")                       # one captured
     pid = _declare(mem)                                     # one declared
-    mem.store.add_edge(_edge("Archive receipts weekly.", record_kind="procedural", basis="stated"))  # one unstamped
+    # one unstamped — and this is ALSO the route the boundary names: a record
+    # hand-minted at Store.add_edge with no producer, on a store created after
+    # the stamp existed, so the doctor's count is the live reading of that route
+    mem.store.add_edge(_edge("Archive receipts weekly.", record_kind="procedural", basis="stated"))
     db = mem.config.db_path
     mem.close()
     rep = doctor.diagnose(db)
@@ -328,7 +333,7 @@ def test_the_doctor_reports_declared_captured_and_unstamped_as_three_numbers_nev
             rep.counts["procedural_unstamped"]) == (1, 1, 1)
     assert rep.counts["procedural_shaped"] == 0
     for phrase in ("procedural_declared 1", "procedural_captured 1", "procedural_unstamped 1",
-                   "cannot be told apart", "never merged"):
+                   "cannot be told apart", "a path other than Memory", "live reading", "never merged"):
         assert phrase in f[0].message, phrase
     assert pid not in f[0].ids                                       # ids: the shaped screen only
     # the negative control for the split: a store with only legacy procedural

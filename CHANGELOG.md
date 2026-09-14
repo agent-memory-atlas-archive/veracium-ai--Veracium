@@ -13,8 +13,10 @@
   edge.provenance.model_copy(update={...})`) — the eight places the library itself did so now
   do. New `Provenance.producer` (`"host"` from `record_procedure`, `"extractor"` from the
   quote-gated capture) on every procedural record written from this release; absent on every
-  declarative record (bytes unchanged) and on procedural records written earlier, which
-  `veracium doctor` reports as `procedural_unstamped` beside the split it can now make —
+  declarative record (bytes unchanged) and on procedural records written earlier or written
+  through a path other than `Memory`, which `veracium doctor` reports as `procedural_unstamped`
+  (on a store created after this release, a non-zero count means something wrote past the
+  `Memory` boundary) beside the split it can now make —
   `procedural_declared` and `procedural_captured` were one merged number before, and the
   check's own docstring called them declared. The stamp is immutable on a same-id replace and
   inherited across a supersession. Export format 11 → 12, stamped only when a producer-bearing

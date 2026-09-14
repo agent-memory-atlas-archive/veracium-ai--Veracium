@@ -432,9 +432,12 @@ a third party is not checked, because the stored payload cannot tell a declared
 derivation from the default every undeclared ingest receives; the procedural
 tripwire — numbers never merged: `procedural_declared` (procedural records
 whose producer stamp is `host`), `procedural_captured` (producer `extractor`),
-`procedural_unstamped` (procedural records written before the producer stamp
-existed, specs/0037 v23 — declared and captured cannot be told apart there,
-and the doctor says so rather than guessing) and `procedural_shaped`
+`procedural_unstamped` (procedural records with no producer stamp: written
+before the stamp existed, or after it through a path other than `Memory` —
+specs/0037 v23 — declared and captured cannot be told apart there, and the
+doctor says so rather than guessing; on a store created after the stamp
+existed, a non-zero count is the live reading that something wrote past the
+`Memory` boundary) and `procedural_shaped`
 (declarative records whose `note` matches research's census marker screen, a
 screen result and never a count of procedures; notes only, never `summary`;
 informational, it cannot fail the build) — there to notice an extractor that starts producing procedure-shaped
