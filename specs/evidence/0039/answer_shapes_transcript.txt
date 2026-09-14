@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — DEV's instrument (specs/evidence/0039/answer_shapes.py)
-# generated 2026-09-12 against veracium @ 61fa6c56542fc05f1a0c36bcf8cd9e7eb152d3b1
+# generated 2026-09-12 against veracium @ dee5e565ca842dd385e5dcfa74cb42d18a34dfea
+# RE-PINNED 2026-09-14 after 0037 v24 (the boundary kinds; no procedural triple in these answers): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0037 v23.1 (doctor and schema comments/message only): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0037 v23 / 0006 v10 (Provenance frozen — eight mutation sites now copy; the producer
 # stamp; the export era; the doctor's split; no procedural triple in these answers): body BYTE-IDENTICAL again.
