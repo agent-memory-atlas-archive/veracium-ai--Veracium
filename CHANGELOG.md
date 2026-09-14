@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Procedural capture: the quoted span must be one whole sentence of the event, and the stored
+  text is that sentence with no transformation** (specs/0037 v22, specs/0038 v6.4; the amendments
+  review package, round 3, returned 2026-09-13). The relative-clause cut added at v21 removed a
+  mid-sentence clause and the condition after it ("I review invoices, which arrive daily, only after
+  approval" stored as "I review invoices"); it is withdrawn — the user's sentence is stored as
+  written. A quote that is a fragment of a sentence ("I always review invoices" lifted from
+  "Imagine I always review invoices.") or that spans two sentences (whatever the case of the second)
+  is refused: the span's boundaries are validated against the event. A conditional whose lead
+  clause carries the routine ("If I review invoices daily, the queue stays short.") is refused.
+  Re-measured on all four labelled draws with thresholds fixed first: admissions unchanged. Packages
+  now carry a machine-readable test-results file.
 - **Recall accepts a host policy and returns its receipt** (specs/0027 v13; the owner's word,
   2026-09-13, "Do the A1 receipt"). `recall(..., policy=PolicyLane(policy_id, policy_version, ranks,
   tags_matched))` feeds the policy lane landed at v11, whose use had been forbidden until a receipt
@@ -21,9 +32,9 @@
   order — a curly apostrophe lost a negation ("I don’t review invoices" stored as "Reviews
   invoices") and a coordination lent its object ("I review invoices and archive receipts" stored as
   "Reviews receipts"). The model's summary is no longer used for a procedural triple at all: the
-  stored `object` is the quoted span itself, whitespace-normalised, with a comma-introduced
-  relative clause cut and nothing else ("I've been misting my fern every other day"; "I go to the
-  gym on Tuesdays, Thursdays, and Saturdays."); `describe_procedures` renders it after "recorded
+  stored `object` is the quoted span itself, whitespace-normalised ("I've been misting my fern every
+  other day"; "I go to the gym on Tuesdays, Thursdays, and Saturdays."; the relative-clause cut this
+  entry first carried was withdrawn the same day, see the entry above); `describe_procedures` renders it after "recorded
   from something you said:". A first-person request ("I request that you review
   invoices today"), any span addressed in the second person, and a span crossing a sentence
   boundary are refused. The record guarantee is now exact: `object` is the derived span, `note` is

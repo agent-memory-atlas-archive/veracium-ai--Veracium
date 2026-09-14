@@ -269,6 +269,8 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
     entry point, not by content. `origin` is deliberately NOT a parameter — a
     LOCAL caller can never supply it (I2a); it stays absent and resolves to the
     store's `store_identity` singleton at read (§4 rule 6)."""
+    if not isinstance(event_text, str):
+        raise TypeError(f"event_text must be a str, got {type(event_text).__name__}")   # v22: never coerced (specs/0037 Gate 1)
     # specs/0011 §4d (E4): resolve the host's ingress declaration FIRST —
     # every RAISES cell fires here, before the LLM runs or anything is
     # written. From this point on `derived_from` is the EFFECTIVE content

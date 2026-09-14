@@ -505,4 +505,9 @@ WITHDRAWN = [
      "grounding to describe; an ordered subsequence across clauses had admitted a meaning change; and the "
      "record claim is EXACT: object IS the derived span, no separate copy in note, no digest.",
      "specs/0037 §4a-iii Gate 4, item 9; docs/api.md; CHANGELOG"),
+    ("0037-v21-relative-clause-cut",
+     r"with a comma-introduced relative clause cut|cut a comma-introduced RELATIVE clause|the one transformation is a cut",
+     "0037 v22 (the amendments round-3 RETURN, 2026-09-13): the stored gloss IS the normalised span with NO "
+     "transformation; v21's relative-clause cut removed a mid-sentence clause and the condition after it.",
+     "specs/0037 §4a-iii Gate 4; docs/api.md; CHANGELOG"),
 ]

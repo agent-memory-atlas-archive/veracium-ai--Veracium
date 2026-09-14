@@ -594,16 +594,19 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: and module-machinery 20 -> 19, the rest unchanged; 0027 v13 (2026-09-13: the
 #: policy receipt — `policy.ranks`/`policy_id`/`policy_version`/`tags_matched`
 #: reads in recall, the receipt dict's edge-id reads in graph.py) moved
-#: dotted/dataflow 5,807 -> 5,824, the rest unchanged.
+#: dotted/dataflow 5,807 -> 5,824, the rest unchanged; 0037 v22 (2026-09-13: the
+#: whole-sentence rule's string reads, the withdrawn cut) moved dotted/dataflow
+#: 5,824 -> 5,828 (with the `no_event` outcome and the type guards) and
+#: module-plain 312 -> 310, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5824,
+    "dotted/dataflow": 5828,
     "dotted/module-machinery": 19,
-    "dotted/module-plain": 312,
+    "dotted/module-plain": 310,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6236
-SRC_DATA_DUNDERS_IN_DATAFLOW = 123
+SRC_ATTRIBUTE_TOTAL = 6238
+SRC_DATA_DUNDERS_IN_DATAFLOW = 125   # 2026-09-14: +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)
 
 
 def _classify_attribute(base, attr, ctx):

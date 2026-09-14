@@ -138,7 +138,9 @@ mem.record_procedure("alice", "Credentials are rotated quarterly.",
 **Procedures captured from `remember` (specs/0037 v16–v19).** On a user-authored event the
 extractor may emit a `follows_procedure` triple carrying `quote`, the verbatim span in which the
 user states a routine of their own. Ingest admits it only through ordered, refuse-only gates:
-the author is the user; the quote is a whitespace-normalised substring of the event text; the
+the author is the user; the quote is a whitespace-normalised substring of the event text AND one
+whole sentence of it (it starts where a sentence starts and ends where one ends, so a fragment
+lifted from inside "Imagine I always review invoices" is refused, and so are two sentences); the
 summary meets `record_procedure`'s contract (normalised, at most 512 characters); the span opens
 with the user asserting a current, repeated performance of their own — present simple, present
 perfect continuous, or present progressive with a frequency marker, with an action verb at the
@@ -146,9 +148,9 @@ head (not a modal, an auxiliary, a cognitive/volitional verb such as "thinking o
 directive such as "request"), is one sentence, is not addressed to anyone in the second person, carries
 no report, rejection, aspect, norm, request, aspiration, one-time or past marker, and has no
 quotation frame to its left; every form not enumerated is refused; and the
-stored summary is DERIVED from the span by rule (the user's sentence, whitespace-normalised, with a
-comma-introduced relative clause cut and nothing else) — the extractor's own summary for a
-procedural triple is discarded, so it cannot misdescribe the span. Any failure is counted in the result's `procedural_refused` and nothing
+stored summary IS the span, whitespace-normalised and nothing else — the extractor's own summary
+for a procedural triple is discarded, so it cannot misdescribe the span, and no transformation is
+applied that could change what the sentence asserts. Any failure is counted in the result's `procedural_refused` and nothing
 is written; a capture counts in `procedures`. A captured procedure's `object` IS the derived span (its
 note is empty, no digest is stored; describe renders the derived text after "recorded from
 something you said:") and it derives `basis="stated"`. The measured residual is stated in the

@@ -444,9 +444,9 @@ def test_the_grammar_against_the_third_draw_meets_the_held_out_threshold_as_pred
     ("F1 curly negation", "I don’t review invoices.", "I don’t review invoices", "Reviews invoices", "I don’t review invoices"),
     ("F1 coordination", "I review invoices and archive receipts.", "I review invoices and archive receipts", "Reviews receipts", "I review invoices and archive receipts"),
     ("F3 gloss is the quote", "I always review invoices.", "I always review invoices", "I always review invoices", "I always review invoices"),
-    ("commentary clause cut", "I've been listening to it during my morning walks with my dog, which has been a great way to get some exercise and make progress on my book.",
+    ("commentary KEPT (v22: no transformation)", "I've been listening to it during my morning walks with my dog, which has been a great way to get some exercise and make progress on my book.",
      "I've been listening to it during my morning walks with my dog, which has been a great way to get some exercise and make progress on my book",
-     "Makes progress on my book", "I've been listening to it during my morning walks with my dog"),
+     "Makes progress on my book", "I've been listening to it during my morning walks with my dog, which has been a great way to get some exercise and make progress on my book"),
     ("the user's own words, verbatim", "I've been keeping track of the birds I've seen, and I log them nightly.",
      "I've been keeping track of the birds I've seen, and I log them nightly", "x", "I've been keeping track of the birds I've seen, and I log them nightly"),
     ("the whole named schedule survives", "I go to the gym on Tuesdays, Thursdays, and Saturdays.", "I go to the gym on Tuesdays, Thursdays, and Saturdays.", "x", "I go to the gym on Tuesdays, Thursdays, and Saturdays."),
@@ -455,10 +455,11 @@ def test_the_stored_gloss_is_derived_from_the_span_and_the_models_summary_is_dis
     """Round-2 finding 1 and finding 3's construction, closed by the owner's
     decision (2026-09-13, "I agree with the derivation recommendation"): the
     gloss is DERIVED from the verified span — the user's sentence, whitespace-
-    normalised, with a comma-introduced relative clause cut and nothing else —
-    so a curly apostrophe cannot lose a negation, a coordination cannot lend its
-    object, commentary is never stored, and the model's summary never reaches
-    the record whatever it says. What is stored is exactly what describe
+    normalised, and NOTHING else (v22 withdrew v21's relative-clause cut after
+    the round-3 reviewer showed it removing a mid-sentence condition) — so a
+    curly apostrophe cannot lose a negation, a coordination cannot lend its
+    object, commentary is stored as the user's own words, and the model's
+    summary never reaches the record whatever it says. What is stored is exactly what describe
     renders, after "recorded from something you said:". Dropping the subject was
     tried and rejected: the imperative-shaped fragment it makes is withheld by
     describe's frozen executable-detail floor (`test_the_derived_gloss_is_not_withheld_by_describes_frozen_floor`)."""
@@ -548,6 +549,7 @@ def test_the_derived_gloss_of_every_observed_positive_is_pinned():
     pinned = [_json.loads(l) for l in DERIVED.read_text().splitlines() if l.strip()]
     assert rows == pinned, "the observed positives' derived glosses moved: regenerate the pinned file and re-read the spec's table"
     assert sum(r["admitted"] for r in rows) == 13                          # recall 13 of 16 across four draws; the misses are #20 (d1), #20 (d3), #59 (d4)
+    assert all(r["derived"] == " ".join(r["quote"].split()) for r in rows)   # v22: the stored gloss IS the normalised span
 
 
 def test_the_grammar_against_the_fourth_draw_meets_the_held_out_threshold():
@@ -573,6 +575,148 @@ def test_the_grammar_against_the_fourth_draw_meets_the_held_out_threshold():
     positives = {r["n"]: actor_present(r["quote"]) for r in distinct.values() if r["expected"] == "pass"}
     assert positives == {1: True, 59: False, 81: True}
     assert not any(r.get("borderline") for r in rows)
+
+
+# ============================================ v22: the round-3 RETURN (the span is ONE WHOLE SENTENCE of the event)
+@pytest.mark.parametrize("case, text, quote, reason", [
+    ("F2 a fragment inside a hypothetical frame", "Imagine I always review invoices.", "I always review invoices", "actor_absent"),
+    ("F2 a fragment inside a doubt frame", "I doubt I review invoices daily.", "I review invoices daily", "actor_absent"),
+    ("F3 two sentences, the second lowercase", "I review invoices daily. archive receipts immediately.", "I review invoices daily. archive receipts immediately.", "actor_absent"),
+    ("a fragment that starts mid-sentence", "I review invoices daily.", "review invoices daily", "actor_absent"),
+    ("a fragment that stops mid-sentence", "I review invoices daily unless the queue is empty.", "I review invoices daily", "actor_absent"),
+    ("the whole hypothetical sentence", "Imagine I always review invoices.", "Imagine I always review invoices.", "actor_absent"),
+    ("a conditional whose lead clause carries the routine", "If I review invoices daily, the queue stays short.", "If I review invoices daily, the queue stays short.", "actor_absent"),
+])
+def test_the_round_3_passage_selections_are_refused_end_to_end(tmp_path, case, text, quote, reason):
+    """Round-3 findings 2 and 3, closed by ONE rule (V-WHOLE-SENTENCE): the
+    quoted span must be exactly one whole sentence of the event — it begins at
+    the start of the event or after sentence-final punctuation and ends at the
+    end of the event or at sentence-final punctuation, validated against the
+    source and independent of case. A fragment inside a framing sentence is not
+    a sentence whatever the frame says; two sentences are not one. And a
+    subordinate lead clause must end at a comma, so a conditional's own "I …"
+    cannot be read as the assertion."""
+    from veracium.procedural_gate import check_capture
+    ok, why, _, _ = check_capture(quote, text, max_summary_chars=512)
+    assert (ok, why) == (False, reason), (case, ok, why)
+    n, refused, dropped, obj, _ = _capture(tmp_path, text, "x", quote, instructions=["archive receipts immediately."] if case.startswith("F3") else ())
+    assert (n, refused) == (0, 1), (case, obj)
+
+
+@pytest.mark.parametrize("case, text, quote, stored", [
+    ("F1 a mid-sentence relative clause and its condition, kept whole", "I review invoices, which arrive daily, only after approval.",
+     "I review invoices, which arrive daily, only after approval.", "I review invoices, which arrive daily, only after approval."),
+    ("the first of two sentences, with its terminal", "I review invoices daily. archive receipts immediately.", "I review invoices daily.", "I review invoices daily."),
+    ("the first of two sentences, terminal omitted", "I review invoices daily. archive receipts immediately.", "I review invoices daily", "I review invoices daily"),
+    ("a sentence in the middle of a paragraph", "Thanks for the notes. I always run the linter before merging. Let me know.", "I always run the linter before merging", "I always run the linter before merging"),
+    ("a frequency lead needs no comma", "Every Friday I review the invoices.", "Every Friday I review the invoices", "Every Friday I review the invoices"),
+    ("a subordinate lead with its comma", "When the build is red, I usually rerun it.", "When the build is red, I usually rerun it", "When the build is red, I usually rerun it"),
+])
+def test_a_whole_sentence_of_the_event_is_admitted_and_stored_as_written(tmp_path, case, text, quote, stored):
+    """The admitting side of V-WHOLE-SENTENCE and V-GLOSS-DERIVED at v22: a
+    whole sentence anywhere in the event, with or without its own terminal, is
+    admitted, and what is stored is the sentence as the user wrote it — the
+    mid-sentence relative clause and the condition after it included (the
+    reviewer's F1: v21's cut had removed "only after approval")."""
+    n, refused, _, obj, att = _capture(tmp_path, text, "x", quote)
+    assert (n, refused) == (1, 0), (case, obj)
+    assert obj == stored and att == "recorded from something you said: " + stored
+
+
+def test_the_first_sentence_admits_while_the_declared_second_instruction_is_not_carried(tmp_path):
+    """The reviewer's F3 event with the CORRECT selection: the extractor quotes
+    the first sentence only; the declared instruction "archive receipts
+    immediately." is not part of the carrier, so 0038's exemption never sees
+    it; one procedure is recorded and its text is the first sentence alone."""
+    n, refused, dropped, obj, _ = _capture(tmp_path, "I review invoices daily. archive receipts immediately.", "x",
+                                           "I review invoices daily.", instructions=["archive receipts immediately."])
+    assert (n, refused) == (1, 0) and obj == "I review invoices daily."
+    assert "archive" not in obj
+
+
+def test_the_fifth_draw_is_the_full_path_evaluation_the_reviewer_asked_for(tmp_path):
+    """Draw 5 — the FULL-PATH grain the round-3 reviewer asked for: every row
+    carries the COMPLETE event text the quote was selected from, captured at
+    collection, so the passage rules evaluate as (event, quote) pairs. 71 rows;
+    11 user-turn pairs labelled by research against the frozen rubric.
+    PROTOCOL, stated: dev stated the thresholds before the labels existed and
+    research had already published the gate's verdicts, so by the rubric's own
+    clause this is a SECOND DENOMINATOR with a non-blind rater
+    (`rater_blind_to_gate_verdicts: false` on every row), not a held-out test.
+    Thresholds (ledger, before any label): (a) zero admissions among the
+    non-borderline must-refuse pairs; (c) every assistant-turn pair refused;
+    (d) the stored text of every admitted pair equals the normalised quote; (b)
+    positives reported. MEASURED: (a) 0 of 4; (c) authorship refuses an
+    assistant-authored event at ingest before the passage rules run (asserted
+    through Memory.remember, reason "author"), AND on this draw the passage
+    rules alone also refuse all 55 assistant pairs — contingent on this corpus,
+    not a property (an assistant's "I always recommend X" could pass them); the
+    five not-located rows have no event text and no role and are excluded, not
+    counted as assistant (research's correction); (b) of the six spans
+    labelled pass SPAN-ALONE, exactly the two that are whole sentences of their
+    event are admitted and exactly those two — the four others are mid-sentence
+    clauses preceded by ", so " (the rubric's rule 1 says "label the span alone",
+    written for the span-only era; the refusals are the whole-sentence rule
+    working, not a recall gap, and the recall figure is 2 of 2 whole-sentence
+    positives, never 2 of 6); (d) holds. Both admitted spans carry a trailing
+    relative clause — F1's case live: the retired cut would have trimmed the
+    user's own words about their own routine."""
+    from veracium.procedural_gate import check_capture, norm_ws, whole_sentence
+    root = ROOT / "tests" / "eval" / "extraction_speech_act"
+    full = [_json.loads(l) for l in (root / "draw5_fullpath.jsonl").read_text().splitlines() if l.strip()]
+    lab = [_json.loads(l) for l in (root / "draw5_11_labelled.jsonl").read_text().splitlines() if l.strip()]
+    assert len(full) == 71 and len(lab) == 11
+    assert all(l["rater_blind_to_gate_verdicts"] is False for l in lab)          # the downgrade, carried as data
+    assistant = [r for r in full if r["turn_role"] == "assistant"]
+    unlocated = [r for r in full if r["turn_role"] is None]
+    assert len(assistant) == 55 and len(unlocated) == 5 and all(r["event_text"] is None and r["located"] == "not_located" for r in unlocated)
+    assert not any(check_capture(r["quote"], r["event_text"], max_summary_chars=512)[0] for r in assistant)   # the passage rules alone, on this draw
+    # (c) AUTHORSHIP, at the ingest path: an assistant-authored event never reaches the passage rules
+    a = assistant[0]
+    mem = Memory(llm=_llm_emitting([_proc_triple(quote=a["quote"], object="x")]), config=_cfg(tmp_path))
+    r = mem.remember(U, a["event_text"], author=EvidenceAuthor.ASSISTANT, context=EvidenceContext.direct())
+    assert (r["procedures"], r["procedural_refused"]) == (0, 1)
+    mem.close()
+    must = [l for l in lab if l["expected"] == "refuse" and not l.get("borderline")]
+    assert len(must) == 4
+    assert not any(check_capture(l["quote"], l["event_text"], max_summary_chars=512)[0] for l in must)        # (a)
+    pos = [l for l in lab if l["expected"] == "pass"]
+    assert len(pos) == 6
+    verdicts = {}
+    for l in pos:
+        ok, why, g, s = check_capture(l["quote"], l["event_text"], max_summary_chars=512)
+        ev = norm_ws(l["event_text"]); q = norm_ws(l["quote"])
+        ws = whole_sentence(q, ev, ev.find(q))
+        verdicts[l["quote"]] = (ok, ws)
+        assert ok == ws, (l["quote"][:60], why)                                       # admitted iff a whole sentence of the event
+        if ok:
+            assert g == q                                                             # (d)
+        else:
+            assert why == "actor_absent" and ", so " in ev[:ev.find(q)][-6:]           # the four: mid-sentence clauses after ", so "
+    assert sum(1 for ok, _ in verdicts.values() if ok) == 2 and len(verdicts) == 4      # (b): 2 of 2 whole-sentence positives; the six pass rows are four distinct quotes
+    assert all("which has been" in q for q, (ok, _) in verdicts.items() if ok)       # F1's case, live: trailing clauses kept
+
+
+def test_the_reason_vocabulary_is_total_and_nothing_is_coerced_to_a_span(tmp_path):
+    """Research, on the draw-5 denominator slip: `norm_ws` coerced any object with
+    `str()`, so a MISSING event refused under the content verdict
+    `quote_not_in_event` — a plausible wrong reason — and five rows with no
+    event read as evaluated. v22: the normaliser refuses a non-string; a missing
+    or blank event is its own named outcome (`no_event`); the ingest entry
+    refuses a non-string event before any model call."""
+    from veracium.procedural_gate import check_capture, norm_ws
+    with pytest.raises(TypeError):
+        norm_ws(None)
+    with pytest.raises(TypeError):
+        norm_ws(["I", "review", "invoices"])
+    assert check_capture("I review invoices daily", None, max_summary_chars=512)[:2] == (False, "no_event")
+    assert check_capture("I review invoices daily", "   ", max_summary_chars=512)[:2] == (False, "no_event")
+    assert check_capture(None, "I review invoices daily.", max_summary_chars=512)[:2] == (False, "no_quote")
+    mem = Memory(llm=_llm_emitting([_proc_triple()]), config=_cfg(tmp_path))
+    with pytest.raises(TypeError, match="event_text must be a str"):
+        mem.remember(U, None, author=EvidenceAuthor.USER, context=EvidenceContext.direct())
+    assert mem.store.edges(U, active_only=False) == []
+    mem.close()
 
 
 # ============================================ v20: the POSITIVE form (the owner's word, Option B)

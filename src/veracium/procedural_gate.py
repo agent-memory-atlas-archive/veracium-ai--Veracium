@@ -33,10 +33,15 @@ import re
 from typing import Optional
 
 # --------------------------------------------------------------- normalisation
-def norm_ws(text) -> str:
+def norm_ws(text: str) -> str:
     """Inner-whitespace collapse ONLY (no casefold, no punctuation strip) — the
-    one normaliser every gate and the substring check run over."""
-    return " ".join(str(text).split())
+    one normaliser every gate and the substring check run over. v22
+    (research): a non-string is REFUSED, never coerced — `str(None)` is the
+    plausible span "None", and a missing event once refused a capture under
+    the content verdict `quote_not_in_event` instead of the truth."""
+    if not isinstance(text, str):
+        raise TypeError(f"norm_ws expects a str, got {type(text).__name__}")
+    return " ".join(text.split())
 
 
 # ------------------------------------------------------- V-ACTOR-PRESENT (grammar)
@@ -45,7 +50,14 @@ def norm_ws(text) -> str:
 # SINGULAR pronoun (research §5: "we" is a team policy, not the user), an
 # optional auxiliary ("I've", "I have", "I am", "I'm"), optional "been", an
 # optional frequency adverb, then a word.
-_LEAD = r"(?:(?:before|after|when|whenever|once|every|each|on|at|during|while|if)\b[^,]{0,80},?\s+)?"
+# v22 (round-3 F2's class in the lead clause): a SUBORDINATE lead clause must
+# END AT A COMMA — "If I review invoices daily, the queue stays short." used
+# to match with the lead consuming only "If " and the head reading the
+# conditional's own "I review…" as the assertion. A frequency lead ("Every
+# Friday I review the invoices") needs no comma. Measured before choosing: no
+# clean positive in 400 sessions opens with a subordinate lead; three
+# must-refuse spans open with "if".
+_LEAD = r"(?:(?:every|each)\s+\w+,?\s+|(?:before|after|when|whenever|once|on|at|during|while|if)\b[^,]{0,80},\s+)?"
 _HEAD = re.compile(
     _LEAD + r"I(?:'ve|'m| have| am)?\s+(?:been\s+)?"
     r"(?:always|usually|typically|often|regularly|routinely|generally|normally|habitually|never|rarely|every \w+|each \w+)?\s*"
@@ -182,9 +194,30 @@ def actor_present(span: str, event_text: Optional[str] = None, left_window: int 
         i = ev.find(s)
         if i < 0:
             return False
+        if not whole_sentence(s, ev, i):          # v22 (round-3 F2/F3): the span is ONE WHOLE SENTENCE of the event
+            return False
         left = ev[max(0, i - left_window):i]
         if _FRAME_TAIL.search(left) or _inside_open_quote(left):
             return False
+    return True
+
+
+def whole_sentence(span: str, event: str, at: int) -> bool:
+    """v22 (round-3 finding 2, "validate the selected passage's boundaries
+    against the source"): the span at offset `at` of the normalised event must
+    be exactly one whole sentence of it — it begins at the start of the event
+    or immediately after sentence-final punctuation, and it ends at the end of
+    the event, or at sentence-final punctuation it carries itself, or
+    immediately before sentence-final punctuation it omitted. A fragment inside
+    a framing sentence ("Imagine I always review invoices." → "I always review
+    invoices") is not a sentence, whatever the frame says; two sentences are
+    not one. Case plays no part."""
+    before = event[:at].rstrip()
+    if before and before[-1] not in _TERMINAL:
+        return False
+    after = event[at + len(span):].lstrip()
+    if after and span[-1] not in _TERMINAL and after[0] not in _TERMINAL:
+        return False
     return True
 
 
@@ -299,17 +332,22 @@ _FREQ_ADV = {"always", "usually", "typically", "often", "regularly", "routinely"
 # expanding contractions was only ever needed to repair that dropping. describe
 # prefixes "recorded from something you said:", so the first-person sentence
 # reads as the quotation it is.
-_COMMENTARY = re.compile(r",\s+(?:which|who|whom|whose|where)\b.*$", re.I)
-_SENTENCE_BOUNDARY = re.compile(r"[.!?]\s+[A-Z\"'“‘(]")
+# v22 (round-3 F3): a sentence terminator followed by whitespace and ANY
+# character is a boundary — the v21 pattern required an uppercase letter or an
+# opening quote after it, so "daily. archive receipts" read as one sentence.
+_SENTENCE_BOUNDARY = re.compile(r"[.!?]\s+\S")
+_TERMINAL = ".!?"
 
 
 def derive_gloss(span: str) -> str:
-    """specs/0037 v21 §4a-iii Gate 4 — the stored gloss is DERIVED from the
-    verified span by rule: whitespace-normalise; cut a comma-introduced relative
-    clause from its comma to the end; whitespace-normalise again. Empty only for
-    an empty span. The grammar refuses a span that crosses a sentence boundary
-    (`actor_present`), so a stored gloss is one sentence."""
-    return norm_ws(_COMMENTARY.sub("", norm_ws(span)))
+    """specs/0037 v22 §4a-iii Gate 4 — the stored gloss IS the verified span,
+    whitespace-normalised, and nothing else. v21 cut a comma-introduced
+    relative clause to the end of the span; the round-3 reviewer showed that a
+    relative clause can sit MID-sentence ("I review invoices, which arrive
+    daily, only after approval" lost its condition), so the one transformation
+    is withdrawn: the user's sentence is stored as the user wrote it, and
+    trailing commentary is a stated cost rather than a meaning change."""
+    return norm_ws(span)
 
 
 # ------------------------------------------------ the normaliser preserves its literals
@@ -339,14 +377,16 @@ def literals_survive_normalisation() -> list:
 def check_capture(span, event_text: str, *, max_summary_chars: int) -> tuple:
     """Runs the gates in the spec's order and returns (accepted, reason,
     derived_gloss, normalised_span). `reason` names the first failing gate:
-    no_quote | quote_not_in_event | actor_absent | summary_contract; None when
-    accepted. The model's own gloss is not an input: v21 derives the stored
+    no_quote | no_event | quote_not_in_event | actor_absent | summary_contract;
+    None when accepted — total over the inputs (v22). The model's own gloss is not an input: v21 derives the stored
     gloss from the span."""
     if not isinstance(span, str):
         return (False, "no_quote", None, None)
     s = norm_ws(span)
     if not s:
         return (False, "no_quote", None, None)
+    if not isinstance(event_text, str) or not event_text.strip():
+        return (False, "no_event", None, s)       # v22: the vocabulary is TOTAL over the inputs — a missing event is its own outcome
     ev = norm_ws(event_text)
     if s not in ev:
         return (False, "quote_not_in_event", None, s)
