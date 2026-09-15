@@ -70,9 +70,9 @@ first.*
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research), the candidate's author → dev (veracium-61), adopted 2026-09-15 at rest and re-read from the file at each adoption: v5 from `0041-targeted-redaction-v4-CANDIDATE.md` (sha16 e7385dd63c02afd6; the file kept its v4 name); v3 from `0041-targeted-redaction-CANDIDATE.md` (1d0c0389bef11a3f); v2.1 from the same name (eecd5a4db4426058) |
-| **Version** | **v5 — THE PER-CANDIDATE TREATMENT MAP, 2026-09-15.** §2d-iii-bis carries one row per carrier with its VALIDATED resulting shape; v4's §2d-ii named 32 of 64 individually and covered the rest with a phrase, and the second seat held adoption on it. Also corrected: the class sentence over-named `desc`/`text`/`payload`, none of which is among the 64. **Prior: v4 — RESPUN FOR THE ROUND-2 RETURN.** Folds all seven round-2 findings. **F1** §4e — the semantic-rebuild exemption is WITHDRAWN (it holds only the instance lock; a two-connection run stores the stale vector) **and research's own v3.1 wiki fix was the same bug** — `set_wiki` takes `store_version` as a parameter, so capture-then-compare is the race it diagnosed; restated as a TRANSACTION rule. **F2** §4b — the marker is NOT reserved (`sanitize_llm_body(MARKER) == MARKER`; `remember()` stores it); reservation becomes INV-11's MIRROR, a refusal at every non-redaction write and import boundary. **F3** §11.2 — reasons closed PER OPERATION; v3.2's five-value CHECK would have rejected every lifecycle write the product makes. **F4** §4g — row 9 and the notice cases RULED. **F5** §4f — the exact-coverage claim WITHDRAWN; conservative reporting is the ordinary case and durable association is a forward obligation. **F6** §2d-ii — the treatment map, ruled against the write-site sweep; `Episode.kind` is REPLACE. **F7** §11.3 — the invariant matrix CORRECTED: it had redefined INV-1 and INV-3 and omitted INV-4/5. *Re-read before editing; quote the version you approve* |
-| **Prior chain** | v1 (banner-only internal read) → **v2** (internal review folded into the body) → **v2.1** (dev's §2b fold at `436e4d4`, before round 1) → **v3** (research's respin for the round-1 return) → **v3.1** (four things folded at adoption from the second seat's exchange) → **v3.2** (the title line moved to line 1 after research's second-seat read found the registry rendering a banner as the spec's name) → **v4** (the round-2 return) → **v5** (this — the per-candidate treatment map) |
+| **Author / session** | research (veracium-research), the candidate's author → dev (veracium-61), adopted 2026-09-15 at rest and re-read from the file at each adoption: v6 from `0041-targeted-redaction-v4-CANDIDATE.md` (sha16 41e31dc725c77cd2; the file kept its v4 name); v5 from the same file (e7385dd63c02afd6); v3 from `0041-targeted-redaction-CANDIDATE.md` (1d0c0389bef11a3f); v2.1 from the same name (eecd5a4db4426058) |
+| **Version** | **v6 — RESPUN FOR THE ROUND-3 RETURN, 2026-09-15.** **F3** §11.2 now REFERENCES `schema.DISPOSITIONED_REASONS` instead of re-typing it — v5 listed the JOURNAL's twelve and omitted four of the registry's seven; the legacy boundary is split into retain-at-migration vs remove-at-redaction, with **hiding a value in `why` removing nothing from storage**. **F4** precedence stated: §11 governs on CONTRACT, **§2d-iii-bis governs on any per-candidate ROW** — v5's §11.1 said deletions govern for `contribution_ledger` while rows 21/23 rule CLEAR-and-keep, and the map is right. **HISTORY SPLIT: §11 now contains NO history; it is in Appendix A.** §2d-v: **WHAT READS THIS FIELD?** — seven executed results showing a treatment changing something other than content, collapsing to **two missing enforcements** (INV-11's mirror; §2d-iv's closure). Row 46 becomes **PRESERVE-if-recognised-kind / REPLACE-if-prose** after v5's flat REPLACE was shown to break H14 twice. §8 gains the consequence that **a redacted record can no longer be corrected.** **Prior: v5 — THE PER-CANDIDATE TREATMENT MAP.** §2d-iii-bis carries one row per carrier with its VALIDATED resulting shape; v4's §2d-ii named 32 of 64 individually and covered the rest with a phrase, and the second seat held adoption on it. Also corrected: the class sentence over-named `desc`/`text`/`payload`, none of which is among the 64. **Prior: v4 — RESPUN FOR THE ROUND-2 RETURN.** Folds all seven round-2 findings. **F1** §4e — the semantic-rebuild exemption is WITHDRAWN (it holds only the instance lock; a two-connection run stores the stale vector) **and research's own v3.1 wiki fix was the same bug** — `set_wiki` takes `store_version` as a parameter, so capture-then-compare is the race it diagnosed; restated as a TRANSACTION rule. **F2** §4b — the marker is NOT reserved (`sanitize_llm_body(MARKER) == MARKER`; `remember()` stores it); reservation becomes INV-11's MIRROR, a refusal at every non-redaction write and import boundary. **F3** §11.2 — reasons closed PER OPERATION; v3.2's five-value CHECK would have rejected every lifecycle write the product makes. **F4** §4g — row 9 and the notice cases RULED. **F5** §4f — the exact-coverage claim WITHDRAWN; conservative reporting is the ordinary case and durable association is a forward obligation. **F6** §2d-ii — the treatment map, ruled against the write-site sweep; `Episode.kind` is REPLACE. **F7** §11.3 — the invariant matrix CORRECTED: it had redefined INV-1 and INV-3 and omitted INV-4/5. *Re-read before editing; quote the version you approve* |
+| **Prior chain** | v1 (banner-only internal read) → **v2** (internal review folded into the body) → **v2.1** (dev's §2b fold at `436e4d4`, before round 1) → **v3** (research's respin for the round-1 return) → **v3.1** (four things folded at adoption from the second seat's exchange) → **v3.2** (the title line moved to line 1 after research's second-seat read found the registry rendering a banner as the spec's name) → **v4** (the round-2 return) → **v5** (the per-candidate treatment map) → **v6** (this — the round-3 return) |
 | **Internal reviewers** | dev · research |
 | **External review** | **required** — touches `store/sqlite.py`, `store/edge_events.py`, `store/schema_version.py` |
 | **Decision + date** | — |
@@ -818,7 +818,7 @@ for two versions.** Every PRESERVE names what makes it safe:
 | 43 | `Episode.date_start` | json blob | **PRESERVE** | the value unchanged, byte for byte | a timestamp |
 | 44 | `Episode.edge_id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
 | 45 | `Episode.id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
-| 46 | `Episode.kind` | json blob | **REPLACE** | the marker, alone, as the whole value (validates: no constraint on the field) | EXTERNAL through import — `kind_import_probe.py`: a prose kind in an export record is accepted and stored; its closure is a comment (§2d-iv) |
+| 46 | `Episode.kind` | json blob | 🔴 **v6: PRESERVE if a RECOGNISED OPERATIONAL KIND · REPLACE if prose** | the kind unchanged when recognised; the marker when prose | 🔴 **v5's flat REPLACE BROKE H14, executed twice.** `sqlite.py:1592` refuses `delete_episode` on `kind == "outcome"`; replace the value and the refusal stops matching — **the chain head disappears, the next `record_outcome` writes `seq 1`, and targeted deletion is PERMITTED.** `sqlite.py:1512` is the same fence on `add_episode` and is lost the same way. **Recognised = the set the product's own writers produce (`interaction`, `outcome`, `corrected`), and it MUST BE CLOSED BY A REFUSAL at the model AND at import** — §2d-iv, and the 0006/portability amendment named at round 2 and not written |
 | 47 | `Episode.lineage` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
 | 48 | `Episode.operation_id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
 | 49 | `Episode.retired_reason` | json blob | **PRESERVE if vocabulary · REPLACE if legacy prose** | the vocabulary value unchanged, else the marker | §11.2's per-operation boundary |
@@ -846,6 +846,46 @@ for two versions.** Every PRESERVE names what makes it safe:
 > it (refiling the unrecognised as `unclassified` + `original_relation`), but
 > **`store.add_edge` and import do not**, and §2d-iv's test is whether something
 > REFUSES, not whether some path is careful.
+
+### 🔴 2d-v. WHAT READS THIS FIELD? — the question the map did not ask, and the two lines that answer it
+
+**Round-3 F1/F2 and four executed simulations. Every one is the same shape: a
+field that LOOKS like content and is LOAD-BEARING, so a treatment on it changes
+something other than content.**
+
+| # | the field | what reads it | executed result |
+|---|---|---|---|
+| **1** | `Episode.kind` | **a REFUSAL** — H14's `delete_episode` fence at `sqlite.py:1592` | 🔴 **chain head gone · next append `seq 1` · targeted deletion PERMITTED** |
+| **2** | `Episode.kind` | the same fence on `add_episode`, `sqlite.py:1512` | 🔴 **refuses `kind="outcome"`, ACCEPTS the marker** |
+| **3** | `Episode.retired_reason` | **a DERIVED PROPERTY** — `active` *is* `retired_reason is None`, and `active` feeds `assertable` | 🔴 **redacting a `None` reason RETIRES the episode** |
+| **4** | `Edge.subject` / `relation` | the supersession guard at `graph.py:333` | 🔴 **a redacted record can NO LONGER BE CORRECTED** — a live replacement is refused for not sharing the prior's `(user, subject, relation)` |
+| **5** | `Edge.subject` / `relation` | the same guard, both sides redacted | 🔴 **a MARKER-CARRYING replacement is ADMITTED** — the guard compares equal |
+| **6** | `Edge.object` | the correction digest at `sqlite.py:1052` | ✅ mostly safe — the digest binds the **replacement**, not the prior. But an authorisation minted **for the marker** admits |
+| **7** | `Edge.relation` | **a SAFETY disposition** — `quarantined` is `relation == QUARANTINE_RELATION or disclosure == QUARANTINED` | ◐ **ingest sets BOTH, so ingest-quarantined edges survive.** 🔴 **But a relation-only quarantine is constructible via `add_edge` with no refusal, and redacting it PROMOTES the edge out of quarantine** — from `UNVERIFIED THIRD-PARTY CLAIMS` into `RELEVANT DETAIL` |
+
+### The seven collapse to TWO missing enforcements
+
+> **1. INV-11's MIRROR — no non-redaction write may INTRODUCE the marker.**
+> Rows 5 and 6 are admitted *only* because nothing refuses a marker-valued
+> write. **The mirror was named in v4's §4b and has never been written**, and it
+> is the single line that closes both.
+>
+> **2. §2d-iv's CLOSURE — the discriminator must be closed by a refusal.**
+> Rows 1, 2 and 7 are all *"a comment named the set and nothing enforces it"*.
+> **Without closure, no treatment can tell an operational value from prose**, so
+> every guard keyed on the field is downstream of a comment.
+
+**Neither is a redaction feature. Both are prerequisites that redaction made
+visible**, and §11.4 carries them as named amendments rather than as notes.
+
+### 🔴 AND ONE CONSEQUENCE THE SPEC MUST STATE TO THE CALLER (row 4)
+
+**A redacted record can no longer be corrected.** The supersession path requires
+a replacement to share the prior's `(user, subject, relation)`, and after
+redaction the prior's are markers. **§8 must say so: redaction is not only
+removal, it is the END OF THE RECORD'S CORRECTABLE LIFE** — and a caller who
+redacts to fix a mistake needs to know that the fix can no longer be filed
+against the record.
 
 ### 🔴 2d-iv. A SET IS CLOSED WHEN SOMETHING REFUSES A VALUE OUTSIDE IT
 
@@ -1188,6 +1228,14 @@ why both carry planted mutants rather than positive assertions alone.
 
 ## 8. Claims and limits
 
+> 🔴 **v6 — A CONSEQUENCE THE CALLER MUST BE TOLD, EXECUTED (round-3 G1).**
+> **After redaction the record can NO LONGER BE CORRECTED.** The supersession
+> path requires a replacement to share the prior's `(user, subject, relation)`;
+> after redaction the prior's are markers, so a live replacement is **REFUSED**.
+> **Redaction is not only removal — it ends the record's correctable life**, and
+> a caller redacting in order to fix a mistake must know the fix can no longer be
+> filed against that record.
+
 **Claimed:** after redaction, the named content is absent from **every carrier
 this spec enumerates AND NAMES IN THE RECEIPT**, and the record that it existed
 and was redacted survives **in the live store**.
@@ -1383,7 +1431,17 @@ the owner's to make.**
 
 ---
 
-# 11. THE OPERATIVE CONTRACT — v3, 2026-09-15 (F7)
+# 11. THE OPERATIVE CONTRACT
+
+> 🔴 **v6 (round-3, "historical discussion moved OUT of the consolidated
+> contract"): §11 IS THE CONTRACT AND CONTAINS NO HISTORY.** Everything about how
+> a clause came to be worded — the conflicts that were resolved, what an earlier
+> version said, which round corrected it — now lives in **Appendix A**. A reader
+> who needs the contract reads §11 and §2d-iii-bis and nothing else.
+>
+> **Precedence, stated once:** §11 governs on **CONTRACT**; **§2d-iii-bis governs
+> on any per-candidate ROW.** Where they differ on a row, the map wins — that is
+> F4's resolution and it is the only place the two can conflict.
 
 > **Everything above this line is HISTORICAL DISCUSSION.** Where it conflicts
 > with this section, **this section governs.** The reviewer found four live
@@ -1398,76 +1456,33 @@ the owner's to make.**
 > that records decisions in place and never consolidates them accumulates exactly
 > this, and it is invisible to any review that reads sections one at a time.
 
-## 11.1 The four conflicts, resolved
+## 11.2 Reason values
 
-| # | conflict | resolution |
+**Three reason surfaces, each with its own vocabulary and its own closure.**
+
+| surface | its vocabulary | closed by |
 |---|---|---|
-| 1 | **D1** selects a closed reason vocabulary; **§2c** still permitted length-capped prose | **D1 governs.** §2c's cell is corrected in place. A length cap is not a defence — the content that matters is short |
-| 2 | **D2** carries redaction events and vocabulary reasons; **INV-6** prohibited reasons from export and **§10** still said the event is omitted | **D2 governs.** INV-6 is amended below to fence *free* reasons, not vocabulary ones; §10's item 3 is superseded |
-| 3 | **§2** requires all three duplicated edge columns; **INV-2** checked only `object` | **§2 governs.** INV-2 is restated to enumerate from the DDL |
-| 4 | *"No row is deleted"* vs deleting `wiki`, `edge_embedding` and `contribution_ledger` rows | **the deletions govern.** The sentence is corrected: no **record** row is deleted; **derived** rows are, and they are rebuildable |
+| **`Edge.invalidation_reason`** | 🔴 **`schema.DISPOSITIONED_REASONS` — referenced, never copied here** | `test_invalidation_reason_registry_is_total`: a producer growing a reason fails it until the spec dispositioning it lands |
+| **`edge_event.reason`** (the journal) | the values its writers produce | **nothing today.** A registry and a totality test are OWED, on the model of the one above |
+| **redaction's own reasons** | `subject_request` · `operator_policy` · `erroneous_capture` · `legal_obligation` · `imported_notice` | this spec, enforced **at the redaction write path** — a column CHECK cannot distinguish operations |
 
-## 11.2 Reason values — 🔴 v4: SCOPED BY OPERATION; v3.2's LIST WOULD REJECT EVERY LIFECYCLE WRITE
+**Other reason-writing operations, named rather than implied:** supersession,
+correction, quarantine, lapse/decay, consolidation, dispute, **and SOURCE
+REVOCATION** (`revoked_source`) — which v5 did not name at all.
 
-> 🔴 **Round-2 F3, verified in the tree before accepting it.** v3.2 declared a
-> closed vocabulary of five — `subject_request`, `operator_policy`,
-> `erroneous_capture`, `legal_obligation`, `imported_notice` — as a CHECK on
-> `edge_event.reason`. **That field carries EVERY disposition reason the product
-> writes, not redaction's.** The values actually present in `src/`:
->
-> `quarantined` · `corrected` · `lapsed` · `recovered` · `superseded` ·
-> `consolidated` · `invalidated` · `locked` · `contended` · `retired` ·
-> `revoked` · `manual`
->
-> **Not one of them is in v3.2's list.** A CHECK on that vocabulary would have
-> **rejected every lifecycle write the product already makes.** The error was
-> mine and it is a scope error: I wrote a vocabulary for REDACTION reasons and
-> applied it to a GENERAL-PURPOSE field.
+### The legacy boundary
 
-**The rule, corrected: reasons are closed PER OPERATION, not per field.**
+**Two different acts, and v5 blurred them:**
 
-| operation | permitted reasons |
+| | |
 |---|---|
-| **redaction** *(new)* | `subject_request` · `operator_policy` · `erroneous_capture` · `legal_obligation` · `imported_notice` *(set only by import, §4g)* |
-| **every existing disposition** | unchanged — the values above keep their meanings and their writers. **This spec does not narrow them and must not** |
+| **at MIGRATION** | legacy free-form reasons are **RETAINED.** A migration that rewrites historical reasons destroys the record it exists to preserve |
+| **at REDACTION** | a legacy prose reason is **REMOVED** like any other content carrier — it is prose, and this is the operation whose purpose is removing prose |
+| 🔴 **and the one that must be said plainly** | **hiding a value in `why` REMOVES NOTHING FROM STORAGE.** `legacy_freeform` rendering is a READ-path courtesy, not a redaction. **A spec that offers it as though it were removal would be claiming an erasure it has not performed** |
 
-**Enforcement is therefore NOT a column CHECK.** It is a check at the redaction
-write path against the operation's own set — the only place that knows which
-operation is being performed. **A column constraint cannot distinguish
-operations, which is precisely why v3.2's version was wrong.**
+## 11.3 The invariant matrix
 
-**Legacy treatment**, unchanged from v3.2 and still required: rows predating the
-constraint are **not rewritten** — a migration that edits historical reasons
-destroys the record it exists to preserve. A legacy value reads back as
-`legacy_freeform` with the original retained, and 🔴 **`why` renders the TOKEN,
-never the original text** — otherwise the vocabulary closes the write path and
-leaves the read path, which is the one a disclosure travels on.
-
-## 11.3 The invariant matrix — 🔴 v4: CORRECTED, IT REDEFINED TWO AND DROPPED TWO
-
-> 🔴 **F7, and this is the worst defect in the spec because of WHERE it sits.**
-> §11 declares itself the operative contract — *"where anything above conflicts
-> with this section, this section governs."* **Its invariant matrix then
-> silently changed what two invariants MEAN and omitted two others entirely:**
->
-> | | §6, the real invariant | §11.3 at v3.2, what I wrote |
-> |---|---|---|
-> | **INV-1** | **structure preserved** — chain lengths, `seq` contiguity, reference integrity unchanged | *"no carrier holds the content"* |
-> | **INV-3** | **`why` degrades, never fails** | *"record and redaction state commit in one transaction"* |
-> | **INV-4** | journal carries no residue | **absent** |
-> | **INV-5** | scope — cross-user or unknown target refuses loudly, never a silent no-op | **absent** |
->
-> **A reader trusting §11 as governing would have believed INV-1 means content
-> removal and would never have checked structure preservation at all** — and
-> INV-5, the one that forbids a silent no-op, is exactly the invariant whose
-> absence is hardest to notice.
->
-> **The section written to make the spec say one thing said a different thing
-> with more authority.** §6's numbering is restored below and is canonical;
-> everything research added is numbered from **INV-8 upward**, where it cannot
-> collide with a meaning that already exists.
-
-### The canonical invariants, §6's meanings, unchanged
+### The canonical invariants — §6 governs their meaning
 
 | inv | statement (§6 governs the meaning) |
 |---|---|
@@ -1479,7 +1494,7 @@ leaves the read path, which is the one a disclosure travels on.
 | **INV-6** | **reason is not a content channel.** 🔴 **AMENDED, not redefined:** D2 carries vocabulary reasons on export, so the fence is on **free-form** reasons. After §11.2 there is no free text to fence |
 | **INV-7** | **oracle disposal** — no `content_digest` or `evidence_ref_digest` survives for redacted content. **Conditional on D3**: §10's item 2 shows a rebuild re-embeds the tombstone, so this is true of the ORIGINAL either way |
 
-### Research's additions, numbered where they cannot collide
+### Additional invariants, numbered from INV-8
 
 | inv | statement | why |
 |---|---|---|
@@ -1495,7 +1510,29 @@ leaves the read path, which is the one a disclosure travels on.
 > removal surface is what made INV-1 read as a content invariant in the first
 > place. The treatment map itself is round-2 F6 and is owed.
 
-## 11.4 Amendments to existing contracts — named, not implied
+## 11.4 Amendments to existing contracts
+
+
+### 11.4-bis. The two prerequisites, in executable form
+
+**Round-3's seven results collapse to two missing enforcements (§2d-v). Each is
+already written as a STRICT XFAIL that flips the day its amendment lands** —
+cited here rather than restated, so **the test is the statement of the property
+and this section cannot drift from it**:
+
+| prerequisite | the test that is red until it lands |
+|---|---|
+| **§2d-iv's CLOSURE** — the recognised-kind set closed by a refusal | `tests/test_0041_treatment_matrix.py::test_row46_the_recognised_kind_set_is_closed_by_a_refusal` |
+| **§2d-iv's CLOSURE** — quarantine closed to the disclosure | `…::test_a_relation_only_quarantine_is_refused_at_the_write_path` |
+| **INV-11's MIRROR** — no non-redaction write may INTRODUCE the marker | `…::test_a_non_redaction_write_may_not_introduce_the_marker` |
+
+> **A strict xfail is the right form and not a formality.** It is **red-first by
+> construction**, it **fails loudly if the property starts holding without the
+> amendment**, and **the amendment's landing is what flips it** — so the spec
+> cannot claim the prerequisite is met while the code says otherwise. **This
+> document has twice asserted a property of a mechanism that did not hold it
+> (`TEXT NOT NULL` forbidding `""`; a leading NUL making the marker
+> unproducible). A cited strict xfail is what makes the third time impossible.**
 
 **This spec changes contracts other specs own. Each is listed so the owning spec
 is swept rather than discovering it later.**
@@ -1526,3 +1563,63 @@ is swept rather than discovering it later.**
 > *"no row is deleted"* — is never that something was incomplete. **It is that
 > the prose claimed more than what was done**, and a reader has no way to see
 > the gap from inside the document.
+
+---
+
+# Appendix A — how the contract got here (HISTORY, not contract)
+
+> **Moved out of §11 at v6 on the round-3 ask.** Nothing here governs. It is
+> kept because a correction with its reason deleted is a claim nobody can
+> check, and this document has withdrawn enough claims to owe that.
+
+## A.1 The four conflicts resolved at v3 (F7)
+
+| # | conflict | resolution |
+|---|---|---|
+| 1 | **D1** selects a closed reason vocabulary; **§2c** still permitted length-capped prose | **D1 governs.** §2c's cell is corrected in place. A length cap is not a defence — the content that matters is short |
+| 2 | **D2** carries redaction events and vocabulary reasons; **INV-6** prohibited reasons from export and **§10** still said the event is omitted | **D2 governs.** INV-6 is amended below to fence *free* reasons, not vocabulary ones; §10's item 3 is superseded |
+| 3 | **§2** requires all three duplicated edge columns; **INV-2** checked only `object` | **§2 governs.** INV-2 is restated to enumerate from the DDL |
+| 4 | 🔴 **v6 (F4): PRECEDENCE STATED, AND v5 CONTRADICTED ITS OWN TABLE.** §11.1 said *"the deletions govern"* for `contribution_ledger`, while §2d-iii-bis rows 21 and 23 rule **CLEAR the field, KEEP the row** — and §11 claims to govern, so the contract contradicted the map it points at. **THE MAP IS RIGHT AND §11 IS CORRECTED:** rows DELETED are **`wiki` and `edge_embedding` ONLY** (derived, rebuildable, no history). **`contribution_ledger` rows are KEPT with their digest fields cleared** — the absorption record is a judgement and INV-7 disposes of the ORACLE, not the record. **Where §11 and §2d-iii-bis differ on a ROW, the per-candidate map governs; §11 governs on CONTRACT.** |
+
+## A.2 — why §11.2 references the registry (round-3 F3)
+
+> 🔴 **ROUND-3 F3. v5 listed TWELVE values and called them the vocabulary. Those
+> twelve are the JOURNAL's (`edge_event.reason`), and they are not the registry.**
+> Verified: `veracium.schema.DISPOSITIONED_REASONS` holds **SEVEN** —
+> `absorbed_duplicate` · `corrected` · `decayed` · `disputed` · `lapsed` ·
+> `revoked_source` · `superseded`. **My list omitted four of them.**
+>
+> **And the product already has the closure discipline I re-enumerated wrongly.**
+> `schema.py:558`, in its own words: *"DISPOSITIONED_REASONS is the process
+> record W5's registry test diffs against: every reason any producer can pass,
+> each explicitly dispositioned. A producer growing a new reason fails
+> `test_invalidation_reason_registry_is_total` until the spec that adds it
+> dispositions it here."*
+>
+> **A spec that RE-TYPES a registry drifts from it the moment either moves. This
+> section now POINTS at it** — the same rule this document applies to carriers,
+> applied to itself.
+
+## A.3 — why §11.3's numbering was restored (round-2 F7)
+
+> 🔴 **F7, and this is the worst defect in the spec because of WHERE it sits.**
+> §11 declares itself the operative contract — *"where anything above conflicts
+> with this section, this section governs."* **Its invariant matrix then
+> silently changed what two invariants MEAN and omitted two others entirely:**
+>
+> | | §6, the real invariant | §11.3 at v3.2, what I wrote |
+> |---|---|---|
+> | **INV-1** | **structure preserved** — chain lengths, `seq` contiguity, reference integrity unchanged | *"no carrier holds the content"* |
+> | **INV-3** | **`why` degrades, never fails** | *"record and redaction state commit in one transaction"* |
+> | **INV-4** | journal carries no residue | **absent** |
+> | **INV-5** | scope — cross-user or unknown target refuses loudly, never a silent no-op | **absent** |
+>
+> **A reader trusting §11 as governing would have believed INV-1 means content
+> removal and would never have checked structure preservation at all** — and
+> INV-5, the one that forbids a silent no-op, is exactly the invariant whose
+> absence is hardest to notice.
+>
+> **The section written to make the spec say one thing said a different thing
+> with more authority.** §6's numbering is restored below and is canonical;
+> everything research added is numbered from **INV-8 upward**, where it cannot
+> collide with a meaning that already exists.
