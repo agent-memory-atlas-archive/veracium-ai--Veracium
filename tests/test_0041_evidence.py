@@ -87,38 +87,63 @@ def test_the_carrier_enumeration_reproduces_its_committed_output_byte_for_byte()
 
 def _inv12_sets(base, content_digest, embedded_text):
     """The fields, top-level AND nested, whose mutation moves each projection —
-    derived by mutation over every string-valued leaf of a POPULATED edge."""
-    import copy
+    derived by mutation over every string-valued leaf of a POPULATED edge,
+    INCLUDING dictionary KEYS (round-4 F4: values-only mutation never exercised
+    the text in `outcome_counts` keys). Returns (moves_digest, moves_text,
+    refused): a leaf whose mutation the model REFUSES is RECORDED, never
+    silently skipped (research's A-5 cross-finding: a bare `except: continue`
+    made `AgreementRecord.direction`'s closed-set refusal reached-but-unobserved,
+    and widening the walk to keys would only enlarge that blind spot)."""
+    import copy, typing
     d0, t0 = content_digest(base), embedded_text(base)
-    moves_digest, moves_text = set(), set()
+    moves_digest, moves_text, refused = set(), set(), set()
     dump = base.model_dump()
+
+    def mapping_paths(model, prefix=()):
+        """The paths of dict-TYPED fields (their keys are text); a model's own
+        field names are structure, not text, and are never mutated as keys."""
+        for name, f in model.model_fields.items():
+            ann = f.annotation; origin = typing.get_origin(ann); args = typing.get_args(ann)
+            inner = [a for a in args if a is not type(None)] if origin is typing.Union else [ann]
+            for a in inner:
+                if isinstance(a, type) and hasattr(a, "model_fields"):
+                    yield from mapping_paths(a, prefix + (name,))
+                elif typing.get_origin(a) is dict:
+                    yield prefix + (name,)
+    mappings = set(mapping_paths(type(base)))
 
     def leaves(obj, path=()):
         if isinstance(obj, str) and not isinstance(obj, bool):
-            yield path
+            yield path, "value"
         elif isinstance(obj, dict):
             for k, v in obj.items():
+                if isinstance(k, str) and path in mappings:
+                    yield path + (k,), "key"          # a KEY of a dict-typed field is text too
                 yield from leaves(v, path + (k,))
         elif isinstance(obj, list):
             for i, v in enumerate(obj):
                 yield from leaves(v, path + (i,))
 
-    for path in leaves(dump):
+    for path, what in leaves(dump):
         mutated = copy.deepcopy(dump)
         cur = mutated
         for k in path[:-1]:
             cur = cur[k]
-        cur[path[-1]] = cur[path[-1]] + "-changed"
+        if what == "key":
+            cur[path[-1] + "-changed"] = cur.pop(path[-1])
+        else:
+            cur[path[-1]] = cur[path[-1]] + "-changed"
+        name = ".".join(str(k) for k in path) + ("[key]" if what == "key" else "")
         try:
             m = type(base).model_validate(mutated)
         except Exception:
-            continue                    # a leaf whose mutation the model refuses (an enum, a closed set)
-        name = ".".join(str(k) for k in path)
+            refused.add(name)                     # a stated result, not a skip
+            continue
         if content_digest(m) != d0:
             moves_digest.add(name)
         if embedded_text(m) != t0:
             moves_text.add(name)
-    return moves_digest, moves_text
+    return moves_digest, moves_text, refused
 
 
 def _string_leaves(model, prefix=()):
@@ -215,10 +240,48 @@ def test_inv12_each_optional_leaf_is_load_bearing_a_widening_onto_it_is_missed_w
     def widened(e):
         v = read(e)
         return f"{real(e)} {v if isinstance(v, str) else (' '.join(v) if isinstance(v, list) else ' '.join(sorted(v)) if isinstance(v, dict) else '')}"
-    md, mt = _inv12_sets(_complete_edge(unset=(leaf,)), semantic.content_digest, widened)
+    md, mt, _r = _inv12_sets(_complete_edge(unset=(leaf,)), semantic.content_digest, widened)
     assert mt <= md, f"the UNSET fixture was expected to MISS a widening onto {leaf}"
-    md, mt = _inv12_sets(_complete_edge(), semantic.content_digest, widened)
+    md, mt, _r = _inv12_sets(_complete_edge(), semantic.content_digest, widened)
     assert not (mt <= md), f"the complete fixture must CATCH a widening onto {leaf}"
+
+
+def test_inv12_the_embedder_sees_no_field_the_content_digest_does_not_cover():
+    """0041 v3.1 INV-12 (research, verifying dev's §4e exemption): the semantic
+    rebuild's exemption from the delayed-writer class holds only while
+    `embedded_text`'s field set is a SUBSET of `content_digest`'s — widening the
+    embedder alone would write back a vector encoding redacted content with both
+    guards passing. Derived by MUTATION over every string LEAF of a POPULATED edge
+    (top-level optionals set, provenance and agreement nested, dictionary KEYS
+    included), not by reading the two docstrings. The leaves the model refuses to
+    mutate are a stated result (the closed sets), and the mutation-derived sets are
+    cross-checked against a DIRECT assertion over the production projections
+    (round-4 F4)."""
+    import hashlib, json
+    from veracium.semantic import content_digest, embedded_text
+    base = _populated_edge()
+    moves_digest, moves_text, refused = _inv12_sets(base, content_digest, embedded_text)
+    assert moves_text <= moves_digest, (moves_text - moves_digest)
+    assert moves_text == moves_digest == {"subject", "relation", "object", "note"}
+    # every closed set the walk meets, STATED: the three enums the dump renders as strings, and the
+    # one validator-closed str (`_direction_closed`) — a fifth would fail here, never be swallowed
+    assert refused == {"agreement.direction", "provenance.author_of_evidence", "provenance.disclosure", "volatility"}, refused
+    assert "outcome_counts.confirmed[key]" not in moves_text     # the key WAS exercised and does not move the embedder
+    # the DIRECT assertion: the production projections read exactly these four leaves
+    payload = {"subject": base.subject, "relation": base.relation, "object": base.object, "note": base.note}
+    assert content_digest(base) == hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    assert embedded_text(base) == f"{base.subject} {base.relation} {base.object} {base.note}"
+
+
+def test_inv12_catches_a_widened_embedder_onto_dictionary_keys():
+    """Round-4 F4's negative control: widen `embedded_text` with the
+    `outcome_counts` KEYS and leave the digest alone — the values-only walk
+    passed all seven cases; the key-aware walk refuses it."""
+    from veracium import semantic
+    real = semantic.embedded_text
+    widened = lambda e: f"{real(e)} {' '.join(sorted(e.outcome_counts))}"
+    md, mt, _r = _inv12_sets(_populated_edge(), semantic.content_digest, widened)
+    assert not (mt <= md) and "outcome_counts.confirmed[key]" in (mt - md)
 
 
 def test_inv12_catches_a_widened_embedder_the_packaged_fixture_missed():
@@ -232,9 +295,9 @@ def test_inv12_catches_a_widened_embedder_the_packaged_fixture_missed():
     packaged = Edge(id="e-inv12", user_id="u", subject="user", relation="works_as", object="Porto", note="n",
                     provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
                                           disclosure=Disclosure.MENTIONABLE))
-    md, mt = _inv12_sets(packaged, semantic.content_digest, widened)
+    md, mt, _r = _inv12_sets(packaged, semantic.content_digest, widened)
     assert mt <= md, "the packaged fixture was expected to MISS the widening"
-    md, mt = _inv12_sets(_populated_edge(), semantic.content_digest, widened)
+    md, mt, _r = _inv12_sets(_populated_edge(), semantic.content_digest, widened)
     assert not (mt <= md) and (mt - md) == {"original_relation"}
 
 
@@ -343,4 +406,20 @@ def test_the_round3_reproduction_script_reports_every_claim_as_the_reviewer_foun
     assert "G4 ingest of a third_party_claim triple sets BOTH markers (relation AND disclosure=QUARANTINED): True" in out
     assert "G4 a RELATION-ONLY quarantine is constructible through store.add_edge (no refusal): True" in out
     assert "G4 redacting relation on the relation-only edge PROMOTES it out of quarantine (quarantined False): True" in out
+
+
+def test_the_round4_reproduction_script_reports_every_claim_as_the_reviewer_found_it():
+    """Round-4 F3 through the packaged script (P4: evidence that RUNS behaviour):
+    the journal already enforces the disposition registry on invalidation events
+    and carries None on every other kind; a source revocation keeps the caller's
+    sentence in its own row while the affected records get `revoked_source`."""
+    r = subprocess.run([sys.executable, str(EVIDENCE / "round4_reproductions.py")],
+                       cwd=ROOT, env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"},
+                       capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stderr[-2000:]
+    out = r.stdout
+    assert "F3a an invalidation with a reason outside DISPOSITIONED_REASONS is REFUSED by the journal writer: True" in out
+    assert "non-invalidation kinds carry None: True | the invalidation carries the registry value: True" in out
+    assert "F3b source_revocations.reason == the caller's sentence: True | the affected edge's invalidation_reason: revoked_source | the episode's retired_reason: revoked_source" in out
+    assert "F3b 'revoked_source' names the EFFECT's reason, not the revocation row's vocabulary: True" in out
 

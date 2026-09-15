@@ -806,6 +806,12 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0021_import_linkage.py", "test_reimport_is_idempotent_rows_skip_counted_existing"): "restore",
     ("test_0021_import_linkage.py", "test_remapped_import_keys_rows_to_postremap_ids"): "default",
     ("test_0021_import_linkage.py", "test_conflicting_history_primitive_returns_destination_changed"): "restore",
+    # specs/0041 (draft) — the executable transition table: the ruled quarantine
+    # shape round-trips on the DEFAULT path (the cap is irrelevant to a
+    # disposition carried by the disclosure); the prose-kind import is the
+    # import-boundary closure's strict xfail, also on the default path
+    ("test_0041_transition_table.py", "test_A_the_ruled_shape_survives_export_and_import"): "default",
+    ("test_0041_transition_table.py", "test_B_an_import_carrying_a_prose_kind_is_refused"): "default",
     ("test_0021_import_linkage.py", "test_conflicting_history_reimport_refuses_whole_writing_nothing"): "restore",
     ("test_0021_import_linkage.py", "test_refusal_cell_leaves_destination_unchanged"): "default",
     ("test_0021_import_linkage.py", "test_legacy_file_without_field_takes_the_note_rule"): "restore",

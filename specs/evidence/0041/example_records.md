@@ -81,7 +81,8 @@ vocabulary values, booleans, integers, timestamps — no content):
                           "json.original_relation",            # provenance.evidence_ref is PRESERVED (§2d-iii-bis; round-3 F4 corrected this list)
                           "edge_event.state[seq=4]", "edge_event.state[seq=9]",
                           "edge_embedding[row deleted]"  (INV-7 — the receipt never carries the removed digest; round-2 F5),
-                          "contribution_ledger.payload[id=…]", "wiki[user=u]" (cleared)],
+                          "contribution_ledger[id=…].identity_digest", "contribution_ledger[id=…].evidence_ref_digest" (cleared to None; the row and its payload PRESERVED — round-4 archive note),
+                          "wiki[user=u]" (cleared)],
   "marker_version":      1,
   "store_version_before": 41,
   "store_version_after":  42,
