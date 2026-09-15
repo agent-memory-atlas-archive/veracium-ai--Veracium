@@ -70,9 +70,9 @@ first.*
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research), the candidate's author → dev (veracium-61), adopted 2026-09-15 from `0041-targeted-redaction-CANDIDATE.md` at rest (v3: sha16 1d0c0389bef11a3f, re-read from the file at adoption; v2.1 earlier the same day from eecd5a4db4426058) |
-| **Version** | **v3.2 — the title line moved to line 1 (research's second-seat read of 6831bcf: `specs/ALLOCATION.md` renders a spec's first line as its registry title, and the v3 banner had become 0041's name there, displacing the renumber notice from the one surface it protects); the note under the title records why; every banner now sits below it. Text otherwise unchanged.** *Prior:* **v3.1 — four things folded at adoption from the second seat's exchange over v3 (dev carried, research verified): §4e's exemption of the semantic rebuild, stated with the property it depends on and INV-12 as a test; §4f's two conditions on partial-and-say-so and the refusal split; §4g's standing notice EXECUTED at the tree (representable, but `doctor` reports it as an error and `export` carries no events at all) — §11.4 gains the doctor exemption row and its export/import row is replaced, §8's narrowing is extended to "until a carrier is BUILT"; nothing else moved.** *Prior:* **v3 — RESPUN FOR THE ROUND-1 RETURN, 2026-09-15.** Folds all seven findings: **F1** the carrier inventory rebuilt (§2, §2d, §2e — the enumeration's own model set was a hand-list, and §2's recorded negative on `json.original_relation` was FALSE); **F2** publication-time validation (§4e); **F3** the tombstone defined and the `TEXT NOT NULL` claim withdrawn, plus the episode record and the reader inventory (§4b, §4b-ii, §4b-iii); **F4** the receipt selection rule and its conservative outcome (§4f); **F5** the import contract (§4g); **F6** ⚖️ **RULED BY THE OWNER — *"outputs are separate"*** (§10.1, §8 narrowed); **F7** §11, **THE OPERATIVE CONTRACT — everything above §11 is historical discussion and §11 GOVERNS where they conflict.** *Re-read before editing; quote the version you approve* |
-| **Prior chain** | v1 (banner-only internal read) → **v2** (internal review folded into the BODY) → **v2.1** (§2b's table count points forward to the fifteenth table, folded by dev at `436e4d4` before round 1) → **v3** (this) |
+| **Author / session** | research (veracium-research), the candidate's author → dev (veracium-61), adopted 2026-09-15 at rest and re-read from the file at each adoption: v5 from `0041-targeted-redaction-v4-CANDIDATE.md` (sha16 e7385dd63c02afd6; the file kept its v4 name); v3 from `0041-targeted-redaction-CANDIDATE.md` (1d0c0389bef11a3f); v2.1 from the same name (eecd5a4db4426058) |
+| **Version** | **v5 — THE PER-CANDIDATE TREATMENT MAP, 2026-09-15.** §2d-iii-bis carries one row per carrier with its VALIDATED resulting shape; v4's §2d-ii named 32 of 64 individually and covered the rest with a phrase, and the second seat held adoption on it. Also corrected: the class sentence over-named `desc`/`text`/`payload`, none of which is among the 64. **Prior: v4 — RESPUN FOR THE ROUND-2 RETURN.** Folds all seven round-2 findings. **F1** §4e — the semantic-rebuild exemption is WITHDRAWN (it holds only the instance lock; a two-connection run stores the stale vector) **and research's own v3.1 wiki fix was the same bug** — `set_wiki` takes `store_version` as a parameter, so capture-then-compare is the race it diagnosed; restated as a TRANSACTION rule. **F2** §4b — the marker is NOT reserved (`sanitize_llm_body(MARKER) == MARKER`; `remember()` stores it); reservation becomes INV-11's MIRROR, a refusal at every non-redaction write and import boundary. **F3** §11.2 — reasons closed PER OPERATION; v3.2's five-value CHECK would have rejected every lifecycle write the product makes. **F4** §4g — row 9 and the notice cases RULED. **F5** §4f — the exact-coverage claim WITHDRAWN; conservative reporting is the ordinary case and durable association is a forward obligation. **F6** §2d-ii — the treatment map, ruled against the write-site sweep; `Episode.kind` is REPLACE. **F7** §11.3 — the invariant matrix CORRECTED: it had redefined INV-1 and INV-3 and omitted INV-4/5. *Re-read before editing; quote the version you approve* |
+| **Prior chain** | v1 (banner-only internal read) → **v2** (internal review folded into the body) → **v2.1** (dev's §2b fold at `436e4d4`, before round 1) → **v3** (research's respin for the round-1 return) → **v3.1** (four things folded at adoption from the second seat's exchange) → **v3.2** (the title line moved to line 1 after research's second-seat read found the registry rendering a banner as the spec's name) → **v4** (the round-2 return) → **v5** (this — the per-candidate treatment map) |
 | **Internal reviewers** | dev · research |
 | **External review** | **required** — touches `store/sqlite.py`, `store/edge_events.py`, `store/schema_version.py` |
 | **Decision + date** | — |
@@ -723,6 +723,153 @@ a negative row for two versions: it was classified *by its name* rather than by
 what reaches it. **A field is a negative only when something checked what writes
 to it** — which is what dev's round-1 reproduction does for the three above.
 
+## 2d-ii. 🔴 THE TREATMENT MAP — what is REMOVED, as distinct from what CAN hold text
+
+> **Round-2 F6 and F7 together.** §2d enumerates the **64 candidates**; this map
+> is the **removal surface**. v3.2 conflated them, which is what made §11.3's
+> INV-1 read as a content invariant. Ruled against dev's skeleton
+> `cf814d849825ca0e` and the write-site sweep `200553ca29066610`.
+
+| treatment | fields | basis |
+|---|---|---|
+| **REPLACE** with the marker | the content leaves **as the per-candidate table names them**; **`markers` per entry, arity preserved**; 🔴 **`Episode.kind`** | extractor- or host-supplied content. 🔴 **v5: this cell previously named `desc`, `text` and `payload` — NONE of the three is among the 64.** `Relation` is configuration and never persisted; `wiki.text` and the ledger `payload` are **DDL-level carriers under §2b**, not model fields. **The class sentence over-named and the TABLE IS THE AUTHORITY** |
+| **CLEAR the keys** | `outcome_counts` | keys persist and export **verbatim**; the `Outcome` enum constrains `record_outcome` but **not the model and not import** |
+| **DELETE the row** | the three digest / vector carriers | INV-7. Never copied into a receipt |
+| **PRESERVE if vocabulary · REPLACE if legacy prose** | the two reason fields | §11.2's per-operation boundary |
+| **PRESERVE** — identifiers, timestamps, traced-internal fields | each with its reason recorded, never a bare negative | §2d-iii |
+
+### 2d-iii. Why each PRESERVE is preserved — the reasons, not a bare list
+
+**A recorded negative with no reason is how `json.original_relation` sat wrong
+for two versions.** Every PRESERVE names what makes it safe:
+
+| field(s) | the line that makes it safe |
+|---|---|
+| `AgreementRecord.direction` | ✅ `_direction_closed` **refuses** anything outside `("inbound","ambiguous","user_source")` |
+| `site` ×2 | ✅ `contribution.validate_payload` **refuses** a site outside `SITES` |
+| `contributor_type` ×2 · `survivor_type` ×2 | the literal `"edge"` at **every** write site, **including import's reconstruction** (`graph.py:514-515`, `portability.py:638`, `scope_linkage.py:354`) |
+| `edge_event.kind` | five literals at the journal writers; **no import path today** |
+| `rule_version` | the module constant `RULE_VERSION` at the single insert |
+| `ConsolidationOp.owner` | product-generated `consolidate:<hex>` (`lifecycle.py:216`). ⚠️ the `Store` methods take `owner` as a **PARAMETER**, so a host driving the `Store` directly can pass anything; `consolidation_ops` neither exports nor imports, so it cannot travel |
+| `ConsolidationOp.claimed_ids` | **episode IDs**, not content — *"every `claimed_id` belongs to `user_id`"*. Replacing them **destroys the lease's record of what it claimed**; `forget_user()` already erases them |
+| `AgreementRecord.lexicon` | ⚠️ `_lexicon_pattern` bounds a **CHARSET** and not a value space. Preserved because redacting it breaks the version binding 0026-R7-1 rests on; **the limit is §8's** |
+| `provenance.evidence_ref` · `source_id` · `origin` | host-supplied pointers; **§8's limit applies** |
+| ids, digests, timestamps, `user_id` | identifiers and bookkeeping |
+
+### 2d-iii-bis. 🔴 THE PER-CANDIDATE MAP — one row per carrier, with its resulting shape
+
+> **Round-2 F6 asks for "one complete mapping from EACH candidate … with valid
+> resulting shapes".** v4's §2d-ii was a five-row table BY CLASS: it named 32 of
+> 64 individually and covered the rest with the phrase *"ids, digests,
+> timestamps, `user_id`"* — **in the section whose own rule is that a recorded
+> negative must name its reason.** The second seat held adoption on it and was
+> right. **The table below is the authority; the class rows above are rationale.**
+>
+> **Every resulting shape here was VALIDATED UNDER THE MODEL, not asserted** —
+> including the two that do NOT validate, which are recorded as results rather
+> than as footnotes.
+
+> **Completeness, asserted at generation:** 64 rows below, derived from `carrier_enumeration_OUTPUT.txt`'s CARRIERS block at generation time; the block declares **64**; EQUAL. Rulings from research's `0041-treatment-matrix-RULINGS.md` (4d9e21a4893fc8cd) over dev's skeleton (cf814d849825ca0e) and traces (200553ca29066610); resulting shapes as research ruled them, each checked to VALIDATE under the model except where marked.
+
+| # | candidate | where it reaches disk | ruling | resulting shape | the line that makes a PRESERVE safe / the basis |
+|---|---|---|---|---|---|
+| 1 | `AgreementRecord.direction` | nested in Edge (json blob) | **PRESERVE** | the value unchanged, byte for byte | `_direction_closed` REFUSES anything outside `(inbound, ambiguous, user_source)` |
+| 2 | `AgreementRecord.lexicon` | nested in Edge (json blob) | **PRESERVE** | the value unchanged, byte for byte | the version binding 0026-R7-1 rests on; the charset pattern bounds a charset, not a value space — §8's limit |
+| 3 | `AgreementRecord.markers` | nested in Edge (json blob) | **REPLACE (per entry)** | a list of N marker entries, arity preserved — 🔴 **INVALID until the uniqueness validator admits repeated markers**: `AgreementRecord(markers=[M, M])` is REFUSED today ("markers[1] duplicates …"); the validator change is BLOCKING for this row, not a footnote | content; `AgreementRecord` validator amendment (a CODE change) |
+| 4 | `Confirmation.correlation_id` | RULED carrier -> confirmations | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 5 | `Confirmation.edge_id` | RULED carrier -> confirmations | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 6 | `Confirmation.id` | RULED carrier -> confirmations | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 7 | `Confirmation.request_digest` | RULED carrier -> confirmations | **REPLACE** | the marker, alone, as the whole value (validates: `Confirmation(..., request_digest=MARKER)`) | CLEAR has NO VALID SHAPE here: a required bare `str` — `None` is refused by the model and `""` by INV-8's CHECK at the database layer; REPLACE removes the oracle (INV-7), keeps the confirmation judgment (*"keep the split"*), validates today, and is self-describing (the marker says *redacted*; an emptied field says *nothing was here*). `content_digest`/`vec` are `edge_embedding` COLUMNS (§2b, DDL level, not among the 64): that row IS deleted |
+| 8 | `Confirmation.user_id` | RULED carrier -> confirmations | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 9 | `ConsolidationOp.claimed_ids` | IS the row -> consolidation_ops | **PRESERVE** | the value unchanged, byte for byte | episode ids, not content — *"every `claimed_id` belongs to `user_id`"*; replacing them destroys the lease's record; `forget_user()` erases them (research 1b) |
+| 10 | `ConsolidationOp.lease_expires_at` | IS the row -> consolidation_ops | **PRESERVE** | the value unchanged, byte for byte | a timestamp |
+| 11 | `ConsolidationOp.operation_id` | IS the row -> consolidation_ops | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 12 | `ConsolidationOp.owner` | IS the row -> consolidation_ops | **PRESERVE** | the value unchanged, byte for byte | product-generated `consolidate:<hex>` (`lifecycle.py:216`); the `Store` methods take it as a parameter — a host driving the `Store` directly is outside the product API |
+| 13 | `ConsolidationOp.user_id` | IS the row -> consolidation_ops | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 14 | `ContributionDraft.contributor_id` | RULED carrier -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 15 | `ContributionDraft.contributor_type` | RULED carrier -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | the literal `"edge"` at every writer incl. import's reconstruction (`graph.py:515`, `scope_linkage.py:354`) |
+| 16 | `ContributionDraft.site` | RULED carrier -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | `contribution.validate_payload` REFUSES a site outside `SITES` (0014 §4a) |
+| 17 | `ContributionDraft.survivor_id` | RULED carrier -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 18 | `ContributionDraft.survivor_type` | RULED carrier -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | the literal `"edge"` at every writer incl. import's reconstruction (`graph.py:514`, `portability.py:638`) |
+| 19 | `ContributionRecord.contributor_ref` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 20 | `ContributionRecord.contributor_type` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | the literal `"edge"` at every writer incl. import's reconstruction (`graph.py:515`, `scope_linkage.py:354`) |
+| 21 | `ContributionRecord.evidence_ref_digest` | IS the row -> contribution_ledger | **CLEAR** | the row KEPT, the field `None` (validates: `Optional[str]`) | the oracle, not the record — INV-7 disposes of the digest, *"keep the split"* keeps the ledger's absorption record; ruled by research over dev's DELETE-the-row (both wrong once, corrected against §2's *"nothing structural changes in the record tables"*) |
+| 22 | `ContributionRecord.id` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 23 | `ContributionRecord.identity_digest` | IS the row -> contribution_ledger | **CLEAR** | the row KEPT, the field `None` (validates: `Optional[str]`) | the oracle, not the record — INV-7 disposes of the digest, *"keep the split"* keeps the ledger's absorption record; ruled by research over dev's DELETE-the-row (both wrong once, corrected against §2's *"nothing structural changes in the record tables"*) |
+| 24 | `ContributionRecord.op_key` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 25 | `ContributionRecord.site` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | `contribution.validate_payload` REFUSES a site outside `SITES` (0014 §4a) |
+| 26 | `ContributionRecord.survivor_id` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 27 | `ContributionRecord.survivor_type` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | the literal `"edge"` at every writer incl. import's reconstruction (`graph.py:514`, `portability.py:638`) |
+| 28 | `ContributionRecord.user_id` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 29 | `Edge.id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 30 | `Edge.invalidation_reason` | json blob | **PRESERVE if vocabulary · REPLACE if legacy prose** | the vocabulary value unchanged, else the marker | §11.2's per-operation boundary |
+| 31 | `Edge.note` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
+| 32 | `Edge.object` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
+| 33 | `Edge.original_relation` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
+| 34 | `Edge.outcome_counts` | json blob | **CLEAR** | `{}` — an empty dict (validates) | round-2 F6: keys persist and export verbatim; the `Outcome` enum bounds `record_outcome` only |
+| 35 | `Edge.relation` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
+| 36 | `Edge.subject` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
+| 37 | `Edge.supersedes` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 38 | `Edge.user_id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 39 | `Episode.claimed_by` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 40 | `Episode.context_ref` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 41 | `Episode.date` | json blob | **PRESERVE** | the value unchanged, byte for byte | a timestamp |
+| 42 | `Episode.date_end` | json blob | **PRESERVE** | the value unchanged, byte for byte | a timestamp |
+| 43 | `Episode.date_start` | json blob | **PRESERVE** | the value unchanged, byte for byte | a timestamp |
+| 44 | `Episode.edge_id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 45 | `Episode.id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 46 | `Episode.kind` | json blob | **REPLACE** | the marker, alone, as the whole value (validates: no constraint on the field) | EXTERNAL through import — `kind_import_probe.py`: a prose kind in an export record is accepted and stored; its closure is a comment (§2d-iv) |
+| 47 | `Episode.lineage` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 48 | `Episode.operation_id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 49 | `Episode.retired_reason` | json blob | **PRESERVE if vocabulary · REPLACE if legacy prose** | the vocabulary value unchanged, else the marker | §11.2's per-operation boundary |
+| 50 | `Episode.summary` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
+| 51 | `Episode.supersedes_episode` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 52 | `Episode.user_id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 53 | `Provenance.evidence_ref` | nested in Edge (json blob) | **PRESERVE** | the value unchanged, byte for byte | §2 excludes it; §8 states the limit (the content is one dereference away on the host's side) |
+| 54 | `Provenance.origin` | nested in Edge (json blob) | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 55 | `Provenance.source_id` | nested in Edge (json blob) | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 56 | `SupersessionRefusal.incoming_edge_id` | IS the row -> supersession_refusals | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 57 | `SupersessionRefusal.prior_edge_id` | IS the row -> supersession_refusals | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 58 | `SupersessionRefusal.refusal_id` | IS the row -> supersession_refusals | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 59 | `SupersessionRefusal.relation` | IS the row -> supersession_refusals | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
+| 60 | `SupersessionRefusal.rule_version` | IS the row -> supersession_refusals | **PRESERVE** | the value unchanged, byte for byte | the module constant `RULE_VERSION` at the single insert (`sqlite.py:1136`) |
+| 61 | `SupersessionRefusal.user_id` | IS the row -> supersession_refusals | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 62 | `SupersessionRefusalDraft.incoming_edge_id` | IS the row -> supersession_refusals | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 63 | `SupersessionRefusalDraft.prior_edge_id` | IS the row -> supersession_refusals | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
+| 64 | `SupersessionRefusalDraft.relation` | IS the row -> supersession_refusals | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
+
+> 🔴 **THREE ROWS ARE NOT INDEPENDENT.** `SupersessionRefusal.relation` and
+> `SupersessionRefusalDraft.relation` **COPY the edge's relation**, so they
+> follow `Edge.relation`'s ruling and must move with it. `Edge.relation` is
+> **REPLACE** because it is not closed: **the model accepts
+> `relation="told me in confidence: hiv-positive"`** — verified. Ingest closes
+> it (refiling the unrecognised as `unclassified` + `original_relation`), but
+> **`store.add_edge` and import do not**, and §2d-iv's test is whether something
+> REFUSES, not whether some path is careful.
+
+### 🔴 2d-iv. A SET IS CLOSED WHEN SOMETHING REFUSES A VALUE OUTSIDE IT
+
+**`Episode.kind` is REPLACE because its closure is a comment:**
+
+```
+kind: str = "interaction"        # "interaction" | "outcome"
+```
+
+The model **accepts and round-trips** `kind = "told me in confidence:
+hiv-positive"`, and `import_memory` **accepts such a record from a file and
+stores it verbatim** — both executed. It becomes PRESERVE **only once import AND
+the model close it**, which is a **named amendment to 0006/portability**.
+
+> **FIFTH instance of one shape in this spec's lineage:** `TEXT NOT NULL`
+> forbidding `""` · a leading NUL making the marker unproducible ·
+> `Episode.retired_reason` · `outcome_counts` · `Episode.kind`. **Each is a
+> description of an intention mistaken for an enforcement, and in each the
+> description is why nobody wrote the refusal.**
+>
+> **The rule this spec now carries: a comment, a docstring, a type alias and a
+> naming convention are not closures. Only a refusal is. Every "closed set" here
+> names the line that refuses, or it is not called closed.**
+
 ## 2e. The residual rulings — decided against the WRITE PATH, not the field names
 
 Thirteen fields shared a table's column names without being a row. **They were
@@ -778,30 +925,28 @@ v1**; when C2 changes, this section is the one that reopens.
 
 Single transaction. Every carrier in §2 or none.
 
-### 4b. The tombstone — v3, REWRITTEN (F3)
+### 4b. The tombstone — 🔴 v4: THE MARKER IS NOT RESERVED, AND SAYING SO DID NOT MAKE IT SO
 
-> 🔴 **THE SUPPORTING CLAIM WAS FALSE, AND THE REVIEWER RAN IT.** v1 said
-> *"`state TEXT NOT NULL` already forbids a silent blank, so the schema enforces
-> an explicit marker rather than leaving it to discipline."* **`TEXT NOT NULL`
-> permits the empty string** — `NOT NULL` excludes NULL, nothing else —
-> confirmed by dev's reproduction at the pin. **So the schema enforced nothing,
-> and the sentence claiming it did is why nobody wrote the validation.** An
-> invariant asserted of a constraint that does not hold it is worse than no
-> invariant: the next reader trusts it instead of checking. (This is the second
-> instance in this spec's lineage, after `V-RECEIPT-IDS-ONLY`.)
+> 🔴 **ROUND-2 F2, EXECUTED.** v3.1 claimed *"a leading NUL makes it unproducible
+> by the extractor, by an LLM body, and by any host string that survives
+> `sanitize_llm_body`."* **All three are false.** Verified: `sanitize_llm_body(MARKER)
+> == MARKER` — it rewrites only the wiki-compile marker prefix — and `remember()`
+> with an extractor emitting `object == MARKER` **stores an edge whose object is
+> the marker, with no redaction anywhere.**
+>
+> **This is the SECOND time in this spec that a property was asserted of a
+> mechanism that does not hold it** — after `TEXT NOT NULL` was claimed to forbid
+> `""`. Both times the sentence was the reason nobody wrote the enforcement.
 
-**The marker, defined rather than named.**
+**Reservation is not a property of the bytes. It is a REFUSAL AT EVERY WRITE.**
 
 | | |
 |---|---|
-| **representation** | the exact byte string `\x00veracium:redacted\x00` — a leading NUL makes it unproducible by the extractor, by an LLM body, and by any host string that survives `sanitize_llm_body` |
-| **validation** | a `CHECK` constraint per carrier column: the value is the marker **or** it is not the empty string. This is the enforcement v1 claimed `NOT NULL` already provided |
-| **distinguishability** | `"" != marker`, so a legitimately empty field and a redacted one are different values. **The test is that the CHECK REJECTS `""` — a positive control, because the failure mode being guarded is precisely that an empty string passes** |
-| **inside `json`** | the same marker as the field's value. A JSON blob has no column constraint, so validation is at the write path and INV-2 plants a mutant per carrier field, not per column |
-
-**Why a reserved value and not a flag column:** a flag can disagree with the
-content it describes. A marker IS the content, so there is no state in which the
-record says redacted and still holds the text.
+| **representation** | unchanged: the exact byte string `\x00veracium:redacted\x00` |
+| **reservation** | 🔴 **INV-11's MIRROR: a NON-REDACTION write MAY NOT INTRODUCE THE MARKER.** Enforced at every ordinary write path and at **every import boundary**, refusing loudly. INV-11 forbids an ordinary write to a field *holding* the marker; this forbids an ordinary write *introducing* it. **Neither implies the other and v3.1 had only one** |
+| **pre-existing rows** | 🔴 **OWED AND NOT YET RULED: rows that already hold the marker byte-string at migration.** They cannot be assumed absent — nothing has ever refused them. Refuse the migration, quarantine the rows, or accept and flag: **the owner's call, and it must be made before the CHECK ships** |
+| **nested shapes** | 🔴 **two `agreement.markers` entries replaced by one marker FAIL the uniqueness validator.** Replacement must preserve arity, or redaction of a list field is refused by a validator the spec never mentions |
+| **legitimately empty** | still owed: a field that is legitimately empty versus one redacted to empty. INV-8's CHECK rejects `""`, which is the enforcement `TEXT NOT NULL` never provided |
 
 ### 4b-ii. The episode redaction record (F3)
 
@@ -874,139 +1019,76 @@ fail** — see INV-3.
 - **A redacted edge remains recallable** — structurally present, content absent.
   Otherwise redaction becomes deletion by another name and reopens every fence.
 
-### 4e. The delayed compiler — publication-time validation (F2)
+### 4e. Delayed writers — 🔴 v4: THE EXEMPTION IS WITHDRAWN AND MY OWN FIX WAS THE SAME BUG
 
-**A single transaction makes the clearing atomic; it does not govern subsequent
-publication.** The reviewer exercised the real compiler: it reads its inputs, a
-redaction clears the content and the wiki row, compilation then finishes — and
-**the original content reappears in `wiki`, stamped with the CURRENT store
-version, with `needs_recompile()` returning false.** The redaction is undone and
-the store reports itself fresh.
+> 🔴 **ROUND-2 F1a, EXECUTED at the pin by the second seat. Both halves of v3.1's
+> §4e are wrong.**
+>
+> **(1) The semantic-rebuild exemption does NOT hold.** v3.1 called it *"exempt
+> by construction"* because `upsert_embedding` re-reads the live row and refuses
+> on a digest mismatch. **It holds only the INSTANCE lock, and its `SELECT`
+> opens no transaction** — verified: `with self._lock:` then `SELECT`, then
+> `INSERT`, with no `BEGIN IMMEDIATE`. Two `Memory` instances on one file, with
+> B committing a tombstone and deleting the embedding between A's `SELECT` and
+> A's `INSERT`: **A reports success and the stale vector is STORED, under the
+> ORIGINAL content digest, while the live edge is the tombstone.** `V-FRESH`
+> excludes it at read — *"excluded but stored"*, which is not what an exemption
+> claimed.
+>
+> **(2) MY FIX FOR THE WIKI WAS THE SAME BUG.** v3.1 prescribed *"capture
+> `v_begin` before `_grounded_inputs`, refuse to publish if it moved."*
+> **`set_wiki` takes `store_version` as a PARAMETER** — read outside, passed in,
+> written under the instance lock in a single statement. So "captured then
+> compared" is itself a **compare-then-act race**: the store can move between
+> the comparison and the commit. **I diagnosed a comparison bug and prescribed a
+> comparison.**
 
-**The mechanism, read in the shipped code.** `compile_wiki` calls
-`_grounded_inputs(store, …)` at the top, then `llm(prompt, …)` — a model call,
-seconds to minutes, **outside any transaction** — and finally:
+**The rule, restated so it is about TRANSACTIONS and not about comparisons.**
 
-```python
-store.set_wiki(user_id, f"{_ENVELOPE}{digest}\n{wiki}",
-               store.store_version(user_id))        # compile.py:259
-```
+> **A read-compute-publish path must make its READ and its PUBLISH one
+> transaction under the DATABASE lock. An instance lock does not serialise
+> across connections, and a captured value compared later is not a guard.**
 
-**`store_version` is read at PUBLISH time, not at input-read time.** The stamp
-therefore describes a store the compiled text was never derived from. The
-digest in the envelope covers compiler POLICY (the relation registry, the
-budgets), not the inputs, so it does not detect this either — and
-`needs_recompile` computes `store_version - version_at_compile`, which is `0`.
-**Every component is behaving as written; the defect is that nothing compares
-the two states.**
+**Two shapes the code admits, named by the second seat from what is there:**
 
-**The rule.** `compile_wiki` captures `v_begin = store.store_version(user_id)`
-**before** `_grounded_inputs`, and publication is conditional on it:
-
-| at publish | outcome |
+| shape | |
 |---|---|
-| `store_version == v_begin` | publish, stamped `v_begin` |
-| `store_version != v_begin` | 🔴 **DO NOT PUBLISH.** The compiled text is derived from a superseded state. Discard it and leave the wiki row absent — `needs_recompile` then takes `compile.py:161`'s unconditional `cached is None` branch and the next compilation runs against the redacted store |
+| **`BEGIN IMMEDIATE` before the read** | the read and the write execute in one transaction under the database lock |
+| **one statement** | `INSERT … SELECT … WHERE` the live digest still matches — the check and the write are indivisible because they are the same statement |
 
-**Stamping `v_begin` rather than the current version is load-bearing on its
-own**, independently of the check: a text derived from version *n* must be
-labelled *n*, or `needs_recompile` is answering a question about a state the
-content never had. The conditional publish and the honest stamp are two
-separate fixes and both are required.
+**Both paths owe this: the embedding upsert AND `compile_wiki`'s publish.**
+Neither is exempt, and **§4e no longer lists an exemption at all.**
 
-**The redaction transaction's version change, defined (the reviewer's second
-ask).** Redaction **MUST** call `_bump(user_id)` inside its transaction. Today
-`_bump` is invoked per write method (`sqlite.py:512, 591, 763, 1163, 1542,
-1608, 1661, 1833, 2095`) and a method that forgets it is silently invisible to
-every version-based staleness check in the product. **A redaction that does not
-move the counter is undetectable by the very mechanism above**, so this is a
-prerequisite of the fix and not an implementation detail.
+> ⚠️ **The generalisation stands and is now better evidenced.** *Read state → do
+> slow work outside the transaction → write a result stamped current.* v3.1
+> named the shape and then granted an exemption to the one path it examined,
+> **on a guard that a second connection defeats.** An exemption is a claim about
+> concurrency and cannot be read off a single-connection reading of the code.
 
-> ⚠️ **DELAYED WRITERS ARE A CLASS, AND THE WIKI IS ONE MEMBER.** The shape is:
-> *read state → do slow work outside the transaction → write a result stamped as
-> current.* **Every such writer can undo a redaction.** The wiki compiler is the
-> one the reviewer found. The enumeration cannot find these — they are control
-> flow, not fields — so this spec names the shape and requires that each
-> read-compute-publish path either carry the `v_begin` check or be recorded here
-> as not requiring it, **with the reason**. Known: `compile_wiki`;
-> `ensure_wiki` through it. **The semantic rebuild (D3) must be checked against
-> this shape before v3 is dispatched** — it reads edges and writes derived rows,
-> which is the same silhouette.
+### 4f. Locating affected receipts — 🔴 v4: THE EXACT-COVERAGE CLAIM IS WITHDRAWN
+
+> 🔴 **ROUND-2 F5, EXECUTED on a real absorption** (prior *"Acme"*, incoming
+> *"Acme Corp"*). v3.1 said step 1 was *"exact for current-domain receipts"*.
+> **It is not exact for ANY domain, and the reasons are structural:**
 >
-> **v3.1 — checked, and EXEMPT by construction (dev at source; research verified
-> at source).** `embed_backfill` reads edges, embeds outside any transaction, then
-> `upsert_embedding` re-reads the LIVE row under the lock and REFUSES when the
-> content digest has moved (`sqlite.py`, the embedding upsert; the INSERT is also
-> `ON CONFLICT(edge_id, embedder_id, content_digest) DO NOTHING`) — a
-> compare-and-set on the content the work was derived from, which is exactly what
-> `compile_wiki` lacks. A second, independent guard excludes stale vectors at
-> READ time (V-FRESH: a row whose stored digest no longer matches the live edge
-> is not returned by search). Episodes are not embedded at all, so §4b-ii raises
-> no rebuild question. **The exemption depends on a property neither function
-> names:** `embedded_text`'s field set must remain a SUBSET of `content_digest`'s
-> (today both are exactly {subject, relation, object, note}). Widening
-> `embedded_text` alone — a plausible edit made to improve embedding quality —
-> would write back a vector encoding redacted content with both guards passing.
-> **INV-12** asserts the subset relation as a TEST derived by mutation
-> (`tests/test_0041_evidence.py`), not as a sentence, because a sentence is what
-> failed four times in this document's lineage. The wiki compiler's fix (above)
-> takes the same shape: `v_begin` captured before the read, publication refused
-> if the version moved, the wiki stamped with `v_begin`.
+> | step | what the reproduction found |
+> |---|---|
+> | **1. recompute the digest** | the logical digest covers **the whole plan** — incoming, upserts, invalidations, refusals — and **is not recoverable from the target alone** |
+> | **2. scan `response` for the target id** | the current domain `veracium.supersession-request.v2` records a response of **COUNTS ONLY** (`inserted_incoming`, `invalidated`, `refused` → integers). **There are no ids in it to find** |
+> | **3. follow the ledger and refusals** | **neither `contribution_ledger` nor `supersession_refusals` carries an `operation_id` column.** The join reaches the SURVIVOR and never the RECEIPT |
 
-### 4f. Locating affected supersession receipts (F4)
+**So the selection rule has no exact tier, and v3.1's table implied one.**
 
-**D4 named the digest fields to clear; the reviewer's point is that naming them
-is insufficient without a rule for FINDING the receipts.**
-`supersession_operations` stores `logical_request_digest`, `request_digest`,
-`response` and an `operation_id` — **digests and an opaque identifier, with no
-complete reverse mapping to affected records.** Dev reproduced a supported
-operation that updates an existing edge under an arbitrary operation id, writing
-a receipt with **zero contribution rows and zero refusal rows naming that
-edge**. So the joins that exist can return nothing while a receipt containing
-the target's content-derived digest sits in the table.
+| | |
+|---|---|
+| **today** | 🔴 **every unlinked receipt gets the CONSERVATIVE outcome.** `receipts_complete=False`, the domains named, and the caller told which class may retain a digest over redacted content. **This is now the ordinary case, not the edge case v3.1 presented** |
+| **forward obligation** | durable association must be BUILT: an `operation_id` on the ledger row, **or** an `ids` field in the response. **Until one exists, no version of this spec can promise receipt coverage** |
+| **the receipt itself** | 🔴 **must NOT carry the removed content digest.** A receipt that names what was removed by its digest is an oracle for the removed content |
 
-**The selection rule, in order.**
-
-| step | what it finds | completeness |
-|---|---|---|
-| 1. **recompute** the target's content-derived digest(s) under **every** digest domain the table records (`request_digest_domain` exists precisely because there is more than one) and match `logical_request_digest` / `request_digest` | receipts whose digest is derivable from the content being redacted | **exact for current-domain receipts** |
-| 2. scan `response` for the target id — it is a stored blob and §2's enumeration reaches it | receipts naming the record without a digest match | exact |
-| 3. follow `contribution_ledger` and `supersession_refusals` rows naming the target | receipts reachable by the existing joins | **incomplete — this is the path dev's reproduction defeats** |
-
-🔴 **STEP 1 IS INCOMPLETE BY CONSTRUCTION FOR OLDER RECEIPTS, AND THAT IS THE
-POINT OF THE CONSERVATIVE OUTCOME.** A digest written under a **retired domain**
-cannot be recomputed if the domain's inputs are no longer reconstructible, and a
-receipt for an operation affecting a **prior** record may carry a digest over
-content that has since been superseded. **Neither is findable by recomputation.**
-
-**The conservative outcome, when the association cannot be established.** The
-operation does **not** report success over the receipt table. Specifically:
-
-- redaction of the record proceeds — **the record is the caller's actual ask**;
-- every receipt found by steps 1–3 is cleared;
-- **the receipt is marked `receipts_complete=False`** with the domains that
-  could not be recomputed named in it;
-- **§8's success claim is narrowed accordingly** (F6's ruling already limits it
-  to the named carriers; this names a second boundary), and the caller is told
-  which class of receipt may retain a digest over the redacted content.
-
-> **Why not refuse the whole operation.** Refusing leaves the content in the
-> record AND in the receipts. **A partial redaction that says so is strictly
-> better than a refusal that says nothing**, provided the incompleteness is in
-> the receipt rather than in the prose. The failure mode this spec must avoid is
-> not incompleteness — it is **a success claim wider than what was done**.
->
-> **v3.1 — two conditions on partial-and-say-so (dev's second opinion, research
-> agreed).** (1) The operation is IDEMPOTENT and RE-RUNNABLE: a later call on the
-> same target — after a migration adds the reverse mapping, or with a better
-> selection rule — finishes the job and flips `receipts_complete` to `True`,
-> writing no second event (§4b-ii's repeat rule). (2) The receipt names BOTH the
-> digest domains that could not be recomputed AND the operation ids of the
-> receipts that were cleared, so a caller can tell *partial* from *nothing*
-> without reading the store. And the split, stated: partial-and-say-so applies
-> only once the record itself is redacted; if step 1 fails — the record cannot be
-> tombstoned — the operation REFUSES, because there the content stays everywhere
-> and a receipt would claim an act that did not happen.
+> **What this costs the spec, stated plainly:** §8's success claim narrows again.
+> Redaction removes content from the named carriers; **receipts containing a
+> digest derived from that content may survive, and the caller is told so.**
+> That is weaker than v3.1 and it is what the code supports.
 
 ### 4g. The import contract for redaction events (F5)
 
@@ -1023,6 +1105,24 @@ record, hold a different version of it, or not hold it at all.
 | holds the record | apply the redaction **in the same transaction as the record's import**. Records and their redaction state **commit together or not at all** — a window in which the record exists un-redacted is the exact harm this spec exists to prevent |
 | holds a **different version** | redact it anyway when the event's target id matches, and record an **inconsistent-notice** flag on the imported event. Content-derived divergence is not grounds to keep content the source says was redacted |
 | **does not hold** the record | import the event as a **standing notice**, not a no-op. If the record arrives later it is redacted on arrival. **Dropping the event makes redaction order-dependent**, and import order is not something either side controls 🔴 **v3.1 — EXECUTED, and the row is REPRESENTABLE BUT NOT YET HONEST.** The store accepts a journal event whose `edge_id` names no row (`edge_event` declares no foreign key, `PRAGMA foreign_keys` is 0) and `edge_events(user, edge_id)` returns it — so a standing notice can be written and read today. **But `doctor` reports it as an ERROR** (check `refs`: *"journaled edge id(s) with no row"*), which is correct for every case that existed before this spec and wrong for this one. **As written, row 3 makes a healthy store permanently fail its own health check**, and an operator's rational response to a permanent error is to stop reading the errors. §11.4 amends 0029's `refs` check so a `pending` notice of kind `redacted` is EXPECTED rather than an orphan — a standing notice is the journal outliving its subject **on purpose**, which is the one case 0029's wording was not written against. |
+
+#### 🔴 Row 9 and the notice cases — RULED v4 (round-2 F4)
+
+**v3.1's row 9 admitted the record UN-REDACTED when its notice was invalid,
+which inverts the whole point.** Ruled, on the second seat's proposed semantics:
+
+| case | ruling |
+|---|---|
+| **an invalid notice accompanying a record** | 🔴 **the record-and-notice UNIT is REFUSED, with an explicit failure result.** Never the record admitted un-redacted. **A malformed notice must not be a route to importing the content it was meant to remove** |
+| **a tombstone arriving with NO notice** | **accepted as content** — it holds none — **and FLAGGED.** A notice-less tombstone is not a failure |
+| **two notices sharing `(origin, target_id, event_id)` with different bodies** | **an integrity refusal.** One identity with two bodies is a corrupted source, not a conflict to resolve |
+| **`event_id`** | **the source's `(user_id, seq)` pair, carried as attributes** — never as the destination's own position, per §4g's `seq`/`txn` rule |
+
+> **The standing notice is representable and still not honest** until 0029's
+> `refs` check exempts a `pending` notice of kind `redacted` (§11.4). **Until
+> that lands, row 3 makes a healthy store fail its own integrity check**, and
+> this spec should not ship a row that does.
+
 | holds it and the event is **missing** from a later export | **nothing is inferred.** Absence is not un-redaction; there is no path by which an import restores redacted content |
 
 **Repeat imports** are idempotent on `(origin, target_id, event_id)` — the same
@@ -1307,45 +1407,93 @@ the owner's to make.**
 | 3 | **§2** requires all three duplicated edge columns; **INV-2** checked only `object` | **§2 governs.** INV-2 is restated to enumerate from the DDL |
 | 4 | *"No row is deleted"* vs deleting `wiki`, `edge_embedding` and `contribution_ledger` rows | **the deletions govern.** The sentence is corrected: no **record** row is deleted; **derived** rows are, and they are rebuildable |
 
-## 11.2 The allowed reason values, and legacy treatment
+## 11.2 Reason values — 🔴 v4: SCOPED BY OPERATION; v3.2's LIST WOULD REJECT EVERY LIFECYCLE WRITE
 
-**`reason` is a closed vocabulary on every instance of D1's shape** —
-`edge_event.reason`, `Edge.invalidation_reason`, `source_revocations.reason`,
-`Episode.retired_reason`.
+> 🔴 **Round-2 F3, verified in the tree before accepting it.** v3.2 declared a
+> closed vocabulary of five — `subject_request`, `operator_policy`,
+> `erroneous_capture`, `legal_obligation`, `imported_notice` — as a CHECK on
+> `edge_event.reason`. **That field carries EVERY disposition reason the product
+> writes, not redaction's.** The values actually present in `src/`:
+>
+> `quarantined` · `corrected` · `lapsed` · `recovered` · `superseded` ·
+> `consolidated` · `invalidated` · `locked` · `contended` · `retired` ·
+> `revoked` · `manual`
+>
+> **Not one of them is in v3.2's list.** A CHECK on that vocabulary would have
+> **rejected every lifecycle write the product already makes.** The error was
+> mine and it is a scope error: I wrote a vocabulary for REDACTION reasons and
+> applied it to a GENERAL-PURPOSE field.
 
-| value | meaning |
+**The rule, corrected: reasons are closed PER OPERATION, not per field.**
+
+| operation | permitted reasons |
 |---|---|
-| `subject_request` | the data subject asked |
-| `operator_policy` | a standing policy of the operator |
-| `erroneous_capture` | the content should never have been stored |
-| `legal_obligation` | a demand the operator is bound by |
-| `imported_notice` | **set only by import** (§4g) — the source redacted it; this store did not witness the act |
+| **redaction** *(new)* | `subject_request` · `operator_policy` · `erroneous_capture` · `legal_obligation` · `imported_notice` *(set only by import, §4g)* |
+| **every existing disposition** | unchanged — the values above keep their meanings and their writers. **This spec does not narrow them and must not** |
 
-**Legacy treatment, which the vocabulary needs and v1 never addressed.** Rows
-predating the constraint hold arbitrary text. They are **not** rewritten — a
-migration that edits historical reasons destroys the record it is meant to
-preserve. Instead:
+**Enforcement is therefore NOT a column CHECK.** It is a check at the redaction
+write path against the operation's own set — the only place that knows which
+operation is being performed. **A column constraint cannot distinguish
+operations, which is precisely why v3.2's version was wrong.**
 
-- the **CHECK applies to new writes only**;
-- a legacy value reads back as `legacy_freeform`, with the original retained;
-- 🔴 **`why` renders `legacy_freeform` as the token, NEVER the original text** —
-  otherwise the vocabulary closes the write path and leaves the read path, which
-  is the one the disclosure actually travels on.
+**Legacy treatment**, unchanged from v3.2 and still required: rows predating the
+constraint are **not rewritten** — a migration that edits historical reasons
+destroys the record it exists to preserve. A legacy value reads back as
+`legacy_freeform` with the original retained, and 🔴 **`why` renders the TOKEN,
+never the original text** — otherwise the vocabulary closes the write path and
+leaves the read path, which is the one a disclosure travels on.
 
-## 11.3 The invariant matrix, expanded
+## 11.3 The invariant matrix — 🔴 v4: CORRECTED, IT REDEFINED TWO AND DROPPED TWO
 
-| inv | statement | v3 change |
+> 🔴 **F7, and this is the worst defect in the spec because of WHERE it sits.**
+> §11 declares itself the operative contract — *"where anything above conflicts
+> with this section, this section governs."* **Its invariant matrix then
+> silently changed what two invariants MEAN and omitted two others entirely:**
+>
+> | | §6, the real invariant | §11.3 at v3.2, what I wrote |
+> |---|---|---|
+> | **INV-1** | **structure preserved** — chain lengths, `seq` contiguity, reference integrity unchanged | *"no carrier holds the content"* |
+> | **INV-3** | **`why` degrades, never fails** | *"record and redaction state commit in one transaction"* |
+> | **INV-4** | journal carries no residue | **absent** |
+> | **INV-5** | scope — cross-user or unknown target refuses loudly, never a silent no-op | **absent** |
+>
+> **A reader trusting §11 as governing would have believed INV-1 means content
+> removal and would never have checked structure preservation at all** — and
+> INV-5, the one that forbids a silent no-op, is exactly the invariant whose
+> absence is hardest to notice.
+>
+> **The section written to make the spec say one thing said a different thing
+> with more authority.** §6's numbering is restored below and is canonical;
+> everything research added is numbered from **INV-8 upward**, where it cannot
+> collide with a meaning that already exists.
+
+### The canonical invariants, §6's meanings, unchanged
+
+| inv | statement (§6 governs the meaning) |
+|---|---|
+| **INV-1** | **structure preserved** — chain lengths, `seq` contiguity and reference integrity unchanged after redaction |
+| **INV-2** | **no partial carrier** — every column duplicating a `json` field agrees with the blob after redaction. 🔴 **v3 widening stands: a mutant is planted in EVERY such column, enumerated from the DDL at run time — three, not one** |
+| **INV-3** | **`why` degrades, never fails** |
+| **INV-4** | **journal carries no residue** — no event for a redacted edge yields the original content |
+| **INV-5** | **scope** — a cross-user or unknown target refuses loudly; **never a silent no-op** |
+| **INV-6** | **reason is not a content channel.** 🔴 **AMENDED, not redefined:** D2 carries vocabulary reasons on export, so the fence is on **free-form** reasons. After §11.2 there is no free text to fence |
+| **INV-7** | **oracle disposal** — no `content_digest` or `evidence_ref_digest` survives for redacted content. **Conditional on D3**: §10's item 2 shows a rebuild re-embeds the tombstone, so this is true of the ORIGINAL either way |
+
+### Research's additions, numbered where they cannot collide
+
+| inv | statement | why |
 |---|---|---|
-| **INV-1** | after redaction no carrier named in §2/§2d holds the content | **widened** — the enumeration's 64 carriers, not a hand-list |
-| **INV-2** | a mutant is planted in **every column that duplicates a `json` field**, enumerated from the DDL at run time | 🔴 **was `object` only.** Three columns: `subject`, `relation`, `object` |
-| **INV-3** | the record and its redaction state commit in one transaction | unchanged; **extended to import** (§4g) |
-| **INV-6** | no **free-form** reason reaches a prompt, recall, export or MCP | 🔴 **amended** — it prohibited reasons from export outright, which D2 overrode. **Vocabulary reasons travel; free text never does**, and after 11.2 there is no free text to travel |
-| **INV-7** | no `content_digest` over redacted content survives | **conditional on D3** — §10's item 2 shows a rebuild re-embeds the tombstone. True of the original either way |
-| 🔴 **INV-8** *(new)* | `""` is **REJECTED** by the tombstone CHECK | the positive control for F3. `TEXT NOT NULL` permits `""`; this is the check that actually forbids it, and it must be seen to fail before the CHECK exists |
-| 🔴 **INV-9** *(new)* | no read-compute-publish path republishes content across a redaction | F2. `compile_wiki` carries the `v_begin` check; every other such path is listed in §4e or recorded there as exempt **with its reason** |
-| 🔴 **INV-10** *(new)* | an imported redaction notice never presents as locally witnessed | F5. The journal distinguishes *was told* from *did* |
-| 🔴 **INV-11** *(new)* | an ordinary write to a field holding the marker is **refused** | F3. Without it the tombstone is advisory and `remember()` walks it back |
-| 🔴 **INV-12** *(new, v3.1)* | `embedded_text`'s field set is a SUBSET of `content_digest`'s — the semantic rebuild's exemption from §4e's class holds only while it is | derived by mutation over every string field of `Edge`; asserted TODAY against the shipped code in `tests/test_0041_evidence.py`, ahead of redaction |
+| **INV-8** | `""` is **REJECTED** by the tombstone CHECK | F3 round 1. `TEXT NOT NULL` permits `""`; **the test must be seen to FAIL before the CHECK exists** |
+| **INV-9** | no read-compute-publish path republishes content across a redaction | F2 round 1 — **and round 2's F1 says the check must be ATOMIC, not instance-local. Wording deferred to dev's two-connection reproduction** |
+| **INV-10** | an imported redaction notice never presents as locally witnessed | F5 round 1 |
+| **INV-11** | an ordinary write to a marker-holding field is **refused** | F3 round 1 |
+| **INV-12** | `embedded_text`'s field set ⊆ `content_digest`'s | 🔴 **round-2 F1: the test PASSES when `embedded_text` is widened with `original_relation`, because the fixture leaves optional fields unset. A check that cannot fail. Fixture correction owed with dev's reproduction** |
+
+> ⚠️ **§11.3 no longer claims all 64 enumerated carriers are the removal
+> surface** (round-2 F7). **§2d's 64 is the set that CAN hold text; §2 and §6's
+> treatment map is the set that is REMOVED.** Conflating an enumeration with a
+> removal surface is what made INV-1 read as a content invariant in the first
+> place. The treatment map itself is round-2 F6 and is owed.
 
 ## 11.4 Amendments to existing contracts — named, not implied
 

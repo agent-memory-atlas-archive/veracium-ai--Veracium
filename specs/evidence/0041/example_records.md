@@ -1,6 +1,6 @@
 # 0041 — example redaction records and the import / failure-case matrix
 
-*Evidence for the round-2 package, built from 0041 v3's §4b, §4b-ii, §4c, §4f and
+*Evidence for the round-2 package (rows 3, 9, 9a–9c, the receipt and §1's `evidence_ref` corrected for round 3 against v4's rulings), built from 0041 v3's §4b, §4b-ii, §4c, §4f and
 §4g by dev on 2026-09-15. Every shape here is PROPOSED — 0041 is a draft and
 nothing below is implemented; the records are what the contract says the store
 will hold, written out so the reviewer can check the contract against concrete
@@ -32,7 +32,7 @@ After `redact(user_id="u", edge_id="e-7c1a", reason="subject_request")`:
 | `subject` | `<MARKER>` |
 | `relation` | `<MARKER>` |
 | `object` | `<MARKER>` |
-| `json` | every carrier field named in §2/§2d holds `<MARKER>`: `subject`, `relation`, `object`, `note`, `original_relation`, `provenance.evidence_ref`, and the `agreement.markers` entries if present; non-carrier fields (`id`, `user_id`, timestamps, booleans, `provenance.author_of_evidence`, `disclosure`, …) unchanged |
+| `json` | per the treatment map (§2d-ii): `subject`, `relation`, `object`, `note`, `original_relation` hold `<MARKER>`; each `agreement.markers` entry is `<MARKER>` (arity preserved — a two-entry list is INVALID under today's uniqueness validator: a blocking code change, §2d-ii); `outcome_counts` is `{}`; **`provenance.evidence_ref` is PRESERVED** (§2 excludes it — round-2 F6 corrected this example; §8 states the limit); `id`, `user_id`, timestamps, booleans, `provenance.author_of_evidence`, `disclosure`, `agreement.direction`/`lexicon` unchanged |
 | `active`, `quarantined` | unchanged (§4d: redaction is not invalidation) |
 
 The three duplicated columns and the `json` agree (INV-2, one mutant per column);
@@ -80,16 +80,16 @@ vocabulary values, booleans, integers, timestamps — no content):
                           "json.subject", "json.relation", "json.object", "json.note",
                           "json.original_relation", "json.provenance.evidence_ref",
                           "edge_event.state[seq=4]", "edge_event.state[seq=9]",
-                          "edge_embedding[content_digest=…]" (deleted, INV-7),
+                          "edge_embedding[row deleted]"  (INV-7 — the receipt never carries the removed digest; round-2 F5),
                           "contribution_ledger.payload[id=…]", "wiki[user=u]" (cleared)],
   "marker_version":      1,
   "store_version_before": 41,
   "store_version_after":  42,
   "repeated":            false,
   "surviving_derived":   ["ep-consolidated-8"],          # F6: named, NOT redacted
-  "receipts_cleared":    ["op-2f"],                        # §4f steps 1–3
-  "receipts_complete":   false,                            # §4f: a domain could not be recomputed
-  "domains_not_recomputed": ["request_digest_domain:v3"]
+  "receipts_cleared":    [],                             # §4f at v4: no exact tier exists for ANY domain today
+  "receipts_complete":   false,                            # §4f at v4: conservative reporting is the ORDINARY case
+  "domains_not_recomputed": ["veracium.supersession-request.v2"]
 }
 ```
 
@@ -111,7 +111,10 @@ split: partial-and-say-so applies only once the record is redacted).
 | 6 | import with `user_id` remapped `u → u2` | `redacted` for `e-7c1a` under `u` | the event's subject is remapped WITH the record, in the same mapping; the notice lands under `u2` | `source_user=u` retained as metadata |
 | 7 | destination already uses the source's `seq=9` / `txn=3` | same | destination-local `seq`/`txn` allocated by the destination's own allocator; source numbers kept ONLY as attributes | `source_seq=9`, `source_txn=3` |
 | 8 | the source export has gaps (only redaction events travel) | — | gaps carry no meaning; not repaired; not reported as missing data | — |
-| 9 | the event names a `reason` outside D1's vocabulary | — | REFUSED per event (the reason field is a closed vocabulary on every path); the record, if present, is imported un-redacted and the refusal counted | — |
+| 9 | the event names a `reason` outside the per-operation vocabulary (§11.2) | — | 🔴 RULED v4 (round-2 F4): the record-and-notice UNIT is REFUSED with an explicit failure result — the record is NOT imported un-redacted and the notice is NOT silently discarded; the import reports the refused unit (origin, target_id, event_id, the reason) and the caller decides whether to reject the whole file | — |
+| 9a | a tombstone arrives (every content leaf already `<MARKER>`) with NO notice for it | — | accepted as content — it holds none — and FLAGGED (`notice_missing=true`); the local journal records the arrival, never a local redaction (INV-10) | `notice_missing=true` |
+| 9b | two notices sharing `(origin, target_id, event_id)` with DIFFERENT bodies | — | an INTEGRITY REFUSAL of the unit (the key is the identity; two bodies under one identity is corruption, not a repeat) | — |
+| 9c | `event_id` — the idempotency key's third element | — | DEFINED: the source's `(user_id, seq)` pair, carried as attributes on the imported notice; the destination never reuses it as a local position (§4g's seq/txn rule) | `source_user`, `source_seq` |
 | 10 | the event's `target_id` belongs to another user at the destination | — | REFUSED loudly (INV-5's shape); never a silent no-op | — |
 | 11 | the record and its event arrive but the transaction fails after the record's write | — | ROLLED BACK whole: no window in which the record exists un-redacted (INV-3, extended to import) | — |
 
@@ -125,7 +128,7 @@ X" — `witnessed=false` is the executable form of that sentence (INV-10).
 |---|---|
 | `redact` on an unknown target id | refuses loudly (`UnknownTarget`); no event, no receipt |
 | `redact` across users (target belongs to another user) | refuses loudly; no event, no receipt |
-| `redact` with a reason outside D1's vocabulary | refuses at the API (the closed set), before any read |
+| `redact` with a reason outside the redaction operation's vocabulary (§11.2 at v4: reasons are closed PER OPERATION; the seven lifecycle reasons stay theirs) | refuses at the API, before any read |
 | `redact` when the record cannot be tombstoned (step 1 fails: a CHECK refuses the marker, a lock cannot be taken) | refuses; nothing written; the content stays and the caller is told |
 | `redact` when a supersession receipt's digest domain cannot be recomputed (§4f) | proceeds; `receipts_complete=false` with the domain named |
 | an ordinary write to a field holding the marker (`remember`, `correct`, `confirm`, import) | REFUSED (INV-11), not merged |

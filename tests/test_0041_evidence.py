@@ -229,3 +229,23 @@ def test_two_connection_publication_the_embedding_upsert_refuses_a_vector_for_co
         semantic.content_digest = real
     stored = B._conn.execute("SELECT content_digest FROM edge_embedding WHERE edge_id='e-1'").fetchall()
     assert stored == [], "a vector for content another connection already replaced was stored"
+
+
+def test_the_before_after_fixtures_validate_as_the_treatment_map_rules_them():
+    """Round-2 artifact ask: VALIDATED before/after fixtures. The script constructs
+    every ruled resulting shape and asks the model; the two refusals (a two-marker
+    agreement redacted per entry; a required digest cleared to None) are printed as
+    results and asserted here as the reviewer would find them today."""
+    r = subprocess.run([sys.executable, str(EVIDENCE / "fixtures_before_after.py")],
+                       cwd=ROOT, env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"},
+                       capture_output=True, text=True, timeout=300)
+    assert r.returncode == 0, r.stderr[-2000:]
+    out = r.stdout
+    assert "VALID    after (arity-1 markers)" in out
+    assert "identity preserved: True | evidence_ref preserved: True | every content leaf is the marker: True | outcome_counts cleared: True" in out
+    assert "REFUSED  after (arity-2 markers) — expected REFUSED today" in out
+    assert "VALID    after (a PROSE kind → marker)" in out and "VALID    after (a legacy prose retired_reason → marker)" in out
+    assert "receipt mentions no 64-hex digest: True" in out
+    assert "VALID    ContributionRecord.identity_digest / evidence_ref_digest → None" in out
+    assert "REFUSED  Confirmation.request_digest → None" in out and "VALID    Confirmation.request_digest → MARKER (the ruling)" in out
+
