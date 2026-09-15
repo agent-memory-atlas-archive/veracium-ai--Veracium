@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — DEV's instrument (specs/evidence/0039/answer_shapes.py)
-# generated 2026-09-12 against veracium @ 181199dbd98e5badad7ea2c5ab49f1269048a11e
+# generated 2026-09-12 against veracium @ 6f2fe04549bdc913c7649cecc56d5d4ffdc1ed9f
+# RE-PINNED 2026-09-15 after 0027 v15 (the displacement budget in the fused construction; no policy lane in these answers): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-15 after 0027 v14.1 (the policy identity strings bounded at PolicyLane; no policy lane in these answers): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0037 v24.5 (the persisted producer in the import lineage; the UTC date default — no import and no omitted date in these answers): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-14 after 0037 v24.4 (the import boundary resolves conflicting ids before lineage; no import in these answers): body BYTE-IDENTICAL again.
