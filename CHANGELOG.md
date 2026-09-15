@@ -58,6 +58,14 @@ them. Library and MCP callers that pass no `policy` change nothing.
   transaction (V-RECEIPT-ERASE). Retention is not in this release: the table grows by
   one row per firing recall (research's T10 priced ≈2.3 KB per row, linear in the
   budget); erasure is per user.
+- **Added: the displacement budget** (specs/0027 v15 §4h; research's candidate, the owner's word).
+  `PolicyLane.max_displaced` declares the most records a policy lane may displace from the returned
+  selection (an int ≥ 0; `None` for no cap; `0` means reorder but never change membership). It is
+  enforced inside the fused construction, where both orders exist, so every caller is bounded; on a
+  breach the recall returns the already-computed no-policy selection and the receipt records
+  `budget_breached=True` with `displaced` still naming what the lane would have displaced. Every
+  receipt now carries `max_displaced_declared` (`None` recorded when no cap was declared). The
+  bound is enforced; its value is the host's — a generous cap changes nothing but the receipt.
 - **Changed (before release, v14.1): the policy's identity strings are bounded.** `PolicyLane.policy_id`,
   `policy_version` and every `tags_matched` entry must be identifiers (letters, digits and `._:-`,
   1–64 characters, no whitespace; at most 64 tags) and are refused at construction otherwise —

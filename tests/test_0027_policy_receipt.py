@@ -464,3 +464,103 @@ def test_an_identifier_shaped_disclosure_is_accepted_and_persisted_the_stated_li
     row = mem.store.policy_receipt(U, rc.recall_id)
     assert "diagnosis:hiv-positive" in row["receipt"] and row["policy_id"] == "diagnosis:hiv-positive"   # bounded, not content-free
     mem.close()
+
+
+# ---------------------------------------------- v15: the displacement budget ----
+# specs/0027 v15 §4h (research's candidate; the owner's word "build the
+# displacement budget"): the lane declares the maximum number of records it may
+# displace; enforced in `fused_subgraph`, the one construction where both orders
+# exist; on a breach the returned selection is the already-computed baseline and
+# the receipt keeps what the lane WOULD have displaced. The eight mutants of the
+# candidate's §4 are each pinned below.
+from veracium.graph import fused_subgraph_with_receipt as _fswr
+
+
+def test_an_undeclared_budget_is_recorded_as_undeclared_and_survives_the_store(tmp_path):
+    """V-DISPLACEMENT-BUDGET-RECORDED: no cap → `max_displaced_declared` is None
+    (present, never absent — mutant 2: an absent cap treated as 0 or as
+    unbounded without recording which) and `budget_breached` is False; the
+    durable row carries both."""
+    mem = _memory(tmp_path, "u.db")
+    rc = mem.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt
+    assert rc.max_displaced_declared is None and rc.budget_breached is False
+    assert mem.policy_receipt(U, rc.recall_id) == rc
+    assert json.loads(mem.store.policy_receipt(U, rc.recall_id)["receipt"])["max_displaced_declared"] is None
+    mem.close()
+
+
+@pytest.mark.parametrize("bad, why", [(True, "a bool (True == 1)"), (False, "a bool"), (-1, "negative"),
+                                      ("3", "a string"), (2.0, "a float")])
+def test_the_budget_refuses_bool_negative_and_non_int(bad, why):
+    """Mutants 6 and 7: `True` accepted as a cap; a negative accepted."""
+    with pytest.raises(ValueError):
+        PolicyLane(policy_id="demo", policy_version="1", ranks={"p": 1}, max_displaced=bad)
+    assert PolicyLane(policy_id="demo", policy_version="1", ranks={"p": 1}, max_displaced=0).max_displaced == 0
+
+
+def test_a_breached_budget_returns_the_computed_baseline_and_keeps_the_evidence(tmp_path):
+    """V-DISPLACEMENT-BUDGET-ENFORCED and V-BREACH-EVIDENCE-PRESERVED: on the
+    fixture the lane displaces exactly one record; with `max_displaced=0` the
+    returned selection is id-for-id the selection the same call gives with no
+    policy (mutant 5: the fallback is the computed baseline, so
+    `adjusted_order == baseline_order`), `budget_breached` is True, and
+    `displaced` still names the record the lane WOULD have displaced (mutant 1:
+    recomputed after the fallback it would be empty)."""
+    mem = _memory(tmp_path, "b.db")
+    no_policy = [e.id for e in mem.recall(U, "boat topic", semantic=False).edges]
+    capped = mem.recall(U, "boat topic", semantic=False,
+                        policy=PolicyLane(policy_id=LANE.policy_id, policy_version=LANE.policy_version,
+                                          ranks=LANE.ranks, tags_matched=LANE.tags_matched, max_displaced=0))
+    rc = capped.policy_receipt
+    assert rc is not None and rc.budget_breached is True and rc.max_displaced_declared == 0
+    assert [e.id for e in capped.edges] == no_policy == rc.adjusted_order == rc.baseline_order
+    assert len(rc.displaced) == 1 and rc.displaced[0] in no_policy and rc.displaced[0] not in rc.admitted
+    assert rc.admitted == ["p"] and "p" not in [e.id for e in capped.edges]          # the lane's would-have-been admission
+    uncapped = mem.recall(U, "boat topic", semantic=False, policy=LANE).policy_receipt
+    assert uncapped.displaced == rc.displaced and uncapped.admitted == rc.admitted    # the same counterfactual, breach or not
+    assert uncapped.adjusted_order != rc.adjusted_order and uncapped.budget_breached is False
+    assert mem.policy_receipt(U, rc.recall_id) == rc                                 # durable, evidence intact
+    mem.close()
+
+
+def test_a_lane_displacing_exactly_its_budget_is_within_it(tmp_path):
+    """Mutant 3: `>=` for `>` — the fixture's lane displaces exactly one record,
+    so `max_displaced=1` is NOT a breach and the lane's order is returned;
+    a generous cap is inert (the candidate's check 6)."""
+    mem = _memory(tmp_path, "e.db")
+    for cap in (1, 10_000):
+        lane = PolicyLane(policy_id=LANE.policy_id, policy_version=LANE.policy_version,
+                          ranks=LANE.ranks, tags_matched=LANE.tags_matched, max_displaced=cap)
+        r = mem.recall(U, "boat topic", semantic=False, policy=lane)
+        rc = r.policy_receipt
+        assert rc.budget_breached is False and rc.max_displaced_declared == cap
+        assert len(rc.displaced) == 1 and rc.adjusted_order == [e.id for e in r.edges] and "p" in rc.adjusted_order
+    assert [e.id for e in mem.recall(U, "boat topic", semantic=False, policy=LANE).edges] == rc.adjusted_order
+    mem.close()
+
+
+def test_below_the_budget_nothing_is_displaced_and_a_zero_cap_does_not_fire(tmp_path):
+    """Mutant 8: a below-budget recall truncates nothing, `displaced` is empty
+    and even `max_displaced=0` must not breach."""
+    mem = _memory(tmp_path, "z.db", max_edges=100)
+    lane = PolicyLane(policy_id=LANE.policy_id, policy_version=LANE.policy_version,
+                      ranks=LANE.ranks, tags_matched=LANE.tags_matched, max_displaced=0)
+    rc = mem.recall(U, "boat topic", semantic=False, policy=lane).policy_receipt
+    assert rc is not None and rc.displaced == [] and rc.budget_breached is False
+    assert rc.budget_state["truncated"] is False and "p" in rc.adjusted_order
+    mem.close()
+
+
+def test_the_budget_is_enforced_in_the_fused_construction_itself():
+    """V-BUDGET-AT-THE-CHOKE-POINT (mutant 4: enforce in `Memory.recall` only):
+    a DIRECT caller of `fused_subgraph` with `max_displaced` gets the fallback
+    and the evidence, with no `Memory` in the loop."""
+    scored, relevant, by_id, max_edges = lane_tests._coverage_fixture()      # R4-1's fixture: the promotion of `p` evicts `r5`
+    ordered, _meta, receipt = _fswr(scored, relevant, by_id, [], max_edges=max_edges,
+                                    policy_rank={"p": 1}, max_displaced=0)
+    assert receipt["budget_breached"] is True and receipt["max_displaced_declared"] == 0
+    assert [e.id for e in ordered] == receipt["baseline_order"] == receipt["adjusted_order"]
+    assert receipt["displaced"] and receipt["admitted"]
+    ordered2, _m2, receipt2 = _fswr(scored, relevant, by_id, [], max_edges=max_edges, policy_rank={"p": 1})
+    assert receipt2["max_displaced_declared"] is None and receipt2["budget_breached"] is False
+    assert receipt2["displaced"] == receipt["displaced"] and [e.id for e in ordered2] != [e.id for e in ordered]

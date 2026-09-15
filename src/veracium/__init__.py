@@ -162,8 +162,20 @@ class PolicyLane:
     policy_version: str
     ranks: dict
     tags_matched: tuple = ()
+    max_displaced: Optional[int] = None
 
     def __post_init__(self):
+        # specs/0027 v15 §4h — THE DISPLACEMENT BUDGET: the lane's declared
+        # maximum number of records it may displace from the returned
+        # selection; an int >= 0 (a bool refused — True == 1 — as policy_rank
+        # already refuses it; a negative refused); None means NO CAP, recorded
+        # as such on every receipt. 0 is the strong setting: the lane may
+        # reorder the returned set and never change its membership.
+        if self.max_displaced is not None:
+            if isinstance(self.max_displaced, bool) or not isinstance(self.max_displaced, int):
+                raise ValueError(f"PolicyLane.max_displaced must be an int >= 0 or None; got {self.max_displaced!r}")
+            if self.max_displaced < 0:
+                raise ValueError(f"PolicyLane.max_displaced must be >= 0; got {self.max_displaced!r}")
         # specs/0027 v14.1 (research's pre-adoption read of 0040, 2026-09-14):
         # the policy's identity fields are HOST-SUPPLIED strings that the
         # receipt persists VERBATIM, so they are bounded to identifier shape
@@ -223,6 +235,13 @@ class PolicyReceipt:
     ranks_applied: dict
     semantic_status: str
     recorded_at: str
+    # specs/0027 v15 §4h (the displacement budget): the declared cap — None
+    # RECORDED when none was declared, never omitted — and whether this recall
+    # breached it; on a breach `adjusted_order` is the baseline (what was
+    # returned) while `displaced`, `admitted` and `reserved_adjusted` keep what
+    # the lane WOULD have done (V-BREACH-EVIDENCE-PRESERVED).
+    max_displaced_declared: Optional[int]
+    budget_breached: bool
 
 
 _RECEIPT_FIELDS = tuple(f.name for f in dataclasses.fields(PolicyReceipt))
@@ -1041,7 +1060,8 @@ class Memory:
                     max_edges=self.config.max_subgraph_edges,
                     coverage_share=self.config.subgraph_coverage_share,
                     relations=self.config.relations,
-                    policy_rank=(policy.ranks if policy is not None else None))
+                    policy_rank=(policy.ranks if policy is not None else None),
+                    max_displaced=(policy.max_displaced if policy is not None else None))
                 sem_meta = {k: RecalledEdge(**v) for k, v in raw_meta.items()}
         # outcome events are structured records, not narrative — they'd crowd
         # out interaction history for high-volume consumers; their signal

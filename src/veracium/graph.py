@@ -824,7 +824,8 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
                    coverage_share: float = 0.25,
                    relations: Optional[dict[str, Relation]] = None,
                    assertable=None, policy_rank: Optional[dict] = None,
-                   receipt_out: Optional[list] = None):
+                   receipt_out: Optional[list] = None,
+                   max_displaced: Optional[int] = None):
     """specs/0027 §4a Stages 2-5 — the one total ordered retrieval-and-budget
     construction, over prepared inputs: `scored`/`relevant_ids`/`by_id` from
     `_lexical_scored` (Stage 0-1, already scoped/shaped), `sm` the semantic
@@ -937,13 +938,36 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
     if pl_rank:
         base_ordered, base_reserved = _stage4_and_5(stage3_base, stage3_base, is_assertable, rel_ext,
                                                     max_edges, coverage_share, relations)
-        adj_ids = [e.id for e in ordered]
+        adj_ids = [e.id for e in ordered]                 # the LANE's order
         base_ids = [e.id for e in base_ordered]
         n = len(adj_ids)
+        displaced = [i for i in base_ids[:n] if i not in set(adj_ids[:n])]
+        admitted = [i for i in adj_ids[:n] if i not in set(base_ids[:n])]
+        lane_reserved = reserved_ids
+        # THE DISPLACEMENT BUDGET (specs/0027 v15 §4h; research's candidate,
+        # the owner's word "build the displacement budget"): the lane's
+        # declared maximum number of displaced records. Enforced HERE, at the
+        # one construction where both orders exist (V-BUDGET-AT-THE-CHOKE-
+        # POINT — a limit one entry point enforces is not a general limit).
+        # On a breach the returned selection is the ALREADY-COMPUTED baseline
+        # (never a re-run without the lane: two paths that must agree can
+        # diverge), and `displaced`/`admitted`/the lane's reserve — captured
+        # ABOVE, before the fallback — keep what the lane WOULD have done
+        # (V-BREACH-EVIDENCE-PRESERVED: recomputed after the fallback,
+        # `displaced` would be empty and the field that exists to evidence the
+        # breach would be emptied by it). An undeclared cap is RECORDED as
+        # None, never omitted (V-DISPLACEMENT-BUDGET-RECORDED). Strictly
+        # greater: a lane displacing exactly its budget is within it.
+        budget_breached = max_displaced is not None and len(displaced) > max_displaced
+        if budget_breached:
+            ordered, reserved_ids = base_ordered, base_reserved
+        returned_ids = [e.id for e in ordered]
         receipt = {"baseline_order": base_ids,
-                   "adjusted_order": adj_ids,
-                   "displaced": [i for i in base_ids[:n] if i not in set(adj_ids[:n])],
-                   "admitted": [i for i in adj_ids[:n] if i not in set(base_ids[:n])],
+                   "adjusted_order": returned_ids,           # what was RETURNED (= baseline on a breach)
+                   "displaced": displaced,                   # what the lane displaced, or WOULD have
+                   "admitted": admitted,
+                   "max_displaced_declared": max_displaced,
+                   "budget_breached": budget_breached,
                    "delta_fused": {eid: fused_score[eid] - base_score[eid] for eid in pl_rank},
                    "budget_state": {"candidates": len(stage3), "max_edges": max_edges,
                                     "truncated": len(stage3) > max_edges,
@@ -952,8 +976,8 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
                    # for the boolean, so `reserve_unchanged` is DERIVABLE from
                    # the receipt rather than declared by it)
                    "reserved_baseline": list(base_reserved),
-                   "reserved_adjusted": list(reserved_ids),
-                   "reserve_unchanged": reserved_ids == base_reserved,
+                   "reserved_adjusted": list(lane_reserved),     # the LANE's reserve, breach or not
+                   "reserve_unchanged": lane_reserved == base_reserved,
                    "ranks_applied": dict(pl_rank)}
 
     meta = {}

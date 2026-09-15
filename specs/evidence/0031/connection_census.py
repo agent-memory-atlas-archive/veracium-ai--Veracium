@@ -627,15 +627,17 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: dotted/dataflow 5,937 -> 5,929, the rest unchanged; 0027 v14.1 (2026-09-14:
 #: the identifier constraint at `PolicyLane` — `IDENTIFIER_RE.match`, the
 #: `tags_matched` reads) moved dotted/dataflow 5,929 -> 5,933 and module-plain
-#: 313 -> 314, the rest unchanged.
+#: 313 -> 314, the rest unchanged; 0027 v15 (2026-09-15: the displacement
+#: budget — `max_displaced` reads on the lane, the breach fallback in
+#: `fused_subgraph`) moved dotted/dataflow 5,933 -> 5,941, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5933,
+    "dotted/dataflow": 5941,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 314,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6347
+SRC_ATTRIBUTE_TOTAL = 6355
 SRC_DATA_DUNDERS_IN_DATAFLOW = 130   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row
 
 
