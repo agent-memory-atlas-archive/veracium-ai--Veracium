@@ -38,7 +38,7 @@ first.*
 | | |
 |---|---|
 | **Author / session** | research (veracium-research), the candidate's author → dev (veracium-61), adopted 2026-09-15 from `0041-targeted-redaction-CANDIDATE.md` at rest (sha16 eecd5a4db4426058, re-read from the file at adoption) |
-| **Version** | **v2 — internal review folded into the BODY** (v1 carried it as a banner only). *Re-read before editing; quote the version you approve* |
+| **Version** | **v2.1 — adopted into the tree as 0041 (2026-09-15) with one sentence folded from research's internal read of the adopted copy: §2b's table count now points forward to `SCHEMA_V14`'s fifteen and §2b-ii-bis, so a linear reader does not meet the stale count before the correction (the external reviewer's standing objection, "replace those remaining conclusions, rather than adding another correction above them").** *Prior:* **v2 — internal review folded into the BODY** (v1 carried it as a banner only). *Re-read before editing; quote the version you approve* |
 | **Internal reviewers** | dev · research |
 | **External review** | **required** — touches `store/sqlite.py`, `store/edge_events.py`, `store/schema_version.py` |
 | **Decision + date** | — |
@@ -271,9 +271,13 @@ is orphaned. That is why this is redaction and not deletion.
 
 ## 2b. The other eight tables — swept 2026-09-13, three carriers found
 
-*The table above names six tables. `SCHEMA_V13` has fourteen. **The eight never
-examined are enumerated here with a verdict each, because an unexamined table
-and a cleared one are indistinguishable in a document that simply omits both.***
+*The table above names six tables. `SCHEMA_V13` had fourteen when this sweep
+was made; the schema has since moved to `SCHEMA_V14`'s fifteen, and the
+fifteenth — `policy_receipt`, 0027 v14 — is carried in §2b-ii-bis below
+(v2.1: the count corrected where a reader meets it first, not only where the
+correction lives). **The eight never examined are enumerated here with a
+verdict each, because an unexamined table and a cleared one are
+indistinguishable in a document that simply omits both.***
 
 ### Carriers — must be added to §2's treatment
 
