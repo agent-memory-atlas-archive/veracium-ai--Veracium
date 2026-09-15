@@ -1,3 +1,19 @@
+# Feature spec: targeted redaction — stored content removed, the record that it existed retained
+
+Spec-Status: draft
+
+> 🧭 **THE TITLE LINE IS FIRST ON PURPOSE — v3.2.** `specs/ALLOCATION.md`
+> renders a spec's FIRST LINE as its registry title, and every other spec
+> opens `# Feature spec: …` (0027, 0028, 0037, 0038 — checked). This file's
+> title had drifted to **line 47** under accumulated banners, so the registry
+> rendered whichever banner was on top: at v3 that was
+> `> # 0041 v3 — RESPUN FOR THE ROUND-1 RETURN, 2026-09-15` — a review round
+> and a date, carrying raw `> #` into a table cell, going stale at every
+> respin, and **displacing the 0040/0041 renumber notice from the one surface
+> that notice exists to protect: the place people look up a number.**
+> **Banners go BELOW the title from here. A banner that outranks the title
+> renames the spec.**
+
 > # 0041 v3 — RESPUN FOR THE ROUND-1 RETURN, 2026-09-15
 >
 > **All seven findings are addressed, and all seven were spec-level.** F1 §2/§2d/§2e
@@ -44,10 +60,6 @@
 > pre-v14.1 schema comment. The tree's own references move at adoption, in dev's
 > commit.
 
-# Feature spec: targeted redaction
-
-Spec-Status: draft
-
 *Research-authored candidate, 2026-09-12, on Quentin's word **"Write the 0040
 candidate"**. Premises already ruled: **C0 answer 2** (the product owes a
 redaction/erase surface), **"keep the split"** (ledger rows cascade, judgments
@@ -59,7 +71,7 @@ first.*
 | | |
 |---|---|
 | **Author / session** | research (veracium-research), the candidate's author → dev (veracium-61), adopted 2026-09-15 from `0041-targeted-redaction-CANDIDATE.md` at rest (v3: sha16 1d0c0389bef11a3f, re-read from the file at adoption; v2.1 earlier the same day from eecd5a4db4426058) |
-| **Version** | **v3.1 — four things folded at adoption from the second seat's exchange over v3 (dev carried, research verified): §4e's exemption of the semantic rebuild, stated with the property it depends on and INV-12 as a test; §4f's two conditions on partial-and-say-so and the refusal split; §4g's standing notice EXECUTED at the tree (representable, but `doctor` reports it as an error and `export` carries no events at all) — §11.4 gains the doctor exemption row and its export/import row is replaced, §8's narrowing is extended to "until a carrier is BUILT"; nothing else moved.** *Prior:* **v3 — RESPUN FOR THE ROUND-1 RETURN, 2026-09-15.** Folds all seven findings: **F1** the carrier inventory rebuilt (§2, §2d, §2e — the enumeration's own model set was a hand-list, and §2's recorded negative on `json.original_relation` was FALSE); **F2** publication-time validation (§4e); **F3** the tombstone defined and the `TEXT NOT NULL` claim withdrawn, plus the episode record and the reader inventory (§4b, §4b-ii, §4b-iii); **F4** the receipt selection rule and its conservative outcome (§4f); **F5** the import contract (§4g); **F6** ⚖️ **RULED BY THE OWNER — *"outputs are separate"*** (§10.1, §8 narrowed); **F7** §11, **THE OPERATIVE CONTRACT — everything above §11 is historical discussion and §11 GOVERNS where they conflict.** *Re-read before editing; quote the version you approve* |
+| **Version** | **v3.2 — the title line moved to line 1 (research's second-seat read of 6831bcf: `specs/ALLOCATION.md` renders a spec's first line as its registry title, and the v3 banner had become 0041's name there, displacing the renumber notice from the one surface it protects); the note under the title records why; every banner now sits below it. Text otherwise unchanged.** *Prior:* **v3.1 — four things folded at adoption from the second seat's exchange over v3 (dev carried, research verified): §4e's exemption of the semantic rebuild, stated with the property it depends on and INV-12 as a test; §4f's two conditions on partial-and-say-so and the refusal split; §4g's standing notice EXECUTED at the tree (representable, but `doctor` reports it as an error and `export` carries no events at all) — §11.4 gains the doctor exemption row and its export/import row is replaced, §8's narrowing is extended to "until a carrier is BUILT"; nothing else moved.** *Prior:* **v3 — RESPUN FOR THE ROUND-1 RETURN, 2026-09-15.** Folds all seven findings: **F1** the carrier inventory rebuilt (§2, §2d, §2e — the enumeration's own model set was a hand-list, and §2's recorded negative on `json.original_relation` was FALSE); **F2** publication-time validation (§4e); **F3** the tombstone defined and the `TEXT NOT NULL` claim withdrawn, plus the episode record and the reader inventory (§4b, §4b-ii, §4b-iii); **F4** the receipt selection rule and its conservative outcome (§4f); **F5** the import contract (§4g); **F6** ⚖️ **RULED BY THE OWNER — *"outputs are separate"*** (§10.1, §8 narrowed); **F7** §11, **THE OPERATIVE CONTRACT — everything above §11 is historical discussion and §11 GOVERNS where they conflict.** *Re-read before editing; quote the version you approve* |
 | **Prior chain** | v1 (banner-only internal read) → **v2** (internal review folded into the BODY) → **v2.1** (§2b's table count points forward to the fifteenth table, folded by dev at `436e4d4` before round 1) → **v3** (this) |
 | **Internal reviewers** | dev · research |
 | **External review** | **required** — touches `store/sqlite.py`, `store/edge_events.py`, `store/schema_version.py` |
