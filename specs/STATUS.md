@@ -63,6 +63,11 @@ closing a finding rewrites no other spec's text.
 
 **Rounds recorded outside the ledger** — so a `0` in *ext* is not read as
 "never reviewed": **0027** — accepted at external round 9 per its own header; those rounds predate `specs/reviews.py` and are recorded in the spec; **0029** — its rounds are housed in **0030**'s ledger (one ledger for the joint review stream; each row names its target); **0032** — no rounds in `specs/reviews.py` and no round named in its header (owner-accepted under PROCESS §4a's second path, or a gap).
+A `draft` spec under the hand-assembled seal shows `0` here until acceptance:
+that protocol writes its `specs/reviews.py` rows and one closure row per
+finding AT the acceptance fold (0037, 0038, 0039), and until then the spec's
+own Version cell and Prior chain, and its packages' `prior-rounds/`, are the
+round record — so a returned draft is not "never reviewed" either.
 The header total counts ledger rounds only.
 
 **Columns.** *updated* is `git log -1` on the file — or today, when the file has

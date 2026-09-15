@@ -182,6 +182,11 @@ closing a finding rewrites no other spec's text.
 
 **Rounds recorded outside the ledger** — so a `0` in *ext* is not read as
 "never reviewed": {"; ".join(outside_ledger) if outside_ledger else "none"}.
+A `draft` spec under the hand-assembled seal shows `0` here until acceptance:
+that protocol writes its `specs/reviews.py` rows and one closure row per
+finding AT the acceptance fold (0037, 0038, 0039), and until then the spec's
+own Version cell and Prior chain, and its packages' `prior-rounds/`, are the
+round record — so a returned draft is not "never reviewed" either.
 The header total counts ledger rounds only.
 
 **Columns.** *updated* is `git log -1` on the file — or today, when the file has
