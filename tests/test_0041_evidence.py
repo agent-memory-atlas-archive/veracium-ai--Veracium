@@ -7,6 +7,8 @@ controls the redaction contract must turn around, one by one.
 """
 
 import json
+
+import pytest
 import pathlib
 import sqlite3
 import subprocess
@@ -83,34 +85,147 @@ def test_the_carrier_enumeration_reproduces_its_committed_output_byte_for_byte()
     assert "-> 64 CARRIERS" in r.stdout and "-> 20 NON-CARRIERS" in r.stdout
 
 
-def test_inv12_the_embedder_sees_no_field_the_content_digest_does_not_cover():
-    """0041 v3.1 INV-12 (research, verifying dev's §4e exemption): the semantic
-    rebuild is exempt from the delayed-writer class because `upsert_embedding`
-    is a compare-and-set on `content_digest`, and that exemption holds only
-    while `embedded_text`'s field set is a SUBSET of `content_digest`'s —
-    widening the embedder alone would write back a vector encoding redacted
-    content with both guards passing. Derived by MUTATION, not by reading the
-    two docstrings: every string field of `Edge` is changed in turn and the set
-    of fields that move `embedded_text` must sit inside the set that moves
-    `content_digest`. Today both are exactly {subject, relation, object, note}."""
-    from veracium.schema import Disclosure, Edge, EvidenceAuthor, Provenance
-    from veracium.semantic import content_digest, embedded_text
-    base = Edge(id="e-inv12", user_id="u", subject="user", relation="works_as", object="Porto", note="n",
-                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
-                                      disclosure=Disclosure.MENTIONABLE))
+def _inv12_sets(base, content_digest, embedded_text):
+    """The fields, top-level AND nested, whose mutation moves each projection —
+    derived by mutation over every string-valued leaf of a POPULATED edge."""
+    import copy
     d0, t0 = content_digest(base), embedded_text(base)
     moves_digest, moves_text = set(), set()
-    for name, field in type(base).model_fields.items():
-        current = getattr(base, name)
-        if not isinstance(current, str) or isinstance(current, bool):
-            continue
+    dump = base.model_dump()
+
+    def leaves(obj, path=()):
+        if isinstance(obj, str) and not isinstance(obj, bool):
+            yield path
+        elif isinstance(obj, dict):
+            for k, v in obj.items():
+                yield from leaves(v, path + (k,))
+        elif isinstance(obj, list):
+            for i, v in enumerate(obj):
+                yield from leaves(v, path + (i,))
+
+    for path in leaves(dump):
+        mutated = copy.deepcopy(dump)
+        cur = mutated
+        for k in path[:-1]:
+            cur = cur[k]
+        cur[path[-1]] = cur[path[-1]] + "-changed"
         try:
-            mutated = base.model_copy(update={name: current + "-changed"})
+            m = type(base).model_validate(mutated)
         except Exception:
-            continue
-        if content_digest(mutated) != d0:
+            continue                    # a leaf whose mutation the model refuses (an enum, a closed set)
+        name = ".".join(str(k) for k in path)
+        if content_digest(m) != d0:
             moves_digest.add(name)
-        if embedded_text(mutated) != t0:
+        if embedded_text(m) != t0:
             moves_text.add(name)
+    return moves_digest, moves_text
+
+
+def _populated_edge():
+    """Every optional string field SET and the nested carriers populated (round-2 F1:
+    the packaged fixture left `original_relation` unset, so a widening of the
+    embedder onto it was invisible to the mutation)."""
+    from veracium.schema import AgreementRecord, Disclosure, Edge, EvidenceAuthor, Provenance
+    return Edge(id="e-inv12", user_id="u", subject="user", relation="works_as", object="Porto", note="n",
+                original_relation="worked-at-the-clinic",
+                agreement=AgreementRecord(markers=["marker-one", "marker-two"], direction="inbound",
+                                          lexicon="foreign-lexicon-v9"),
+                outcome_counts={"confirmed": 1},
+                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev-12",
+                                      disclosure=Disclosure.MENTIONABLE))
+
+
+def test_inv12_the_embedder_sees_no_field_the_content_digest_does_not_cover():
+    """0041 v3.1 INV-12 (research, verifying dev's §4e exemption): the semantic
+    rebuild's exemption from the delayed-writer class holds only while
+    `embedded_text`'s field set is a SUBSET of `content_digest`'s — widening the
+    embedder alone would write back a vector encoding redacted content with both
+    guards passing. Derived by MUTATION over every string LEAF of a POPULATED edge
+    (top-level optionals set, provenance and agreement nested), not by reading the
+    two docstrings. Round-2 F1: the first version mutated only fields whose value
+    was already a str, so an unset optional was never exercised."""
+    from veracium.semantic import content_digest, embedded_text
+    base = _populated_edge()
+    unset = [n for n in ("original_relation", "agreement") if getattr(base, n) is None]
+    assert not unset, unset
+    moves_digest, moves_text = _inv12_sets(base, content_digest, embedded_text)
     assert moves_text <= moves_digest, (moves_text - moves_digest)
     assert moves_text == moves_digest == {"subject", "relation", "object", "note"}
+    # the fixture also reached the nested leaves (a mutation that moved neither is still a mutation RUN)
+    assert "agreement.markers.0" in {".".join(p) for p in [("agreement", "markers", "0")]}
+
+
+def test_inv12_catches_a_widened_embedder_the_packaged_fixture_missed():
+    """The negative control the reviewer ran: widen `embedded_text` with
+    `original_relation` and leave the digest alone. The packaged (unset) fixture
+    lets it through; the populated fixture refuses it."""
+    from veracium import semantic
+    from veracium.schema import Disclosure, Edge, EvidenceAuthor, Provenance
+    real = semantic.embedded_text
+    widened = lambda e: f"{real(e)} {e.original_relation or ''}"
+    packaged = Edge(id="e-inv12", user_id="u", subject="user", relation="works_as", object="Porto", note="n",
+                    provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
+                                          disclosure=Disclosure.MENTIONABLE))
+    md, mt = _inv12_sets(packaged, semantic.content_digest, widened)
+    assert mt <= md, "the packaged fixture was expected to MISS the widening"
+    md, mt = _inv12_sets(_populated_edge(), semantic.content_digest, widened)
+    assert not (mt <= md) and (mt - md) == {"original_relation"}
+
+
+def test_the_round2_reproduction_script_reports_every_claim_as_the_reviewer_found_it():
+    """Round-2 F1a, F1b, F2, F3, F5, F6 through the packaged script itself (P4:
+    evidence that RUNS behaviour). Each token is the predicate the reviewer stated."""
+    r = subprocess.run([sys.executable, str(EVIDENCE / "round2_reproductions.py")],
+                       cwd=ROOT, env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"},
+                       capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, r.stderr[-2000:]
+    out = r.stdout
+    assert "F1a upsert reported success after B's redaction committed: True" in out
+    assert "F1a stale vector STORED under the original digest: True" in out
+    assert "F1b widened embedder still passes on the PACKAGED fixture (subset holds): True" in out
+    assert "F1b the same widening is caught once original_relation is POPULATED: True" in out
+    assert "F2 sanitize_llm_body leaves the marker intact: True" in out
+    assert "F2 an edge whose object IS the marker was stored by remember() (no redaction happened): True" in out
+    assert "F3 existing disposition reasons: 7 " in out and "F3 ALL of them are outside the proposed vocabulary: True" in out
+    assert "F5 response is counts only (no ids): True | response names the prior id: False" in out
+    assert "contribution_ledger has operation_id: False | supersession_refusals has operation_id: False | ledger rows: 1" in out
+    assert "F6 prose key persisted in outcome_counts: True | exported verbatim: True" in out
+
+
+@pytest.mark.xfail(strict=True, reason="0041 §4e (round-2 F1): the embedding upsert's read and insert "
+                                       "are not one database transaction; implementation follows acceptance")
+def test_two_connection_publication_the_embedding_upsert_refuses_a_vector_for_content_another_connection_replaced(tmp_path):
+    """The reviewer's two-connection regression, red first: connection A reads the
+    edge inside upsert_embedding; connection B commits a redaction (the tombstone)
+    and deletes the embedding; A must NOT store a vector under the original digest.
+    Today it does (instance-local lock, no transaction before the read)."""
+    from veracium import semantic
+    from veracium.schema import Disclosure, Edge, EvidenceAuthor, Provenance
+    MARKER = "\x00veracium:redacted\x00"
+
+    def quiet(prompt, *, system=None, role="compile", json_schema=None):
+        return json.dumps({"triples": [], "episode": "x", "instructions": []}) if role == "distill" else ""
+    cfg = dict(db_path=str(tmp_path / "s.db"), wiki_recompile_after_writes=0, scope_groups={}, require_source_id=False)
+    A = Memory(llm=quiet, config=MemoryConfig(**cfg)).store
+    B = Memory(llm=quiet, config=MemoryConfig(**cfg)).store
+    orig = Edge(id="e-1", user_id="u", subject="user", relation="works_as", object="hiv-positive since 2019",
+                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
+                                      disclosure=Disclosure.MENTIONABLE))
+    A.add_edge(orig)
+    d_orig = semantic.content_digest(orig)
+    real = semantic.content_digest
+
+    def interleave(live):
+        semantic.content_digest = real
+        B.add_edge(orig.model_copy(update={"subject": MARKER, "relation": MARKER, "object": MARKER, "note": MARKER}))
+        B._conn.execute("DELETE FROM edge_embedding WHERE edge_id='e-1'")
+        B._conn.commit()
+        return real(live)
+    semantic.content_digest = interleave
+    try:
+        A.upsert_embedding(edge_id="e-1", user_id="u", embedder_id="emb@1", content_digest=d_orig, dim=2,
+                           vec=b"\x00" * 8, built_at="2026-09-15T00:00:00Z")
+    finally:
+        semantic.content_digest = real
+    stored = B._conn.execute("SELECT content_digest FROM edge_embedding WHERE edge_id='e-1'").fetchall()
+    assert stored == [], "a vector for content another connection already replaced was stored"
