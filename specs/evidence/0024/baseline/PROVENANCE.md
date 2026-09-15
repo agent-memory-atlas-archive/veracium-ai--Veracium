@@ -17,6 +17,15 @@ RESULTS_POSTFIX.md + postfix_records.jsonl (post-fix, main @ `1b542b9`,
 probe-paired). `probes.jsonl` is the frozen 48-probe matrix;
 `run_baseline.py`/`run_postfix.py` are the harness.
 
+> **Post-acceptance evidence maintenance, 2026-09-15 (0024 v20.1):** both harness
+> scripts carried this machine's absolute path (`/home/ubuntu/Dev/veracium`) in
+> their `sys.path` line, their `git -C` calls and their docstring. They now locate
+> the repo root from their own file. The shipped records above were produced by the
+> pre-maintenance scripts; the change is path resolution only (`git diff` of the
+> maintenance commit shows nothing else), the runs are not repeated, and
+> `DIGESTS.sha256` is re-pinned for the two scripts and this file. The finite-
+> acceptance boundary (v20) makes this evidence maintenance, not a design change.
+
 Canary-subject records (added at round 15, EVIDENCE-R15-1): the
 canary floor is artifact-verified BY THE SHIPPED 2026-08-24 records
 (`canary_subject_records.jsonl`; chain and the one disclosed benign

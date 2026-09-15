@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 """0024 conflation baseline runner. Run with the LIVE tree's venv:
-  /home/ubuntu/Dev/veracium/.venv/bin/python run_baseline.py
+  .venv/bin/python specs/evidence/0024/baseline/run_baseline.py   (from the repo root; the script locates the tree from its own path)
 Measures current main (pre-0024-fix); the post-fix re-run uses the SAME
 frozen probes and pairs probe-for-probe. Store-level classification
 first (classify from artifacts), answer classification second.
 """
 import json, os, re, subprocess, sys, tempfile, time
 
-sys.path.insert(0, "/home/ubuntu/Dev/veracium/src")
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))   # the repo root, from this file (post-acceptance maintenance 2026-09-15: no absolute local path)
+sys.path.insert(0, os.path.join(ROOT, "src"))
 
-COMMIT = subprocess.run(["git", "-C", "/home/ubuntu/Dev/veracium",
+COMMIT = subprocess.run(["git", "-C", ROOT,
                          "rev-parse", "--short", "HEAD"],
                         capture_output=True, text=True).stdout.strip()
-DIRTY_SRC = subprocess.run(["git", "-C", "/home/ubuntu/Dev/veracium",
+DIRTY_SRC = subprocess.run(["git", "-C", ROOT,
                             "status", "--porcelain", "--", "src/", "tests/"],
                            capture_output=True, text=True).stdout.strip()
 
