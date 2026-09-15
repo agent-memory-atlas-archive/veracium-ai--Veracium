@@ -71,7 +71,7 @@ them. Library and MCP callers that pass no `policy` change nothing.
   1–64 characters, no whitespace; at most 64 tags) and are refused at construction otherwise —
   the receipt persists them verbatim, and v14 had accepted a sentence or a 400-character tag into
   the `policy_receipt` row while its schema comment claimed the row carried no content. Bounded,
-  not content-free: an identifier can still name a person, which specs/0040 records as the same
+  not content-free: an identifier can still name a person, which specs/0041 records as the same
   class as `evidence_ref` and `source_id` — and the identifier alphabet is the alphabet of
   structured personal data (`ssn:123-45-6789`, `dob:1974-03-02`, `dx:C50.9` all pass). **Who must
   act:** a host whose policy ids, versions or tags carry spaces or punctuation beyond `._:-`, or

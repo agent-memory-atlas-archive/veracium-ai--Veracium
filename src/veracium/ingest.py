@@ -734,7 +734,7 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
             # specs/0037 v19 §4a-iii (research's red team, 2026-09-13): the verified span
             # is NOT stored — `note` is the one field every non-procedural record renders,
             # and a successor that dropped the stamp rendered it; a digest of the span
-            # would be a confirmation oracle (0040 §4's content-digest carrier). The span
+            # would be a confirmation oracle (0041 §4's content-digest carrier). The span
             # is verified and DISCARDED; the record's evidence is the event's own
             # evidence_ref, and no stored field holds the payload, by construction.
             note_str = ""

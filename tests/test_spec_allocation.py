@@ -123,13 +123,20 @@ def test_a_spent_number_is_never_handed_out_again__with_its_controls(monkeypatch
     for n in allocation.SPENT:
         assert n not in {r["number"] for r in allocation.holders()}
     assert allocation.allocation_problems() == []
-    # the control: without the table, the first free number above the tree is
-    # handed out even if it was spent
+    # the control: at the tree state where the table DECIDES — the holders
+    # below the spent number (0041, targeted redaction, took the number the
+    # table steered to on 2026-09-15, so the live tree no longer tops at 0039)
+    # — the table hands out the number after the spent one, and without the
+    # table the spent number itself is handed out
+    real = allocation.holders()
+    below = [r for r in real if r["number"] < "0040"]
+    assert below and max(r["number"] for r in below) == "0039"
+    monkeypatch.setattr(allocation, "holders", lambda: below)
+    with_table = allocation.next_uncontested()
     monkeypatch.setattr(allocation, "SPENT", {})
     bare = allocation.next_uncontested()
     monkeypatch.undo()
-    assert bare <= nxt and (bare in allocation.SPENT or bare == nxt)
-    assert "0040" in allocation.SPENT and bare == "0040"
+    assert "0040" in allocation.SPENT and bare == "0040" and with_table == "0041"
     # a tree file holding a SPENT number is a reuse, refused by name
     monkeypatch.setattr(allocation, "SPENT", {top: dict(next(iter(allocation.SPENT.values())))})
     assert any(f"SPENT {top} is also held by" in p for p in allocation.allocation_problems())

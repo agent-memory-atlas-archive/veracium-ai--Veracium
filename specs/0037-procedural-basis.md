@@ -793,7 +793,7 @@ REFUSED and counted in `procedural_refused`, nothing written, never filed as
    non-procedural record renders — "never rendered" was a property of the
    exclusion, not of the field, and a successor that dropped the stamp rendered
    it (below). A digest of the span is not stored either: a sha256 of the
-   user's own sentence is a confirmation oracle (0040 §4's content-digest
+   user's own sentence is a confirmation oracle (0041 §4's content-digest
    carrier). WHAT THIS ESTABLISHES, made exact at v21 on the round-2 reviewer's
    finding ("no stored field holds the span" was an overstatement — with the
    gloss equal to the quote, `object` held the sentence): `object` IS the
@@ -1300,7 +1300,7 @@ bar) and BEFORE any implementation line.
   corpus edited without its spec line cannot either. At acceptance the
   same digest moves into `## Review closure`.
 
-corpus sha256: f815b44878c7f55640de911eeac68973c6455a91940ce1a0e2643a5c671a8185
+corpus sha256: 7d4e6719cc95b352b4eef65272507e8e0e5f27fb8bf3722eeacf6f583b3b9626
 
 - **Cells — GENERATED, not enumerated here (round-2 fold, research's
   finding on v11's first draft):** the corpus generates its product cells

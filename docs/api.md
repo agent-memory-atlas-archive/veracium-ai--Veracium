@@ -264,7 +264,7 @@ bounded; it is not content-free. Bounded to WHAT: letters, digits and `._:-` is 
 structured identifiers, which is the alphabet of most structured personal data — `ssn:123-45-6789`,
 `dob:1974-03-02`, `dx:C50.9`, `phone:555-123-4567` all pass and are persisted verbatim in the
 receipt. The rule the alphabet cannot enforce, stated in words: **a policy tag names a policy, not a
-subject.** Redaction reach over the receipt is specs/0040's. `max_displaced` (spec 0027 §4h) declares the most
+subject.** Redaction reach over the receipt is specs/0041's. `max_displaced` (spec 0027 §4h) declares the most
 records the lane may displace from the returned selection — an int ≥ 0, `None` for no cap, `0` for
 "reorder but never change membership"; on a breach the call returns the selection it would have
 returned with no policy, and the receipt records `budget_breached=True` with `displaced` still naming

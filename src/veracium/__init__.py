@@ -176,14 +176,14 @@ class PolicyLane:
                 raise ValueError(f"PolicyLane.max_displaced must be an int >= 0 or None; got {self.max_displaced!r}")
             if self.max_displaced < 0:
                 raise ValueError(f"PolicyLane.max_displaced must be >= 0; got {self.max_displaced!r}")
-        # specs/0027 v14.1 (research's pre-adoption read of 0040, 2026-09-14):
+        # specs/0027 v14.1 (research's pre-adoption read of 0041, 2026-09-14):
         # the policy's identity fields are HOST-SUPPLIED strings that the
         # receipt persists VERBATIM, so they are bounded to identifier shape
         # — IDENTIFIER_RE, at most 64 characters each, at most 64 tags — and
         # refused otherwise; the receipt's blob column then carries nothing a
         # host did not shape as an identifier. Bounded, not content-free: an
         # identifier can still be a label about a person
-        # (`diagnosis:hiv-positive` passes every rule here), which is 0040's
+        # (`diagnosis:hiv-positive` passes every rule here), which is 0041's
         # class for `evidence_ref`, `source_id` and `correlation_id`, and is
         # stated as the limit rather than claimed away.
         _require_identifier("PolicyLane.policy_id", self.policy_id)
@@ -217,7 +217,7 @@ class PolicyReceipt:
     recomputed from the receipt; `recall_id` is a minted opaque correlation
     key (no content, no oracle) the host joins to its own logs. Ids only — no
     content, no query, no digest of the query (a digest of user prose is a
-    confirmation oracle, 0040 §4); a receipt naming a record later redacted
+    confirmation oracle, 0041 §4); a receipt naming a record later redacted
     becomes unreadable, which is the correct degradation."""
     recall_id: str
     policy_id: str

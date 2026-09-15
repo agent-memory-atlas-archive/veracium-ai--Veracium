@@ -4,11 +4,11 @@
 
 # Spec status
 
-**35 specs · 34 accepted · 392 external review
+**36 specs · 34 accepted · 392 external review
 rounds · 0 blocking questions open.**
 
 **Only `accepted` authorises implementation** (`PROCESS.md` §4a), and external
-review is required to reach it. **34 of 35 are accepted**, which
+review is required to reach it. **34 of 36 are accepted**, which
 is the number that decides what can be built.
 
 | # | spec | status | updated | int | ext | open Q | blocking | findings | code |
@@ -45,9 +45,10 @@ is the number that decides what can be built.
 | **0030** | time-relative trust classification | `accepted` | 2026-09-08 | 0 | 18 | 0 | 0 | 0 | — |
 | **0031** | the agent-facing trust surface | `accepted` | 2026-09-08 | 0 | 16 | 0 | 0 | 0 | — |
 | **0032** | the valid-time predicate at the present | `accepted` | 2026-09-04 | 0 | 0 | 0 | 0 | 0 | — |
-| **0037** | procedural records and the `basis` axis (stages 1–3) | `accepted` | 2026-09-14 | 0 | 5 | 0 | 0 | 0 | — |
+| **0037** | procedural records and the `basis` axis (stages 1–3) | `accepted` | 2026-09-15 | 0 | 5 | 0 | 0 | 0 | — |
 | **0038** | the extraction's speech-act discipline | `accepted` | 2026-09-14 | 0 | 4 | 0 | 0 | 0 | — |
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
+| **0041** | targeted redaction | `draft` | 2026-09-15 | 0 | 0 | 0 | 0 | 0 | — |
 
 **Review archives** — the exact package sent for each round, with a sha256 per
 archive — are indexed in `specs/archives/INDEX.md`.

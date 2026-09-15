@@ -511,10 +511,10 @@ SCHEMA_V13 = SCHEMA_V12 + (
 # ids only (V-RECEIPT-IDS-ONLY); its policy identity fields (`policy_id`,
 # `policy_version`, `tags_matched`) are HOST-SUPPLIED strings, bounded to
 # identifier shape at `PolicyLane` (v14.1) and persisted verbatim — bounded,
-# not content-free, 0040's class for `evidence_ref` and `source_id`; the
+# not content-free, 0041's class for `evidence_ref` and `source_id`; the
 # `receipt` column is therefore a second blob carrier beside `edges.json`
-# that 0040's enumeration must reach as such (research's pre-adoption read
-# of 0040, 2026-09-14: the earlier wording here claimed "never content" of a
+# that 0041's enumeration must reach as such (research's pre-adoption read
+# of 0041, 2026-09-14: the earlier wording here claimed "never content" of a
 # column that held whatever the host passed). Policies: the table REQUIRED (an audit
 # record is not derivable from current state — the 0029 `edge_event`
 # argument; its absence is damage, not drift); the time index REBUILDABLE
