@@ -18,7 +18,7 @@ probe-paired). `probes.jsonl` is the frozen 48-probe matrix;
 `run_baseline.py`/`run_postfix.py` are the harness.
 
 > **Post-acceptance evidence maintenance, 2026-09-15 (0024 v20.1):** both harness
-> scripts carried this machine's absolute path (`/home/ubuntu/Dev/veracium`) in
+> scripts carried this machine's absolute path (the developer's home directory) in
 > their `sys.path` line, their `git -C` calls and their docstring. They now locate
 > the repo root from their own file. The shipped records above were produced by the
 > pre-maintenance scripts; the change is path resolution only (`git diff` of the
