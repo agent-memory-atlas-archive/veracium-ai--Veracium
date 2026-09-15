@@ -1,0 +1,285 @@
+A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V14 — 15 tables
+
+   confirmations            id, user_id, edge_id, confirmed_at, actor, call_path, correlation_id, request_digest
+   consolidation_ops        operation_id, user_id, state, owner, lease_expires_at, claimed_ids
+   contribution_ledger      id, user_id, survivor_type, survivor_id, site, identity_digest, evidence_ref_digest, payload, op_key, created_at, contributor_type, contributor_ref
+   edge_embedding           edge_id, user_id, embedder_id, content_digest, vec, built_at
+   edge_event               user_id, edge_id, kind, reason, state, recorded_at
+   edges                    id, user_id, subject ←DUPLICATES json, relation ←DUPLICATES json, object ←DUPLICATES json, json
+   episodes                 id, user_id, date, json
+   policy_receipt           user_id, recall_id, policy_id, policy_version, recorded_at, receipt
+   source_revocations       user_id, identity_digest, action, at, reason
+   store_epoch              started_at
+   store_identity           origin
+   supersession_operations  user_id, operation_id, logical_request_digest, status, request_digest, response, request_digest_domain
+   supersession_refusals    refusal_id, user_id, prior_edge_id, incoming_edge_id, relation, rule_version, created_at
+   wiki                     user_id, text
+   write_counter            user_id
+
+   → 3 columns duplicate a json field: ['edges.subject', 'edges.relation', 'edges.object']
+     INV-2 must plant a mutant PER COLUMN, enumerated from here.
+     Every other TEXT column above is a candidate carrier §2 must
+     name or explicitly record as a non-carrier.
+
+B. Model fields that can carry TEXT — the DDL is blind to these
+   18 models DISCOVERED in veracium.schema, never named: AgreementRecord, Confirmation, ConsolidationOp, ConsolidationOutputDraft, ContestedGroup, ContestedLinkage, ContributionDraft, ContributionRecord, CorrectionAuthorisation, Edge, Episode, OutcomeJudgmentDraft, Provenance, Relation, SupersessionPlan, SupersessionRefusal, SupersessionRefusalDraft, SupersessionResult
+
+     AgreementRecord.markers                     list[str]
+     AgreementRecord.direction                   <class 'str'>
+     AgreementRecord.lexicon                     <class 'str'>
+     Confirmation.edge_id                     <class 'str'>
+     Confirmation.correlation_id              <class 'str'>
+     Confirmation.request_digest              <class 'str'>
+     ConsolidationOp.operation_id                <class 'str'>
+     ConsolidationOp.owner                       <class 'str'>
+     ConsolidationOp.lease_expires_at            <class 'str'>
+     ConsolidationOp.claimed_ids                 list[str]
+     ConsolidationOutputDraft.summary                     <class 'str'>
+     ConsolidationOutputDraft.date_start                  <class 'str'>
+     ConsolidationOutputDraft.date_end                    <class 'str'>
+     ContestedGroup.subject                     <class 'str'>
+     ContestedGroup.relation                    <class 'str'>
+     ContestedGroup.exposed.id                  <class 'str'>
+     ContestedGroup.exposed.user_id             <class 'str'>
+     ContestedGroup.exposed.subject             <class 'str'>
+     ContestedGroup.exposed.relation            <class 'str'>
+     ContestedGroup.exposed.object              <class 'str'>
+     ContestedGroup.exposed.note                <class 'str'>
+     ContestedGroup.exposed.provenance.evidence_ref<class 'str'>
+     ContestedGroup.exposed.provenance.source_idtyping.Optional[str]
+     ContestedGroup.exposed.provenance.origin   typing.Optional[str]
+     ContestedGroup.exposed.invalidation_reason typing.Optional[str]
+     ContestedGroup.exposed.supersedes          typing.Optional[str]
+     ContestedGroup.exposed.original_relation   typing.Optional[str]
+     ContestedGroup.exposed.agreement.markers   list[str]
+     ContestedGroup.exposed.agreement.direction <class 'str'>
+     ContestedGroup.exposed.agreement.lexicon   <class 'str'>
+     ContestedGroup.exposed.outcome_counts      dict[str, int]
+     ContestedGroup.linkage.edge_id             <class 'str'>
+     ContestedGroup.linkage.partition           <class 'str'>
+     ContestedGroup.prior_edge_ids              list[str]
+     ContestedLinkage.edge_id                     <class 'str'>
+     ContestedLinkage.partition                   <class 'str'>
+     ContributionDraft.site                        <class 'str'>
+     ContributionDraft.survivor_type               <class 'str'>
+     ContributionDraft.survivor_id                 <class 'str'>
+     ContributionDraft.contributor_type            <class 'str'>
+     ContributionDraft.contributor_id              <class 'str'>
+     ContributionRecord.survivor_type               <class 'str'>
+     ContributionRecord.survivor_id                 <class 'str'>
+     ContributionRecord.site                        <class 'str'>
+     ContributionRecord.identity_digest             typing.Optional[str]
+     ContributionRecord.evidence_ref_digest         typing.Optional[str]
+     ContributionRecord.op_key                      typing.Optional[str]
+     ContributionRecord.contributor_type            typing.Optional[str]
+     ContributionRecord.contributor_ref             typing.Optional[str]
+     CorrectionAuthorisation.origin                      <class 'str'>
+     CorrectionAuthorisation.prior_edge_id               <class 'str'>
+     CorrectionAuthorisation.replacement_digest          <class 'str'>
+     CorrectionAuthorisation.kind                        <class 'str'>
+     CorrectionAuthorisation.principal                   <class 'str'>
+     Edge.subject                     <class 'str'>
+     Edge.relation                    <class 'str'>
+     Edge.object                      <class 'str'>
+     Edge.note                        <class 'str'>
+     Edge.provenance.evidence_ref     <class 'str'>
+     Edge.provenance.source_id        typing.Optional[str]
+     Edge.provenance.origin           typing.Optional[str]
+     Edge.invalidation_reason         typing.Optional[str]
+     Edge.supersedes                  typing.Optional[str]
+     Edge.original_relation           typing.Optional[str]
+     Edge.agreement.markers           list[str]
+     Edge.agreement.direction         <class 'str'>
+     Edge.agreement.lexicon           <class 'str'>
+     Edge.outcome_counts              dict[str, int]
+     Episode.date                        <class 'str'>
+     Episode.summary                     <class 'str'>
+     Episode.provenance.evidence_ref     <class 'str'>
+     Episode.provenance.source_id        typing.Optional[str]
+     Episode.provenance.origin           typing.Optional[str]
+     Episode.kind                        <class 'str'>
+     Episode.edge_id                     typing.Optional[str]
+     Episode.context_ref                 typing.Optional[str]
+     Episode.retired_reason              typing.Optional[str]
+     Episode.supersedes_episode          typing.Optional[str]
+     Episode.claimed_by                  typing.Optional[str]
+     Episode.operation_id                typing.Optional[str]
+     Episode.lineage                     typing.Optional[list[str]]
+     Episode.date_start                  typing.Optional[str]
+     Episode.date_end                    typing.Optional[str]
+     OutcomeJudgmentDraft.event_timestamp             <class 'str'>
+     OutcomeJudgmentDraft.summary                     <class 'str'>
+     OutcomeJudgmentDraft.context_ref                 typing.Optional[str]
+     Provenance.evidence_ref                <class 'str'>
+     Provenance.source_id                   typing.Optional[str]
+     Provenance.origin                      typing.Optional[str]
+     Relation.name                        <class 'str'>
+     Relation.desc                        <class 'str'>
+     SupersessionPlan.incoming_edge.id            <class 'str'>
+     SupersessionPlan.incoming_edge.user_id       <class 'str'>
+     SupersessionPlan.incoming_edge.subject       <class 'str'>
+     SupersessionPlan.incoming_edge.relation      <class 'str'>
+     SupersessionPlan.incoming_edge.object        <class 'str'>
+     SupersessionPlan.incoming_edge.note          <class 'str'>
+     SupersessionPlan.incoming_edge.provenance.evidence_ref<class 'str'>
+     SupersessionPlan.incoming_edge.provenance.source_idtyping.Optional[str]
+     SupersessionPlan.incoming_edge.provenance.origintyping.Optional[str]
+     SupersessionPlan.incoming_edge.invalidation_reasontyping.Optional[str]
+     SupersessionPlan.incoming_edge.supersedes    typing.Optional[str]
+     SupersessionPlan.incoming_edge.original_relationtyping.Optional[str]
+     SupersessionPlan.incoming_edge.agreement.markerslist[str]
+     SupersessionPlan.incoming_edge.agreement.direction<class 'str'>
+     SupersessionPlan.incoming_edge.agreement.lexicon<class 'str'>
+     SupersessionPlan.incoming_edge.outcome_countsdict[str, int]
+     SupersessionPlan.operation_id                <class 'str'>
+     SupersessionPlan.expected_state              <class 'str'>
+     SupersessionPlan.refusals.prior_edge_id      <class 'str'>
+     SupersessionPlan.refusals.incoming_edge_id   <class 'str'>
+     SupersessionPlan.refusals.relation           <class 'str'>
+     SupersessionPlan.contribution_drafts.site    <class 'str'>
+     SupersessionPlan.contribution_drafts.survivor_type<class 'str'>
+     SupersessionPlan.contribution_drafts.survivor_id<class 'str'>
+     SupersessionPlan.contribution_drafts.contributor_type<class 'str'>
+     SupersessionPlan.contribution_drafts.contributor_id<class 'str'>
+     SupersessionRefusal.refusal_id                  <class 'str'>
+     SupersessionRefusal.prior_edge_id               <class 'str'>
+     SupersessionRefusal.incoming_edge_id            <class 'str'>
+     SupersessionRefusal.relation                    <class 'str'>
+     SupersessionRefusal.rule_version                <class 'str'>
+     SupersessionRefusalDraft.prior_edge_id               <class 'str'>
+     SupersessionRefusalDraft.incoming_edge_id            <class 'str'>
+     SupersessionRefusalDraft.relation                    <class 'str'>
+
+   125 text-capable fields, RECURSED through nested models.
+   Every one lives inside a json blob and is invisible to the schema.
+
+C. TRIAGE -- carriers, DERIVED from persistence and value-space bounds
+   84 TERMINAL (model, field) identities behind 135 paths.
+
+   -> 64 CARRIERS. Each must be named in 0041 section 2, or recorded there as an explicit exclusion.
+      AgreementRecord.direction                [nested in Edge (json blob)]
+      [also reachable as ContestedGroup.exposed.agreement.direction, Edge.agreement.direction, SupersessionPlan.incoming_edge.agreement.direction]
+      AgreementRecord.lexicon                  [nested in Edge (json blob)]
+      [also reachable as ContestedGroup.exposed.agreement.lexicon, Edge.agreement.lexicon, SupersessionPlan.incoming_edge.agreement.lexicon]
+      AgreementRecord.markers                  [nested in Edge (json blob)]
+      [also reachable as ContestedGroup.exposed.agreement.markers, Edge.agreement.markers, SupersessionPlan.incoming_edge.agreement.markers]
+      Confirmation.correlation_id           [RULED carrier -> confirmations]
+      Confirmation.edge_id                  [RULED carrier -> confirmations]
+      Confirmation.id                       [RULED carrier -> confirmations]
+      Confirmation.request_digest           [RULED carrier -> confirmations]
+      Confirmation.user_id                  [RULED carrier -> confirmations]
+      ConsolidationOp.claimed_ids              [IS the row -> consolidation_ops]
+      ConsolidationOp.lease_expires_at         [IS the row -> consolidation_ops]
+      ConsolidationOp.operation_id             [IS the row -> consolidation_ops]
+      ConsolidationOp.owner                    [IS the row -> consolidation_ops]
+      ConsolidationOp.user_id                  [IS the row -> consolidation_ops]
+      ContributionDraft.contributor_id           [RULED carrier -> contribution_ledger]
+      [also reachable as SupersessionPlan.contribution_drafts.contributor_id]
+      ContributionDraft.contributor_type         [RULED carrier -> contribution_ledger]
+      [also reachable as SupersessionPlan.contribution_drafts.contributor_type]
+      ContributionDraft.site                     [RULED carrier -> contribution_ledger]
+      [also reachable as SupersessionPlan.contribution_drafts.site]
+      ContributionDraft.survivor_id              [RULED carrier -> contribution_ledger]
+      [also reachable as SupersessionPlan.contribution_drafts.survivor_id]
+      ContributionDraft.survivor_type            [RULED carrier -> contribution_ledger]
+      [also reachable as SupersessionPlan.contribution_drafts.survivor_type]
+      ContributionRecord.contributor_ref          [IS the row -> contribution_ledger]
+      ContributionRecord.contributor_type         [IS the row -> contribution_ledger]
+      ContributionRecord.evidence_ref_digest      [IS the row -> contribution_ledger]
+      ContributionRecord.id                       [IS the row -> contribution_ledger]
+      ContributionRecord.identity_digest          [IS the row -> contribution_ledger]
+      ContributionRecord.op_key                   [IS the row -> contribution_ledger]
+      ContributionRecord.site                     [IS the row -> contribution_ledger]
+      ContributionRecord.survivor_id              [IS the row -> contribution_ledger]
+      ContributionRecord.survivor_type            [IS the row -> contribution_ledger]
+      ContributionRecord.user_id                  [IS the row -> contribution_ledger]
+      Edge.id                       [json blob]
+      [also reachable as ContestedGroup.exposed.id, SupersessionPlan.incoming_edge.id]
+      Edge.invalidation_reason      [json blob]
+      [also reachable as ContestedGroup.exposed.invalidation_reason, SupersessionPlan.incoming_edge.invalidation_reason]
+      Edge.note                     [json blob]
+      [also reachable as ContestedGroup.exposed.note, SupersessionPlan.incoming_edge.note]
+      Edge.object                   [json blob]
+      [also reachable as ContestedGroup.exposed.object, SupersessionPlan.incoming_edge.object]
+      Edge.original_relation        [json blob]
+      [also reachable as ContestedGroup.exposed.original_relation, SupersessionPlan.incoming_edge.original_relation]
+      Edge.outcome_counts           [json blob]
+      [also reachable as ContestedGroup.exposed.outcome_counts, SupersessionPlan.incoming_edge.outcome_counts]
+      Edge.relation                 [json blob]
+      [also reachable as ContestedGroup.exposed.relation, SupersessionPlan.incoming_edge.relation]
+      Edge.subject                  [json blob]
+      [also reachable as ContestedGroup.exposed.subject, SupersessionPlan.incoming_edge.subject]
+      Edge.supersedes               [json blob]
+      [also reachable as ContestedGroup.exposed.supersedes, SupersessionPlan.incoming_edge.supersedes]
+      Edge.user_id                  [json blob]
+      [also reachable as ContestedGroup.exposed.user_id, SupersessionPlan.incoming_edge.user_id]
+      Episode.claimed_by               [json blob]
+      Episode.context_ref              [json blob]
+      Episode.date                     [json blob]
+      Episode.date_end                 [json blob]
+      Episode.date_start               [json blob]
+      Episode.edge_id                  [json blob]
+      Episode.id                       [json blob]
+      Episode.kind                     [json blob]
+      Episode.lineage                  [json blob]
+      Episode.operation_id             [json blob]
+      Episode.retired_reason           [json blob]
+      Episode.summary                  [json blob]
+      Episode.supersedes_episode       [json blob]
+      Episode.user_id                  [json blob]
+      Provenance.evidence_ref             [nested in Edge (json blob)]
+      [also reachable as ContestedGroup.exposed.provenance.evidence_ref, Edge.provenance.evidence_ref, Episode.provenance.evidence_ref, SupersessionPlan.incoming_edge.provenance.evidence_ref]
+      Provenance.origin                   [nested in Edge (json blob)]
+      [also reachable as ContestedGroup.exposed.provenance.origin, Edge.provenance.origin, Episode.provenance.origin, SupersessionPlan.incoming_edge.provenance.origin]
+      Provenance.source_id                [nested in Edge (json blob)]
+      [also reachable as ContestedGroup.exposed.provenance.source_id, Edge.provenance.source_id, Episode.provenance.source_id, SupersessionPlan.incoming_edge.provenance.source_id]
+      SupersessionRefusal.incoming_edge_id         [IS the row -> supersession_refusals]
+      SupersessionRefusal.prior_edge_id            [IS the row -> supersession_refusals]
+      SupersessionRefusal.refusal_id               [IS the row -> supersession_refusals]
+      SupersessionRefusal.relation                 [IS the row -> supersession_refusals]
+      SupersessionRefusal.rule_version             [IS the row -> supersession_refusals]
+      SupersessionRefusal.user_id                  [IS the row -> supersession_refusals]
+      SupersessionRefusalDraft.incoming_edge_id         [IS the row -> supersession_refusals]
+      [also reachable as SupersessionPlan.refusals.incoming_edge_id]
+      SupersessionRefusalDraft.prior_edge_id            [IS the row -> supersession_refusals]
+      [also reachable as SupersessionPlan.refusals.prior_edge_id]
+      SupersessionRefusalDraft.relation                 [IS the row -> supersession_refusals]
+      [also reachable as SupersessionPlan.refusals.relation]
+
+
+   RULED, against the write path (see RULINGS):
+      Confirmation         CARRIER. Subset failed on `replayed` alone, and schema.py:149 comments it `runtime only: True when returned for a replay` -- it is not a column. The model IS the confirmations row; INSERT at sqlite.py:588.
+      ContestedGroup       NON-CARRIER as a storage SITE. `exposed`/`linkage`/`prior_edge_ids` are not columns: it is a view ASSEMBLED from rows, never written. Its text is Edge's, already carried above. (`partition` greps clean in store/ -- every hit is str.partition(), our word, their sense.)
+      ContributionDraft    CARRIER. Subset failed on `contributor_id` alone, which is INSERTed into the column `contributor_ref` -- sqlite.py:1236 documents the rename in its own comment. The draft's content reaches disk.
+
+   -> 0 UNRESOLVED -- shares a table's columns but is not a row.
+      NOT defaulted into either pile: guessing non-carrier loses a real
+      carrier, and that is the direction that costs something. Each needs
+      one explicit ruling in 0041 section 2, recorded with its reason.
+
+   -> 20 NON-CARRIERS, each with the reason it cannot carry text:
+      ConsolidationOutputDraft.date_end                 TRANSIENT (never stored)
+      ConsolidationOutputDraft.date_start               TRANSIENT (never stored)
+      ConsolidationOutputDraft.summary                  TRANSIENT (never stored)
+      ContestedGroup.prior_edge_ids           RULED non-carrier
+      ContestedGroup.relation                 RULED non-carrier
+      ContestedGroup.subject                  RULED non-carrier
+      ContestedLinkage.edge_id                  TRANSIENT (never stored)
+      ContestedLinkage.partition                TRANSIENT (never stored)
+      CorrectionAuthorisation.kind                     TRANSIENT (never stored)
+      CorrectionAuthorisation.origin                   TRANSIENT (never stored)
+      CorrectionAuthorisation.principal                TRANSIENT (never stored)
+      CorrectionAuthorisation.prior_edge_id            TRANSIENT (never stored)
+      CorrectionAuthorisation.replacement_digest       TRANSIENT (never stored)
+      OutcomeJudgmentDraft.context_ref              TRANSIENT (never stored)
+      OutcomeJudgmentDraft.event_timestamp          TRANSIENT (never stored)
+      OutcomeJudgmentDraft.summary                  TRANSIENT (never stored)
+      Relation.desc                     TRANSIENT (never stored)
+      Relation.name                     TRANSIENT (never stored)
+      SupersessionPlan.expected_state           TRANSIENT (never stored)
+      SupersessionPlan.operation_id             TRANSIENT (never stored)
+
+   is_bounded fired on 0 of 20 non-carriers, as predicted: no
+   text-capable field in veracium.schema has a closed value space. EVERY
+   non-carrier is one because it never reaches disk -- NOT because its
+   content is constrained. If storage changes, they become carriers at once.
