@@ -81,3 +81,36 @@ def test_the_carrier_enumeration_reproduces_its_committed_output_byte_for_byte()
     assert r.returncode == 0, r.stderr[-2000:]
     assert r.stdout == (EVIDENCE / "carrier_enumeration_OUTPUT.txt").read_text()
     assert "-> 64 CARRIERS" in r.stdout and "-> 20 NON-CARRIERS" in r.stdout
+
+
+def test_inv12_the_embedder_sees_no_field_the_content_digest_does_not_cover():
+    """0041 v3.1 INV-12 (research, verifying dev's §4e exemption): the semantic
+    rebuild is exempt from the delayed-writer class because `upsert_embedding`
+    is a compare-and-set on `content_digest`, and that exemption holds only
+    while `embedded_text`'s field set is a SUBSET of `content_digest`'s —
+    widening the embedder alone would write back a vector encoding redacted
+    content with both guards passing. Derived by MUTATION, not by reading the
+    two docstrings: every string field of `Edge` is changed in turn and the set
+    of fields that move `embedded_text` must sit inside the set that moves
+    `content_digest`. Today both are exactly {subject, relation, object, note}."""
+    from veracium.schema import Disclosure, Edge, EvidenceAuthor, Provenance
+    from veracium.semantic import content_digest, embedded_text
+    base = Edge(id="e-inv12", user_id="u", subject="user", relation="works_as", object="Porto", note="n",
+                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
+                                      disclosure=Disclosure.MENTIONABLE))
+    d0, t0 = content_digest(base), embedded_text(base)
+    moves_digest, moves_text = set(), set()
+    for name, field in type(base).model_fields.items():
+        current = getattr(base, name)
+        if not isinstance(current, str) or isinstance(current, bool):
+            continue
+        try:
+            mutated = base.model_copy(update={name: current + "-changed"})
+        except Exception:
+            continue
+        if content_digest(mutated) != d0:
+            moves_digest.add(name)
+        if embedded_text(mutated) != t0:
+            moves_text.add(name)
+    assert moves_text <= moves_digest, (moves_text - moves_digest)
+    assert moves_text == moves_digest == {"subject", "relation", "object", "note"}
