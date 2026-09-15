@@ -77,8 +77,8 @@ vocabulary values, booleans, integers, timestamps — no content):
   "target_id":           "e-7c1a",
   "reason":              "subject_request",
   "carriers_cleared":    ["edges.subject", "edges.relation", "edges.object",
-                          "json.subject", "json.relation", "json.object", "json.note",
-                          "json.original_relation", "json.provenance.evidence_ref",
+                          "json.subject", "json.relation", "json.object", "json.note", "json.outcome_counts (cleared)", "json.agreement.markers[*]",
+                          "json.original_relation",            # provenance.evidence_ref is PRESERVED (§2d-iii-bis; round-3 F4 corrected this list)
                           "edge_event.state[seq=4]", "edge_event.state[seq=9]",
                           "edge_embedding[row deleted]"  (INV-7 — the receipt never carries the removed digest; round-2 F5),
                           "contribution_ledger.payload[id=…]", "wiki[user=u]" (cleared)],

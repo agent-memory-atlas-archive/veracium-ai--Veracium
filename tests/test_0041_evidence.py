@@ -121,38 +121,104 @@ def _inv12_sets(base, content_digest, embedded_text):
     return moves_digest, moves_text
 
 
+def _string_leaves(model, prefix=()):
+    """Every (path, optional?) leaf of `model` whose type admits a str — walked
+    from the model's own fields, recursively through nested models, so the
+    fixture is COMPLETE by construction and not by a hand list (round-3 F5: the
+    hand list left invalidation_reason and the nested source_id/origin unset)."""
+    import typing
+    for name, f in model.model_fields.items():
+        ann = f.annotation; origin = typing.get_origin(ann); args = typing.get_args(ann)
+        optional = origin is typing.Union and type(None) in args
+        inner = [a for a in args if a is not type(None)] if origin is typing.Union else [ann]
+        nested = [a for a in inner if isinstance(a, type) and hasattr(a, "model_fields")]
+        if nested:
+            yield from _string_leaves(nested[0], prefix + (name,))
+        elif any(a is str for a in inner):
+            yield prefix + (name,), optional
+        elif any(typing.get_origin(a) is list and typing.get_args(a) == (str,) for a in inner):
+            yield prefix + (name,), optional
+        elif any(typing.get_origin(a) is dict and typing.get_args(a)[:1] == (str,) for a in inner):
+            yield prefix + (name,), optional
+
+
+_LEAF_VALUES = {                      # every str-admitting leaf of Edge, by path, with a VALID populated value
+    ("id",): "e-inv12", ("user_id",): "u", ("subject",): "user", ("relation",): "works_as", ("object",): "Porto",
+    ("note",): "n", ("invalidation_reason",): "superseded", ("supersedes",): "e-prior",
+    ("original_relation",): "worked-at-the-clinic", ("outcome_counts",): {"confirmed": 1},
+    ("provenance", "evidence_ref"): "ev-12", ("provenance", "source_id"): "mb-a", ("provenance", "origin"): "origin-1",
+    ("agreement", "markers"): ["marker-one", "marker-two"], ("agreement", "direction"): "inbound",
+    ("agreement", "lexicon"): "foreign-lexicon-v9",
+}
+
+
+def _complete_edge(unset=()):
+    """An Edge with EVERY str-admitting leaf populated (or all but `unset`); the
+    completeness is asserted against the model's own field walk."""
+    from veracium.schema import Edge
+    leaves = list(_string_leaves(Edge))
+    missing = [p for p, _opt in leaves if p not in _LEAF_VALUES]
+    assert not missing, f"the fixture table lacks a value for {missing} — a str leaf the model grew"
+    d = {"invalidated_at": "2026-09-10T00:00:00Z",
+         "provenance": {"author_of_evidence": "user", "disclosure": "mentionable"},
+         "agreement": {}}
+    for path, val in _LEAF_VALUES.items():
+        if path in unset:
+            continue
+        cur = d
+        for k in path[:-1]:
+            cur = cur.setdefault(k, {})
+        cur[path[-1]] = val
+    if unset and ("invalidation_reason",) in unset:
+        d.pop("invalidated_at", None)                      # coherence: no reason without a retirement
+    if not d["agreement"]:
+        d.pop("agreement")
+    e = Edge.model_validate(d)
+    for path, opt in leaves:
+        if path in unset:
+            continue
+        cur = e
+        for k in path:
+            cur = getattr(cur, k) if cur is not None else None
+        assert cur not in (None, "", [], {}), f"leaf {path} is unset in the complete fixture"
+    return e
+
+
 def _populated_edge():
-    """Every optional string field SET and the nested carriers populated (round-2 F1:
-    the packaged fixture left `original_relation` unset, so a widening of the
-    embedder onto it was invisible to the mutation)."""
-    from veracium.schema import AgreementRecord, Disclosure, Edge, EvidenceAuthor, Provenance
-    return Edge(id="e-inv12", user_id="u", subject="user", relation="works_as", object="Porto", note="n",
-                original_relation="worked-at-the-clinic",
-                agreement=AgreementRecord(markers=["marker-one", "marker-two"], direction="inbound",
-                                          lexicon="foreign-lexicon-v9"),
-                outcome_counts={"confirmed": 1},
-                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev-12",
-                                      disclosure=Disclosure.MENTIONABLE))
+    return _complete_edge()
 
 
-def test_inv12_the_embedder_sees_no_field_the_content_digest_does_not_cover():
-    """0041 v3.1 INV-12 (research, verifying dev's §4e exemption): the semantic
-    rebuild's exemption from the delayed-writer class holds only while
-    `embedded_text`'s field set is a SUBSET of `content_digest`'s — widening the
-    embedder alone would write back a vector encoding redacted content with both
-    guards passing. Derived by MUTATION over every string LEAF of a POPULATED edge
-    (top-level optionals set, provenance and agreement nested), not by reading the
-    two docstrings. Round-2 F1: the first version mutated only fields whose value
-    was already a str, so an unset optional was never exercised."""
-    from veracium.semantic import content_digest, embedded_text
-    base = _populated_edge()
-    unset = [n for n in ("original_relation", "agreement") if getattr(base, n) is None]
-    assert not unset, unset
-    moves_digest, moves_text = _inv12_sets(base, content_digest, embedded_text)
-    assert moves_text <= moves_digest, (moves_text - moves_digest)
-    assert moves_text == moves_digest == {"subject", "relation", "object", "note"}
-    # the fixture also reached the nested leaves (a mutation that moved neither is still a mutation RUN)
-    assert "agreement.markers.0" in {".".join(p) for p in [("agreement", "markers", "0")]}
+def test_inv12_every_string_leaf_of_edge_is_populated_in_the_fixture():
+    """Completeness by the model's own field walk: the fixture's leaf table
+    covers every str-admitting leaf (a leaf the model grows fails here first)."""
+    from veracium.schema import Edge
+    leaves = {p for p, _ in _string_leaves(Edge)}
+    assert leaves == set(_LEAF_VALUES), leaves ^ set(_LEAF_VALUES)
+    _complete_edge()
+
+
+@pytest.mark.parametrize("leaf", sorted(p for p, opt in _string_leaves(__import__("veracium.schema", fromlist=["Edge"]).Edge) if opt))
+def test_inv12_each_optional_leaf_is_load_bearing_a_widening_onto_it_is_missed_when_it_is_unset(leaf):
+    """The per-leaf NEGATIVE CONTROL: for every optional leaf, a fixture with that
+    leaf UNSET lets a widening of the embedder onto it pass the mutation test,
+    and the complete fixture refuses it. So each populated leaf is doing work,
+    and the control shares the failure mode it guards (round-3 F5)."""
+    from veracium import semantic
+    real = semantic.embedded_text
+
+    def read(e):
+        cur = e
+        for k in leaf:
+            cur = getattr(cur, k) if cur is not None else None
+        return cur
+
+    def widened(e):
+        v = read(e)
+        return f"{real(e)} {v if isinstance(v, str) else (' '.join(v) if isinstance(v, list) else ' '.join(sorted(v)) if isinstance(v, dict) else '')}"
+    md, mt = _inv12_sets(_complete_edge(unset=(leaf,)), semantic.content_digest, widened)
+    assert mt <= md, f"the UNSET fixture was expected to MISS a widening onto {leaf}"
+    md, mt = _inv12_sets(_complete_edge(), semantic.content_digest, widened)
+    assert not (mt <= md), f"the complete fixture must CATCH a widening onto {leaf}"
 
 
 def test_inv12_catches_a_widened_embedder_the_packaged_fixture_missed():
@@ -232,20 +298,49 @@ def test_two_connection_publication_the_embedding_upsert_refuses_a_vector_for_co
 
 
 def test_the_before_after_fixtures_validate_as_the_treatment_map_rules_them():
-    """Round-2 artifact ask: VALIDATED before/after fixtures. The script constructs
-    every ruled resulting shape and asks the model; the two refusals (a two-marker
-    agreement redacted per entry; a required digest cleared to None) are printed as
-    results and asserted here as the reviewer would find them today."""
+    """Round-2 artifact ask, corrected for round-3 F5: every after-shape is built by
+    FULL model validation of a complete dump (never model_copy), the ledger record
+    also through the absorption-site validator; the refusals are printed as results
+    and asserted here as the reviewer would find them today."""
     r = subprocess.run([sys.executable, str(EVIDENCE / "fixtures_before_after.py")],
                        cwd=ROOT, env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"},
                        capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr[-2000:]
     out = r.stdout
-    assert "VALID    after (arity-1 markers)" in out
+    assert "model_copy" not in (EVIDENCE / "fixtures_before_after.py").read_text().split('"""', 2)[2]   # never used outside the docstring
+    assert "VALID    after (arity-1 markers)  (model)" in out
     assert "identity preserved: True | evidence_ref preserved: True | every content leaf is the marker: True | outcome_counts cleared: True" in out
     assert "REFUSED  after (arity-2 markers) — expected REFUSED today" in out
-    assert "VALID    after (a PROSE kind → marker)" in out and "VALID    after (a legacy prose retired_reason → marker)" in out
+    assert "kind preserved: True | still active (retired_reason None): True" in out
+    assert "kind preserved: True | seq preserved: True" in out
+    assert "active unchanged by the redaction: True" in out
     assert "receipt mentions no 64-hex digest: True" in out
-    assert "VALID    ContributionRecord.identity_digest / evidence_ref_digest → None" in out
-    assert "REFUSED  Confirmation.request_digest → None" in out and "VALID    Confirmation.request_digest → MARKER (the ruling)" in out
+    assert "VALID    ContributionRecord before (a REAL absorption payload)  (model + operation validator)" in out
+    assert "VALID    ContributionRecord after (identity_digest / evidence_ref_digest → None; payload untouched)  (model + operation validator)" in out
+    assert "REFUSED  ContributionRecord with payload={} — the round-2 fixture (expected REFUSED by the operation validator): model VALID but the operation validator refuses" in out
+    assert "REFUSED  Confirmation.request_digest → None" in out and "VALID    Confirmation.request_digest → MARKER (the ruling)  (model)" in out
+
+
+def test_the_round3_reproduction_script_reports_every_claim_as_the_reviewer_found_it():
+    """Round-3 F1, F2 and F5 through the packaged script, plus the four guard
+    simulations research named as candidates (P4: evidence that RUNS behaviour).
+    Each token is the predicate the reviewer stated or the simulation printed."""
+    r = subprocess.run([sys.executable, str(EVIDENCE / "round3_reproductions.py")],
+                       cwd=ROOT, env={"PYTHONPATH": "src", "PATH": "/usr/bin:/bin"},
+                       capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, r.stderr[-2000:]
+    out = r.stdout
+    assert "F1 after replacement: the model validated: True | chain head disappeared: True" in out
+    assert "F1 the next append restarted at seq 1: True" in out
+    assert "F1 targeted deletion of the original (now marker-kind) record PERMITTED: True" in out
+    assert "F2 retired_reason=None → active: True | retired_reason=MARKER → active: False | flipped: True" in out
+    assert "F5a model_copy accepted two identical markers: True | the constructor refuses the same: True" in out
+    assert "F5b payload={} passes the model: True | passes the absorption-site validator: False" in out
+    assert "a widening onto invalidation_reason passes the mutation test: True" in out
+    assert "G1 graph.py:333 — a LIVE replacement against a REDACTED prior: REFUSED" in out
+    assert "against the redacted prior: ADMITTED by the guard" in out
+    assert "G3 sqlite.py:1512 — add_episode refuses a kind='outcome' link: True | refuses the same link once kind is the marker: False" in out
+    assert "G4 ingest of a third_party_claim triple sets BOTH markers (relation AND disclosure=QUARANTINED): True" in out
+    assert "G4 a RELATION-ONLY quarantine is constructible through store.add_edge (no refusal): True" in out
+    assert "G4 redacting relation on the relation-only edge PROMOTES it out of quarantine (quarantined False): True" in out
 
