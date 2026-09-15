@@ -712,12 +712,17 @@ explicit assertions (never prompted for): `--i-have-quiesced` states that all
 other access is stopped; `--backup REF` names the pre-migration backup this
 operation made (a token: 1–128 ASCII characters, no whitespace).
 
-This release migrates **v7 stores only**. Older bases take the two-release
-ladder (printed in the refusal): bases 1–5 — migrate to v6 on a ≤0.8.x
-release, then to v7 on a 0.9.x release, then run this release's migration;
-base 6 — migrate to v7 on a 0.9.x release first. A store already at v8 is a
-no-op (`current`); rebuildable index drift is repaired during opening and
-reported honestly as a committed change.
+Every stamped base from v1 through the previous head migrates to the current
+schema in ONE operation — the additive object diff plus each data step the
+crossed versions declare (v3's outcome-chain roots, v5's store identity, v6's
+ALTER path, v8's ledger, v10's operations column, v13's journal baseline) —
+and an unstamped legacy v1 store is resolved by shape and migrated the same
+way (measured 2026-09-15: bases 1–13 and unstamped v1 each reach 14 with
+`migrated`; an earlier revision of this paragraph described a two-release
+ladder that no longer exists). A store already at the head is a no-op
+(`current`); a store newer than this build refuses (`newer`); rebuildable
+index drift is repaired during opening and reported honestly as a committed
+change.
 
 Exit codes: **0** migrated/current · **1** every refusal (structured outcome,
 facts, and diagnostic on stdout) · **2** usage / invalid attestation ·

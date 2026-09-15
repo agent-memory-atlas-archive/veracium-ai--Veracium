@@ -115,16 +115,30 @@ def test_a_clean_store_is_clean_and_every_check_ran():
         json.dumps(doctor.to_json(rep), default=str)
 
 
-def test_doctor_writes_nothing_and_opens_read_only():
+def test_doctor_writes_nothing_and_opens_read_only(monkeypatch):
     with tempfile.TemporaryDirectory() as d:
+        # The doctor takes its snapshot copy in `tempfile.mkdtemp(prefix=
+        # "veracium-doctor-")`, i.e. the SYSTEM temp dir. This test used to
+        # assert that no such directory existed there afterwards — a claim
+        # about a directory the test does not own, which a concurrent suite's
+        # doctor run falsified for the moment its own copy existed (the 0041
+        # round-1 seal legs, 2026-09-15: both legs' offline runs failed here,
+        # each seeing the other's copy; passed solo every time). Own the
+        # directory instead: point the temp root at a private one for the
+        # duration and assert the doctor's cleanup THERE.
+        private = pathlib.Path(d) / "tmp"
+        private.mkdir()
+        monkeypatch.setenv("TMPDIR", str(private))
+        monkeypatch.setattr(tempfile, "tempdir", None)        # gettempdir() re-reads TMPDIR
+        assert pathlib.Path(tempfile.gettempdir()) == private
         db = _seed(f"{d}/t.db")
         before = hashlib.sha256(pathlib.Path(db).read_bytes()).hexdigest()
         doctor.diagnose(db); doctor.diagnose(db, user=U)
         assert hashlib.sha256(pathlib.Path(db).read_bytes()).hexdigest() == before
         # the original is never opened: no journal/WAL side file appears beside it
-        assert sorted(p.name for p in pathlib.Path(d).iterdir()) == ["t.db"]
-        # the snapshot copy is removed
-        assert not [p for p in pathlib.Path(tempfile.gettempdir()).glob("veracium-doctor-*")]
+        assert sorted(p.name for p in pathlib.Path(d).iterdir()) == ["t.db", "tmp"]
+        # the snapshot copy is removed — from the directory this test owns
+        assert not [p for p in private.glob("veracium-doctor-*")] and list(private.iterdir()) == []
         # and it never creates a file: a missing path is a finding, not a new store
         rep = doctor.diagnose(f"{d}/nope.db")
         assert not rep.readable and rep.exit_code == 2 and not pathlib.Path(f"{d}/nope.db").exists()

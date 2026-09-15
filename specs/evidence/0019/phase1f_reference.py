@@ -20,7 +20,8 @@ Fixes over phase 1b:
 import json, re, sys, glob, collections, random, datetime
 from pathlib import Path
 
-HARNESS = Path("/home/ubuntu/Dev/veracium/tests/longmemeval")
+REPO = Path(__file__).resolve().parents[3]   # the repository root, from this file — never an absolute local path
+HARNESS = REPO / "tests" / "longmemeval"
 sys.path.insert(0, str(HARNESS))
 import adapter, run_longmemeval as RL          # noqa: E402
 from cache import _sha                          # noqa: E402

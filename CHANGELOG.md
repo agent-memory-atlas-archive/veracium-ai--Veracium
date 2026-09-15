@@ -58,6 +58,15 @@ them. Library and MCP callers that pass no `policy` change nothing.
   transaction (V-RECEIPT-ERASE). Retention is not in this release: the table grows by
   one row per firing recall (research's T10 priced ≈2.3 KB per row, linear in the
   budget); erasure is per user.
+- **Docs: the migration section re-derived.** `docs/api.md`'s "Migrating a store" had said "this
+  release migrates v7 stores only" with a two-release ladder for older bases — true of an earlier
+  release and stale since schema 8. Measured 2026-09-15: every stamped base from v1 through v13,
+  and an unstamped legacy v1, migrates to the current schema in one operation; the section now
+  says so. Two of the four evidence scripts that carried an absolute local path (0019
+  phase1f/phase1g) now resolve the repository root from their own location; the other two
+  (0024 baseline run_baseline/run_postfix) are digest-bound inside a sealed evidence bundle
+  (`DIGESTS.sha256`, closure row EVIDENCE-R15-1) and stay byte-identical — their repair is
+  that line's amendment, not a cleanup. None of the four is run by a shipped check.
 - **Added: the displacement budget** (specs/0027 v15 §4h; research's candidate, the owner's word).
   `PolicyLane.max_displaced` declares the most records a policy lane may displace from the returned
   selection (an int ≥ 0; `None` for no cap; `0` means reorder but never change membership). It is
