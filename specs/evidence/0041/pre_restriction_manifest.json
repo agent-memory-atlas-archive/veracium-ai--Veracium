@@ -1,19 +1,20 @@
 {
   "bytes": 188416,
-  "frozen_at_head": "ead0bcc93301b42f7e2ae19f684c49bae8e9882e",
+  "frozen_at_head": "6b8d757530865194c5ad4ffc50783994b7eb8f0c",
   "frozen_on": "2026-09-16",
   "rows": {
     "active_episode_absent_reason": "ep-active",
     "ordinary_edge": "e-ordinary",
     "prose_kind": "ep-prose-kind",
     "prose_retired_reason": "ep-prose-retired",
-    "prose_source_revocation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "prose_source_revocation": "a10207354137db27f0c51c13f72f127a6c2e2210238353d212a25b11f6c21f5a",
     "registry_retired_reason": "ep-registry-reason",
     "relation_only_quarantine": "e-quarantine-relation",
+    "source_linked_edge": "e-source-linked",
     "unattested_marker": "e-unattested-marker",
     "unattested_marker_2": "e-unattested-marker-2"
   },
-  "sha256": "047f0d11630987abbca0b05e89a6c099115af5ded33997589f4f7619fdbb6d98",
+  "sha256": "741d941764a13f4addd2fe67c68662c2be8d8d932945b73478bf20df559527b2",
   "store_schema_version": 14,
   "what": "a store written BEFORE 0041's write-path closure; the transition tests copy it instead of writing rows a landed closure would refuse"
 }

@@ -132,10 +132,21 @@ def build(path: pathlib.Path):
     # finding 1: the six-shape fixture lacked this case, and after v12 it can no
     # longer be created, because `revoke_source` will refuse a reason outside the
     # four values. This row is the only pre-closure instance that will exist.
+    # ROUND 7: the revocation now has a SOURCE-LINKED EDGE, because the round-7
+    # reviewer found the frozen revocation carried no linked record and the
+    # transition test asserts about the AFFECTED record as well as the reason. A
+    # revocation with nothing attached cannot exercise "the prose is replaced and
+    # the effect's registry value on the affected record is preserved" — only half
+    # the claim has a subject.
+    from veracium.source_identity import resolve_origin, source_identity_digest
     from veracium.store.revocation import revoke_source
-    revoke_source(st, U, "a" * 64, "revoke",
+    st.add_edge(Edge(id="e-source-linked", user_id=U, subject="user", relation="works_as",
+                     object="Porto", provenance=prov(source_id="mb-frozen")))
+    digest = source_identity_digest(resolve_origin(None, st.local_origin()), "mb-frozen")
+    revoke_source(st, U, digest, "revoke",
                   "she asked me to drop everything from that address", "2026-09-01T00:00:00Z")
-    rows["prose_source_revocation"] = "a" * 64
+    rows["prose_source_revocation"] = digest
+    rows["source_linked_edge"] = "e-source-linked"
 
     st._conn.commit()
     st.close() if hasattr(st, "close") else None
@@ -150,6 +161,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--map", action="store_true",
+                    help="print the fixture-to-test mapping, DERIVED from the tests")
     a = ap.parse_args()
 
     if a.write:
@@ -183,6 +196,42 @@ def main():
         print(f"frozen fixture matches its manifest: {actual[:16]}… "
               f"({man['bytes']} bytes, store schema {man['store_schema_version']}, "
               f"frozen at {man['frozen_at_head'][:8]})")
+        return 0
+
+    if a.map:
+        # THE FIXTURE-TO-TEST MAPPING, asked for by the round-7 reviewer so the
+        # remaining amendment is verifiable at a glance. DERIVED by scanning the
+        # tests for `_frozen_rows()["<shape>"]` and for the manifest's own row ids,
+        # never hand-written: a hand list would be one more carrier to drift, and
+        # this whole arc has been a catalogue of those.
+        import ast
+        import re
+        man = _strict_json(MANIFEST.read_text())
+        tests = sorted((ROOT / "tests").glob("test_0041_*.py"))
+        used = {k: [] for k in man["rows"]}
+        for f in tests:
+            src = f.read_text()
+            tree = ast.parse(src)
+            for fn in [n for n in ast.walk(tree)
+                       if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")]:
+                seg = ast.get_source_segment(src, fn) or ""
+                for shape, rid in man["rows"].items():
+                    if f'"{shape}"' in seg or f"'{shape}'" in seg or rid in seg:
+                        used[shape].append(f"{f.name}::{fn.name}")
+        width = max(len(k) for k in used)
+        print(f"fixture: {DB.name}  sha256 {digest(DB)[:16]}…  {len(man['rows'])} shapes")
+        print(f"derived from {len(tests)} test module(s); a shape with no test is a shape "
+              f"nobody is using\n")
+        for shape in sorted(used):
+            nodes = used[shape]
+            print(f"  {shape:<{width}}  {man['rows'][shape][:28]:<30} {len(nodes)} test(s)")
+            for n in nodes:
+                print(f"  {'':<{width}}    {n}")
+        orphans = [s for s, n in used.items() if not n]
+        print(f"\n{len(used) - len(orphans)} of {len(used)} shapes are used by at least one test")
+        if orphans:
+            print(f"ORPHANED SHAPES (frozen, referenced by nothing): {orphans}")
+            return 1
         return 0
 
     ap.print_help()

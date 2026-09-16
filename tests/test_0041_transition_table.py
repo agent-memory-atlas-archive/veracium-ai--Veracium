@@ -57,22 +57,36 @@ def _rewrite(store, table, rid, **changes):
     store._conn.commit()
 
 
-def _redact(memory, *, kind, target_id, fields):
-    """THE ONE PLACE THE ASSUMED API SPELLING LIVES.
+def _redact(memory, *, user_id=U, edge_id=None, episode_id=None, reason):
+    """THE OPERATION AS §4a SPECIFIES IT, not as this seat guessed it.
 
-    0041 defines the redaction CONTRACT (§4b, the receipt-fields row, the
-    repeat-calls row) and does not fix a signature. These tests bind the
-    contract, not the spelling, so every call goes through this adapter: when
-    the API lands under different argument names, ONE function is reconciled and
-    no assertion moves. That is deliberate — a test that hard-codes an invented
-    signature in six places turns an ordinary naming choice into six false reds.
+    §4a, at the reviewed pin and since v1:
 
-    Today `Memory` has no `redact`, so this raises `AttributeError` and the
-    callers are strict xfails. It is a genuine call, not a reference: a no-op
-    method added to `Memory` satisfies the attribute lookup and then fails every
-    assertion that follows, which is the property the round-5 verdict found
-    missing."""
-    return memory.redact(kind=kind, target_id=target_id, fields=fields)
+        redact(user_id, *, edge_id | episode_id, reason) -> RedactionReceipt
+
+    ROUND-7 CORRECTION 3. This adapter passed `kind`, `target_id` and `fields`,
+    and its docstring said *"0041 … does not fix a signature"*. **It does, and it
+    did when that sentence was written, in the same tree.** A callable with the
+    documented signature fails immediately on an unexpected `kind` argument, so
+    the repeat test would have gone green against an implementation that ignored
+    §4a and red against one that followed it — the identical defect the round-6
+    reviewer found in the event-count helper, which counted a `redaction_events`
+    table this spec never proposes.
+
+    The lesson is the same both times and it is not about carelessness: **when a
+    test needs a surface that does not exist yet, the temptation is to invent one
+    and note the assumption. The spec is the place to look first, and both times
+    the answer was already there.** What an adapter is for is the spelling the
+    spec leaves open — here, only the receipt's field names are open, and those
+    are read through `_field`.
+
+    `edge_id` and `episode_id` are exclusive, as the `|` in §4a requires, and
+    that exclusivity is asserted rather than assumed: passing both, or neither,
+    is a caller error and fails here rather than reaching the product."""
+    assert (edge_id is None) != (episode_id is None), (
+        "§4a takes `edge_id | episode_id` — exactly one, never both and never neither")
+    target = {"edge_id": edge_id} if edge_id is not None else {"episode_id": episode_id}
+    return memory.redact(user_id, reason=reason, **target)
 
 
 def _field(receipt, name):
@@ -177,11 +191,17 @@ def test_B_existing_prose_kind_is_retained_at_migration_and_readable(tmp_path):
 @pytest.mark.xfail(strict=True, reason="0041 §4h / §11.4-bis: the recognised-kind closure binds the WRITE path; "
                                        "an ordinary write of a NEW prose kind is not yet refused")
 def test_B_an_ordinary_write_of_a_new_prose_kind_is_refused_while_the_stored_one_stays(tmp_path):
-    st = _mem(tmp_path).store
-    st.add_episode(Episode(id="ep-old", user_id=U, date="2026-09-01", summary="s", kind="told me in confidence", provenance=_prov()))
+    # ROUND-7 CORRECTION 1: the historical record was WRITTEN here through the
+    # ordinary writer, so the closure fires at SETUP and `ep-new` is never
+    # attempted — the refusal this test exists to assert is never reached. Its
+    # neighbour was converted to the frozen fixture at round 6 and this one was
+    # missed, which is the same sibling-left-behind defect as `test_row46`'s.
+    st = _frozen_store(tmp_path)
+    stored = _frozen_rows()["prose_kind"]
     with pytest.raises(Exception):
-        st.add_episode(Episode(id="ep-new", user_id=U, date="2026-09-02", summary="s", kind="another prose kind", provenance=_prov()))
-    assert [e for e in st.episodes(U) if e.id == "ep-old"][0].kind == "told me in confidence"
+        st.add_episode(Episode(id="ep-new", user_id=U, date="2026-09-02", summary="s",
+                               kind="another prose kind", provenance=_prov()))
+    assert [e for e in st.episodes(U, include_retired=True) if e.id == stored][0].kind == "told me in confidence"
 
 
 @pytest.mark.xfail(strict=True, reason="0041 §4h / §11.4-bis: the recognised-kind closure binds the IMPORT boundary; "
@@ -195,11 +215,29 @@ def test_B_an_import_carrying_a_prose_kind_is_refused(tmp_path):
     # the closure refuses — so it too would have failed while preparing data. The
     # export source is the frozen store, which already carries a prose-kind
     # episode written before the restrictions.
+    # ROUND-7 CORRECTION 2. This exported the WHOLE frozen store, which carries two
+    # unattested marker rows — so the reviewer installed an import check that
+    # rejects markers and does NO kind validation, and this test passed. Its
+    # `pytest.raises` was satisfiable by a restriction that has nothing to do with
+    # kinds. My round-6 fix caused it: pointing the export at the frozen store
+    # wholesale made the setup legal and the assertion ambiguous in one move.
+    #
+    # The export is now ISOLATED to the prose-kind episode alone, so nothing in the
+    # exported file can trigger a different rule. The marker rows stay frozen and
+    # unexported; the control below proves the isolation rather than assuming it.
     src = _frozen_store(tmp_path)
-    assert any(e.kind == "told me in confidence" for e in src.episodes(U)), (
-        "the frozen store must carry the prose-kind episode this export needs")
+    ep_id = _frozen_rows()["prose_kind"]
     out = tmp_path / "x.jsonl"
     export_memory(src, U, out)
+    _isolate_jsonl(out, keep_id=ep_id)
+
+    body = out.read_text()
+    assert "told me in confidence" in body, "the prose kind must survive the isolation"
+    assert MARKER not in body, (
+        "ISOLATION CONTROL: no marker may remain in the exported file, or a "
+        "marker rule could satisfy the refusal below and this test would prove "
+        "nothing about kinds")
+
     with pytest.raises(Exception):
         import_memory(_mem(tmp_path, "d.db").store, out)
 
@@ -301,7 +339,7 @@ def test_C_after_attestation_the_same_write_is_refused(tmp_path):
     man = _frozen_rows()
     target = man["ordinary_edge"]
 
-    _redact(m, kind="edge", target_id=target, fields=["object"])        # the attestation is CREATED here
+    _redact(m, edge_id=target, reason="subject_request")                # the attestation is CREATED here
 
     with pytest.raises(Exception):                                      # ... and only then refused
         st.add_edge(Edge(id=target, user_id=U, subject="user", relation="likes",
@@ -333,8 +371,8 @@ def test_F_a_repeated_call_returns_the_original_or_a_reconstructed_receipt(tmp_p
     st = m.store
     st.add_edge(Edge(id="e-rep", user_id=U, subject="user", relation="works_as", object="a secret", provenance=_prov()))
 
-    first = _redact(m, kind="edge", target_id="e-rep", fields=["object"])
-    second = _redact(m, kind="edge", target_id="e-rep", fields=["object"])
+    first = _redact(m, edge_id="e-rep", reason="subject_request")
+    second = _redact(m, edge_id="e-rep", reason="subject_request")
 
     assert _field(first, "repeated") is False                          # the first call is not a repeat
     assert _field(second, "repeated") is True
@@ -342,9 +380,14 @@ def test_F_a_repeated_call_returns_the_original_or_a_reconstructed_receipt(tmp_p
     # the SAME receipt, not an equal-looking new one
     for name in ("redacted_kind", "target_id", "fields_cleared", "recorded_at"):
         assert _field(second, name) == _field(first, name), name
+    # §4a's receipt, read by the names §1040 gives it. `fields_cleared` is the
+    # CARRIERS the operation cleared — determined by the treatment map, not passed
+    # in by the caller, which is why the call no longer names them.
     assert _field(first, "redacted_kind") == "edge"
     assert _field(first, "target_id") == "e-rep"
-    assert list(_field(first, "fields_cleared")) == ["object"]
+    assert list(_field(first, "fields_cleared")), (
+        "the receipt must name the carriers actually cleared; §1040 lists them as a "
+        "receipt field and the treatment map decides their content")
     # ... and the repeat wrote NO second event: a log of repeats is itself a signal
     assert _redaction_event_count(st, "e-rep") == 1
 
@@ -384,15 +427,33 @@ def test_D_a_source_revocation_reason_holding_the_callers_sentence_is_replaced(t
     """source_revocations.reason has no vocabulary to preserve (round-4 F3,
     executed): it is REPLACED as ordinary prose; the effect's registry value on
     the affected records is preserved."""
-    from veracium.source_identity import resolve_origin, source_identity_digest
-    from veracium.store import revocation as rv
-    st = _mem(tmp_path).store
-    st.add_edge(Edge(id="e-s", user_id=U, subject="user", relation="works_as", object="Porto", provenance=_prov(source_id="mb-x")))
-    digest = source_identity_digest(resolve_origin(None, st.local_origin()), "mb-x")
-    rv.revoke_source(st, U, digest, "revoke", "the mailbox was compromised on 3 March", "2026-09-15T00:00:00Z")
-    st._conn.execute("UPDATE source_revocations SET reason=? WHERE user_id=?", (MARKER, U)); st._conn.commit()
-    assert st._conn.execute("SELECT reason FROM source_revocations WHERE user_id=?", (U,)).fetchone()[0] == MARKER
-    assert _edge(st, "e-s").invalidation_reason == "revoked_source"
+    # ROUND-7 CORRECTION 1: this created a NEW prose reason with `revoke_source`,
+    # which the finalised vocabulary refuses — the setup fails before the claim is
+    # reached. The frozen fixture has carried a historical prose revocation since
+    # round 6 and this test did not read it. It now does, WITH the source-linked
+    # edge the round-7 reviewer asked for: a revocation with nothing attached
+    # cannot exercise the second half of the claim, which is about the affected
+    # record rather than about the reason.
+    st = _frozen_store(tmp_path)
+    man = _frozen_rows()
+    digest, linked = man["prose_source_revocation"], man["source_linked_edge"]
+
+    stored = st._conn.execute(
+        "SELECT reason FROM source_revocations WHERE identity_digest=?", (digest,)).fetchone()[0]
+    assert stored == "she asked me to drop everything from that address", (
+        "the frozen revocation must still carry the caller's PROSE — it is the last "
+        "such row creatable, since the vocabulary now closes the field at the writer")
+    assert _edge(st, linked).invalidation_reason == "revoked_source", (
+        "and the affected record must already carry the REGISTRY value, which is what "
+        "the redaction must preserve while the prose is replaced")
+
+    # the treatment: prose replaced, the effect's registry value untouched
+    st._conn.execute("UPDATE source_revocations SET reason=? WHERE identity_digest=?",
+                     (MARKER, digest))
+    st._conn.commit()
+    assert st._conn.execute(
+        "SELECT reason FROM source_revocations WHERE identity_digest=?", (digest,)).fetchone()[0] == MARKER
+    assert _edge(st, linked).invalidation_reason == "revoked_source"
 
 
 def test_D_a_registry_reason_is_preserved(tmp_path):
@@ -453,6 +514,29 @@ def _strict_json(text):
             out[k] = v
         return out
     return json.loads(text, object_pairs_hook=pairs)
+
+
+def _isolate_jsonl(path, *, keep_id):
+    """Keep only the record named, plus any line that is not a record.
+
+    ROUND-7 CORRECTION 2. An export of the whole frozen store carries every shape
+    it holds, so a refusal asserted over it can be caused by ANY of them. A test
+    that expects rejection for ONE reason must not hand the importer a file with
+    three other reasons in it. Lines without an `id` (headers, manifests) are kept
+    so the file stays well-formed; the caller asserts what survived."""
+    import json as _json
+    kept = []
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            obj = _json.loads(line)
+        except ValueError:
+            kept.append(line)
+            continue
+        if not isinstance(obj, dict) or "id" not in obj or obj.get("id") == keep_id:
+            kept.append(line)
+    path.write_text("\n".join(kept) + "\n")
 
 
 def _frozen_memory(tmp_path):

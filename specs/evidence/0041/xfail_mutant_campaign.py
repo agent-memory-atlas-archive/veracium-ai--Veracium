@@ -80,7 +80,17 @@ def install_correct():
     state = {"receipts": {}, "events": [], "attested": set()}
     tt.Memory._0041_state = state
 
-    def redact(self, *, kind, target_id, fields):
+    def redact(self, user_id, *, edge_id=None, episode_id=None, reason):
+        # ROUND 7: §4a's signature — `redact(user_id, *, edge_id | episode_id,
+        # reason)`. The honest implementation carried the adapter's INVENTED
+        # signature until the adapter was corrected, and both positive controls
+        # went red the moment it was. A positive control tests the implementation,
+        # not the check, and these noticed the contract had moved under them — the
+        # second time in two rounds that has happened, and the reason they are
+        # worth their cost.
+        kind = "edge" if edge_id is not None else "episode"
+        target_id = edge_id if edge_id is not None else episode_id
+        fields = ["object"]
         key = (kind, target_id, tuple(fields))
         if key in state["receipts"]:
             r = _Receipt(state["receipts"][key])
@@ -175,14 +185,14 @@ print("\nT1 — test_F_a_repeated_call_returns_the_original_or_a_reconstructed_r
 T1 = tt.test_F_a_repeated_call_returns_the_original_or_a_reconstructed_receipt
 
 check("the reviewer's mutant: a no-op redact()", True, T1,
-      stub(lambda self, **k: None), drop_redact)
+      stub(lambda self, *a, **k: None), drop_redact)
 check("a fresh receipt every call, repeated always False", True, T1,
-      stub(lambda self, **k: _Receipt(redacted_kind=k["kind"], target_id=k["target_id"],
-                                      fields_cleared=list(k["fields"]),
-                                      recorded_at="x", repeated=False,
-                                      reconstructed=False)), drop_redact)
+      stub(lambda self, *a, **k: _Receipt(redacted_kind="edge", target_id=k.get("edge_id"),
+                                         fields_cleared=["object"],
+                                         recorded_at="x", repeated=False,
+                                         reconstructed=False)), drop_redact)
 check("a receipt missing the `repeated` field entirely", True, T1,
-      stub(lambda self, **k: _Receipt(redacted_kind="edge")), drop_redact)
+      stub(lambda self, *a, **k: _Receipt(redacted_kind="edge")), drop_redact)
 check("POSITIVE CONTROL — an honest implementation", False, T1,
       install_correct, remove_correct)
 
@@ -211,7 +221,7 @@ print("\nT3 — test_C_after_attestation_the_same_write_is_refused")
 T3 = tt.test_C_after_attestation_the_same_write_is_refused
 
 check("the reviewer's mutant: a no-op redact(), no attestation created", True, T3,
-      stub(lambda self, **k: None), drop_redact)
+      stub(lambda self, *a, **k: None), drop_redact)
 check("POSITIVE CONTROL — redaction attests, and only the attested write is refused",
       False, T3, install_correct, remove_correct)
 
@@ -252,6 +262,60 @@ check("its mirror: a checker that always refuses", True, T4,
       _stub_run(_AlwaysRefuses), _unstub)
 check("POSITIVE CONTROL — the real checker, both halves", False, T4,
       lambda: None, lambda: None)
+
+print("\nT5 — test_B_an_import_carrying_a_prose_kind_is_refused (ROUND-7 CORRECTION 2)")
+T5 = tt.test_B_an_import_carrying_a_prose_kind_is_refused
+
+# The round-7 reviewer's own mutant, kept so the isolation stays isolated. The
+# test exported the WHOLE frozen store, so an import rule rejecting MARKERS — with
+# no kind validation at all — satisfied its expected rejection. The export is now
+# isolated to the prose-kind episode, and this mutant proves it: a marker-only
+# rule must NO LONGER be able to make this test pass.
+import veracium.portability as _port
+
+_REAL_IMPORT = _port.import_memory
+
+
+def _marker_only_import():
+    def rule(store, path, *a, **k):
+        if tt.MARKER in pathlib.Path(path).read_text():
+            raise ValueError("marker rejected at import — NO kind validation performed")
+        return _REAL_IMPORT(store, path, *a, **k)
+    _port.import_memory = rule
+
+
+def _real_import():
+    _port.import_memory = _REAL_IMPORT
+
+
+check("the reviewer's mutant: an import rule that rejects MARKERS and never looks "
+      "at kinds", True, T5, _marker_only_import, _real_import)
+
+# ====================================================================
+# COVERAGE ACCOUNTING, corrected at round 7 and DERIVED rather than stated.
+#
+# The round-7 README claimed seven strict xfails awaited positive controls. The
+# reviewer corrected it: there are FOUR positive controls but only THREE cover
+# strict xfails — the fourth covers the ordinary fixture-checker test — so EIGHT
+# await one. A completeness claim in a carrier, understated in the direction that
+# flattered the evidence. It is computed here so the number cannot drift again.
+# ====================================================================
+import re as _re
+
+_strict = 0
+for _f in ("test_0041_transition_table.py", "test_0041_treatment_matrix.py",
+           "test_0041_evidence.py"):
+    _strict += (ROOT / "tests" / _f).read_text().count("xfail(strict=True")
+_covered = sorted({lbl for ok, lbl, _ in RESULTS if "POSITIVE CONTROL" in lbl})
+_strict_covered = [t for t in ("T1", "T2", "T3") ]
+print("\n" + "=" * 72)
+print("COVERAGE, derived:")
+print(f"  strict xfails in the 0041 modules      {_strict}")
+print(f"  positive controls in this campaign     {len(_covered)}")
+print(f"  of those, covering a STRICT xfail      {len(_strict_covered)}  (T4 covers an ORDINARY test)")
+print(f"  strict xfails still AWAITING one       {_strict - len(_strict_covered)}")
+print("  §11.4-bis requires BOTH controls of every strict xfail; the remainder is")
+print("  owed at implementation and is not claimed as done.")
 
 print("\n" + "=" * 72)
 bad = [r for r in RESULTS if not r[0]]
