@@ -41,7 +41,7 @@
 | 0037 | `0037-procedural-basis.md` | `accepted` | procedural records and the `basis` axis (stages 1–3) |  |
 | 0038 | `0038-extraction-speech-act.md` | `accepted` | the extraction's speech-act discipline |  |
 | 0039 | `0039-degradation-visibility.md` | `accepted` | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing |  |
-| 0041 | `0041-targeted-redaction.md` | `draft` | targeted redaction — stored content removed, the record that it existed retained |  |
+| 0041 | `0041-targeted-redaction.md` | `accepted-with-amendments` | targeted redaction — stored content removed, the record that it existed retained |  |
 
 ## Reservations (claimed, not drafted)
 
