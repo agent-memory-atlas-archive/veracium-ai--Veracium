@@ -89,14 +89,23 @@ def _field(receipt, name):
 
 
 def _redaction_event_count(store, target_id):
-    """How many redaction events the store holds for one target.
+    """How many REDACTION events the journal holds for one target.
 
-    No such table ships, so this raises today rather than returning 0 — which is
-    the point. A count helper that swallowed the missing table and returned 0
-    would make `== 1` fail and `== 0` pass, and a test asserting "no second event"
-    would have been green against a store that records nothing at all."""
+    ROUND-6 FINDING 1, aligned with the journal contract the spec already carries.
+    The first version queried a `redaction_events` table — a table this spec never
+    proposes. §11.2 and §2d-ii say the redaction event is a NEW KIND in the
+    EXISTING `edge_event` journal (one branch added at the writer that already
+    refuses, no new mechanism), carrying the redaction vocabulary in `reason`
+    where every other kind carries `None`. Counting a table of my own invention
+    would have gone green against an implementation that followed the spec, and
+    red against one that did not — the wrong way round.
+
+    No `redacted` kind is written yet, so this returns 0 today and its caller is a
+    strict xfail. It reads the SHIPPED journal, so when the kind lands the count
+    becomes real without this helper changing."""
     rows = store._conn.execute(
-        "SELECT COUNT(*) FROM redaction_events WHERE target_id=?", (target_id,)).fetchone()
+        "SELECT COUNT(*) FROM edge_event WHERE edge_id=? AND kind=?",
+        (target_id, "redacted")).fetchone()
     return rows[0]
 
 
@@ -154,12 +163,14 @@ def test_A_the_ruled_shape_survives_export_and_import(tmp_path):
 def test_B_existing_prose_kind_is_retained_at_migration_and_readable(tmp_path):
     """§4h: the closure binds the WRITE path and the IMPORT boundary, never the
     read path; an existing prose kind is retained and stays readable."""
-    st = _mem(tmp_path).store
-    st.add_episode(Episode(id="ep-p", user_id=U, date="2026-09-01", summary="s", kind="told me in confidence", provenance=_prov()))
-    ep = [e for e in st.episodes(U) if e.id == "ep-p"][0]
+    # ROUND-6 FINDING 1: the prose kind was written here, which the recognised-kind
+    # closure refuses at the write path. It is a frozen record now.
+    st = _frozen_store(tmp_path)
+    ep_id = _frozen_rows()["prose_kind"]
+    ep = [e for e in st.episodes(U) if e.id == ep_id][0]
     assert ep.kind == "told me in confidence"                        # readable, retained
-    _rewrite(st, "episodes", "ep-p", summary=MARKER, kind=MARKER)    # redaction: prose kind → marker
-    ep2 = [e for e in st.episodes(U) if e.id == "ep-p"][0]
+    _rewrite(st, "episodes", ep_id, summary=MARKER, kind=MARKER)    # redaction: prose kind → marker
+    ep2 = [e for e in st.episodes(U) if e.id == ep_id][0]
     assert ep2.kind == MARKER and ep2.summary == MARKER              # the marker-valued record reads back today
 
 
@@ -177,9 +188,18 @@ def test_B_an_ordinary_write_of_a_new_prose_kind_is_refused_while_the_stored_one
                                        "an import carrying a prose kind is not yet refused")
 def test_B_an_import_carrying_a_prose_kind_is_refused(tmp_path):
     from veracium.portability import export_memory, import_memory
-    src = _mem(tmp_path, "s.db").store
-    src.add_episode(Episode(id="ep-p", user_id=U, date="2026-09-01", summary="s", kind="told me in confidence", provenance=_prov()))
-    out = tmp_path / "x.jsonl"; export_memory(src, U, out)
+    # ROUND-6 FINDING 1, EXTENDED. The reviewer named three tests that built their
+    # historical records through ordinary writers; this is a FOURTH of the same
+    # shape, found by the class sweep rather than by the verdict. It wrote a prose
+    # kind into its own source store to have something to export — the exact write
+    # the closure refuses — so it too would have failed while preparing data. The
+    # export source is the frozen store, which already carries a prose-kind
+    # episode written before the restrictions.
+    src = _frozen_store(tmp_path)
+    assert any(e.kind == "told me in confidence" for e in src.episodes(U)), (
+        "the frozen store must carry the prose-kind episode this export needs")
+    out = tmp_path / "x.jsonl"
+    export_memory(src, U, out)
     with pytest.raises(Exception):
         import_memory(_mem(tmp_path, "d.db").store, out)
 
@@ -236,15 +256,16 @@ def test_C_the_migration_report_enumerates_unattested_marker_rows(tmp_path):
     store whose answer is known — two unattested rows and one ordinary row — so a
     report that returns [] fails, and so does one that returns everything."""
     from veracium.store import migration
-    st = _mem(tmp_path).store
-    st.add_edge(Edge(id="e-mark-1", user_id=U, subject="user", relation="works_as", object=MARKER, provenance=_prov()))
-    st.add_edge(Edge(id="e-mark-2", user_id=U, subject="user", relation="lives_in", object=MARKER, provenance=_prov()))
-    st.add_edge(Edge(id="e-plain", user_id=U, subject="user", relation="likes", object="tea", provenance=_prov()))
+    # ROUND-6 FINDING 1: this body WROTE its two marker rows through the ordinary
+    # writer, which the write-path closure refuses — so the test failed while
+    # PREPARING its data, in the one place a frozen fixture exists to serve.
+    st = _frozen_store(tmp_path)
+    man = _frozen_rows()
 
     rows = migration.unattested_marker_report(st)
 
     named = {r["target_id"] if isinstance(r, dict) else r.target_id for r in rows}
-    assert named == {"e-mark-1", "e-mark-2"}, (
+    assert named == {man["unattested_marker"], man["unattested_marker_2"]}, (
         "the report must name every row holding the marker bytes with no redaction "
         "record attesting them, and no others")
     # and it must say WHICH field carries the marker — a report that names the row
@@ -272,20 +293,27 @@ def test_C_after_attestation_the_same_write_is_refused(tmp_path):
     own CONTROL: an unattested marker row stays writable. Without that control a
     blanket refusal of every write to a marker-holding field would satisfy the
     test while contradicting §4b."""
-    m = _mem(tmp_path)
+    # ROUND-6 FINDING 1: both the target and the control were WRITTEN here, and
+    # the control wrote the marker through the ordinary writer — the exact write
+    # the closure refuses. Both are frozen records now.
+    m = _frozen_memory(tmp_path)
     st = m.store
-    st.add_edge(Edge(id="e-att", user_id=U, subject="user", relation="works_as", object="a secret", provenance=_prov()))
+    man = _frozen_rows()
+    target = man["ordinary_edge"]
 
-    _redact(m, kind="edge", target_id="e-att", fields=["object"])       # the attestation is CREATED here
+    _redact(m, kind="edge", target_id=target, fields=["object"])        # the attestation is CREATED here
 
     with pytest.raises(Exception):                                      # ... and only then refused
-        st.add_edge(Edge(id="e-att", user_id=U, subject="user", relation="works_as", object="Porto", provenance=_prov()))
+        st.add_edge(Edge(id=target, user_id=U, subject="user", relation="likes",
+                         object="Porto", provenance=_prov()))
 
     # THE CONTROL, and it is the half that keeps the refusal honest: an UNATTESTED
-    # marker confers nothing, so this write must still succeed (§4b).
-    st.add_edge(Edge(id="e-un", user_id=U, subject="user", relation="works_as", object=MARKER, provenance=_prov()))
-    st.add_edge(Edge(id="e-un", user_id=U, subject="user", relation="works_as", object="Porto", provenance=_prov()))
-    assert _edge(st, "e-un").object == "Porto"
+    # marker confers nothing, so a write over one must still succeed (§4b). The
+    # marker row is frozen; only the ordinary write over it happens here.
+    un = man["unattested_marker"]
+    st.add_edge(Edge(id=un, user_id=U, subject="user", relation="works_as",
+                     object="Porto", provenance=_prov()))
+    assert _edge(st, un).object == "Porto"
 
 
 @pytest.mark.xfail(strict=True, reason="0041 §4b repeat calls: repeated=True with the original receipt, or reconstructed=True "
@@ -427,6 +455,21 @@ def _strict_json(text):
     return json.loads(text, object_pairs_hook=pairs)
 
 
+def _frozen_memory(tmp_path):
+    """A `Memory` over a writable copy of the frozen pre-restriction store — the
+    sibling of `_frozen_store`, for tests that need the API and not the store."""
+    dst = tmp_path / "frozen.db"
+    shutil.copy2(_FROZEN / "pre_restriction.sqlite", dst)
+    return _mem(tmp_path, name="frozen.db")
+
+
+def _frozen_rows():
+    """The frozen store's named shapes, from its manifest. A test names a shape
+    and the manifest says which row carries it, so a rebuild cannot silently
+    leave a test pointing at an id that no longer exists."""
+    return _strict_json((_FROZEN / "pre_restriction_manifest.json").read_text())["rows"]
+
+
 def _frozen_store(tmp_path):
     """A writable copy of the frozen pre-restriction store.
 
@@ -464,11 +507,31 @@ def test_the_frozen_pre_restriction_store_matches_its_manifest(tmp_path):
     raw = bytearray((_FROZEN / "pre_restriction.sqlite").read_bytes())
     assert hashlib.sha256(bytes(raw)).hexdigest() == man["sha256"]
     assert len(raw) == man["bytes"]
-    raw[-1] ^= 0xFF
-    mutated = tmp_path / "mutated.sqlite"
-    mutated.write_bytes(bytes(raw))
-    assert hashlib.sha256(mutated.read_bytes()).hexdigest() != man["sha256"], (
-        "a flipped byte must move the digest the checker compares")
+    # ROUND-6 FINDING 2. This half used to flip a byte and compare two sha256
+    # digests, which is a property of sha256 and not of the checker: the reviewer
+    # replaced the subprocess result with unconditional success and the test still
+    # passed. It was written in the same commit as the rule that a check without a
+    # working negative control certifies nothing. The checker is now RUN on the
+    # altered bytes, in a throwaway copy of its own directory, and the rejection is
+    # read from ITS exit code and ITS message.
+    copy = tmp_path / "evidence"
+    copy.mkdir()
+    for name in ("pre_restriction_fixture.py", "pre_restriction.sqlite",
+                 "pre_restriction_manifest.json"):
+        (copy / name).write_bytes((_FROZEN / name).read_bytes())
+    b = bytearray((copy / "pre_restriction.sqlite").read_bytes())
+    b[-1] ^= 0xFF
+    (copy / "pre_restriction.sqlite").write_bytes(bytes(b))
+
+    bad = subprocess.run([sys.executable, str(copy / "pre_restriction_fixture.py"), "--check"],
+                         capture_output=True, text=True)
+    assert bad.returncode == 1, (
+        f"the checker ACCEPTED a store with a flipped byte (exit {bad.returncode}); a "
+        f"digest check that cannot be made to fail is the unfailable-check class, and "
+        f"this one guards an artifact whose whole value is that it has not changed")
+    assert "CHANGED" in bad.stdout.upper(), (
+        f"the checker refused the altered bytes but did not SAY what was wrong; its "
+        f"output was {bad.stdout.strip()!r}")
 
 
 def test_the_frozen_store_carries_every_pre_restriction_shape_the_table_needs(tmp_path):

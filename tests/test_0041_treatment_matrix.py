@@ -83,10 +83,33 @@ def test_row46_the_replace_branch_applies_to_prose_only(tmp_path):
 @pytest.mark.xfail(strict=True, reason="0041 §11.4 / §2d-iv: the recognised-kind set is not yet closed by a refusal "
                                        "at the model or at import (Episode.kind is a bare str); implementation follows acceptance")
 def test_row46_the_recognised_kind_set_is_closed_by_a_refusal(tmp_path):
+    """ROUND-6 FINDING 1, moved to the boundary §4h names.
+
+    This body asserted that the `Episode` CONSTRUCTOR rejects a prose kind. That
+    contradicts the clause it was written to defend: §4h binds the recognised-kind
+    closure to the WRITE path and the IMPORT boundary and NEVER to the read path,
+    because a row already on disk has to load — and loading goes through the same
+    validator, so a refusal there makes an existing record unreadable.
+
+    Its sibling in the transition table was moved at round 5 and this one was
+    left, which is the whole finding: a rule applied to one instance and not to
+    the other instance of the same shape. The spec needed no change — §4h already
+    said this — so the fix brings the TEST to the spec, the inversion of round
+    5's finding 1 where the spec had drifted from a test that was right.
+
+    Both halves are asserted: the model ADMITS the value, so the read path stays
+    open, and the write path refuses it."""
+    # READ PATH: the model admits a prose kind, and a stored row loads
+    ep = Episode(id="ep-x", user_id=U, date="2026-09-01", summary="s", kind="told me in confidence",
+                 provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
+                                       disclosure=Disclosure.MENTIONABLE))
+    assert ep.kind == "told me in confidence"
+    assert Episode.model_validate(json.loads(ep.model_dump_json())).kind == ep.kind
+
+    # WRITE PATH: the closure binds here
+    st = _mem(tmp_path).store
     with pytest.raises(Exception):
-        Episode(id="ep-x", user_id=U, date="2026-09-01", summary="s", kind="told me in confidence",
-                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
-                                      disclosure=Disclosure.MENTIONABLE))
+        st.add_episode(ep)
 
 
 # ---------------------------------------------------------------- absent values (round-3 F2)

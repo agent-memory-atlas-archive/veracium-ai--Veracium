@@ -91,13 +91,20 @@ def install_correct():
                 f"UPDATE edges SET {f}=?, json=json_set(json,'$.{f}',?) WHERE id=?",
                 (tt.MARKER, tt.MARKER, target_id))
         self.store._conn.commit()
+        # ROUND 6: the honest implementation writes a `redacted` event into the
+        # EXISTING edge_event journal, which is what §11.2 and §2d-ii specify —
+        # not into a table of the test's own invention. The campaign caught this
+        # the moment the helper was corrected: the positive control failed because
+        # the stub still wrote the invented table, which is the control doing its
+        # job on the implementation rather than on the check.
+        row = self.store._conn.execute(
+            "SELECT COALESCE(MAX(seq), -1) + 1, COALESCE(MAX(txn), -1) + 1 "
+            "FROM edge_event WHERE user_id=?", (tt.U,)).fetchone()
         self.store._conn.execute(
-            "CREATE TABLE IF NOT EXISTS redaction_events "
-            "(target_id TEXT, field TEXT, recorded_at TEXT)")
-        for f in fields:
-            self.store._conn.execute(
-                "INSERT INTO redaction_events VALUES (?,?,?)",
-                (target_id, f, "2026-09-16T00:00:00Z"))
+            "INSERT INTO edge_event (user_id, seq, txn, edge_id, kind, reason, state, recorded_at) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (tt.U, row[0], row[1], target_id, "redacted", "subject_request",
+             "tombstone", "2026-09-16T00:00:00Z"))
         self.store._conn.commit()
         state["events"].append(target_id)
         state["attested"].add((target_id, tuple(fields)))
@@ -207,6 +214,44 @@ check("the reviewer's mutant: a no-op redact(), no attestation created", True, T
       stub(lambda self, **k: None), drop_redact)
 check("POSITIVE CONTROL — redaction attests, and only the attested write is refused",
       False, T3, install_correct, remove_correct)
+
+print("\nT4 — test_the_frozen_pre_restriction_store_matches_its_manifest (ROUND-6 FINDING 2)")
+T4 = tt.test_the_frozen_pre_restriction_store_matches_its_manifest
+
+# The reviewer's mutant, kept so the repair stays repaired. The original body ran
+# the checker once, on the frozen bytes, and compared two digests for the altered
+# copy — so forcing subprocess.run to succeed left it green. Both halves now read
+# the same tool the same way, and the two mutants below are mirror images: one
+# makes the checker always accept, the other always refuse.
+import subprocess as _sp
+
+_REAL_RUN = _sp.run
+
+
+class _AlwaysOK:
+    returncode, stdout, stderr = 0, "frozen fixture matches its manifest", ""
+
+
+class _AlwaysRefuses:
+    returncode, stdout, stderr = 1, "FROZEN FIXTURE CHANGED", ""
+
+
+def _stub_run(cls):
+    def patch():
+        _sp.run = lambda *a, **k: cls()
+    return patch
+
+
+def _unstub():
+    _sp.run = _REAL_RUN
+
+
+check("the reviewer's mutant: a checker that always succeeds", True, T4,
+      _stub_run(_AlwaysOK), _unstub)
+check("its mirror: a checker that always refuses", True, T4,
+      _stub_run(_AlwaysRefuses), _unstub)
+check("POSITIVE CONTROL — the real checker, both halves", False, T4,
+      lambda: None, lambda: None)
 
 print("\n" + "=" * 72)
 bad = [r for r in RESULTS if not r[0]]

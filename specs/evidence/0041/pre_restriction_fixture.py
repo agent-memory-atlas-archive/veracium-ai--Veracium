@@ -113,6 +113,30 @@ def build(path: pathlib.Path):
                            retired_reason="superseded", provenance=prov()))
     rows["registry_retired_reason"] = "ep-registry-reason"
 
+    # C-bis — a SECOND unattested marker row and an ordinary row beside it, so the
+    # migration-report test can assert the report's CONTENTS against a store whose
+    # answer is known WITHOUT writing marker rows itself. Round 6, finding 1: three
+    # transition tests still built their historical records through ordinary
+    # writers and failed while PREPARING data once the write restrictions were
+    # added — which is the trap this fixture exists to avoid, sprung in the tests
+    # that did not use it.
+    st.add_edge(Edge(id="e-unattested-marker-2", user_id=U, subject="user", relation="lives_in",
+                     object=MARKER, provenance=prov()))
+    rows["unattested_marker_2"] = "e-unattested-marker-2"
+    st.add_edge(Edge(id="e-ordinary", user_id=U, subject="user", relation="likes",
+                     object="tea", provenance=prov()))
+    rows["ordinary_edge"] = "e-ordinary"
+
+    # E — a historical SOURCE REVOCATION carrying the caller's PROSE, written
+    # through the sole writer before D1's vocabulary closes the field. Round 6,
+    # finding 1: the six-shape fixture lacked this case, and after v12 it can no
+    # longer be created, because `revoke_source` will refuse a reason outside the
+    # four values. This row is the only pre-closure instance that will exist.
+    from veracium.store.revocation import revoke_source
+    revoke_source(st, U, "a" * 64, "revoke",
+                  "she asked me to drop everything from that address", "2026-09-01T00:00:00Z")
+    rows["prose_source_revocation"] = "a" * 64
+
     st._conn.commit()
     st.close() if hasattr(st, "close") else None
     return rows
