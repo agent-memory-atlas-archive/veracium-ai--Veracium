@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""0041 — a FROZEN store written BEFORE the restrictions the spec adds.
+
+Round 5's standing artifact ask, made twice: "freeze pre-restriction fixtures so
+future write restrictions do not prevent test setup."
+
+THE PROBLEM THIS SOLVES. Every transition test proves a claim about a record that
+EXISTS ALREADY — a prose `kind`, a prose `retired_reason`, a relation-only
+quarantine, an unattested marker. Today those records are built by writing them
+through the store in the test's own setup. The moment 0041's write-path closure
+lands, those setup writes are refused, and the tests that prove existing records
+survive can no longer create an existing record. The evidence would be destroyed
+by the very change it exists to check.
+
+So the bytes are frozen NOW, under today's model and today's store, and the tests
+copy the file instead of writing the rows. A frozen store is the only fixture a
+write restriction cannot reach.
+
+    --write   build the store and the manifest (run once, before the closure)
+    --check   re-verify the frozen bytes against the manifest
+
+The manifest records the digest, the store's schema version, and the tree's HEAD
+at freeze time, so a silent regeneration after the closure lands is visible as a
+digest change and a reader can tell which code wrote it.
+"""
+# Mutation-Matrix: tests/test_0041_transition_table.py::test_the_frozen_pre_restriction_store_matches_its_manifest
+import argparse
+import hashlib
+import json
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+
+HERE = pathlib.Path(__file__).resolve().parent
+ROOT = HERE.parents[2]
+DB = HERE / "pre_restriction.sqlite"
+MANIFEST = HERE / "pre_restriction_manifest.json"
+U = "u"
+MARKER = "\x00veracium:redacted\x00"
+sys.path.insert(0, str(ROOT / "src"))
+
+
+def _strict_pairs(pairs):
+    """0026-EVIDENCE-R8-1: `json.loads` keeps the LAST duplicate key, so a
+    manifest carrying `"sha256"` twice would authenticate under whichever value
+    came second. Duplicate names REFUSE at parse, at every evidence boundary —
+    and this file's manifest is exactly such a boundary, since its digest is what
+    says the frozen fixture has not been regenerated."""
+    out = {}
+    for k, v in pairs:
+        if k in out:
+            raise ValueError(f"duplicate JSON member {k!r}")
+        out[k] = v
+    return out
+
+
+def _strict_json(text: str):
+    """json.loads with duplicate-member refusal (0026-EVIDENCE-R8-1)."""
+    return json.loads(text, object_pairs_hook=_strict_pairs)
+
+
+def _quiet(prompt, *, system=None, role="compile", json_schema=None):
+    return json.dumps({"triples": [], "episode": "x", "instructions": []}) if role == "distill" else ""
+
+
+def build(path: pathlib.Path):
+    """Write one of every shape the transition table needs, through the ordinary
+    write paths, with nothing that 0041 has not yet closed."""
+    from veracium import Memory, MemoryConfig
+    from veracium.schema import Disclosure, Edge, Episode, EvidenceAuthor, Provenance, QUARANTINE_RELATION
+
+    def prov(**kw):
+        base = dict(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
+                    disclosure=Disclosure.MENTIONABLE)
+        base.update(kw)
+        return Provenance(**base)
+
+    m = Memory(llm=_quiet, config=MemoryConfig(db_path=str(path), wiki_recompile_after_writes=0,
+                                               scope_groups={}, require_source_id=False))
+    st = m.store
+    rows = {}
+
+    # A — a relation-only quarantine: quarantined by its RELATION, not its disclosure
+    st.add_edge(Edge(id="e-quarantine-relation", user_id=U, subject="user",
+                     relation=QUARANTINE_RELATION, object="a claim", provenance=prov()))
+    rows["relation_only_quarantine"] = "e-quarantine-relation"
+
+    # B — an episode carrying PROSE in `kind`, stored before the recognised-kind closure
+    st.add_episode(Episode(id="ep-prose-kind", user_id=U, date="2026-09-01", summary="a summary",
+                           kind="told me in confidence", provenance=prov()))
+    rows["prose_kind"] = "ep-prose-kind"
+
+    # C — an UNATTESTED marker: the bytes, with no redaction record anywhere
+    st.add_edge(Edge(id="e-unattested-marker", user_id=U, subject="user", relation="works_as",
+                     object=MARKER, provenance=prov()))
+    rows["unattested_marker"] = "e-unattested-marker"
+
+    # D — legacy prose in each of the reason carriers
+    st.add_episode(Episode(id="ep-prose-retired", user_id=U, date="2026-09-01", summary="a summary",
+                           retired_reason="she asked me not to repeat it", provenance=prov()))
+    rows["prose_retired_reason"] = "ep-prose-retired"
+
+    # D-control — an ACTIVE episode: retired_reason absent, which is the case round 5
+    # found row 49 destroying. Frozen so the absence can be proved to survive.
+    st.add_episode(Episode(id="ep-active", user_id=U, date="2026-09-02", summary="a summary",
+                           provenance=prov()))
+    rows["active_episode_absent_reason"] = "ep-active"
+
+    # D-registry — a REGISTERED reason, which must be preserved unchanged
+    st.add_episode(Episode(id="ep-registry-reason", user_id=U, date="2026-09-03", summary="a summary",
+                           retired_reason="superseded", provenance=prov()))
+    rows["registry_retired_reason"] = "ep-registry-reason"
+
+    st._conn.commit()
+    st.close() if hasattr(st, "close") else None
+    return rows
+
+
+def digest(p: pathlib.Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--write", action="store_true")
+    ap.add_argument("--check", action="store_true")
+    a = ap.parse_args()
+
+    if a.write:
+        with tempfile.TemporaryDirectory() as d:
+            tmp = pathlib.Path(d) / "pre_restriction.sqlite"
+            rows = build(tmp)
+            shutil.copy2(tmp, DB)
+        head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                              capture_output=True, text=True).stdout.strip()
+        from veracium.store import schema_version as sv
+        MANIFEST.write_text(json.dumps({
+            "what": "a store written BEFORE 0041's write-path closure; the transition "
+                    "tests copy it instead of writing rows a landed closure would refuse",
+            "sha256": digest(DB),
+            "bytes": DB.stat().st_size,
+            "store_schema_version": sv.SCHEMA_VERSION,
+            "frozen_at_head": head,
+            "frozen_on": "2026-09-16",
+            "rows": rows,
+        }, indent=2, sort_keys=True) + "\n")
+        print(f"wrote {DB.name} ({DB.stat().st_size} bytes) and its manifest")
+        print(f"  sha256 {digest(DB)}")
+        return 0
+
+    if a.check:
+        man = _strict_json(MANIFEST.read_text())
+        actual = digest(DB)
+        if actual != man["sha256"]:
+            print(f"FROZEN FIXTURE CHANGED\n  manifest {man['sha256']}\n  on disk  {actual}")
+            return 1
+        print(f"frozen fixture matches its manifest: {actual[:16]}… "
+              f"({man['bytes']} bytes, store schema {man['store_schema_version']}, "
+              f"frozen at {man['frozen_at_head'][:8]})")
+        return 0
+
+    ap.print_help()
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

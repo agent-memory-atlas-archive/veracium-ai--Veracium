@@ -2212,6 +2212,12 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # binds the test that re-runs it against the committed transcript
         root / "specs" / "evidence" / "0039" / "manual_cli_driver.py",
         root / "specs" / "evidence" / "0039" / "retention_measurement.py",
+        # 0041 round 5: `--check` re-verifies the frozen pre-restriction
+        # store against its manifest, which makes it a checker whatever its
+        # name says. Registered rather than left to the naming convention:
+        # the convention is a PROXY for "is a checker" and this file would
+        # have sat outside it for the same reason subject_census.py did.
+        root / "specs" / "evidence" / "0041" / "pre_restriction_fixture.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"
