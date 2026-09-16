@@ -48,7 +48,7 @@ is the number that decides what can be built.
 | **0037** | procedural records and the `basis` axis (stages 1–3) | `accepted` | 2026-09-15 | 0 | 5 | 0 | 0 | 0 | — |
 | **0038** | the extraction's speech-act discipline | `accepted` | 2026-09-14 | 0 | 4 | 0 | 0 | 0 | — |
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
-| **0041** | targeted redaction — stored content removed, the record that it existed retained | `draft` | 2026-09-15 | 0 | 0 | 0 | 0 | 0 | — |
+| **0041** | targeted redaction — stored content removed, the record that it existed retained | `draft` | 2026-09-16 | 0 | 0 | 0 | 0 | 0 | — |
 
 **Review archives** — the exact package sent for each round, with a sha256 per
 archive — are indexed in `specs/archives/INDEX.md`.

@@ -70,9 +70,9 @@ first.*
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research), the candidate's author → dev (veracium-61), adopted 2026-09-15 at rest and re-read from the file at each adoption: v6 from `0041-targeted-redaction-v4-CANDIDATE.md` (sha16 41e31dc725c77cd2; the file kept its v4 name); v5 from the same file (e7385dd63c02afd6); v3 from `0041-targeted-redaction-CANDIDATE.md` (1d0c0389bef11a3f); v2.1 from the same name (eecd5a4db4426058) |
-| **Version** | **v6 — RESPUN FOR THE ROUND-3 RETURN, 2026-09-15.** **F3** §11.2 now REFERENCES `schema.DISPOSITIONED_REASONS` instead of re-typing it — v5 listed the JOURNAL's twelve and omitted four of the registry's seven; the legacy boundary is split into retain-at-migration vs remove-at-redaction, with **hiding a value in `why` removing nothing from storage**. **F4** precedence stated: §11 governs on CONTRACT, **§2d-iii-bis governs on any per-candidate ROW** — v5's §11.1 said deletions govern for `contribution_ledger` while rows 21/23 rule CLEAR-and-keep, and the map is right. **HISTORY SPLIT: §11 now contains NO history; it is in Appendix A.** §2d-v: **WHAT READS THIS FIELD?** — seven executed results showing a treatment changing something other than content, collapsing to **two missing enforcements** (INV-11's mirror; §2d-iv's closure). Row 46 becomes **PRESERVE-if-recognised-kind / REPLACE-if-prose** after v5's flat REPLACE was shown to break H14 twice. §8 gains the consequence that **a redacted record can no longer be corrected.** **Prior: v5 — THE PER-CANDIDATE TREATMENT MAP.** §2d-iii-bis carries one row per carrier with its VALIDATED resulting shape; v4's §2d-ii named 32 of 64 individually and covered the rest with a phrase, and the second seat held adoption on it. Also corrected: the class sentence over-named `desc`/`text`/`payload`, none of which is among the 64. **Prior: v4 — RESPUN FOR THE ROUND-2 RETURN.** Folds all seven round-2 findings. **F1** §4e — the semantic-rebuild exemption is WITHDRAWN (it holds only the instance lock; a two-connection run stores the stale vector) **and research's own v3.1 wiki fix was the same bug** — `set_wiki` takes `store_version` as a parameter, so capture-then-compare is the race it diagnosed; restated as a TRANSACTION rule. **F2** §4b — the marker is NOT reserved (`sanitize_llm_body(MARKER) == MARKER`; `remember()` stores it); reservation becomes INV-11's MIRROR, a refusal at every non-redaction write and import boundary. **F3** §11.2 — reasons closed PER OPERATION; v3.2's five-value CHECK would have rejected every lifecycle write the product makes. **F4** §4g — row 9 and the notice cases RULED. **F5** §4f — the exact-coverage claim WITHDRAWN; conservative reporting is the ordinary case and durable association is a forward obligation. **F6** §2d-ii — the treatment map, ruled against the write-site sweep; `Episode.kind` is REPLACE. **F7** §11.3 — the invariant matrix CORRECTED: it had redefined INV-1 and INV-3 and omitted INV-4/5. *Re-read before editing; quote the version you approve* |
-| **Prior chain** | v1 (banner-only internal read) → **v2** (internal review folded into the body) → **v2.1** (dev's §2b fold at `436e4d4`, before round 1) → **v3** (research's respin for the round-1 return) → **v3.1** (four things folded at adoption from the second seat's exchange) → **v3.2** (the title line moved to line 1 after research's second-seat read found the registry rendering a banner as the spec's name) → **v4** (the round-2 return) → **v5** (the per-candidate treatment map) → **v6** (this — the round-3 return) |
+| **Author / session** | research (veracium-research), the candidate's author → dev (veracium-61), adopted 2026-09-15 at rest and re-read from the file at each adoption: v9 from `0041-targeted-redaction-v4-CANDIDATE.md` (sha16 fcd801bbbe9595db; the file kept its v4 name; v7 was superseded by v8 before adoption and never reached this tree; v8 was copied here at c3595046d343b1c9 and HELD before commit when the adopting seat read it against its own attestation rule, then replaced by v9); v6 from the same file (41e31dc725c77cd2); v5 from the same file (e7385dd63c02afd6); v3 from `0041-targeted-redaction-CANDIDATE.md` (1d0c0389bef11a3f); v2.1 from the same name (eecd5a4db4426058) |
+| **Version** | **v9 — INV-11 RE-KEYED EVERYWHERE, 2026-09-15.** 🔴 **THE SECOND SEAT READ THE ADOPTED COPY AGAINST ITS OWN ATTESTATION RULE AND FOUND THE RULE CONTRADICTED THREE SECTIONS LATER.** v7 changed INV-11 to key on ATTESTED redaction rather than on the marker bytes **and did not sweep the statements that depended on it.** The second seat found ONE; **the sweep found FOUR, and the worst was not the one reported**: 🔴 **INV-11's CANONICAL STATEMENT IN THE INVARIANT TABLE still read *"an ordinary write to a marker-holding field is refused"*** — a reviewer reading the normative table met the superseded rule as the definition. Also re-keyed: §4b-ii's `repopulation` row (the reported one), the §4b `reservation` cell's restatement, and the write-path row. **All four now key on the RECORD: an ordinary write to an ATTESTED-redacted field is refused; a write to an UNATTESTED marker SUCCEEDS** — which is what the second seat's transition table already asserts green. **Also: a cited test node wrapped across a line break inside its backticks** (§11.4-bis), which no checker can read and which is exactly what produced three false violations in research's own regex; every backticked node now sits on one line, verified by derivation rather than by eye. **Prior: v8 — THE OWNER'S LAST 0041 DECISION, FOLDED. 2026-09-15.** 🔴 **RULED: the pre-existing-marker migration report is ADVISORY, NOT BLOCKING** — the last decision this spec held for the owner, and v7 had already withdrawn the three options v6 offered him as wrong. **The §4b cell now states the consequence rather than the preference: a store can be upgraded with unattested marker rows in it and nothing stops the operator.** **Also: the cell's bare pointer to the research tree's open-items register is REMOVED.** It resolved beside the candidate in the research tree and **not from `specs/`, where the adopted copy lives** — a spec citing a file absent from its own repo is a dangling citation. ⚠️ **And the reason it had to be found by reading rather than by a gate: `test_no_spec_names_a_module_or_script_that_does_not_exist` matches `.py` ONLY** (`specs/…py` and bare `name.py`); **no gate checks a backticked `.md` citation at all.** Verified by running the gate's own two patterns over this document: zero violations, including over the pointer now removed. **Prior: v7 — RESPUN FOR THE ROUND-4 RETURN, 2026-09-15. F1, F2 AND F3 WRITTEN; F4 IS THE SECOND SEAT'S.** 🔴 **F2: NEW §4h, THE TRANSITION POLICY — and v6's relation-only quarantine CANDIDATE IS NOW A PROVEN SAFETY REGRESSION.** Executed: `Edge(relation=QUARANTINE_RELATION, disclosure=MENTIONABLE)` is accepted by the model, stores, and reads back `quarantined=True` **held entirely by the relation clause** — `ingest.py:190` pairs them, but ingest is one producer and the model is the contract. **Redact `relation` and `quarantined` flips to False, promoting an unverified third-party claim out of `## UNVERIFIED THIRD-PARTY CLAIMS (never assert as fact)` into the grounded section.** A privacy operation would have WIDENED what the model may assert. **The general rule this forces: A REDACTION MAY NOT CHANGE A DERIVED DISPOSITION — it must re-establish it through a field it does not redact, in the same transaction, or REFUSE.** Third proven instance after `Episode.kind`→H14 and `retired_reason`→`active`. **`Episode.kind`'s closure binds the WRITE and IMPORT paths, never the read path** (a closure enforced on read makes every legacy store unopenable); existing prose kinds are RETAINED at migration, and **a marker-valued `kind` validates only when ATTESTED** — the §4b rule doing a second job. **And the EVIDENCE RULE: a transition claim proved on a record built under the new model proves nothing** — the fixture has already satisfied the rule it is meant to test, exactly how the packaged INV-12 fixture missed a widened embedder. 🔴 **F3: §11.2 IS REBUILT ON THE SECOND SEAT'S EXECUTED RESULTS, and v6's central claim there was FALSE** — it said `edge_event.reason` is closed by *"nothing today"*, when `sqlite.py:247` ALREADY refuses an unregistered reason on the `invalidated` kind (executed: `invalidate_edge(reason="told me in confidence")` is REFUSED). **The rule exists and must be EXTENDED, not invented.** **FOUR reason fields, THREE contracts, each stated against what it does today**: the two that close today; `Episode.retired_reason`, which has **NO refusal at all** and whose closure is a code change this spec requires; and 🔴 **`source_revocations.reason`, which has NO VOCABULARY TO PRESERVE** — it carries the caller's sentence verbatim while the affected records get `revoked_source`, so v6's single *"PRESERVE if vocabulary"* cell was wrong for it and it is REPLACED as ordinary prose. **`revoked_source` is the EFFECT's registry value, not the revocation's reason.** **§9b's D1 is ANNOTATED, NOT EDITED** — its own conditional (*"all three close, or the next sweep finds a fourth"*) has been met, and the owner's count stays the owner's. 🔴 **F1 was right and the fault was mine: decisions reached in discussion were never written into the text.** **§4b gains THE ATTESTATION RULE — the marker is NOT self-authenticating; the redaction RECORD is the authority — and it settles THREE rows that said "owed" at once.** **pre-existing marker-holding rows: ADMITTED AS UNATTESTED MARKERS**, not refused, not quarantined; INV-11 is re-keyed on ATTESTED redaction rather than on the byte string, because keying on the bytes freezes an owner's own content and renders it as a tombstone. **legitimately empty: redaction NEVER writes `""`**, so the ambiguity does not arise and INV-8 rejects a value redaction cannot produce. **§4g's notice-less tombstone vs INV-11's import mirror: the CONFLICT IS RESOLVED** — both stand once keyed on the record; what is refused is a marker presented AS a redaction without its notice. **repeat calls with no original receipt: a RECONSTRUCTED receipt, explicit `None` for what the record cannot support, nothing inferred.** 🔴 **ROWS 30/49 NO LONGER SAY "else the marker" — they write the NEW registry value `redacted`**, because `sqlite.py:247` already refuses an unregistered reason (v6's marker would have been rejected on every legacy row) and because **`NULL` on `Episode.retired_reason` UN-RETIRES the episode** (`active` IS `retired_reason is None`) while being harmless on `Edge.invalidation_reason` (`active` keys on `invalidated_at`) — an asymmetry v6 had flat. **The extension costs FOUR coordinated sites**, including the IMPORT-TIME gate at `asof/resolve.py:113` that fails `import veracium` if the registry is extended alone. **Base: the TREE's adopted v6 at `ef46d4a` (sha16 4eaec88fde6ad1bc), RE-COPIED, not folded** — the candidate had again drifted from it by exactly one line, the Author cell dev owns. **v6 — RESPUN FOR THE ROUND-3 RETURN, 2026-09-15.** **F3** §11.2 now REFERENCES `schema.DISPOSITIONED_REASONS` instead of re-typing it — v5 listed the JOURNAL's twelve and omitted four of the registry's seven; the legacy boundary is split into retain-at-migration vs remove-at-redaction, with **hiding a value in `why` removing nothing from storage**. **F4** precedence stated: §11 governs on CONTRACT, **§2d-iii-bis governs on any per-candidate ROW** — v5's §11.1 said deletions govern for `contribution_ledger` while rows 21/23 rule CLEAR-and-keep, and the map is right. **HISTORY SPLIT: §11 now contains NO history; it is in Appendix A.** §2d-v: **WHAT READS THIS FIELD?** — seven executed results showing a treatment changing something other than content, collapsing to **two missing enforcements** (INV-11's mirror; §2d-iv's closure). Row 46 becomes **PRESERVE-if-recognised-kind / REPLACE-if-prose** after v5's flat REPLACE was shown to break H14 twice. §8 gains the consequence that **a redacted record can no longer be corrected.** **Prior: v5 — THE PER-CANDIDATE TREATMENT MAP.** §2d-iii-bis carries one row per carrier with its VALIDATED resulting shape; v4's §2d-ii named 32 of 64 individually and covered the rest with a phrase, and the second seat held adoption on it. Also corrected: the class sentence over-named `desc`/`text`/`payload`, none of which is among the 64. **Prior: v4 — RESPUN FOR THE ROUND-2 RETURN.** Folds all seven round-2 findings. **F1** §4e — the semantic-rebuild exemption is WITHDRAWN (it holds only the instance lock; a two-connection run stores the stale vector) **and research's own v3.1 wiki fix was the same bug** — `set_wiki` takes `store_version` as a parameter, so capture-then-compare is the race it diagnosed; restated as a TRANSACTION rule. **F2** §4b — the marker is NOT reserved (`sanitize_llm_body(MARKER) == MARKER`; `remember()` stores it); reservation becomes INV-11's MIRROR, a refusal at every non-redaction write and import boundary. **F3** §11.2 — reasons closed PER OPERATION; v3.2's five-value CHECK would have rejected every lifecycle write the product makes. **F4** §4g — row 9 and the notice cases RULED. **F5** §4f — the exact-coverage claim WITHDRAWN; conservative reporting is the ordinary case and durable association is a forward obligation. **F6** §2d-ii — the treatment map, ruled against the write-site sweep; `Episode.kind` is REPLACE. **F7** §11.3 — the invariant matrix CORRECTED: it had redefined INV-1 and INV-3 and omitted INV-4/5. *Re-read before editing; quote the version you approve* |
+| **Prior chain** | v1 (banner-only internal read) → **v2** (internal review folded into the body) → **v2.1** (dev's §2b fold at `436e4d4`, before round 1) → **v3** (research's respin for the round-1 return) → **v3.1** (four things folded at adoption from the second seat's exchange) → **v3.2** (the title line moved to line 1 after research's second-seat read found the registry rendering a banner as the spec's name) → **v4** (the round-2 return) → **v5** (the per-candidate treatment map) → **v6** (the round-3 return) → **v7** (research's respin for the round-4 return — F1, F2 and F3 written into the text; **SUPERSEDED BY v8 BEFORE ADOPTION and never reached the tree**) → **v8** (the owner's ruling that the migration report is ADVISORY, folded; the dangling research-tree pointer removed — **adoption HELD when the second seat read it against its own attestation rule**) → **v9** (this — INV-11 re-keyed on the RECORD in all four places v7 left keyed on the bytes, including the invariant table's own definition; the wrapped citation un-wrapped) |
 | **Internal reviewers** | dev · research |
 | **External review** | **required** — touches `store/sqlite.py`, `store/edge_events.py`, `store/schema_version.py` |
 | **Decision + date** | — |
@@ -735,7 +735,7 @@ to it** — which is what dev's round-1 reproduction does for the three above.
 | **REPLACE** with the marker | the content leaves **as the per-candidate table names them**; **`markers` per entry, arity preserved**; 🔴 **`Episode.kind`** | extractor- or host-supplied content. 🔴 **v5: this cell previously named `desc`, `text` and `payload` — NONE of the three is among the 64.** `Relation` is configuration and never persisted; `wiki.text` and the ledger `payload` are **DDL-level carriers under §2b**, not model fields. **The class sentence over-named and the TABLE IS THE AUTHORITY** |
 | **CLEAR the keys** | `outcome_counts` | keys persist and export **verbatim**; the `Outcome` enum constrains `record_outcome` but **not the model and not import** |
 | **DELETE the row** | the three digest / vector carriers | INV-7. Never copied into a receipt |
-| **PRESERVE if vocabulary · REPLACE if legacy prose** | the two reason fields | §11.2's per-operation boundary |
+| 🔴 **v7: PER FIELD — §11.2 is the authority, and there is no single rule** | 🔴 **FOUR reason fields, three different contracts.** `Edge.invalidation_reason` and `Episode.retired_reason`: **PRESERVE if in the registry · else the new `redacted`** (rows 30/49; never the marker, and never `NULL` on the episode). `edge_event.reason`: the journal's existing closure, **EXTENDED** to the `redacted` kind. 🔴 **`source_revocations.reason`: REPLACED with the marker like any other prose — it has NO vocabulary**, and v6's single *"preserve if vocabulary"* cell was wrong for it | §11.2, built on the second seat's executed results |
 | **PRESERVE** — identifiers, timestamps, traced-internal fields | each with its reason recorded, never a bare negative | §2d-iii |
 
 ### 2d-iii. Why each PRESERVE is preserved — the reasons, not a bare list
@@ -802,7 +802,7 @@ for two versions.** Every PRESERVE names what makes it safe:
 | 27 | `ContributionRecord.survivor_type` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | the literal `"edge"` at every writer incl. import's reconstruction (`graph.py:514`, `portability.py:638`) |
 | 28 | `ContributionRecord.user_id` | IS the row -> contribution_ledger | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
 | 29 | `Edge.id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
-| 30 | `Edge.invalidation_reason` | json blob | **PRESERVE if vocabulary · REPLACE if legacy prose** | the vocabulary value unchanged, else the marker | §11.2's per-operation boundary |
+| 30 | `Edge.invalidation_reason` | json blob | 🔴 **v7: PRESERVE if in `DISPOSITIONED_REASONS` · else the NEW registry value `redacted`** | the registered reason unchanged; otherwise `"redacted"` — **never the marker** | 🔴 **THE MARKER IS REFUSED BY A GUARD THAT ALREADY SHIPS.** `sqlite.py:247`: *"if reason not in DISPOSITIONED_REASONS: … the write is refused (specs/0029 V-KIND)"*. v6's *"else the marker"* would have been rejected by the journal on every legacy row — the same class as row 46 and H14, found the same way (§2d-v: what READS this field). `doctor.py:263` independently flags a retired edge whose reason is outside the registry |
 | 31 | `Edge.note` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
 | 32 | `Edge.object` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
 | 33 | `Edge.original_relation` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
@@ -821,7 +821,7 @@ for two versions.** Every PRESERVE names what makes it safe:
 | 46 | `Episode.kind` | json blob | 🔴 **v6: PRESERVE if a RECOGNISED OPERATIONAL KIND · REPLACE if prose** | the kind unchanged when recognised; the marker when prose | 🔴 **v5's flat REPLACE BROKE H14, executed twice.** `sqlite.py:1592` refuses `delete_episode` on `kind == "outcome"`; replace the value and the refusal stops matching — **the chain head disappears, the next `record_outcome` writes `seq 1`, and targeted deletion is PERMITTED.** `sqlite.py:1512` is the same fence on `add_episode` and is lost the same way. **Recognised = the set the product's own writers produce (`interaction`, `outcome`, `corrected`), and it MUST BE CLOSED BY A REFUSAL at the model AND at import** — §2d-iv, and the 0006/portability amendment named at round 2 and not written |
 | 47 | `Episode.lineage` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
 | 48 | `Episode.operation_id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
-| 49 | `Episode.retired_reason` | json blob | **PRESERVE if vocabulary · REPLACE if legacy prose** | the vocabulary value unchanged, else the marker | §11.2's per-operation boundary |
+| 49 | `Episode.retired_reason` | json blob | 🔴 **v7: PRESERVE if in `DISPOSITIONED_REASONS` · else the NEW registry value `redacted`** | the registered reason unchanged; otherwise `"redacted"` — **never the marker, and NEVER `NULL`** | 🔴 **`NULL` HERE UN-RETIRES THE EPISODE.** `schema.py:872`: `Episode.active` **IS** `self.retired_reason is None`, and `active` feeds `assertable` — clearing this field returns a retired episode to assertable content. **The asymmetry matters and v6 had it flat: `Edge.active` keys on `invalidated_at` (`schema.py:750`), NOT on its reason — so `NULL` is harmless for row 30 and a STATE CHANGE here.** `revocation_sweep.py:637` also already refuses a `retired_reason` that is not a non-empty str |
 | 50 | `Episode.summary` | json blob | **REPLACE** | the marker, alone, as the whole value (validates today: no pattern or length constraint on any of these — checked by construction) | content; the duplicated `edges.subject/relation/object` columns follow the json field (INV-2) |
 | 51 | `Episode.supersedes_episode` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
 | 52 | `Episode.user_id` | json blob | **PRESERVE** | the value unchanged, byte for byte | an identifier (an id, a reference to an id, or a version/state token the product writes) |
@@ -980,13 +980,52 @@ Single transaction. Every carrier in §2 or none.
 
 **Reservation is not a property of the bytes. It is a REFUSAL AT EVERY WRITE.**
 
+#### 🔴 v7 — THE ATTESTATION RULE, and it settles three things that were "owed"
+
+> **THE MARKER IS NOT SELF-AUTHENTICATING. THE REDACTION RECORD IS THE
+> AUTHORITY.** A field is REDACTED if and only if a redaction record (§4b-ii)
+> names that record and that field. A field holding the marker byte-string with
+> **no** such record is an **UNATTESTED MARKER**: bytes that carry no user
+> content and confer no redacted status.
+
+**Why the spec could not settle the three rows below without it.** Each of them
+asked *"what does the marker mean here?"* and the marker cannot answer — it is a
+byte string anyone could have stored, and `sanitize_llm_body(MARKER) == MARKER`
+proved at round 2 that the product never stopped them. **Keying the guarantees
+on the RECORD instead of the bytes makes all three answerable at once, and it
+changes INV-11: the write-refusal keys on ATTESTED redaction, not on the byte
+string.** Without that change a pre-existing marker-holding row becomes
+permanently unwritable and reads to every consumer as a tombstone the owner
+never asked for.
+
 | | |
 |---|---|
 | **representation** | unchanged: the exact byte string `\x00veracium:redacted\x00` |
-| **reservation** | 🔴 **INV-11's MIRROR: a NON-REDACTION write MAY NOT INTRODUCE THE MARKER.** Enforced at every ordinary write path and at **every import boundary**, refusing loudly. INV-11 forbids an ordinary write to a field *holding* the marker; this forbids an ordinary write *introducing* it. **Neither implies the other and v3.1 had only one** |
-| **pre-existing rows** | 🔴 **OWED AND NOT YET RULED: rows that already hold the marker byte-string at migration.** They cannot be assumed absent — nothing has ever refused them. Refuse the migration, quarantine the rows, or accept and flag: **the owner's call, and it must be made before the CHECK ships** |
+| **reservation** | 🔴 **INV-11's MIRROR: a NON-REDACTION write MAY NOT INTRODUCE THE MARKER.** Enforced at every ordinary write path and at **every import boundary**, refusing loudly. INV-11 forbids an ordinary write to a field whose redaction is *attested*; this forbids an ordinary write *introducing* the marker. **Neither implies the other and v3.1 had only one** |
+| **pre-existing rows** | 🔴 **RULED v7 — ADMITTED AS UNATTESTED MARKERS; the migration neither refuses nor quarantines.** Rows already holding the marker byte-string at migration carry no redaction record, so by the attestation rule they are **not redacted**: they stay writable, they are not tombstones, and INV-11 does not fence them. The migration **enumerates them into its report** so an operator can see what the store holds. **The three options v6 offered the owner are all withdrawn as wrong**: refusing the migration bricks a store over a byte string the product never forbade; quarantining silently reclassifies the owner's own content; and *accept-and-flag* alone still leaves INV-11 keyed on the bytes, which freezes the row and renders it as redacted. 🔴 **v8 — RULED BY THE OWNER 2026-09-15: THE REPORT IS ADVISORY, NOT BLOCKING.** *"Make the migration report advisory, not blocking."* **The upgrade proceeds; the report enumerates the rows and an operator reads it.** **Stated plainly rather than left as a preference: this means a store CAN BE UPGRADED WITH UNATTESTED MARKER ROWS IN IT and nothing stops the operator — and the attestation rule is why that is right.** Those rows are not redacted, are not tombstones, and stay writable, so the report tells an operator about **content they already own**, not about damage. **A blocking report would have made the product refuse an upgrade over a byte string it never forbade anyone from storing** |
 | **nested shapes** | 🔴 **two `agreement.markers` entries replaced by one marker FAIL the uniqueness validator.** Replacement must preserve arity, or redaction of a list field is refused by a validator the spec never mentions |
-| **legitimately empty** | still owed: a field that is legitimately empty versus one redacted to empty. INV-8's CHECK rejects `""`, which is the enforcement `TEXT NOT NULL` never provided |
+| **legitimately empty** | 🔴 **RULED v7 — REDACTION NEVER WRITES `""`, so the ambiguity does not arise.** Every REPLACE writes the marker; every CLEAR writes `NULL` where the column admits it. `""` is therefore **never a redaction outcome**, which is precisely what INV-8's CHECK enforces and what `TEXT NOT NULL` never provided. A legitimately empty field keeps whatever its own column rule allows and redaction does not touch it. **Confirmed against a second enforcement**: `revocation_sweep.py:637` already refuses a `retired_reason` that is not *"a non-empty str"*, so `""` is independently unreachable on that field today |
+
+#### 🔴 v7 — THE REGISTRY EXTENSION rows 30/49 REQUIRE, and the FOUR sites that must move together
+
+Rows 30 and 49 write `"redacted"` into fields whose vocabulary is
+`schema.DISPOSITIONED_REASONS`. **That value does not exist today, and adding it
+to one place breaks the product at import.**
+
+| site | what it does today | what the extension owes it |
+|---|---|---|
+| `schema.py:570` `DISPOSITIONED_REASONS` | a **dict** of 7 reasons → `"drop"` / `"retain"` | add `"redacted": "drop"`. **A redacted record's wiki must not be retained** — the wiki may carry a derivation of the very content being removed, and `WIKI_RETAINING_REASONS` is the mechanism |
+| 🔴 `asof/resolve.py:113` | an **IMPORT-TIME** gate: `if set(RESOLUTION) != set(DISPOSITIONED_REASONS): raise ImportError` | add `"redacted"` to `RESOLUTION` **in the same change**. Its own comment states the rule: *"an eighth reason fails BOTH this gate and the registry's own totality test … a new reason must be dispositioned TWICE (V-TOTAL)"*. **Extending the registry alone makes `import veracium` fail** |
+| `asof/resolve.py` outcome | — | **`(NOT_RETURNABLE, TAG_REDACTED_EXCLUDED)`**, following `revoked_source`'s precedent: both are rights-driven removals, and an as-of read must not serve a tombstone as a historical answer |
+| `tests/test_0004_wiki_revocation.py:101` `producer_reachable` | enumerates the producers | **redaction becomes a producer**; add `"redacted"` or `test_invalidation_reason_registry_is_total` fails |
+| `doctor.py:263` | flags a retired edge whose reason is outside the registry | **no change needed** — it goes quiet once the value is registered. Named here because it is the check that would otherwise report every redacted record as damage |
+
+> **This is the §2d-iv rule paying out in the other direction.** The rule said a
+> set is closed only when something REFUSES a value outside it. `DISPOSITIONED_
+> REASONS` **is** properly closed — by `sqlite.py:247`, by the import-time gate
+> and by the totality test — **and that is exactly why this spec cannot write a
+> new value into those fields without amending the registry.** A closed set
+> costs something to extend, and the cost is the evidence that it was closed.
 
 ### 4b-ii. The episode redaction record (F3)
 
@@ -999,8 +1038,8 @@ journal** — the asymmetry the reviewer named.
 |---|---|
 | **durable record** | an `episode_event` row of the same shape as `edge_event` (`episode_id`, `kind`, `reason`, `state`, `recorded_at`), written in the redaction transaction. **`reason` is D1's shape and takes D1's closed vocabulary** — this is the fourth instance (§9b/D1) |
 | **receipt fields** | `redacted_kind` (`edge`/`episode`), the target id, the carrier fields cleared, the marker version, the store version **before and after**, and the surviving derived records F6 requires the caller be told about |
-| **repeat calls** | **idempotent by content, not by attempt.** A second redaction of an already-redacted target writes **no** new event and returns the original receipt with `repeated=True`. Redaction is not an append-only log of intentions; a log of repeats is itself a signal about the target |
-| **repopulation** | an ordinary write whose target field currently holds the marker is **refused**, not merged. Without this the tombstone is advisory: `remember()` on the same subject/relation would supersede it back into content |
+| **repeat calls** | **idempotent by content, not by attempt.** A second redaction of an already-redacted target writes **no** new event and returns the original receipt with `repeated=True`. Redaction is not an append-only log of intentions; a log of repeats is itself a signal about the target. 🔴 **v7 — AND WHEN THERE IS NO ORIGINAL RECEIPT TO RETURN.** A record redacted before receipts existed, or an attested redaction whose receipt was never stored, has none. **The call returns a RECONSTRUCTED receipt — `repeated=True` AND `reconstructed=True`** — carrying only what the redaction record itself supports (`redacted_kind`, the target id, the fields the record names, the event's `recorded_at`) and **explicit `None` for every field it cannot support** (the store version before and after, the marker version in force at the time). **Nothing is inferred and nothing is fabricated**: a receipt that guesses the store version is worse than one that says it does not know. An **unattested** marker is not an already-redacted target at all — the call proceeds as a first redaction |
+| **repopulation** | 🔴 **v9 — KEYED ON THE RECORD, NOT THE BYTES.** An ordinary write to a field whose redaction is **ATTESTED by a redaction record** is **refused**, not merged; **a write to an UNATTESTED marker SUCCEEDS** (§4b's attestation rule). Without the refusal the tombstone is advisory: `remember()` on the same subject/relation would supersede an attested redaction back into content. **v8 still read *"whose target field currently holds the marker"* — the pre-attestation rule, stated as current three sections after the rule that replaced it** |
 
 > ⚠️ **The repopulation rule is the one with teeth, and it is a constraint on
 > the WRITE path, not on redaction.** Redaction that does not change what
@@ -1154,7 +1193,7 @@ which inverts the whole point.** Ruled, on the second seat's proposed semantics:
 | case | ruling |
 |---|---|
 | **an invalid notice accompanying a record** | 🔴 **the record-and-notice UNIT is REFUSED, with an explicit failure result.** Never the record admitted un-redacted. **A malformed notice must not be a route to importing the content it was meant to remove** |
-| **a tombstone arriving with NO notice** | **accepted as content** — it holds none — **and FLAGGED.** A notice-less tombstone is not a failure |
+| **a tombstone arriving with NO notice** | 🔴 **v7 — ADMITTED AS AN UNATTESTED MARKER (§4b), recorded as such, and FLAGGED.** v6 said *"accepted as content — it holds none"*, and that phrasing is what **CONFLICTED with INV-11's mirror**, which refuses the marker *"at every import boundary"*. **Both rules stand once the attestation rule keys them on the RECORD**: the mirror refuses a marker the import cannot account for, and the import's own flag IS the accounting — so the record is admitted, is **not** treated as redacted, and stays writable. **What is still refused at the boundary is a marker presented AS a redaction without its notice** — a forged tombstone — which is the harm the mirror exists to stop |
 | **two notices sharing `(origin, target_id, event_id)` with different bodies** | **an integrity refusal.** One identity with two bodies is a corrupted source, not a conflict to resolve |
 | **`event_id`** | **the source's `(user_id, seq)` pair, carried as attributes** — never as the destination's own position, per §4g's `seq`/`txn` rule |
 
@@ -1189,6 +1228,72 @@ already be using those numbers**. Therefore:
 > journal's value is that it records what THIS store did. An import that writes
 > foreign acts as local acts corrupts that property for every reader, and
 > redaction events would be the first records to do it.
+
+### 4h. 🔴 v7 — THE TRANSITION POLICY FOR EXISTING RECORDS (round-4 F2)
+
+**Every restriction in this spec is a rule about WRITES. None of them reaches a
+record already in the store**, and the reviewer's F2 is that the spec had
+written the restrictions and not the transition.
+
+#### (i) The relation-only quarantine is REAL, and redacting it is a SAFETY REGRESSION — EXECUTED
+
+v6 carried this as a *candidate* needing simulation. **Simulated, at the pin:**
+
+```
+BEFORE redaction: relation='third_party_claim'    quarantined=True
+AFTER  redaction: relation=<marker>               quarantined=False
+```
+
+The pair is **constructible through the public model, stores, and reads back**:
+`Edge(relation=QUARANTINE_RELATION, provenance.disclosure=MENTIONABLE)` is
+accepted, persisted, and returns `quarantined == True` — **held entirely by the
+first clause of `Edge.quarantined`.** `ingest.py:190` does set both together,
+which is why this has never been seen; **ingest is one producer and the model is
+the contract.**
+
+> 🔴 **So redacting `relation` on such an edge PROMOTES AN UNVERIFIED
+> THIRD-PARTY CLAIM out of `## UNVERIFIED THIRD-PARTY CLAIMS (never assert as
+> fact)` and into the grounded `## RELEVANT DETAIL` section** — the render split
+> at `__init__.py:1167/1168` reads `quarantined`. **A privacy operation would
+> have widened what the model may assert.**
+
+**THE RULE THIS FORCES, and it is general:**
+
+> **A REDACTION MAY NOT CHANGE A DERIVED DISPOSITION. Where the treatment would,
+> the redaction MUST RE-ESTABLISH that disposition through a field it does not
+> redact — in the same transaction — or REFUSE.**
+
+For this case: redacting `relation` on a quarantined edge **sets
+`provenance.disclosure = QUARANTINED`**, so the second clause carries what the
+first one held. **This is §2d-v's question (*what READS this field?*) turned
+into an obligation rather than a warning**, and it is the third proven instance
+after `Episode.kind` → H14 and `retired_reason` → `active`.
+
+#### (ii) `Episode.kind`: existing prose kinds, and how a marker-valued record validates
+
+Row 46 closes `kind` to the recognised operational set. **Existing stores hold
+prose kinds that nothing ever refused**, so the closure cannot be applied
+retroactively without refusing records the product itself wrote.
+
+| | |
+|---|---|
+| **at MIGRATION** | existing prose kinds are **RETAINED** — the same boundary §11.2 draws for legacy reasons, and for the same reason: a migration that rewrites history destroys the record it exists to preserve |
+| **enforcement point** | the closure binds **the WRITE path and the IMPORT boundary**, never the read path. A closure enforced on read turns every legacy store into an unopenable one |
+| 🔴 **how the marker-valued record validates** | **by the ATTESTATION RULE (§4b).** The closed set is the recognised kinds **plus the marker when, and only when, a redaction record names this record and this field.** An unattested marker in `kind` is not a valid kind and is refused — which is what stops the closure from becoming a route to writing arbitrary bytes into a field five guards read |
+
+#### (iii) 🔴 THE EVIDENCE RULE — a transition claim proved on a NEW record proves nothing
+
+**Every claim in this section must be demonstrated on a record written by the
+PRE-RESTRICTION writer**, loaded from a store created before the change — never
+on a record constructed under the new model in the same test. A fixture built
+by the new code has already satisfied the new rule, so it cannot show what
+happens to one that never did.
+
+> **This is the reviewer's F2 in its sharpest form, and it is a rule about
+> FIXTURES rather than about redaction.** The spec has been wrong this way once
+> already: the packaged INV-12 fixture left fields unset and **missed a widened
+> embedder that a populated fixture caught.** A fixture that cannot fail the
+> test is not evidence that the test passes.
 
 ## 5. Regime analysis
 
@@ -1306,6 +1411,8 @@ effect research does not.
 > | **D2** | **RULED IN THE OWNER'S OWN WORDS: *"carry it — but carry only the redacted events, not the journal."*** The constraint is his instruction, **not research's gloss on a one-word yes** |
 > | **D3** | **SKIP redacted edges in the semantic rebuild** |
 > | **D4** | **TOMBSTONE the receipt's request digest**, and a replay of a redacted supersession REFUSES rather than silently re-applying |
+>
+> 🔴 **v7 ANNOTATION — D1's OWN CONDITIONAL HAS BEEN MET, and the ruling is left exactly as the owner wrote it.** D1 says *"all three close, or the next sweep finds a fourth"*. **The sweep found the fourth (`Episode.retired_reason`), and then found that a fifth surface has a different character entirely**: §11.2 now carries FOUR reason fields with THREE contracts, because the EXECUTED state differs per field — two close today, `Episode.retired_reason` has **no refusal at all**, and `source_revocations.reason` **has no vocabulary to close**, so D1's shape-binding rule reaches it as a content carrier rather than as a vocabulary. **The count in the ruling above is the owner's and is NOT edited**; this note records what the condition it names has since produced.
 >
 > **D2's reasoning, recorded because the question was put to research rather than
 > answered by the document — and then RULED back in the owner's own words,
@@ -1458,13 +1565,26 @@ the owner's to make.**
 
 ## 11.2 Reason values
 
-**Three reason surfaces, each with its own vocabulary and its own closure.**
+🔴 **v7 — FOUR reason fields, not three, and the PER-FIELD contract is built on
+what each one DOES TODAY, executed at the pin by the second seat.** v6 said
+`edge_event.reason` is closed by *"nothing today"*. **That is FALSE**, and the
+correction changes what this section owes: the rule exists and must be
+EXTENDED, not invented.
 
-| surface | its vocabulary | closed by |
-|---|---|---|
-| **`Edge.invalidation_reason`** | 🔴 **`schema.DISPOSITIONED_REASONS` — referenced, never copied here** | `test_invalidation_reason_registry_is_total`: a producer growing a reason fails it until the spec dispositioning it lands |
-| **`edge_event.reason`** (the journal) | the values its writers produce | **nothing today.** A registry and a totality test are OWED, on the model of the one above |
-| **redaction's own reasons** | `subject_request` · `operator_policy` · `erroneous_capture` · `legal_obligation` · `imported_notice` | this spec, enforced **at the redaction write path** — a column CHECK cannot distinguish operations |
+| field | 🔴 **EXECUTED state today** | contract after this spec | enforced by |
+|---|---|---|---|
+| **`edge_event.reason`** (the journal) | 🔴 **ALREADY CLOSED on the `invalidated` kind** — `sqlite.py:247` refuses a reason outside `DISPOSITIONED_REASONS` (*"the write is refused, 0029 V-KIND"*); **`None` for every other kind.** Executed: `invalidate_edge(reason="told me in confidence")` is REFUSED; with `superseded` the journal reads `[(created, None), (invalidated, superseded)]` | **EXTEND the existing rule to the new kind**: a `redacted` event carries the redaction vocabulary below; **every other kind stays `None`** | the writer that already refuses — one branch added, no new mechanism |
+| **`Edge.invalidation_reason`** | **closed by the same writer** | `DISPOSITIONED_REASONS` **+ the new `redacted`** (row 30) | `test_invalidation_reason_registry_is_total` |
+| **`Episode.retired_reason`** | 🔴 **a bare `str` with NO refusal** (round-1 F1b, reconfirmed) — prose reaches it through the sole retirement writer, persists and exports | close to `DISPOSITIONED_REASONS` **+ `redacted`** (row 49). 🔴 **And `NULL` is forbidden here** — `active` IS `retired_reason is None`, so clearing it un-retires the episode | 🔴 **OWED — this refusal DOES NOT EXIST and is a code change this spec requires.** The other two close today; this one does not, and saying "the reason fields are closed" would be false of it |
+| 🔴 **`source_revocations.reason`** | 🔴 **a bare `str` carrying THE CALLER'S PROSE, with no vocabulary at all.** Executed: `revoke_source(..., "<the caller's sentence>", ...)` stores that sentence **verbatim** in the revocation row, while the affected edge and episode get `revoked_source` | 🔴 **NOT "preserve if vocabulary" — THERE IS NO VOCABULARY TO PRESERVE.** It is an ordinary free-text content carrier and is **REPLACED with the marker** like any other | §2's column table, which had already classed it a carrier and deferred its treatment here |
+| **redaction's own reasons** | — | `subject_request` · `operator_policy` · `erroneous_capture` · `legal_obligation` · `imported_notice` | this spec, at the redaction write path — a column CHECK cannot distinguish operations |
+
+> 🔴 **`revoked_source` IS THE EFFECT'S REGISTRY VALUE, NOT THE REVOCATION'S
+> REASON.** They are different fields with opposite characters: the affected
+> records get a closed vocabulary value; the revocation row keeps the human
+> sentence that explains it. **A treatment that reads "the reason field" and
+> applies one rule gets one of them wrong**, and v6's single
+> *"PRESERVE if vocabulary"* cell did exactly that.
 
 **Other reason-writing operations, named rather than implied:** supersession,
 correction, quarantine, lapse/decay, consolidation, dispute, **and SOURCE
@@ -1498,10 +1618,10 @@ REVOCATION** (`revoked_source`) — which v5 did not name at all.
 
 | inv | statement | why |
 |---|---|---|
-| **INV-8** | `""` is **REJECTED** by the tombstone CHECK | F3 round 1. `TEXT NOT NULL` permits `""`; **the test must be seen to FAIL before the CHECK exists** |
+| **INV-8** | `""` is **REJECTED** by the tombstone CHECK | F3 round 1. `TEXT NOT NULL` permits `""`; **the test must be seen to FAIL before the CHECK exists.** 🔴 **v7 — the "legitimately empty vs redacted-to-empty" ambiguity this invariant was carrying is RESOLVED in §4b: redaction NEVER writes `""`** (REPLACE writes the marker, CLEAR writes `NULL`), so INV-8 rejects a value redaction cannot produce, and a legitimately empty field is never mistaken for a redacted one |
 | **INV-9** | no read-compute-publish path republishes content across a redaction | F2 round 1 — **and round 2's F1 says the check must be ATOMIC, not instance-local. Wording deferred to dev's two-connection reproduction** |
 | **INV-10** | an imported redaction notice never presents as locally witnessed | F5 round 1 |
-| **INV-11** | an ordinary write to a marker-holding field is **refused** | F3 round 1 |
+| **INV-11** | 🔴 **v9:** an ordinary write to a field whose redaction is **ATTESTED** is **refused** — *not* keyed on the marker bytes; an unattested marker stays writable (§4b) | F3 round 1; re-keyed by v7's attestation rule |
 | **INV-12** | `embedded_text`'s field set ⊆ `content_digest`'s | 🔴 **round-2 F1: the test PASSES when `embedded_text` is widened with `original_relation`, because the fixture leaves optional fields unset. A check that cannot fail. Fixture correction owed with dev's reproduction** |
 
 > ⚠️ **§11.3 no longer claims all 64 enumerated carriers are the removal
@@ -1525,6 +1645,22 @@ and this section cannot drift from it**:
 | **§2d-iv's CLOSURE** — the recognised-kind set closed by a refusal | `tests/test_0041_treatment_matrix.py::test_row46_the_recognised_kind_set_is_closed_by_a_refusal` |
 | **§2d-iv's CLOSURE** — quarantine closed to the disclosure | `…::test_a_relation_only_quarantine_is_refused_at_the_write_path` |
 | **INV-11's MIRROR** — no non-redaction write may INTRODUCE the marker | `…::test_a_non_redaction_write_may_not_introduce_the_marker` |
+| 🔴 **v7 — THE REGISTRY EXTENSION** rows 30/49 require (§4b) | `…::test_the_redacted_reason_is_dispositioned_twice` — asserting **BOTH** `"redacted" in schema.DISPOSITIONED_REASONS` **AND** `RESOLUTION["redacted"] == (NOT_RETURNABLE, TAG_REDACTED_EXCLUDED)`. **One assertion would not be enough**: `asof/resolve.py:113`'s set-equality gate raises `ImportError` on a lone extension, so a test that checked only the registry would pass in a tree that cannot be imported |
+
+> 🔴 **v7 — THE REGISTRY EXTENSION IS AN AMENDMENT TO 0028/0030 AS WELL AS TO
+> THIS SPEC**, because `RESOLUTION` is 0028's table and the gate that couples
+> them is executed at import. **It is named here so its landing cannot be
+> mistaken for a local change to `schema.py`.**
+
+> 🔴 **v7 — THE QUARANTINE ROW ABOVE DOES NOT COVER THE RECORDS ALREADY STORED,
+> and §4h is why that matters.**
+> `test_a_relation_only_quarantine_is_refused_at_the_write_path`
+> closes the pair **going forward**. It cannot reach an edge
+> already holding `relation=QUARANTINE_RELATION` with a non-quarantined
+> disclosure — **and those exist** (§4h(i), executed). **The write-path refusal
+> and §4h's re-establish-or-refuse rule are two halves of one property**, and
+> a spec carrying only the first would ship a redaction that promotes a stored
+> unverified claim while its own prerequisite test reads green.
 
 > **A strict xfail is the right form and not a formality.** It is **red-first by
 > construction**, it **fails loudly if the property starts holding without the
@@ -1544,7 +1680,7 @@ is swept rather than discovering it later.**
 | **reader** (0030) | `edge_state_at()` gains a **`REDACTED`** state. 🔴 **Today a plain sentinel classifies as `MALFORMED`** — a redacted read must not report as damage |
 | **compiler** (0012) | publication is conditional on the store version the inputs were read at (§4e) |
 | **export/import** (0006/portability) | 🔴 **`export` carries NO events at all today — verified, and this is larger than a format change.** The record kinds are `edge` and `episode`; anything else raises *"unknown record kind"*. So D2's travelling redaction event **has no existing carrier**, and §8's survival claim depends on building one. §4g is the acceptance contract for a transport that does not yet exist |
-| **write path** | writes to a marker-holding field are refused (INV-11); redaction calls `_bump` (§4e) |
+| **write path** | writes to an **ATTESTED-redacted** field are refused (INV-11, re-keyed v9); redaction calls `_bump` (§4e) |
 | **`why`** (CLI) | renders vocabulary reasons and `legacy_freeform` tokens only |
 
 ## 11.5 What a caller is guaranteed after a successful redaction
