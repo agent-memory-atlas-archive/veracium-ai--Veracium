@@ -852,11 +852,28 @@ def test_no_spec_names_a_module_or_script_that_does_not_exist():
         # `src/veracium/store/base.py`. Match on basename, not on a guessed
         # directory, or the gate invents violations.
         for ref in set(re.findall(r"`(\w+\.py)`", body)):
-            if not any(p.name == ref for p in root.rglob("*.py")
-                       if ".git" not in p.parts):
+            if not any(p.name == ref for p in _tracked_py(root)):
                 bad.append(f"{spec.name}: names `{ref}`, which does not exist "
                            f"anywhere in the tree")
     assert not bad, "\n".join(bad)
+
+
+def _tracked_py(root):
+    """The `.py` files the TREE carries — `git ls-files`, never a walk of the
+    working directory. 2026-09-16: the walk crossed into `.venv/`, where
+    `cryptography/x509/name.py` satisfied a spec's backticked `name.py`, so the
+    gate passed locally and failed in CI's clean checkout (one red push, 0041 v9).
+    A gate about the tree reads the tree; a working-tree artefact is not the tree.
+    Falls back to the walk (minus `.venv`) where git is unavailable."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--", "*.py"],
+                             capture_output=True, text=True, timeout=60)
+        if out.returncode == 0:
+            return [root / f for f in out.stdout.split("\0") if f]
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return [p for p in root.rglob("*.py") if ".git" not in p.parts and ".venv" not in p.parts]
 
 
 # R11-4/R12-4 (0014 rounds 11-12): the guide's hardcoded counts drifted three
