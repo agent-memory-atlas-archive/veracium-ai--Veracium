@@ -3570,3 +3570,73 @@ def test_a_planted_split_row_is_caught_and_escaped_pipes_are_not(tmp_path):
     split = good + "| **B** | only two cells |\n| **C** | c1 | c2 | c3 | displaced | displaced |\n"
     assert [(n, h) for _, n, h in _section6_row_mismatches(split)] == [(2, 4), (6, 4)]
     assert _section6_row_mismatches("## 5. Other\n\n| a | b |\n|---|---|\n| one |\n") == [], "only §6 is gated"
+
+def test_a_reproduction_that_quotes_test_source_freezes_it_at_the_pin():
+    """A reproduction script makes claims about A PIN. If it reads those claims
+    out of the working tree, it inverts the moment the defect is fixed: it stops
+    saying "here is the defect" and starts saying "here is the absence of one",
+    and it passes or fails on whichever the tree happens to say today.
+
+    TWICE, IN CONSECUTIVE ROUNDS, BY THE SAME HAND. `round5_reproductions.py`
+    inverted and its pin-era bodies were frozen as quotations. Hours later
+    `round6_reproductions.py` was written re-reading the tree and inverted
+    identically — caught only by running the evidence from a sealed package's
+    bytes, where the tree's version is not available to paper over it. The repair
+    had been applied to the FILE and not to the CLASS.
+
+    So the property is asserted rather than remembered: a reproduction that reads
+    source under `tests/` must carry the pin's own digest and a frozen quotation
+    of what it is quoting. Reading the live tree is still allowed — both scripts
+    do, to assert the repair LANDED — but the pin-era claim may not depend on it.
+
+    Scope, stated: scripts that reproduce PRODUCT behaviour (rounds 1-4) read
+    exported data, not source, and are untouched by this. The trigger is reading
+    a file under `tests/`, which is a claim about what a test said at a commit.
+    """
+    import ast
+    import pathlib
+    import re
+    root = pathlib.Path(__file__).resolve().parents[1]
+    scripts = sorted((root / "specs" / "evidence").rglob("round*_reproductions.py"))
+    assert scripts, "no reproduction scripts found — the gate would pass vacuously"
+
+    quoting, problems = [], []
+    for s in scripts:
+        text = s.read_text()
+        # DOES IT READ source under tests/ — not merely MENTION a test file.
+        # The first version of this trigger matched any occurrence of
+        # `tests/test_*.py`, and fired on round 1's docstring, which names the
+        # test beside the claim in a sentence. A heuristic that keys on a token
+        # fires on text about that token; this project has the rule and this gate
+        # broke it on its first run. So: find the actual reads, by syntax.
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:                                  # pragma: no cover
+            problems.append(f"{s.name}: does not parse")
+            continue
+        reads_test_source = False
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            fn = node.func
+            reader = getattr(fn, "attr", "") in ("read_text", "read_bytes", "open")
+            if not reader:
+                continue
+            if "tests" in ast.unparse(fn):
+                reads_test_source = True
+                break
+        if not reads_test_source:
+            continue
+        quoting.append(s.name)
+        if not re.search(r"^PIN_FILE_SHA16\s*=", text, re.M):
+            problems.append(f"{s.name}: quotes test source but names no PIN_FILE_SHA16")
+        if not re.search(r"^PIN_BOD(Y|IES)\s*=", text, re.M):
+            problems.append(f"{s.name}: quotes test source but carries no frozen PIN_BODY/PIN_BODIES")
+
+    assert quoting, (
+        "no reproduction script reads test source — either the convention changed "
+        "or this gate's trigger no longer matches, and a gate that never fires is "
+        "indistinguishable from one that cannot")
+    assert not problems, (
+        "a reproduction script quotes test source without freezing it at the pin, "
+        "so it will invert when the defect is fixed:\n  " + "\n  ".join(problems))

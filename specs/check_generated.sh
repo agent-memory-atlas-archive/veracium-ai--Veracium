@@ -24,6 +24,24 @@
 set -u
 PY=${PY:-.venv/bin/python}
 cd "$(dirname "$0")/.." || exit 2
+
+# THIS INSTRUMENT CHECKS A WORKING TREE, NOT A PACKAGE, and it says so rather
+# than reporting phantom findings. 2026-09-16, found by the round-7 throwaway
+# verification before the package reached the outbox: run inside a `git archive`
+# copy it reported THREE STALE that were nothing of the kind —
+# `render_archives.py` (the archives it indexes are gitignored, so a clone has
+# none), `render_index.py` (STATUS.md dates rows from the COMMIT) and
+# `schema_evidence.py` (which says in its own words that `--check` needs a git
+# checkout). A reviewer running this in the archive would have chased three
+# findings that do not exist. Degrade LOUDLY: a check that cannot run here must
+# not look like a check that failed, any more than like one that passed.
+if [ ! -d .git ]; then
+  echo "N/A — no .git here (a packaged tree). Every generator below regenerates from"
+  echo "      repository state: commit dates, released tags, or gitignored archives."
+  echo "      This instrument answers a question about a WORKING TREE and cannot"
+  echo "      answer it about an archive. Run it in a clone of the pinned commit."
+  exit 0
+fi
 fail=0; ran=0; nocli=0
 # RECURSIVE ON PURPOSE. The first version globbed `specs/*.py` and missed three
 # generators under `specs/evidence/` — including this round's own frozen-fixture
