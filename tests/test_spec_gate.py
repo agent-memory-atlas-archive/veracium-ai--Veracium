@@ -1297,6 +1297,56 @@ def test_the_round5_verbatim_withdrawal_is_absent_from_0022():
         "(external round 6, R6-2)")
 
 
+def test_the_count_of_closure_evidence_unrunnable_in_a_package_is_pinned():
+    """How many of the closure ledger's rows CANNOT run in the artifact a reviewer gets.
+
+    A sealed review package is a `git archive` — no `.git` — so every row whose
+    evidence is `git show …` is skipped there with its cause named, by the branch
+    in `test_every_closure_evidence_command_actually_runs` below. That is correct
+    behaviour and it has a cost nobody had counted: the external reviewer runs the
+    package, so those rows' evidence is unrunnable in the ONLY context they have.
+    2026-09-16, found while sealing 0041 round 5.
+
+    Pinned rather than written down, for the reason the UNCLASSIFIED_CEILING pin
+    gives: a number in a docstring or a README goes stale silently and is read only
+    by whoever opens that file. This recomputes every run, so it cannot drift
+    unnoticed.
+
+    The pin is the COUNT, and it is an EQUALITY, not a ceiling on the share. A share
+    moves when rows that have nothing to do with this are added — twenty-five new
+    grep-evidence rows would lower it while the unrunnable set grew — so the share is
+    a derived figure for the message, never the thing under test. A ceiling sized
+    with a few rows of headroom gets raised on ordinary growth and stops being read;
+    an equality fires on the very next history-citing row and says why, which is the
+    intent: each such row is a deliberate act. Lowering it is free and equally
+    deliberate. (The form is research's, argued before this landed; the ceiling it
+    replaced had three rows of headroom.)
+    """
+    import importlib.util
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("cf", root / "specs" / "closure_findings.py")
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    rows = mod.CLOSURES
+    history = [r for r in rows if r[6].lstrip().startswith("git show ")]
+    share = len(history) / len(rows)
+    # measured 2026-09-16: 99 history-citing rows, out of 485 rows in the ledger
+    UNRUNNABLE_IN_A_PACKAGE = 99
+    assert len(history) == UNRUNNABLE_IN_A_PACKAGE, (
+        f"{len(history)} of {len(rows)} closure rows ({share:.1%}) cite `git show` and cannot "
+        f"run in a packaged tree; the pin says {UNRUNNABLE_IN_A_PACKAGE}. A reviewer runs the "
+        f"package, so each of these rows' evidence is unrunnable in the only context they have. "
+        f"If the count rose, prefer closing the new finding with evidence that runs without a "
+        f"`.git` directory; if it fell, or the rise is deliberate, move the pin in the same "
+        f"commit and say why")
+    # the pin is about the PACKAGED context, so it is only meaningful while the skip
+    # branch it measures still exists — assert the branch, not just the number
+    gate = pathlib.Path(__file__).read_text()
+    assert 'evidence.lstrip().startswith("git show ") and not in_git_checkout' in gate, (
+        "the history-citing skip branch was renamed or removed; this pin measures a "
+        "behaviour that no longer exists and must be rewritten, not deleted")
+
+
 def test_every_closure_evidence_command_actually_runs():
     """External round 7, R7-1. Four of the ledger's evidence commands could not
     run as written — three said `python3 -m pytest` and a bare python3 has no

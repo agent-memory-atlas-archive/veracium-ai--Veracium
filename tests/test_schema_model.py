@@ -31,6 +31,37 @@ from schema_model import (REBUILDABLE, REQUIRED, SCHEMA_V1, SCHEMA_VERSION,  # n
 from veracium.store.sqlite import SqliteStore, _SCHEMA  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _mktemp_under_tmp_path(tmp_path):
+    """Every `tempfile` name this module mints lands under the test's own
+    `tmp_path`, which pytest removes.
+
+    2026-09-16: `tempfile.mktemp(suffix=".db")` at 3 sites in this file wrote
+    into the system temp directory and deleted nothing. Across the suite that was
+    413 stray stores per run and 53,230 in /tmp over three days (4 GB), measured
+    before the clean-up. The call sites sit inside module helpers as well as
+    tests, so redirecting `tempfile` for the module fixes both without changing a
+    single signature or assertion — the shape the doctor-CLI test already uses to
+    own its own temp root.
+
+    Set and restored DIRECTLY rather than through `monkeypatch`. A test that calls
+    `monkeypatch.undo()` mid-body undoes every patch on that fixture, including one
+    another fixture installed, so the `monkeypatch.setattr(tempfile, "tempdir", …)`
+    version of this redirect was silently lifted for the rest of those tests and
+    three stores per run still escaped. Measured across the seven files: 27+ before,
+    3 with the monkeypatch form, 0 with this one. Two of the seven call `undo()`
+    mid-body — `tests/test_0018_orchestrator.py` (three times inside one test) and
+    `tests/test_migrations_0013.py` — so this is a live hazard here, not a
+    precaution. Do not simplify it back to `monkeypatch`.
+    """
+    previous = tempfile.tempdir
+    tempfile.tempdir = str(tmp_path)
+    try:
+        yield
+    finally:
+        tempfile.tempdir = previous
+
+
 def _fresh() -> str:
     p = tempfile.mktemp(suffix=".db")
     SqliteStore(p)
