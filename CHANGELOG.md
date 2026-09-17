@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.26.0 — 2026-09-17
 
 **BREAKING for existing stores — schema 13 → 14 (specs/0027 v14, the durable policy
 receipt).** One additive table (`policy_receipt`) and its time index; no data step — a
@@ -13,6 +13,15 @@ policy lane — the store must add `write_policy_receipt`, `policy_receipts` and
 `policy_receipt`, because the base class refuses rather than drops and the first
 recall on which a lane fires raises `NotImplementedError` against a store without
 them. Library and MCP callers that pass no `policy` change nothing.
+
+**Who should take this release, beyond the store migration above.** Any deployment that
+IMPORTS procedural records from a source it does not itself control should take it: two
+import-boundary defects are fixed here, and both let a claim in an incoming copy decide
+something the stored record should have decided. A copy claiming a different predecessor
+had its claim replace the stored producer in the inheritance lookup; and conflicting
+record ids were resolved after inheritance was derived rather than before. Neither is
+reachable by a deployment that only ingests its own writes. Stated per the standing rule
+that a release carrying a trust-surface fix says who should act, not only what changed.
 
 - **Import boundary: a persisted producer is the constraint** (specs/0037 v24.5; the amendments
   review package, round 9, returned 2026-09-14 with the design acceptances in force). A copy of a
@@ -134,6 +143,17 @@ them. Library and MCP callers that pass no `policy` change nothing.
   positions (5,045 of 6,608), and neither is a capture-loss figure; the measured capture
   result is the held-out draw's 0 of 6 positive rows. The counting script ships in the
   evidence tree. Two fixture and wording cleanups the reviewer named.
+
+- **Design accepted, NOT implemented: targeted redaction** (specs/0041, external round 8,
+  2026-09-17; eight rounds, 32 findings, the ledger in the spec's `## Review closure`).
+  Acceptance freezes INV-1–INV-12, the 64-carrier treatment map and §4h's transition rules,
+  and authorises implementation — **it ships no behaviour.** Nothing in this release removes
+  stored content, and no redaction API exists; the only source change the line made is three
+  comments renumbered `0040` → `0041`. Stated here because an accepted design is a commitment
+  a consumer can read, and because "redaction accepted" is easy to misread as "redaction
+  available". Carried into implementation by the reviewer: reconstructed receipts where no
+  original exists, positive controls for the eight strict expected-failure tests that still
+  lack one, and the `"redacted"` disposition.
 
 ## 0.25.0 — 2026-09-14
 
