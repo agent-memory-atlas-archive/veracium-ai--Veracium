@@ -447,6 +447,7 @@ def test_the_11_4_bis_evidence_figures_are_derived_from_the_artifacts_they_cite(
     else in the spec is not what the follow-up asked for.
     """
     import ast as _ast
+    import re
 
     spec = (ROOT / "specs" / "0041-targeted-redaction.md").read_text()
     start = spec.index("### 11.4-bis.")
@@ -492,6 +493,53 @@ def test_the_11_4_bis_evidence_figures_are_derived_from_the_artifacts_they_cite(
         f"§11.4-bis cites a creation pin that is not the manifest's "
         f"{man['frozen_at_head'][:8]}…")
     assert str(man["store_schema_version"]) in section
+
+    # --- THE SERIES' TAIL IS BOUND; ITS HISTORY IS NOT --------------------------
+    # Round 8's defect was not a misremembered history. Nobody's memory of 6→9
+    # decayed — the ARTIFACT MOVED and the sentence's LAST TERM did not follow,
+    # under a cell that had already been updated. The assertions above cannot see
+    # that: they ask whether the manifest's values appear ANYWHERE in the section,
+    # and the cell alone satisfies them. A regeneration to eleven shapes would
+    # update the cell, match `f"{shapes} shapes"` against it, and leave the series
+    # ending "→ 10 shapes" green.
+    #
+    # So the series' FINAL term is compared to the manifest, and only that. The
+    # historical terms are deliberately unasserted: a test that walked the file's
+    # git history would bind this spec to the REPOSITORY'S HISTORY REMAINING
+    # INTACT — a rebase or a re-import would redden it for reasons that say
+    # nothing about whether the sentence is true, and it would be evidence about
+    # git rather than about the claim. The history needs no test because it is
+    # published AS A SERIES WITH DIGESTS IN IT, which any reader can check in one
+    # command. That property is what a single number never had.
+    # Rule, from the second seat: a series' TAIL is bindable and its HISTORY is
+    # not, and the tail is where staleness enters.
+    series = re.search(r"size never once \(([^)]*)\)", section)
+    assert series, ("§11.4-bis's trap note no longer carries the parenthesised series "
+                    "(digests, shapes, bytes) that this check binds")
+    s = series.group(1)
+
+    digests = re.findall(r"\b([0-9a-f]{8})\b", s)
+    assert digests, f"no digests in the series: {s!r}"
+    assert digests[-1] == man["sha256"][:8], (
+        f"the series ends at digest {digests[-1]}… but the frozen store is now "
+        f"{man['sha256'][:8]}… — the fixture was regenerated and the series' last "
+        f"term did not follow, which is exactly round 8's defect")
+
+    counts = [int(x) for x in re.findall(r"\b(\d+)\b(?=[^,]*shapes)", s)]
+    assert counts, f"no shape counts in the series: {s!r}"
+    assert counts[-1] == shapes, (
+        f"the series ends at {counts[-1]} shapes but the manifest holds {shapes}")
+
+    size = re.search(r"([\d,]+) bytes throughout", s)
+    assert size and int(size.group(1).replace(",", "")) == man["bytes"], (
+        f"the series states {size.group(1) if size else '?'} bytes; the manifest "
+        f"records {man['bytes']:,}")
+
+    # NEGATIVE CONTROL: a stale tail must be caught. This is the mutation the
+    # check exists for, and it is asserted rather than assumed.
+    stale = s.replace(digests[-1], "deadbeef")
+    assert re.findall(r"\b([0-9a-f]{8})\b", stale)[-1] != man["sha256"][:8], (
+        "the series-tail control did not change the term it was meant to change")
 
     # NEGATIVE CONTROL: the derivation must be capable of failing. A section that
     # has lost a figure is refused — otherwise this test is the very thing round 8
