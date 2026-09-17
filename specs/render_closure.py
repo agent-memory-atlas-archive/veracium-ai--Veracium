@@ -29,7 +29,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS = ROOT / "specs"
-TRACKED = ("0001", "0022", "0023", "0024", "0025", "0028", "0030", "0031", "0037", "0038", "0039")     # the specs whose ledgers this gate governs — the L-pair joined at acceptance (round 12); 0001 at its first sealed RETURN (round 3)
+TRACKED = ("0001", "0022", "0023", "0024", "0025", "0028", "0030", "0031", "0037", "0038", "0039", "0041")     # the specs whose ledgers this gate governs — the L-pair joined at acceptance (round 12); 0001 at its first sealed RETURN (round 3)
 
 
 def _is_sent(row) -> bool:
@@ -132,8 +132,16 @@ def _apply(path: pathlib.Path, spec: str, write: bool) -> bool:
     block = render(spec)
     if BEGIN not in text or END not in text:
         return False           # spec has no generated block yet
-    new = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), block,
-                 text, flags=re.S)
+    # THE BLOCK IS A LITERAL, NOT A REPLACEMENT TEMPLATE. `re.sub` reads
+    # backslash escapes in its replacement argument: a closure summary quoting
+    # `\u0000` raised `bad escape \u` at render time, and a summary containing
+    # `\1` or `\g<0>` would have been SILENTLY rewritten into whatever the
+    # pattern matched — a generated ledger quietly saying something its source
+    # does not. A function replacement is passed through untouched.
+    # Found 2026-09-17 while rendering 0041's ledger, whose round-8 row quotes
+    # the JSON escape that made an isolation check unfailable.
+    new = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END),
+                 lambda _m: block, text, flags=re.S)
     if new == text:
         return True
     if write:

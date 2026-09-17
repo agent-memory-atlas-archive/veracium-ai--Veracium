@@ -3760,6 +3760,399 @@ CLOSURES = [
      "v19: the rule rewritten as a CRITERION — a site carries the value iff the value is what it asserts (§2e; §6 invariant rows; behaviour-table and matrix rows), every other site points; six discussions made value-free; the checker replaced by a DERIVED census over the live text with the history exclusions declared, each occurrence classified by its site's form, failing on the rest; the discussion pointers derived by subject vocabulary; the reviewer's mutation both ways",
      '$PY -m pytest tests/test_0039_degradation_visibility.py::test_the_result_surface_is_stated_once_and_every_other_site_points_to_it tests/test_0039_degradation_visibility.py::test_the_census_refuses_a_planted_restatement_and_admits_a_planted_invariant'),
 
+
+    # ---- 0041 external rounds 1-8 (2026-09-15..17), the acceptance fold -----
+    ("0041", "external", 1, "0041-R1-1",
+     'the content-carrier inventory was incomplete: '
+     '`Edge.original_relation` was classified non-content while ingestion '
+     'preserves an unrecognised extractor relation there verbatim, and the '
+     'reviewer confirmed it persists AND exports; two further omitted '
+     'carriers did the same',
+     'the inventory re-derived by a script that WALKS THE MODEL rather '
+     'than a hand list, with its classification output committed beside it '
+     'and reproduced byte-for-byte from the tree; v3.1 §2/§2d',
+     '$PY -m pytest '
+     'tests/test_0041_evidence.py::test_the_carrier_enumeration_reproduces_its_committed_output_byte_for_byte '
+     'tests/test_0041_evidence.py::test_f1a_an_unrecognised_extractor_relation_is_kept_verbatim_in_original_relation '
+     '-q -p no:randomly'),
+    ("0041", "external", 1, "0041-R1-2",
+     'clearing the wiki inside the redaction transaction does not prevent '
+     'its later restoration — a compilation that BEGAN before the '
+     'redaction republishes the original content, stamped with the current '
+     'store version',
+     '§4e: publication is conditional on the store version its inputs were '
+     'read at, and redaction bumps that version; the delayed-writer '
+     'treatment defined',
+     'git show 6831bcf3e22521fff9f5fbb95a87f826bca68380 # v3.1 §4e — the '
+     'version-conditional publication rule'),
+    ("0041", "external", 1, "0041-R1-3",
+     'redacted state and episode handling were underspecified, and the '
+     'supporting claim was FALSE: `TEXT NOT NULL` permits the empty '
+     'string, so it reserves nothing. §4c described only an edge journal '
+     'event while §4a accepts an episode',
+     "§4b defines the marker's representation and validation, §4c gains "
+     'the durable episode record, and the reader inventory names '
+     "`edge_state_at()`'s new REDACTED state instead of leaving a sentinel "
+     'to classify as MALFORMED',
+     'git show 6831bcf3e22521fff9f5fbb95a87f826bca68380 # v3.1 §4b/§4c/§6 '
+     '— representation, the episode record, the reader state'),
+    ("0041", "external", 1, "0041-R1-4",
+     'D4 did not explain how affected supersession receipts are LOCATED: '
+     '`supersession_operations` stores digests and an operation id with no '
+     'complete reverse mapping to affected records',
+     '§4f defines durable associations for future operations and '
+     'CONSERVATIVE completeness reporting for existing unlinked receipts — '
+     'the limit is stated as a guarantee (`receipts_complete=False`) '
+     'rather than claimed away',
+     'git show 6831bcf3e22521fff9f5fbb95a87f826bca68380 # v3.1 §4f — '
+     'durable association and conservative reporting'),
+    ("0041", "external", 1, "0041-R1-5",
+     'exporting redaction events needed a complete IMPORT contract: '
+     'record/event binding, missing or inconsistent notices, repeat '
+     'imports, user remapping, destination conflicts, and the treatment of '
+     'source `seq`/`txn`',
+     '§4g, the acceptance contract for a transport that does not yet exist '
+     '— export carries no events at all today, which the spec now states '
+     'rather than assumes',
+     'git show 6831bcf3e22521fff9f5fbb95a87f826bca68380 # v3.1 §4g — the '
+     'import contract and its failure cases'),
+    ("0041", "external", 1, "0041-R1-6",
+     'the scope of dependent content was an open PRODUCT question: §10.1 '
+     'left consolidated outputs unresolved, so a caller could not know '
+     'what remained after a successful redaction',
+     "THE OWNER'S RULING — outputs are separate; §10.1 and §8 state it, "
+     'and §11.5 limits the success claim accordingly, naming surviving '
+     'copies in the receipt',
+     'git show 6831bcf3e22521fff9f5fbb95a87f826bca68380 # v3.1 §10.1/§8 — '
+     "the owner's ruling, outputs are separate"),
+    ("0041", "external", 1, "0041-R1-7",
+     "the owner's four decisions had not reached the operative contract "
+     'consistently — four live passages still contradicted them (D1 '
+     "against §2c's length-capped prose; D2 against INV-6 and §10; §2's "
+     "three duplicated columns against INV-2; 'no row is deleted' against "
+     'deleting wiki, embedding and ledger rows)',
+     '§11, one consolidated current contract that GOVERNS where anything '
+     'above it conflicts, with the historical discussion moved out',
+     'git show 6831bcf3e22521fff9f5fbb95a87f826bca68380 # v3.1 §11 — the '
+     'operative contract and its precedence rule'),
+    ("0041", "external", 2, "0041-R2-1",
+     'the semantic-rebuild exemption did not hold ACROSS DATABASE '
+     'CONNECTIONS: `upsert_embedding()` read and checked the live edge '
+     'under an instance-local lock with no transaction, so a second '
+     "connection's redaction was overwritten. Separately the INV-12 test "
+     'still passed when `embedded_text()` was widened onto an optional '
+     'field its fixture left UNSET',
+     '§4e requires validation and publication to be atomic against other '
+     'CONNECTIONS, and the exemption is withdrawn; the INV-12 fixture '
+     'populates every string leaf and each optional leaf carries a control '
+     'proving a widening onto it is caught',
+     '$PY -m pytest '
+     'tests/test_0041_evidence.py::test_two_connection_publication_the_embedding_upsert_refuses_a_vector_for_content_another_connection_replaced '
+     'tests/test_0041_evidence.py::test_inv12_each_optional_leaf_is_load_bearing_a_widening_onto_it_is_missed_when_it_is_unset '
+     '-q -p no:randomly'),
+    ("0041", "external", 2, "0041-R2-2",
+     'the tombstone was not reserved by the stated mechanism — the marker '
+     'survives `sanitize_llm_body()`, ordinary ingestion and storage, so '
+     'the claim that a leading NUL makes it unproducible was false; nested '
+     'replacement shapes were undefined and broke an existing uniqueness '
+     'validator',
+     '§4b: the marker is NOT reserved by a column constraint, reservation '
+     "is INV-11's mirror at the write and import boundaries, and the "
+     'nested shapes carry valid post-redaction representations',
+     'git show 0fb4a3299b7b62b49f029b3919c0db426321f757 # v5 §4b — '
+     'reservation as a rule, not a claim about a column'),
+    ("0041", "external", 2, "0041-R2-3",
+     'the five-value reason vocabulary conflicted with existing lifecycle '
+     "behaviour: all seven of the store's disposition reasons were "
+     'excluded, so enforcing it would reject normal writes, and calling '
+     'them `legacy_freeform` would discard distinctions historical '
+     'classification and cache handling use',
+     '§11.2 scopes permitted reasons BY OPERATION and preserves existing '
+     'lifecycle meanings, separating migration-time retention from '
+     'redaction-time removal',
+     'git show 0fb4a3299b7b62b49f029b3919c0db426321f757 # v5 §11.2 — '
+     'reasons per operation'),
+    ("0041", "external", 2, "0041-R2-4",
+     'import failure row 9 rejected an event with an invalid reason but '
+     'imported its record UN-REDACTED — the content arrived without the '
+     'instruction to remove it',
+     '§4g rules the dependent record-and-notice unit as ONE: it is '
+     'rejected together or the import fails explicitly; the adjacent cases '
+     "(notice-less tombstone, inconsistent notices, the idempotency key's "
+     '`event_id`) are completed',
+     'git show 0fb4a3299b7b62b49f029b3919c0db426321f757 # v5 §4g — the '
+     'record and its notice commit together'),
+    ("0041", "external", 2, "0041-R2-5",
+     'receipt selection was incomplete for CURRENT-format operations too: '
+     'a reproduced `prior_upserts` update left no contribution or refusal '
+     'row linking the target to the operation, and step 2 could not locate '
+     'an id in the current `response`',
+     'the exact-coverage claim is WITHDRAWN; §4f reports completeness '
+     'conservatively and the receipt no longer copies a removed content '
+     'digest into itself',
+     'git show 0fb4a3299b7b62b49f029b3919c0db426321f757 # v5 §4f — the '
+     'withdrawn coverage claim'),
+    ("0041", "external", 2, "0041-R2-6",
+     'the expanded inventory still lacked a complete treatment map — 64 '
+     'candidates discovered, none of them told what happens to it; a prose '
+     '`outcome_counts` KEY was confirmed to persist and export, and §2 and '
+     'the example disagreed about `provenance.evidence_ref`',
+     '§2d-iii-bis, the 64-row per-candidate map built by both seats: '
+     'replace, clear, delete, preserve or explicitly exclude, each with '
+     'its resulting shape',
+     'git show 0fb4a3299b7b62b49f029b3919c0db426321f757 # v5 §2d-iii-bis — '
+     'the 64-row treatment map'),
+    ("0041", "external", 2, "0041-R2-7",
+     '§11 did not provide a consistent invariant contract: it re-pointed '
+     'EXISTING identities (INV-1 from structure preservation to content '
+     'absence, INV-3 from `why` behaviour to atomicity), dropped INV-4 and '
+     'INV-5, and described all 64 candidates as the removal surface while '
+     '§2d said they are not all targets',
+     "§11.3 restores §6's meanings, new properties take NEW identifiers, "
+     'and the matrix is one complete current table with its checks',
+     'git show 0fb4a3299b7b62b49f029b3919c0db426321f757 # v5 §11.3 — '
+     'stable invariant identities'),
+    ("0041", "external", 3, "0041-R3-1",
+     'replacing `Episode.kind` broke outcome-history protection: simulated '
+     'on a real outcome record the model still VALIDATED, but the chain '
+     'head disappeared, the next append restarted at sequence 1, and '
+     'targeted deletion of the original was no longer refused — five '
+     'guards read that discriminator',
+     'row 46 becomes two branches — PRESERVE a recognised operational '
+     'kind, REPLACE prose — with the recognised set closed by a refusal '
+     'rather than by convention',
+     '$PY -m pytest '
+     'tests/test_0041_treatment_matrix.py::test_row46_the_two_branch_kind_treatment_keeps_the_outcome_chain_and_its_guards '
+     'tests/test_0041_treatment_matrix.py::test_row46_the_replace_branch_applies_to_prose_only '
+     '-q -p no:randomly'),
+    ("0041", "external", 3, "0041-R3-2",
+     'marker, migration and absence handling were still incomplete: §4b '
+     "left pre-existing marker values 'not yet ruled', §4b and §4g "
+     'contradicted each other over a notice-less tombstone, and `None`, a '
+     'legitimate empty value, ordinary text and a redacted value were not '
+     'distinguished',
+     "§2d-v's absence rules — None stays None, empty stays empty — and "
+     "§4b's ruling on pre-existing markers as unattested rather than "
+     'forbidden',
+     'git show ef46d4a4cb80e5c86f672a0f76b162d46eea0d63 # v6 §2d-v/§4b — '
+     'the absence rules and the migration ruling'),
+    ("0041", "external", 3, "0041-R3-3",
+     'the corrected reason contract named the WRONG existing vocabulary: a '
+     "twelve-value list against the journal writer's seven-value "
+     '`DISPOSITIONED_REASONS`, omitting `disputed`, `revoked_source` and '
+     'others',
+     '§11.2 REFERENCES `schema.DISPOSITIONED_REASONS` instead of re-typing '
+     'it — a list copied into prose is a list that drifts — and defines '
+     'the other reason-writing operations separately, splitting '
+     'retain-at-migration from remove-at-redaction',
+     'git show ef46d4a4cb80e5c86f672a0f76b162d46eea0d63 # v6 §11.2 — the '
+     'registry referenced, not retyped'),
+    ("0041", "external", 3, "0041-R3-4",
+     'the supposedly authoritative sections still disagreed about '
+     'treatment: rows 21 and 23 retained contribution-ledger rows and '
+     'cleared their digests while §11.1 said deletion governs, and the '
+     'example receipt cleared a field the map preserves',
+     'one current contract with EXPLICIT PRECEDENCE — §11 governs on '
+     'contract, §2d-iii-bis on per-carrier treatment — and the example '
+     'corrected to the map',
+     'git show ef46d4a4cb80e5c86f672a0f76b162d46eea0d63 # v6 '
+     '§11.1/§2d-iii-bis — precedence stated'),
+    ("0041", "external", 3, "0041-R3-5",
+     'the evidence OVERSTATED its validation and field coverage: fixtures '
+     'labelled VALID used `model_copy(update=...)`, which skips validation '
+     'of the updates, and the revised INV-12 fixture still passed a '
+     'widening onto an unset `invalidation_reason`',
+     'every fixture is validated through the applicable model AND the '
+     "operation's own checks, with the two refusals printed as results; "
+     "INV-12 is generated from the model's field walk with a per-leaf "
+     'control',
+     '$PY -m pytest '
+     'tests/test_0041_evidence.py::test_the_before_after_fixtures_validate_as_the_treatment_map_rules_them '
+     'tests/test_0041_evidence.py::test_inv12_catches_a_widened_embedder_the_packaged_fixture_missed '
+     '-q -p no:randomly'),
+    ("0041", "external", 4, "0041-R4-1",
+     'the marker decisions the README reported as completed were still '
+     "missing: §4b labelled pre-existing marker values 'OWED AND NOT YET "
+     "RULED' and legitimate empty values 'still owed', §4g accepted a "
+     'marker-only record without a notice while §4b prohibited marker '
+     'introduction, and repeat handling promised an original receipt a '
+     'record may never have had',
+     "v9's ATTESTATION RULE, which answers all four at once: a field is "
+     'redacted iff a redaction record names that record and that field — '
+     'so a pre-existing marker is an unattested marker, writable and '
+     'reported, and a repeat returns the original OR a reconstructed '
+     'receipt',
+     'git show 7db9987b980505d8a7f57bbdf05499f41c690c31 # v9 §4b — the '
+     'attestation rule'),
+    ("0041", "external", 4, "0041-R4-2",
+     'the new restrictions did not settle compatibility with records '
+     'ALREADY STORED: a stored relation-only quarantine loses its '
+     'quarantine under the treatment map, and existing prose-valued kinds '
+     'had no transition policy',
+     "§4h's re-establish-or-refuse rule, and an EXECUTABLE transition "
+     'table over records written before the restrictions — the write-path '
+     'refusal and the transition rule are two halves of one property',
+     '$PY -m pytest '
+     'tests/test_0041_transition_table.py::test_A_existing_relation_only_quarantine_keeps_its_quarantine_under_the_ruled_treatment '
+     'tests/test_0041_transition_table.py::test_A_control_the_naive_treatment_promotes_the_claim '
+     '-q -p no:randomly'),
+    ("0041", "external", 4, "0041-R4-3",
+     '§11.2 still described the reason fields incorrectly: the journal '
+     'already enforces `DISPOSITIONED_REASONS` for invalidation events, so '
+     "its closure is not 'nothing today', and `revoked_source` does not "
+     'define the vocabulary of `source_revocations.reason` — the '
+     "revocation row retained the caller's sentence",
+     '§11.2 states the allowed values and enforcement PER D1 REASON FIELD, '
+     'including `source_revocations.reason` and `Episode.retired_reason`, '
+     'and extends the existing journal rule to redaction events',
+     'git show 7db9987b980505d8a7f57bbdf05499f41c690c31 # v9 §11.2 — '
+     'per-field reason contract'),
+    ("0041", "external", 4, "0041-R4-4",
+     'INV-12 still missed DICTIONARY KEYS: `_inv12_sets` changed values '
+     'and not keys, so with `embedded_text` widened onto `outcome_counts` '
+     'keys all seven fixture/control cases passed although the embedding '
+     'text changed and the content digest did not',
+     'the generator mutates keys as well as values and asserts directly '
+     'against the production projections, keeping the optional-field '
+     'controls',
+     '$PY -m pytest '
+     'tests/test_0041_evidence.py::test_inv12_catches_a_widened_embedder_onto_dictionary_keys '
+     'tests/test_0041_evidence.py::test_inv12_the_embedder_sees_no_field_the_content_digest_does_not_cover '
+     '-q -p no:randomly'),
+    ("0041", "external", 5, "0041-R5-1",
+     "row 49 still changed an ACTIVE episode's disposition: "
+     'preserve-registered, else `"redacted"`, never NULL turned '
+     '`retired_reason=None, active=True` into `"redacted", active=False` — '
+     'a redaction RETIRING an active episode, which §4h forbids and which '
+     "the previous round's own fix introduced",
+     "§4h's corollary — REDACTION ACTS ON CONTENT; ABSENCE IS NOT CONTENT "
+     '— so every carrier rule is three cases: absent stays absent, '
+     'registered stays registered, only prose becomes the registry value',
+     '$PY -m pytest '
+     'tests/test_0041_transition_table.py::test_rows30_49_on_a_frozen_record_absence_survives_and_prose_does_not '
+     'tests/test_0041_treatment_matrix.py::test_rows30_49_absence_stays_absence_a_none_reason_is_not_replaced '
+     '-q -p no:randomly'),
+    ("0041", "external", 5, "0041-R5-2",
+     'the source-revocation rule changed D1 without recording a '
+     'replacement decision: D1 puts `source_revocations.reason` under a '
+     'closed vocabulary and §11.2 treated it as continuing free text. '
+     'Removing historical prose does not constrain what future writes may '
+     'store — two separate questions',
+     '§11.2 separates the restriction on FUTURE writes from the treatment '
+     'of historical prose, and the field closes for future writes without '
+     'amending D1',
+     'git show ead0bcc93301b42f7e2ae19f684c49bae8e9882e # v11 §11.2 — '
+     'future writes and historical prose separated'),
+    ("0041", "external", 5, "0041-R5-3",
+     'three strict xfails did not exercise the behaviour their names '
+     'promised — the repeated-call test passed against a no-op '
+     '`Memory.redact`, the migration-report test against a helper that '
+     'always returned `[]`, and the after-attestation test never called '
+     'redaction at all. Existence checks wearing behaviour names',
+     'the three rewritten to bind VALUES the product computes, the class '
+     'exhausted by our own mutant campaign, and POSITIVE CONTROLS added — '
+     'the after-attestation test could never have been made green by any '
+     'implementation, which no negative control can reveal',
+     '$PY specs/evidence/0041/xfail_mutant_campaign.py'),
+    ("0041", "external", 6, "0041-R6-1",
+     'several transition tests still created their historical records '
+     'through ORDINARY WRITERS, so three of them fail at SETUP once the '
+     'proposed restrictions land; the fixture lacked a historical '
+     'source-revocation row with a prose reason, and the row-46 test still '
+     'expected the `Episode` CONSTRUCTOR to reject a prose kind, '
+     "contradicting §4h's requirement that existing records stay readable",
+     'a FROZEN pre-restriction store, written before the closure and '
+     'checked against its manifest, which the transition tests copy '
+     'instead of writing rows a landed closure would refuse; the refusal '
+     'moved from the constructor to the write path',
+     '$PY -m pytest '
+     'tests/test_0041_transition_table.py::test_the_frozen_store_carries_every_pre_restriction_shape_the_table_needs '
+     'tests/test_0041_transition_table.py::test_B_existing_prose_kind_is_retained_at_migration_and_readable '
+     '-q -p no:randomly'),
+    ("0041", "external", 6, "0041-R6-2",
+     "the fixture-checker's test invoked the checker only on the ORIGINAL "
+     'bytes and compared sha256 digests for the altered copy — a property '
+     'of sha256, not of the checker. Replacing the subprocess result with '
+     'unconditional success left the test passing: an unfailable check '
+     'guarding the artifact whose whole value is that it has not changed',
+     'the checker is RUN on the altered bytes in a throwaway copy of its '
+     'own directory, and the rejection is read from ITS exit code and ITS '
+     "message; the README's both-directions claim corrected",
+     '$PY -m pytest '
+     'tests/test_0041_transition_table.py::test_the_frozen_pre_restriction_store_matches_its_manifest '
+     '-q -p no:randomly'),
+    ("0041", "external", 6, "0041-R6-3",
+     'the source-revocation vocabulary was still marked PROPOSED — '
+     '`policy`, `subject_request`, `erroneous_capture` and '
+     '`legal_obligation` — with older summaries still implying the field '
+     'stays permanently free text',
+     "THE OWNER'S RULING, folded as authorised rather than proposed: the "
+     'four values are final, `policy` is defined, and the superseded '
+     'summaries are DATED as historical rather than erased',
+     'git show e0cba0aac04ff48adc8a28befc96648a65e47a60 # v12 §11.2 — the '
+     'vocabulary authorised, not proposed'),
+    ("0041", "external", 7, "0041-R7-1",
+     'historical-data setup still used restricted writers: the prose-kind '
+     'test wrote `ep-old` through the ordinary writer and would fail at '
+     'setup under the proposed restriction, never reaching its assertion; '
+     'the source-reason test created a new prose reason; and the frozen '
+     "revocation had no linked record for the test's affected-records "
+     'assertion',
+     'both tests read frozen records, and the fixture gains a '
+     'source-linked edge so the affected-records assertion has something '
+     'to be about',
+     '$PY -m pytest '
+     'tests/test_0041_transition_table.py::test_B_an_ordinary_write_of_a_new_prose_kind_is_refused_while_the_stored_one_stays '
+     'tests/test_0041_transition_table.py::test_D_a_source_revocation_reason_holding_the_callers_sentence_is_replaced '
+     '-q -p no:randomly'),
+    ("0041", "external", 7, "0041-R7-2",
+     'the revised import test could pass FOR THE WRONG REASON: it exported '
+     'the entire mixed fixture including marker-bearing rows, so an import '
+     'rule that rejected markers and performed no kind validation at all '
+     'made it pass',
+     'the prose-kind case is exported in ISOLATION, so no other '
+     'restriction can satisfy its expected rejection — and a control '
+     'asserts the isolated export carries no marker to reject',
+     '$PY -m pytest '
+     'tests/test_0041_transition_table.py::test_B_an_import_carrying_a_prose_kind_is_refused '
+     'tests/test_0041_transition_table.py::test_the_isolation_control_detects_a_marker_bearing_export '
+     '-q -p no:randomly'),
+    ("0041", "external", 7, "0041-R7-3",
+     'the redaction adapter disagreed with §4a: it passed `kind`, '
+     '`target_id` and `fields` where §4a specifies a user, an '
+     'edge-OR-episode target and a reason, so a callable with the '
+     'documented signature failed the repeat test immediately',
+     'the adapter takes `user_id`, exactly one of `edge_id | episode_id` — '
+     'asserted, never both and never neither — and `reason`, matching §4a',
+     '$PY -m pytest '
+     'tests/test_0041_transition_table.py::test_F_a_repeated_call_returns_the_original_or_a_reconstructed_receipt '
+     '-q -p no:randomly'),
+    ("0041", "external", 8, "0041-R8-1",
+     "NONBLOCKING FOLLOW-UP. The isolation control searched the export's "
+     'RAW TEXT for a marker whose NUL bytes JSON escapes to `\\u0000`, so '
+     'the assertion was true of every JSON export ever written — a file '
+     "full of markers passed it. The campaign's import mutant had the same "
+     'defect, so it simulated a rule that does nothing',
+     'the check DECODES and walks every string value and dictionary key, '
+     'returns the list so a failure names what it found, and reads record '
+     "lines only because the export's metadata header carries a kind of "
+     'its own; demonstrated rather than claimed, on a marker-bearing '
+     'export',
+     '$PY -m pytest '
+     'tests/test_0041_transition_table.py::test_the_isolation_control_detects_a_marker_bearing_export '
+     '-q -p no:randomly'),
+    ("0041", "external", 8, "0041-R8-2",
+     "NONBLOCKING FOLLOW-UP. §11.4-bis's evidence references were stale in "
+     'five figures: ten campaign cases where the file holds 14, a '
+     'nine-shape fixture where the manifest holds 10, and a superseded '
+     'digest and creation pin',
+     'the five figures corrected AND bound — a test DERIVES each one from '
+     "the artifact it describes (the campaign's `check()` calls by AST, "
+     "the manifest's rows, the store's sha256, the recorded HEAD) and "
+     'fails if the section disagrees, so the class cannot recur silently',
+     '$PY -m pytest '
+     'tests/test_0041_evidence.py::test_the_11_4_bis_evidence_figures_are_derived_from_the_artifacts_they_cite '
+     '-q -p no:randomly'),
 ]
 
 

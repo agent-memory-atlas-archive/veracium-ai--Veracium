@@ -4,16 +4,16 @@
 
 # Spec status
 
-**36 specs · 34 accepted · 392 external review
+**36 specs · 35 accepted · 400 external review
 rounds · 0 blocking questions open.**
 
 **Only `accepted` authorises implementation** (`PROCESS.md` §4a), and external
-review is required to reach it. **34 of 36 are accepted**, which
+review is required to reach it. **35 of 36 are accepted**, which
 is the number that decides what can be built.
 
 | # | spec | status | updated | int | ext | open Q | blocking | findings | code |
 |---|---|---|---|---|---|---|---|---|---|
-| **0001** | generated-content trust class (`EvidenceAuthor.ASSISTANT`) | `accepted` | 2026-09-08 | 1 | 18 | 2 | 0 | 0 | — |
+| **0001** | generated-content trust class (`EvidenceAuthor.ASSISTANT`) | `accepted` | 2026-09-17 | 1 | 18 | 2 | 0 | 0 | — |
 | **0002** | the maintenance provenance invariant | `deferred` | 2026-09-11 | 2 | 8 | 0 | 0 | 10 | 8/10 |
 | **0003** | supersession authority | `accepted` | 2026-08-26 | 1 | 12 | 0 | 0 | 0 | — |
 | **0004** | derived views must not outlive a revoked trust decision | `accepted` | 2026-08-22 | 1 | 3 | 1 | 0 | 1 | 1/1 |
@@ -35,8 +35,8 @@ is the number that decides what can be built.
 | **0020** | scoped recall — the principal boundary (S1) | `accepted` | 2026-08-16 | 2 | 14 | 0 | 0 | 0 | — |
 | **0021** | scope under derivation and consolidation (S2) | `accepted` | 2026-08-20 | 1 | 14 | 0 | 0 | 0 | — |
 | **0022** | source revocation — the standing state and the sweep (A3a) | `accepted` | 2026-09-13 | 4 | 21 | 5 | 0 | 0 | — |
-| **0023** | non-revival under maintenance — a revoked source cannot re-enter (A3b) | `accepted` | 2026-09-08 | 3 | 21 | 3 | 0 | 0 | — |
-| **0024** | the user's own words are not third-party testimony (L1) | `accepted` | 2026-09-15 | 2 | 24 | 3 | 0 | 0 | — |
+| **0023** | non-revival under maintenance — a revoked source cannot re-enter (A3b) | `accepted` | 2026-09-17 | 3 | 21 | 3 | 0 | 0 | — |
+| **0024** | the user's own words are not third-party testimony (L1) | `accepted` | 2026-09-17 | 2 | 24 | 3 | 0 | 0 | — |
 | **0025** | the relation vocabulary is closed, or it is not a vocabulary (L2) | `accepted` | 2026-09-13 | 2 | 24 | 2 | 0 | 0 | — |
 | **0026** | label/value agreement check | `accepted` | 2026-09-08 | 14 | 12 | 2 | 0 | 0 | — |
 | **0027** | semantic hybrid recall | `accepted` | 2026-09-15 | 0 | 0 | 0 | 0 | 0 | — |
@@ -48,13 +48,13 @@ is the number that decides what can be built.
 | **0037** | procedural records and the `basis` axis (stages 1–3) | `accepted` | 2026-09-15 | 0 | 5 | 0 | 0 | 0 | — |
 | **0038** | the extraction's speech-act discipline | `accepted` | 2026-09-14 | 0 | 4 | 0 | 0 | 0 | — |
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
-| **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted-with-amendments` | 2026-09-16 | 0 | 0 | 0 | 0 | 0 | — |
+| **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-09-17 | 0 | 8 | 0 | 0 | 0 | — |
 
 **Review archives** — the exact package sent for each round, with a sha256 per
 archive — are indexed in `specs/archives/INDEX.md`.
 
-**Per-finding closure ledger — 385 findings across the
-11 tracked specs** (0001, 0022, 0023, 0024, 0025, 0028, 0030, 0031, 0037, 0038, 0039), derived from
+**Per-finding closure ledger — 419 findings across the
+12 tracked specs** (0001, 0022, 0023, 0024, 0025, 0028, 0030, 0031, 0037, 0038, 0039, 0041), derived from
 `specs/closure_findings.py` and validated against `specs/reviews.py` by
 `specs/render_closure.py --check`. This total is rendered HERE ONLY (owner's
 ruling, 2026-09-08): each tracked spec's `## Review closure` block carries its

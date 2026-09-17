@@ -1331,7 +1331,17 @@ def test_the_count_of_closure_evidence_unrunnable_in_a_package_is_pinned():
     history = [r for r in rows if r[6].lstrip().startswith("git show ")]
     share = len(history) / len(rows)
     # measured 2026-09-16: 99 history-citing rows, out of 485 rows in the ledger
-    UNRUNNABLE_IN_A_PACKAGE = 99
+    # MOVED 2026-09-17 at 0041's acceptance fold: 99 -> 118, out of 519. The 19 are
+    # 0041's text-only closures, and the rise is the deliberate act this pin exists to
+    # make visible rather than a drift. 0041 is a SPEC WITH NO IMPLEMENTATION: for
+    # nineteen of its findings the fold WAS the spec text, so the fold commit is the
+    # only thing a closure can honestly point at — P4 says so in the same words, and
+    # the alternative, a grep for the new wording, is satisfied by any file containing
+    # it. The other 15 rows cite pytest nodes or the mutant campaign and DO run in a
+    # package. The cost stands as the docstring states it: a reviewer holding only the
+    # archive cannot run these 19, and they are named in the ledger so that limit is
+    # readable rather than discovered.
+    UNRUNNABLE_IN_A_PACKAGE = 118
     assert len(history) == UNRUNNABLE_IN_A_PACKAGE, (
         f"{len(history)} of {len(rows)} closure rows ({share:.1%}) cite `git show` and cannot "
         f"run in a packaged tree; the pin says {UNRUNNABLE_IN_A_PACKAGE}. A reviewer runs the "
@@ -2412,6 +2422,36 @@ def test_new_closure_evidence_is_behavioral():
         '0039-R2-2': 'The byte-identical callback test is not executable as written — independent ingestion',
         '0039-R2-3': 'Carrier-completeness drift: five passages still describe the superseded three-site / e',
         '0039-R3-3': 'The deterministic fixture pseudocode does not match the shipped API (store.conn, "prim',
+        # 0041 (2026-09-17, the ledger written at acceptance after eight external
+        # rounds in three days): a SPEC WITH NO IMPLEMENTATION, like 0037 — every fold
+        # changed spec text or evidence, never src/. Its text-only closures interleave
+        # with behavioural ones INSIDE the same rounds (round 1's carrier inventory is
+        # closed by the enumeration script while its six siblings are spec text; round
+        # 2's cross-connection finding by a two-connection regression beside six text
+        # folds), so a round cutoff would exempt the behavioural rows too. Per-finding,
+        # as 0030, 0028, 0038 and 0039. Every entry cites the fold commit that landed
+        # the text. The 15 behavioural rows cite pytest nodes and the mutant campaign,
+        # and rounds 7-8 are behavioural WITHOUT EXCEPTION — by then the findings were
+        # in the evidence layer, where there is behaviour to point at.
+        '0041-R1-2': 'clearing the wiki inside the redaction transaction does not prevent its later re',
+        '0041-R1-3': 'redacted state and episode handling were underspecified, and the supporting clai',
+        '0041-R1-4': 'D4 did not explain how affected supersession receipts are LOCATED: `supersession',
+        '0041-R1-5': 'exporting redaction events needed a complete IMPORT contract: record/event bindi',
+        '0041-R1-6': 'the scope of dependent content was an open PRODUCT question: §10.1 left consolid',
+        '0041-R1-7': "the owner's four decisions had not reached the operative contract consistently —",
+        '0041-R2-2': 'the tombstone was not reserved by the stated mechanism — the marker survives `sa',
+        '0041-R2-3': 'the five-value reason vocabulary conflicted with existing lifecycle behaviour: a',
+        '0041-R2-4': 'import failure row 9 rejected an event with an invalid reason but imported its r',
+        '0041-R2-5': 'receipt selection was incomplete for CURRENT-format operations too: a reproduced',
+        '0041-R2-6': 'the expanded inventory still lacked a complete treatment map — 64 candidates dis',
+        '0041-R2-7': '§11 did not provide a consistent invariant contract: it re-pointed EXISTING iden',
+        '0041-R3-2': 'marker, migration and absence handling were still incomplete: §4b left pre-exist',
+        '0041-R3-3': 'the corrected reason contract named the WRONG existing vocabulary: a twelve-valu',
+        '0041-R3-4': 'the supposedly authoritative sections still disagreed about treatment: rows 21 a',
+        '0041-R4-1': 'the marker decisions the README reported as completed were still missing: §4b la',
+        '0041-R4-3': '§11.2 still described the reason fields incorrectly: the journal already enforce',
+        '0041-R5-2': 'the source-revocation rule changed D1 without recording a replacement decision:',
+        '0041-R6-3': 'the source-revocation vocabulary was still marked PROPOSED — `policy`, `subject_',
     }
     offenders = []
     for row in closure_findings.CLOSURES:

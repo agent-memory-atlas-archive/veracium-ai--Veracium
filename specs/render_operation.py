@@ -67,7 +67,16 @@ def main() -> int:
     if BEGIN not in text:
         print(f"{SPEC.name} carries no {BEGIN} marker", file=sys.stderr)
         return 1
-    new = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), block, text, flags=re.S)
+    # THE BLOCK IS A LITERAL, NOT A REPLACEMENT TEMPLATE. `re.sub` reads
+    # backslash escapes in its replacement argument: a closure summary quoting
+    # `\u0000` raised `bad escape \u` at render time, and a summary containing
+    # `\1` or `\g<0>` would have been SILENTLY rewritten into whatever the
+    # pattern matched — a generated ledger quietly saying something its source
+    # does not. A function replacement is passed through untouched.
+    # Found 2026-09-17 while rendering 0041's ledger, whose round-8 row quotes
+    # the JSON escape that made an isolation check unfailable.
+    new = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END),
+                 lambda _m: block, text, flags=re.S)
     if a.write:
         SPEC.write_text(new)
         print("R19 operation block written")

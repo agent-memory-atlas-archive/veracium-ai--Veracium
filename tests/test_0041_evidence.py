@@ -423,3 +423,79 @@ def test_the_round4_reproduction_script_reports_every_claim_as_the_reviewer_foun
     assert "F3b source_revocations.reason == the caller's sentence: True | the affected edge's invalidation_reason: revoked_source | the episode's retired_reason: revoked_source" in out
     assert "F3b 'revoked_source' names the EFFECT's reason, not the revocation row's vocabulary: True" in out
 
+
+
+def test_the_11_4_bis_evidence_figures_are_derived_from_the_artifacts_they_cite():
+    """ROUND-8 FOLLOW-UP 2, and the reason it is a TEST rather than an edit.
+
+    §11.4-bis describes the campaign and the frozen fixture by counting them, and
+    round 8 found five of those counts stale at once: ten campaign cases where the
+    file held fourteen, a nine-shape fixture where the manifest held ten, plus a
+    superseded store digest and creation pin. Nothing was wrong when it was
+    written. It went stale the way every hand-carried count in this repo goes
+    stale — the artifact grew and the sentence about it did not.
+
+    Correcting the five numbers fixes today and guarantees nothing about the next
+    time the campaign gains a case. So the figures are DERIVED here from the
+    artifacts themselves and compared to the section: the campaign's cases by
+    walking its `check()` calls, the shapes and digest and pin from the manifest
+    the fixture checker already binds. A sixth case added without touching the
+    prose is a red test, not a finding three rounds later.
+
+    The section is read as a SLICE, not as the whole document, because the figures
+    must be stated where the reviewer reads them — a matching number somewhere
+    else in the spec is not what the follow-up asked for.
+    """
+    import ast as _ast
+
+    spec = (ROOT / "specs" / "0041-targeted-redaction.md").read_text()
+    start = spec.index("### 11.4-bis.")
+    end = spec.index("## 11.5 ", start)
+    section = spec[start:end]
+
+    # --- the campaign, derived by walking its own case table -------------------
+    campaign = EVIDENCE / "xfail_mutant_campaign.py"
+    labels = []
+    for node in _ast.walk(_ast.parse(campaign.read_text())):
+        if (isinstance(node, _ast.Call) and isinstance(node.func, _ast.Name)
+                and node.func.id == "check"):
+            labels.append(_ast.literal_eval(node.args[0]))
+    assert labels, "no check() calls found — the derivation, not the spec, is broken"
+    reviewers = [l for l in labels if "reviewer's" in l]
+    positive = [l for l in labels if "POSITIVE CONTROL" in l]
+    ours = [l for l in labels if l not in reviewers and l not in positive]
+
+    assert f"runs {len(labels)}" in section, (
+        f"§11.4-bis does not say the campaign runs {len(labels)} cases; "
+        f"{len(labels)} `check()` calls are in {campaign.name}")
+    assert f"{len(labels)} of {len(labels)} behave" in section, (
+        f"§11.4-bis's behave-count is not '{len(labels)} of {len(labels)}'")
+    # phrase-bound, not a bare digit: `str(5) in section` is satisfied by any
+    # stray 5 in the prose, which is the unfailable-check class one more time
+    for phrase in (f"the reviewer's {len(reviewers)}",
+                   f"{len(ours)} more of ours",
+                   f"{len(positive)} positive controls"):
+        assert phrase in section, (
+            f"§11.4-bis does not carry {phrase!r} — the campaign's own case table "
+            f"says {len(reviewers)} reviewer's, {len(ours)} ours, "
+            f"{len(positive)} positive controls")
+
+    # --- the fixture, derived from the manifest the checker binds ---------------
+    man = json.loads((EVIDENCE / "pre_restriction_manifest.json").read_text())
+    shapes = len(man["rows"])
+    assert f"{shapes} shapes" in section or f"**{shapes}** shapes" in section, (
+        f"§11.4-bis does not say the fixture carries {shapes} shapes")
+    assert man["sha256"][:8] in section, (
+        f"§11.4-bis cites a store digest that is not the manifest's "
+        f"{man['sha256'][:8]}… — the frozen bytes moved and the prose did not")
+    assert man["frozen_at_head"][:8] in section, (
+        f"§11.4-bis cites a creation pin that is not the manifest's "
+        f"{man['frozen_at_head'][:8]}…")
+    assert str(man["store_schema_version"]) in section
+
+    # NEGATIVE CONTROL: the derivation must be capable of failing. A section that
+    # has lost a figure is refused — otherwise this test is the very thing round 8
+    # found in the isolation check, an assertion true of any input.
+    mutilated = section.replace(f"runs {len(labels)}", "runs 10")
+    assert f"runs {len(labels)}" not in mutilated, (
+        "the negative control did not change the text it was meant to change")
