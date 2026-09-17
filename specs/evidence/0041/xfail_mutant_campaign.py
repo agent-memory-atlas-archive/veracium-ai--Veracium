@@ -277,8 +277,13 @@ _REAL_IMPORT = _port.import_memory
 
 
 def _marker_only_import():
+    # ROUND-8 FOLLOW-UP 1: this mutant searched the RAW file text, and JSON escapes
+    # the marker's NUL bytes — so it could never have found a marker in any export
+    # and the "marker-only rule" it simulated was really a rule that does nothing.
+    # A mutant that cannot do the wrong thing cannot prove a check refuses it.
+    # It decodes now, through the same helper the test uses.
     def rule(store, path, *a, **k):
-        if tt.MARKER in pathlib.Path(path).read_text():
+        if tt._exported_markers(pathlib.Path(path)):
             raise ValueError("marker rejected at import — NO kind validation performed")
         return _REAL_IMPORT(store, path, *a, **k)
     _port.import_memory = rule

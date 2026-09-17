@@ -231,12 +231,13 @@ def test_B_an_import_carrying_a_prose_kind_is_refused(tmp_path):
     export_memory(src, U, out)
     _isolate_jsonl(out, keep_id=ep_id)
 
-    body = out.read_text()
-    assert "told me in confidence" in body, "the prose kind must survive the isolation"
-    assert MARKER not in body, (
-        "ISOLATION CONTROL: no marker may remain in the exported file, or a "
-        "marker rule could satisfy the refusal below and this test would prove "
-        "nothing about kinds")
+    assert _exported_kinds(out) == {"told me in confidence"}, (
+        f"the prose kind must survive the isolation and nothing else may; the "
+        f"export carries {_exported_kinds(out)}")
+    assert not _exported_markers(out), (
+        f"ISOLATION CONTROL: no marker may remain in the exported file, or a marker "
+        f"rule could satisfy the refusal below and this test would prove nothing "
+        f"about kinds. Found: {_exported_markers(out)}")
 
     with pytest.raises(Exception):
         import_memory(_mem(tmp_path, "d.db").store, out)
@@ -516,6 +517,74 @@ def _strict_json(text):
     return json.loads(text, object_pairs_hook=pairs)
 
 
+def _decoded_values(path):
+    """Every string VALUE in an exported jsonl, DECODED — never the raw text.
+
+    ROUND-8 FOLLOW-UP 1, found by the reviewer. The isolation control asserted
+    `MARKER not in path.read_text()` against the file's raw bytes, and **JSON
+    escapes the marker's NUL characters**:
+
+        raw          '\x00veracium:redacted\x00'
+        in the file  '\\u0000veracium:redacted\\u0000'
+
+    so that assertion is TRUE for every JSON export whatever it contains. **The
+    control could never have failed**; a file full of markers passed it. The
+    unfailable-check class, in the control written to prove isolation — one round
+    after the same seat's fixture-checker control was found comparing digests
+    instead of running the checker. Twice the control was written and the control
+    was not tested. `test_the_isolation_control_detects_a_marker_bearing_export`
+    is the demonstration the reviewer asked for."""
+    import json as _json
+    out = []
+
+    def walk(obj):
+        if isinstance(obj, str):
+            out.append(obj)
+        elif isinstance(obj, dict):
+            for k, v in obj.items():
+                out.append(k)
+                walk(v)
+        elif isinstance(obj, (list, tuple)):
+            for v in obj:
+                walk(v)
+
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            walk(_json.loads(line))
+        except ValueError:
+            out.append(line)
+    return out
+
+
+def _exported_markers(path):
+    """The decoded values carrying the marker — the LIST, so a failure names what
+    it found rather than only that it found something."""
+    return [v for v in _decoded_values(path) if MARKER in v]
+
+
+def _exported_kinds(path):
+    """The `kind` values the export's RECORDS carry, decoded.
+
+    Record lines only: the export's metadata header carries its own `kind`
+    ("veracium-export"), which the round-8 reviewer's description accounts for —
+    *"exactly the metadata header and the intended prose-kind episode"*. A header
+    is not a record, and counting it fails a correct export."""
+    import json as _json
+    kinds = set()
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            obj = _json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(obj, dict) and "id" in obj and isinstance(obj.get("kind"), str):
+            kinds.add(obj["kind"])
+    return kinds
+
+
 def _isolate_jsonl(path, *, keep_id):
     """Keep only the record named, plus any line that is not a record.
 
@@ -668,3 +737,41 @@ def test_rows30_49_on_a_frozen_record_absence_survives_and_prose_does_not(tmp_pa
     _rewrite(st, "episodes", prose.id, summary=MARKER, retired_reason="redacted")
     replaced = {e.id: e for e in st.episodes(U, include_retired=True)}[prose.id]
     assert replaced.retired_reason == "redacted" and replaced.active is False
+
+
+def test_the_isolation_control_detects_a_marker_bearing_export(tmp_path):
+    """ROUND-8 FOLLOW-UP 1's DEMONSTRATION, asked for in those words: *"strengthen
+    the check and demonstrate that it detects a marker-bearing export."*
+
+    The old control could not. `MARKER not in path.read_text()` is true of every
+    JSON export ever written, because JSON escapes the marker's NUL bytes, so the
+    assertion held whether or not markers were present and the isolation it
+    claimed to prove rested on nothing.
+
+    This is the control for the control: it exports the FULL frozen store, which
+    carries two unattested marker rows, and requires the check to FIND them. If it
+    ever passes vacuously the isolation assertion beside it is worthless again, and
+    the failure surfaces here rather than in a reviewer's message three rounds on."""
+    from veracium.portability import export_memory
+
+    src = _frozen_store(tmp_path)
+    full = tmp_path / "full.jsonl"
+    export_memory(src, U, full)
+
+    assert MARKER not in full.read_text(), (
+        "THE OLD CHECK, SHOWN NOT FIRING: markers ARE present in this export and a "
+        "raw-text search does not see them, because JSON escapes NUL. This "
+        "assertion passing is the defect being demonstrated, not a property")
+
+    found = _exported_markers(full)
+    assert len(found) >= 2, (
+        f"the decoded check must FIND the frozen store's unattested markers; it "
+        f"found {len(found)}. A control that cannot detect what it excludes is not "
+        f"a control")
+
+    isolated = tmp_path / "isolated.jsonl"
+    export_memory(src, U, isolated)
+    _isolate_jsonl(isolated, keep_id=_frozen_rows()["prose_kind"])
+    assert not _exported_markers(isolated), (
+        "and it must find NOTHING once the export is isolated, or it would refuse "
+        "the correct case too")
