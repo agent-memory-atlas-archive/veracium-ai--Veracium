@@ -377,6 +377,19 @@ def _check_commit(sha: str) -> tuple[list[str], list[str]]:
 def main(rng: str, *, allow_missing_base: bool = False) -> int:
     try:
         commits = _git("rev-list", rng).split()
+        # FAIL CLOSED ON AN EMPTY RANGE TOO (research's post-land re-derivation of
+        # b72fccb, 2026-09-18; the owner's word: refuse). The default range is
+        # origin/main..HEAD, which is EMPTY on a freshly pushed tree, so the bare
+        # invocation after a push printed "ok (0 commit(s))" and exited 0 — the
+        # same words and the same exit code as a real pass, having examined
+        # nothing. That is the missing-base case wearing a different costume, and
+        # it gets the same sentence. A check that did not run is not a pass.
+        if not commits:
+            print(f"ERROR: commit range {rng!r} is EMPTY, so nothing was checked.\n"
+                  f"  Refusing to report success for a check that did not run. "
+                  f"Pass an explicit range that contains the commits under review "
+                  f"(e.g. origin/main~2..HEAD after a push).", file=sys.stderr)
+            return 2
     except CannotRun as e:
         if allow_missing_base:
             print(f"could not resolve range {rng!r}; --allow-missing-base given, "
