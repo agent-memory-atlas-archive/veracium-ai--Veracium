@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 87aa4c5
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ bbeb024
+# RE-PINNED 2026-09-18 after the derived ladder diagnostic (bbeb024; src/veracium/store/release_migration.py): bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-18 after the MemoryConfig.relations doc line (87aa4c5; src/ moved by comment text only): bodies byte-identical
 # RE-PINNED 2026-09-18 after the v0.26.1 schema-evidence regeneration (legacy_stores.json records the new release; no product change): bodies byte-identical
 # RE-PINNED 2026-09-18 after the second v0.26.0 schema-evidence regeneration (the record now names the tag's final commit; JSON under src/, no product code): body BYTE-IDENTICAL again.
