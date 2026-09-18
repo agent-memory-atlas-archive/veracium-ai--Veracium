@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ f59731b
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 1e2d399
+# RE-PINNED 2026-09-18 after the second v0.26.0 schema-evidence regeneration (the record now names the tag's final commit; JSON under src/, no product code): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-17 after the v0.26.0 schema-evidence regeneration (a released-version record, not product code): body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-15 after the 0041 adoption: body BYTE-IDENTICAL again.
 # RE-PINNED 2026-09-15 after 0027 v15: body BYTE-IDENTICAL again.

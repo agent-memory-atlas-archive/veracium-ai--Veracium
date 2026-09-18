@@ -14,14 +14,29 @@ policy lane — the store must add `write_policy_receipt`, `policy_receipts` and
 recall on which a lane fires raises `NotImplementedError` against a store without
 them. Library and MCP callers that pass no `policy` change nothing.
 
+> **Erratum, 2026-09-17, after publication.** Three sentences in this section shipped wrong in
+> the sdist's frozen copy of this file and are corrected above; the shipped wording is kept
+> here so the two copies can be reconciled. (1) The upgrade guidance read *"Neither is
+> reachable by a deployment that only ingests its own writes"* — false, and in the direction
+> that would let an operator skip a trust-surface release: restoring your own export crosses
+> the same import boundary. (2) The 0041 entry said *"32 findings"*; the ledger it cites
+> sums to 34. (3) It said *"three comments renumbered"*; the commit changed seven lines
+> across three files, six comments and one docstring line — three was the file count. Also
+> labelled: the ≈2.3 KB receipt figure is an estimate, not a measurement. Found by the second
+> seat's post-land re-derivation, the first run of that standing step; every correction
+> re-derived from the artifact before it was written.
+
 **Who should take this release, beyond the store migration above.** Any deployment that
 IMPORTS procedural records from a source it does not itself control should take it: two
 import-boundary defects are fixed here, and both let a claim in an incoming copy decide
 something the stored record should have decided. A copy claiming a different predecessor
 had its claim replace the stored producer in the inheritance lookup; and conflicting
-record ids were resolved after inheritance was derived rather than before. Neither is
-reachable by a deployment that only ingests its own writes. Stated per the standing rule
-that a release carrying a trust-surface fix says who should act, not only what changed.
+record ids were resolved after inheritance was derived rather than before. Both live in
+`import_memory`, and RESTORE is a mode of that same function (`veracium import --restore`,
+the path the product's own backup guidance directs operators to), so **any deployment that
+imports — including one restoring its own export — reaches them; only a deployment that
+never imports at all is unaffected.** Stated per the standing rule that a release carrying a
+trust-surface fix says who should act, not only what changed.
 
 - **Import boundary: a persisted producer is the constraint** (specs/0037 v24.5; the amendments
   review package, round 9, returned 2026-09-14 with the design acceptances in force). A copy of a
@@ -65,8 +80,9 @@ that a release carrying a trust-surface fix says who should act, not only what c
   Receipts are ids only, as before; they are not part of `export_memory` (deployment
   audit, not memory) and `forget_user` erases them with the user's rows in the same
   transaction (V-RECEIPT-ERASE). Retention is not in this release: the table grows by
-  one row per firing recall (research's T10 priced ≈2.3 KB per row, linear in the
-  budget); erasure is per user.
+  one row per firing recall (research's T10 ESTIMATED ≈2.3 KB per row, linear in the
+  budget — an estimate, not a measurement: the table did not exist to measure until this
+  release, so it is measurable for the first time now); erasure is per user.
 - **Docs: the migration section re-derived.** `docs/api.md`'s "Migrating a store" had said "this
   release migrates v7 stores only" with a two-release ladder for older bases — true of an earlier
   release and stale since schema 8. Measured 2026-09-15: every stamped base from v1 through v13,
@@ -145,11 +161,11 @@ that a release carrying a trust-surface fix says who should act, not only what c
   evidence tree. Two fixture and wording cleanups the reviewer named.
 
 - **Design accepted, NOT implemented: targeted redaction** (specs/0041, external round 8,
-  2026-09-17; eight rounds, 32 findings, the ledger in the spec's `## Review closure`).
+  2026-09-17; eight rounds, 34 findings, the ledger in the spec's `## Review closure`).
   Acceptance freezes INV-1–INV-12, the 64-carrier treatment map and §4h's transition rules,
   and authorises implementation — **it ships no behaviour.** Nothing in this release removes
-  stored content, and no redaction API exists; the only source change the line made is three
-  comments renumbered `0040` → `0041`. Stated here because an accepted design is a commitment
+  stored content, and no redaction API exists; the only source change the line made is seven
+  lines renumbered `0040` → `0041` across three files — six comments and one docstring line. Stated here because an accepted design is a commitment
   a consumer can read, and because "redaction accepted" is easy to misread as "redaction
   available". Carried into implementation by the reviewer: reconstructed receipts where no
   original exists, positive controls for the eight strict expected-failure tests that still
