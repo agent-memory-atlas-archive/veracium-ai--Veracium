@@ -4,14 +4,14 @@ Spec-Status: draft
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), adopted at rest and re-read from the file: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa) |
-| **Version** | **v3.1 — two figures corrected in dev's pre-adoption re-derivation window, BOTH mine and BOTH unit errors: `127×` was `grep -rc` SUMMED, which counts LINES not occurrences; `163` was asserted with no recipe and is unreproducible. Neither argument changes; both numbers do.** **v3 — dev's internal read folded: F1–F6 before external review, F7's wording taken.** 🔴 **F1 was load-bearing and v2 was wrong: the "invariant registry" the census derived its expected set from DOES NOT EXIST** (`INV-` **0× in `src/`**, and in `specs/` it is **0041's alone** — 117 occurrences in that spec, 48 more in its ledgers and evidence; **no other spec uses the prefix at all**), and it cannot be scraped from §6 either — the id is embedded in prose rather than a column, and the vocabulary has two families: **a grammar requiring a digit drops 177 of 641 ids; one that does not degenerates to counting names** (definition given EXECUTABLE in §4a after three rounds of seat disagreement — 181 was mine, pre-dedup). The declaration is now CREATED BY THIS SPEC, and INV-1 gains a second independent source. F2: *enforcement point* DEFINED as a property, with the candidate count now EXECUTABLE — **162 lines matching a lexical pattern over the five guarded files, an upper bound on candidates, not 162 confirmed sites** (v3.1; v3's **163** is withdrawn as unreproducible). F3: the baseline arm is a HARNESS construction — there is no gate-off mode and this spec does not add one. F4: `UNMEASURED` is a field, not prose. F5: `REFUSED-QUARANTINED` split out. F6: INV-7 is a decision-trace diff and names suites that reach the sites — not 0041's, which would pass vacuously. Prior: v2 — Q1 ruled, replay withdrawn · v1 — first draft |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39) |
+| **Version** | **v4 — ROUND-1 VERDICT FOLDED: *returned for amendment*, six amendments and two carrier corrections. THE SPEC IS SPLIT ON QUENTIN'S RULING (*“Split: 0042 = census, new number = harness”*, 2026-09-18): **0042 is now PART A ONLY, the firing census.** Part B (the refusal harness) becomes its own candidate and takes its number from `allocation.py --next` at adoption — never from a message. Amendments 4 and 5 land here; 1, 2, 3 and 6 travel with Part B. INV-1/2/7/8 stay; INV-3/4/5/6 move. Carrier C2 (the Number cell) corrected; C1 is dev's. Activation is opt-in, default OFF, with **DISABLED** a fifth STATUS — *that ruling reached this seat RELAYED through dev, and is marked so a later reader can tell which rulings arrived first-hand.* 🔴 **AND THIS CELL NO LONGER RESTATES FIGURES.** Four times in one day a withdrawn number survived here after being corrected in the body — 207, 181, 163, 162 — because a cell that summarises every count is a DEPENDENT OF EVERY CORRECTION BY CONSTRUCTION. Sweeping it a fifth time would fix the instance and leave the mechanism. **Version history now names WHAT CHANGED AND WHERE; every number lives in exactly one place, the section that derives it.** Prior: v3.1 · v3 · v2 · v1 — their figure corrections are recorded at §4 A-0 and §2, beside the derivations, not here. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — §4's counters sit in `gate.py`, `graph.py`, `lifecycle.py`, `ingest.py`, `schema.py`, all guarded |
 | **Decision + date** | |
 | **Path** | **full** |
-| **Number** | 0042. **0040 is free but was VACATED** in the 0040→0041 renumbering; reusing a vacated number invites a stale reference to resolve to the wrong spec |
+| **Number** | 0042. 🔴 **CORRECTED v4 (round-1 carrier finding C2, research's): v3.1 said “0040 is free but was VACATED”. IT IS NOT FREE — `specs/ALLOCATION.md` records it under the column `spent on`, consumed by the WITHDRAWN procedural-text proposal.** Vacated and free are different states and this cell asserted the wrong one against the registry. *(Found by the external reviewer. Research had swept 63 `0040` references across 21 files the same night and classified THIS line as correct — by asking whether the file explains the renumbering rather than whether the sentence agrees with the registry. A category check where a content check was owed.)* **0042 is this spec; the refusal harness takes its own number from `allocation.py --next` at adoption.** |
 
 ---
 
@@ -40,23 +40,38 @@ after it was written; two controls that reported PASS without executing; a
 status check that printed `ok` when its lookup broke. **Every one was found by a
 person noticing. This is the systematic version.**
 
-### Why the two halves are ONE spec
+### What this spec claims ON ITS OWN — and what it no longer claims
 
-**Part A (the firing census)** counts how often each enforcement point executes.
-**Part B (the refusal measurement)** measures how often the assertion gate
-declines when it should.
+🔴 **v4 REPLACES v3.1's “Why the two halves are ONE spec”, which rested on a
+dependency the round-1 reviewer removed.** That section argued *“Part B cannot
+produce a rate without Part A's counter”*. The reviewer ruled otherwise, and the
+ruling is accepted here verbatim:
 
-They are not merely related: **Part B cannot produce a rate without Part A's
-counter.** A refusal rate needs a denominator — *how many times was the gate
-consulted?* — and that denominator is exactly a census count. **Shipping B
-without A yields a numerator with no denominator, which is the shape of every
-unfalsifiable claim this project has withdrawn.**
+> *“A refusal rate needs a defined denominator, but a controlled question harness
+> can count attempts and outcomes itself. Part A adds valuable evidence about
+> internal decisions; Part B does not inherently depend on process-wide counters
+> to calculate a rate.”*
+
+**So the harness is now its own spec, and this one keeps only the census.** The
+honest consequence is stated rather than absorbed: **0042's original value
+proposition was partly that it supplied another spec's denominator, and it no
+longer does.** What remains is narrower and stands alone:
+
+> **Does what we specify actually RUN?** For every enforcement point this project
+> declares, is it INSTALLED, is it EXERCISED in production, and can we tell those
+> two apart from a deployment that never switched the census on? **No rate, no
+> onward dependency, no second arm.**
+
+**That claim needs no harness and answers the competitors' finding directly** —
+`tigerless-labs` learned its supersede count was zero by counting, and this is
+the counting. **The refusal harness cites this spec for evidence about internal
+decisions; it does not draw its denominator from it.**
 
 ## 2. Field contracts touched
 
-**No stored field changes.** Part A adds a process-local counter keyed by a
-declared enforcement-point id; Part B adds no product surface at all and consumes
-Part A's counters plus a fixture store.
+**No stored field changes.** The census adds a process-local counter keyed by a
+declared enforcement-point id, and nothing else. *(v3.1 also described Part B's
+surface here; Part B is now its own spec and describes its own.)*
 
 | contract | touched how |
 |---|---|
@@ -77,8 +92,8 @@ Part A's counters plus a fixture store.
 
 | input | source | treatment |
 |---|---|---|
-| **examiner questions** (Part B) | a human or model that has NOT read the implementation | **data, never instructions.** Questions are asked through the ordinary public API; no question text reaches a prompt with authority |
-| **the fixture store's records** (Part B) | includes deliberately poisoned and deliberately quarantined rows | **the material under test.** A poisoned row must be able to reach recall — excluding it in the fixture would measure the fixture |
+| ~~**examiner questions**~~ — **MOVED to the harness spec** | a human or model that has NOT read the implementation | **data, never instructions.** Questions are asked through the ordinary public API; no question text reaches a prompt with authority |
+| ~~**the fixture store's records**~~ — **MOVED to the harness spec** | includes deliberately poisoned and deliberately quarantined rows | **the material under test.** A poisoned row must be able to reach recall — excluding it in the fixture would measure the fixture |
 | **enforcement-point ids** (Part A) | declared in source, read by the census | **code-supplied, not caller-supplied.** An id that is not in the derived registry is a REFUSAL, not a new row |
 
 ### 2c-ii. Assertions about reach — REQUIRED
@@ -91,7 +106,7 @@ this spec does not attempt.
 
 ## 3. Trust-class matrix — REQUIRED, blocking
 
-| class | may the census count it? | may Part B ask about it? |
+| class | may the census count it? | *(the harness spec carries its own question-class column — MOVED)* |
 |---|---|---|
 | **first-party stated** | yes | yes — the ANSWERED baseline |
 | **third-party / unverified** | yes | 🔴 **yes, and this is the contribution** — the question class where the answer IS present and MAY NOT be asserted |
@@ -101,9 +116,11 @@ this spec does not attempt.
 
 ## 3b. Authorization and scope
 
-The census is **observation-only and cannot alter a decision** (INV-7). It has no
-authorization surface of its own: it reads what the host already computes. Part B
-runs against a fixture store, never a live user store.
+The census is **observation-only and cannot alter a decision** (INV-7, now a
+THREE-arm diff — see Part A-2). It has no authorization surface of its own: it
+reads what the host already computes. 🔴 **It runs in PRODUCTION and is opt-in,
+default OFF**; the fixture-store constraint that stood here belonged to the
+harness and travelled with it.
 
 ## 4. Behaviour
 
@@ -116,26 +133,71 @@ other than the caller's request** — refuse, quarantine, withhold, abstain,
 downgrade. **It is a property, not a choice.** v2 said *"each enforcement point
 declares a stable id"* without saying which sites those are, which made the
 census's domain "whatever someone instrumented" — **a hand list one level up, in
-the spec written to kill hand lists.** The domain is far larger than the five
-mechanisms §1 names — **and, per this spec's own argument about ids, the count is
-given EXECUTABLE rather than asserted:**
+the spec written to kill hand lists.** 🔴 **THE 162 IS WITHDRAWN — NOT REPAIRED. (Round-1 amendment 4.)**
 
-```bash
-# over the five guarded files graph.py ingest.py schema.py gate.py lifecycle.py
-grep -cE '^\s*raise |refus|quarantin|withh|abstain|downgrade' <file>
-#   graph 45  ingest 50  schema 56  gate 8  lifecycle 3   =  162
-```
+v3.1 offered a count of *"decision-shaped sites in the five guarded files"* and
+labelled it an UPPER BOUND on candidates. **The reviewer reproduced it and showed
+it is not a bound at all:** it misses ordinary `return False` decisions and
+excludes relevant modules such as `scope.py`.
 
-> 🔴 **STATED AS WHAT IT IS: 162 LINES matching a lexical pattern, NOT 162
-> confirmed enforcement points.** It counts comments and docstrings, so it is an
-> **UPPER BOUND on candidates** and the per-site confirmation is Part A's work,
-> not a premise of it. **The argument needs only that the domain is ≫ 5**, and it
-> is: even if most of the 162 fall away, the five §1 names do not describe it.
+> **Both of its boundaries were CHOSEN, not derived.** The five files came from
+> the GUARDED set — which exists to route review, a different purpose entirely —
+> and the pattern came from me. **A lexical line count over a hand-picked file
+> set is the same defect as a hand list of enforcement points, one level up, in
+> the section written to kill hand lists.** v3.1 already said it counts comments
+> and docstrings; what it did not say is that a line is not a site and that
+> nothing established the file set.
 >
-> *(v3.1: v3 said **163**, asserted with no recipe. Two seats independently reach
-> **162** under the pattern above — dev's five-file refuse/quarantine split sums
-> to the same. **The 163 is WITHDRAWN as unreproducible; I could not re-derive my
-> own figure, which is precisely the defect §2 raises about ids.**)*
+> 🔴 **So it is not restated with a caveat. It is gone.** A quantity whose domain
+> was picked by its author cannot bound anything, and carrying it with a warning
+> would let a reviewer cite the number and drop the warning — which is how the
+> withdrawn figures in this project's own history survived.
+
+**THE DOMAIN IS NOW MEASURED, and it is a PREREQUISITE of this spec rather than a
+premise inside it.** The inventory is an AST pass over **all of `src/veracium`**,
+not a lexical pattern over a chosen subset, and it defines:
+
+| | |
+|---|---|
+| **counting unit** | 🔴 **THE TOOL'S UNIT, STATED VERBATIM, because 636 is the tool's number:** one AST node of a listed kind — **`RAISE`** (every `raise` statement, no branch condition) · **`RETURN_FALSE`** (`return False`) · **`RETURN_NONE`** (`return None` or a bare `return`, *only inside a function that also returns a value somewhere*). Not a line, not a function. *(v4 first wrote a STRICTER unit — “reached on a branch that can also return the caller's request” — which the tool does not implement and nothing executes. A prose definition and a figure that disagree are two definitions of one quantity: the same defect this spec's §2 raises about ids, at the definition rather than the count. The branch condition is exactly what the INSPECTION adds; it is not in the inventory.)* |
+| **site identity** | `(module, qualname, line)` — stable across formatting, and the key the declaration joins on |
+| **bounded scope** | every module under `src/veracium`, stated by name in the evidence output, so a later reader can see what was NOT scanned |
+
+**THE INVENTORY HAS NOW RUN** (`specs/evidence/0042/decision_site_inventory.py`,
+against `src/` at pin `5121501`):
+
+| | |
+|---|---|
+| modules scanned | **55**, every `src/veracium/**/*.py`, nothing excluded |
+| modules with at least one site | **40** |
+| **candidate sites** | **636** = `RAISE` **482** + `RETURN_FALSE` **82** + `RETURN_NONE` **72** |
+
+> 🔴 **THIS IS AN INVENTORY OF CANDIDATES BY SYNTACTIC KIND. IT IS NOT A COUNT
+> OF ENFORCEMENT POINTS AND IT IS NOT A VERDICT.** A `raise` may be an argument
+> check; a `return False` may be a predicate. **It is where an inspector STARTS.**
+> The declaration is compared against an **INSPECTED SUBSET** of this inventory,
+> and the inspection is work this spec requires rather than evidence it already
+> has.
+>
+> **What it does establish, and what 162 could not:** the domain is **measured**,
+> its boundary is **stated** (every module under `src/veracium`, named in the
+> evidence output, so a reader can see what was not scanned), and its unit is
+> **one AST node of a listed kind** with identity `(module, qualname, line)`.
+> *Nobody chose which files to look at.*
+
+**Both seats derived it independently and disagreed, and the disagreement was
+research's.** Dev reported 636; research's first pass returned **652**, with
+`RAISE` agreeing exactly at 482 and only the return kinds differing. The cause
+was research's: `ast.walk(fn)` descends into NESTED functions, so a `return` in a
+closure was counted once for the enclosing function and again for the closure.
+Re-run with a visitor that sees each `Return` once: **636, all three kinds
+matching.**
+
+> **The lesson is the one this spec exists to make.** Two counts of one quantity
+> differed by 16, and comparing the COUNTS would have said only that somebody was
+> wrong. **Reading the other seat's DEFINITION is what located it** — and it
+> located it in the seat that went looking. *A disagreement is self-announcing;
+> an agreement is not.*
 
 **THE EXPECTED SET comes from a spec-side DECLARATION this spec creates**, one
 row per point: `id · governing spec · §6 invariant it enforces · file:symbol`.
@@ -156,53 +218,70 @@ declared id that never reports, and a reporting id never declared.
 2. When the point EXECUTES, it increments `consulted`; when it DECLINES
    (refuses, quarantines, withholds), it also increments `fired`.
 3. `census()` returns, for every id **in the declaration**:
-   `{id, status, consulted, fired, errors}` where **`status` is one of
-   `EXERCISED` · `UNEXERCISED` · `UNMEASURED`** — including ids with zero, named.
-   🔴 **`UNMEASURED` is a FOURTH state and it needs its own field.** v2 put it in
+   `{id, status, consulted, fired, errors}` where **`status` is one of FIVE:
+   `EXERCISED` · `UNEXERCISED` · `UNMEASURED` · `DISABLED` · `UNDECLARED`** —
+   including ids with zero, named. **`DISABLED` per INV-2b** (activation is
+   opt-in, default OFF); **`UNDECLARED` per INV-2c**.
+   🔴 **`UNMEASURED` needs its own field, and so does the count of five.** v2 put it in
    §7 prose while the row shape was `{id, consulted, fired}`, so **a counter that
    raised before incrementing rendered as `consulted=0` → UNEXERCISED** — the
    ok-vs-na collapse this spec names at §10.1, inside its own report.
 4. A declared id absent from the report is a **failure of the census**, not a
    zero (INV-1).
 
-### Part B — the refusal measurement
+### Part A-2 — the counter lifecycle and the observation-only contract *(amendment 5)*
 
-1. A **blind examiner** writes N questions from `introspect`'s listing alone
-   (*v2 said "the store's INDEX", which names no surface*), never having read the
-   gate, this spec, **or the fixture's trust manifest** (INV-6). Question
-   authorship is recorded.
-2. Four classes, fixed in advance: **present-and-trusted** · **absent** ·
-   🔴 **present-but-untrusted** · **present-but-quarantined**.
-3. Each question is asked of (a) Veracium as shipped and (b) a **baseline arm**
-   — the confabulating control. 🔴 **THE BASELINE IS A HARNESS CONSTRUCTION, NOT
-   A PRODUCT MODE.** There is no gate-off switch and this spec does not add one:
-   zero hits in `src/` for any gate-disable flag, and the gate is consulted at
-   `__init__.py:1593`. The arm is built **in the harness** by merging the
-   grounded and unverified partitions into one prompt and answering from that —
-   **never through `Memory.recall`**. *"Gate off" reads as a switch; a switch
-   would be a trust-surface change needing its own §3 row, and §2's "Part B adds
-   no product surface" would become false.*
-4. Every answer resolves to exactly one of **ANSWERED / REFUSED-ABSENT /
-   REFUSED-UNTRUSTED / REFUSED-QUARANTINED / OTHER**, where OTHER (errored,
-   timed out, fell silently through) is **its own bucket and is never folded into
-   a refusal** (INV-4). **`REFUSED-QUARANTINED` is separate from
-   `REFUSED-UNTRUSTED`**: v2 gave classes 3 and 4 distinct question classes and
-   one shared bucket, so a reader could not tell an intended outcome from a
-   mis-classification.
-5. The report states the rate **with its denominator** and the baseline arm
-   beside it. A rate without a baseline is void (INV-5).
+**v3.1 left activation unresolved and said nothing about concurrency, snapshot
+consistency or partial failure.** Each of those turns a census into a number
+nobody can interpret, and the reviewer named all four.
 
-> **The contribution is class 3.** Everyone can refuse what is absent.
-> **Refusing what is PRESENT AND UNTRUSTED is the claim we make and have never
-> measured**, and it is the case where a grounded system with no trust surface
-> answers confidently and wrongly.
+| | |
+|---|---|
+| **activation** | **opt-in, default OFF** (Quentin, 2026-09-18, *relayed to this seat through dev*). Resolved for v1 rather than deferred |
+| **disabled ≠ zero** | a deployment that never enabled it reports `DISABLED` per id (INV-2b). 🔴 *A measured zero and an unmeasured one are the same bytes unless the status distinguishes them, which is this spec's own thesis applied to its own output* |
+| **concurrency** | counters are process-local and monotonic; increments are atomic per id. A report names the process it read |
+| **snapshot consistency** | one report reads ONE snapshot. A report assembled from counters read at different instants states the read window, or refuses |
+| **partial failure** | a counter that raised reports `UNMEASURED` for that id **and does not invalidate its neighbours**; the report states how many ids are `UNMEASURED`. 🔴 **An incomplete set of counters must never produce an apparently valid total** |
+
+#### The third arm *(amendment 5's sharper half)*
+
+**v3.1's INV-7 compared healthy counters against counters forced to error.** The
+reviewer's objection is one both arms share a defect:
+
+> *“Comparing healthy counters with failing counters is useful, but both versions
+> could introduce the same change to product behavior.”*
+
+🔴 **He is right, and it is this project's own control lesson: two arms that
+share the instrument cannot detect the instrument.** So INV-7 becomes a **THREE-ARM
+decision-trace diff** — healthy · failing · **UNINSTRUMENTED** — and the trace
+fields compared are **named in the spec** rather than left to the harness. *An
+uninstrumented reference is the only arm that can show the census changed nothing,
+because it is the only one without a census in it.*
+
+### Part B — MOVED OUT OF THIS SPEC
+
+🔴 **The refusal harness is no longer part of 0042.** On Quentin's ruling
+(2026-09-18) it becomes its own candidate:
+`proposals/0042B-refusal-harness-CANDIDATE.md`, **taking its registry number from
+`allocation.py --next` at adoption — the `0042B` in the filename is a placeholder
+and is NOT a number.** *0040 is spent, 0042 is this spec; a filename is not an
+allocation, and this project has already paid once for treating one as if it were.*
+
+**It carries round-1 amendments 1, 2, 3 and 6, and invariants INV-3/4/5/6.** It is
+moved rather than redrafted, so the new spec starts from the text the reviewer
+actually read.
+
+**What this spec still owes it:** nothing. The harness counts its own attempts and
+outcomes. **0042 supplies evidence about internal decisions; it does not supply a
+denominator** — that dependency was the round-1 reviewer's §9 ruling and its
+removal is why the two are separable at all.
 
 ## 5. Regime analysis
 
 | regime | behaviour |
 |---|---|
-| **fixture corpus** | the only regime Part B claims; results are scoped to it |
-| **a store where a class never occurs** | the census reports UNEXERCISED; Part B reports that class as **NOT PRESENTED**, never as 100% |
+| ~~**fixture corpus**~~ | **MOVED with the harness** — the census runs against the PRODUCTION store, which is the point of it |
+| **a store where a class never occurs** | the census reports `UNEXERCISED` with the id named — **and, if the census was never switched on, `DISABLED` instead (INV-2b), which is a different fact about a different thing** |
 | **long-running host** | counters are process-local and reset on restart; a census is a statement about one process's lifetime (§8) |
 | **concurrent recalls** | counts may interleave; the census claims totals, never per-request attribution |
 
@@ -212,11 +291,10 @@ declared id that never reports, and a reporting id never declared.
 |---|---|---|
 | **INV-1** | **CENSUS-TOTAL, FROM TWO INDEPENDENT SOURCES** — every id in the DECLARATION appears in the report, and every reporting id is declared | add a declared id with no site → report REFUSES; add a site with no declared id → report REFUSES. **Both directions, or the check is one source comparing with itself** |
 | **INV-2** | **ZERO-IS-A-VERDICT, AND AN ERROR IS A THIRD ONE** — zero → `UNEXERCISED` with the id named; a counter that raised → `UNMEASURED`; never omitted, never `ok` | two fixtures: a never-fired guard asserts `UNEXERCISED`; **a FORCED-RAISE counter asserts `UNMEASURED` and must NOT render `UNEXERCISED`** |
-| **INV-3** | **DENOMINATOR-BEFORE-RATE** — no rate without its denominator; a zero denominator reports **UNDEFINED**, never `0%` | assert `UNDEFINED` on an unconsulted gate |
-| **INV-4** | **THREE-OUTCOMES-PLUS-OTHER** — every question resolves to exactly one bucket; OTHER is never folded into a refusal | inject a timeout; assert it lands in OTHER and the refusal rate is unchanged |
-| **INV-5** | **BASELINE-REQUIRED** — a refusal measurement without a comparison arm is void | assert the report REFUSES to emit a rate when the baseline arm is missing |
-| **INV-6** | **BLIND TO THE TRUST CLASS, not only to the implementation** — the examiner writes from the record's PRESENCE alone; the trust class is attached afterwards from the fixture manifest, never by the examiner. Questions authored with either kind of knowledge are excluded AND counted | assert the excluded count is reported, not silently dropped. 🔴 *If the examiner knows a record is untrusted while writing the question, the question is about the GATE and not about the STORE, and the measurement collapses into testing* |
-| **INV-7** | **OBSERVATION-ONLY** — no counter may alter a decision | **a DECISION-TRACE DIFF, not a green run**: capture the decision trace with counters healthy and with them forced to error, and assert the two are **byte-identical**. Name the suites that actually reach the instrumented sites — **0027's (graph.py) and the gate/ingest/schema suites**. 🔴 **NOT 0041's**: it is accepted and UNIMPLEMENTED, its tests are frozen-record transition tests with eleven strict xfails, and none exercises a gate decision — **forcing counters to error there changes nothing they can observe, so that half would pass vacuously** |
+| **INV-2b** | 🔴 **DISABLED IS A STATUS, NOT A MISSING REPORT** — activation is opt-in and default OFF (Quentin, 2026-09-18, *relayed*); a deployment that never enabled the census reports **`DISABLED`** for every declared id. **Never a zero, never `UNEXERCISED`, and never a report-level flag a per-id reader can skip.** Five statuses: `EXERCISED` · `UNEXERCISED` · `UNMEASURED` · `DISABLED` · `UNDECLARED` | run the report with the census off; assert every row reads `DISABLED` and that NO row reads `UNEXERCISED` |
+| **INV-2c** | 🔴 **INSTALLED IS NOT EXERCISED, AND RUNTIME CANNOT TELL THEM APART** (amendment 4) — *a correctly installed site with no traffic and a MISSING site both produce no runtime events.* So INV-1's missing-site check is settled against the **AST inventory**, never against runtime counts | four checks, each with its own fixture: **installed-but-unused** (asserts `UNEXERCISED`, not missing) · **missing** (in the inventory, absent from the declaration → REFUSE) · **undeclared** (reports an id nobody declared → REFUSE) · **duplicate id** (two sites, one id → REFUSE) |
+| **INV-2d** | 🔴 **TWO AUTHORED LISTS AGREEING PROVE CONSISTENCY, NOT COMPLETENESS** (amendment 4) — the declaration and the report are both authored; their agreement cannot establish that neither omits the same point. **The third source is the AST inventory, which nobody authored** | assert the report REFUSES when a site in the inventory appears in neither the declaration nor the report |
+| **INV-7** | **OBSERVATION-ONLY** — no counter may alter a decision | **a THREE-ARM DECISION-TRACE DIFF, not a green run** (amendment 5; the two-arm form is withdrawn because both arms carry the instrument): capture the trace with counters **healthy**, **forced to error**, and **UNINSTRUMENTED**, over the trace fields NAMED in Part A-2, and assert all three are **byte-identical**. Name the suites that actually reach the instrumented sites — **0027's (graph.py) and the gate/ingest/schema suites**. 🔴 **NOT 0041's**: it is accepted and UNIMPLEMENTED, its tests are frozen-record transition tests with eleven strict xfails, and none exercises a gate decision — **forcing counters to error there changes nothing they can observe, so that half would pass vacuously** |
 | **INV-8** | **COUNTS CARRY NO CONTENT** — a census row is an id and integers | assert no record text, user id, or digest appears in the report |
 
 **Each check must be demonstrated RED** against a deliberately wrong
@@ -229,16 +307,19 @@ this spec exists to find.
 |---|---|---|
 | a counter raises | 🔴 **must not fail the caller** — the decision is the product; the measurement is not. The row's `status` becomes **`UNMEASURED`** and `errors` increments (§4 step 3), which is a FIELD and not prose | remove the counter; no stored state |
 | the registry and the call sites drift | INV-1 turns it into a refusal rather than a silent gap | — |
-| the fixture is unrepresentative | Part B's rate is scoped to the fixture and says so (§2c-ii) | re-run on a new corpus |
+| the declaration omits a point the code has | **INV-2c/2d: the AST inventory is a third source neither list authored**, and a site in it that appears in neither the declaration nor the report is a REFUSAL | re-run the inventory; it is derived, not maintained |
 | counts leak content | INV-8; counters take an id and an integer only | — |
 
 **Fully reversible.** No schema change, no stored field, no migration.
 
 ## 8. Claims and limits
 
-**Claimed:** for a named corpus and a named process lifetime, the rate at which
-each declared enforcement point was consulted and fired; and the rate at which
-the assertion gate declined on four fixed question classes, beside a baseline arm.
+**Claimed:** for a named deployment and a named read window, **which declared
+enforcement points were INSTALLED, which were EXERCISED, which were not, and
+which could not be measured** — each id carrying one of five statuses. 🔴 **NO
+RATE IS CLAIMED HERE.** v3.1 claimed a refusal rate beside a baseline arm; that
+claim, its arms and its denominator argument all travelled to the harness spec
+with the round-1 reviewer's §9 ruling.
 
 **NOT claimed:**
 - that a zero-count guard cannot fire — only that **this corpus never presented
@@ -253,12 +334,27 @@ the assertion gate declined on four fixed question classes, beside a baseline ar
 
 ## 9. Brief for the external reviewer
 
-Two questions above all. **(1) Is the denominator argument sound** — is a
-refusal rate meaningful only relative to consultations, and does §4's `consulted`
-counter measure that? **(2) Is class 3 (present-but-untrusted) well-posed**, or
-does asking a question whose answer is present-but-untrusted smuggle in an
-assumption about what the gate *should* do? We believe it is the whole point;
-we would rather be told early if it is circular.
+🔴 **ROUND 2, and the round-1 questions are both RETIRED rather than re-asked.**
+v3.1 asked whether the denominator argument was sound and whether class 3 was
+well-posed. **The reviewer answered both: the denominator argument was
+OVERSTATED, and class 3 IS well-posed** provided the answer has only
+non-assertable support under the applicable policy. *The first answer is why this
+spec is now the census alone; the second travelled with the harness.*
+
+**What round 2 asks instead, all census-side:**
+
+1. **Is the AST inventory an adequate third source?** INV-2c/2d rest on it being
+   authored by nobody. It is derived from the code it measures — **does that make
+   it independent of the declaration, or merely independent of the declaration's
+   AUTHOR?**
+2. **Is `DISABLED` sufficient to keep an unmeasured deployment from reading as a
+   measured one?** It is a status per id rather than a report-level flag,
+   deliberately — but the reviewer's amendment 5 warned that incomplete counters
+   must not yield apparently valid totals, and we would rather be told early if a
+   status is too weak a carrier for that.
+3. **Does the three-arm trace diff (healthy · failing · UNINSTRUMENTED) actually
+   establish observation-only**, or does the uninstrumented arm differ for reasons
+   that have nothing to do with the census?
 
 ## 10. Open questions
 
@@ -274,9 +370,14 @@ we would rather be told early if it is circular.
      *"never fired"* and *"never invoked"* produce the same evidence — **exactly
      the distinction this spec exists to draw**, and the `ok`-vs-`na` failure one
      level up
-   - **cannot produce a denominator.** §1's own argument for shipping the halves
-     together is that a rate without one is the shape of every unfalsifiable
-     claim we have withdrawn. Replay supplies the numerator only
+   - **cannot observe a ZERO.** A replay sees only what was written; an
+     enforcement point that never fired wrote nothing, so replay cannot
+     distinguish *never fired* from *never installed* — which is the census's
+     whole question. *(v4: this bullet previously cited §1's argument that Part B
+     needs Part A's denominator. §1 no longer makes it — the round-1 reviewer
+     removed the dependency and the sentence travelled to the harness spec. A
+     surviving carrier of a withdrawn claim, in the section a reviewer reads to
+     see what was ruled.)*
    - **sees one mechanism.** Supersession, correction, `forget_user`, quarantine
      promotion and the reserve write no `policy_receipt`; the candidate set is
      five and receipts cover one
@@ -285,13 +386,15 @@ we would rather be told early if it is circular.
    required** (the counters land in guarded files). **The replay variant is
    withdrawn, not deferred** — keeping it as a fallback would invite a later
    seat to take the cheap half and report zeros it cannot see.
-2. **Always-on or opt-in?** Always-on gives real numbers and a permanent cost;
-   opt-in gives numbers only where someone already suspected a problem — which is
-   how we have been finding these by hand.
+2. ⚖️ **RULED — no longer open.** *Always-on or opt-in?* **Opt-in, default OFF,
+   with `DISABLED` reported per id** (Quentin, 2026-09-18; **that ruling reached
+   this seat RELAYED through dev, marked so a later reader can tell which rulings
+   arrived first-hand**). Implemented at Part A-2 and INV-2b. *v4 left this open
+   while two other sections recorded it ruled — a clause and its open question are
+   two carriers of one value, and this project has had them disagree before.*
 3. **Should `policy_receipt` carry the enforcement-point ids?** It would make the
    census durable and queryable rather than process-local — but it is a schema
    change and 0027 v14 has just shipped.
-4. **Who is the blind examiner?** A person is ideal and expensive; a model that
-   has not read the implementation is cheap and its blindness is harder to prove.
-5. **How many questions per class** before a rate is worth publishing?
-   `distill-kura` reported n=6 on its refusal class — blind, and small.
+4. ~~**Who is the blind examiner?**~~ · ~~**How many questions per class?**~~
+   **Both MOVED to the harness spec** — they are questions about an examiner and a
+   rate, and this spec has neither.

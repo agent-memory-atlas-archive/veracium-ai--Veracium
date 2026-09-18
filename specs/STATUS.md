@@ -4,11 +4,11 @@
 
 # Spec status
 
-**37 specs · 35 accepted · 400 external review
+**38 specs · 35 accepted · 400 external review
 rounds · 0 blocking questions open.**
 
 **Only `accepted` authorises implementation** (`PROCESS.md` §4a), and external
-review is required to reach it. **35 of 37 are accepted**, which
+review is required to reach it. **35 of 38 are accepted**, which
 is the number that decides what can be built.
 
 | # | spec | status | updated | int | ext | open Q | blocking | findings | code |
@@ -50,6 +50,7 @@ is the number that decides what can be built.
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
 | **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-09-17 | 0 | 8 | 0 | 0 | 0 | — |
 | **0042** | exercised guarantees — measuring whether what we specify is what runs | `draft` | 2026-09-18 | 0 | 0 | 0 | 0 | 0 | — |
+| **0043** | the refusal harness — measuring whether the gate declines when it should | `draft` | 2026-09-18 | 0 | 0 | 0 | 0 | 0 | — |
 
 **Review archives** — the exact package sent for each round, with a sha256 per
 archive — are indexed in `specs/archives/INDEX.md`.
