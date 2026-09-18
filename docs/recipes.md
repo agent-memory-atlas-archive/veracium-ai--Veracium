@@ -30,6 +30,14 @@ mem = Memory(llm=your_complete_callable, config=MemoryConfig(relations=rels))
 The gloss (`desc`) is what the extractor sees — write it for the model, and
 keep names non-confusable with the built-ins.
 
+Start from `dict(DEFAULT_RELATIONS)` as above, because `relations=` **replaces**
+the built-in vocabulary rather than merging with it: a dict holding only your
+own relations drops every built-in content relation (`prefers`, `works_as`,
+`located_at`, ...). The two reserved relations are force-included whatever you
+pass — `third_party_claim` (the quarantine relation) and `unclassified` are
+always in the effective registry and the extractor's prompt, so hearsay never
+loses its relation.
+
 ## Quarantine content your agent merely read
 
 ```python

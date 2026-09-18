@@ -606,7 +606,7 @@ Close the underlying store.
 | field | default | meaning |
 |---|---|---|
 | `db_path` | `"veracium.db"` | SQLite file path (default store). |
-| `relations` | built-in registry | edge vocabulary; add your own `Relation(name=..., functional=...)`. |
+| `relations` | built-in registry (`DEFAULT_RELATIONS`) | edge vocabulary; add your own `Relation(name=..., functional=...)`. **Replaces, does not merge:** passing your own dict drops every built-in content relation you did not copy (`prefers`, `works_as`, `located_at`, ...), so start from `{**DEFAULT_RELATIONS, **custom}` to keep them. The reserved pair is force-included whatever you pass: `third_party_claim` (the quarantine relation) and `unclassified` are always in the effective registry and the extractor's prompt. See [recipes](recipes.md#add-your-own-relations-the-registry-is-host-extensible). |
 | `max_subgraph_edges` | `40` | cap on per-query subgraph size (bounds read cost). |
 | `subgraph_coverage_share` | `0.0` | fraction of the subgraph budget reserved for time coverage rather than pure relevance. **Off by default and we recommend leaving it off** — it was measured under a pre-registered protocol and did not improve retrieval of answer-bearing facts. See [design rationale](design-rationale.md#measured-and-not-adopted). |
 | `max_recent_episodes` | `12` | recent episodes included in recall. |

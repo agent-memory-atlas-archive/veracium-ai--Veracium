@@ -17,6 +17,14 @@ def _default_lifetimes() -> dict[Volatility, Optional[int]]:
 @dataclass
 class MemoryConfig:
     db_path: str = "veracium.db"
+    # `relations` REPLACES the content vocabulary; it does not merge with it. A host
+    # passing its own dict loses every relation in DEFAULT_RELATIONS it did not copy
+    # (`prefers`, `works_as`, `located_at`, ...); pass `{**DEFAULT_RELATIONS, **custom}`
+    # to keep them. What is never lost: `registry.effective_registry` force-includes
+    # the reserved pair, so `third_party_claim` (the quarantine relation) and
+    # `unclassified` are in the effective registry and in the extractor's prompt
+    # whatever the host passes (executed 2026-09-18: one custom relation gives an
+    # effective registry of three).
     relations: dict[str, Relation] = field(default_factory=lambda: dict(DEFAULT_RELATIONS))
     # recall assembly (these caps bound read cost as history grows — finding 22)
     max_subgraph_edges: int = 40
