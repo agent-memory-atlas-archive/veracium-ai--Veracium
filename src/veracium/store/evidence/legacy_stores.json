@@ -381,6 +381,14 @@
       "store_schema_version": 14,
       "digest": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
       "result": "ok"
+    },
+    {
+      "tag": "v0.26.1",
+      "commit": "e97ffb0731cc4b76fbf59ff9f006537fe9489683",
+      "on_disk_user_version": 14,
+      "store_schema_version": 14,
+      "digest": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
+      "result": "ok"
     }
   ]
 }
