@@ -376,7 +376,7 @@
     },
     {
       "tag": "v0.26.0",
-      "commit": "0262f86f2228b17dee20a1f366316d7c7e137000",
+      "commit": "3857911c2a66f132d2c691d8c0082dca1e923011",
       "on_disk_user_version": 14,
       "store_schema_version": 14,
       "digest": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
