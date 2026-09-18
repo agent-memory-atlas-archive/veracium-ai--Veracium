@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.26.1 — 2026-09-18
+
+**Documentation, evidence and process only — no behaviour change.** Nothing under
+`src/veracium` changed between the `v0.26.0` tag and this one except
+`store/evidence/legacy_stores.json`, the record that names the commit v0.26.0 was cut
+from. The wheel's code is the wheel you have. **Who should take this release: nobody
+has to.** A 0.26.0 deployment runs the same product and needs no migration (schema
+stays 14). Take it if you read release notes from the installed package or from PyPI:
+**0.26.0's notes shipped with three wrong sentences, one in the direction that would
+let an operator skip a trust-surface release** — it said the two import-boundary fixes
+were *"not reachable by a deployment that only ingests its own writes"*, and restoring
+your own export crosses that same boundary (`veracium import --restore` is a mode of
+`import_memory`). The corrected guidance stands above the 0.26.0 erratum below, and this
+cut publishes it in the sdist's frozen copy of this file and in the GitHub Release.
+
+- **0.26.0 erratum (2026-09-17/18).** The three sentences and their corrections are kept
+  verbatim under the 0.26.0 heading: the reachability sentence above; *"32 findings"* →
+  34 (the ledger it cites); *"three comments renumbered"* → seven lines across three
+  files. The receipt figure it quoted as ≈2.3 KB was an estimate; it has since been
+  measured (next item).
+- **specs/0027 v15.1 — the policy receipt's cost measured, not estimated.** At the
+  default budget (`max_subgraph_edges = 40`) a receipt is 1,280 B of JSON, a 1,384 B row,
+  and 2,171 B per firing on disk (106 SQLite pages amortised over 200 firings). It scales
+  with the BUDGET, not the store: payload ≈ 580 B + 17.5 B per unit of budget while the
+  budget truncates (`budget_state.truncated` true); the `tags_matched` bound adds exactly
+  one 4,096 B page flat. *"Linear in the budget"* is withdrawn as a general law — it
+  describes the default-shaped receipt only. Measured on this repository's fixtures;
+  the measurement scripts are in the sdist.
+- **specs/0022 — the two evidence records regenerated and bound to their generators.**
+  `vector_harness_result.txt` (78/78 against `reference_revocation.py`) and
+  `store_concurrency_result.txt` (18/18 against the §4e-i construction), previously
+  stale since the finding that named them was closed a month ago; a test now fails if
+  either drifts from its generator.
+- **The evidence fan-out stays at four workers.** Six was measured against a prediction
+  filed first and the prediction was falsified: the evidence phase fell from 149.2 s to
+  132.3 s (predicted 85–100 s), the suite total was unchanged within noise, and every
+  command got slower — serial-equivalent CPU 580 s → 764 s, the median command 1.33×
+  slower. The commands contend with each other; the box was not the limiter. The
+  comment beside the constant now says so instead of the reason that was wrong.
+- **`specs/check_spec_reference.py` refuses an empty commit range** the way it already
+  refused a missing base: a bare invocation after a push was reporting green having
+  examined nothing.
+- **Two draft specs, not implemented: specs/0042 (exercised guarantees — the firing
+  census, v4) and specs/0043 (the refusal harness, v1).** 0042's round-1 external verdict
+  returned it for amendment and it was split on the owner's ruling; both are in external
+  review and authorise no implementation. Their evidence directories ship runnable
+  reproductions of the reviewer's findings: an AST inventory of decision sites over all
+  of `src/veracium` (55 modules, 636 candidate sites by syntactic kind — an inventory,
+  not a census); a neutral examiner projection whose forbidden-label set is derived from
+  the render code (the product's `introspect(mode="categories")` prints the trust
+  labels; the projection carries none); and five disclaimer-then-assertion answers that
+  the shipped abstention heuristic counts as abstention — **which is a measurement
+  defect in the product's own `abstained` telemetry (`Memory.answer`, the selfcheck),
+  filed, not yet fixed, and not a behaviour change here.**
+
 ## 0.26.0 — 2026-09-17
 
 **BREAKING for existing stores — schema 13 → 14 (specs/0027 v14, the durable policy
