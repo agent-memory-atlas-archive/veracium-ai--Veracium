@@ -157,6 +157,22 @@ trust-surface fix says who should act, not only what changed.
   (0024 baseline run_baseline/run_postfix) are digest-bound inside a sealed evidence bundle
   (`DIGESTS.sha256`, closure row EVIDENCE-R15-1) and stay byte-identical — their repair is
   that line's amendment, not a cleanup. None of the four is run by a shipped check.
+
+  > **Erratum, 2026-09-18, after publication.** The sentence above and the docs
+  > paragraph it describes attributed to `veracium migrate` what only the LIBRARY
+  > path does. Re-executed on a store stamped at each base 1–13 (the probe ran both
+  > paths on copies of the same store): `veracium migrate` — the specs/0018
+  > orchestrator, `run_release_migration` — migrates base **13 only** (`HEAD-1`, the
+  > accepted 0018 contract) and returns `unsupported-base` for bases 1–12;
+  > `veracium.store.migration.migrate_store` migrates every base 1–13 and an
+  > unstamped v1 to 14 in one call. The 2026-09-15 measurement ran `migrate_store`
+  > (its commit says so) and the sentence went under the CLI's heading. Found
+  > the same day by the workflow platform's 0.13.0 → 0.26.1 upgrade (store
+  > 9 → 14): the CLI refused, correctly; the library chained. `docs/api.md`'s
+  > "Migrating a store" now states both paths and the far-behind consumer's route.
+  > A second defect, not fixed here: the orchestrator's `unsupported-base`
+  > diagnostic reports bases 7–12 as "resolves to base v6" and gives ladder advice
+  > written when the head was v8 (the outcome is right, the sentence is not).
 - **Added: the displacement budget** (specs/0027 v15 §4h; research's candidate, the owner's word).
   `PolicyLane.max_displaced` declares the most records a policy lane may displace from the returned
   selection (an int ≥ 0; `None` for no cap; `0` means reorder but never change membership). It is
