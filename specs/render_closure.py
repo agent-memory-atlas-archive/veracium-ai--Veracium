@@ -29,7 +29,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS = ROOT / "specs"
-TRACKED = ("0001", "0022", "0023", "0024", "0025", "0028", "0030", "0031", "0037", "0038", "0039", "0041")     # the specs whose ledgers this gate governs — the L-pair joined at acceptance (round 12); 0001 at its first sealed RETURN (round 3)
+TRACKED = ("0001", "0022", "0023", "0024", "0025", "0028", "0030", "0031", "0037", "0038", "0039", "0041", "0042", "0043")     # the specs whose ledgers this gate governs — the L-pair joined at acceptance (round 12); 0001 at its first sealed RETURN (round 3)
 
 
 def _is_sent(row) -> bool:
@@ -97,8 +97,11 @@ def render(spec: str) -> str:
     # the two specs whose text is digest-pinned — twice for 0037 (the 0028
     # and 0038 acceptance folds). Owner's ruling, 2026-09-08: "Drop the
     # cross-spec total from the per-spec block."
+    not_closed = [c[3] for c in mine if c[5].lstrip().startswith("NOT CLOSED")]
+    open_clause = (f", of which {len(not_closed)} {'is' if len(not_closed) == 1 else 'are'} NOT CLOSED "
+                   f"({', '.join(not_closed)} — OWED, the 'closed in' cell says by what)" if not_closed else "")
     out.append(f"**Per-finding closure ledger — PROCESS §4a.** "
-               f"**{counts['per_spec'].get(spec, 0)} finding(s) for `{spec}`** "
+               f"**{counts['per_spec'].get(spec, 0)} finding(s) for `{spec}`{open_clause}** "
                f"— every number here is "
                f"DERIVED from the rows below (external round 7, R7-1: the "
                f"manifest claimed 26 while the ledgers held 31, and 0023 said "

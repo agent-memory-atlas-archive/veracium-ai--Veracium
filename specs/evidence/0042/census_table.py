@@ -51,6 +51,11 @@ def parse_state_table(text: str | None = None) -> list[dict]:
     return rows
 
 
+# FROZEN at round 5 (2026-09-18): the reviewer ACCEPTED 0042 v7 AT THE DESIGN LEVEL on this surface —
+# in the verdict's words, "both specifications are accepted at the design level and may proceed to implementation." Frozen scope: "INV-1, INV-2, INV-2b–2d, INV-7, INV-8". The state table below is PARSED from
+# Part A-1 (the single authority); its six statuses and their precedence are part of that surface.
+# THE GOVERNING RULE FORWARD, quoted from the banked verdict, never paraphrased: "require runtime checks at real product sites once implemented, alongside the three-arm decision-trace comparison."
+# Editing the parser, the CONDITIONS map or the status set is reopening design review, not a constant edit.
 STATE_TABLE = parse_state_table()
 STATUSES = tuple(r["status"] for r in STATE_TABLE)
 

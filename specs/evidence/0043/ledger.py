@@ -39,6 +39,10 @@ def parse_outcomes(text: str | None = None) -> tuple[str, ...]:
     return tuple(seen)
 
 
+# FROZEN at round 4 of this line (package round 5, 2026-09-18): the reviewer ACCEPTED 0043 v4 AT THE DESIGN
+# LEVEL — "both specifications are accepted at the design level and may proceed to implementation." Frozen scope: "INV-3–6, including the current ledger, blindness, adjudication and arm contracts". The six outcomes are PARSED from INV-4; the gate's five checks,
+# the RESOLVED denominators and the baseline arm required by name are that ledger contract.
+# Editing them is reopening design review, not a constant edit.
 OUTCOMES = parse_outcomes()
 REFUSALS = ("REFUSED-ABSENT", "REFUSED-UNTRUSTED", "REFUSED-QUARANTINED")
 FIXTURE_CLASSES = ("present-and-trusted", "absent", "present-but-untrusted", "present-but-quarantined")

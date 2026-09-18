@@ -1341,7 +1341,16 @@ def test_the_count_of_closure_evidence_unrunnable_in_a_package_is_pinned():
     # package. The cost stands as the docstring states it: a reviewer holding only the
     # archive cannot run these 19, and they are named in the ledger so that limit is
     # readable rather than discovered.
-    UNRUNNABLE_IN_A_PACKAGE = 118
+    # MOVED 2026-09-18 at the 0042/0043 design-level acceptance fold: 118 -> 130, RECOMPUTED
+    # from the inserted rows at the fold (never carried from a message: the figure had been
+    # announced as 130 while the set held eleven rows, and became true only when 0043-R2-4
+    # moved to a git show). The 12 are: eleven closures where the fold WAS the spec text
+    # (round 1's four amendments that travelled to 0043 at the split; the superseded A-0-ter
+    # and arm-contract definitions; the round-4 consolidation advisories; the two
+    # superseded-wording rows; the A6 residue, OWED), plus 0043-R2-4, whose evidence opens
+    # the limit the acceptance carries. The other rows cite pytest nodes and DO run in a
+    # package.
+    UNRUNNABLE_IN_A_PACKAGE = 130
     assert len(history) == UNRUNNABLE_IN_A_PACKAGE, (
         f"{len(history)} of {len(rows)} closure rows ({share:.1%}) cite `git show` and cannot "
         f"run in a packaged tree; the pin says {UNRUNNABLE_IN_A_PACKAGE}. A reviewer runs the "
@@ -2472,6 +2481,28 @@ def test_new_closure_evidence_is_behavioral():
         '0041-R4-3': '§11.2 still described the reason fields incorrectly: the journal already enforce',
         '0041-R5-2': 'the source-revocation rule changed D1 without recording a replacement decision:',
         '0041-R6-3': 'the source-revocation vocabulary was still marked PROPOSED — `policy`, `subject_',
+        # 0042 + 0043 (2026-09-18, the ledgers written at the design-level acceptance after
+        # five packages, one line split in two on the owner's ruling at round 2): both are
+        # SPECS WITH NO IMPLEMENTATION — every fold changed spec text or evidence, never
+        # src/. Text-only closures interleave with behavioural ones inside the same rounds
+        # (round 1's counter lifecycle by the trace-diff test beside four amendments that
+        # travelled to 0043 at the split; round 3's A5 by a pytest node beside A-0-ter's
+        # text), so per-finding, as 0030/0028/0038/0039/0041. Eleven entries are closures
+        # where the fold WAS the text; the twelfth, 0043-R2-4, is an acceptance WITH A LIMIT
+        # whose evidence must OPEN the limit (§8's relation-quarantined exclusion) rather
+        # than run the supplementary check the reviewer called insufficient proof.
+        '0042-R1-1': 'the rates and their measurement windows were undefined (§§1, 4B, 5; INV-3/4): th',
+        '0042-R1-2': 'the proposed examiner input violated blindness (§4B step 1; INV-6)',
+        '0042-R1-3': 'no independent outcome judge and no question-level reference labels (§§3, 4B; IN',
+        '0042-R1-6': 'the baseline treatment was unspecified (§4B step 3; INV-5)',
+        '0042-R3-1': 'reviewed and declared does not establish installed: with every candidate reviewe',
+        '0042-R4-2': 'advisory: consolidating the superseded passages would help prevent old installat',
+        '0042-R5-2': 'superseded normative wording still readable as live requirements — the class the',
+        '0043-R1-4': 'the baseline lacked a reproducible comparison procedure',
+        '0043-R2-4': 'A2, an acceptance WITH A LIMIT: "Accept the examiner view within its stated fixt',
+        '0043-R3-7': 'advisory: consolidating the superseded passages would help prevent old timeout w',
+        '0043-R3-6': 'A6 residue: the final implementation must capture the baseline at its actual mod',
+        '0043-R4-3': 'superseded normative wording still readable as live requirements: the old prompt',
     }
     offenders = []
     for row in closure_findings.CLOSURES:

@@ -4,11 +4,11 @@
 
 # Spec status
 
-**38 specs · 35 accepted · 400 external review
+**38 specs · 37 accepted · 409 external review
 rounds · 0 blocking questions open.**
 
 **Only `accepted` authorises implementation** (`PROCESS.md` §4a), and external
-review is required to reach it. **35 of 38 are accepted**, which
+review is required to reach it. **37 of 38 are accepted**, which
 is the number that decides what can be built.
 
 | # | spec | status | updated | int | ext | open Q | blocking | findings | code |
@@ -49,14 +49,14 @@ is the number that decides what can be built.
 | **0038** | the extraction's speech-act discipline | `accepted` | 2026-09-14 | 0 | 4 | 0 | 0 | 0 | — |
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
 | **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-09-17 | 0 | 8 | 0 | 0 | 0 | — |
-| **0042** | exercised guarantees — measuring whether what we specify is what runs | `draft` | 2026-09-18 | 0 | 0 | 0 | 0 | 0 | — |
-| **0043** | the refusal harness — measuring whether the gate declines when it should | `draft` | 2026-09-18 | 0 | 0 | 0 | 0 | 0 | — |
+| **0042** | exercised guarantees — measuring whether what we specify is what runs | `accepted` | 2026-09-18 | 0 | 5 | 0 | 0 | 0 | — |
+| **0043** | the refusal harness — measuring whether the gate declines when it should | `accepted` | 2026-09-18 | 0 | 4 | 0 | 0 | 0 | — |
 
 **Review archives** — the exact package sent for each round, with a sha256 per
 archive — are indexed in `specs/archives/INDEX.md`.
 
-**Per-finding closure ledger — 419 findings across the
-12 tracked specs** (0001, 0022, 0023, 0024, 0025, 0028, 0030, 0031, 0037, 0038, 0039, 0041), derived from
+**Per-finding closure ledger — 452 findings across the
+14 tracked specs** (0001, 0022, 0023, 0024, 0025, 0028, 0030, 0031, 0037, 0038, 0039, 0041, 0042, 0043), derived from
 `specs/closure_findings.py` and validated against `specs/reviews.py` by
 `specs/render_closure.py --check`. This total is rendered HERE ONLY (owner's
 ruling, 2026-09-08): each tracked spec's `## Review closure` block carries its

@@ -165,6 +165,10 @@ def per_fact_outcome(support_class: str, mention: str, execution: dict) -> tuple
     return "OTHER", "not mentioned"
 
 
+# FROZEN at round 4 of this line (2026-09-18): the adjudication contract — presence per arm, provenance
+# once from the DELIVERED identities, one assertability rule — is inside the accepted surface ("INV-3–6, including the current ledger, blindness, adjudication and arm contracts").
+# THE LIMIT THE ACCEPTANCE CARRIES, in the verdict's words: store-derived adjudication "It does not independently validate ingestion or provenance assignment."
+# Editing assertable(), per_fact_outcome() or the causes is reopening design review, not a constant edit.
 UNRESOLVED_CAUSES = ("ambiguous-question", "capture-disagrees-with-delivered")
 
 

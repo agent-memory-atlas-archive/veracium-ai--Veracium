@@ -42,8 +42,8 @@
 | 0038 | `0038-extraction-speech-act.md` | `accepted` | the extraction's speech-act discipline |  |
 | 0039 | `0039-degradation-visibility.md` | `accepted` | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing |  |
 | 0041 | `0041-targeted-redaction.md` | `accepted` | targeted redaction — stored content removed, the record that it existed retained |  |
-| 0042 | `0042-exercised-guarantees.md` | `draft` | exercised guarantees — measuring whether what we specify is what runs |  |
-| 0043 | `0043-refusal-harness.md` | `draft` | the refusal harness — measuring whether the gate declines when it should |  |
+| 0042 | `0042-exercised-guarantees.md` | `accepted` | exercised guarantees — measuring whether what we specify is what runs |  |
+| 0043 | `0043-refusal-harness.md` | `accepted` | the refusal harness — measuring whether the gate declines when it should |  |
 
 ## Reservations (claimed, not drafted)
 
