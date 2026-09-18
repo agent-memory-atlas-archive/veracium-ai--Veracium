@@ -1407,10 +1407,14 @@ def test_every_closure_evidence_command_actually_runs():
 
     # WHY THIS RUNS CONCURRENTLY, measured rather than assumed.
     #
-    # The ledger holds 59 runnable commands and each pays ~6.5s that is almost
-    # entirely interpreter start plus importing the project — 1.1s of it is
-    # `import pytest` alone. Serially that is ~6.4 minutes, and it was the bulk
-    # of an 8-minute suite and of every seal.
+    # The ledger held 59 runnable commands when this was written and each paid
+    # ~6.5s that is almost entirely interpreter start plus importing the project
+    # — 1.1s of it `import pytest` alone; serially that was ~6.4 minutes, the
+    # bulk of an 8-minute suite. That count is a hand-carried figure and it went
+    # stale by a factor of nine before anyone read it against the run (518 ran
+    # on 2026-09-18). The CURRENT count, the per-command durations and the wall
+    # clock are in specs/generated/evidence_run.json, written by this test —
+    # read that, never this comment.
     #
     # The obvious fix was the wrong one. Selecting by NODE ID instead of `-k`
     # saves nothing, because `-k` is not what costs: measured on this tree, the
@@ -1423,6 +1427,22 @@ def test_every_closure_evidence_command_actually_runs():
     # time and must get what we got. Only the scheduling changes. Results are
     # reassembled in LEDGER ORDER, so the transcript is byte-identical to what
     # a serial run would have produced apart from the durations.
+    # THE CAP IS 4, AND 6 WAS MEASURED BEFORE BEING REJECTED (2026-09-18, on the
+    # owner's word both ways). When the dev box moved from 4 burstable vCPUs to 8
+    # fixed ones the argument for 6 was "the fan-out leaves half the box idle".
+    # Measured against a prediction filed first (phase 149.2 s at 4; predicted
+    # 85–100 s at 6): the phase went to 132.3 s — parallelism 3.89 -> 5.78, so the
+    # workers were used, but serial-equivalent 580 -> 764 s (+32% CPU-seconds),
+    # median command 1.33x slower, 218 of 476 slower and none faster, the two
+    # 0011 mutant-tree reproductions 67 -> 91 s each. Suite total 677 s against
+    # 679–685 s at 4: inside run-to-run noise. The box was never the limiter;
+    # contention among the commands is (CPU on the mutant trees, the import
+    # cache and SQLite on the rest), so more workers each run slower and the
+    # wall becomes the longest command plus drain. A change whose stated reason
+    # was falsified and whose gain is inside the noise does not land on the
+    # reason. Figures: specs/generated/evidence_run.json for the live run; the
+    # cap-4/cap-6 pair and the prediction are in the commit that landed this.
+    # The quiet lane is unaffected either way: NEEDS_QUIET runs after the drain.
     workers = min(4, (os.cpu_count() or 2))
 
     # SOME EVIDENCE MEASURES CONTENTION, so it cannot be measured under
