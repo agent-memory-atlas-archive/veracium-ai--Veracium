@@ -4,8 +4,8 @@ Spec-Status: draft
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39) |
-| **Version** | **v4 — ROUND-1 VERDICT FOLDED: *returned for amendment*, six amendments and two carrier corrections. THE SPEC IS SPLIT ON QUENTIN'S RULING (*“Split: 0042 = census, new number = harness”*, 2026-09-18): **0042 is now PART A ONLY, the firing census.** Part B (the refusal harness) becomes its own candidate and takes its number from `allocation.py --next` at adoption — never from a message. Amendments 4 and 5 land here; 1, 2, 3 and 6 travel with Part B. INV-1/2/7/8 stay; INV-3/4/5/6 move. Carrier C2 (the Number cell) corrected; C1 is dev's. Activation is opt-in, default OFF, with **DISABLED** a fifth STATUS — *that ruling reached this seat RELAYED through dev, and is marked so a later reader can tell which rulings arrived first-hand.* 🔴 **AND THIS CELL NO LONGER RESTATES FIGURES.** Four times in one day a withdrawn number survived here after being corrected in the body — 207, 181, 163, 162 — because a cell that summarises every count is a DEPENDENT OF EVERY CORRECTION BY CONSTRUCTION. Sweeping it a fifth time would fix the instance and leave the mechanism. **Version history now names WHAT CHANGED AND WHERE; every number lives in exactly one place, the section that derives it.** Prior: v3.1 · v3 · v2 · v1 — their figure corrections are recorded at §4 A-0 and §2, beside the derivations, not here. |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625) |
+| **Version** | **v5 — THE ROUND-2 VERDICT FOLDED. Both specs were RETURNED FOR AMENDMENT; the census owed A4 and A5.** **A5 → Part A-1, the STATE TABLE, now the single authority prose, schema and tests all derive from** — and answering the reviewer's “one authoritative reading of `consulted` vs `fired`” exposed that FIVE statuses could not carry it, so there are **SIX**, with `UNREACHED` separating *never ran* from *never engaged*. **A5 also: the snapshot contract given ONE answer** (per-id atomic, report window recorded) **and the trace fields LISTED** where v4 said they were named and named none. **A4 → Part A-0-bis, THE THREE SETS** — DISCOVERED / REVIEWED / INSTALLED — which resolves the contradiction between §4's “inspected subset” and INV-2d's refusal on any absent site: *the inventory forces a DECISION, never a declaration.* **Carrier C4 closed:** three harness limits removed from §8, one of which this file's own note recorded as having been MOVED and which survived here anyway. 🔴 **AND THE SIX-STATUS CHANGE HAD FIVE CARRIERS, not the one the peer reported** — §5's regime row, INV-2b's negative list, INV-2c's fixture, INV-2c's missing check, §7's recovery row. *A reported defect is a sample of its class.* **This cell states WHAT CHANGED AND WHERE and restates no figure** — four withdrawn numbers accumulated here in one day before that rule. Prior: v4 · v3.1 · v3 · v2 · v1, their corrections recorded beside the derivations that own them. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — §4's counters sit in `gate.py`, `graph.py`, `lifecycle.py`, `ingest.py`, `schema.py`, all guarded |
@@ -175,7 +175,9 @@ against `src/` at pin `5121501`):
 > 🔴 **THIS IS AN INVENTORY OF CANDIDATES BY SYNTACTIC KIND. IT IS NOT A COUNT
 > OF ENFORCEMENT POINTS AND IT IS NOT A VERDICT.** A `raise` may be an argument
 > check; a `return False` may be a predicate. **It is where an inspector STARTS.**
-> The declaration is compared against an **INSPECTED SUBSET** of this inventory,
+> 🔴 **SUPERSEDED BY PART A-0-bis (round-2 A4).** v4 said the declaration is compared against an “inspected subset” of this inventory — which round 2
+> showed contradicts INV-2d's refusal on any absent site, since 636 syntactic candidates would then all need declaring. **The comparison is against the
+> REVIEWED set, and the inventory forces a DECISION rather than a declaration.** The sentence that stood here said
 > and the inspection is work this spec requires rather than evidence it already
 > has.
 >
@@ -218,16 +220,122 @@ declared id that never reports, and a reporting id never declared.
 2. When the point EXECUTES, it increments `consulted`; when it DECLINES
    (refuses, quarantines, withholds), it also increments `fired`.
 3. `census()` returns, for every id **in the declaration**:
-   `{id, status, consulted, fired, errors}` where **`status` is one of FIVE:
-   `EXERCISED` · `UNEXERCISED` · `UNMEASURED` · `DISABLED` · `UNDECLARED`** —
-   including ids with zero, named. **`DISABLED` per INV-2b** (activation is
-   opt-in, default OFF); **`UNDECLARED` per INV-2c**.
+   `{id, status, consulted, fired, errors}` where **`status` is one of the SIX
+   in Part A-1's state table** — `DISABLED` · `UNDECLARED` · `UNMEASURED` ·
+   `UNREACHED` · `UNEXERCISED` · `EXERCISED`, in that precedence order.
+   🔴 **Part A-1 is the sole authority for the enum and its conditions; this
+   step does not restate them.** *v4 enumerated five here and the validator
+   implemented four — three carriers of one value is how they drift, so this one
+   now points instead of copying.*
    🔴 **`UNMEASURED` needs its own field, and so does the count of five.** v2 put it in
    §7 prose while the row shape was `{id, consulted, fired}`, so **a counter that
-   raised before incrementing rendered as `consulted=0` → UNEXERCISED** — the
+   raised before incrementing rendered as `consulted=0`** — *which under Part A-1
+   now renders as `UNREACHED`; the defect is identical and the status it wore
+   changed* — the
    ok-vs-na collapse this spec names at §10.1, inside its own report.
 4. A declared id absent from the report is a **failure of the census**, not a
    zero (INV-1).
+
+### Part A-0-bis — THE THREE SETS *(round-2 amendment A4; the contract §4 A-0 lacked)*
+
+🔴 **Round 2 found a contradiction and it is real: §4 A-0 says the declaration
+is compared against an “INSPECTED SUBSET” of the inventory, while INV-2d refuses
+on ANY inventory site absent from the declaration. With 636 syntactic candidates
+that means declaring every ordinary `raise`** — including argument checks and
+predicates that are not enforcement points at all.
+
+**The fix is that there are THREE sets, not two, and v4 named two.**
+
+| set | what it is | who made it |
+|---|---|---|
+| **DISCOVERED** | the AST inventory — **636 candidates by syntactic kind** | 🔴 **nobody.** Derived from the code; its value is that no one chose its members |
+| 🔴 **REVIEWED** | **one INCLUSION-OR-EXCLUSION DECISION for every discovered candidate**: `{candidate_id → decision: enforcement \| not, reason, reviewer}` | **authored, and that is the point** — *the reviewer's “record inclusion/exclusion decisions”* |
+| **INSTALLED** | the declaration plus the ids that report at runtime | authored + observed |
+
+#### The refusals, rewritten so they compare the RIGHT pair
+
+| condition | verdict |
+|---|---|
+| a **DISCOVERED** candidate with **no decision in REVIEWED** | 🔴 **REFUSE.** *This is what makes the third source bite — and it demands a DECISION, never a declaration, so an ordinary `raise` is discharged by recording “not an enforcement point, argument check”* |
+| **REVIEWED-as-enforcement** but **not DECLARED** | **REFUSE** — a point we agreed enforces something and nobody declared |
+| **DECLARED** but **not REVIEWED-as-enforcement** | **REFUSE** — a declaration nobody reviewed |
+| **reporting** but not **DECLARED** | `UNDECLARED` (Part A-1), and the report refuses |
+
+> **The inventory never forces a declaration. It forces a DECISION.** *That is the
+> whole difference between a third source that bites and one that would require
+> declaring predicates, and v4 collapsed them by comparing the declaration
+> against the inventory directly.*
+
+#### The coverage claim, stated at its real width
+
+**DISCOVERY covers the node kinds it scans and NOTHING ELSE.** Round 2 named four
+policy decisions it misses — `Edge.assertable`, `Edge.quarantined`,
+`gate.partition_parts`, `gate.exclude_procedural` — **Boolean-returning properties
+and collection-returning filters, which are not `raise` / `return False` /
+`return None`.** The discovery kinds are widened to cover them.
+
+> 🔴 **And the claim is narrowed in the same breath, because widening a scan can
+> never establish that nothing is left:** *a generated inventory is independent
+> evidence about the kinds it scans. It is NOT evidence of semantic
+> completeness, and this spec does not claim it is.* **What the REVIEWED set
+> establishes is that every candidate the scan found got a human decision — not
+> that the scan found everything.**
+
+### Part A-1 — THE STATE TABLE *(round-2 amendment A5; the single authority)*
+
+🔴 **This table is the ONE definition. Prose, schema and tests all derive from
+it, and where any of them disagreed before, this table wins.** Round 2 found the
+spec naming five statuses, the validator supporting four, and its test requiring
+four — three carriers of one value, which is the defect this spec exists to
+measure.
+
+#### The two counters, defined once
+
+| | |
+|---|---|
+| **`consulted`** | the site was **REACHED and EVALUATED** — control arrived, the condition was tested |
+| **`fired`** | the site **RETURNED A DECISION OTHER THAN THE CALLER'S REQUEST** — refused, quarantined, withheld, abstained, downgraded |
+
+> **`fired` ≤ `consulted` always.** A site cannot decide without being reached.
+
+#### 🔴 SIX statuses, not five — and the sixth is the one the reviewer's question forces
+
+**The reviewer asked for one authoritative reading of `consulted` vs `fired`.
+Giving one exposes that FIVE STATUSES CANNOT CARRY IT.** `consulted = 0` and
+`consulted > 0, fired = 0` are **different findings**:
+
+- **`consulted = 0`** — the site never ran. *Nothing was asked of the guarantee.*
+- **`consulted > 0, fired = 0`** — the site ran and **the guarantee never
+  engaged.** *This is exactly `tigerless-labs`' finding in §1: 3,744 memories
+  written, supersede edge count **ZERO** — the mechanism executed and its outcome
+  never once occurred.*
+
+**Collapsing those two into one `UNEXERCISED` destroys the distinction §1 is
+built on**, and it is the `ok`-vs-`na` collapse this spec names at §10.1,
+committed inside its own status enum. **So the table has six rows.**
+
+| status | condition | precedence |
+|---|---|---|
+| **`DISABLED`** | `enabled == false` | **1** — wins over everything; no count is meaningful, and the counts are omitted rather than reported as zero |
+| **`UNDECLARED`** | `declared == false` | **2** — see the INV-1 disposition below |
+| **`UNMEASURED`** | `errors > 0` | **3** — a counter that raised cannot be read as a count |
+| 🔴 **`UNREACHED`** | `consulted == 0` | **4** — *the site never ran.* **NEW at round 3** |
+| **`UNEXERCISED`** | `consulted > 0 and fired == 0` | **5** — *it ran; the guarantee never engaged.* **This is the finding the spec exists for** |
+| **`EXERCISED`** | `fired > 0` | **6** |
+
+**Precedence is evaluated top to bottom and the first match wins**, so every
+`(consulted, fired, errors, declared, enabled)` tuple maps to exactly one status
+and no tuple maps to none. *A state table that does not say what happens when two
+conditions hold at once is a table with a gap, and the gap is where the
+implementations diverge.*
+
+#### The three things round 2 found unresolved, resolved
+
+| | |
+|---|---|
+| **`UNEXERCISED` with `consulted=10, fired=0`** | 🔴 **VALID, and it is the central case.** The validator rejecting it was wrong and INV-2's prose was right. *A guard consulted ten times that never fired is the thing we set out to detect.* |
+| **`UNDECLARED`: reported or refused?** | 🔴 **BOTH, and that is not a contradiction.** The row IS EMITTED with status `UNDECLARED`, **and the report as a whole REFUSES** (INV-1). *The row is the EVIDENCE FOR the refusal — a refusal that does not say which id caused it is an `ok`-vs-`na` collapse in the other direction.* |
+| **negative counts** | **REFUSE the report.** Not a status: a negative `consulted` is not a census outcome, it is a broken counter, and §4's contract is that a broken instrument reports `UNMEASURED` **only when it knows it broke**. A negative it did not notice is worse and must stop the report. |
 
 ### Part A-2 — the counter lifecycle and the observation-only contract *(amendment 5)*
 
@@ -240,8 +348,29 @@ nobody can interpret, and the reviewer named all four.
 | **activation** | **opt-in, default OFF** (Quentin, 2026-09-18, *relayed to this seat through dev*). Resolved for v1 rather than deferred |
 | **disabled ≠ zero** | a deployment that never enabled it reports `DISABLED` per id (INV-2b). 🔴 *A measured zero and an unmeasured one are the same bytes unless the status distinguishes them, which is this spec's own thesis applied to its own output* |
 | **concurrency** | counters are process-local and monotonic; increments are atomic per id. A report names the process it read |
-| **snapshot consistency** | one report reads ONE snapshot. A report assembled from counters read at different instants states the read window, or refuses |
+| 🔴 **snapshot consistency — ONE ANSWER (round-2 A5)** | **PER-ID ATOMIC; report-level WINDOW, recorded.** *v4's prose allowed a window while the schema demanded one atomic read under one lock — two answers to one question.* **Per-id is sufficient and a global lock is not**, because every status in Part A-1 is a function of ONE id's tuple: no row depends on another row's counters, so cross-id atomicity buys nothing a reader can use. **The report carries `window_start` and `window_end`**; a report whose window exceeds a deployment-stated bound says so in the header rather than being refused. ⚠️ **And a global lock is the WRONG trade here specifically**: it would serialise the very sites INV-7 must show are unaffected, so the cheap consistency guarantee would be bought by making the observation-only claim harder to hold. |
 | **partial failure** | a counter that raised reports `UNMEASURED` for that id **and does not invalidate its neighbours**; the report states how many ids are `UNMEASURED`. 🔴 **An incomplete set of counters must never produce an apparently valid total** |
+
+#### 🔴 THE COMPARED TRACE FIELDS *(round-2 amendment A5 — v4 said these were "named" and named none)*
+
+**A decision trace is an ordered sequence of records, one per enforcement point
+REACHED, carrying exactly these fields and no others:**
+
+| field | why it is IN |
+|---|---|
+| `seq` | the position in the sequence. **Order is the signal**: a census that changed which site runs first has altered a decision even if every site still runs |
+| `site_id` | which enforcement point was reached |
+| `decision` | the branch taken — the caller's request, or the refusal/quarantine/withhold/abstain/downgrade actually returned |
+
+| field | why it is OUT |
+|---|---|
+| **wall-clock / duration** | differs between arms **BY CONSTRUCTION** — the instrumented arm does more work. Including it makes INV-7 fail on every run and the failure would carry no information |
+| **counter VALUES** | the census is the independent variable. Comparing it across arms compares the thing being varied |
+| **record content, user ids, digests** | INV-8 forbids them in the census and they are no safer in a trace |
+
+> **The comparison is `[(seq, site_id, decision), …]` byte-identical across all
+> three arms.** *Naming the fields is the whole assertion: “the traces match” is
+> unfalsifiable until someone says which bytes, and v4 asserted that someone had.*
 
 #### The third arm *(amendment 5's sharper half)*
 
@@ -262,9 +391,11 @@ because it is the only one without a census in it.*
 
 🔴 **The refusal harness is no longer part of 0042.** On Quentin's ruling
 (2026-09-18) it becomes its own candidate:
-`proposals/0042B-refusal-harness-CANDIDATE.md`, **taking its registry number from
-`allocation.py --next` at adoption — the `0042B` in the filename is a placeholder
-and is NOT a number.** *0040 is spent, 0042 is this spec; a filename is not an
+`proposals/0043-refusal-harness-CANDIDATE.md` — **allocated 0043 at adoption `1bc2917` from
+`allocation.py --next`, read from the registry rather than from a filename or a message.**
+🔴 *v4 pointed at `0042B-…`, a placeholder name that was true when written and
+dangling from the moment the candidate was renamed — and `test_spec_gate` checks
+backticked `.py` names ONLY, so this `.md` would have shipped silently.* *0040 is spent, 0042 is this spec; a filename is not an
 allocation, and this project has already paid once for treating one as if it were.*
 
 **It carries round-1 amendments 1, 2, 3 and 6, and invariants INV-3/4/5/6.** It is
@@ -281,7 +412,7 @@ removal is why the two are separable at all.
 | regime | behaviour |
 |---|---|
 | ~~**fixture corpus**~~ | **MOVED with the harness** — the census runs against the PRODUCTION store, which is the point of it |
-| **a store where a class never occurs** | the census reports `UNEXERCISED` with the id named — **and, if the census was never switched on, `DISABLED` instead (INV-2b), which is a different fact about a different thing** |
+| **a store where a class never occurs** | 🔴 the census reports **`UNREACHED`** with the id named — *the site was never consulted, which is a different finding from `UNEXERCISED` (consulted, never fired) and the distinction is the point of Part A-1* — **and, if the census was never switched on, `DISABLED` instead (INV-2b), which is a different fact about a different thing** |
 | **long-running host** | counters are process-local and reset on restart; a census is a statement about one process's lifetime (§8) |
 | **concurrent recalls** | counts may interleave; the census claims totals, never per-request attribution |
 
@@ -290,11 +421,11 @@ removal is why the two are separable at all.
 | id | invariant | executable check |
 |---|---|---|
 | **INV-1** | **CENSUS-TOTAL, FROM TWO INDEPENDENT SOURCES** — every id in the DECLARATION appears in the report, and every reporting id is declared | add a declared id with no site → report REFUSES; add a site with no declared id → report REFUSES. **Both directions, or the check is one source comparing with itself** |
-| **INV-2** | **ZERO-IS-A-VERDICT, AND AN ERROR IS A THIRD ONE** — zero → `UNEXERCISED` with the id named; a counter that raised → `UNMEASURED`; never omitted, never `ok` | two fixtures: a never-fired guard asserts `UNEXERCISED`; **a FORCED-RAISE counter asserts `UNMEASURED` and must NOT render `UNEXERCISED`** |
-| **INV-2b** | 🔴 **DISABLED IS A STATUS, NOT A MISSING REPORT** — activation is opt-in and default OFF (Quentin, 2026-09-18, *relayed*); a deployment that never enabled the census reports **`DISABLED`** for every declared id. **Never a zero, never `UNEXERCISED`, and never a report-level flag a per-id reader can skip.** Five statuses: `EXERCISED` · `UNEXERCISED` · `UNMEASURED` · `DISABLED` · `UNDECLARED` | run the report with the census off; assert every row reads `DISABLED` and that NO row reads `UNEXERCISED` |
-| **INV-2c** | 🔴 **INSTALLED IS NOT EXERCISED, AND RUNTIME CANNOT TELL THEM APART** (amendment 4) — *a correctly installed site with no traffic and a MISSING site both produce no runtime events.* So INV-1's missing-site check is settled against the **AST inventory**, never against runtime counts | four checks, each with its own fixture: **installed-but-unused** (asserts `UNEXERCISED`, not missing) · **missing** (in the inventory, absent from the declaration → REFUSE) · **undeclared** (reports an id nobody declared → REFUSE) · **duplicate id** (two sites, one id → REFUSE) |
-| **INV-2d** | 🔴 **TWO AUTHORED LISTS AGREEING PROVE CONSISTENCY, NOT COMPLETENESS** (amendment 4) — the declaration and the report are both authored; their agreement cannot establish that neither omits the same point. **The third source is the AST inventory, which nobody authored** | assert the report REFUSES when a site in the inventory appears in neither the declaration nor the report |
-| **INV-7** | **OBSERVATION-ONLY** — no counter may alter a decision | **a THREE-ARM DECISION-TRACE DIFF, not a green run** (amendment 5; the two-arm form is withdrawn because both arms carry the instrument): capture the trace with counters **healthy**, **forced to error**, and **UNINSTRUMENTED**, over the trace fields NAMED in Part A-2, and assert all three are **byte-identical**. Name the suites that actually reach the instrumented sites — **0027's (graph.py) and the gate/ingest/schema suites**. 🔴 **NOT 0041's**: it is accepted and UNIMPLEMENTED, its tests are frozen-record transition tests with eleven strict xfails, and none exercises a gate decision — **forcing counters to error there changes nothing they can observe, so that half would pass vacuously** |
+| **INV-2** | **ZERO-IS-A-VERDICT, AND AN ERROR IS A THIRD ONE** — 🔴 **and “zero” is TWO verdicts, not one**: `consulted == 0` → `UNREACHED`, `consulted > 0 and fired == 0` → `UNEXERCISED`, both with the id named (Part A-1); a counter that raised → `UNMEASURED`; never omitted, never `ok` | two fixtures: a never-fired guard asserts `UNEXERCISED`; **a FORCED-RAISE counter asserts `UNMEASURED` and must NOT render `UNEXERCISED`** |
+| **INV-2b** | 🔴 **DISABLED IS A STATUS, NOT A MISSING REPORT** — activation is opt-in and default OFF (Quentin, 2026-09-18, *relayed*); a deployment that never enabled the census reports **`DISABLED`** for every declared id. **Never a zero, never `UNREACHED` or `UNEXERCISED`, and never a report-level flag a per-id reader can skip.** **The enum and its precedence live in Part A-1 and nowhere else** | run the report with the census off; assert every row reads `DISABLED` and that NO row reads `UNEXERCISED` |
+| **INV-2c** | 🔴 **INSTALLED IS NOT EXERCISED, AND RUNTIME CANNOT TELL THEM APART** (amendment 4) — *a correctly installed site with no traffic and a MISSING site both produce no runtime events.* So INV-1's missing-site check is settled against the **AST inventory**, never against runtime counts | 🔴 **the missing-site check compares the DECLARATION against the REVIEWED set, never against DISCOVERED (Part A-0-bis)** — four checks, each with its own fixture: **installed-but-unused** (asserts 🔴 **`UNREACHED`**, not missing — *`consulted == 0`; v4 said `UNEXERCISED` and the six-status change reached A-1 and INV-2 but not this row*) · **missing** (🔴 **REVIEWED-as-enforcement, absent from the declaration → REFUSE** — *v4 compared the raw inventory to the declaration, which would demand declaring every ordinary `raise`; Part A-0-bis*) · **undeclared** (reports an id nobody declared → REFUSE) · **duplicate id** (two sites, one id → REFUSE) |
+| **INV-2d** | 🔴 **TWO AUTHORED LISTS AGREEING PROVE CONSISTENCY, NOT COMPLETENESS** (amendment 4) — the declaration and the report are both authored; their agreement cannot establish that neither omits the same point. **The third source is the AST inventory, which nobody authored** | 🔴 assert the report REFUSES when a **DISCOVERED candidate has NO DECISION in the REVIEWED set** — *not when it is absent from the DECLARATION, which round 2 showed would require declaring every ordinary `raise`. The inventory forces a DECISION, never a declaration (Part A-0-bis)* |
+| **INV-7** | **OBSERVATION-ONLY** — no counter may alter a decision | **a THREE-ARM DECISION-TRACE DIFF, not a green run** (amendment 5; the two-arm form is withdrawn because both arms carry the instrument): capture the trace with counters **healthy**, **forced to error**, and **UNINSTRUMENTED**, over **the trace fields listed in Part A-2's table below**, and assert all three are **byte-identical**. Name the suites that actually reach the instrumented sites — **0027's (graph.py) and the gate/ingest/schema suites**. 🔴 **NOT 0041's**: it is accepted and UNIMPLEMENTED, its tests are frozen-record transition tests with eleven strict xfails, and none exercises a gate decision — **forcing counters to error there changes nothing they can observe, so that half would pass vacuously** |
 | **INV-8** | **COUNTS CARRY NO CONTENT** — a census row is an id and integers | assert no record text, user id, or digest appears in the report |
 
 **Each check must be demonstrated RED** against a deliberately wrong
@@ -307,7 +438,7 @@ this spec exists to find.
 |---|---|---|
 | a counter raises | 🔴 **must not fail the caller** — the decision is the product; the measurement is not. The row's `status` becomes **`UNMEASURED`** and `errors` increments (§4 step 3), which is a FIELD and not prose | remove the counter; no stored state |
 | the registry and the call sites drift | INV-1 turns it into a refusal rather than a silent gap | — |
-| the declaration omits a point the code has | **INV-2c/2d: the AST inventory is a third source neither list authored**, and a site in it that appears in neither the declaration nor the report is a REFUSAL | re-run the inventory; it is derived, not maintained |
+| the declaration omits a point the code has | **INV-2c/2d: the AST inventory is a third source neither list authored** — 🔴 and a DISCOVERED candidate carrying **no DECISION in the REVIEWED set** is a REFUSAL *(not one absent from the declaration; Part A-0-bis)* | re-run the inventory; it is derived, not maintained |
 | counts leak content | INV-8; counters take an id and an integer only | — |
 
 **Fully reversible.** No schema change, no stored field, no migration.
@@ -316,7 +447,7 @@ this spec exists to find.
 
 **Claimed:** for a named deployment and a named read window, **which declared
 enforcement points were INSTALLED, which were EXERCISED, which were not, and
-which could not be measured** — each id carrying one of five statuses. 🔴 **NO
+which could not be measured** — each id carrying one of the SIX statuses in Part A-1's table. 🔴 **NO
 RATE IS CLAIMED HERE.** v3.1 claimed a refusal rate beside a baseline arm; that
 claim, its arms and its denominator argument all travelled to the harness spec
 with the round-1 reviewer's §9 ruling.
@@ -324,13 +455,22 @@ with the round-1 reviewer's §9 ruling.
 **NOT claimed:**
 - that a zero-count guard cannot fire — only that **this corpus never presented
   the condition** (§2c-ii)
-- that the fixture generalises to a production store
-- any comparison to another system's published refusal figures: **different
-  corpora, different question sets, no shared axis** — the numbers must not share
-  a table
-- an answer-quality claim. **This measures REFUSAL, not correctness** — a system
-  that refuses everything scores perfectly here and is useless, which is why the
-  ANSWERED-on-present-and-trusted class is reported beside it
+- 🔴 **that the census generalises beyond THIS deployment and THIS process
+  lifetime.** A census is a fact about what ran where it ran (§5)
+- 🔴 **semantic completeness of discovery.** The inventory is evidence about the
+  node kinds it scans; **widening a scan can never establish that nothing is
+  left** (Part A-0-bis)
+- 🔴 **a rate of any kind.** The census reports statuses and counts. Every rate in
+  this arc belongs to the harness spec
+
+> 🔴 **THREE HARNESS LIMITS WERE REMOVED FROM THIS LIST AT ROUND 3** — *the
+> fixture generalising to a production store* (the census has no fixture and §5's
+> row moved out), *comparison to another system's published refusal figures* (the
+> census publishes no refusal figure), and *the answer-quality limit* whose
+> sentence **had already been MOVED to 0043 §8 by a note in this file and
+> survived here anyway.** **That is the reviewer's C4 — “remove obsolete harness
+> claims from 0042” — and a limit that names an artifact the spec no longer has
+> is not caution, it is a claim about the wrong document.**
 
 ## 9. Brief for the external reviewer
 
@@ -370,14 +510,18 @@ spec is now the census alone; the second travelled with the harness.*
      *"never fired"* and *"never invoked"* produce the same evidence — **exactly
      the distinction this spec exists to draw**, and the `ok`-vs-`na` failure one
      level up
-   - **cannot observe a ZERO.** A replay sees only what was written; an
-     enforcement point that never fired wrote nothing, so replay cannot
-     distinguish *never fired* from *never installed* — which is the census's
-     whole question. *(v4: this bullet previously cited §1's argument that Part B
-     needs Part A's denominator. §1 no longer makes it — the round-1 reviewer
-     removed the dependency and the sentence travelled to the harness spec. A
-     surviving carrier of a withdrawn claim, in the section a reviewer reads to
-     see what was ruled.)*
+   - 🔴 **cannot observe INSTALLATION, which is a second blindness and the one
+     amendment 4 names.** The bullet above is about *never fired* vs *never
+     invoked*; this one is about **a site that was never INSTALLED.** A missing
+     site and a correctly installed site with no traffic write **the same
+     nothing**, so no replay over receipts can implement INV-1's missing-site
+     check. *That is why the check settles against the REVIEWED set (Part
+     A-0-bis) rather than against runtime evidence.*
+     *(v4 history: this bullet once cited §1's argument that Part B needs Part
+     A's denominator — a claim §1 no longer makes. The round-2 rewording then
+     restated the bullet above it instead of saying this; **a correction that
+     duplicates its neighbour is a correction that did not land**, and dev caught
+     it reading the two in sequence.)*
    - **sees one mechanism.** Supersession, correction, `forget_user`, quarantine
      promotion and the reserve write no `policy_receipt`; the candidate set is
      five and receipts cover one

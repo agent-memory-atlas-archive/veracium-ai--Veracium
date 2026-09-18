@@ -181,6 +181,12 @@
    "qualname": "Memory._recall"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 1455,
+   "module": "__init__.py",
+   "qualname": "Memory._fit_to_budget._claim_lines"
+  },
+  {
    "bare": true,
    "kind": "RAISE",
    "line": 1596,
@@ -224,6 +230,12 @@
    "line": 1721,
    "module": "__init__.py",
    "qualname": "Memory.introspect"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1747,
+   "module": "__init__.py",
+   "qualname": "Memory.edges_since"
   },
   {
    "bare": false,
@@ -289,6 +301,12 @@
    "qualname": "Memory.correct"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 2072,
+   "module": "__init__.py",
+   "qualname": "Memory.policy_receipts"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 43,
@@ -317,6 +335,12 @@
    "qualname": "_validate_lexicon"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 219,
+   "module": "agreement.py",
+   "qualname": "_is_possessive"
+  },
+  {
    "kind": "RETURN_NONE",
    "line": 267,
    "module": "agreement.py",
@@ -336,6 +360,18 @@
    "qualname": "_strict_pairs"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 93,
+   "module": "asof/adapter.py",
+   "qualname": "derive_quarantined"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 100,
+   "module": "asof/adapter.py",
+   "qualname": "derive_use_only"
+  },
+  {
    "kind": "RETURN_FALSE",
    "line": 129,
    "module": "asof/adapter.py",
@@ -352,6 +388,12 @@
    "line": 133,
    "module": "asof/adapter.py",
    "qualname": "_check_derived"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 142,
+   "module": "asof/adapter.py",
+   "qualname": "_identity_field"
   },
   {
    "kind": "RETURN_NONE",
@@ -432,6 +474,36 @@
    "qualname": "adapt"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 112,
+   "module": "asof/classify.py",
+   "qualname": "classify_as_of._coherent"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 113,
+   "module": "asof/classify.py",
+   "qualname": "classify_as_of._coherent"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 162,
+   "module": "asof/classify.py",
+   "qualname": "assertable_as_of"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 31,
+   "module": "asof/recall.py",
+   "qualname": "recall_at.grounded"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 34,
+   "module": "asof/recall.py",
+   "qualname": "recall_at.claim"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 114,
@@ -450,6 +522,12 @@
    "line": 176,
    "module": "asof/resolve.py",
    "qualname": "AsOfAnswer.resolution_of"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 201,
+   "module": "asof/resolve.py",
+   "qualname": "is_head"
   },
   {
    "bare": false,
@@ -473,6 +551,12 @@
    "qualname": "normalise_T"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 233,
+   "module": "asof/resolve.py",
+   "qualname": "held_at"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 250,
@@ -490,6 +574,18 @@
    "line": 302,
    "module": "asof/resolve.py",
    "qualname": "_resolve_edge"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 65,
+   "module": "authority.py",
+   "qualname": "permitted"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 76,
+   "module": "authority.py",
+   "qualname": "self_assertion"
   },
   {
    "bare": false,
@@ -546,6 +642,18 @@
    "line": 564,
    "module": "cli.py",
    "qualname": "<module>"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 154,
+   "module": "compile.py",
+   "qualname": "_grounded_inputs"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 168,
+   "module": "compile.py",
+   "qualname": "needs_recompile"
   },
   {
    "kind": "RETURN_NONE",
@@ -733,6 +841,18 @@
    "qualname": "receipt_request_matches"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 269,
+   "module": "contribution.py",
+   "qualname": "receipt_request_matches"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 272,
+   "module": "contribution.py",
+   "qualname": "receipt_request_matches"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 284,
@@ -816,8 +936,26 @@
    "qualname": "Reporter._get_logger"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 211,
+   "module": "diagnostics.py",
+   "qualname": "Reporter._auto_send_due"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 244,
+   "module": "diagnostics.py",
+   "qualname": "Reporter.has_pending"
+  },
+  {
    "kind": "RETURN_FALSE",
    "line": 250,
+   "module": "diagnostics.py",
+   "qualname": "Reporter._confirm"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 257,
    "module": "diagnostics.py",
    "qualname": "Reporter._confirm"
   },
@@ -882,6 +1020,36 @@
    "qualname": "_open_snapshot"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 193,
+   "module": "doctor.py",
+   "qualname": "_tables"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 376,
+   "module": "doctor.py",
+   "qualname": "_check_sources.unsourced"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 68,
+   "module": "dryrun.py",
+   "qualname": "DryRun.usable"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 89,
+   "module": "dryrun.py",
+   "qualname": "_snapshot"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 43,
+   "module": "gate.py",
+   "qualname": "exclude_procedural"
+  },
+  {
    "kind": "RETURN_FALSE",
    "line": 105,
    "module": "gate.py",
@@ -898,6 +1066,18 @@
    "line": 109,
    "module": "gate.py",
    "qualname": "scoped_assertable"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 161,
+   "module": "gate.py",
+   "qualname": "partition_parts"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 41,
+   "module": "graph.py",
+   "qualname": "_value_key"
   },
   {
    "kind": "RETURN_FALSE",
@@ -939,6 +1119,12 @@
    "qualname": "_absorption_scope_gate.same_scope"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 271,
+   "module": "graph.py",
+   "qualname": "_absorption_scope_gate.same_scope"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 336,
@@ -957,6 +1143,18 @@
    "line": 404,
    "module": "graph.py",
    "qualname": "_build_supersession_plan._src_revoked"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 408,
+   "module": "graph.py",
+   "qualname": "_build_supersession_plan._src_revoked"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 619,
+   "module": "graph.py",
+   "qualname": "_tokens"
   },
   {
    "kind": "RETURN_FALSE",
@@ -1000,6 +1198,36 @@
    "line": 866,
    "module": "graph.py",
    "qualname": "fused_subgraph"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 887,
+   "module": "graph.py",
+   "qualname": "fused_subgraph._order"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1030,
+   "module": "graph.py",
+   "qualname": "_stage4_and_5"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1176,
+   "module": "graph.py",
+   "qualname": "_strictly_redundant"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1270,
+   "module": "graph.py",
+   "qualname": "collapse_for_render"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 153,
+   "module": "grounding.py",
+   "qualname": "resolution_set"
   },
   {
    "kind": "RETURN_FALSE",
@@ -1098,6 +1326,12 @@
    "qualname": "_pool_result"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 184,
+   "module": "lifecycle.py",
+   "qualname": "partition_cold"
+  },
+  {
    "kind": "RETURN_NONE",
    "line": 323,
    "module": "lifecycle.py",
@@ -1109,6 +1343,18 @@
    "line": 36,
    "module": "llm/anthropic.py",
    "qualname": "AnthropicComplete.__init__"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 59,
+   "module": "llm/metered.py",
+   "qualname": "count_valid"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 138,
+   "module": "llm/metered.py",
+   "qualname": "Metered.totals"
   },
   {
    "bare": false,
@@ -1403,6 +1649,18 @@
    "qualname": "assemble._is_variant"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 85,
+   "module": "proactive.py",
+   "qualname": "assemble._is_variant"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 141,
+   "module": "proactive.py",
+   "qualname": "assemble._eligible"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 266,
@@ -1415,6 +1673,12 @@
    "line": 43,
    "module": "procedural_gate.py",
    "qualname": "norm_ws"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 108,
+   "module": "procedural_gate.py",
+   "qualname": "_inside_open_quote"
   },
   {
    "kind": "RETURN_NONE",
@@ -1449,6 +1713,12 @@
   {
    "kind": "RETURN_FALSE",
    "line": 185,
+   "module": "procedural_gate.py",
+   "qualname": "positive_form"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 186,
    "module": "procedural_gate.py",
    "qualname": "positive_form"
   },
@@ -1507,6 +1777,18 @@
    "qualname": "whole_sentence"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 241,
+   "module": "procedural_gate.py",
+   "qualname": "whole_sentence"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 245,
+   "module": "procedural_gate.py",
+   "qualname": "whole_sentence"
+  },
+  {
    "kind": "RETURN_FALSE",
    "line": 246,
    "module": "procedural_gate.py",
@@ -1523,6 +1805,18 @@
    "line": 468,
    "module": "procedural_gate.py",
    "qualname": "enclosure_structure"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 515,
+   "module": "procedural_gate.py",
+   "qualname": "sentence_segments"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 525,
+   "module": "procedural_gate.py",
+   "qualname": "has_internal_boundary"
   },
   {
    "bare": false,
@@ -1734,6 +2028,18 @@
    "qualname": "Provenance._producer_only_on_procedural"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 235,
+   "module": "schema.py",
+   "qualname": "Provenance.procedural"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 242,
+   "module": "schema.py",
+   "qualname": "Provenance.third_party_influenced"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 275,
@@ -1783,6 +2089,12 @@
    "qualname": "EvidenceContext.__setattr__"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 324,
+   "module": "schema.py",
+   "qualname": "EvidenceContext.__eq__"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 378,
@@ -1809,6 +2121,12 @@
    "line": 398,
    "module": "schema.py",
    "qualname": "AgreementRecord._lexicon_pattern"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 516,
+   "module": "schema.py",
+   "qualname": "is_procedural_relation"
   },
   {
    "bare": false,
@@ -1853,6 +2171,72 @@
    "qualname": "SuccessorLookup.__setattr__"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 679,
+   "module": "schema.py",
+   "qualname": "SuccessorLookup.__eq__"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 750,
+   "module": "schema.py",
+   "qualname": "Edge.active"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 758,
+   "module": "schema.py",
+   "qualname": "Edge.quarantined"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 765,
+   "module": "schema.py",
+   "qualname": "Edge.use_only"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 783,
+   "module": "schema.py",
+   "qualname": "Edge.valid_now"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 793,
+   "module": "schema.py",
+   "qualname": "Edge.assertable"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 856,
+   "module": "schema.py",
+   "qualname": "Episode.quarantined"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 866,
+   "module": "schema.py",
+   "qualname": "Episode.use_only"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 872,
+   "module": "schema.py",
+   "qualname": "Episode.active"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 890,
+   "module": "schema.py",
+   "qualname": "Episode.assertable"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 897,
+   "module": "schema.py",
+   "qualname": "Episode.valid_now"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 135,
@@ -1860,11 +2244,23 @@
    "qualname": "Identity.__post_init__"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 143,
+   "module": "scope.py",
+   "qualname": "Identity.groupable"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 149,
    "module": "scope.py",
    "qualname": "resolve"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 169,
+   "module": "scope.py",
+   "qualname": "same_identity"
   },
   {
    "kind": "RETURN_FALSE",
@@ -1990,6 +2386,12 @@
    "qualname": "_revalidate"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 363,
+   "module": "scope.py",
+   "qualname": "is_legacy_derivative"
+  },
+  {
    "kind": "RETURN_FALSE",
    "line": 422,
    "module": "scope.py",
@@ -2064,6 +2466,12 @@
    "qualname": "prune_absorbed_record"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 570,
+   "module": "scope.py",
+   "qualname": "prune_absorbed_record"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 613,
@@ -2124,6 +2532,12 @@
    "line": 720,
    "module": "scope.py",
    "qualname": "validate_filters"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 732,
+   "module": "scope.py",
+   "qualname": "apply_filters"
   },
   {
    "bare": false,
@@ -2320,6 +2734,12 @@
    "qualname": "reconstruct_absorption_rows"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 501,
+   "module": "scope_linkage.py",
+   "qualname": "_is_canonical"
+  },
+  {
    "kind": "RETURN_FALSE",
    "line": 502,
    "module": "scope_linkage.py",
@@ -2345,6 +2765,12 @@
    "qualname": "MembershipResolver.flattening_plan"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 277,
+   "module": "scope_read.py",
+   "qualname": "MembershipResolver.flattening_plan"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 295,
@@ -2364,6 +2790,18 @@
    "line": 308,
    "module": "scope_read.py",
    "qualname": "ScopeView.__init__"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 402,
+   "module": "scope_read.py",
+   "qualname": "ScopeView.scoped"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 434,
+   "module": "scope_read.py",
+   "qualname": "narrow_edges"
   },
   {
    "kind": "RETURN_NONE",
@@ -2670,6 +3108,12 @@
    "line": 292,
    "module": "store/migration.py",
    "qualname": "migrate_store"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 148,
+   "module": "store/release_migration.py",
+   "qualname": "backup_token_ok"
   },
   {
    "bare": false,
@@ -3043,6 +3487,12 @@
    "qualname": "run_release_migration"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 56,
+   "module": "store/revocation.py",
+   "qualname": "_is_ordinal_violation"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 72,
@@ -3377,6 +3827,66 @@
    "qualname": "apply_effects"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 554,
+   "module": "store/schema_version.py",
+   "qualname": "rebuildable_keys"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 627,
+   "module": "store/schema_version.py",
+   "qualname": "identity"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 646,
+   "module": "store/schema_version.py",
+   "qualname": "drift"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 756,
+   "module": "store/schema_version.py",
+   "qualname": "active_records"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 782,
+   "module": "store/schema_version.py",
+   "qualname": "artifact_problems._current"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 927,
+   "module": "store/schema_version.py",
+   "qualname": "manifestation_problems"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1055,
+   "module": "store/schema_version.py",
+   "qualname": "_keyable_runtime"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1070,
+   "module": "store/schema_version.py",
+   "qualname": "active_records"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1096,
+   "module": "store/schema_version.py",
+   "qualname": "artifact_problems._current"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1241,
+   "module": "store/schema_version.py",
+   "qualname": "manifestation_problems"
+  },
+  {
    "kind": "RETURN_FALSE",
    "line": 1267,
    "module": "store/schema_version.py",
@@ -3399,6 +3909,12 @@
    "line": 1289,
    "module": "store/schema_version.py",
    "qualname": "runtime_supported"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1360,
+   "module": "store/schema_version.py",
+   "qualname": "accepted_digests"
   },
   {
    "kind": "RETURN_NONE",
@@ -3608,6 +4124,12 @@
    "qualname": "SqliteStore._journal_edge_write"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 277,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.edge_events"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 282,
@@ -3726,6 +4248,12 @@
    "qualname": "SqliteStore.confirm_edge"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 621,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.confirmations_for"
+  },
+  {
    "kind": "RETURN_NONE",
    "line": 628,
    "module": "store/sqlite.py",
@@ -3742,6 +4270,18 @@
    "line": 737,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._recompute_edge_row"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 753,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._edge_in_refusal"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 785,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.edges"
   },
   {
    "bare": false,
@@ -3904,6 +4444,12 @@
    "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 1184,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.refusals"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 1199,
@@ -3988,6 +4534,24 @@
    "qualname": "SqliteStore._write_consolidation_contributions"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 1457,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.contributions"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1469,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.contributions_naming"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1484,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.contributors_of_source"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 1501,
@@ -4021,6 +4585,18 @@
    "line": 1536,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.add_episode"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1579,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._ordinary_read_visible"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1581,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._ordinary_read_visible"
   },
   {
    "bare": false,
@@ -4098,6 +4674,18 @@
    "line": 1836,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1861,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._ops_for_user"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1870,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._lease_live"
   },
   {
    "bare": false,
@@ -4186,6 +4774,24 @@
    "qualname": "SqliteStore.abandon_consolidation_if_current"
   },
   {
+   "kind": "FILTER_RETURN",
+   "line": 2138,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.pending_consolidations"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 2148,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.quiescent_episode_snapshot"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 2159,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.list_users"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
    "line": 2203,
@@ -4196,6 +4802,12 @@
    "bare": false,
    "kind": "RAISE",
    "line": 2218,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.policy_receipts"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 2221,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
@@ -4301,6 +4913,8 @@
  ],
  "summary": {
   "by_kind": {
+   "BOOL_RETURN": 61,
+   "FILTER_RETURN": 41,
    "RAISE": 482,
    "RETURN_FALSE": 82,
    "RETURN_NONE": 72
@@ -4308,213 +4922,330 @@
   "kinds": [
    "RAISE",
    "RETURN_FALSE",
-   "RETURN_NONE"
+   "RETURN_NONE",
+   "BOOL_RETURN",
+   "FILTER_RETURN"
   ],
   "modules_scanned": 55,
-  "modules_with_sites": 40,
+  "modules_with_sites": 45,
   "per_module": {
    "__init__.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 3,
     "RAISE": 36,
     "RETURN_FALSE": 2,
     "RETURN_NONE": 4
    },
    "_json.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 1,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "agreement.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 0,
     "RAISE": 3,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 2
    },
    "asof/adapter.py": {
+    "BOOL_RETURN": 3,
+    "FILTER_RETURN": 0,
     "RAISE": 1,
     "RETURN_FALSE": 3,
     "RETURN_NONE": 13
    },
+   "asof/classify.py": {
+    "BOOL_RETURN": 3,
+    "FILTER_RETURN": 0,
+    "RAISE": 0,
+    "RETURN_FALSE": 0,
+    "RETURN_NONE": 0
+   },
+   "asof/recall.py": {
+    "BOOL_RETURN": 2,
+    "FILTER_RETURN": 0,
+    "RAISE": 0,
+    "RETURN_FALSE": 0,
+    "RETURN_NONE": 0
+   },
    "asof/resolve.py": {
+    "BOOL_RETURN": 2,
+    "FILTER_RETURN": 0,
     "RAISE": 6,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 3
    },
+   "authority.py": {
+    "BOOL_RETURN": 2,
+    "FILTER_RETURN": 0,
+    "RAISE": 0,
+    "RETURN_FALSE": 0,
+    "RETURN_NONE": 0
+   },
    "budgets.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 3,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "cli.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 5,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "compile.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 1,
     "RAISE": 0,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
    "config.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 11,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "contribution.py": {
+    "BOOL_RETURN": 2,
+    "FILTER_RETURN": 0,
     "RAISE": 23,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 3
    },
    "diagnostics.py": {
+    "BOOL_RETURN": 3,
+    "FILTER_RETURN": 0,
     "RAISE": 0,
     "RETURN_FALSE": 6,
     "RETURN_NONE": 1
    },
    "doctor.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 1,
     "RAISE": 0,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 5
    },
+   "dryrun.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 1,
+    "RAISE": 0,
+    "RETURN_FALSE": 0,
+    "RETURN_NONE": 0
+   },
    "gate.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 2,
     "RAISE": 0,
     "RETURN_FALSE": 3,
     "RETURN_NONE": 0
    },
    "graph.py": {
+    "BOOL_RETURN": 4,
+    "FILTER_RETURN": 4,
     "RAISE": 6,
     "RETURN_FALSE": 10,
     "RETURN_NONE": 0
    },
    "grounding.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 1,
     "RAISE": 0,
     "RETURN_FALSE": 1,
     "RETURN_NONE": 0
    },
    "ingest.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 9,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
    "introspect.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 1,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "lifecycle.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 1,
     "RAISE": 2,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
    "llm/anthropic.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 1,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
+   "llm/metered.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 1,
+    "RAISE": 0,
+    "RETURN_FALSE": 0,
+    "RETURN_NONE": 0
+   },
    "mcp_server.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 6,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "portability.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 34,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
    "proactive.py": {
+    "BOOL_RETURN": 2,
+    "FILTER_RETURN": 0,
     "RAISE": 1,
     "RETURN_FALSE": 1,
     "RETURN_NONE": 0
    },
    "procedural_gate.py": {
+    "BOOL_RETURN": 5,
+    "FILTER_RETURN": 1,
     "RAISE": 1,
     "RETURN_FALSE": 14,
     "RETURN_NONE": 4
    },
    "procedures.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 15,
     "RETURN_FALSE": 5,
     "RETURN_NONE": 2
    },
    "registry.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 4,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "schema.py": {
+    "BOOL_RETURN": 15,
+    "FILTER_RETURN": 0,
     "RAISE": 21,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
    "scope.py": {
+    "BOOL_RETURN": 3,
+    "FILTER_RETURN": 2,
     "RAISE": 27,
     "RETURN_FALSE": 13,
     "RETURN_NONE": 1
    },
    "scope_linkage.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 0,
     "RAISE": 27,
     "RETURN_FALSE": 1,
     "RETURN_NONE": 3
    },
    "scope_read.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 3,
     "RAISE": 3,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 2
    },
    "semantic.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 0,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 7
    },
    "source_identity.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 1,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
    "store/base.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 25,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "store/current_state.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 3,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "store/migration.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 7,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "store/release_migration.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 0,
     "RAISE": 53,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "store/revocation.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 0,
     "RAISE": 6,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "store/revocation_sweep.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 40,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 2
    },
    "store/schema_version.py": {
+    "BOOL_RETURN": 3,
+    "FILTER_RETURN": 8,
     "RAISE": 17,
     "RETURN_FALSE": 5,
     "RETURN_NONE": 1
    },
    "store/sqlite.py": {
+    "BOOL_RETURN": 4,
+    "FILTER_RETURN": 12,
     "RAISE": 80,
     "RETURN_FALSE": 13,
     "RETURN_NONE": 7
    },
    "telemetry.py": {
+    "BOOL_RETURN": 0,
+    "FILTER_RETURN": 0,
     "RAISE": 3,
     "RETURN_FALSE": 5,
     "RETURN_NONE": 6
    }
   },
-  "total": 636,
+  "total": 738,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }
