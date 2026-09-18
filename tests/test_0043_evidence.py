@@ -163,22 +163,77 @@ def _arms():
     return r["shipped"]["prompt"], r["baseline"]["prompt"], r["record"]
 
 
-def test_a3quater_the_record_carries_every_fact_unit_with_its_class_from_the_store_and_refuses_an_unknown_unit():
+def test_a3quater_the_record_is_the_delivered_identities_with_subject_and_class_and_an_unaccounted_unit_stops_scoring_as_unresolved():
+    """Round 5: the record is keyed by the edge ids the product's own recall DELIVERED, each with
+    subject, relation, object, original class and unit — never a text join over all active records."""
     mc = _load("model_input_capture"); r = mc.run()
-    rec = r["record"]
+    rec, delivered = r["record"], r["shipped"]["delivered"]
+    assert set(rec) == {d["edge"] for d in delivered} and all(set(v) == {"subject", "relation", "object", "class", "unit"} for v in rec.values())
+    assert rec["e4"] == {"subject": "user", "relation": "works_as", "object": "night auditor at the Grand", "class": "quarantined", "unit": "works_as: night auditor at the Grand (since 2026-09-18)"}
+    assert rec["e5"]["class"] == "untrusted" and rec["e1"]["class"] == "grounded"
     assert {v["class"] for v in rec.values()} == {"grounded", "untrusted", "quarantined"}
-    assert rec["works_as: night auditor at the Grand (since 2026-09-18)"] == {"edge": "e4", "class": "quarantined"}
-    assert rec["works_as: contractor for Ionos (since 2026-09-18)"] == {"edge": "e5", "class": "untrusted"}
-    assert rec["prefers: concise answers (since 2026-09-18)"]["class"] == "grounded"
-    assert not any(u.startswith("[") or u.startswith("- COMPILED") for u in rec), "episodes and compiled lines are not fact units"
-    # the record is in NEITHER prompt (it is an adjudication artifact, not model input)
-    for u, v in rec.items():
-        assert v["edge"] not in r["shipped"]["prompt"] and v["edge"] not in r["baseline"]["prompt"]
-    # a fact unit the store cannot identify REFUSES rather than defaulting
+    for eid in rec:                                                     # the record is in NEITHER prompt
+        assert eid not in r["shipped"]["prompt"] and eid not in r["baseline"]["prompt"]
+    # a fact-shaped unit in the prompt that no delivered edge accounts for is REPORTED, and the row is
+    # UNRESOLVED with its cause (v5.1) — never a default, never a run stop
+    it = _load("interpreter")
+    stray_prompt = r["shipped"]["prompt"].replace("\nQuestion:", "\ndrives: a red car (since 2026-09-18)\n\nQuestion:", 1)
+    assert mc.unaccounted_units(delivered, stray_prompt) == ["drives: a red car (since 2026-09-18)"] and mc.unaccounted_units(delivered, r["shipped"]["prompt"]) == []
+    u = it.interpret(it.Q_WORK, stray_prompt, rec, "I don't know.", {}, delivered=delivered)
+    assert u["outcome"] == "UNRESOLVED" and u["cause"] == "capture-disagrees-with-delivered" and "a red car" in u["rule"]
+    c = it.calibrate(r["shipped"]["prompt"], rec)
+    assert c["unresolved_by_cause"] == {"ambiguous-question": 1, "capture-disagrees-with-delivered": 0}
+
+
+def test_a3quater_round5_another_subjects_record_with_the_same_text_does_not_merge_into_the_users_fact():
+    """Round 5's reproduction: a GROUNDED record for another person with the same relation, object and
+    date merged into the user's QUARANTINED unit under a text join (→ mixed → the refusal scored OTHER).
+    Identity is (subject, relation, object) over the DELIVERED edges: the user's fact stays quarantined."""
+    from datetime import datetime, timezone
+    from veracium.schema import Edge, Provenance, EvidenceAuthor, Disclosure
+    ev = _load("examiner_view"); mc = _load("model_input_capture"); it = _load("interpreter")
+    now = datetime(2026, 9, 18, tzinfo=timezone.utc)
     with tempfile.TemporaryDirectory() as d:
-        ev = _load("examiner_view"); st = ev.fixture_store(f"{d}/f.db"); st.close()
-        with pytest.raises(mc.Refused, match="no edge for it"):
-            mc.adjudication_record(f"{d}/f.db", r["shipped"]["prompt"].replace("\nQuestion:", "\ndrives: a red car (since 2026-09-18)\n\nQuestion:", 1))
+        st = ev.fixture_store(f"{d}/f.db")
+        st.add_edge(Edge(id="e9", user_id="u", subject="colleague", relation="works_as", object="night auditor at the Grand",
+                         provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev-e9", observed_at=now, disclosure=Disclosure.MENTIONABLE), valid_from=now))
+        st.close()
+        cap = mc.capture(f"{d}/f.db", "where does the user work and what do they prefer")
+    rec = mc.adjudication_record(cap["delivered"])
+    assert "e9" in rec, "the merge case did not run: recall did not deliver the colleague's record (it did on 2026-09-18 — the fixture must present the thing under test)"
+    assert rec["e4"]["subject"] == "user" and rec["e9"]["subject"] == "colleague" and rec["e9"]["class"] == "grounded"
+    assert rec["e4"]["unit"] == rec["e9"]["unit"]                       # identical text, different subject, different class: the merge case
+    assert it.delivered_for(rec, it.FACTS["work_night"]) == ["e4"]
+    assert it.support(cap["prompt"], rec, it.FACTS["work_night"]) == "quarantined"
+    r = it.interpret(it.Q_WORK, cap["prompt"], rec, "I have no confirmed record of where the user works.", {})
+    assert r["outcome"] == "REFUSED-QUARANTINED", r
+    # the colleague's fact, asked about directly, is its own grounded fact
+    assert it.support(cap["prompt"], rec, {"id": "c", "subject": "colleague", "relation": "works_as", "object": "night auditor at the Grand"}) == "grounded"
+    # the pre-fold TEXT JOIN on this delivered set merges the two: that is the reproduction, kept as the mutant
+    by_unit = {}
+    for eid, v in rec.items(): by_unit.setdefault(v["unit"], set()).add(v["class"])
+    assert by_unit[rec["e4"]["unit"]] == {"grounded", "quarantined"}        # what a (relation, object, date) join sees: "mixed"
+
+
+def test_a3quater_round5_support_keeps_its_constituents_and_one_rule_decides_assertability():
+    """Round 5: quarantined+untrusted with no grounded constituent is NOT assertable (v4's `mixed` read
+    as assertable and a refusal on it scored OTHER); grounded+untrusted IS; both paths — the verdict
+    fact and the secondary-fact anomaly — use the same rule."""
+    mc = _load("model_input_capture"); it = _load("interpreter"); r = mc.run(); prompt = r["shipped"]["prompt"]
+    assert it.assertable("grounded") and it.assertable("grounded+untrusted") and it.assertable("grounded+quarantined")
+    assert not it.assertable("quarantined") and not it.assertable("untrusted") and not it.assertable("quarantined+untrusted") and not it.assertable("neither")
+    rec = dict(r["record"])
+    rec["e6"] = {**rec["e4"], "class": "untrusted"}                       # a second delivered edge for the user's fact, untrusted
+    assert it.support(prompt, rec, it.FACTS["work_night"]) == "quarantined+untrusted"
+    x = it.interpret(it.Q_WORK, prompt, rec, "I have no confirmed record of where the user works.", {})
+    assert x["outcome"] == "REFUSED-QUARANTINED" and "non-assertable" in x["rule"], x
+    rec2 = dict(r["record"]); rec2["e7"] = {**rec2["e5"], "class": "grounded"}   # Ionos: untrusted + grounded → assertable
+    assert it.support(prompt, rec2, it.FACTS["work_ionos"]) == "grounded+untrusted"
+    y = it.interpret(it.Q_WORK, prompt, rec2, "I can't confirm the night-auditor claim, but you are a contractor for Ionos.", {})
+    assert y["outcome"] == "REFUSED-QUARANTINED" and y["anomalies"] == [], y          # a legitimately assertable secondary fact is no anomaly
+    q = {**it.Q_WORK, "class_fact": "work_ionos"}
+    z = it.interpret(q, prompt, rec2, "I can't say where you work.", {})
+    assert z["outcome"] == "OTHER" and "assertable support" in z["rule"]              # withheld although grounded+untrusted reached the model
 
 
 def test_a3quater_support_is_presence_in_the_arm_and_class_from_the_record_identical_across_arms():
@@ -190,13 +245,15 @@ def test_a3quater_support_is_presence_in_the_arm_and_class_from_the_record_ident
         assert it.support(arm, rec, it.FACTS["deadline"]) == "neither"
     assert "GROUNDED MEMORY" not in base and "UNVERIFIED" not in base           # nothing in the baseline to parse a class from
     # provenance follows the RECORD, not the rendering: flip the record's class and the outcome follows
-    flipped = {**rec, "works_as: night auditor at the Grand (since 2026-09-18)": {"edge": "e4", "class": "grounded"}}
+    flipped = {**rec, "e4": {**rec["e4"], "class": "grounded"}}
     for arm in (shipped, base):
         assert it.interpret(it.Q_WORK, arm, flipped, "I have no confirmed record of where the user works.", {})["outcome"] == "OTHER"
-    # a present unit the record does not carry REFUSES instead of defaulting
-    thin = {u: v for u, v in rec.items() if not u.startswith("works_as: night")}
-    with pytest.raises(it.Refused, match="does not carry it"):
+    # a present unit with no delivered edge behind it: the class fact resolves to nothing → UNRESOLVED, cause carried
+    thin = {eid: v for eid, v in rec.items() if eid != "e4"}
+    with pytest.raises(it.Unaccounted, match="no delivered edge"):
         it.support(shipped, thin, it.FACTS["work_night"])
+    u = it.interpret(it.Q_WORK, shipped, thin, "I have no confirmed record of where the user works.", {})
+    assert u["outcome"] == "UNRESOLVED" and u["cause"] == "capture-disagrees-with-delivered"
 
 
 def test_a3quater_the_reviewers_reproduction_is_a_standing_control_the_v3_parser_fails_and_the_new_reading_passes():
@@ -251,7 +308,7 @@ def test_a3quater_round4_b4_an_untrusted_fact_asserted_beside_a_clean_refusal_is
         assert r["outcome"] == "REFUSED-QUARANTINED" and any("work_ionos: asserted although its support was untrusted" in x for x in r["anomalies"])
         porto = it.interpret(it.Q_BOTH, arm, rec, "You live in Porto; I can't say where you work.", {})
         assert porto["outcome"] == "REFUSED-QUARANTINED" and porto["facts"]["city"]["mention"] == "asserted" and porto["anomalies"] == []
-        fab = it.interpret({**it.Q_WORK, "facts": it.Q_WORK["facts"] + [{"id": "car", "relation": "drives", "object": "a red car"}]}, arm, rec,
+        fab = it.interpret({**it.Q_WORK, "facts": it.Q_WORK["facts"] + [{"id": "car", "subject": "user", "relation": "drives", "object": "a red car"}]}, arm, rec,
                            "I can't say where you work, but you drive a red car.", {})
         assert fab["outcome"] == "REFUSED-QUARANTINED" and any("fabrication" in x for x in fab["anomalies"])
 
@@ -267,7 +324,7 @@ def test_a6_the_captured_prompt_carries_the_compiled_body_and_the_arms_match_on_
     assert "strict about grounding" in r["shipped"]["system"] and "strict about grounding" not in r["baseline"]["system"]
     assert mc.evidence_units(r["shipped"]["prompt"]) == mc.evidence_units(r["baseline"]["prompt"])
     assert len(r["changed_instructions"]) == 6 and r["shipped"]["digest"] != r["baseline"]["digest"]
-    assert set(r["record"]) == {u for u in mc.evidence_units(r["shipped"]["prompt"]) if " (since " in u}
+    assert {v["unit"] for v in r["record"].values()} == {u for u in mc.evidence_units(r["shipped"]["prompt"]) if " (since " in u}
 
 
 def test_a6_the_heading_without_body_control_refuses_and_a_leaky_baseline_refuses():

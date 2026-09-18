@@ -4,8 +4,8 @@ Spec-Status: draft
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), adopted at rest and re-read from the file: v1 2026-09-18 from `0042B-refusal-harness-CANDIDATE.md` (sha16 27d6b564c9b9db6f); the number 0043 from `allocation.py --next` at this adoption; v2 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 1095135f2305c0e4); v3 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 fbd7a2c7e51a36a4); v4 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 d44d0a20bc72afc5) |
-| **Version** | **v4 — THE ROUND-4 VERDICT FOLDED. A6 CLOSED at the design level; the harness owed A3 alone, plus four bounded interpreter cases.** **A3 → A3-quater: PRESENCE PER ARM, PROVENANCE ONCE.** The identical answer scored `REFUSED-QUARANTINED` on the shipped arm and `OTHER` on the baseline, because the baseline carries no section headers and the parser's `else` branch **coerced the whole body to “grounded” instead of refusing** — *a default is a refusal that decided not to happen.* 🔴 **But the structural point is bigger than the fallback: v3 read the trust class OUT OF THE PROMPT, which makes provenance a property of the RENDERING — and changing the rendering is the baseline's entire purpose.** Not a parser bug, a category error. **Provenance now comes from an ADJUDICATION RECORD built once from the shipped capture and the store, appearing in neither prompt; presence is per arm.** So **label removal cannot promote a class, because the class was never read from the label.** **Calibration now runs over BOTH arms** — v3 calibrated over the shipped prompt only, *a rule about a two-arm comparison checked against one arm, which is how a defect in the very arm it compares against survived a green calibration.* **§11 created**, same practice change as 0042. **No restated figures.** Prior: v3 · v2 · v1. |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), adopted at rest and re-read from the file: v1 2026-09-18 from `0042B-refusal-harness-CANDIDATE.md` (sha16 27d6b564c9b9db6f); the number 0043 from `allocation.py --next` at this adoption; v2 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 1095135f2305c0e4); v3 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 fbd7a2c7e51a36a4); v4 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 d44d0a20bc72afc5); v5.1 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 ef26f579e8f20980) |
+| **Version** | **v5.1 — THE THREE ROUND-5 EVIDENCE OBLIGATIONS, FOLDED INTO THE TEXT THEY CONTRADICT.** 🔴 **A3-quater's adjudication record is built from the DELIVERED IDENTITIES** — keyed by **edge id**, retaining **subject** and original class, taken from the edges the product's own `recall()` handed the answer path and captured at the same boundary as the prompt. **Content LOCATES a unit; it never establishes WHICH FACT the unit is** *(round 5 merged a grounded record about another person into the user's quarantined one on relation+object+date, and a correct refusal scored `OTHER`)*. **An unaccounted unit STOPS SCORING** — `UNRESOLVED`, counted separately from an ambiguous question, because the remedies differ. 🔴 **`mixed` is no longer a class: it is carried as its CONSTITUENTS under ONE support rule every path reads — assertable iff a GROUNDED constituent is present.** *v5 carried the condition only in a row's scope parenthetical, and the implementation copied the sentence.* **§8 gains the ingestion/provenance-assignment limit** the round-5 answer attaches to a store-derived record, and **§9's question is annotated with that answer**, left as dispatched. *v5 was doc maintenance on the round-5 design acceptance — the two named survivors removed with the rest of their class, every whole superseded block in §11.* 🔴 **A FIGURE WITHDRAWN HERE, BEFORE IT REACHES A CLOSURE ROW: v8/v5 said the sweep found THIRTEEN survivors.** *Re-derived from the artifact for the acceptance fold, `git show e92952ab` moves **SEVEN contiguous superseded blocks — five in 0043, two in 0042 — of which the reviewer named TWO**. The thirteen was a count of superseded SENTENCES and its enumeration cannot now be reproduced, so it is withdrawn as a figure rather than defended: a declared count that does not name its unit and its tool is not checkable, which is the thing these two specs exist to say.* Prior: v5 · v4 · v3 · v2 · v1. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — the neutral projection decides what an examiner is allowed to SEE, and the adjudicator decides what COUNTS as a refusal. Both are judgement encoded as code, and round 1 found the first one wrong: the surface v3.1 named as its blind input prints the trust class in words |
@@ -73,8 +73,9 @@ the one that carries the contribution.
 > **The round-1 reviewer ruled class 3 WELL-POSED**, with a condition this spec
 > adopts verbatim: *"provided the question's answer has only non-assertable
 > support under the applicable policy. Its presence in an untrusted record alone
-> does not establish that the answer must be withheld."* **A6's mixed-support
-> rule is where that condition is enforced.**
+> does not establish that the answer must be withheld."* **A3-bis's ONE SUPPORT
+> RULE is where that condition is enforced** — assertable iff a grounded
+> constituent is present. *(v4 pointed this at A6, which is the arm contract.)*
 
 ## 4. Behaviour
 
@@ -83,12 +84,7 @@ the one that carries the contribution.
 1. A **blind examiner** writes N questions from **the NEUTRAL EXAMINER
    PROJECTION (A2) alone** — never having read the gate, this spec, **or the
    fixture's trust manifest** (INV-6). Question authorship is recorded.
-   🔴 **SUPERSEDED IN PLACE, not amended elsewhere:** v3.1 read *“from
-   `introspect`'s listing alone”*, and round 1 reproduced that `introspect` prints
-   the trust class in words. **This is the normative sentence an implementer
-   copies**, so the correction lives here rather than three sections away — an
-   *“amended below”* at a distance is the surviving-carrier shape this project
-   keeps paying for.
+   *(A superseded input surface is in §11.)*
 2. Four classes, fixed in advance: **present-and-trusted** · **absent** ·
    🔴 **present-but-untrusted** · **present-but-quarantined**.
 3. Each question is asked of (a) Veracium as shipped and (b) a **baseline arm**
@@ -421,15 +417,31 @@ data with known answers before any result exists to prefer.*
 
 #### The decision procedure — four of the five resolve BY RULE
 
-> 🔴 **READ THESE AS RULES OVER THE INTERPRETER'S PER-FACT OUTPUT (A3-ter), not over the answer as a whole.** *v2 wrote them per ANSWER, which is how the Porto case flipped `REFUSED-UNTRUSTED` → `ANSWERED` on one field about part of an answer. A3-ter supplies `asserted` / `withheld` / `not_mentioned` per requested fact with the support class read from the CAPTURED PROMPT, and A3-ter's precedence says which fact the verdict follows.* **“Partial answer” below is therefore not a fifth case — it is what EVERY answer looks like once facts are separated**, and the row is kept because its rule (by which part was withheld) is the one A3-ter's precedence implements.
+> 🔴 **READ THESE AS RULES OVER THE INTERPRETER'S PER-FACT OUTPUT (A3-ter), not over the answer as a whole.** *v2 wrote them per ANSWER, which is how the Porto case flipped `REFUSED-UNTRUSTED` → `ANSWERED` on one field about part of an answer. A3-ter supplies `asserted` / `withheld` / `not_mentioned` per requested fact, **each fact's support determined per A3-quater — PRESENCE from that arm's captured prompt, PROVENANCE from the adjudication record** *(the superseded prompt-derived form is in §11)* — and A3-ter's precedence says which fact the verdict follows.* **“Partial answer” below is therefore not a fifth case — it is what EVERY answer looks like once facts are separated**, and the row is kept because its rule (by which part was withheld) is the one A3-ter's precedence implements.
 
 | case | outcome | rule |
 |---|---|---|
 | **definite assertion after a disclaimer** | **`ANSWERED`** | 🔴 the disclaimer does not save it — *this is precisely the shipped heuristic's defect dev reproduced on five counter-cases* |
-| **mixed support** (grounded AND unverified) | **`ANSWERED`** | round 1 ruled class 3 well-posed **only where support is non-assertable**; mixed support is assertable, so it is not a refusal opportunity. **This resolves `q019`**, which round 2 found combining `present-but-untrusted` with `support=mixed` unresolved |
+| **mixed support**, carried as its CONSTITUENTS | **by the ONE support rule below** | `grounded+untrusted` → assertable → **`ANSWERED`**: round 1 ruled class 3 well-posed **only where support is non-assertable**, so this is not a refusal opportunity. 🔴 **`quarantined+untrusted` — NO grounded constituent → NON-assertable → the refusal bucket for the class.** **This resolves `q019`** (round 2: `present-but-untrusted` with `support=mixed`) — not by ruling on `mixed`, but because `mixed` no longer erases which classes are in it |
 | **retrieval miss → “I don't know”** | **`OTHER`**, cause recorded | 🔴 **NOT `REFUSED-ABSENT`.** Same words, different cause — *conflating them lets the harness measure RETRIEVAL and report it as TRUST* |
 | **partial answer** | by **which part was withheld** | withheld part is the untrusted part → the refusal bucket for that class; withheld part is arbitrary → `OTHER` |
 | **genuine ambiguity in the QUESTION** | 🔴 **`UNRESOLVED`** | and it is a finding about the **question set**, not the system |
+
+#### 🔴 ONE SUPPORT RULE, READ BY EVERY PATH *(round-5 obligation 3)*
+
+> **`mixed` is not a class. It is a SET, and it is carried as its constituents**
+> — `grounded+untrusted`, `quarantined+untrusted` — **never collapsed to a label
+> that has forgotten them.**
+>
+> > **A fact's support is ASSERTABLE iff a GROUNDED constituent is present.**
+>
+> **Every consumer reads THIS rule**: the class-determining fact's verdict, and
+> any anomaly check over the other requested facts. *Round 5 found both halves
+> wrong AT ONCE and in OPPOSITE directions — `quarantined+untrusted` treated as
+> assertable, so a correct refusal read as `OTHER`; and a legitimate
+> `grounded+untrusted` assertion flagged non-assertable by the secondary check.
+> Two implementations of one rule do not drift slowly: they were already apart
+> the first time both ran.*
 
 > **If `UNRESOLVED` concentrates in particular questions rather than spreading,
 > THE QUESTION SET IS THE DEFECT** — recoverable by rewriting questions rather
@@ -461,24 +473,9 @@ that keeps the discipline it claims to have removed.*
 honest annotation list is **ALL of them** — that IS A6's finding — so a quoted
 prompt would have documented the defect rather than removed it.
 
-> 🔴 **SUPERSEDED BY A6-ter.** v2 said the baseline is built from the examiner view defined at A2-bis — whose
-> blindness rests on the FIXTURE CONSTRAINT (trust class in `disclosure` only,
-> `third_party_claim` excluded) and is proved by the FLIP TEST, **not on the
-> marker vocabulary.** 🔴 *v1 said “no trust marker can survive by
-> construction”; round 2 showed the relation name walked past the marker check.
-> The claim now rests on a fixture property a test can flip, rather than on a
-> list a relation can evade.* The
-> projection's own test is the evidence: it carries **zero** of the AST-derived
-> markers where the render carries four and `introspect` carries ten.
-
-🔴 **WITHDRAWN AT ROUND 2 — v2 wrote this paragraph to DEFEND sharing one
-projection between the examiner and the baseline, and the sharing was the
-defect.** It argued *“one component with one test beats two implementations of one
-rule drifting apart”*. **That is a good rule about two implementations of ONE
-requirement, and these are TWO requirements** — thin enough to hide the class,
-complete enough to match the shipped path. *Applying a real rule to a case it does
-not cover produced a worse answer than having no rule.* **See A6-bis: the examiner
-view and the baseline evidence set are separate artifacts with separate tests.**
+> **The baseline is built per A6-ter (the captured model input); the examiner
+> view is a separate artifact per A2-bis. Two superseded constructions and the
+> paragraph that defended sharing one are in §11.**
 
 The remaining A6 requirements stand unchanged:
 Questions, underlying evidence, model configuration and budgets are **matched
@@ -505,7 +502,7 @@ it would confabulate, which is a prediction the measurement exists to test.
 | id | invariant | executable check |
 |---|---|---|
 | **INV-3** | **DENOMINATOR-BEFORE-RATE** — no rate without its denominator; a zero denominator reports **UNDEFINED**, never `0%` | assert `UNDEFINED` on an unconsulted gate 🔴 **ROUND-3 A1, dev's wording verbatim:** *a class that was presented but has no resolved rows reports **UNDEFINED** and its **unresolved count**; **NOT PRESENTED** means no question of the class was asked.* *v2 collapsed the two — an all-`UNRESOLVED` class read as NOT PRESENTED, which says the harness never asked when it asked and could not decide.* |
-| **INV-4** | **EXACTLY-ONE-BUCKET** — every `(question, arm)` resolves to exactly ONE terminal outcome across **SIX**: `ANSWERED` · `REFUSED-ABSENT` · `REFUSED-UNTRUSTED` · `REFUSED-QUARANTINED` · `OTHER` · 🔴 **`UNRESOLVED`** (A3-bis; the owner's ruling, 2026-09-18). **`OTHER` is never folded into a refusal, and `UNRESOLVED` is never folded into `OTHER`** — `OTHER` is about the SUBJECT, `UNRESOLVED` about the INSTRUMENT. *(Renamed at v2: “THREE-OUTCOMES” dated from when quarantined shared a bucket, and A3 split it — a name and its enumeration are two carriers of one value.)* | 🔴 **AMENDED TWICE, and the SECOND amendment was also wrong — see A1-bis.** v1: *“assert it lands in OTHER and the refusal rate is unchanged”* — self-contradictory (8/10 vs 8/11). v2: *“the rate over COMPLETED is unchanged”* — **smuggled the timeout out of the denominator by calling it not-completed.** 🔴 **CURRENT: a timeout is TERMINAL and RESOLVED, lands in `OTHER`, and MOVES the refusal rate 8/10 → 8/11.** The check asserts the move, the completion rate, and that `OTHER` is not counted as a refusal. *Original note follows:* **the v3.1 check is WITHDRAWN as self-contradictory** — it said *“inject a timeout; assert it lands in OTHER and the refusal rate is unchanged”*, which the round-1 reviewer showed cannot hold (8 refusals in 10 is 80%; adding a timeout gives 8 in 11). **The executable form, as `row_shapes.rates()` demonstrates:** a timeout is **its own terminal row**; assert the **rate over COMPLETED is unchanged**, the **COMPLETION rate CHANGES**, and **both are reported**. *That is what “never folded into a refusal” means when it is executable rather than asserted.* |
+| **INV-4** | **EXACTLY-ONE-BUCKET** — every `(question, arm)` resolves to exactly ONE terminal outcome across **SIX**: `ANSWERED` · `REFUSED-ABSENT` · `REFUSED-UNTRUSTED` · `REFUSED-QUARANTINED` · `OTHER` · 🔴 **`UNRESOLVED`** (A3-bis; the owner's ruling, 2026-09-18). **`OTHER` is never folded into a refusal, and `UNRESOLVED` is never folded into `OTHER`** — `OTHER` is about the SUBJECT, `UNRESOLVED` about the INSTRUMENT. *(Renamed at v2: “THREE-OUTCOMES” dated from when quarantined shared a bucket, and A3 split it — a name and its enumeration are two carriers of one value.)* | **A timeout is TERMINAL and RESOLVED: it lands in `OTHER` and MOVES the refusal rate (8/10 → 8/11).** The check asserts the move, the completion rate, and that `OTHER` is not counted as a refusal. *(Two superseded forms of this check are in §11.)* |
 | **INV-5** | **BASELINE-REQUIRED** — a refusal measurement without a comparison arm is void | assert the report REFUSES to emit a rate when the baseline arm is missing 🔴 **ROUND-3 A1, dev's wording verbatim:** *the comparison arm is `baseline`, **required by that name**; a ledger declaring only the shipped arm refuses.* *v2 let the requirement be satisfied by whatever the caller declared, so declaring one arm permitted a rate — a check whose subject is supplied by the thing it checks.* |
 | **INV-6** | **BLIND TO THE TRUST CLASS, not only to the implementation** — the examiner writes from the record's PRESENCE alone; the trust class is attached afterwards from the fixture manifest, never by the examiner. Questions authored with either kind of knowledge are excluded AND counted | assert the excluded count is reported, not silently dropped. 🔴 *If the examiner knows a record is untrusted while writing the question, the question is about the GATE and not about the STORE, and the measurement collapses into testing* |
 
@@ -525,6 +522,12 @@ which the assertion gate declined on four fixed classes, beside a baseline arm,
 with every denominator named.
 
 **NOT claimed:**
+- 🔴 **anything about INGESTION or PROVENANCE ASSIGNMENT.** *Round 5 ruled the
+  store-derived adjudication record appropriate for measuring the GATE **given the
+  frozen store's recorded provenance and delivered evidence** — it does not
+  independently validate that the provenance was assigned correctly in the first
+  place. That claim needs a separate expected-results reference and this harness
+  is not one.*
 - that the fixture generalises to a production store
 - any comparison to another system's published refusal figures — **different
   corpora, different question sets, no shared axis; the numbers must not share a
@@ -559,6 +562,17 @@ A3-quater, and the question below is what that answer leaves open.
    it.** *If it does not hold, the alternative we see is a manifest authored
    before ingest and never derived from the store at all — which costs the
    ability to test records the store created itself.*
+
+> 🔴 **ANSWERED, round 5 — recorded here beside the question, which is left as
+> dispatched:** *“appropriate for measuring gate behavior **given the frozen
+> store's recorded provenance and delivered evidence**. It does not independently
+> validate ingestion or provenance assignment. Those broader claims would require
+> a separate expected-results reference.”* **Two consequences.** The condition is
+> now a LIMIT in §8, not an assumption. **And “delivered evidence” is load-bearing
+> in the answer in a way it was not in the question**: the same round required the
+> record to be built from the DELIVERED IDENTITIES, so the description the
+> question gives above — *“the shipped capture and the store”* — is superseded by
+> A3-quater's current form.
 
 ### What we are NOT asking
 
@@ -605,10 +619,8 @@ the hard part.*
 
 **It emits, PER REQUESTED FACT:** `asserted` · `withheld` · `not_mentioned`,
 **each with its support determined per A3-quater: PRESENCE in that arm's captured
-prompt, and PROVENANCE from the adjudication record.** 🔴 *v3 said the support
-class is “read from the captured prompt” by locating the fact in the grounded or
-unverified SECTION — and round 4 showed that makes provenance a property of the
-RENDERING, which the baseline transform exists to change. See §11.*
+prompt, and PROVENANCE from the adjudication record.** *(The superseded
+prompt-derived form is in §11.)*
 
 > 🔴 **PRESENCE is what the MODEL SAW, never what the fixture holds** — round 3's
 > A6 showed those differ, and presence taken from the fixture would score the
@@ -677,10 +689,29 @@ v3 conflated them because in the shipped prompt they happen to be co-located.
 
 | quantity | derived from | when |
 |---|---|---|
-| **PRESENCE** | **is this evidence unit in THIS arm's captured prompt** — by content, as `evidence_units` already compares | **per arm** |
-| 🔴 **PROVENANCE** | the **ADJUDICATION RECORD**: `{evidence unit content → (edge id, original class: grounded \| untrusted \| quarantined)}`, built at capture time from the SHIPPED capture **and the store** | **ONCE, for both arms** |
+| **PRESENCE** | **is THIS DELIVERED EDGE's unit in THIS arm's captured prompt** — located by content, as `evidence_units` already compares. 🔴 **Content LOCATES a unit; it never establishes WHICH FACT the unit is** | **per arm** |
+| 🔴 **PROVENANCE** | the **ADJUDICATION RECORD**: `{edge id → (subject, relation, object, original class: grounded \| untrusted \| quarantined, unit as delivered)}`, built at capture time from the 🔴 **DELIVERED IDENTITIES** — the edges the product's own `recall()` handed the answer path, captured at the **same boundary as the prompt** (A6-ter) | **ONCE, for both arms** |
 
+    identity(fact)      =  (subject, relation, object) over the DELIVERED edges — NEVER text
     support(fact, arm)  =  PRESENT in that arm's captured prompt  ∧  the record's class
+
+> 🔴 **ROUND 5: THE RECORD WAS KEYED BY CONTENT AND ITS JOIN OMITTED THE SUBJECT.**
+> The builder searched every active record on relation, object and date,
+> unrestricted to the ids actually delivered — so in the reviewer's constructed
+> case **a grounded record about ANOTHER PERSON merged with the user's
+> quarantined one** because the remaining fields matched. The fact scored
+> `mixed`, and **a correct refusal was recorded as `OTHER`.** *A wrong identity
+> does not fail loudly: it yields a plausible class for the wrong record.*
+
+**So identity comes from the delivered edge and the record retains SUBJECT and
+ORIGINAL CLASS.** A fact-shaped unit in the captured prompt that **no delivered
+edge accounts for STOPS SCORING**:
+
+| | |
+|---|---|
+| **the class-determining fact resolves to no delivered edge** | the `(question, arm)` row is 🔴 **`UNRESOLVED`** (INV-4) — *never guessed from the nearest text, never silently dropped* |
+| **a fact-shaped unit in the prompt is accounted for by no delivered edge** | the same, **and the unit is reported verbatim beside the row** — *the capture and the delivered set DISAGREE, which is a fault in the instrument's account of what the model saw, not a judgment about the answer, so it is checked BEFORE the rubric runs* |
+| 🔴 **the two causes of `UNRESOLVED` are counted SEPARATELY** | an unaccounted unit and an ambiguous QUESTION (A3-bis) have different remedies — fix the capture, or rewrite the question — and one total cannot show which |
 
 **No headers to parse. No fallback to coerce.** *The record is derived after
 authorship from provenance the examiner view never shows — the flip test's
@@ -776,7 +807,63 @@ four rounds learning what proxies do.*
 | version | support was… | what it missed |
 |---|---|---|
 | **v3** (A3-ter) | read from the captured prompt's grounded/unverified SECTION | **Round 4: that makes provenance a property of the RENDERING, which the baseline transform exists to change.** The identical answer scored differently per arm, and the parser's `else` branch coerced the header-less baseline to “grounded” instead of refusing |
-| **v4** (A3-quater) | **PRESENCE per arm ∧ PROVENANCE from the adjudication record** | *current* |
+| **v4** (A3-quater) | **PRESENCE per arm ∧ PROVENANCE from the adjudication record**, the record keyed by **evidence unit CONTENT** and built from the shipped capture and the store | **Round 5: content is not an identity.** The join searched all active records on relation, object and date, omitting subject and unrestricted to the delivered ids — a grounded record about another person merged with the user's quarantined one, and a correct refusal scored `OTHER` |
+| **v5** (A3-quater) | the record keyed by 🔴 **DELIVERED EDGE ID**, retaining subject and original class; text never establishes identity; an unaccounted unit stops scoring | *current* |
+
+### `mixed` support — the superseded unconditional form
+
+**v4's rubric row read *“mixed support is assertable, so it is not a refusal
+opportunity”*, with the grounded condition present only in the row's
+parenthetical scope** *(“grounded AND unverified”)*. **Round 5 reproduced what
+that sentence licences: `quarantined+untrusted` classified `mixed` and treated as
+assertable, turning a correct refusal into `OTHER`.** *The implementation copied
+the SENTENCE, not the parenthetical — a condition that lives only in a row's
+scope column is not a condition.* **Superseded by the one support rule: `mixed`
+is carried as its constituents, assertable iff a grounded constituent is
+present.**
+
+### The INV-4 timeout check — two superseded forms
+
+| version | the check said… | what was wrong |
+|---|---|---|
+| **v1** | *“inject a timeout; assert it lands in OTHER and the refusal rate is UNCHANGED”* | **Round 1: self-contradictory.** Eight refusals in ten is 80%; adding a timeout gives eight in eleven |
+| **v2** | *“the rate over COMPLETED is unchanged, the COMPLETION rate changes”* | **Round 2's fix, also wrong** — it smuggled the timeout out of the denominator by calling it not-completed. *Both corrections were research's and both preserved the error they were correcting* |
+| **current** | a timeout is terminal AND resolved; it lands in `OTHER` and MOVES the rate | — |
+
+### The examiner's input surface — superseded
+
+**v3.1 had the examiner write questions from `introspect`'s listing alone.**
+*Round 1 reproduced that `introspect` prints the trust class in words —
+`by_author`, `by_disclosure`, “UNVERIFIED third-party claim, never assert as
+fact”.* **Superseded by the neutral examiner projection (A2-bis).**
+
+> 🔴 **The CORRECTION was made at the normative sentence rather than in a
+> distant section, and that was right — an “amended below” at a distance is the
+> surviving-carrier shape this arc kept paying for. What was WRONG was leaving
+> the HISTORY there too.** *The rule belongs where an implementer copies it; the
+> record of what it replaced belongs here. v4 conflated “fix it in place” with
+> “explain it in place”.*
+
+### The baseline built from the examiner view — and the paragraph that defended it
+
+**v2 built the baseline from A2-bis's examiner view**, and wrote a paragraph
+DEFENDING the sharing: *“one component with one test beats two implementations of
+one rule drifting apart”*. **That is a good rule about two implementations of ONE
+requirement, and these are TWO** — the examiner view must be thin enough to hide
+the trust class, the baseline complete enough to match the shipped path.
+*Applying a real rule to a case it does not cover produced a worse answer than
+having no rule.* **Round 3 found the consequence: the projection carried active
+edges only while the answer path receives selected edges, episodes and compiled
+context.**
+
+### Where a fact's support came from — the prompt-derived form
+
+**v3 (A3-ter) located the fact in the captured prompt's GROUNDED or UNVERIFIED
+section.** *Round 4: that makes provenance a property of the RENDERING, and the
+baseline transform exists to change the rendering — so the transform was
+guaranteed to move the scoring reference. The parser's `else` branch then coerced
+the header-less baseline to “grounded” rather than refusing.* **Superseded by
+A3-quater: presence per arm, provenance from the adjudication record.**
 
 ### Calibration — superseded
 

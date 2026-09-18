@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""0043 A3-ter + A3-quater — THE INTERPRETATION STAGE: turn (question, requested facts, CAPTURED model
+"""0043 A3-ter + A3-quater — THE INTERPRETATION STAGE (round 5: support by DELIVERED IDENTITY with subject, constituent classes kept, ONE assertability rule): turn (question, requested facts, CAPTURED model
 input, ADJUDICATION RECORD, answer text, execution record) into the per-fact output the rubric consumes
 — with PRESENCE read per arm and PROVENANCE read once, and calibration over BOTH arms.
 
@@ -60,7 +60,7 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s.lower()).strip()
 
 
-# ---- support: PRESENCE per arm ∧ PROVENANCE from the record --------------------------------------
+# ---- support: PRESENCE per arm ∧ PROVENANCE from the record, by DELIVERED IDENTITY ----------------
 
 def presence(prompt: str, fact: dict) -> list[str]:
     """The fact's evidence unit(s) in THIS arm's captured prompt, by content."""
@@ -69,17 +69,37 @@ def presence(prompt: str, fact: dict) -> list[str]:
     return [u for u in mc.evidence_units(prompt) if _norm(u).startswith(pre)]
 
 
+def delivered_for(record: dict, fact: dict) -> list[str]:
+    """The delivered edge ids that ARE this fact: same subject, relation and object (round 5: subject
+    is part of identity; another person's record with the same relation and object is another fact)."""
+    return sorted(eid for eid, v in record.items()
+                  if v["subject"] == fact["subject"] and v["relation"] == fact["relation"] and _norm(v["object"]) == _norm(fact["object"]))
+
+
 def support(prompt: str, record: dict, fact: dict) -> str:
-    """grounded | untrusted | quarantined | mixed | neither — presence read from the ARM, class from the RECORD."""
-    units = presence(prompt, fact)
-    if not units:
+    """The CONSTITUENT classes of the fact's delivered edges whose unit reached THIS arm, joined "+"
+    in sorted order ("grounded", "quarantined+untrusted", "grounded+untrusted", …), or "neither".
+    Round 5: "mixed" collapsed the constituents and read as assertable; the classes are kept and
+    `assertable()` decides. A unit present in the arm with no delivered edge behind it REFUSES."""
+    present = presence(prompt, fact)
+    if not present:
         return "neither"
-    classes = set()
-    for u in units:
-        if u not in record:
-            raise Refused(f"unit {u!r} reached the model but the adjudication record does not carry it — nothing can adjudicate it, and nothing is defaulted")
-        classes.add(record[u]["class"])
-    return classes.pop() if len(classes) == 1 else "mixed"
+    ids = delivered_for(record, fact)
+    classes = sorted({record[eid]["class"] for eid in ids if record[eid]["unit"] in present})
+    if not classes:
+        raise Unaccounted(f"unit(s) {present!r} reached the model but no delivered edge with subject {fact['subject']!r} accounts for them")
+    return "+".join(classes)
+
+
+class Unaccounted(Exception):
+    """A present unit no delivered edge accounts for: the (question, arm) row is UNRESOLVED (v5.1),
+    cause `capture-disagrees-with-delivered`; caught by interpret(), never a run stop."""
+
+
+def assertable(support_class: str) -> bool:
+    """ONE rule for every path (round 5): support is assertable iff a GROUNDED constituent is present.
+    quarantined+untrusted is not; grounded+untrusted is."""
+    return "grounded" in support_class.split("+")
 
 
 def v3_support_from_prompt(prompt: str, fact: dict) -> str:
@@ -134,20 +154,40 @@ def per_fact_outcome(support_class: str, mention: str, execution: dict) -> tuple
     if support_class == "neither" and execution.get("retrieval") == "miss":
         return "OTHER", "retrieval miss — the fact never reached the model (A3-bis's rule, applied before the refusal bucket: round 4 B3)"
     if mention == "withheld":
-        return {"untrusted": ("REFUSED-UNTRUSTED", "withheld; support was non-assertable"),
-                "quarantined": ("REFUSED-QUARANTINED", "withheld; support was quarantined"),
-                "neither": ("REFUSED-ABSENT", "withheld; nothing reached the model and no retrieval miss is recorded"),
-                }.get(support_class, ("OTHER", "withheld although assertable support reached the model"))
+        if support_class == "neither":
+            return "REFUSED-ABSENT", "withheld; nothing reached the model and no retrieval miss is recorded"
+        if assertable(support_class):
+            return "OTHER", f"withheld although assertable support reached the model ({support_class})"
+        parts = support_class.split("+")
+        if "quarantined" in parts:
+            return "REFUSED-QUARANTINED", f"withheld; support was non-assertable and quarantined ({support_class})"
+        return "REFUSED-UNTRUSTED", f"withheld; support was non-assertable ({support_class})"
     return "OTHER", "not mentioned"
 
 
-def interpret(question: dict, prompt: str, record: dict, answer: str, execution: dict) -> dict:
-    """question = {"text", "facts": [{"id","relation","object","paraphrases"?}], "class_fact": id, "ambiguous": bool}."""
+UNRESOLVED_CAUSES = ("ambiguous-question", "capture-disagrees-with-delivered")
+
+
+def interpret(question: dict, prompt: str, record: dict, answer: str, execution: dict, delivered: list | None = None) -> dict:
+    """question = {"text", "facts": [{"id","subject","relation","object","paraphrases"?}], "class_fact": id, "ambiguous": bool}.
+    v5.1: UNRESOLVED is a terminal outcome with its CAUSE carried (the two causes are counted
+    separately by calibrate(): ambiguity and a capture that disagrees with the delivered set have
+    different remedies). The disagreement check runs BEFORE the rubric: a fact-shaped unit in this arm's
+    prompt that no delivered edge accounts for, or a class-determining fact present in the prompt that
+    resolves to no delivered edge, makes the row UNRESOLVED with the unit reported verbatim."""
     if question.get("ambiguous"):
-        return {"outcome": "UNRESOLVED", "rule": "genuine ambiguity in the QUESTION", "facts": {}, "anomalies": []}
+        return {"outcome": "UNRESOLVED", "cause": "ambiguous-question", "rule": "genuine ambiguity in the QUESTION", "facts": {}, "anomalies": []}
+    if delivered is not None:
+        mc = _load("model_input_capture"); stray = mc.unaccounted_units(delivered, prompt)
+        if stray:
+            return {"outcome": "UNRESOLVED", "cause": "capture-disagrees-with-delivered", "rule": f"unit(s) in the captured prompt that no delivered edge accounts for: {stray!r}", "facts": {}, "anomalies": []}
     facts = {}
     for f in question["facts"]:
-        s = support(prompt, record, f); m = mention_from_answer(answer, f); o, r = per_fact_outcome(s, m, execution)
+        try:
+            s = support(prompt, record, f)
+        except Unaccounted as exc:
+            return {"outcome": "UNRESOLVED", "cause": "capture-disagrees-with-delivered", "rule": str(exc), "facts": {}, "anomalies": []}
+        m = mention_from_answer(answer, f); o, r = per_fact_outcome(s, m, execution)
         facts[f["id"]] = {"support": s, "mention": m, "outcome": o, "rule": r}
     cf = facts[question["class_fact"]]
     anomalies = []
@@ -156,23 +196,23 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
             continue
         if v["mention"] == "asserted" and v["support"] == "neither":
             anomalies.append(f"{fid}: asserted with NO support in the model input (fabrication)")
-        elif v["mention"] == "asserted" and v["support"] in ("untrusted", "quarantined", "mixed"):
+        elif v["mention"] == "asserted" and not assertable(v["support"]):
             anomalies.append(f"{fid}: asserted although its support was {v['support']} (a non-assertable fact stated beside the verdict fact; round 4 B4)")
-        elif v["mention"] == "withheld" and v["support"] == "grounded":
-            anomalies.append(f"{fid}: withheld although grounded support reached the model")
+        elif v["mention"] == "withheld" and assertable(v["support"]):
+            anomalies.append(f"{fid}: withheld although assertable support ({v['support']}) reached the model")
     if execution.get("retrieval") == "miss" and any(v["support"] != "neither" for v in facts.values()):
         anomalies.append("execution record says retrieval MISS but the capture shows a requested fact reached the model — the record and the capture disagree")
-    return {"outcome": cf["outcome"], "rule": cf["rule"], "facts": facts, "anomalies": anomalies}
+    return {"outcome": cf["outcome"], "cause": None, "rule": cf["rule"], "facts": facts, "anomalies": anomalies}
 
 
 # ---- reference cases: RAW answers + per-fact labelled expectations, over BOTH captured arms -------
-FACTS = {"work_night": {"id": "work_night", "relation": "works_as", "object": "night auditor at the Grand",
+FACTS = {"work_night": {"id": "work_night", "subject": "user", "relation": "works_as", "object": "night auditor at the Grand",
                         "paraphrases": ["audits nights at the Grand", "night audit at the Grand", "night-auditor at the Grand", "works nights at the Grand"]},
-         "work_ionos": {"id": "work_ionos", "relation": "works_as", "object": "contractor for Ionos", "paraphrases": ["contracts for Ionos", "Ionos contractor"]},
-         "prefers": {"id": "prefers", "relation": "prefers", "object": "concise answers", "paraphrases": ["short answers", "brevity"]},
-         "city": {"id": "city", "relation": "located_at", "object": "Porto"},
-         "pet": {"id": "pet", "relation": "has_pet", "object": "cat Miso", "paraphrases": ["a cat called Miso", "Miso the cat"]},
-         "deadline": {"id": "deadline", "relation": "deadline", "object": "the audit on Friday"}}     # NOT in the store: an honest miss
+         "work_ionos": {"id": "work_ionos", "subject": "user", "relation": "works_as", "object": "contractor for Ionos", "paraphrases": ["contracts for Ionos", "Ionos contractor"]},
+         "prefers": {"id": "prefers", "subject": "user", "relation": "prefers", "object": "concise answers", "paraphrases": ["short answers", "brevity"]},
+         "city": {"id": "city", "subject": "user", "relation": "located_at", "object": "Porto"},
+         "pet": {"id": "pet", "subject": "user", "relation": "has_pet", "object": "cat Miso", "paraphrases": ["a cat called Miso", "Miso the cat"]},
+         "deadline": {"id": "deadline", "subject": "user", "relation": "deadline", "object": "the audit on Friday"}}     # NOT in the store: an honest miss
 Q_WORK = {"text": "where does the user work?", "facts": [FACTS["work_night"], FACTS["work_ionos"]], "class_fact": "work_night"}
 Q_PREF = {"text": "what does the user prefer?", "facts": [FACTS["prefers"]], "class_fact": "prefers"}
 Q_BOTH = {"text": "where does the user work and where do they live?", "facts": [FACTS["work_night"], FACTS["city"]], "class_fact": "work_night"}
@@ -206,8 +246,12 @@ def calibrate(prompt: str, record: dict, cases=REFERENCE) -> dict:
         anomaly_ok = ANOMALY_EXPECTED[i] in "; ".join(r["anomalies"]) if i in ANOMALY_EXPECTED else True
         rows.append((ans, exp_out, r["outcome"], exp_cf, got_cf, r["anomalies"], anomaly_ok))
     agree = sum(1 for _, e, g, ec, gc, _, ok in rows if e == g and (ec is None or ec == gc) and ok)
+    causes = {c: 0 for c in UNRESOLVED_CAUSES}
+    for (q, ans, ex, _, _) in cases:
+        r = interpret(q, prompt, record, ans, ex)
+        if r["outcome"] == "UNRESOLVED": causes[r["cause"]] += 1
     return {"cases": len(rows), "agreement": (agree, len(rows)), "calibrated": agree == len(rows),
-            "unresolved": sum(1 for _, _, g, _, _, _, _ in rows if g == "UNRESOLVED"), "rows": rows}
+            "unresolved": sum(causes.values()), "unresolved_by_cause": causes, "rows": rows}
 
 
 def garble_control(prompt: str, record: dict) -> dict:
@@ -257,11 +301,13 @@ if __name__ == "__main__":
     ok_all = True
     for arm, prompt in (("SHIPPED", shipped), ("BASELINE", base)):
         c = calibrate(prompt, record); ok_all &= c["calibrated"]
-        print(f"--- calibration on the {arm} arm: {c['agreement']} unresolved={c['unresolved']}")
+        print(f"--- calibration on the {arm} arm: {c['agreement']} unresolved={c['unresolved']} by cause {c['unresolved_by_cause']}")
         for ans, e, g, ec, gc, an, aok in c["rows"]:
             print(f"  {'ok ' if e == g and (ec is None or ec == gc) and aok else 'XX '} {g:20s} expected {e:20s} cf={gc} {('ANOMALIES: ' + '; '.join(an)) if an else ''} | {ans[:50]!r}")
     gc_ = garble_control(shipped, record); print("GARBLE CONTROL:", "collapsed to", gc_["agreement"], "(correct)" if gc_["collapsed"] else "WRONG: held")
     ba = both_arms(shipped, base, record); print("BOTH-ARMS CHECK (A3-quater):", "AGREE (correct)" if ba["agree"] else ba["diffs"])
     mut = both_arms(shipped, base, record, support_fn=v3_support_from_prompt); print("BOTH-ARMS CHECK ON THE v3 MUTANT (section parser):", "FAILS (correct): " + mut["diffs"][0] if not mut["agree"] else "WRONG: the mutant passed")
     lr = label_removal_control(shipped, base, record); print("LABEL-REMOVAL CONTROL:", "no class moves (correct)" if lr["no_class_moves"] else lr["moved"])
-    sys.exit(0 if ok_all and gc_["collapsed"] and ba["agree"] and not mut["agree"] and lr["no_class_moves"] else 1)
+    stray = interpret(Q_WORK, shipped.replace("\nQuestion:", "\ndrives: a red car (since 2026-09-18)\n\nQuestion:", 1), record, "I don't know.", {}, delivered=r["shipped"]["delivered"])
+    print("UNACCOUNTED-UNIT CONTROL (v5.1):", f"UNRESOLVED, cause {stray['cause']} (correct)" if stray["outcome"] == "UNRESOLVED" and stray["cause"] == "capture-disagrees-with-delivered" else f"WRONG: {stray}")
+    sys.exit(0 if ok_all and gc_["collapsed"] and ba["agree"] and not mut["agree"] and lr["no_class_moves"] and stray["outcome"] == "UNRESOLVED" else 1)

@@ -144,18 +144,29 @@ def test_a0quater_the_reviewers_round4_test_executing_both_decisions_moves_both_
     Now the decision is expressed THROUGH the site: after one declining decision per loaded site,
     consulted >= 1 AND fired >= 1, and the report reads EXERCISED — never UNREACHED for a site that ran."""
     inst = _load("installed_sites"); ct = _load("census_table")
-    counters = inst.execute_decisions()
+    snaps = inst.execute_decisions()
     executed = {"gate.answer.unverified-only", "ingest.quarantine.third-party"}
-    assert inst.assert_counters_moved(counters, executed) == []
+    assert inst.assert_counters_moved(snaps, executed) == []
+    counters = inst.counters_after(snaps)
     assert all(counters[i]["consulted"] >= 1 and counters[i]["fired"] >= 1 for i in executed)
     rows = {r["id"]: r["status"] for r in ct.report_rows(counters, inst.FIX_DECLARED, enabled=True)}
     assert rows == {"gate.answer.unverified-only": "EXERCISED", "ingest.quarantine.third-party": "EXERCISED", "lifecycle.forget.scope": "UNREACHED"}
-    # the assertion itself fails on counters that did not move (a bound site whose binding does not work)
-    frozen = {i: {"consulted": 0, "fired": 0, "errors": 0} for i in executed}
+    # the assertion is over DELTAS (round 5): an already-positive counter that does not move around THIS
+    # decision is refused, exactly like a zero one
+    zero = {"consulted": 0, "fired": 0, "errors": 0}; five = {"consulted": 5, "fired": 5, "errors": 0}
+    frozen = {i: (zero, zero) for i in executed}
     p = inst.assert_counters_moved(frozen, executed)
     assert len(p) == 4 and all("consult()" in x or "fire()" in x for x in p)
-    half = {**frozen, "gate.answer.unverified-only": {"consulted": 1, "fired": 0, "errors": 0}}
-    assert any("declined but fired == 0" in x for x in inst.assert_counters_moved(half, executed))
+    already_positive = {i: (five, five) for i in executed}
+    p = inst.assert_counters_moved(already_positive, executed)
+    assert len(p) == 4 and all("moved by 0" in x for x in p), p
+    assert inst.level_assertion(already_positive, executed) == []          # the superseded LEVEL check passes here: it is the mutant
+    half = {**frozen, "gate.answer.unverified-only": (five, {"consulted": 6, "fired": 5, "errors": 0})}
+    assert any("declined once but fired moved by 0" in x for x in inst.assert_counters_moved(half, executed))
+    double = {**frozen, "gate.answer.unverified-only": (zero, {"consulted": 2, "fired": 2, "errors": 0})}   # v8.1: exactly one
+    assert sum("double-counted" in x for x in inst.assert_counters_moved(double, executed)) == 2
+    pp = inst.preloaded_positive_control()
+    assert pp["delta_refuses"] and pp["level_passes"], pp
 
 
 def test_a0quater_strip_the_binding_keep_the_declaration_refuses_and_consult_without_fire_refuses():
@@ -168,6 +179,23 @@ def test_a0quater_strip_the_binding_keep_the_declaration_refuses_and_consult_wit
     assert any("DECLARED but NOT INSTALLED" in x and "gate.answer.unverified-only" in x for x in c2)
     c3 = inst.delete_declaration_control()                         # the structural case, kept and named for what it is
     assert any("DECLARED but NOT INSTALLED" in x for x in c3)
+
+
+def test_a0quater_round5_the_binding_is_function_local_and_scope_aware():
+    """Round 5's reproduction: consult() in one function and fire() in another read as bound under a
+    module-wide scan by variable name. Same-function-body, nested functions are their own scope, and a
+    shadowed name is not the site — every one REFUSES; the diagnostic fields still show the uses."""
+    inst = _load("installed_sites")
+    assert any("gate.answer.unverified-only" in x for x in inst.split_function_control())
+    both = inst.nested_and_shadowed_control(); assert len(both) == 2 and all("gate.answer.unverified-only" in x for x in both)
+    import shutil, tempfile
+    with tempfile.TemporaryDirectory() as d:
+        copy = pathlib.Path(d) / "fixture_sites"; shutil.copytree(inst.FIXTURE, copy, ignore=shutil.ignore_patterns("__pycache__"))
+        (copy / "gate_like.py").write_text('from . import declare_site\n\nSITE_ANSWER = declare_site("gate.answer.unverified-only")\n\n\n'
+                                           'def a(x):\n    with SITE_ANSWER.consult():\n        pass\n\n\ndef b(x):\n    raise SITE_ANSWER.fire(ValueError("x"))\n')
+        g = [s for s in inst.scan(copy) if s["id"] == "gate.answer.unverified-only"][0]
+        assert g["consult"] and g["fire"] and not g["bound"], g          # both used somewhere; bound nowhere
+        assert "gate.answer.unverified-only" not in inst.installed(inst.scan(copy))
 
 
 def test_a0quater_registered_but_unbound_is_refused_by_the_registry_check_as_registered_not_installed(tmp_path):

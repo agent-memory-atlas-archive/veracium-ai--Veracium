@@ -11,8 +11,9 @@ and the grounded rendering carries the COMPILED context when compilation is on.
   shipped arm   the captured (system, prompt), verbatim, frozen by digest
   baseline arm  the SAME captured prompt under a STATED TRANSFORM — every changed instruction is
                 named in CHANGED_INSTRUCTIONS and nothing else changes
-  record        the ADJUDICATION RECORD (A3-quater): unit content -> (edge id, original class), from the
-                STORE at capture time, once for both arms, in neither prompt
+  record        the ADJUDICATION RECORD (A3-quater, round 5): edge id -> (subject, relation, object, original
+                class, unit) for every edge the product's own recall DELIVERED to the answer path — captured
+                at the same boundary as the prompt, once for both arms, in neither prompt
   compared      the EVIDENCE UNITS each prompt carries, by CONTENT (fact lines, episode lines,
                 compiled-body lines) — never by heading
   controls      compilation ON (the captured prompt must carry the compiled body, or the fixture
@@ -59,13 +60,26 @@ def capture(db_path: str, question: str, *, max_subgraph_edges: int = 40) -> dic
     llm = CapturingLLM()
     mem = Memory(llm=llm, config=MemoryConfig(require_source_id=False, db_path=db_path, wiki_recompile_after_writes=1,
                                               max_subgraph_edges=max_subgraph_edges))
+    # round 5: the DELIVERED IDENTITIES. `Memory.answer` builds its prompt from the `Recall` its own
+    # `recall()` returns; the wrapper records that Recall (the product's selection, edge ids and all) —
+    # the identities are captured at the same boundary the prompt is, never re-derived from text.
+    recalls = []
+    orig_recall = mem.recall
+    def _recording_recall(*a, **k):
+        r = orig_recall(*a, **k); recalls.append(r); return r
+    mem.recall = _recording_recall
     mem.answer("u", question); mem.close()
     gate_calls = [c for c in llm.calls if c["role"] == "gate"]
     if len(gate_calls) != 1:
         raise RuntimeError(f"expected exactly one gate call at the boundary, saw {len(gate_calls)}")
+    if len(recalls) != 1:
+        raise RuntimeError(f"expected exactly one recall behind the gate call, saw {len(recalls)}")
     c = gate_calls[0]
     frozen = hashlib.sha256((c["system"] + "\n\x00\n" + c["prompt"]).encode()).hexdigest()
-    return {"system": c["system"], "prompt": c["prompt"], "digest": frozen,
+    delivered = [{"edge": e.id, "subject": e.subject, "relation": e.relation, "object": e.object,
+                  "class": edge_class(e), "unit": f"{e.relation}: {e.object} (since {e.valid_from.date()})"}
+                 for e in recalls[0].edges]
+    return {"system": c["system"], "prompt": c["prompt"], "digest": frozen, "delivered": delivered,
             "config": {"question": question, "max_subgraph_edges": max_subgraph_edges, "compilation": "on"}}
 
 
@@ -86,31 +100,22 @@ def fact_unit_prefix(relation: str, obj: str) -> str:
     return f"{relation}: {obj} (since "
 
 
-def adjudication_record(db_path: str, shipped_prompt: str, user_id: str = "u") -> dict:
-    """{evidence unit content -> {"edge": id, "class": grounded|untrusted|quarantined}} for every FACT
-    unit the SHIPPED capture carries, identified in the store by (relation, object). Built once, after
-    authorship, from provenance the examiner view never shows; it appears in NEITHER prompt. A fact-
-    shaped unit the store cannot identify REFUSES (a unit nobody can adjudicate is not scored by default)."""
-    from veracium.store.sqlite import SqliteStore
-    st = SqliteStore(db_path)
-    try:
-        edges = [e for e in st.edges(user_id, active_only=False, include_quarantined=True) if e.active]
-    finally:
-        st.close()
-    by_unit = {}
-    for e in edges:
-        by_unit.setdefault(f"{fact_unit_prefix(e.relation, e.object)}{e.valid_from.date()})", []).append(e)
-    record = {}
-    for u in evidence_units(shipped_prompt):
-        m = re.match(r"^(\S+): (.+) \(since \d{4}-\d{2}-\d{2}\)$", u)
-        if not m:
-            continue                                     # an episode or a compiled-body line: not a fact unit
-        es = by_unit.get(u, [])
-        if not es:
-            raise Refused(f"fact unit {u!r} is in the shipped capture but the store has no edge for it — nothing can adjudicate it")
-        classes = sorted({edge_class(e) for e in es})
-        record[u] = {"edge": ",".join(sorted(e.id for e in es)), "class": classes[0] if len(classes) == 1 else "mixed"}
-    return record
+def adjudication_record(delivered: list) -> dict:
+    """{edge id -> {"subject", "relation", "object", "class", "unit"}} for every DELIVERED edge — the
+    identities the product's own recall handed the answer path, with subject and original class kept.
+    Round 5: the earlier builder joined the prompt's text to ALL active records on (relation, object,
+    date) without subject and without restricting to the delivered ids, so another person's grounded
+    record merged into the user's quarantined unit. Text never establishes identity here."""
+    return {d["edge"]: {k: d[k] for k in ("subject", "relation", "object", "class", "unit")} for d in delivered}
+
+
+def unaccounted_units(delivered: list, prompt: str) -> list[str]:
+    """Fact-shaped units in a captured prompt that NO delivered edge accounts for — v5.1: such a unit
+    makes the (question, arm) row UNRESOLVED (the capture disagrees with the delivered set), checked
+    before the rubric runs and reported verbatim; it never defaults and never stops the run."""
+    delivered_units = {d["unit"] for d in delivered}
+    return [u for u in evidence_units(prompt)
+            if re.match(r"^(\S+): (.+) \(since \d{4}-\d{2}-\d{2}\)$", u) and u not in delivered_units]
 
 
 class Refused(Exception):
@@ -215,7 +220,7 @@ def run(question: str = "where does the user work and what do they prefer") -> d
     with tempfile.TemporaryDirectory() as d:
         st = ev.fixture_store(f"{d}/f.db"); st.close()
         shipped = capture(f"{d}/f.db", question)
-        record = adjudication_record(f"{d}/f.db", shipped["prompt"])
+        record = adjudication_record(shipped["delivered"])
     b_system, b_prompt = baseline_transform(shipped["system"], shipped["prompt"])
     baseline = {"system": b_system, "prompt": b_prompt, "digest": hashlib.sha256((b_system + "\n\x00\n" + b_prompt).encode()).hexdigest()}
     problems = check(shipped, baseline)
@@ -230,7 +235,7 @@ if __name__ == "__main__":
     print("--- captured shipped (prompt):"); print(r["shipped"]["prompt"])
     print("--- baseline (prompt):"); print(r["baseline"]["prompt"])
     print("--- evidence units (shipped):", evidence_units(r["shipped"]["prompt"]))
-    print("--- ADJUDICATION RECORD (from the store, once):"); [print(f"    {u!r}: {v}") for u, v in r["record"].items()]
+    print("--- ADJUDICATION RECORD (the DELIVERED identities, once):"); [print(f"    {eid}: {v}") for eid, v in r["record"].items()]
     print("CHANGED INSTRUCTIONS:"); [print("  -", c) for c in r["changed_instructions"]]
     print("ARM CHECK:", "PASS" if not r["problems"] else r["problems"])
     print("HEADING-WITHOUT-BODY CONTROL:", "REFUSES (correct)" if r["control_refuses"] else "WRONG: passed")

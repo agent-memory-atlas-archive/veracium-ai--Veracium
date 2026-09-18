@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""0042 Part A-0-quater — THE SITE BINDS THE DECISION: INSTALLED is derived from the code by two
+"""0042 Part A-0-quater — THE SITE BINDS THE DECISION (round 5: the binding is FUNCTION-LOCAL and scope-aware; the runtime assertion is over DELTAS): INSTALLED is derived from the code by two
 derivations that check each other, and the second is the reviewer's own round-4 test made an assertion.
 
   SCAN      a static AST pass: for every `NAME = declare_site("<id>")` at module level, the function
@@ -55,13 +55,54 @@ def _call_name(node: ast.Call):
     return f.id if isinstance(f, ast.Name) else (f.attr if isinstance(f, ast.Attribute) else None)
 
 
+def _binding_bodies(tree: ast.AST) -> dict:
+    """{NAME: set of (consult|fire) methods used on NAME INSIDE ONE FUNCTION BODY, unioned over bodies
+    that carry BOTH} — round 5: the scan had unioned uses across the whole module by variable name, so
+    consult() in one function and fire() in another read as bound. Each function (nested ones
+    included) is its own scope: a nested function's uses belong to the nested function, not to its
+    parent; a name assigned or bound as a parameter inside the body SHADOWS the module-level site, so
+    uses of it count for nothing."""
+    bound = {}
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        shadowed = {a.arg for a in fn.args.args + fn.args.kwonlyargs + fn.args.posonlyargs}
+        if fn.args.vararg: shadowed.add(fn.args.vararg.arg)
+        if fn.args.kwarg: shadowed.add(fn.args.kwarg.arg)
+        uses = {}
+        def visit(node):
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                    continue                                  # a nested scope is NOT this body
+                if isinstance(child, ast.Assign):
+                    for t in child.targets:
+                        for n in ast.walk(t):
+                            if isinstance(n, ast.Name): shadowed.add(n.id)
+                if isinstance(child, (ast.AnnAssign, ast.AugAssign)) and isinstance(child.target, ast.Name):
+                    shadowed.add(child.target.id)
+                if isinstance(child, (ast.For, ast.comprehension)) and isinstance(getattr(child, "target", None), ast.Name):
+                    shadowed.add(child.target.id)
+                if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute) and isinstance(child.func.value, ast.Name) \
+                        and child.func.attr in BINDING_METHODS:
+                    uses.setdefault(child.func.value.id, set()).add(child.func.attr)
+                visit(child)
+        visit(fn)
+        for name, methods in uses.items():
+            if name in shadowed:
+                continue
+            if set(BINDING_METHODS) <= methods:
+                bound.setdefault(name, set()).update(methods)
+    return bound
+
+
 def scan(root: pathlib.Path) -> list[dict]:
-    """Every `NAME = declare_site("<literal>")` under root, with the BINDING found for NAME in the
-    same module's function bodies: {id, module, qualname, line, name, consult, fire, bound}."""
+    """Every `NAME = declare_site("<literal>")` under root, with the BINDING found for NAME inside ONE
+    function body of the same module: {id, module, qualname, line, name, consult, fire, bound}.
+    `consult`/`fire` report whether ANY body uses the method (diagnostic); `bound` is true only when
+    ONE body carries both on the unshadowed module-level name."""
     out = []
     for p in sorted(root.rglob("*.py")):
         tree = ast.parse(p.read_text()); declared = []
-        # 1. declarations (any depth, so a declaration hidden in a body is still seen and still needs binding)
         stack = []
         def walk(node):
             for child in ast.iter_child_nodes(node):
@@ -73,25 +114,25 @@ def scan(root: pathlib.Path) -> list[dict]:
                                      "line": child.lineno, "name": None})
                 walk(child)
         walk(tree)
-        # the bound NAME: `NAME = declare_site(...)` (a call not assigned to a name can never be used)
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) and _call_name(node.value) == "declare_site" \
                     and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
                 for d in declared:
                     if d["line"] == node.value.lineno and d["name"] is None:
                         d["name"] = node.targets[0].id
-        # 2. binding: uses of NAME.consult( / NAME.fire( INSIDE a function body of this module
-        uses = {}
+        # diagnostic: any use anywhere in a function body (module-wide, the round-4 reading)
+        anywhere = {}
         for fn in ast.walk(tree):
             if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 for node in ast.walk(fn):
                     if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) \
                             and node.func.attr in BINDING_METHODS:
-                        uses.setdefault(node.func.value.id, set()).add(node.func.attr)
+                        anywhere.setdefault(node.func.value.id, set()).add(node.func.attr)
+        bound_names = _binding_bodies(tree)
         for d in declared:
-            u = uses.get(d["name"], set()) if d["name"] else set()
+            u = anywhere.get(d["name"], set()) if d["name"] else set()
             d["consult"], d["fire"] = "consult" in u, "fire" in u
-            d["bound"] = d["consult"] and d["fire"]
+            d["bound"] = bool(d["name"]) and d["name"] in bound_names      # ONE body, both methods, unshadowed
             out.append(d)
     return out
 
@@ -155,27 +196,75 @@ FIX_DECLARED = set(FIX_DISCOVERED)
 # ---- the RUNTIME derivation: the reviewer's round-4 test, as an assertion -----------------------
 
 def execute_decisions() -> dict:
-    """Run one DECLINING decision at each loaded fixture site and return the counters afterwards."""
+    """Run one DECLINING decision at each loaded fixture site and return {site: (before, after)} —
+    round 5: the assertion is over the DELTA around the particular decision; an already-positive
+    counter must not establish that a later decision was measured."""
     load_fixture(); pkg = importlib.import_module("fixture_sites"); pkg.reset_counters()
     g = importlib.import_module("fixture_sites.gate_like"); i = importlib.import_module("fixture_sites.ingest_like")
+    snaps = {}
+    before = pkg.counters().get("gate.answer.unverified-only")
     try:
         g.answer([], ["an unverified claim"]); raise AssertionError("the fixture gate did not decline")
     except ValueError:
         pass
+    snaps["gate.answer.unverified-only"] = (before, pkg.counters().get("gate.answer.unverified-only"))
+    before = pkg.counters().get("ingest.quarantine.third-party")
     assert i.admit({"author": "third_party"}) is False, "the fixture ingest did not quarantine"
-    return pkg.counters()
+    snaps["ingest.quarantine.third-party"] = (before, pkg.counters().get("ingest.quarantine.third-party"))
+    return snaps
 
 
-def assert_counters_moved(counters: dict, executed_ids: set[str]) -> list[str]:
-    """After a declining decision at each executed site: consulted ≥ 1 AND fired ≥ 1, or the binding
-    does not work whatever the scan says."""
+def assert_counters_moved(snapshots: dict, executed_ids: set[str]) -> list[str]:
+    """After ONE declining decision at each executed site: Δconsulted == 1 AND Δfired == 1 BETWEEN the
+    snapshot before that decision and the one after it (v8.1: exactly one, so a double-count refuses
+    too). A LEVEL (consulted >= 1) is the proxy the reviewer refused: an already-positive counter
+    proves nothing about this decision."""
     p = []
     for sid in sorted(executed_ids):
-        c = counters.get(sid)
-        if c is None: p.append(f"{sid}: executed but has NO counters — never registered"); continue
-        if c["consulted"] < 1: p.append(f"{sid}: executed but consulted == {c['consulted']} — the decision is not bracketed by consult()")
-        if c["fired"] < 1: p.append(f"{sid}: declined but fired == {c['fired']} — the decision is not expressed through fire()")
+        snap = snapshots.get(sid)
+        if snap is None or snap[1] is None: p.append(f"{sid}: executed but has NO counters — never registered"); continue
+        before, after = snap
+        b = before or {"consulted": 0, "fired": 0, "errors": 0}
+        dc, df = after["consulted"] - b["consulted"], after["fired"] - b["fired"]
+        if dc != 1: p.append(f"{sid}: executed once but consulted moved by {dc} — " + ("the decision is not bracketed by consult()" if dc < 1 else "double-counted"))
+        if df != 1: p.append(f"{sid}: declined once but fired moved by {df} — " + ("the decision is not expressed through fire()" if df < 1 else "double-counted"))
     return p
+
+
+def level_assertion(snapshots: dict, executed_ids: set[str]) -> list[str]:
+    """THE SUPERSEDED v8 RUNTIME LEG, kept as the mutant: a LEVEL check (consulted >= 1 and fired >= 1
+    after the decision). It passes on pre-loaded counters that never moved."""
+    p = []
+    for sid in sorted(executed_ids):
+        after = (snapshots.get(sid) or (None, None))[1]
+        if after is None or after["consulted"] < 1 or after["fired"] < 1:
+            p.append(f"{sid}: counters not positive")
+    return p
+
+
+def preloaded_positive_control() -> dict:
+    """v8.1's second control: counters PRE-LOADED positive, then a decision that never reaches the site
+    (the declaration kept, the raise unwrapped). The delta assertion REFUSES; the level assertion PASSES —
+    which is why the level assertion is the mutant, not the check."""
+    load_fixture(); pkg = importlib.import_module("fixture_sites"); pkg.reset_counters()
+    site = pkg._REGISTRY["gate.answer.unverified-only"]; site.consulted = site.fired = 5
+    before = pkg.counters()["gate.answer.unverified-only"]
+    def answer_unwrapped(grounded, unverified):          # the mutant decision: declares nothing, touches no counter
+        if not grounded and unverified:
+            raise ValueError("refuse: unverified-only support")
+        return "answer"
+    try:
+        answer_unwrapped([], ["claim"]); raise AssertionError("the mutant did not decline")
+    except ValueError:
+        pass
+    snaps = {"gate.answer.unverified-only": (before, pkg.counters()["gate.answer.unverified-only"])}
+    return {"delta_refuses": bool(assert_counters_moved(snaps, {"gate.answer.unverified-only"})),
+            "level_passes": not level_assertion(snaps, {"gate.answer.unverified-only"}), "snapshots": snaps}
+
+
+def counters_after(snapshots: dict) -> dict:
+    """The live counters after the decisions, in report_rows' shape."""
+    return {sid: after for sid, (_, after) in snapshots.items() if after is not None}
 
 
 # ---- controls ------------------------------------------------------------------------------------
@@ -208,6 +297,32 @@ def consult_without_fire_control() -> list[str]:
     return reconcile(FIX_DISCOVERED, FIX_REVIEWED, FIX_DECLARED, _mutated_copy(edit), set())
 
 
+def split_function_control() -> list[str]:
+    """Round 5's reproduction: consult() in ONE function and fire() in ANOTHER — a module-wide scan by
+    variable name read it as bound. Same-function-body → not bound → REFUSE."""
+    def edit(copy):
+        g = copy / "gate_like.py"
+        g.write_text('from . import declare_site\n\nSITE_ANSWER = declare_site("gate.answer.unverified-only")\n\n\n'
+                     'def consult_only(grounded, unverified):\n    with SITE_ANSWER.consult():\n        pass\n    return "answer"\n\n\n'
+                     'def answer(grounded, unverified):\n    if not grounded and unverified:\n        raise SITE_ANSWER.fire(ValueError("refuse: unverified-only support"))\n    return "answer"\n')
+    return reconcile(FIX_DISCOVERED, FIX_REVIEWED, FIX_DECLARED, _mutated_copy(edit), set())
+
+
+def nested_and_shadowed_control() -> list[str]:
+    """Two more scope mutants: (a) consult() in the body and fire() only inside a NESTED function;
+    (b) both methods on a LOCAL name that shadows the module-level site. Both → not bound → REFUSE."""
+    def nested(copy):
+        g = copy / "gate_like.py"
+        g.write_text('from . import declare_site\n\nSITE_ANSWER = declare_site("gate.answer.unverified-only")\n\n\n'
+                     'def answer(grounded, unverified):\n    with SITE_ANSWER.consult():\n        def inner():\n            raise SITE_ANSWER.fire(ValueError("refuse"))\n        if not grounded and unverified:\n            inner()\n    return "answer"\n')
+    def shadowed(copy):
+        g = copy / "gate_like.py"
+        g.write_text('from . import declare_site\n\nSITE_ANSWER = declare_site("gate.answer.unverified-only")\n\n\n'
+                     'def answer(grounded, unverified, SITE_ANSWER=None):\n    with SITE_ANSWER.consult():\n        if not grounded and unverified:\n            raise SITE_ANSWER.fire(ValueError("refuse"))\n    return "answer"\n')
+    return reconcile(FIX_DISCOVERED, FIX_REVIEWED, FIX_DECLARED, _mutated_copy(nested), set()) + \
+           reconcile(FIX_DISCOVERED, FIX_REVIEWED, FIX_DECLARED, _mutated_copy(shadowed), set())
+
+
 def delete_declaration_control() -> list[str]:
     """v6's control under its honest name: delete the `declare_site` line, keep the body → the id is
     unscanned → REFUSE. (Structural; it is not the instrumentation control.)"""
@@ -226,12 +341,15 @@ if __name__ == "__main__":
     print("four-set reconciliation (fixture, no traffic):", reconcile(FIX_DISCOVERED, FIX_REVIEWED, FIX_DECLARED, inst, set()) or "PASS")
     ct_spec = importlib.util.spec_from_file_location("census_table", HERE / "census_table.py"); ct = importlib.util.module_from_spec(ct_spec); ct_spec.loader.exec_module(ct)
     print("report, no traffic:", [(r["id"], r["status"]) for r in ct.report_rows({}, FIX_DECLARED, True)])
-    counters = execute_decisions(); moved = assert_counters_moved(counters, {"gate.answer.unverified-only", "ingest.quarantine.third-party"})
-    print("RUNTIME — one declining decision per loaded site, counters:", counters)
-    print("RUNTIME — counters moved:", "ASSERTED" if not moved else moved)
-    print("report after the decisions:", [(r["id"], r["status"]) for r in ct.report_rows(counters, FIX_DECLARED, True)])
+    snaps = execute_decisions(); moved = assert_counters_moved(snaps, {"gate.answer.unverified-only", "ingest.quarantine.third-party"})
+    print("RUNTIME — one declining decision per loaded site, (before, after):", snaps)
+    print("RUNTIME — counters moved BY DELTA around each decision:", "ASSERTED" if not moved else moved)
+    print("report after the decisions:", [(r["id"], r["status"]) for r in ct.report_rows(counters_after(snaps), FIX_DECLARED, True)])
     c1 = strip_binding_control(); print("STRIP-THE-BINDING CONTROL (keep declare_site + raise):", "REFUSES (correct): " + c1[0] if c1 else "WRONG: passed")
     c2 = consult_without_fire_control(); print("CONSULT-WITHOUT-FIRE CONTROL:", "REFUSES (correct): " + c2[0] if c2 else "WRONG: passed")
+    c4 = split_function_control(); print("SPLIT-FUNCTION CONTROL (round 5):", "REFUSES (correct): " + c4[0] if c4 else "WRONG: passed")
+    c5 = nested_and_shadowed_control(); print("NESTED / SHADOWED CONTROLS:", f"REFUSE (correct): {len(c5)} refusal(s)" if len(c5) == 2 else f"WRONG: {c5}")
     c3 = delete_declaration_control(); print("DELETE-THE-DECLARATION (structural):", "REFUSES (correct): " + c3[0] if c3 else "WRONG: passed")
+    pp = preloaded_positive_control(); print("PRE-LOADED-POSITIVE CONTROL (v8.1):", "delta REFUSES, level PASSES (the level check is the mutant)" if pp["delta_refuses"] and pp["level_passes"] else f"WRONG: {pp}")
     real = scan(SRC); print(f"REAL TREE: declare_site calls in src/veracium: {len(real)} → INSTALLED = {'∅' if not real else len(installed(real))}; a non-empty DECLARED would refuse")
-    sys.exit(0 if not ref and not moved and c1 and c2 and c3 else 1)
+    sys.exit(0 if not ref and not moved and c1 and c2 and c4 and len(c5) == 2 and c3 and pp["delta_refuses"] and pp["level_passes"] else 1)

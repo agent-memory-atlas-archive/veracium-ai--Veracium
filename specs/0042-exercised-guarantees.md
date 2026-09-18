@@ -4,8 +4,8 @@ Spec-Status: draft
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc); v7 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ccf0715041f3148a) |
-| **Version** | **v7 — THE ROUND-4 VERDICT FOLDED. A6 CLOSED at the design level; the census owed A4 alone.** **A4 → Part A-0-quater: THE SITE BINDS THE DECISION.** Round 4 executed both fixture decisions — the gate declined, ingest returned `False` — and the reconciliation PASSED while **the counters never moved**. 🔴 *A `declare_site` call is a PROXY for a counter bound to the decision; v6's scan was honest about what it scanned and what it scanned was the wrong thing.* The decision is now expressed THROUGH the site, so the update and the decision are **one call that cannot be separated**, `INSTALLED` requires the BINDING and not the registration, and the reviewer's own test becomes a **runtime assertion**: execute a decision, the counters must have moved. 🔴 **AND OUR CONTROL DEGENERATED** — named *“delete a counter”*, it deleted the declaration on a fixture that had no counters, so the name promised one property and the body checked another. **§11 CREATED, and this is a change of PRACTICE:** the reviewer read struck-through passages as live requirements, so **the history leaves the normative body** — *a marker saying “not a requirement” is a PROXY for not being one, and four rounds have shown what proxies do.* **No restated figures.** Prior: v6 · v5 · v4 · v3.1 · v3 · v2 · v1. |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc); v7 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ccf0715041f3148a); v8.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 b94d814d20b96d2c) |
+| **Version** | **v8.1 — THE THREE ROUND-5 EVIDENCE OBLIGATIONS, FOLDED INTO THE TEXT THEY CONTRADICT.** 🔴 **Dev built the fixes, and two of them make a sentence of v8 FALSE — so the sentence moves with the code.** Part A-0-quater's binding is now **function-local, lexical and unshadowed** *(a nested function is its own scope; a parameter or local assignment shadowing the name is not the site)*, and its runtime leg asserts **Δ`consulted` == 1 ∧ Δ`fired` == 1 ACROSS the decision. 🔴 v8 asserted `consulted ≥ 1` / `fired ≥ 1` — a LEVEL, which an earlier decision can satisfy: the proxy defect this Part exists to fix, reappearing inside the check that fixes it.** **Two controls added:** the reviewer's split-function reproduction *(`.consult` in one body, `.fire` in another)*, and a **PRE-LOADED counter** — the mutant a level assertion passes. **§9's two round-5 questions are annotated with the answers, the questions left as dispatched.** *v8 was doc maintenance on the round-5 design acceptance: every whole superseded BLOCK moved to §11.* 🔴 **A FIGURE WITHDRAWN HERE, BEFORE IT REACHES A CLOSURE ROW: v8/v5 said the sweep found THIRTEEN survivors.** *Re-derived from the artifact for the acceptance fold, `git show e92952ab` moves **SEVEN contiguous superseded blocks — five in 0043, two in 0042 — of which the reviewer named TWO**. The thirteen was a count of superseded SENTENCES and its enumeration cannot now be reproduced, so it is withdrawn as a figure rather than defended: a declared count that does not name its unit and its tool is not checkable, which is the thing these two specs exist to say.* * The distinction that took five rounds to state — a CORRECTION belongs at the sentence an implementer copies; the RECORD OF WHAT IT REPLACED belongs in §11 — still governs, and short parentheticals giving the REASON a current rule exists are kept deliberately.* Prior: v8 · v7 · v6 · v5 · v4 · v3.1 · v3 · v2 · v1. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — §4's counters sit in `gate.py`, `graph.py`, `lifecycle.py`, `ingest.py`, `schema.py`, all guarded |
@@ -175,17 +175,7 @@ against `src/` at pin `5121501`):
 > 🔴 **THIS IS AN INVENTORY OF CANDIDATES BY SYNTACTIC KIND. IT IS NOT A COUNT
 > OF ENFORCEMENT POINTS AND IT IS NOT A VERDICT.** A `raise` may be an argument
 > check; a `return False` may be a predicate. **It is where an inspector STARTS.**
-> 🔴 **SUPERSEDED BY PART A-0-bis (round-2 A4).** v4 said the declaration is compared against an “inspected subset” of this inventory — which round 2
-> showed contradicts INV-2d's refusal on any absent site, since 636 syntactic candidates would then all need declaring. **The comparison is against the
-> REVIEWED set, and the inventory forces a DECISION rather than a declaration.** The sentence that stood here said
-> and the inspection is work this spec requires rather than evidence it already
-> has.
->
-> **What it does establish, and what 162 could not:** the domain is **measured**,
-> its boundary is **stated** (every module under `src/veracium`, named in the
-> evidence output, so a reader can see what was not scanned), and its unit is
-> **one AST node of a listed kind** with identity `(module, qualname, line)`.
-> *Nobody chose which files to look at.*
+> *(The superseded “inspected subset” comparison is in §11.)*
 
 **Both seats derived it independently and disagreed, and the disagreement was
 research's.** Dev reported 636; research's first pass returned **652**, with
@@ -305,7 +295,7 @@ authored sets can be true of code that contains no instrumentation.**
 | **SCAN** | 🔴 a static AST pass for ids carrying **BOTH `declare_site(…)` AND a `.consult`/`.fire` BINDING** (A-0-quater), yielding `(id, module, qualname, line)` | **nobody** — derived from the source |
 | **REGISTRY** | the **import-time record**: each `declare_site(id)` registers when its module loads | **nobody** — produced by execution |
 
-🔴 **SUPERSEDED BY A-0-quater (round-4 A4): `INSTALLED` = the scan OF THE BINDING, not of the `declare_site` call.** *v6 said “`INSTALLED` = the SCAN” of `declare_site` calls — and round 4 executed both fixture decisions with the reconciliation passing and the counters never moving. A registration is a PROXY for a counter bound to the decision.* **The rest of this section stands: the registry is the check on the scan, and what the scan looks FOR is what changed.**
+**`INSTALLED` is defined at Part A-0-quater.** *(Two superseded definitions are in §11.)*
 
 **The REGISTRY is the CHECK ON THE SCAN, not a second opinion about it:**
 
@@ -370,23 +360,26 @@ with SITE.consult():          # consulted += 1, at the decision
 
 | | |
 |---|---|
-| **`INSTALLED`** | 🔴 an id with a `declare_site` call **AND, in the same function body, BOTH a `.consult()` use AND a `.fire(` use** on the declared name. *Not either: a body with `consult` and no `fire` takes traffic that moves `consulted` while a decline never moves `fired`, so the row reads `UNEXERCISED` for a site that FIRED — the exact confusion Part A-1 exists to prevent, reintroduced through a permissive binding rule.* |
+| **`INSTALLED`** | 🔴 an id with a `declare_site` call **AND, in ONE function body, BOTH a `.consult()` use AND a `.fire(` use** on the declared name — 🔴 **the body is the LEXICAL one and the name must be UNSHADOWED: a nested function is its own scope, and a parameter or a local assignment rebinding that name is not the site** (round 5). *Not either: a body with `consult` and no `fire` takes traffic that moves `consulted` while a decline never moves `fired`, so the row reads `UNEXERCISED` for a site that FIRED — the exact confusion Part A-1 exists to prevent, reintroduced through a permissive binding rule.* |
 | **declared, registered, NOT bound** | **REFUSE** — *“registered, not installed”*, which is precisely what round 4 found and A-0-ter called installed |
+| 🔴 **bound in the MODULE but not in one body** | **REFUSE** — *round 5 reproduced v7's scan: `.consult()` in one function, `.fire()` in another, keyed only by variable name, reported `bound=True` and the registry check accepted it. **A scan keyed by NAME answers “does this module mention both” — a different question, true more often than the one asked.*** |
 
 #### Two derivations, and the second is the reviewer's own test made an assertion
 
 | | |
 |---|---|
 | **STATIC** | the scan above — the code binds the counter to the decision |
-| 🔴 **RUNTIME** | **execute a DECLINING decision and assert BOTH counters moved: `consulted ≥ 1` AND `fired ≥ 1`.** *One counter is not enough — a site bound only for `consult` passes a one-counter assertion while never recording that it fired. The scan says the binding exists; the execution says BOTH halves of it work. Round 4 is what happens when only the first is checked* |
+| 🔴 **RUNTIME** | **execute ONE declining decision and assert the counters MOVED ACROSS IT: Δ`consulted` == 1 AND Δ`fired` == 1**, measured as the difference between a snapshot before and a snapshot after that decision (Part A-2's snapshot contract). 🔴 **NOT `consulted ≥ 1` / `fired ≥ 1`, which is what v8 asserted: a LEVEL says the counter is positive, and an EARLIER decision can have made that true — “an already-positive counter must not establish that a later decision was measured” (round 5). A level assertion on a counter is the proxy defect this whole Part exists to fix, one level up.** *Exactly one, not at least one: `≥` also passes a site that double-counts.* **And one counter is not enough** — a site bound only for `consult` passes a one-counter assertion while never recording that it fired. *The scan says the binding exists; the execution says BOTH halves of it work. Round 4 is what happens when only the first is checked; round 5 is what happens when the second is checked with the wrong operator* |
 
 #### The controls, with the naming defect fixed
 
 | control | must |
 |---|---|
 | **strip the wrappers, KEEP the `declare_site` line and the `raise`** · **and separately: keep `.consult`, strip `.fire`** | **REFUSE** — *this is what “delete a counter” was always supposed to mean, and now the fixture HAS counters so the name and the body agree* |
+| 🔴 **`.consult()` in one function and `.fire()` in another — same module, same name** · **and: `.fire` inside a NESTED function** · **and: both uses on a name a parameter or local assignment SHADOWS** | **REFUSE** — *the reviewer's round-5 reproduction and its two neighbours, made standing regression checks* |
+| 🔴 **counters PRE-LOADED positive, then a decision that never reaches the site** | **REFUSE.** *This is the mutant for the runtime assertion: under `≥ 1` it PASSES. If the check does not fail here it is measuring the counter's HISTORY, not this decision* |
 | **full binding, no traffic** | `UNREACHED` |
-| **execute a decision** | the counters move, **asserted** |
+| **execute a decision** | the counters move **by exactly one each, asserted as a delta** |
 
 > **The fixture must carry REAL COUNTER UPDATES.** *A control cannot delete what
 > the fixture never had, and a fixture that cannot present the thing under test
@@ -632,6 +625,18 @@ and the two questions below are what that answer leaves open.
    agree its way past a missing binding — we would rather be told early if a
    pair remains that can.*
 
+> 🔴 **ANSWERED, round 5 — recorded beside the question, which is left as
+> dispatched:** *“require runtime checks at real product sites once implemented,
+> alongside the three-arm decision-trace comparison. **A suite that never supplies
+> a declining case is a test coverage gap.** The census should continue reporting
+> observed statuses: `UNREACHED` when never consulted, or `UNEXERCISED` when
+> consulted without firing.”* **And on authored agreement:** *“corrected
+> independent scans prevent the authored sets from agreeing past a structurally
+> missing binding. Human decisions about which candidates constitute enforcement
+> remain a semantic review responsibility.”* — *so A-0-bis's two-authored-lists
+> hazard is answered by the scan, not by more authorship, and the residual
+> judgement is named as judgement.*
+
 ### What we are NOT asking
 
 **Whether 738 reviews are complete.** *Round 3 ruled that implementation work and
@@ -701,13 +706,21 @@ requirement**, and round 4's reviewer did exactly that.
 > what proxies do. Structure asks nothing of the reader; a marker asks them to
 > read more carefully than they just did.*
 
+### The declaration compared against the raw inventory — superseded
+
+**v4's §4 A-0 compared the declaration against an “INSPECTED SUBSET” of the
+inventory while INV-2d refused on any absent site.** *Round 2: with 636 syntactic
+candidates that means declaring every ordinary `raise`.* **Superseded by
+A-0-bis's three sets — the inventory forces a DECISION, never a declaration.**
+
 ### `INSTALLED` — two superseded definitions
 
 | version | definition | what it missed |
 |---|---|---|
 | **v5** (A-0-bis) | the declaration plus the ids that report at runtime | **Round 3: satisfied by code containing no instrumentation at all.** Both inputs were AUTHORED — and A-0-bis's own text said two authored lists agreeing proves consistency, not completeness |
 | **v6** (A-0-ter) | a static scan for `declare_site(…)` calls | **Round 4: a registration is a PROXY for a counter bound to the decision.** Both fixture decisions executed, reconciliation passed, counters never moved |
-| **v7** (A-0-quater) | the scan of the **BINDING** — `declare_site` **and** a `.consult`/`.fire` use | *current* |
+| **v7** (A-0-quater) | the scan of the **BINDING** — `declare_site` **and** a `.consult`/`.fire` use, accumulated **over the MODULE and keyed by variable name** | **Round 5: “does this module mention both” is a different question.** `.consult()` in one function and `.fire()` in another reported `bound=True`; nested scopes and shadowed names were invisible to it. *The binding was right and the SCOPE it was checked over was wrong* |
+| **v8** (A-0-quater) | the same binding, 🔴 **function-local, lexical and unshadowed**, with the runtime leg asserting **DELTAS across the decision** rather than positive levels | *current* |
 
 ### The “delete a counter” control — superseded
 
