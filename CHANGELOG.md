@@ -28,7 +28,8 @@ them. Library and MCP callers that pass no `policy` change nothing.
 > notes say *"≈2.3 KB per row, linear in the budget"*; the figure was then measured (specs/0027
 > v15.1) — ≈2.2 KB per firing at the default budget, scaling with the budget and not the store,
 > with the `tags_matched` bound adding one 4,096 B page flat, so "linear in the budget" holds
-> for the default-shaped receipt only. The entry above now carries the measured statement.
+> for the default-shaped receipt only. The section's retention entry (below, under the durable
+> receipt) now carries the measured statement.
 
 **Who should take this release, beyond the store migration above.** Any deployment that
 IMPORTS procedural records from a source it does not itself control should take it: two
@@ -86,8 +87,10 @@ trust-surface fix says who should act, not only what changed.
   transaction (V-RECEIPT-ERASE). Retention is not in this release: the table grows by
   one row per firing recall — MEASURED after this release shipped (2026-09-18, specs/0027
   v15.1): ≈2.2 KB per firing at the default budget (`max_subgraph_edges = 40`; 2,171 B on
-  disk, row 1,384 B), scaling with the BUDGET (~16 B per unit above truncation) and not
-  with the store; a host using the full `tags_matched` bound adds exactly one 4,096 B page
+  disk, row 1,384 B), scaling with the BUDGET — receipt payload ≈ 580 B + 17.5 B per unit while the budget
+  truncates (`budget_state.truncated` is true; once the budget exceeds the candidates the receipt
+  is sized by the candidates), independently derived blind by the second seat; the disk figure is page-quantised, 106 pages
+  amortised over 200 firings — and not with the store; a host using the full `tags_matched` bound adds exactly one 4,096 B page
   per firing, flat, which dominates — budget-linearity describes the default-shaped receipt
   only. T10's ≈2.3 KB estimate was 5.9% high on the default cell. Erasure is per user.
 - **Docs: the migration section re-derived.** `docs/api.md`'s "Migrating a store" had said "this

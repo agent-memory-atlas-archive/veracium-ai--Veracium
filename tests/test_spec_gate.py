@@ -1419,8 +1419,8 @@ def test_every_closure_evidence_command_actually_runs():
     # The obvious fix was the wrong one. Selecting by NODE ID instead of `-k`
     # saves nothing, because `-k` is not what costs: measured on this tree, the
     # node-id form ran 7.58s against 6.48s for `-k`. The cost is the import,
-    # and the only way to stop paying it 59 times in a row is to stop being in
-    # a row.
+    # and the only way to stop paying it once per command, in a row, is to stop
+    # being in a row.
     #
     # Each command keeps running EXACTLY as written, in its own process, with
     # its own exit code and output digest — the reviewer runs these one at a
