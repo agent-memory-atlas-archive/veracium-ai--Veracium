@@ -24,7 +24,11 @@ them. Library and MCP callers that pass no `policy` change nothing.
 > across three files, six comments and one docstring line — three was the file count. Also
 > labelled: the ≈2.3 KB receipt figure is an estimate, not a measurement. Found by the second
 > seat's post-land re-derivation, the first run of that standing step; every correction
-> re-derived from the artifact before it was written.
+> re-derived from the artifact before it was written. **Addendum, 2026-09-18:** the shipped
+> notes say *"≈2.3 KB per row, linear in the budget"*; the figure was then measured (specs/0027
+> v15.1) — ≈2.2 KB per firing at the default budget, scaling with the budget and not the store,
+> with the `tags_matched` bound adding one 4,096 B page flat, so "linear in the budget" holds
+> for the default-shaped receipt only. The entry above now carries the measured statement.
 
 **Who should take this release, beyond the store migration above.** Any deployment that
 IMPORTS procedural records from a source it does not itself control should take it: two
@@ -80,9 +84,12 @@ trust-surface fix says who should act, not only what changed.
   Receipts are ids only, as before; they are not part of `export_memory` (deployment
   audit, not memory) and `forget_user` erases them with the user's rows in the same
   transaction (V-RECEIPT-ERASE). Retention is not in this release: the table grows by
-  one row per firing recall (research's T10 ESTIMATED ≈2.3 KB per row, linear in the
-  budget — an estimate, not a measurement: the table did not exist to measure until this
-  release, so it is measurable for the first time now); erasure is per user.
+  one row per firing recall — MEASURED after this release shipped (2026-09-18, specs/0027
+  v15.1): ≈2.2 KB per firing at the default budget (`max_subgraph_edges = 40`; 2,171 B on
+  disk, row 1,384 B), scaling with the BUDGET (~16 B per unit above truncation) and not
+  with the store; a host using the full `tags_matched` bound adds exactly one 4,096 B page
+  per firing, flat, which dominates — budget-linearity describes the default-shaped receipt
+  only. T10's ≈2.3 KB estimate was 5.9% high on the default cell. Erasure is per user.
 - **Docs: the migration section re-derived.** `docs/api.md`'s "Migrating a store" had said "this
   release migrates v7 stores only" with a two-release ladder for older bases — true of an earlier
   release and stale since schema 8. Measured 2026-09-15: every stamped base from v1 through v13,
