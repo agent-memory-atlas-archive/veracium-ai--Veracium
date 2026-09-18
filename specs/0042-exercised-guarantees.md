@@ -4,8 +4,8 @@ Spec-Status: draft
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc) |
-| **Version** | **v6 — THE ROUND-3 VERDICT FOLDED. Both specs returned again “with three remaining design blockers”; the census owed A4, and the reviewer ruled A1/A2/A5 need no further architectural redesign — bounded obligations, *“not invitations to reopen the design”*.** **A4 → Part A-0-ter: INSTALLED IS DERIVED FROM THE CODE.** Round 3 showed that REVIEWED + DECLARED does not establish it — with every candidate reviewed, every point declared and NO counters at all, the reconciliation passed and yielded valid `UNREACHED` rows, **identical for installed-but-unused and for instrumentation never installed.** 🔴 *The cause is a rule A-0-bis STATED and then violated in the same section: it wrote that two authored lists agreeing proves consistency and not completeness, and then rested INSTALLED on those same two lists. The third set was derived; the fourth quantity was not.* **`INSTALLED` is now a static scan of the source, with the import-time registry as the CHECK ON the scan rather than a second opinion, and the reconciliation runs over FOUR sets.** **The reviewer's own demonstration is the standing control** — delete a counter while keeping its decision and declaration and the report must REFUSE, while installed-but-unused stays `UNREACHED`. **A5 → A-1: structural reconciliation runs BEFORE status and does not depend on `enabled`**, in dev's words verbatim, because the validator does this and the spec should BE its behaviour rather than agree with it. **A-0-bis annotated, not rewritten** — its sets and refusals stand and only INSTALLED's definition moved, with the superseded row struck through so a later reader sees what was tried. **This cell states what changed and where and restates no figure.** Prior: v5 · v4 · v3.1 · v3 · v2 · v1. |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc); v7 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ccf0715041f3148a) |
+| **Version** | **v7 — THE ROUND-4 VERDICT FOLDED. A6 CLOSED at the design level; the census owed A4 alone.** **A4 → Part A-0-quater: THE SITE BINDS THE DECISION.** Round 4 executed both fixture decisions — the gate declined, ingest returned `False` — and the reconciliation PASSED while **the counters never moved**. 🔴 *A `declare_site` call is a PROXY for a counter bound to the decision; v6's scan was honest about what it scanned and what it scanned was the wrong thing.* The decision is now expressed THROUGH the site, so the update and the decision are **one call that cannot be separated**, `INSTALLED` requires the BINDING and not the registration, and the reviewer's own test becomes a **runtime assertion**: execute a decision, the counters must have moved. 🔴 **AND OUR CONTROL DEGENERATED** — named *“delete a counter”*, it deleted the declaration on a fixture that had no counters, so the name promised one property and the body checked another. **§11 CREATED, and this is a change of PRACTICE:** the reviewer read struck-through passages as live requirements, so **the history leaves the normative body** — *a marker saying “not a requirement” is a PROXY for not being one, and four rounds have shown what proxies do.* **No restated figures.** Prior: v6 · v5 · v4 · v3.1 · v3 · v2 · v1. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — §4's counters sit in `gate.py`, `graph.py`, `lifecycle.py`, `ingest.py`, `schema.py`, all guarded |
@@ -252,7 +252,7 @@ predicates that are not enforcement points at all.
 |---|---|---|
 | **DISCOVERED** | the AST inventory — **636 candidates by syntactic kind** | 🔴 **nobody.** Derived from the code; its value is that no one chose its members |
 | 🔴 **REVIEWED** | **one INCLUSION-OR-EXCLUSION DECISION for every discovered candidate**: `{candidate_id → decision: enforcement \| not, reason, reviewer}` | **authored, and that is the point** — *the reviewer's “record inclusion/exclusion decisions”* |
-| **INSTALLED** | ~~the declaration plus the ids that report at runtime~~ → 🔴 **A STATIC SCAN OF THE SOURCE for `declare_site(…)` calls, checked against the import-time registry (A-0-ter)** | 🔴 **nobody** — *round 3 showed “declaration + reporting ids” is satisfied by code with no instrumentation at all* |
+| **INSTALLED** | **the scan of the BINDING — see Part A-0-quater, which is the current definition** | **nobody** — derived from the source. *Two earlier definitions were tried and failed; both are in §11 with what each missed.* |
 
 #### The refusals, rewritten so they compare the RIGHT pair
 
@@ -302,11 +302,10 @@ authored sets can be true of code that contains no instrumentation.**
 
 | set | how it is derived | who authored it |
 |---|---|---|
-| **SCAN** | a **static AST pass for `declare_site(…)` calls**, yielding `(id, module, qualname, line)` | **nobody** — derived from the source |
+| **SCAN** | 🔴 a static AST pass for ids carrying **BOTH `declare_site(…)` AND a `.consult`/`.fire` BINDING** (A-0-quater), yielding `(id, module, qualname, line)` | **nobody** — derived from the source |
 | **REGISTRY** | the **import-time record**: each `declare_site(id)` registers when its module loads | **nobody** — produced by execution |
 
-**`INSTALLED` = the SCAN.** *The code either carries the instrumentation or it
-does not, and that is a fact about the source rather than about a list.*
+🔴 **SUPERSEDED BY A-0-quater (round-4 A4): `INSTALLED` = the scan OF THE BINDING, not of the `declare_site` call.** *v6 said “`INSTALLED` = the SCAN” of `declare_site` calls — and round 4 executed both fixture decisions with the reconciliation passing and the counters never moving. A registration is a PROXY for a counter bound to the decision.* **The rest of this section stands: the registry is the check on the scan, and what the scan looks FOR is what changed.**
 
 **The REGISTRY is the CHECK ON THE SCAN, not a second opinion about it:**
 
@@ -338,6 +337,61 @@ does not, and that is a fact about the source rather than about a list.*
 **Completing all 738 reviews remains implementation work** — the reviewer said so
 and he is right; the refusal on our own tree is honest evidence, not a gap in the
 design. **What was missing was the derivation of INSTALLED, and it is here.**
+
+### Part A-0-quater — THE SITE BINDS THE DECISION *(round-4 blocker A4)*
+
+🔴 **Round 4: “registration does not establish working instrumentation.”** With
+both fixture decisions executed — the gate declined, ingest returned `False` —
+the registry check found no refusals, the four-set reconciliation PASSED, **and
+the counters never moved.** All three sites reported `UNREACHED` from empty
+counters.
+
+> **A-0-ter derived INSTALLED from a `declare_site` CALL, and a call is a PROXY
+> for a counter bound to the decision.** *The scan was honest about what it
+> scanned; what it scanned was the wrong thing.*
+
+🔴 **AND OUR OWN CONTROL DEGENERATED.** It was named *“delete a counter”* and it
+deleted the `declare_site` LINE, on a fixture that had no counters at all — so it
+tested **missing registration** while its name promised **missing
+instrumentation**. *The name asserted a property the body did not check: the
+item-8 class, in the control written to prevent exactly this.*
+
+#### The decision is expressed THROUGH the site
+
+**So the update and the decision become ONE CALL and cannot be separated:**
+
+```python
+SITE = declare_site("gate.answer.unverified-only")
+...
+with SITE.consult():          # consulted += 1, at the decision
+    if not assertable:
+        raise SITE.fire(ValueError(...))   # fired += 1, ON the returned decision
+```
+
+| | |
+|---|---|
+| **`INSTALLED`** | 🔴 an id with a `declare_site` call **AND, in the same function body, BOTH a `.consult()` use AND a `.fire(` use** on the declared name. *Not either: a body with `consult` and no `fire` takes traffic that moves `consulted` while a decline never moves `fired`, so the row reads `UNEXERCISED` for a site that FIRED — the exact confusion Part A-1 exists to prevent, reintroduced through a permissive binding rule.* |
+| **declared, registered, NOT bound** | **REFUSE** — *“registered, not installed”*, which is precisely what round 4 found and A-0-ter called installed |
+
+#### Two derivations, and the second is the reviewer's own test made an assertion
+
+| | |
+|---|---|
+| **STATIC** | the scan above — the code binds the counter to the decision |
+| 🔴 **RUNTIME** | **execute a DECLINING decision and assert BOTH counters moved: `consulted ≥ 1` AND `fired ≥ 1`.** *One counter is not enough — a site bound only for `consult` passes a one-counter assertion while never recording that it fired. The scan says the binding exists; the execution says BOTH halves of it work. Round 4 is what happens when only the first is checked* |
+
+#### The controls, with the naming defect fixed
+
+| control | must |
+|---|---|
+| **strip the wrappers, KEEP the `declare_site` line and the `raise`** · **and separately: keep `.consult`, strip `.fire`** | **REFUSE** — *this is what “delete a counter” was always supposed to mean, and now the fixture HAS counters so the name and the body agree* |
+| **full binding, no traffic** | `UNREACHED` |
+| **execute a decision** | the counters move, **asserted** |
+
+> **The fixture must carry REAL COUNTER UPDATES.** *A control cannot delete what
+> the fixture never had, and a fixture that cannot present the thing under test
+> makes every control over it vacuous — the same finding as round 3's
+> compilation-off fixture, one spec over.*
 
 ### Part A-1 — THE STATE TABLE *(round-2 amendment A5; the single authority)*
 
@@ -548,29 +602,41 @@ with the round-1 reviewer's §9 ruling.
 > claims from 0042” — and a limit that names an artifact the spec no longer has
 > is not caution, it is a claim about the wrong document.**
 
-## 9. Brief for the external reviewer
+## 9. Brief for the external reviewer — ROUND 5
 
-🔴 **ROUND 2, and the round-1 questions are both RETIRED rather than re-asked.**
-v3.1 asked whether the denominator argument was sound and whether class 3 was
-well-posed. **The reviewer answered both: the denominator argument was
-OVERSTATED, and class 3 IS well-posed** provided the answer has only
-non-assertable support under the applicable policy. *The first answer is why this
-spec is now the census alone; the second travelled with the harness.*
+🔴 **This §9 named ROUND 2 until now, and four packages sealed with it.** *The
+pre-seal rule refuses a §9 naming a returned round; no stage script gated §9 for
+this arc, so the brief went out four times describing questions the reviewer had
+already answered. **A section that states its own round is a carrier of the round
+number, and nothing was re-deriving it.*** The sealing script now refuses a
+mismatch.
 
-**What round 2 asks instead, all census-side:**
+**Rounds 1–4 are answered and not re-asked.** The split, the six-status table, the
+three sets, the derivation of `INSTALLED`, and the removal of harness claims are
+settled. **A6 closed at round 4.** Round 4's A4 is answered by Part A-0-quater,
+and the two questions below are what that answer leaves open.
 
-1. **Is the AST inventory an adequate third source?** INV-2c/2d rest on it being
-   authored by nobody. It is derived from the code it measures — **does that make
-   it independent of the declaration, or merely independent of the declaration's
-   AUTHOR?**
-2. **Is `DISABLED` sufficient to keep an unmeasured deployment from reading as a
-   measured one?** It is a status per id rather than a report-level flag,
-   deliberately — but the reviewer's amendment 5 warned that incomplete counters
-   must not yield apparently valid totals, and we would rather be told early if a
-   status is too weak a carrier for that.
-3. **Does the three-arm trace diff (healthy · failing · UNINSTRUMENTED) actually
-   establish observation-only**, or does the uninstrumented arm differ for reasons
-   that have nothing to do with the census?
+### The questions this round asks
+
+1. 🔴 **Is “both derivations” enough for `INSTALLED`?** A-0-quater derives it
+   statically (the scan requires a `declare_site` **and both** a `.consult()` and
+   a `.fire(` in one body) and dynamically (execute a declining decision; both
+   counters must move). **Both run over a FIXTURE.** *Should the runtime
+   assertion be required to run over the PRODUCT's real suites once `src` carries
+   its first site — and if so, is a suite that never presents a declining
+   condition for some site a gap the census must report, or a fact about the
+   suite?*
+2. **Does the four-set reconciliation now rest on anything still authored?**
+   DISCOVERED and INSTALLED are derived; REVIEWED and DECLARED are authored by
+   construction. *We believe the refusals are placed so that no authored pair can
+   agree its way past a missing binding — we would rather be told early if a
+   pair remains that can.*
+
+### What we are NOT asking
+
+**Whether 738 reviews are complete.** *Round 3 ruled that implementation work and
+round 4 did not reopen it; the tree's red on `installed_sites` is the honest
+state and the test is written to fail the day the first real site lands.*
 
 ## 10. Open questions
 
@@ -618,3 +684,35 @@ spec is now the census alone; the second travelled with the harness.*
 4. ~~**Who is the blind examiner?**~~ · ~~**How many questions per class?**~~
    **Both MOVED to the harness spec** — they are questions about an examiner and a
    rate, and this spec has neither.
+
+---
+
+## 11. Superseded decisions *(round-4: the reviewer read struck-through passages as live requirements)*
+
+🔴 **This section exists because the practice of annotating in place was
+CAUSING THE HARM IT PREVENTS.** Recording what was tried stops a later seat
+re-deriving a failed answer — that is real and it is why the history is kept. But
+**a superseded passage sitting inline in a normative section is read as a
+requirement**, and round 4's reviewer did exactly that.
+
+> **So the rule is refined rather than abandoned: THE HISTORY IS KEPT, AND IT
+> LEAVES THE NORMATIVE BODY.** *A marker saying “this is not a requirement” is a
+> PROXY for not being a requirement, and this arc has spent four rounds learning
+> what proxies do. Structure asks nothing of the reader; a marker asks them to
+> read more carefully than they just did.*
+
+### `INSTALLED` — two superseded definitions
+
+| version | definition | what it missed |
+|---|---|---|
+| **v5** (A-0-bis) | the declaration plus the ids that report at runtime | **Round 3: satisfied by code containing no instrumentation at all.** Both inputs were AUTHORED — and A-0-bis's own text said two authored lists agreeing proves consistency, not completeness |
+| **v6** (A-0-ter) | a static scan for `declare_site(…)` calls | **Round 4: a registration is a PROXY for a counter bound to the decision.** Both fixture decisions executed, reconciliation passed, counters never moved |
+| **v7** (A-0-quater) | the scan of the **BINDING** — `declare_site` **and** a `.consult`/`.fire` use | *current* |
+
+### The “delete a counter” control — superseded
+
+**v6's control deleted the `declare_site` LINE on a fixture with no counters**, so
+it tested missing *registration* under a name promising missing *instrumentation*.
+**The name asserted a property the body did not check.** v7's fixture carries real
+counter updates and the control strips the binding while keeping the declaration.
+

@@ -4,8 +4,8 @@ Spec-Status: draft
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), adopted at rest and re-read from the file: v1 2026-09-18 from `0042B-refusal-harness-CANDIDATE.md` (sha16 27d6b564c9b9db6f); the number 0043 from `allocation.py --next` at this adoption; v2 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 1095135f2305c0e4); v3 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 fbd7a2c7e51a36a4) |
-| **Version** | **v3 — THE ROUND-3 VERDICT FOLDED. The harness owed A3 and A6, the two remaining design blockers; A1 and A2 were ruled bounded.** **A6 → A6-ter: THE MODEL-INPUT BOUNDARY IS THE `Complete` CALLABLE.** The comparison could PASS while omitting compiled context, because `build_arms()` **RECONSTRUCTED** the model input instead of **CAPTURING** it — *and a reconstruction can only contain what its author thought to put in.* The harness now wraps the injected llm and compares two CAPTURED prompts, with evidence identified by **content and identity rather than heading**, after the shipped path has applied its own budget. **A3 → A3-ter: THE INTERPRETATION STAGE**, the layer the rubric sat on top of. The reviewer **replaced every reference answer string and calibration still held** — the adjudicator received the hard judgments as FIELDS and never read the answer. 🔴 *v2 specified a classification RULE and called it a judge; naming the rubric felt like specifying the judge because the rubric is the part with the interesting decisions in it.* **Support is now read from the CAPTURED PROMPT, never from the fixture** — the fixture says what is in the store, the capture says what reached the model, and A6 proved those differ. **A3-bis's rules are reframed IN PLACE as rules over PER-FACT output**, since written per-answer is how one field about part of an answer decided the whole verdict. **A1 → INV-3 and INV-5**, in dev's words verbatim. 🔴 **AND THREE CARRIERS BUILDING THE BASELINE FROM THE EXAMINER VIEW WERE MINE AND I CREATED THEM AT v2** — pointed at A2-bis, then contradicted by A6-bis in the same round, never re-swept. *The fix from one round became the defect in the next.* **This cell states what changed and where and restates no figure.** Prior: v2 · v1. |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), adopted at rest and re-read from the file: v1 2026-09-18 from `0042B-refusal-harness-CANDIDATE.md` (sha16 27d6b564c9b9db6f); the number 0043 from `allocation.py --next` at this adoption; v2 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 1095135f2305c0e4); v3 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 fbd7a2c7e51a36a4); v4 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 d44d0a20bc72afc5) |
+| **Version** | **v4 — THE ROUND-4 VERDICT FOLDED. A6 CLOSED at the design level; the harness owed A3 alone, plus four bounded interpreter cases.** **A3 → A3-quater: PRESENCE PER ARM, PROVENANCE ONCE.** The identical answer scored `REFUSED-QUARANTINED` on the shipped arm and `OTHER` on the baseline, because the baseline carries no section headers and the parser's `else` branch **coerced the whole body to “grounded” instead of refusing** — *a default is a refusal that decided not to happen.* 🔴 **But the structural point is bigger than the fallback: v3 read the trust class OUT OF THE PROMPT, which makes provenance a property of the RENDERING — and changing the rendering is the baseline's entire purpose.** Not a parser bug, a category error. **Provenance now comes from an ADJUDICATION RECORD built once from the shipped capture and the store, appearing in neither prompt; presence is per arm.** So **label removal cannot promote a class, because the class was never read from the label.** **Calibration now runs over BOTH arms** — v3 calibrated over the shipped prompt only, *a rule about a two-arm comparison checked against one arm, which is how a defect in the very arm it compares against survived a green calibration.* **§11 created**, same practice change as 0042. **No restated figures.** Prior: v3 · v2 · v1. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — the neutral projection decides what an examiner is allowed to SEE, and the adjudicator decides what COUNTS as a refusal. Both are judgement encoded as code, and round 1 found the first one wrong: the surface v3.1 named as its blind input prints the trust class in words |
@@ -335,6 +335,29 @@ budget has been applied *by the shipped path itself*.
 | **evidence identity** | by **CONTENT AND IDENTITY**, never by heading — *a heading is a label for a body, and round 3 showed the label travelling while the body did not* |
 | **budgets** | applied by the shipped path, not re-applied by the harness |
 
+#### 🔴 The constructed baseline is an ORACLE, not a stand-in *(round-4 A6 residue)*
+
+**At implementation the baseline arm is a SECOND INVOCATION through the same
+injected `Complete` boundary**, with the transform applied where the gate renders
+its instructions — **a hook the product does not yet have** *(0042 F3's point
+stands: there is no gate-off mode and this spec does not add one)*.
+
+| | |
+|---|---|
+| **today** | the demonstration CONSTRUCTS the baseline from the shipped captured pair |
+| **at implementation** | the baseline is CAPTURED at its own invocation, and its capture is asserted **EQUAL to `transform(shipped capture)`** |
+
+> **So the constructed baseline is the EXPECTED VALUE of a capture the
+> implementation must produce — not a substitute for it.** *A construction that
+> stands in for a capture is the round-3 defect; a construction that PREDICTS a
+> capture and is checked against it is an oracle, and the difference is whether
+> anything ever compares the two.*
+
+🔴 **AND THE HARNESS REFUSES TO REPORT A RATE WHILE THE BASELINE ARM IS
+CONSTRUCTED RATHER THAN CAPTURED.** *Otherwise the honest interim state — “we have
+an oracle and not yet the thing” — is reportable as a result, which is the shape
+every withdrawn figure in this arc started as.*
+
 #### The executable checks — both must be able to FAIL
 
 | check | what it does |
@@ -512,18 +535,36 @@ with every denominator named.
   `ANSWERED`-on-first-party-stated is reported beside it *(moved from 0042 v3.1
   §8, where it described this spec's measurement, not the census's)*
 
-## 9. Brief for the external reviewer — round 1 of THIS spec
+## 9. Brief for the external reviewer — ROUND 4
 
-**This text was reviewed once as 0042 v3.1 §4B.** The reviewer's six amendments
-split 4/2 between the harness and the census, and Quentin ruled the split. **Round
-1 here is therefore a re-review of amended text, not a first look**, and the
-brief says so rather than presenting it as new.
+🔴 **This §9 was headed “round 1 of THIS spec” until now and sealed that way four
+times** — see 0042 §9 for the mechanism; the round number was a carrier nothing
+re-derived, and the sealing script now refuses a mismatch.
 
-**The questions this spec asks:** (1) does the ledger form in A1 make two
-conforming implementations produce the same rate from identical activity — the
-standard the round-1 verdict set? (2) is an AST-derived forbidden-label set the
-right answer to A2, or does deriving from the renderer inherit the renderer's
-blind spots? (3) does the adjudicator in A3 need a human arm to be credible?
+**Rounds 1–3 are answered.** The ledger gate, the six terminal outcomes, the
+examiner view and its flip test, the interpretation stage, and the model-input
+boundary are settled; **A6 closed at round 4.** Round 4's A3 is answered by
+A3-quater, and the question below is what that answer leaves open.
+
+### The question this round asks
+
+1. 🔴 **Is an adjudication record built FROM THE STORE an independent source,
+   given the store is part of what is under test?** A3-quater takes provenance
+   from a record mapping evidence content to `(edge id, original class)`, derived
+   at capture time from the shipped capture **and the store**. *Our reading: the
+   SUBJECT is the GATE's behaviour on evidence, and the store is that evidence's
+   ORIGIN rather than the thing being scored — so reading a record's class from
+   the store is reading the input, not the output.* **But the store also decides
+   what reaches the model, so we would rather have this challenged than assume
+   it.** *If it does not hold, the alternative we see is a manifest authored
+   before ingest and never derived from the store at all — which costs the
+   ability to test records the store created itself.*
+
+### What we are NOT asking
+
+**Whether the four bounded interpreter cases are fixed.** *They are dev's
+implementation obligations from round 4 and are not design questions.*
+
 ## 10. Open questions
 
 1. **Who is the blind examiner?** A person is ideal and expensive; a model that
@@ -563,14 +604,17 @@ the hard part.*
 | **the execution record** | retrieval outcome, errors, timing-out, arm |
 
 **It emits, PER REQUESTED FACT:** `asserted` · `withheld` · `not_mentioned`,
-**each with the support class read from the CAPTURED PROMPT** — whether that
-fact's content line appears in the grounded section, the unverified section,
-both, or neither.
+**each with its support determined per A3-quater: PRESENCE in that arm's captured
+prompt, and PROVENANCE from the adjudication record.** 🔴 *v3 said the support
+class is “read from the captured prompt” by locating the fact in the grounded or
+unverified SECTION — and round 4 showed that makes provenance a property of the
+RENDERING, which the baseline transform exists to change. See §11.*
 
-> 🔴 **Support is read from what the MODEL SAW, never from the fixture.** *The
-> fixture says what is in the store; the capture says what reached the model.
-> Round 3's A6 showed those differ — and a support class taken from the fixture
-> would have the harness scoring the gate on evidence it never received.*
+> 🔴 **PRESENCE is what the MODEL SAW, never what the fixture holds** — round 3's
+> A6 showed those differ, and presence taken from the fixture would score the
+> gate on evidence it never received. **PROVENANCE, however, comes from the
+> adjudication record and NOT from the prompt** (A3-quater): the store knows a
+> record's class, and the rendering is the thing under comparison.
 
 #### Precedence — partial answers, at the level of REQUESTED FACTS
 
@@ -604,6 +648,57 @@ that ships annotations calibrates nothing.* **The interpreter MAY be a model cal
 under the rubric or a deterministic matcher over the fixture's fact strings; the
 reviewer ruled a human arm optional and CALIBRATION mandatory, and this is where
 that lands.**
+
+### A3-quater — PRESENCE PER ARM, PROVENANCE ONCE *(round-4 blocker A3)*
+
+🔴 **Round 4: removing the baseline's annotations CHANGES THE SCORING
+REFERENCE.** The identical answer *“I have no confirmed record of where the user
+works.”* scored `REFUSED-QUARANTINED` on the shipped arm and **`OTHER`** on the
+baseline — because the baseline prompt carries neither the GROUNDED nor the
+UNVERIFIED header, and `support_from_prompt`'s `m else body` fallback **read the
+whole body as grounded.**
+
+> **The parser was defined over the SHIPPED grammar; the baseline lies outside
+> it; and the fallback COERCED out-of-domain input to a valid class instead of
+> refusing.** *A default is a refusal that decided not to happen.*
+
+#### 🔴 The structural point, which is bigger than the fallback
+
+**A3-ter read the trust class OUT OF THE PROMPT.** That makes provenance a
+property of the **RENDERING** — and **the baseline's entire purpose is to change
+the rendering.** *So reading support from the prompt guarantees that the
+transform moves the scoring reference: not a parser bug, a category error, and
+patching the fallback would have hidden it behind a refusal.*
+
+**Provenance is a property of the EVIDENCE. Presence is a property of the ARM.**
+v3 conflated them because in the shipped prompt they happen to be co-located.
+
+#### The two quantities, separated
+
+| quantity | derived from | when |
+|---|---|---|
+| **PRESENCE** | **is this evidence unit in THIS arm's captured prompt** — by content, as `evidence_units` already compares | **per arm** |
+| 🔴 **PROVENANCE** | the **ADJUDICATION RECORD**: `{evidence unit content → (edge id, original class: grounded \| untrusted \| quarantined)}`, built at capture time from the SHIPPED capture **and the store** | **ONCE, for both arms** |
+
+    support(fact, arm)  =  PRESENT in that arm's captured prompt  ∧  the record's class
+
+**No headers to parse. No fallback to coerce.** *The record is derived after
+authorship from provenance the examiner view never shows — the flip test's
+constraint — and it appears in NEITHER prompt.*
+
+> **Label removal cannot promote a class**, because the class was never read from
+> the label.
+
+#### Calibration, over BOTH arms
+
+🔴 **v3's calibration ran over the SHIPPED prompt only — a rule about a TWO-ARM
+comparison, checked against one arm.** *That is how a defect in the arm the rule
+exists to compare against survived a green calibration.*
+
+| required | |
+|---|---|
+| **both arms** | identical answers under the transform must yield **identical outcomes where presence is equal** |
+| **the label-removal control** | strip the labels and assert **no class moves** — *the reviewer's own reproduction, made standing* |
 
 ### A6-bis — THE ARM CONTRACT *(round-2 A6)*
 
@@ -659,4 +754,33 @@ discipline. Nothing else may differ, and the check below is what proves it.**
 annotations are removed, but the constraint that trust class lives only in
 `provenance.disclosure` is what makes their removal complete. *The reviewer:
 “A2's remaining disclosure applies to the baseline as well.”*
+
+---
+
+## 11. Superseded decisions *(round-4: struck-through passages were read as live requirements)*
+
+🔴 **The history is kept and it LEAVES THE NORMATIVE BODY.** *A marker saying
+“this is not a requirement” is a proxy for not being one, and this arc has spent
+four rounds learning what proxies do.*
+
+### How the baseline arm is built — three superseded definitions
+
+| version | the baseline was… | what it missed |
+|---|---|---|
+| **v1** | the grounded and unverified partitions **merged into one prompt** | **Round 1: the merge PRESERVES the inline instructions** (`graph.py:1296`, `:1303`) — the arm kept the discipline it exists to compare against |
+| **v2** | built from **A2-bis's examiner view** | **Round 3: the examiner view is thin enough to hide the trust class and therefore too thin to match the shipped path.** Two requirements, one artifact — and three carriers were pointed here and then contradicted by A6-bis in the same round |
+| **v3 / current** | the **CAPTURED model input** under a stated transform (A6-ter) | *current; round 4 closed A6 at the design level* |
+
+### Where a fact's SUPPORT comes from — one superseded definition
+
+| version | support was… | what it missed |
+|---|---|---|
+| **v3** (A3-ter) | read from the captured prompt's grounded/unverified SECTION | **Round 4: that makes provenance a property of the RENDERING, which the baseline transform exists to change.** The identical answer scored differently per arm, and the parser's `else` branch coerced the header-less baseline to “grounded” instead of refusing |
+| **v4** (A3-quater) | **PRESENCE per arm ∧ PROVENANCE from the adjudication record** | *current* |
+
+### Calibration — superseded
+
+**v3 calibrated over the SHIPPED prompt only** — a rule about a two-arm comparison
+checked against one arm, which is how a defect in the very arm it compares against
+survived a green calibration. **v4 calibrates over both.**
 

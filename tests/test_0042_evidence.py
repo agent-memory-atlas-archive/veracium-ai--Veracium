@@ -126,26 +126,76 @@ def test_a0bis_on_the_real_tree_the_third_source_bites_because_no_decisions_exis
     assert undecided > 0, "every discovered candidate has a decision — update this test to assert the pass"
 
 
-# ---- Part A-0-ter: INSTALLED derived from the code ------------------------------------------
+# ---- Part A-0-quater: the site BINDS the decision (round 4) ----------------------------------
 
-def test_a0ter_scan_and_registry_check_each_other_and_the_unloaded_site_is_named():
+def test_a0quater_scan_finds_the_binding_and_the_registry_checks_it_and_the_unloaded_site_is_named():
     inst = _load("installed_sites")
     fx = inst.scan(inst.FIXTURE); reg, loaded = inst.load_fixture()
-    assert {s["id"] for s in fx} == inst.FIX_DISCOVERED and all(set(s) == {"id", "module", "qualname", "line"} for s in fx)
+    assert {s["id"] for s in fx} == inst.FIX_DISCOVERED
+    assert all(set(s) == {"id", "module", "qualname", "line", "name", "consult", "fire", "bound"} for s in fx)
+    assert all(s["bound"] and s["consult"] and s["fire"] for s in fx), "the fixture's three sites must all be BOUND (consult AND fire)"
     ref, oor = inst.check_registry_against_scan(fx, reg, loaded)
     assert ref == [] and len(oor) == 1 and "lifecycle.forget.scope" in oor[0] and "NAMED" in oor[0]
-    assert inst.reconcile(inst.FIX_DISCOVERED, inst.FIX_REVIEWED, inst.FIX_DECLARED, {s["id"] for s in fx}, set()) == []
+    assert inst.reconcile(inst.FIX_DISCOVERED, inst.FIX_REVIEWED, inst.FIX_DECLARED, inst.installed(fx), set()) == []
 
 
-def test_a0ter_delete_a_counter_refuses_and_installed_but_unused_reads_unreached():
+def test_a0quater_the_reviewers_round4_test_executing_both_decisions_moves_both_counters_and_reads_exercised():
+    """Round 4: both fixture decisions executed, every counter stayed at zero, the report read UNREACHED.
+    Now the decision is expressed THROUGH the site: after one declining decision per loaded site,
+    consulted >= 1 AND fired >= 1, and the report reads EXERCISED — never UNREACHED for a site that ran."""
     inst = _load("installed_sites"); ct = _load("census_table")
-    ctl = inst.delete_counter_control()
-    assert any("DECLARED but NOT INSTALLED" in x and "gate.answer.unverified-only" in x for x in ctl)
-    rows = ct.report_rows({}, inst.FIX_DECLARED, enabled=True)                 # installed (the scan has them), no traffic
+    counters = inst.execute_decisions()
+    executed = {"gate.answer.unverified-only", "ingest.quarantine.third-party"}
+    assert inst.assert_counters_moved(counters, executed) == []
+    assert all(counters[i]["consulted"] >= 1 and counters[i]["fired"] >= 1 for i in executed)
+    rows = {r["id"]: r["status"] for r in ct.report_rows(counters, inst.FIX_DECLARED, enabled=True)}
+    assert rows == {"gate.answer.unverified-only": "EXERCISED", "ingest.quarantine.third-party": "EXERCISED", "lifecycle.forget.scope": "UNREACHED"}
+    # the assertion itself fails on counters that did not move (a bound site whose binding does not work)
+    frozen = {i: {"consulted": 0, "fired": 0, "errors": 0} for i in executed}
+    p = inst.assert_counters_moved(frozen, executed)
+    assert len(p) == 4 and all("consult()" in x or "fire()" in x for x in p)
+    half = {**frozen, "gate.answer.unverified-only": {"consulted": 1, "fired": 0, "errors": 0}}
+    assert any("declined but fired == 0" in x for x in inst.assert_counters_moved(half, executed))
+
+
+def test_a0quater_strip_the_binding_keep_the_declaration_refuses_and_consult_without_fire_refuses():
+    """A-0-quater's first control under its honest name: v6's "delete a counter" deleted the declare_site
+    LINE on a fixture with no counters. Now: keep declare_site + the raise, strip consult/fire -> REFUSE."""
+    inst = _load("installed_sites")
+    c1 = inst.strip_binding_control()
+    assert any("DECLARED but NOT INSTALLED" in x and "gate.answer.unverified-only" in x for x in c1)
+    c2 = inst.consult_without_fire_control()                       # the next mutant: consult kept, fire stripped
+    assert any("DECLARED but NOT INSTALLED" in x and "gate.answer.unverified-only" in x for x in c2)
+    c3 = inst.delete_declaration_control()                         # the structural case, kept and named for what it is
+    assert any("DECLARED but NOT INSTALLED" in x for x in c3)
+
+
+def test_a0quater_registered_but_unbound_is_refused_by_the_registry_check_as_registered_not_installed(tmp_path):
+    """The exact round-4 state: declared, registered at import, and no counter bound — the registry check
+    names it 'registered, not installed' rather than passing."""
+    import shutil
+    inst = _load("installed_sites")
+    copy = tmp_path / "fixture_sites"; shutil.copytree(inst.FIXTURE, copy, ignore=shutil.ignore_patterns("__pycache__"))
+    g = copy / "gate_like.py"
+    g.write_text(g.read_text().replace("    with SITE_ANSWER.consult():\n        if not grounded and unverified:\n            raise SITE_ANSWER.fire(ValueError(\"refuse: unverified-only support\"))\n",
+                                       "    if not grounded and unverified:\n        raise ValueError(\"refuse: unverified-only support\")\n"))
+    fx = inst.scan(copy)
+    unbound = [s for s in fx if s["id"] == "gate.answer.unverified-only"][0]
+    assert not unbound["bound"] and not unbound["consult"] and not unbound["fire"]
+    reg = {s["id"]: {"module": s["module"], "line": s["line"]} for s in fx}               # every site registered, as at import
+    ref, _ = inst.check_registry_against_scan(fx, reg, {"gate_like.py", "ingest_like.py", "__init__.py"})
+    assert any("registered, not installed" in x and "gate.answer.unverified-only" in x for x in ref)
+    assert "gate.answer.unverified-only" not in inst.installed(fx)
+
+
+def test_a0quater_full_binding_and_no_traffic_reads_unreached():
+    inst = _load("installed_sites"); ct = _load("census_table")
+    assert inst.installed(inst.scan(inst.FIXTURE)) == inst.FIX_DECLARED
+    rows = ct.report_rows({}, inst.FIX_DECLARED, enabled=True)
     assert {r["status"] for r in rows} == {"UNREACHED"}
 
 
-def test_a0ter_registry_refuses_a_registration_the_scan_does_not_show_and_a_scanned_site_that_did_not_register():
+def test_a0quater_registry_refuses_a_registration_the_scan_does_not_show_and_a_scanned_site_that_did_not_register():
     inst = _load("installed_sites")
     fx = inst.scan(inst.FIXTURE); reg, loaded = inst.load_fixture()
     ref, _ = inst.check_registry_against_scan(fx, {**reg, "phantom.site": {"module": "x.py", "line": 1}}, loaded)
@@ -155,10 +205,10 @@ def test_a0ter_registry_refuses_a_registration_the_scan_does_not_show_and_a_scan
     assert any("did not register" in x and "gate.answer.unverified-only" in x for x in ref)
 
 
-def test_a0ter_on_the_real_tree_installed_is_empty_so_only_an_empty_declaration_reconciles():
+def test_a0quater_on_the_real_tree_installed_is_empty_so_only_an_empty_declaration_reconciles():
     inst = _load("installed_sites")
-    real = {s["id"] for s in inst.scan(inst.SRC)}
-    assert real == set(), "src/ now carries declare_site calls — a draft spec authorises none; update this test with the spec's status"
+    real = inst.installed(inst.scan(inst.SRC))
+    assert real == set(), "src/ now carries bound declare_site calls — a draft spec authorises none; update this test with the spec's status"
     assert inst.reconcile(set(), {}, set(), real, set()) == []
     assert any("DECLARED but NOT INSTALLED" in x for x in inst.reconcile(set(), {}, {"gate.answer.unverified-only"}, real, set()))
 

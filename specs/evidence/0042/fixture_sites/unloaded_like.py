@@ -4,4 +4,5 @@ SITE_FORGET = declare_site("lifecycle.forget.scope")   # this module is delibera
 
 
 def forget(user):
-    raise PermissionError("out of scope")
+    with SITE_FORGET.consult():
+        raise SITE_FORGET.fire(PermissionError("out of scope"))

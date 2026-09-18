@@ -11,6 +11,8 @@ and the grounded rendering carries the COMPILED context when compilation is on.
   shipped arm   the captured (system, prompt), verbatim, frozen by digest
   baseline arm  the SAME captured prompt under a STATED TRANSFORM — every changed instruction is
                 named in CHANGED_INSTRUCTIONS and nothing else changes
+  record        the ADJUDICATION RECORD (A3-quater): unit content -> (edge id, original class), from the
+                STORE at capture time, once for both arms, in neither prompt
   compared      the EVIDENCE UNITS each prompt carries, by CONTENT (fact lines, episode lines,
                 compiled-body lines) — never by heading
   controls      compilation ON (the captured prompt must carry the compiled body, or the fixture
@@ -65,6 +67,54 @@ def capture(db_path: str, question: str, *, max_subgraph_edges: int = 40) -> dic
     frozen = hashlib.sha256((c["system"] + "\n\x00\n" + c["prompt"]).encode()).hexdigest()
     return {"system": c["system"], "prompt": c["prompt"], "digest": frozen,
             "config": {"question": question, "max_subgraph_edges": max_subgraph_edges, "compilation": "on"}}
+
+
+# ---- the ADJUDICATION RECORD (A3-quater: provenance ONCE, from the store; presence per arm) --------
+
+CLASSES = ("grounded", "untrusted", "quarantined")
+
+
+def edge_class(e) -> str:
+    """The record's ORIGINAL trust class of one edge, from provenance — never from a rendering."""
+    if e.quarantined: return "quarantined"
+    if e.assertable: return "grounded"
+    return "untrusted"
+
+
+def fact_unit_prefix(relation: str, obj: str) -> str:
+    """A fact's evidence unit, minus its date: the form evidence_units() normalises BOTH arms to."""
+    return f"{relation}: {obj} (since "
+
+
+def adjudication_record(db_path: str, shipped_prompt: str, user_id: str = "u") -> dict:
+    """{evidence unit content -> {"edge": id, "class": grounded|untrusted|quarantined}} for every FACT
+    unit the SHIPPED capture carries, identified in the store by (relation, object). Built once, after
+    authorship, from provenance the examiner view never shows; it appears in NEITHER prompt. A fact-
+    shaped unit the store cannot identify REFUSES (a unit nobody can adjudicate is not scored by default)."""
+    from veracium.store.sqlite import SqliteStore
+    st = SqliteStore(db_path)
+    try:
+        edges = [e for e in st.edges(user_id, active_only=False, include_quarantined=True) if e.active]
+    finally:
+        st.close()
+    by_unit = {}
+    for e in edges:
+        by_unit.setdefault(f"{fact_unit_prefix(e.relation, e.object)}{e.valid_from.date()})", []).append(e)
+    record = {}
+    for u in evidence_units(shipped_prompt):
+        m = re.match(r"^(\S+): (.+) \(since \d{4}-\d{2}-\d{2}\)$", u)
+        if not m:
+            continue                                     # an episode or a compiled-body line: not a fact unit
+        es = by_unit.get(u, [])
+        if not es:
+            raise Refused(f"fact unit {u!r} is in the shipped capture but the store has no edge for it — nothing can adjudicate it")
+        classes = sorted({edge_class(e) for e in es})
+        record[u] = {"edge": ",".join(sorted(e.id for e in es)), "class": classes[0] if len(classes) == 1 else "mixed"}
+    return record
+
+
+class Refused(Exception):
+    pass
 
 
 # ---- the stated transform ----------------------------------------------------------------------
@@ -165,11 +215,12 @@ def run(question: str = "where does the user work and what do they prefer") -> d
     with tempfile.TemporaryDirectory() as d:
         st = ev.fixture_store(f"{d}/f.db"); st.close()
         shipped = capture(f"{d}/f.db", question)
+        record = adjudication_record(f"{d}/f.db", shipped["prompt"])
     b_system, b_prompt = baseline_transform(shipped["system"], shipped["prompt"])
     baseline = {"system": b_system, "prompt": b_prompt, "digest": hashlib.sha256((b_system + "\n\x00\n" + b_prompt).encode()).hexdigest()}
     problems = check(shipped, baseline)
     control = check(heading_without_body_control(shipped), baseline)
-    return {"shipped": shipped, "baseline": baseline, "problems": problems,
+    return {"shipped": shipped, "baseline": baseline, "record": record, "problems": problems,
             "control_refuses": bool(control), "control_problems": control, "changed_instructions": CHANGED_INSTRUCTIONS}
 
 
@@ -179,6 +230,7 @@ if __name__ == "__main__":
     print("--- captured shipped (prompt):"); print(r["shipped"]["prompt"])
     print("--- baseline (prompt):"); print(r["baseline"]["prompt"])
     print("--- evidence units (shipped):", evidence_units(r["shipped"]["prompt"]))
+    print("--- ADJUDICATION RECORD (from the store, once):"); [print(f"    {u!r}: {v}") for u, v in r["record"].items()]
     print("CHANGED INSTRUCTIONS:"); [print("  -", c) for c in r["changed_instructions"]]
     print("ARM CHECK:", "PASS" if not r["problems"] else r["problems"])
     print("HEADING-WITHOUT-BODY CONTROL:", "REFUSES (correct)" if r["control_refuses"] else "WRONG: passed")

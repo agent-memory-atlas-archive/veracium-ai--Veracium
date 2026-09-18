@@ -4,6 +4,7 @@ SITE_QUARANTINE = declare_site("ingest.quarantine.third-party")
 
 
 def admit(record):
-    if record.get("author") == "third_party":
-        return False        # quarantine
+    with SITE_QUARANTINE.consult():
+        if record.get("author") == "third_party":
+            return SITE_QUARANTINE.fire(False)        # quarantine
     return True

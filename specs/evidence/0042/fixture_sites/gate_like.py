@@ -4,6 +4,7 @@ SITE_ANSWER = declare_site("gate.answer.unverified-only")
 
 
 def answer(grounded, unverified):
-    if not grounded and unverified:
-        raise ValueError("refuse: unverified-only support")
+    with SITE_ANSWER.consult():
+        if not grounded and unverified:
+            raise SITE_ANSWER.fire(ValueError("refuse: unverified-only support"))
     return "answer"
