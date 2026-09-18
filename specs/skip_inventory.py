@@ -220,6 +220,12 @@ INVENTORY = [
      "host-conditional", "unqualified SQLite runtime (the gate working)"),
     ("tests/test_schema_model.py", "skip", "no git checkout",
      "git-checkout", "check() returns 2 before reaching the assertion"),
+    ("tests/test_printed_verification_instructions.py", "skip",
+     "the tracked-file enumeration cannot run",
+     "git-checkout", "the printed-instruction gate asserts that no TERMINAL RECORD "
+     "carrier lives outside its subject set by enumerating the TRACKED Markdown "
+     "files; a git archive has no index to enumerate, so the complement assertion "
+     "is a named not-run there (the records inside the set are still executed)"),
 ]
 
 
