@@ -4,8 +4,8 @@ Spec-Status: draft
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625) |
-| **Version** | **v5 — THE ROUND-2 VERDICT FOLDED. Both specs were RETURNED FOR AMENDMENT; the census owed A4 and A5.** **A5 → Part A-1, the STATE TABLE, now the single authority prose, schema and tests all derive from** — and answering the reviewer's “one authoritative reading of `consulted` vs `fired`” exposed that FIVE statuses could not carry it, so there are **SIX**, with `UNREACHED` separating *never ran* from *never engaged*. **A5 also: the snapshot contract given ONE answer** (per-id atomic, report window recorded) **and the trace fields LISTED** where v4 said they were named and named none. **A4 → Part A-0-bis, THE THREE SETS** — DISCOVERED / REVIEWED / INSTALLED — which resolves the contradiction between §4's “inspected subset” and INV-2d's refusal on any absent site: *the inventory forces a DECISION, never a declaration.* **Carrier C4 closed:** three harness limits removed from §8, one of which this file's own note recorded as having been MOVED and which survived here anyway. 🔴 **AND THE SIX-STATUS CHANGE HAD FIVE CARRIERS, not the one the peer reported** — §5's regime row, INV-2b's negative list, INV-2c's fixture, INV-2c's missing check, §7's recovery row. *A reported defect is a sample of its class.* **This cell states WHAT CHANGED AND WHERE and restates no figure** — four withdrawn numbers accumulated here in one day before that rule. Prior: v4 · v3.1 · v3 · v2 · v1, their corrections recorded beside the derivations that own them. |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc) |
+| **Version** | **v6 — THE ROUND-3 VERDICT FOLDED. Both specs returned again “with three remaining design blockers”; the census owed A4, and the reviewer ruled A1/A2/A5 need no further architectural redesign — bounded obligations, *“not invitations to reopen the design”*.** **A4 → Part A-0-ter: INSTALLED IS DERIVED FROM THE CODE.** Round 3 showed that REVIEWED + DECLARED does not establish it — with every candidate reviewed, every point declared and NO counters at all, the reconciliation passed and yielded valid `UNREACHED` rows, **identical for installed-but-unused and for instrumentation never installed.** 🔴 *The cause is a rule A-0-bis STATED and then violated in the same section: it wrote that two authored lists agreeing proves consistency and not completeness, and then rested INSTALLED on those same two lists. The third set was derived; the fourth quantity was not.* **`INSTALLED` is now a static scan of the source, with the import-time registry as the CHECK ON the scan rather than a second opinion, and the reconciliation runs over FOUR sets.** **The reviewer's own demonstration is the standing control** — delete a counter while keeping its decision and declaration and the report must REFUSE, while installed-but-unused stays `UNREACHED`. **A5 → A-1: structural reconciliation runs BEFORE status and does not depend on `enabled`**, in dev's words verbatim, because the validator does this and the spec should BE its behaviour rather than agree with it. **A-0-bis annotated, not rewritten** — its sets and refusals stand and only INSTALLED's definition moved, with the superseded row struck through so a later reader sees what was tried. **This cell states what changed and where and restates no figure.** Prior: v5 · v4 · v3.1 · v3 · v2 · v1. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — §4's counters sit in `gate.py`, `graph.py`, `lifecycle.py`, `ingest.py`, `schema.py`, all guarded |
@@ -236,7 +236,9 @@ declared id that never reports, and a reporting id never declared.
 4. A declared id absent from the report is a **failure of the census**, not a
    zero (INV-1).
 
-### Part A-0-bis — THE THREE SETS *(round-2 amendment A4; the contract §4 A-0 lacked)*
+### Part A-0-bis — THE THREE SETS *(round-2 amendment A4)* — 🔴 **SUPERSEDED IN PART BY A-0-ter: THERE ARE FOUR**
+
+> 🔴 **Round 3 found the fourth.** This section derived DISCOVERED and authored REVIEWED and DECLARED — and then rested **INSTALLED** on the two authored ones, which can both be true of code containing no instrumentation. **`INSTALLED` is now derived from the source by a static scan (A-0-ter).** *The sets and refusals below stand; only INSTALLED's definition moved.*
 
 🔴 **Round 2 found a contradiction and it is real: §4 A-0 says the declaration
 is compared against an “INSPECTED SUBSET” of the inventory, while INV-2d refuses
@@ -250,7 +252,7 @@ predicates that are not enforcement points at all.
 |---|---|---|
 | **DISCOVERED** | the AST inventory — **636 candidates by syntactic kind** | 🔴 **nobody.** Derived from the code; its value is that no one chose its members |
 | 🔴 **REVIEWED** | **one INCLUSION-OR-EXCLUSION DECISION for every discovered candidate**: `{candidate_id → decision: enforcement \| not, reason, reviewer}` | **authored, and that is the point** — *the reviewer's “record inclusion/exclusion decisions”* |
-| **INSTALLED** | the declaration plus the ids that report at runtime | authored + observed |
+| **INSTALLED** | ~~the declaration plus the ids that report at runtime~~ → 🔴 **A STATIC SCAN OF THE SOURCE for `declare_site(…)` calls, checked against the import-time registry (A-0-ter)** | 🔴 **nobody** — *round 3 showed “declaration + reporting ids” is satisfied by code with no instrumentation at all* |
 
 #### The refusals, rewritten so they compare the RIGHT pair
 
@@ -280,6 +282,62 @@ and collection-returning filters, which are not `raise` / `return False` /
 > completeness, and this spec does not claim it is.* **What the REVIEWED set
 > establishes is that every candidate the scan found got a human decision — not
 > that the scan found everything.**
+
+### Part A-0-ter — INSTALLED IS DERIVED FROM THE CODE *(round-3 blocker A4)*
+
+🔴 **Round 3: REVIEWED + DECLARED does not establish INSTALLED.** With every
+candidate reviewed, every enforcement point declared, **no counters and no
+reports**, the three-set reconciliation PASSES and `report_rows()` yields valid
+`UNREACHED` rows — **byte-identical for installed-but-unused and for
+instrumentation that was never installed at all.** That is the exact distinction
+INV-2c exists to draw, and A-0-bis could not draw it **because both of its
+authored sets can be true of code that contains no instrumentation.**
+
+> **Two authored lists agreeing proves consistency, not installation.** A-0-bis
+> said that about COMPLETENESS and then rested INSTALLED on the same two lists.
+> *The third set was derived; the fourth quantity was not, and nobody noticed
+> because the derived one was standing next to it.*
+
+#### INSTALLED comes from the code, by two derivations that check each other
+
+| set | how it is derived | who authored it |
+|---|---|---|
+| **SCAN** | a **static AST pass for `declare_site(…)` calls**, yielding `(id, module, qualname, line)` | **nobody** — derived from the source |
+| **REGISTRY** | the **import-time record**: each `declare_site(id)` registers when its module loads | **nobody** — produced by execution |
+
+**`INSTALLED` = the SCAN.** *The code either carries the instrumentation or it
+does not, and that is a fact about the source rather than about a list.*
+
+**The REGISTRY is the CHECK ON THE SCAN, not a second opinion about it:**
+
+| condition | verdict |
+|---|---|
+| a module LOADED and a scanned site in it did **not** register | 🔴 **REFUSE** — the call is in the source and did not run: dead branch, guarded import, or a site the scan misread |
+| a module **did not load** in this process | its sites are **NAMED IN THE REPORT as out of reach**, never silently absent — *a census must state what it could not observe* |
+| registered but **not** in the scan | **REFUSE** — something registered that the source does not show |
+
+#### The reconciliation, now over FOUR sets
+
+    DISCOVERED  -> every candidate carries a DECISION in REVIEWED        else REFUSE
+    REVIEWED-as-enforcement  ==  DECLARED                                else REFUSE
+    DECLARED    ==  INSTALLED (the scan)                                 else REFUSE
+    reporting   ⊆  DECLARED                                             else UNDECLARED + refuse
+
+#### 🔴 The reviewer's demonstration, made the standing control
+
+> **Delete a counter while KEEPING its decision and its declaration.** The scan
+> loses it → `INSTALLED` ≠ `DECLARED` → **REFUSE.**
+> **Keep the counter and send no traffic** → `INSTALLED` has it, `consulted == 0`
+> → **`UNREACHED`.**
+>
+> **Those two must produce different verdicts, and before round 3 they produced
+> the same one.** *This is the general control A6-ter states for the harness,
+> applied here: for every clause saying “X is established”, delete X and require
+> the check to fail.*
+
+**Completing all 738 reviews remains implementation work** — the reviewer said so
+and he is right; the refusal on our own tree is honest evidence, not a gap in the
+design. **What was missing was the derivation of INSTALLED, and it is here.**
 
 ### Part A-1 — THE STATE TABLE *(round-2 amendment A5; the single authority)*
 
@@ -328,6 +386,24 @@ committed inside its own status enum. **So the table has six rows.**
 and no tuple maps to none. *A state table that does not say what happens when two
 conditions hold at once is a table with a gap, and the gap is where the
 implementations diverge.*
+
+#### 🔴 STRUCTURAL RECONCILIATION RUNS BEFORE STATUS *(round-3 bounded obligation A5)*
+
+**Round 3 found that disabling measurement let an UNDECLARED id through
+validation.** The sentence below is dev's, verbatim, and it is the spec BECAUSE
+the validator does this — not a description that happens to agree with it:
+
+> **STRUCTURAL RECONCILIATION RUNS BEFORE STATUS AND DOES NOT DEPEND ON
+> `enabled`. An id that reports but is not declared, a declared id absent from
+> the report, and a duplicate id each REFUSE the report whether measurement is on
+> or off. The state table orders STATUSES; it never switches reconciliation off.
+> So under `enabled == false` an undeclared reporter's row is emitted with status
+> `DISABLED` (precedence 1) AND the report refuses (INV-1) — the row is the
+> evidence for the refusal, exactly as for `UNDECLARED` when measurement is on.**
+
+*The precedence table orders what a row is CALLED. It was never a gate on whether
+the report is checked, and v5 did not say so — which is how `enabled=false` came
+to suppress a refusal that has nothing to do with measurement.*
 
 #### The three things round 2 found unresolved, resolved
 

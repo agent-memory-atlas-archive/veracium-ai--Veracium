@@ -44,6 +44,7 @@ REFUSALS = ("REFUSED-ABSENT", "REFUSED-UNTRUSTED", "REFUSED-QUARANTINED")
 FIXTURE_CLASSES = ("present-and-trusted", "absent", "present-but-untrusted", "present-but-quarantined")
 REQUIRED = ("question_id", "arm", "fixture_class", "outcome", "attempts", "claimed_reason", "support")
 SUPPORT = ("grounded-only", "unverified-only", "mixed", "none")
+BASELINE_ARM = "baseline"
 
 
 class Refused(Exception):
@@ -104,6 +105,8 @@ def rates(ledger: list[dict], arm: str, expected_questions: dict[str, str], decl
           exclusions: dict[str, str] | None = None) -> dict:
     """Every rate with its denominator NAMED, over RESOLVED rows; refuses first."""
     problems = gate(ledger, expected_questions, declared_arms, exclusions)
+    if BASELINE_ARM not in declared_arms:                        # INV-5: the comparison arm is required BY NAME, not by the caller's list
+        problems.append(f"check 4: the comparison arm {BASELINE_ARM!r} is not declared — a refusal measurement without a comparison arm is void (INV-5)")
     if problems:
         raise Refused(problems)
     exclusions = exclusions or {}
@@ -114,8 +117,13 @@ def rates(ledger: list[dict], arm: str, expected_questions: dict[str, str], decl
     def ratio(n, d): return (n, d) if d else "UNDEFINED"
     per_class = {}
     for c in FIXTURE_CLASSES:
-        rc = [r for r in resolved if r["fixture_class"] == c]
-        per_class[c] = ratio(sum(1 for r in rc if r["outcome"] in REFUSALS), len(rc)) if rc else "NOT PRESENTED"
+        presented = [r for r in mine if r["fixture_class"] == c]
+        rc = [r for r in presented if r["outcome"] != "UNRESOLVED"]
+        if not presented:
+            per_class[c] = "NOT PRESENTED"                       # no question of this class was asked
+        else:                                                    # presented: a rate (UNDEFINED if none resolved) AND the unresolved count
+            per_class[c] = {"rate": ratio(sum(1 for r in rc if r["outcome"] in REFUSALS), len(rc)),
+                            "unresolved": len(presented) - len(rc), "presented": len(presented)}
     expected_pairs = len([q for q in expected_questions if q not in exclusions])
     return {"arm": arm,
             "refusal_rate": ratio(len(refused), len(resolved)),        # OTHER is IN the denominator

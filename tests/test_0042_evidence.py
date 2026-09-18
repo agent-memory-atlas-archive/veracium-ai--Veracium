@@ -77,6 +77,15 @@ def test_a1_report_gate_refuses_every_named_defect_and_emits_the_undeclared_row(
     assert any("window_end" in x for x in ct.validate_report(nowin, decl))
 
 
+def test_a5_an_undeclared_reporter_is_refused_even_when_measurement_is_off():
+    """Round-3 A5 reproduction, kept as the control: enabled=False + an undeclared reporter."""
+    ct = _load("census_table")
+    snap = {"snapshot_id": "s", "process_started": "t0", "window_start": "t1", "window_end": "t2", "enabled": False}
+    rows = ct.report_rows({"ghost": dict(consulted=3, fired=1, errors=0)}, {"a"}, enabled=False)
+    p = ct.validate_report({"snapshot": snap, "rows": rows}, {"a"})
+    assert any("UNDECLARED id 'ghost'" in x for x in p) and any(r["id"] == "ghost" and r["status"] == "DISABLED" for r in rows)
+
+
 # ---- Part A-2: the trace diff over exactly the named fields --------------------------------
 
 def test_a2_three_arm_trace_diff_compares_only_the_named_fields_and_refuses_extra_ones():
@@ -117,6 +126,43 @@ def test_a0bis_on_the_real_tree_the_third_source_bites_because_no_decisions_exis
     assert undecided > 0, "every discovered candidate has a decision — update this test to assert the pass"
 
 
+# ---- Part A-0-ter: INSTALLED derived from the code ------------------------------------------
+
+def test_a0ter_scan_and_registry_check_each_other_and_the_unloaded_site_is_named():
+    inst = _load("installed_sites")
+    fx = inst.scan(inst.FIXTURE); reg, loaded = inst.load_fixture()
+    assert {s["id"] for s in fx} == inst.FIX_DISCOVERED and all(set(s) == {"id", "module", "qualname", "line"} for s in fx)
+    ref, oor = inst.check_registry_against_scan(fx, reg, loaded)
+    assert ref == [] and len(oor) == 1 and "lifecycle.forget.scope" in oor[0] and "NAMED" in oor[0]
+    assert inst.reconcile(inst.FIX_DISCOVERED, inst.FIX_REVIEWED, inst.FIX_DECLARED, {s["id"] for s in fx}, set()) == []
+
+
+def test_a0ter_delete_a_counter_refuses_and_installed_but_unused_reads_unreached():
+    inst = _load("installed_sites"); ct = _load("census_table")
+    ctl = inst.delete_counter_control()
+    assert any("DECLARED but NOT INSTALLED" in x and "gate.answer.unverified-only" in x for x in ctl)
+    rows = ct.report_rows({}, inst.FIX_DECLARED, enabled=True)                 # installed (the scan has them), no traffic
+    assert {r["status"] for r in rows} == {"UNREACHED"}
+
+
+def test_a0ter_registry_refuses_a_registration_the_scan_does_not_show_and_a_scanned_site_that_did_not_register():
+    inst = _load("installed_sites")
+    fx = inst.scan(inst.FIXTURE); reg, loaded = inst.load_fixture()
+    ref, _ = inst.check_registry_against_scan(fx, {**reg, "phantom.site": {"module": "x.py", "line": 1}}, loaded)
+    assert any("registered site 'phantom.site' is not in the scan" in x for x in ref)
+    silent = {k: v for k, v in reg.items() if k != "gate.answer.unverified-only"}
+    ref, _ = inst.check_registry_against_scan(fx, silent, loaded)
+    assert any("did not register" in x and "gate.answer.unverified-only" in x for x in ref)
+
+
+def test_a0ter_on_the_real_tree_installed_is_empty_so_only_an_empty_declaration_reconciles():
+    inst = _load("installed_sites")
+    real = {s["id"] for s in inst.scan(inst.SRC)}
+    assert real == set(), "src/ now carries declare_site calls — a draft spec authorises none; update this test with the spec's status"
+    assert inst.reconcile(set(), {}, set(), real, set()) == []
+    assert any("DECLARED but NOT INSTALLED" in x for x in inst.reconcile(set(), {}, {"gate.answer.unverified-only"}, real, set()))
+
+
 # ---- A4: discovery kinds -----------------------------------------------------------------
 
 def test_a4_discovery_finds_the_four_symbols_round_2_named_and_states_its_unit():
@@ -131,7 +177,7 @@ def test_a4_discovery_finds_the_four_symbols_round_2_named_and_states_its_unit()
     assert saved["summary"]["total"] == s["total"] == len(rows), "the saved inventory is stale — regenerate with --write"
 
 
-@pytest.mark.parametrize("script,args", [("census_table.py", []), ("decision_site_inventory.py", []), ("reviewed_points.py", [])])
+@pytest.mark.parametrize("script,args", [("census_table.py", []), ("decision_site_inventory.py", []), ("reviewed_points.py", []), ("installed_sites.py", [])])
 def test_every_evidence_script_runs_and_exits_zero(script, args):
     import subprocess, sys
     r = subprocess.run([sys.executable, str(EVIDENCE / script), *args], capture_output=True, text=True, cwd=ROOT)

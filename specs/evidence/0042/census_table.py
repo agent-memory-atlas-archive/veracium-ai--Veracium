@@ -97,6 +97,11 @@ def validate_report(report: dict, declaration: set[str]) -> list[str]:
         if r["id"] in seen:
             problems.append(f"row {i}: duplicate id {r['id']!r}")
         seen.add(r["id"])
+        # STRUCTURAL refusals come BEFORE status and do not depend on `enabled` (round-3 A5): an
+        # undeclared reporter is refused whether or not measurement was on — the state table orders
+        # STATUSES, it does not switch reconciliation off.
+        if r["id"] not in declaration:
+            problems.append(f"row {i}: UNDECLARED id {r['id']!r} — the row is emitted AND the report refuses (INV-1), measurement on or off")
         t = {"enabled": snap.get("enabled"), "declared": r["id"] in declaration,
              "errors": r.get("errors"), "consulted": r.get("consulted"), "fired": r.get("fired")}
         if t["enabled"] is False:
@@ -116,8 +121,6 @@ def validate_report(report: dict, declaration: set[str]) -> list[str]:
         expected = status_of(t)
         if r.get("status") != expected:
             problems.append(f"row {i}: status {r.get('status')!r} but the table says {expected}")
-        if expected == "UNDECLARED":
-            problems.append(f"row {i}: UNDECLARED id {r['id']!r} — the row is emitted AND the report refuses (INV-1)")
         for k in r:
             if k not in ("id", "status", "consulted", "fired", "errors"):
                 problems.append(f"row {i}: field {k!r} is not an id or an integer (INV-8)")
@@ -146,7 +149,11 @@ TRACE_FIELDS = ("seq", "site_id", "decision")
 
 def trace_key(trace: list[dict]) -> list[tuple]:
     """Project a trace onto exactly the compared fields; a record carrying anything else refuses,
-    so wall-clock, counter values and content cannot leak into the comparison."""
+    so wall-clock, counter values and content cannot leak into the comparison.
+
+    THE BOUND (round-3): equal keys establish BRANCH-SEQUENCE EQUIVALENCE under frozen replay inputs
+    and execution conditions — not that behaviour is unchanged. Returned results and state changes
+    are checked separately before any broader claim."""
     out = []
     for rec in trace:
         extra = set(rec) - set(TRACE_FIELDS)

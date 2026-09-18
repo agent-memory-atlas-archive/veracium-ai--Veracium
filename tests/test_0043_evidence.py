@@ -72,7 +72,7 @@ def test_a1_formulas_a_timeout_moves_the_rate_and_unresolved_is_out_of_both_side
     r = lg.rates(twelve, "veracium", {**q11, "q11": "present-but-untrusted"}, arms)
     assert r["refusal_rate"] == (8, 11) and r["unresolved"] == 1 and r["completion"] == (12, 12)
     assert lg.rates([row(0, "veracium", "UNRESOLVED"), row(0, "baseline", "ANSWERED")], "veracium", {"q00": "present-but-untrusted"}, arms)["refusal_rate"] == "UNDEFINED"
-    assert r["per_class"]["absent"] == "NOT PRESENTED"
+    assert r["per_class"]["absent"] == "NOT PRESENTED" and r["per_class"]["present-but-untrusted"]["rate"] == (8, 11)
 
 
 def test_a1_retries_are_attempts_not_rows_and_exclusions_are_declared_rows():
@@ -84,6 +84,17 @@ def test_a1_retries_are_attempts_not_rows_and_exclusions_are_declared_rows():
     assert r["excluded"] == 1 and r["refusal_rate"] == (1, 1) and r["completion"] == (1, 1)
     leaked = base + [{**excl_rows[0], "outcome": "ANSWERED"}, excl_rows[1]]
     assert any("excluded question" in x for x in lg.gate(leaked, q, arms, exclusions={"q2": "not blind"}))
+
+
+def test_a1_round3_a_presented_class_with_no_resolved_rows_reads_undefined_and_a_single_arm_is_refused():
+    lg = _load("ledger")
+    q = {"q1": "absent"}; arms = ("veracium", "baseline")
+    rows = [{"question_id": "q1", "arm": a, "fixture_class": "absent", "outcome": "UNRESOLVED", "attempts": 1, "claimed_reason": "", "support": "none"} for a in arms]
+    pc = lg.rates(rows, "veracium", q, arms)["per_class"]
+    assert pc["absent"] == {"rate": "UNDEFINED", "unresolved": 1, "presented": 1} and pc["present-and-trusted"] == "NOT PRESENTED"
+    solo = [{"question_id": "q1", "arm": "veracium", "fixture_class": "absent", "outcome": "REFUSED-ABSENT", "attempts": 1, "claimed_reason": "", "support": "none"}]
+    with pytest.raises(lg.Refused, match="INV-5"):
+        lg.rates(solo, "veracium", q, ("veracium",))
 
 
 # ---- A2-bis: the examiner view and the flip test ---------------------------------------------
@@ -145,30 +156,74 @@ def test_a3_the_five_rules_resolve_as_the_spec_states_them():
     assert ad.adjudicate({})[0] == "UNRESOLVED"                       # an incomplete case record is not silently classified
 
 
-# ---- A6-bis: the arm contract ----------------------------------------------------------------
+# ---- A3-ter: the interpretation stage -----------------------------------------------------
 
-def test_a6_both_arms_receive_the_same_evidence_including_episodes_and_differ_only_in_discipline():
-    ev = _load("examiner_view"); ac = _load("arm_contract")
+def _captured_prompt():
+    mc = _load("model_input_capture"); return mc.run()["shipped"]["prompt"]
+
+
+def test_a3ter_support_is_read_from_the_captured_prompt_and_mention_from_the_answer():
+    it = _load("interpreter"); prompt = _captured_prompt()
+    assert it.support_from_prompt(prompt, it.FACTS["prefers"]) == "grounded"
+    assert it.support_from_prompt(prompt, it.FACTS["work_night"]) == "quarantined"
+    assert it.support_from_prompt(prompt, it.FACTS["work_ionos"]) == "untrusted"
+    assert it.support_from_prompt(prompt, {"id": "x", "relation": "drives", "object": "a red car"}) == "neither"
+    assert it.mention_from_answer("You are a night auditor at the Grand.", it.FACTS["work_night"]) == "asserted"
+    assert it.mention_from_answer("I have no confirmed record of that.", it.FACTS["work_night"]) == "withheld"
+    assert it.mention_from_answer("Nice weather today.", it.FACTS["work_night"]) == "not_mentioned"
+
+
+def test_a3ter_calibrates_from_raw_answers_and_the_garble_control_collapses_it():
+    it = _load("interpreter"); prompt = _captured_prompt()
+    c = it.calibrate(prompt); assert c["calibrated"] and c["agreement"] == (9, 9) and c["unresolved"] == 1
+    g = it.garble_control(prompt); assert g["collapsed"] and g["agreement"][0] < 9
+    assert set(o for _, _, _, o, _ in it.REFERENCE) >= {"ANSWERED", "REFUSED-QUARANTINED", "OTHER", "UNRESOLVED"}
+
+
+def test_a3ter_the_porto_case_is_decided_by_the_class_fact_and_other_facts_are_anomalies_not_the_verdict():
+    it = _load("interpreter"); prompt = _captured_prompt()
+    r = it.interpret(it.Q_BOTH, prompt, "You live in Porto; I can't say where you work.", {})
+    assert r["outcome"] == "REFUSED-QUARANTINED" and r["facts"]["city"]["mention"] == "asserted" and r["anomalies"] == []
+    fab = it.interpret({**it.Q_WORK, "facts": it.Q_WORK["facts"] + [{"id": "car", "relation": "drives", "object": "a red car"}]}, prompt,
+                       "I can't say where you work, but you drive a red car.", {})
+    assert fab["outcome"] == "REFUSED-QUARANTINED" and any("fabrication" in x for x in fab["anomalies"])
+    miss = it.interpret(it.Q_PREF, prompt, "I don't know.", {"retrieval": "miss"})
+    assert miss["outcome"] == "OTHER" and any("disagree" in x for x in miss["anomalies"])
+
+
+# ---- A6-ter: the model-input boundary ------------------------------------------------------
+
+def test_a6_the_captured_prompt_carries_the_compiled_body_and_the_arms_match_on_evidence():
+    mc = _load("model_input_capture")
+    r = mc.run()
+    assert r["problems"] == [], r["problems"]
+    assert mc.COMPILED_SENTINEL in r["shipped"]["prompt"] and mc.COMPILED_SENTINEL in r["baseline"]["prompt"]
+    assert "GROUNDED MEMORY" in r["shipped"]["prompt"] and "GROUNDED MEMORY" not in r["baseline"]["prompt"]
+    assert "strict about grounding" in r["shipped"]["system"] and "strict about grounding" not in r["baseline"]["system"]
+    assert mc.evidence_units(r["shipped"]["prompt"]) == mc.evidence_units(r["baseline"]["prompt"])
+    assert len(r["changed_instructions"]) == 6 and r["shipped"]["digest"] != r["baseline"]["digest"]
+
+
+def test_a6_the_heading_without_body_control_refuses_and_a_leaky_baseline_refuses():
+    mc = _load("model_input_capture")
+    r = mc.run()
+    assert r["control_refuses"] and any("differ in EVIDENCE" in x for x in r["control_problems"])
+    leaky = {**r["baseline"], "system": r["shipped"]["system"]}                    # the grounding instruction retained
+    assert any("still carries the trust discipline" in x for x in mc.check(r["shipped"], leaky))
+    thin = {**r["baseline"], "prompt": r["baseline"]["prompt"].replace("[2026-09-18] User mentioned a cat called Miso.\n", "")}
+    assert any("differ in EVIDENCE" in x for x in mc.check(r["shipped"], thin))
+
+
+def test_a6_capture_sees_exactly_one_gate_call_and_compilation_is_on():
+    ev = _load("examiner_view"); mc = _load("model_input_capture")
     with tempfile.TemporaryDirectory() as d:
         st = ev.fixture_store(f"{d}/f.db"); st.close()
-        arms = ac.build_arms(f"{d}/f.db", "where does the user work and what do they prefer")
-    assert ac.check(arms) == []
-    assert arms["shipped"]["evidence"]["episodes"] and arms["shipped"]["evidence"] == arms["baseline"]["evidence"]
-    assert "UNVERIFIED" in arms["shipped"]["rendered"] and "UNVERIFIED" not in arms["baseline"]["rendered"]
+        c = mc.capture(f"{d}/f.db", "what does the user prefer")
+    assert c["config"]["compilation"] == "on" and "## USER MODEL" in c["prompt"] and mc.COMPILED_SENTINEL in c["prompt"]
+    assert len(c["digest"]) == 64
 
 
-def test_a6_an_arm_built_from_a_second_selection_or_thinner_evidence_is_refused():
-    ev = _load("examiner_view"); ac = _load("arm_contract")
-    with tempfile.TemporaryDirectory() as d:
-        st = ev.fixture_store(f"{d}/f.db"); st.close()
-        arms = ac.build_arms(f"{d}/f.db", "where does the user work and what do they prefer")
-        thin = {**arms, "baseline": {**arms["baseline"], "evidence": {**arms["baseline"]["evidence"], "episodes": []}}}
-        assert any("evidence sets differ" in x for x in ac.check(thin))
-        leaky = {**arms, "baseline": {**arms["baseline"], "rendered": arms["shipped"]["rendered"]}}
-        assert any("still carries the trust discipline" in x for x in ac.check(leaky))
-
-
-@pytest.mark.parametrize("script,args", [("ledger.py", []), ("examiner_view.py", []), ("adjudicator.py", []), ("arm_contract.py", []), ("examiner_projection.py", ["--demo"]), ("abstention_counter_cases.py", [])])
+@pytest.mark.parametrize("script,args", [("ledger.py", []), ("examiner_view.py", []), ("adjudicator.py", []), ("examiner_projection.py", ["--demo"]), ("abstention_counter_cases.py", []), ("model_input_capture.py", []), ("interpreter.py", [])])
 def test_every_evidence_script_runs_and_exits_zero(script, args):
     import subprocess, sys
     r = subprocess.run([sys.executable, str(EVIDENCE / script), *args], capture_output=True, text=True, cwd=ROOT)
