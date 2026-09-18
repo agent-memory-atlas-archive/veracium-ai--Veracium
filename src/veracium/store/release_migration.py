@@ -7,8 +7,11 @@ three-resolve retry (§4c), a validating result carrier over the literal §4e
 table, a terminal readback with total routing (§4f), and the loud audit
 escapes. The operative version numerals are the 0019 rider's: the preflight
 passes ONLY resolved base **7** to minting; bases **1–6** return
-`unsupported-base` with the two-release ladder diagnostic; already-current
-**v8** returns `current`.
+`unsupported-base` with the ladder diagnostic; already-current
+**v8** returns `current`. (The numerals are relative to `SCHEMA_VERSION` —
+HEAD-1 mints, 1..HEAD-2 are unsupported — and since 2026-09-18 the ladder
+diagnostic is DERIVED from the resolved base, the mint base and the shipped
+release record rather than the rider's literal head-8 sentences.)
 
 The shapes and laws here are PORTED from the reviewed 0013 instrument
 (`specs/migrations_0013.py` — `TerminalFacts` ~:860, `MigrationAuthority`
@@ -929,15 +932,46 @@ def _intercept(outcome, ch, co, state, ver, diagnostic):
             MigrationResult(outcome, ch, co, state, ver, diagnostic))
 
 
+def _release_heads() -> dict:
+    """{schema version: [release tags whose store schema head is that version]} from the
+    shipped release record; {} (fail closed to "unknown") if the record is unreadable."""
+    try:
+        data = json.loads(sv.RELEASES.read_text())
+        out: dict = {}
+        for r in data.get("releases", []):
+            v = r.get("store_schema_version")
+            if isinstance(v, int) and v > 0 and isinstance(r.get("tag"), str):
+                out.setdefault(v, []).append(r["tag"])
+        return out
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
 def _ladder_diagnostic(base: int) -> str:
-    if base <= 5:
-        return (f"store resolves to base v{base}, below this release's "
-                f"supported migration source (v{_MINT_BASE}): migrate to v6 "
-                f"on a ≤0.8.x release, then to v7 on a 0.9.x/0019-era "
-                f"release, then run this release's migration")
-    return (f"store resolves to base v6, below this release's supported "
-            f"migration source (v{_MINT_BASE}): migrate to v7 on a 0019-era "
-            f"release first")
+    """DERIVED from the resolved base, the mint base and the shipped release record (amended
+    2026-09-18; the 0019 rider's literal head-8 sentences named "v6"/"v7" for every base and,
+    once the head moved past 8, misreported bases 7.. as v6). States: the actual base; that
+    this orchestrator migrates one schema version per release; how many rungs the CLI ladder
+    has and which rungs the shipped record names no release for (so an operator is never sent
+    to a release the record cannot vouch for); and the library route that walks every step."""
+    rungs = list(range(base + 1, _MINT_BASE + 1))       # the intermediate heads a CLI ladder needs
+    heads = _release_heads()
+    unwalkable = [v for v in rungs if v not in heads]
+    walk = (f"{len(rungs)} intermediate migration(s) on earlier releases (one schema version "
+            f"per release: " + ", ".join(
+                f"v{v} on {heads[v][0]}" + (f"..{heads[v][-1]}" if len(heads[v]) > 1 else "")
+                if v in heads else f"v{v} on a release the shipped record does not name"
+                for v in rungs) + ")")
+    if unwalkable:
+        walk += (f"; the shipped record names no release whose schema head is "
+                 + ", ".join(f"v{v}" for v in unwalkable)
+                 + " (some releases were recorded without one), so that ladder cannot be "
+                 f"planned from the record alone")
+    return (f"store resolves to base v{base}, below this release's supported migration "
+            f"source (v{_MINT_BASE}): this release's orchestrator migrates v{_MINT_BASE} -> "
+            f"v{_HEAD} only, so from v{base} the CLI path needs {walk}. The offline library "
+            f"path applies every step in one call: quiesce, back up, then "
+            f"veracium.store.migration.migrate_store(path) (docs/api.md, 'Migrating a store')")
 
 
 def _preflight_classify(path: str):

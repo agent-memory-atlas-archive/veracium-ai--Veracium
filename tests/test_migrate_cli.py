@@ -152,7 +152,7 @@ def test_below_v7_store_exits_1_with_the_ladder(capsys):
     assert rc == 1
     assert "outcome: unsupported-base" in out
     assert "resulting_version: 1" in out
-    assert "migrate to v6 on a ≤0.8.x release" in out
+    assert "resolves to base v" in out and "migrate_store(path)" in out      # the derived ladder, not the rider's literal
     assert _user_version(p) == 0                   # unstamped, untouched
     c = sqlite3.connect(p)
     assert c.execute("SELECT COUNT(*) FROM edges").fetchone()[0] == 5

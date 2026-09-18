@@ -30,7 +30,7 @@ is the number that decides what can be built.
 | **0015** | supersession / reinforcement telemetry counters | `accepted` | 2026-08-11 | 1 | 11 | 0 | 0 | 0 | — |
 | **0016** | SourceType deletion + the evidence_basis contract freeze | `accepted` | 2026-09-08 | 1 | 15 | 0 | 0 | 0 | — |
 | **0017** | token-usage telemetry over the Metered wrapper | `accepted` | 2026-08-14 | 1 | 10 | 0 | 0 | 0 | — |
-| **0018** | the release-migration orchestrator | `accepted` | 2026-08-22 | 1 | 4 | 0 | 0 | 0 | — |
+| **0018** | the release-migration orchestrator | `accepted` | 2026-09-18 | 1 | 4 | 0 | 0 | 0 | — |
 | **0019** | the `ungrounded` flag — evidence-grounding at ingest | `accepted` | 2026-08-16 | 1 | 4 | 0 | 0 | 0 | — |
 | **0020** | scoped recall — the principal boundary (S1) | `accepted` | 2026-08-16 | 2 | 14 | 0 | 0 | 0 | — |
 | **0021** | scope under derivation and consolidation (S2) | `accepted` | 2026-08-20 | 1 | 14 | 0 | 0 | 0 | — |

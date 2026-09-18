@@ -2,7 +2,7 @@
 
 Operative numerals per the 0019 rider on specs/0018: the preflight passes ONLY
 resolved base 7 to minting; bases 1–6 return `unsupported-base` with the
-ladder diagnostic; already-current v8 returns `current`; the two `current`
+ladder diagnostic (DERIVED from the base since 2026-09-18); already-current v8 returns `current`; the two `current`
 rows carry resulting_version 8.
 
 The exhaustive §4e-domain oracle enumeration (I15's gate-extension obligation)
@@ -15,6 +15,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import pathlib
+import re
 import sqlite3
 import tempfile
 
@@ -127,10 +129,41 @@ def _valid_facts(outcome: str) -> rm.TerminalFacts:
 # I13 — the preflight matrix is TOTAL
 # ==========================================================================
 
-@pytest.mark.parametrize("base", [1, 2, 3, 4, 5, 6])
-def test_below_v7_base_refuses_with_the_ladder_message(base):
-    """Bases 1–6 → `unsupported-base` (returned, never raised), the ladder
-    diagnostic, NO authority, ZERO audit rows, bytes+stamp unchanged."""
+def _v6_literal_ladder(base: int) -> str:
+    """THE SUPERSEDED DIAGNOSTIC (0019 rider's literal head-8 sentences), kept as the MUTANT the
+    derived-diagnostic test must fail on: every base above 5 was reported as "v6"."""
+    if base <= 5:
+        return (f"store resolves to base v{base}, below this release's supported migration "
+                f"source (v{rm._MINT_BASE}): migrate to v6 on a ≤0.8.x release, then to v7 on a "
+                f"0.9.x/0019-era release, then run this release's migration")
+    return (f"store resolves to base v6, below this release's supported migration source "
+            f"(v{rm._MINT_BASE}): migrate to v7 on a 0019-era release first")
+
+
+def _ladder_problems(base: int, diag: str) -> list:
+    """What a correct ladder diagnostic for `base` must carry — the property, not the wording."""
+    p = []
+    named = re.findall(r"resolves to base v(\d+)", diag)
+    if named != [str(base)]:
+        p.append(f"names base {named}, resolved base is {base}")
+    if f"(v{rm._MINT_BASE})" not in diag:
+        p.append("does not name the mint base")
+    if f"{rm._MINT_BASE - base} intermediate migration(s)" not in diag:
+        p.append("does not state the number of intermediate migrations")
+    for v in range(base + 1, rm._MINT_BASE + 1):
+        if f"v{v} on " not in diag:
+            p.append(f"rung v{v} not named")
+    if "migrate_store(path)" not in diag:
+        p.append("does not name the library route")
+    return p
+
+
+@pytest.mark.parametrize("base", list(range(1, rm._MINT_BASE)))
+def test_every_unsupported_base_refuses_with_a_ladder_diagnostic_derived_from_that_base(base):
+    """Every base 1..HEAD-2 → `unsupported-base` (returned, never raised), NO authority, ZERO
+    audit rows, bytes+stamp unchanged — and the diagnostic names THAT base, the mint base, every
+    rung to it, and the library route (amended 2026-09-18: the rider's literal text said "v6"
+    for every base above 5 once the head passed 8, and sent operators to releases for head 8)."""
     p = _store_at(base)
     before = _bytes(p)
     r = rm.run_release_migration(p, host_attestation=ATT)
@@ -138,14 +171,40 @@ def test_below_v7_base_refuses_with_the_ladder_message(base):
     assert (r.store_changed, r.transaction_committed) == (False, False)
     assert r.resulting_state == "source"
     assert r.resulting_version == base
-    if base <= 5:
-        assert "migrate to v6 on a ≤0.8.x release" in r.diagnostic
-        assert "then to v7 on a 0.9.x/0019-era release" in r.diagnostic
-        assert "then run this release's migration" in r.diagnostic
-    else:
-        assert "migrate to v7 on a 0019-era release first" in r.diagnostic
+    assert _ladder_problems(base, r.diagnostic) == [], r.diagnostic
     assert _bytes(p) == before
     assert _no_audit(p)
+
+
+def test_the_ladder_diagnostic_names_unwalkable_rungs_from_the_shipped_record_and_fails_closed():
+    """A rung the shipped record names no release for is NAMED as such (the record has gaps:
+    stamp-only bumps and releases probed without a schema version); with the record unreadable,
+    every rung reads as unnamed rather than being invented."""
+    heads = rm._release_heads()
+    assert heads and all(isinstance(v, int) for v in heads)
+    gaps = [v for v in range(2, rm._MINT_BASE + 1) if v not in heads]
+    d = rm._ladder_diagnostic(1)
+    for v in gaps:
+        assert f"v{v} on a release the shipped record does not name" in d
+    if gaps:
+        assert "cannot be planned from the record alone" in d
+    for v in (v for v in range(2, rm._MINT_BASE + 1) if v in heads):
+        assert f"v{v} on {heads[v][0]}" in d
+    import unittest.mock as m
+    with m.patch.object(rm.sv, "RELEASES", pathlib.Path("/nonexistent/legacy_stores.json")):
+        assert rm._release_heads() == {}
+        d0 = rm._ladder_diagnostic(rm._MINT_BASE - 1)
+        assert f"v{rm._MINT_BASE} on a release the shipped record does not name" in d0 and "resolves to base v" + str(rm._MINT_BASE - 1) in d0
+
+
+@pytest.mark.parametrize("base", list(range(1, rm._MINT_BASE)))
+def test_the_superseded_literal_ladder_fails_the_derived_property_on_every_base(base):
+    """The mutant: the rider's literal sentences fail the property on EVERY base — above 5 they
+    name the wrong base; at every base they name no rung to the mint base and no library route."""
+    problems = _ladder_problems(base, _v6_literal_ladder(base))
+    assert problems, f"the literal ladder passed at base {base}"
+    if base > 6:
+        assert any("names base ['6']" in x for x in problems)
 
 
 def test_unstamped_legacy_v1_resolves_without_stamping_and_takes_the_ladder():

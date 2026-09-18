@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed: the release-migration orchestrator's `unsupported-base` diagnostic is
+  derived from the store, not recited.** `veracium migrate` on a store more than one
+  schema version behind refused correctly but said "store resolves to base v6" for
+  every base 7–12 and sent the operator to releases for a v8 head (the 0019 rider's
+  literal sentences, unchanged while `SCHEMA_VERSION` moved 8 → 14; found by the
+  workflow platform's 0.13.0 → 0.26.1 upgrade, store 9 → 14). The diagnostic now
+  names the resolved base, the mint base, the number of one-version rungs a CLI
+  ladder would need and — from the shipped release record — which rungs the record
+  names no release for (v2, v5, v6, v7, v10, v11 today: stamp-only bumps and releases
+  probed without a schema version, so the CLI ladder cannot be planned from the record
+  alone), and the
+  offline library route that applies every step in one call
+  (`veracium.store.migration.migrate_store`). Outcome, facts and exit code are
+  unchanged; only the sentence. Tested exhaustively over every base 1..HEAD-2, with
+  the superseded literal text kept in the suite as the mutant the property must fail
+  on. Accepted spec 0018 amended in place (the diagnostic is derived; the rider's
+  ladder sentences are historical).
+
 ## 0.26.1 — 2026-09-18
 
 **Documentation, evidence and process only — no behaviour change.** Nothing under

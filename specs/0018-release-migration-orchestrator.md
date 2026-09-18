@@ -31,6 +31,21 @@ Spec-Requires: 0007, 0013, 0016
 > Legacy-export refusal behaviour is 0020 §4a-iii's decidable rule (ambiguity
 > → whole-import refusal)
 
+> **Amended 2026-09-18 (the owner's word in the dev session; no frozen surface
+> I13–I23 changes).** The `unsupported-base` DIAGNOSTIC is **derived**, not static:
+> from the resolved base, the mint base (`HEAD-1`) and the shipped release record
+> it states the resolved base, the number of one-version rungs a CLI ladder would
+> need, which of those rungs the shipped release record names no release for, and
+> the offline library route (`migrate_store`) that applies every step in one call.
+> The 0019 rider's literal ladder sentences below ("migrate to v6 on a ≤0.8.x
+> release …") described head 8 and are HISTORICAL: once the head moved past 8 the
+> code still recited them, naming "v6" for every base above 5 and sending an
+> operator to releases chosen for a v8 head. §3's "static ladder
+> text" reads "derived version-only text" — it carries versions and release tags,
+> never store content, so the disclosure class is unchanged. Facts, outcome, exit
+> code and the §4e table are untouched. Tested exhaustively over every base
+> 1..HEAD-2 with the literal text kept as the mutant.
+
 > **Amended by 0019 (same-commit with 0019's acceptance; sign-off granted
 > round 4, 2026-08-14).** (B1) §4a, final: the preflight intercepts
 > everything except resolved base **7**; bases **1–6** → `unsupported-base`

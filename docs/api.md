@@ -721,10 +721,11 @@ operation made (a token: 1–128 ASCII characters, no whitespace).
   only** — on this release, v13 → v14. Any older stamped base (v1–v12)
   is refused with the closed outcome `unsupported-base` and nothing is
   touched. This is the accepted 0018 contract (the preflight passes only
-  `HEAD-1` to minting). *Known defect in this release's refusal
-  diagnostic: for bases 7–12 it reports "resolves to base v6" and gives
-  ladder advice written when the head was v8; the outcome is right, the
-  sentence is not.*
+  `HEAD-1` to minting). The refusal's diagnostic names the resolved base,
+  the number of one-version rungs a CLI ladder would need and which of
+  them the shipped release record names no release for, and the library
+  route below. (0.26.1's diagnostic reported every base 7–12 as "v6" with
+  advice from head v8; fixed after 0.26.1.)
 - **`veracium.store.migration.migrate_store(path)` walks every stamped base
   from v1 through v13, and an unstamped legacy v1 store resolved by shape,
   to the current schema in ONE call** — the additive object diff plus each
