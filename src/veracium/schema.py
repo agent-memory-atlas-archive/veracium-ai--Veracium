@@ -12,6 +12,7 @@ narrative the graph lacks, and an LLM curator compiles the working view. See the
 """
 
 from __future__ import annotations
+from . import census as _census
 from .census import declare_site
 
 from datetime import datetime, timezone
@@ -769,16 +770,22 @@ class Edge(BaseModel):
         # as fact. Benign third-party *inferences* (employer learned from a
         # received email) are not quarantined; they're marked use_only at ingest
         # (finding B: content-type quarantine, not blanket sender distrust).
-        with _SITE_EDGE_QUARANTINED.consult():
-            return _SITE_EDGE_QUARANTINED.fire((self.relation == QUARANTINE_RELATION
-                    or self.provenance.disclosure == Disclosure.QUARANTINED))
+        q = (self.relation == QUARANTINE_RELATION
+             or self.provenance.disclosure == Disclosure.QUARANTINED)
+        if _census.enabled():                # the shipped default skips the machinery
+            with _SITE_EDGE_QUARANTINED.consult():     # (Quentin, 2026-09-19: the four hot Edge
+                return _SITE_EDGE_QUARANTINED.fire(q)   # predicates cost 12.4k decisions per recall)
+        return q
 
     @property
     def use_only(self) -> bool:
         # A benign third-party *inference* (finding B): may shape behavior, but
         # the user never confirmed it — never volunteered or asserted as fact.
-        with _SITE_EDGE_USE_ONLY.consult():
-            return _SITE_EDGE_USE_ONLY.fire(self.provenance.disclosure == Disclosure.USE_ONLY)
+        u = self.provenance.disclosure == Disclosure.USE_ONLY
+        if _census.enabled():                # the shipped default skips the machinery
+            with _SITE_EDGE_USE_ONLY.consult():     # (Quentin, 2026-09-19: the four hot Edge
+                return _SITE_EDGE_USE_ONLY.fire(u)   # predicates cost 12.4k decisions per recall)
+        return u
 
     @property
     def valid_now(self) -> bool:
@@ -796,8 +803,11 @@ class Edge(BaseModel):
         0030 §4e); with 0031 Phase A that window becomes agent-reachable,
         which is why the ruling sequences this BEFORE Phase A. UTC-aware
         comparison only."""
-        with _SITE_EDGE_VALID_NOW.consult():
-            return _SITE_EDGE_VALID_NOW.fire(as_utc(self.valid_from) <= utcnow())
+        v = as_utc(self.valid_from) <= utcnow()
+        if _census.enabled():                # the shipped default skips the machinery
+            with _SITE_EDGE_VALID_NOW.consult():     # (Quentin, 2026-09-19: the four hot Edge
+                return _SITE_EDGE_VALID_NOW.fire(v)   # predicates cost 12.4k decisions per recall)
+        return v
 
     @property
     def assertable(self) -> bool:
@@ -807,9 +817,12 @@ class Edge(BaseModel):
         else is context, not assertion material. A not-yet-valid edge stays
         stored and becomes assertable by itself when its `valid_from`
         arrives; nothing is rewritten."""
-        with _SITE_EDGE_ASSERTABLE.consult():
-            return _SITE_EDGE_ASSERTABLE.fire((self.active and not self.quarantined and not self.use_only
-                    and self.valid_now))
+        ok = (self.active and not self.quarantined and not self.use_only
+             and self.valid_now)
+        if _census.enabled():                # the shipped default skips the machinery
+            with _SITE_EDGE_ASSERTABLE.consult():     # (Quentin, 2026-09-19: the four hot Edge
+                return _SITE_EDGE_ASSERTABLE.fire(ok)   # predicates cost 12.4k decisions per recall)
+        return ok
 
 
 class Outcome(str, Enum):

@@ -9,10 +9,15 @@
   `permitted`/`self_assertion`, and the as-of adapter, classifier, recall and resolver refusals.
   Each decision is returned through its declared site; a predicate site declares its declining
   value so `fired` counts only declines. **Cost at the shipped default (census off), measured:**
-  recall median 152.1 ms → 158.9 ms (+4.5 %) on the rebuilt ten-conversation store over 180 timed
-  recalls, after the site became its own context manager (1.00 µs → 0.20 µs per decision disabled).
-  No behaviour changes; every site's tests still pass unchanged except one 0037 text pin re-pinned
-  to the predicate's conjuncts.
+  with the plain idiom at every site, recall median 152.1 ms → 158.9 ms (+4.5 %) on the rebuilt
+  ten-conversation store over 180 timed recalls, 12,385 of a recall's 12,527 census decisions being
+  the four `Edge` predicates; so those four skip the census machinery when it is off (the decision
+  computed once, the count taken after it — a predicate that raises is therefore uncounted there,
+  and both paths are asserted to raise and return identically). Re-measured alternating the
+  pre-tranche tree and this one, twice: 149.9 / 151.1 ms against 150.5 / 147.6 ms — inside
+  run-to-run noise; the figure is from the alternating run only. No behaviour changes; every
+  site's tests still pass unchanged except one 0037 text pin re-pinned to the predicate's
+  conjuncts.
 - **Fixed: the reference Anthropic provider refuses an empty completion instead of returning
   `""`.** With the default `max_tokens` (4096) a hard prompt can spend the whole budget inside a
   `thinking` block; the API call succeeds with `stop_reason == "max_tokens"` and no text block, and

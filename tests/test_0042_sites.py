@@ -117,9 +117,9 @@ DECLINES = {
 }
 
 
-def _raises(exc, fn, *a):
+def _raises(exc, fn, *a, **k):
     with pytest.raises(exc):
-        fn(*a)
+        fn(*a, **k)
 
 
 # the two as-of recall sites are inner functions of `recall_at` and execute once per candidate
@@ -191,3 +191,45 @@ def test_the_trace_names_the_branch_not_the_content(enabled, monkeypatch):
     assert ("asof.adapter.adapt.refuse", "unparseable") in labels
     assert ("gate.scoped-assertable.entitlement", "entitlement") in labels
     assert all(len(r) == 3 for r in rows)
+
+
+# ---- the bypass at the four hot Edge predicates (Quentin, 2026-09-19): both paths, and the raise --
+# The decision is computed ONCE (`q = <expr>`) and the census machinery runs only when enabled, so
+# §4A-2's "consulted before the decision branches" is honoured in purpose (counted at the site) and
+# not in letter: a predicate that RAISES is invisible to the census at these four sites. Research's
+# sharpest case for the fourth arm: the bypassed path and the enabled path must raise the SAME
+# exception, and `Site.__exit__` must never swallow it.
+
+def test_a_raising_predicate_raises_identically_on_both_paths_and_is_invisible_to_the_census(monkeypatch):
+    from veracium import schema as schema_mod
+
+    def boom(_dt):
+        raise RuntimeError("the predicate itself raised")
+    monkeypatch.setattr(schema_mod, "as_utc", boom)
+    e = _edge()
+    census.enable(False)
+    with pytest.raises(RuntimeError, match="the predicate itself raised"):
+        e.valid_now                                             # the bypassed (shipped) path
+    census.enable(True)
+    try:
+        dc, df, de = _delta("schema.edge.valid-now", lambda: pytest.raises(RuntimeError, e.__class__.valid_now.fget, e))
+    finally:
+        census.enable(False)
+    assert (dc, df, de) == (0, 0, 0), "a raising predicate is not counted at a bypassed site (the trade, stated)"
+
+
+def test_the_enabled_and_bypassed_paths_agree_on_every_verdict(monkeypatch):
+    """The fourth arm in miniature: for each of the four hot predicates, the value the property
+    returns is identical with the census off and on, on a declining and a passing edge."""
+    cases = [(_edge(disc=Disclosure.QUARANTINED), _edge()), (_edge(disc=Disclosure.USE_ONLY), _edge()),
+             (_edge(valid_from=NOW + timedelta(days=1)), _edge()), (_edge(disc=Disclosure.QUARANTINED), _edge())]
+    props = ["quarantined", "use_only", "valid_now", "assertable"]
+    for prop, (declining, passing) in zip(props, cases):
+        for e in (declining, passing):
+            census.enable(False); off = getattr(e, prop)
+            census.enable(True)
+            try:
+                on = getattr(e, prop)
+            finally:
+                census.enable(False)
+            assert off == on, (prop, e.id, off, on)

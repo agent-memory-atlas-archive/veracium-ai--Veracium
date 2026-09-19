@@ -273,3 +273,51 @@ def test_every_evidence_script_runs_and_exits_zero(script, args):
     import subprocess, sys
     r = subprocess.run([sys.executable, str(EVIDENCE / script), *args], capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stdout[-600:] + r.stderr[-600:]
+
+
+# ---- tranche 2 (2026-09-19): instrumenting a site never removes it from DISCOVERED --------------
+# Research's read of INV-2d: if wrapping a decision in `fire()` dropped its statement from the
+# inventory, the set that requires a decision would shrink exactly as sites are instrumented and
+# the third source would stop being one. The first form of tranche 2 did that to 14 of 28 sites;
+# discovery now looks THROUGH the wrapper, and this is the assertion that keeps it so.
+
+def _fire_wrapped_statements():
+    """Every `return`/`raise` in src whose value is `NAME.fire(...)`: (module, line, unwrapped kind)."""
+    import ast
+    inv = _load("decision_site_inventory")
+    out = []
+    for path in sorted((ROOT / "src/veracium").rglob("*.py")):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            v = node.value if isinstance(node, ast.Return) else node.exc if isinstance(node, ast.Raise) else None
+            if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "fire" \
+                    and isinstance(v.func.value, ast.Name):
+                out.append((str(path.relative_to(ROOT / "src/veracium")), node.lineno, isinstance(node, ast.Raise)))
+    return out
+
+
+def test_instrumenting_a_site_never_removes_its_statement_from_discovered():
+    inv = _load("decision_site_inventory")
+    rows = {(r["module"], r["line"]): r["kind"] for r in inv.inventory()}
+    wrapped = _fire_wrapped_statements()
+    assert len(wrapped) >= 28, "tranche 2 wrapped at least 28 statements"
+    missing = [(m, ln) for m, ln, _ in wrapped if (m, ln) not in rows
+               and not _returns_true_through_fire(m, ln)]
+    assert missing == [], f"fire-wrapped statements discovery no longer lists: {missing}"
+    # a wrapped raise is a RAISE; a wrapped `None`/`False`/Boolean/filter is its own kind
+    for m, ln, is_raise in wrapped:
+        if (m, ln) in rows:
+            assert (rows[(m, ln)] == "RAISE") == is_raise, (m, ln, rows[(m, ln)])
+
+
+def _returns_true_through_fire(module, line):
+    """`return NAME.fire(True, …)` is the non-declining branch of a predicate split across
+    statements (grounding.ungrounded's final `return`): `return True` is not a discovery kind
+    unwrapped either, so its absence is not a removal."""
+    import ast
+    src = (ROOT / "src/veracium" / module).read_text().split("\n")[line - 1]
+    try:
+        v = ast.parse(src.strip()).body[0].value
+    except SyntaxError:
+        return False
+    return isinstance(v, ast.Call) and v.args and isinstance(v.args[0], ast.Constant) and v.args[0].value is True

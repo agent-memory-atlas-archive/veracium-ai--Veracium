@@ -33,9 +33,29 @@ Spec-Status: accepted
 > declining decision at every declared id and asserts Δconsulted == 1 and Δfired == 1; the two
 > as-of recall sites are inner functions driven through a recall with one candidate. Cost at the
 > shipped default (census OFF), measured on the rebuilt ten-conversation store over 180 timed
-> recalls: median 152.1 ms → 158.9 ms (+4.5 %), after the site became its own context manager
-> (1.00 µs → 0.20 µs per consult+fire disabled). The DECLARED/INSTALLED half of the reconciliation
-> holds per tranche; the DISCOVERED/REVIEWED half lands with the review file in the last tranche.
+> recalls: median 152.1 ms → 158.9 ms (+4.5 %) with the plain idiom at every site, after the site
+> became its own context manager (1.00 µs → 0.20 µs per consult+fire disabled). Measured where it
+> came from: 12,527 decisions per recall, 12,385 of them the four `Edge` predicates (`quarantined`
+> 4,314, `use_only` 2,732, `assertable` 2,727, `valid_now` 2,612). **The owner's word (question
+> form, 2026-09-19): a bypass at those four.** The decision is computed ONCE (`q = <expr>`), the
+> census machinery runs only when the census is enabled, and both returns are discovered under
+> the one id (discovery applies FILTER_RETURN's name rule to Boolean names). Re-measured
+> ALTERNATING the pre-tranche tree and this one, twice, 180 timed recalls each: 149.9 / 151.1 ms
+> against 150.5 / 147.6 ms — inside run-to-run noise; the figure is from the alternating run only.
+> **Three things stated, not implied.** (a) The trade against §4A-2's letter: `consulted` is
+> counted AFTER the decision is computed (so the predicate is written once, never twice), which
+> honours the clause's purpose — counted at the site, never at a consumer — and not its letter; the
+> one observable consequence is that a predicate that RAISES is invisible to the census at these
+> four sites (`test_a_raising_predicate_raises_identically_on_both_paths_and_is_invisible_to_the_
+> census` executes exactly that, and asserts `Site.__exit__` never swallows the raise). (b) The
+> price research named: the shipped default is now a FOURTH code path at these sites, so the INV-7
+> harness, when it lands, gains a fourth arm — instrumented-but-bypassed — compared with the
+> healthy arm on decision OUTPUTS (a bypassed arm emits no trace), its sharpest case a predicate
+> that raises; `test_the_enabled_and_bypassed_paths_agree_on_every_verdict` is that arm in
+> miniature today. (c) A third option, considered and not taken: a per-recall count at the four
+> would have removed the cost without a bypass but made the counter values two units across one
+> report. The DECLARED/INSTALLED half of the reconciliation holds per tranche; the
+> DISCOVERED/REVIEWED half lands with the review file in the last tranche.
 
 ## 1. Problem and motivation
 

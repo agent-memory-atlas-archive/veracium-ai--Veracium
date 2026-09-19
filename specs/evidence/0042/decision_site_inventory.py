@@ -59,12 +59,19 @@ class _Walker(ast.NodeVisitor):
         self.stack.append(node.name)
         # names bound to a comprehension / filter() / sorted() in THIS function: returning one of
         # them is a FILTER_RETURN (`kept = [r for r in records if ...]; return kept, n`)
-        bound = set()
+        bound = set(); boolnames = set()
         for n in ast.walk(node):
             if isinstance(n, ast.Assign) and self._is_filter(n.value):
                 for t in n.targets:
                     if isinstance(t, ast.Name): bound.add(t.id)
+            # a name bound to a Boolean expression and RETURNED is a BOOL_RETURN (tranche 2's
+            # bypass form at the hot Edge predicates: `q = <bool expr>; if enabled: return
+            # SITE.fire(q); return q` — the same rule FILTER_RETURN already applies to names)
+            if isinstance(n, ast.Assign) and self._is_bool(n.value):
+                for t in n.targets:
+                    if isinstance(t, ast.Name): boolnames.add(t.id)
         self._filter_names = getattr(self, "_filter_names", []); self._filter_names.append(bound)
+        self._bool_names = getattr(self, "_bool_names", []); self._bool_names.append(boolnames)
         returns = [n for n in ast.walk(node) if isinstance(n, ast.Return)]
         has_value = any(self._unwrap_fire(r.value) is not None
                         and not (isinstance(self._unwrap_fire(r.value), ast.Constant)
@@ -73,7 +80,7 @@ class _Walker(ast.NodeVisitor):
         self._fn_has_value = getattr(self, "_fn_has_value", [])
         self._fn_has_value.append(has_value)
         self.generic_visit(node)
-        self._fn_has_value.pop(); self._filter_names.pop(); self.stack.pop()
+        self._fn_has_value.pop(); self._filter_names.pop(); self._bool_names.pop(); self.stack.pop()
 
     visit_FunctionDef = visit_AsyncFunctionDef = _visit_fn
 
@@ -95,6 +102,14 @@ class _Walker(ast.NodeVisitor):
         self.generic_visit(node)
 
     @staticmethod
+    def _is_bool(v):
+        return isinstance(v, (ast.BoolOp, ast.Compare)) or (isinstance(v, ast.UnaryOp) and isinstance(v.op, ast.Not))
+
+    def _returns_bool_name(self, v):
+        names = self._bool_names[-1] if getattr(self, "_bool_names", None) else set()
+        return isinstance(v, ast.Name) and v.id in names
+
+    @staticmethod
     def _is_filter(v):
         if isinstance(v, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)):
             return True
@@ -114,7 +129,7 @@ class _Walker(ast.NodeVisitor):
 
     def visit_Return(self, node):
         v = self._unwrap_fire(node.value)
-        if isinstance(v, (ast.BoolOp, ast.Compare)) or (isinstance(v, ast.UnaryOp) and isinstance(v.op, ast.Not)):
+        if self._is_bool(v) or self._returns_bool_name(v):
             self.rows.append({"module": self.module, "qualname": self._qual(), "line": node.lineno, "kind": "BOOL_RETURN"})
         elif self._is_filter(v) or self._returns_filtered_name(v):
             self.rows.append({"module": self.module, "qualname": self._qual(), "line": node.lineno, "kind": "FILTER_RETURN"})
