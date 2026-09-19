@@ -24,7 +24,7 @@ is the number that decides what can be built.
 | **0009** | outcome authorship is append-only history | `accepted` | 2026-08-16 | 0 | 5 | 0 | 0 | 1 | 1/1 |
 | **0010** | crash-safe consolidation | `accepted` | 2026-08-07 | 0 | 7 | 0 | 0 | 2 | 2/2 |
 | **0011** | subject-scoped entitlement | `accepted` | 2026-09-08 | 2 | 19 | 0 | 0 | 1 | 1/1 |
-| **0012** | who may renew a fact's currency | `accepted` | 2026-08-10 | 1 | 14 | 0 | 0 | 1 | 1/1 |
+| **0012** | who may renew a fact's currency | `accepted` | 2026-09-19 | 1 | 14 | 0 | 0 | 1 | 1/1 |
 | **0013** | on-disk store migrations | `accepted` | 2026-08-07 | 0 | 29 | 0 | 0 | 0 | — |
 | **0014** | maintenance attribution — a consumed contributor must leave a recoverable record | `accepted` | 2026-09-14 | 0 | 16 | 0 | 0 | 0 | — |
 | **0015** | supersession / reinforcement telemetry counters | `accepted` | 2026-08-11 | 1 | 11 | 0 | 0 | 0 | — |

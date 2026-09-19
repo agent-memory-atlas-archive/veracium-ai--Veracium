@@ -10,7 +10,7 @@ cache identity. Structured carriers (`Recall.edges` etc.) are deliberately out o
 from __future__ import annotations
 
 import re
-from typing import Optional
+from typing import NamedTuple, Optional
 
 # --- the frozen estimator ----------------------------------------------------------- #
 def est_tokens(text: str) -> int:
@@ -20,8 +20,11 @@ def est_tokens(text: str) -> int:
 # --- floor derivation (0012 §4c(i), R11-2/R12-2) ------------------------------------ #
 MIN_ITEM_ALLOWANCE = 64          # one framed, clamped item
 MARKER_RESERVE = 16              # the non-truncatable wiki compile-marker line
-REPORT_RESERVE = 32              # the per-surface truncation report (bounded-width
+REPORT_RESERVE = 32              # the proactive truncation report (bounded-width
 #                                  counts keep its worst case ~100 chars ≈ 25 tokens)
+RECALL_REPORT_RESERVE = 40       # the recall report ALSO carries the contested class
+#                                  (groups dropped / values withheld, 2026-09-19): its
+#                                  worst case is 148 chars ≈ 37 tokens
 WITHHELD_MARKER_RESERVE = 16     # "… +N more contending values withheld"
 MEMBER_FRAMING_COST = 32         # a contested member's framing (author tag, punctuation)
 MIN_MEMBER_CONTENT = 32          # the minimum clamped content per mandatory member
@@ -41,11 +44,20 @@ def mandatory_contested_allowance(heading_allowance: int = GROUP_HEADING_ALLOWAN
             + 2 * (MEMBER_FRAMING_COST + MIN_MEMBER_CONTENT))
 
 
+def reserve_for(surface: str) -> tuple[int, str]:
+    """The reserve is PER-SURFACE and matches what the surface actually charges
+    (R-impl2-4): recall reserves its 40-token truncation report (the contested class
+    included), proactive its 32-token report, the wiki its 16-token compile-marker
+    line. Returns (tokens, the name the floor derivation prints)."""
+    if surface == "wiki":
+        return MARKER_RESERVE, "marker reserve"
+    if surface == "recall":
+        return RECALL_REPORT_RESERVE, "report reserve"
+    return REPORT_RESERVE, "report reserve"
+
+
 def floor_for(surface: str, heading_allowance: int = GROUP_HEADING_ALLOWANCE) -> int:
-    # the reserve is PER-SURFACE and matches what the surface actually charges
-    # (R-impl2-4): recall/proactive reserve the 32-token truncation REPORT; the wiki
-    # reserves the 16-token compile-marker line.
-    reserve = MARKER_RESERVE if surface == "wiki" else REPORT_RESERVE
+    reserve, _name = reserve_for(surface)
     return (ENVELOPES[surface]
             + max(MIN_ITEM_ALLOWANCE, mandatory_contested_allowance(heading_allowance))
             + reserve)
@@ -58,8 +70,7 @@ def validate_budget(surface: str, value: int,
     serialized derivation uses the surface's ACTUAL reserve (R-impl3-3)."""
     fl = floor_for(surface, heading_allowance)
     if value < fl:
-        reserve = MARKER_RESERVE if surface == "wiki" else REPORT_RESERVE
-        reserve_name = "marker reserve" if surface == "wiki" else "report reserve"
+        reserve, reserve_name = reserve_for(surface)
         raise ValueError(
             f"token budget {value} for the {surface!r} surface is below its floor {fl} "
             f"(= envelope {ENVELOPES[surface]} + max(item allowance {MIN_ITEM_ALLOWANCE}, "
@@ -107,9 +118,51 @@ _MARKER_RE = re.compile(
     r"\+(\d{1,3}|999\+) facts / \+(\d{1,3}|999\+) episodes not compiled$")
 
 
+class ContestedLoss(NamedTuple):
+    """What the CONTESTED block lost to its budget (0012 I10b, amended 2026-09-19): whole
+    groups dropped after the cut AND contending values withheld inside rendered lines
+    (I10i's squeeze). `truncated` is the renderer's own flag — EVERY cause signals — and
+    the recall report is emitted on it, so a zero figure can never stand where the flag
+    says a loss occurred. One object, computed once at the renderer, carried to the
+    report unchanged (the single source of both figures)."""
+    groups_dropped: int
+    values_withheld: int
+    truncated: bool
+
+
+NO_CONTESTED_LOSS = ContestedLoss(0, 0, False)
+
+
 def bounded_count(n: int) -> str:
     """Exact to 999, then the literal '999+' — fixed width, never grows with the store."""
     return str(n) if n <= 999 else "999+"
+
+
+def recall_report_line(d_detail: int, d_safety: int, c_groups: int, c_values: int,
+                       n_clamped: int, wiki_dropped: bool, d_eps: int) -> str:
+    """The recall surface's I10b truncation report — the ONE place its grammar lives. The
+    surface renders it; `test_the_bounded_report_lines_fit_their_reserves` builds it with every
+    count at its bounded maximum and the wiki on its longer branch and asserts it fits
+    `RECALL_REPORT_RESERVE` — so a class added here without the reserve raised fails loudly
+    (2026-09-19: the margin is 3 tokens; nothing pinned it before)."""
+    return (f"[budget: dropped {bounded_count(d_detail)} detail / {bounded_count(d_safety)} SAFETY / "
+            f"{bounded_count(c_groups)} contested groups / "
+            f"{bounded_count(c_values)} contested values / "
+            f"{bounded_count(n_clamped)} clamped / "
+            f"wiki {'clamped-or-dropped' if wiki_dropped else 'kept'} / "
+            f"{bounded_count(d_eps)} episodes]")
+
+
+def proactive_report_line(d_warn: int, d_commit: int, d_ctx: int, d_hist: int,
+                          d_var: int, n_clamped: int) -> str:
+    """The proactive surface's truncation report — the ONE place its grammar lives; the same
+    control asserts its bounded worst case fits `REPORT_RESERVE`."""
+    return (f"[budget: dropped {bounded_count(d_warn)} warnings / "
+            f"{bounded_count(d_commit)} commitments / "
+            f"{bounded_count(d_ctx)} context / "
+            f"{bounded_count(d_hist)} history / "
+            f"{bounded_count(d_var)} variants / "
+            f"{bounded_count(n_clamped)} clamped]")
 
 
 def sanitize_llm_body(text: str) -> str:

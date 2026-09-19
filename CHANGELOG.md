@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- **Fixed: the recall budget report now states the contested block's losses, and appears
+  whenever the block truncated.** The `[budget: …]` line was built from the detail fitter's own
+  counts and emitted only when the fitter itself dropped something, while the `CONTESTED
+  FUNCTIONAL FACTS` block is charged upstream and its losses reached only the `truncated` flag.
+  **Measured, on the rebuilt ten-conversation store at share `0.5` (60 questions):** before the
+  fix 54 of 60 truncated contexts carried no budget line at all and the 6 that did read
+  `0 SAFETY` while 71 contested groups were withheld on every question — a wrong number in the
+  report 0012 I10b writes so that overflow is never silent; after the fix 60 of 60 contexts
+  carry the line, each stating `71 contested groups / 54 contested values`. The line gains those
+  two figures as their own class (`SAFETY` keeps its meaning) and is emitted on the block's own
+  flag, so the flag and the visible report cannot disagree. **Who should take this:** anyone
+  whose model reasons over contested facts — the model now sees how much of the contested
+  surface it was not shown. **What moved with it:** the recall report reserve is 40 tokens (was
+  32) to carry the longer line, so the recall floor is 280 tokens (was 272); a host `token_budget`
+  or `query_context_tokens` between 272 and 279 is now rejected at the floor with the derivation
+  printed. Beside it, the fitter's four within-class admission orders (warnings most-overdue
+  first, related and unrelated; commitments nearest-first; episodes newest-first) were found
+  reversible with no 0012 test failing; they are pinned now, one mutant per sort. Both report
+  lines now come from one named builder each, and a test builds them with every count at its
+  bounded maximum and asserts each fits its reserve, so the next class added without the
+  reserve raised fails loudly. 0012 carries the amendment.
 - **Changed: the contested-fact renderer is capped at a share of the recall budget
   (`MemoryConfig.contested_render_share`, default `0.5`).** The `CONTESTED FUNCTIONAL
   FACTS` block had first claim on the whole token budget, so on a store with many

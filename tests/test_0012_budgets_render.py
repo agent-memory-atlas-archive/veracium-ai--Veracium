@@ -205,7 +205,7 @@ def test_one_oversized_contention_group_is_bounded(tmp_path):
                                          author=EvidenceAuthor.USER, days=i % 30)
                                    for i in range(300)],
                           linkage=[])
-    block, spent, truncated = mem._render_contested([wide], 420, mem._est_tokens)
+    block, spent, truncated, _loss = mem._render_contested([wide], 420, mem._est_tokens)
     assert mem._est_tokens(block) <= 420                        # one group NEVER breaks it
     import re as _re
     m = _re.search(r"\(\+(\d+) more contending values withheld\)", block)
@@ -412,7 +412,7 @@ def test_two_oversized_mandatory_members_both_emit(tmp_path):
                                 _edge("m-prior", "P" * 500_000,
                                       author=EvidenceAuthor.SYSTEM, days=1)],
                        linkage=[], prior_edge_ids=["m-prior"])
-    block, spent, truncated = mem._render_contested([g], floor_for("recall"),
+    block, spent, truncated, _loss = mem._render_contested([g], floor_for("recall"),
                                                     mem._est_tokens)
     assert mem._est_tokens(block) <= floor_for("recall")
     assert "HHH" in block and "PPP" in block                # BOTH mandatory members
@@ -433,7 +433,7 @@ def test_aliased_mandatory_roles_leave_challengers_optional(tmp_path):
                                 _edge("s-chal", "S" * 500_000,
                                       author=EvidenceAuthor.SYSTEM, days=1)],
                        linkage=[], prior_edge_ids=["u-prior"])   # roles ALIAS
-    block, _spent, truncated = mem._render_contested([g], floor_for("recall"),
+    block, _spent, truncated, _loss = mem._render_contested([g], floor_for("recall"),
                                                      mem._est_tokens)
     assert mem._est_tokens(block) <= floor_for("recall")
     assert "UUU" in block                                    # the aliased mandatory
@@ -712,3 +712,170 @@ def test_a_dated_variant_stays_a_commitment_nearest_due_first(tmp_path):
     assert {e.id for e in edges2} >= {"near-old", "far-new"}
     assert "RESTATED VARIANTS" not in ctx2
     assert ctx2.find(near) < ctx2.find(far)                 # nearest-due first
+
+
+# --- I10b amended 2026-09-19: the CONTESTED class in the recall report -------------------
+# Research's read, confirmed by dev on a rebuilt ten-conversation store: at share 0.5, 54 of 60
+# truncated contexts carried NO budget line and the 6 that did read "0 SAFETY" while 71
+# contested groups were withheld — a wrong number in the report that exists so overflow is
+# never silent. The report now carries the class (groups dropped / values withheld) from the
+# ONE ContestedLoss the renderer computed, and is emitted on the block's own flag.
+import re as _re
+
+_REPORT = _re.compile(r"\[budget: dropped (\S+) detail / (\S+) SAFETY / (\S+) contested groups / "
+                      r"(\S+) contested values / (\S+) clamped / wiki (\S+) / (\S+) episodes\]")
+
+
+def _contended_store(mem, n_groups, n_values=1, pad=3, grounded_values=0):
+    """`n_groups` functional contentions on DISTINCT subjects (each its own (subject, relation)
+    group), each with `n_values` quarantined challengers, values padded to occupy budget;
+    `grounded_values` further ASSERTABLE (user-authored) contending values per group — 0003 §4e:
+    a contention group is every active edge sharing the functional key — so a line has more
+    grounded members than `contested_members_per_line` admits and must WITHHOLD (I10i)."""
+    tail = " with an intentionally verbose qualifier occupying budget" * pad
+    for n in range(n_groups):
+        subj = f"person:{n:02d}"
+        mem.store.add_edge(_edge(f"p{n}", f"grounded value {n}{tail}").model_copy(
+            update={"subject": subj}))
+        for v in range(grounded_values):
+            mem.store.add_edge(_edge(f"g{n}-{v}", f"grounded alternative {n}-{v}{tail}",
+                                     days=2 + v).model_copy(update={"subject": subj}))
+        for v in range(n_values):
+            inc = _edge(f"i{n}-{v}", f"challenge {n}-{v}{tail}", author=EvidenceAuthor.THIRD_PARTY,
+                        disc=Disclosure.QUARANTINED).model_copy(update={"subject": subj})
+            apply_supersession(mem.store, inc, mem.config.relations)
+
+
+def _independent_contested_figures(r):
+    """The figures the report MUST state, derived from the structured carrier and the block's
+    own text, never from the report: renderable groups minus rendered lines; the sum of the
+    '+N more contending values withheld' suffixes."""
+    block = r.context.split("## CONTESTED FUNCTIONAL FACTS", 1)[1].split("\n## ", 1)[0] \
+        if "## CONTESTED FUNCTIONAL FACTS" in r.context else ""
+    rendered = [ln for ln in block.splitlines() if ln.startswith("- ")]
+    renderable = sum(1 for g in r.contested if any(e.assertable for e in g.exposed))
+    withheld = sum(int(x) for x in _re.findall(r"\(\+(\d+) more contending values withheld\)", block))
+    return renderable - len(rendered), withheld
+
+
+def _assert_report_states_the_contested_loss(r):
+    m = _REPORT.search(r.context)
+    assert m, f"no report line in a truncated context: {r.context[-200:]!r}"
+    groups, values = _independent_contested_figures(r)
+    assert m.group(3) == str(groups), (m.group(0), groups)
+    assert m.group(4) == str(values), (m.group(0), values)
+    return m
+
+
+def test_contested_overflow_is_reported_with_its_own_class(tmp_path):
+    """Only the contested block truncates (no detail, no claims, no episodes, nothing clamped):
+    the report line APPEARS and its contested figures equal the independently derived loss."""
+    mem = _mem(tmp_path)
+    _contended_store(mem, n_groups=12)
+    r = mem.recall(U, "unrelated query", token_budget=floor_for("recall") + 200)
+    assert r.truncated
+    m = _assert_report_states_the_contested_loss(r)
+    assert int(m.group(3)) > 0                              # groups WERE dropped (the cut)
+    assert (m.group(1), m.group(2), m.group(5), m.group(7)) == ("0", "0", "0", "0")  # only contested lost
+    r2 = mem.recall(U, "unrelated query", token_budget=floor_for("recall") + 200)
+    assert r2.context == r.context                          # deterministic
+    mem.close()
+
+
+def test_a_report_reading_zero_for_dropped_groups_is_refused_by_the_check(tmp_path, monkeypatch):
+    """The wrong-number control (research's first test): a fixture with N dropped groups whose
+    report reads 0 for the class MUST fail the check above — otherwise the check is unfailable."""
+    from veracium.budgets import ContestedLoss
+    mem = _mem(tmp_path)
+    _contended_store(mem, n_groups=12)
+    real = veracium.Memory._render_contested
+
+    def zeroed(self, *a, **k):
+        block, spent, trunc, loss = real(self, *a, **k)
+        return block, spent, trunc, ContestedLoss(0, loss.values_withheld, loss.truncated)
+    monkeypatch.setattr(veracium.Memory, "_render_contested", zeroed)
+    r = mem.recall(U, "unrelated query", token_budget=floor_for("recall") + 200)
+    assert r.truncated and "[budget:" in r.context           # the line is there — and wrong
+    with pytest.raises(AssertionError):
+        _assert_report_states_the_contested_loss(r)
+    mem.close()
+
+
+def test_values_withheld_alone_print_the_report(tmp_path):
+    """Every group fits but lines squeeze their members (I10i): the block's flag is true with
+    ZERO groups dropped — the report still appears, reading 0 groups / M values, M from the
+    suffixes. Nothing else lost. Before the amendment this context carried no line at all."""
+    mem = _mem(tmp_path, contested_members_per_line=2)
+    _contended_store(mem, n_groups=2, n_values=1, pad=0, grounded_values=4)
+    r = mem.recall(U, "unrelated query", token_budget=4000)
+    assert r.truncated
+    m = _assert_report_states_the_contested_loss(r)
+    assert m.group(3) == "0" and int(m.group(4)) > 0
+    assert (m.group(1), m.group(2), m.group(5), m.group(7)) == ("0", "0", "0", "0")
+    mem.close()
+
+
+def test_the_within_class_admission_orders_are_pinned(tmp_path):
+    """I10b's within-class orders, asserted (the order census of 2026-09-19 found all four sorts
+    in the fitter reversible with nothing failing): a one-item budget admits the MOST OVERDUE
+    warning, the NEAREST commitment, and the NEWEST episode — never the other."""
+    pad = "padding text " * 40                                # ~120 tokens: one fits, two do not
+    # warnings: the older observation is the more overdue one
+    (tmp_path / "w").mkdir(); mem = _mem(tmp_path / "w")
+    mem.store.add_edge(_edge("newer", f"query token newer-warning {pad}", flag=True, days=1))
+    mem.store.add_edge(_edge("older", f"query token older-warning {pad}", flag=True, days=10))
+    r = mem.recall(U, "query token", token_budget=floor_for("recall"))
+    assert "older-warning" in r.context and "newer-warning" not in r.context
+    mem.close()
+    # UNRELATED flagged warnings (no query match) admit by the same overdue order — a
+    # separate sort in the fitter, a separate mutant (survived the first pin, 2026-09-19)
+    (tmp_path / "u").mkdir(); mem = _mem(tmp_path / "u")
+    mem.store.add_edge(_edge("u-newer", f"newer-unrelated {pad}", flag=True, days=1))
+    mem.store.add_edge(_edge("u-older", f"older-unrelated {pad}", flag=True, days=10))
+    r = mem.recall(U, "zzz", token_budget=floor_for("recall"))
+    assert "older-unrelated" in r.context and "newer-unrelated" not in r.context
+    mem.close()
+    # commitments: the nearer date admits first
+    (tmp_path / "c").mkdir(); mem = _mem(tmp_path / "c")
+    near = (NOW + timedelta(days=3)).date().isoformat(); far = (NOW + timedelta(days=30)).date().isoformat()
+    mem.store.add_edge(_edge("far", f"far-commitment due {far} {pad}", rel="deadline_far"))
+    mem.store.add_edge(_edge("near", f"near-commitment due {near} {pad}", rel="deadline_near"))
+    r = mem.recall(U, "unrelated", token_budget=floor_for("recall"))
+    assert "near-commitment" in r.context and "far-commitment" not in r.context
+    mem.close()
+    # episodes: the newest admits first (recall's own path, not proactive's)
+    (tmp_path / "e").mkdir(); mem = _mem(tmp_path / "e")
+    Episode = __import__("veracium.schema", fromlist=["Episode"]).Episode
+    for tag, days in (("OLD-episode", 5), ("NEW-episode", 0)):
+        mem.store.add_episode(Episode(
+            id=f"ep-{tag}", user_id=U, date=(NOW - timedelta(days=days)).date().isoformat(),
+            summary=f"{tag} {pad}",
+            provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
+                                  evidence_ref=tag, observed_at=NOW - timedelta(days=days))))
+    r = mem.recall(U, "unrelated", token_budget=floor_for("recall"))
+    assert "NEW-episode" in r.context and "OLD-episode" not in r.context
+    mem.close()
+
+
+def test_the_bounded_report_lines_fit_their_reserves():
+    """Research's control (2026-09-19): NOTHING pinned the reserve against the line it pays for,
+    and the recall margin is three tokens. Every count at its bounded maximum ("999+"), the wiki
+    on its longer branch: the line must fit the surface's reserve. Loud the moment a class is
+    added without the reserve raised in the same commit."""
+    from veracium.budgets import (RECALL_REPORT_RESERVE, REPORT_RESERVE, est_tokens,
+                                  proactive_report_line, recall_report_line)
+    big = 10 ** 9
+    recall_line = recall_report_line(big, big, big, big, big, True, big)
+    assert "999+" in recall_line and "clamped-or-dropped" in recall_line
+    assert est_tokens(recall_line) <= RECALL_REPORT_RESERVE, (
+        f"the bounded worst-case recall report is {est_tokens(recall_line)} tokens against a "
+        f"reserve of {RECALL_REPORT_RESERVE} — raise the reserve in the same commit that adds a "
+        f"figure, and move the floor with it")
+    proactive_line = proactive_report_line(big, big, big, big, big, big)
+    assert est_tokens(proactive_line) <= REPORT_RESERVE, (
+        f"the bounded worst-case proactive report is {est_tokens(proactive_line)} tokens against "
+        f"a reserve of {REPORT_RESERVE}")
+    # the surfaces render THESE builders, not a copy of their grammar
+    import inspect, veracium, veracium.proactive
+    assert "recall_report_line" in inspect.getsource(veracium.Memory._fit_to_budget)
+    assert "proactive_report_line" in inspect.getsource(veracium.proactive.assemble)

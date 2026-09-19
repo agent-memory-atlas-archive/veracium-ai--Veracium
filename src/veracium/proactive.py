@@ -337,11 +337,9 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
              for header, _ in sections if admitted[header]]
     context = "\n\n".join(parts).strip() or "(nothing needs attention)"
     if truncated:
-        from .budgets import bounded_count as _bc          # bounded-width (R9-2)
-        context += (f"\n[budget: dropped {_bc(dropped['## CONFIRM WHEN NATURAL'])} warnings / "
-                    f"{_bc(dropped['## DATED COMMITMENTS'])} commitments / "
-                    f"{_bc(dropped['## CURRENT CONTEXT'])} context / "
-                    f"{_bc(dropped['## RECENT HISTORY'])} history / "
-                    f"{_bc(dropped.get('## RESTATED VARIANTS', 0))} variants / "
-                    f"{_bc(len(_clamped_ids))} clamped]")
+        from .budgets import proactive_report_line         # bounded-width (R9-2); the
+        context += "\n" + proactive_report_line(           # grammar lives in budgets
+            dropped['## CONFIRM WHEN NATURAL'], dropped['## DATED COMMITMENTS'],
+            dropped['## CURRENT CONTEXT'], dropped['## RECENT HISTORY'],
+            dropped.get('## RESTATED VARIANTS', 0), len(_clamped_ids))
     return context, sel_edges, sel_eps, truncated

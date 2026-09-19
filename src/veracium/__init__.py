@@ -1143,13 +1143,17 @@ class Memory:
         # lines recall had ranked first (measured: 99.4% of the context was this block). The
         # first group line stays unconditional inside the renderer (I6a), and what the block
         # does not spend flows to detail below.
-        contested_block, spent, c_trunc = self._render_contested(
+        contested_block, spent, c_trunc, c_loss = self._render_contested(
             contested, max(1, int(token_budget * self.config.contested_render_share)),
             self._est_tokens)
         if filter_report:                       # §4e M-3, charged before detail
             spent += self._est_tokens(filter_report)
+        # the block's loss rides into the report as ONE object (I10b, 2026-09-19): the
+        # report is emitted on the block's own flag, so `truncated` and the visible
+        # line can never disagree about the contested class
         wiki, detail_grounded, unverified, d_trunc = self._fit_to_budget(
-            wiki, detail_edges, episodes, max(0, token_budget - spent), query)
+            wiki, detail_edges, episodes, max(0, token_budget - spent), query,
+            contested_loss=c_loss)
         truncated = c_trunc or d_trunc
 
         grounded_parts = []
@@ -1212,12 +1216,14 @@ class Memory:
         reducing dynamically below `contested_members_per_line`; the withheld count
         reflects everything not emitted. A fenced member is NOT shown here — it stays in
         the unverified channel (partition-preserving, §4c-ii). Returns None if the group
-        has no assertable member."""
+        has no assertable member. Returns (line, squeezed, values_withheld) — the
+        withheld COUNT rides with the line so the recall report can state it (I10b,
+        amended 2026-09-19) from the same computation that wrote the suffix."""
         from .budgets import (MEMBER_FRAMING_COST, MIN_MEMBER_CONTENT,
                               WITHHELD_MARKER_RESERVE, clamp_item, est_tokens)
         grounded = [e for e in g.exposed if e.assertable]
         if not grounded:
-            return None, False
+            return None, False, 0
         k_cap = self.config.contested_members_per_line
         head = clamp_item(f"{g.subject} {g.relation}",
                           self.config.group_heading_allowance_tokens)
@@ -1268,31 +1274,38 @@ class Memory:
         squeezed = squeezed or withheld > 0                # I10i: EVERY cause signals
         vals = " / ".join(members)
         wh = f" (+{withheld} more contending values withheld)" if withheld > 0 else ""
-        return f"- {head}: {vals}{wh}{tail}", squeezed
+        return f"- {head}: {vals}{wh}{tail}", squeezed, withheld
 
     def _render_contested(self, contested, budget=None, est=None):
         """Render the deterministic CONTESTED FUNCTIONAL FACTS block from the grounded
-        exposed members (specs/0003 §4c-ii). Returns (block, tokens_spent, truncated). With
-        a budget, group lines are admitted highest-priority-first with a best-effort minimum
-        (the first line is unconditional — the higher-authority prior is never dropped),
-        and the rest are budget-gated so the surface is bounded, not unbounded."""
+        exposed members (specs/0003 §4c-ii). Returns (block, tokens_spent, truncated,
+        loss). Group lines are walked IN THE ORDER `_build_contested` RETURNS THEM —
+        sorted (subject, relation) — with a best-effort minimum (the first line is
+        unconditional — the higher-authority prior is never dropped); the rest are
+        budget-gated so the surface is bounded, and the cut takes that order's tail.
+        `loss` is the `ContestedLoss` (whole groups dropped after the cut / contending
+        values withheld inside rendered lines / this flag) computed HERE, once, and
+        carried to the recall report unchanged (I10b, amended 2026-09-19)."""
+        from .budgets import NO_CONTESTED_LOSS, ContestedLoss
         if not contested:
-            return "", 0, False
+            return "", 0, False, NO_CONTESTED_LOSS
         heading = "## CONTESTED FUNCTIONAL FACTS (no single current value; do not assert one)"
         if budget is None or est is None:
             results = [self._contested_line(g) for g in contested]
-            lines = [ln for ln, _sq in results if ln]
+            lines = [ln for ln, _sq, _wh in results if ln]
             if not lines:
-                return "", 0, False
+                return "", 0, False, NO_CONTESTED_LOSS
             # I10i: within-group withholding signals truncation even unbudgeted
-            any_sq = any(sq for ln, sq in results if ln)
-            return heading + "\n" + "\n".join(lines), 0, any_sq
+            any_sq = any(sq for ln, sq, _wh in results if ln)
+            withheld = sum(wh for ln, _sq, wh in results if ln)
+            return (heading + "\n" + "\n".join(lines), 0, any_sq,
+                    ContestedLoss(0, withheld, any_sq))
         remaining = budget - est(heading + "\n")
-        sel, truncated = [], False
-        for g in contested:
+        sel, truncated, withheld, dropped = [], False, 0, 0
+        for idx, g in enumerate(contested):
             # I10i: each group line is PACKED within what remains — one group can
             # never break the budget (the first line is best-effort unconditional)
-            line, squeezed = self._contested_line(
+            line, squeezed, wh = self._contested_line(
                 g, line_budget=remaining if sel else max(remaining, 1))
             if line is None:
                 continue
@@ -1300,13 +1313,18 @@ class Memory:
             cost = est(line)
             if cost > remaining and sel:
                 truncated = True
+                # the cut: this group and every RENDERABLE group after it is dropped
+                # whole — counted here, from the same walk, never re-derived later
+                dropped = 1 + sum(1 for h in contested[idx + 1:]
+                                  if self._contested_line(h)[0] is not None)
                 break
             sel.append(line)
+            withheld += wh
             remaining -= cost
         if not sel:
-            return "", 0, False
+            return "", 0, False, NO_CONTESTED_LOSS
         block = heading + "\n" + "\n".join(sel)
-        return block, est(block), truncated
+        return block, est(block), truncated, ContestedLoss(dropped, withheld, truncated)
 
     def _build_contested(self, user_id: str, query_edges: list, view=None):
         """Build the structured contested surface for the LIVE refusal contentions of a
@@ -1393,7 +1411,7 @@ class Memory:
     def _fit_to_budget(self, wiki: Optional[str], edges, episodes,
                        budget: int, query: str = "", *,
                        assertable=None, claims=None,
-                       render=None) -> tuple[Optional[str], str, str, bool]:
+                       render=None, contested_loss=None) -> tuple[Optional[str], str, str, bool]:
         """Greedy selection under the token budget in the specs/0012 I10f precedence
         (mirroring the surface order; the contested block was already charged upstream):
 
@@ -1407,10 +1425,14 @@ class Memory:
 
         Every item is clamped at the item cap (framing + content, I10a); the
         truncation report marker is charged from the reserve BEFORE selection and
-        reports dropped counts per class, SAFETY distinctly (I10b); class decides
+        reports dropped counts per class, SAFETY distinctly, and the CONTESTED class
+        (groups dropped / values withheld) from the `contested_loss` the renderer
+        computed upstream — the report is emitted whenever ANY class lost, the
+        contested block's own flag included (I10b, amended 2026-09-19); class decides
         priority, the gate decides presentation — classification never moves an
         item across the partition (I10f)."""
-        from .budgets import REPORT_RESERVE, clamp_item
+        from .budgets import NO_CONTESTED_LOSS, RECALL_REPORT_RESERVE, clamp_item
+        c_loss = contested_loss if contested_loss is not None else NO_CONTESTED_LOSS
         est = self._est_tokens
         cap = self.config.item_cap_tokens
         qtok = set(re.findall(r"[a-z0-9]+", (query or "").lower()))
@@ -1472,7 +1494,7 @@ class Memory:
 
         headers = est("## RELEVANT DETAIL\n") \
             + est("\n\n## UNVERIFIED THIRD-PARTY CLAIMS (never assert as fact)\n")
-        remaining = budget - headers - REPORT_RESERVE          # I10b: report reserved first
+        remaining = budget - headers - RECALL_REPORT_RESERVE   # I10b: report reserved first
 
         n_clamped = 0
 
@@ -1564,15 +1586,15 @@ class Memory:
         d_variants = _admit_edges(variants, sel_edges)                # variants LAST
 
         d_detail = d_flag_rel + d_flag_unrel + d_commit + d_plain + d_variants
-        truncated = bool(d_detail or d_safety or wiki_dropped or d_eps or n_clamped)
+        truncated = bool(d_detail or d_safety or wiki_dropped or d_eps or n_clamped
+                         or c_loss.truncated)
         detail = "\n".join(sel_edges + sel_eps).strip()
         if truncated:                                      # the I10b report, per class,
-            from .budgets import bounded_count as _bc      # counts BOUNDED-WIDTH (R9-2)
-            detail = (detail + ("\n" if detail else "")
-                      + f"[budget: dropped {_bc(d_detail)} detail / {_bc(d_safety)} SAFETY / "
-                        f"{_bc(n_clamped)} clamped / "
-                        f"wiki {'clamped-or-dropped' if wiki_dropped else 'kept'} / "
-                        f"{_bc(d_eps)} episodes]")
+            from .budgets import recall_report_line        # counts BOUNDED-WIDTH (R9-2);
+            detail = (detail + ("\n" if detail else "")    # the grammar lives in budgets
+                      + recall_report_line(d_detail, d_safety, c_loss.groups_dropped,
+                                           c_loss.values_withheld, n_clamped,
+                                           wiki_dropped, d_eps))
         unverified = "\n".join(sel_unv).strip()
         return wiki, detail, unverified, truncated
 

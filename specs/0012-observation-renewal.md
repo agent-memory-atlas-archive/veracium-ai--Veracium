@@ -114,6 +114,40 @@ Spec-Status: accepted
 > folded R3; v5 folded R2; v4 folded round 1 (F4 fixed at root under `0003`). 🔗 Design 1
 > closes `0014` §3.1 + `M9` (§11). **ACCEPTED at round 14** — see §12, the Review closure ledger.
 
+> **Amended 2026-09-19 (the owner's word in the dev session, question form; I10b and I10e
+> extended, no invariant withdrawn).** The recall truncation report was a WRONG NUMBER for the
+> contested class: `_fit_to_budget` built the `[budget: …]` line from its own local counts and
+> emitted it only when its own local truncation was true, while the CONTESTED block is charged
+> upstream and its losses reached only the surface's `truncated` flag. Measured by dev on a
+> rebuilt ten-conversation store at `contested_render_share` 0.5 (60 questions): 54 of 60
+> truncated contexts carried no budget line at all, and the 6 that did read `0 SAFETY` while 71
+> contested groups were withheld on every question. Now: the renderer computes ONE
+> `ContestedLoss` (whole groups dropped after the cut / contending values withheld inside
+> rendered lines / its own flag) and the call site carries it into the fitter unchanged; the
+> report gains the class — `… / N contested groups / M contested values / …` — as its own
+> figures (SAFETY's meaning untouched), and is emitted whenever ANY class lost, the contested
+> block's own flag included, so the flag and the visible line cannot disagree. The recall
+> report reserve is 40 tokens (was 32): the line's bounded worst case grew from 100 to 148
+> characters; the recall floor therefore moves 272 → 280 (I10e's derivation unchanged, its
+> reserve term per surface); proactive's report and reserve are unchanged (it renders no
+> contested block, I10d). The same store, re-measured on the fix: 60 of 60 contexts carry the
+> line, every one stating 71 groups / 54 values. Beside it, the order census of the same day
+> found the fitter's four within-class sorts (warnings most-overdue-first, related and
+> unrelated; commitments nearest-first; episodes newest-first) reversible with nothing in
+> this spec's tests failing; `test_the_within_class_admission_orders_are_pinned` now fails
+> against each of the four reversed alone. Tests: `test_contested_overflow_is_reported_with_
+> its_own_class`, `test_a_report_reading_zero_for_dropped_groups_is_refused_by_the_check`
+> (the wrong-number control: a fixture with N dropped groups whose report reads 0 fails the
+> check), `test_values_withheld_alone_print_the_report` (the squeeze-only case: 0 groups /
+> M values, the line present), and `test_the_bounded_report_lines_fit_their_reserves` —
+> research's control: both report lines are built by ONE named builder each
+> (`recall_report_line`, `proactive_report_line` in `budgets`), and the control builds
+> them with every count at its bounded maximum and asserts each fits its reserve, so a
+> class added without the reserve raised fails loudly (the margin is 3 tokens; nothing
+> pinned the reserve against the line before). The across-group ORDER of the block —
+> sorted (subject, relation), the cut taking that order's tail — is `0003`'s open
+> amendment, not this one.
+
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
@@ -693,7 +727,7 @@ implementation.*
 | **I8j** | **(R4-4)** the surfaced set is DETERMINISTIC and store-order invariant: the survivor is chosen by the §4c total order (note-bearing → specificity → freshest → edge id) BEFORE suppression is evaluated | `test_surfaced_set_is_permutation_invariant` — insert one group's members in several store orders (incl. the asymmetric empty-note/nonempty-note pair both ways): identical surfaced set every time |
 | **I10** | **(R4-1, made mechanical in v8 per R5-1…R5-3)** every model-facing read surface carries a HARD budget in ESTIMATED TOKENS (never item counts) with the §4c(i) defaults, a per-ITEM clamp with in-item elision, marker cost reserved off the top, the §4c(iv) per-surface total order (composing with `0003`'s contested first-claim, unmodified), defined safety-only overflow, and truncation SIGNALED for every cause | `test_read_surfaces_are_hard_bounded_against_variant_floods` — 25 distinct-note variants: every surface within its token bound, warning + commitment retained, marker present and deterministic |
 | **I10a** | **(R5-1, extended v9 per R6-3)** ONE oversized item cannot break a budget — for EVERY item type in the §4c(iv) taxonomy: a 500K-char edge note/object, an oversized EPISODE summary, and an oversized cached WIKI BODY are each clamped at their cap with the in-item elision marker; an oversized item never sails through whole, never yields `truncated=False`, and an oversized SAFETY item is clamped-to-fit rather than dropped | `test_a_single_oversized_item_is_clamped_not_emitted` — one 500K-char member of each item type (edge, episode, wiki body) under each surface: rendered size ≤ the bound, elision marker present, `truncated` set; repeated as the FIRST item under a tiny `token_budget` |
-| **I10b** | **(R5-3, extended v9 per R6-3)** overflow is ordered, deterministic, and NEVER silent across the FULL taxonomy: when safety items alone — or episodes/wiki body alongside them — exceed a bound, the §4c(iv) order decides (contested first per `0003`; wiki within its share; warnings most-overdue-first; commitments nearest-first; episodes newest-first; ties `observed_at` DESC then edge id), and markers report dropped counts per class, SAFETY distinctly | `test_safety_overflow_is_ordered_and_reported` — more flagged groups + commitments + a contested pair + episodes + a large wiki body than the bound admits: selection matches the total order exactly, is permutation-invariant, and the per-class markers render within budget |
+| **I10b** | **(R5-3, extended v9 per R6-3)** overflow is ordered, deterministic, and NEVER silent across the FULL taxonomy: when safety items alone — or episodes/wiki body alongside them — exceed a bound, the §4c(iv) order decides (contested first per `0003`; wiki within its share; warnings most-overdue-first; commitments nearest-first; episodes newest-first; ties `observed_at` DESC then edge id), and markers report dropped counts per class, SAFETY distinctly — **and (amended 2026-09-19) the CONTESTED class as two figures, groups dropped / values withheld, from the one `ContestedLoss` the renderer computed, the report emitted whenever any class lost, the block's own flag included** | `test_safety_overflow_is_ordered_and_reported` — more flagged groups + commitments + a contested pair + episodes + a large wiki body than the bound admits: selection matches the total order exactly, is permutation-invariant, and the per-class markers render within budget; **`test_contested_overflow_is_reported_with_its_own_class` + `test_a_report_reading_zero_for_dropped_groups_is_refused_by_the_check` + `test_values_withheld_alone_print_the_report` + `test_the_within_class_admission_orders_are_pinned` + `test_the_bounded_report_lines_fit_their_reserves`** (2026-09-19) |
 | **I10c** | **(R6-2)** trust/state labels are NON-TRUNCATABLE framing charged before content: clamping can never sever `[possibly stale — …]`, `[third-party-reported; unconfirmed]`, `CONTESTED` markers, or due/confirmation instructions from the content they govern — attacker-controlled text is never retained while its label is dropped | `test_clamping_never_severs_the_safety_label` — an oversized item of EACH class (mentionable, use_only, quarantined, stale-flagged, dated commitment, contested member): the label renders intact in every case, the content is clamped, and the label+clamped-content pair stays within the item cap |
 | **I10d** | **(R6-4)** proactive recall gives contested material NO NEW REACH — accepted `0003`'s rule, restated here because v7–v8 violated it with a contested-first tier (WITHDRAWN): a grounded contested member enters proactive only via the ordinary categories (flagged/due/transient/recent); an otherwise-ineligible contested member does NOT appear; a fenced (`use_only`/quarantined) member is NEVER volunteered | `test_proactive_grants_contested_no_new_reach` — a durable, unflagged, undated, non-transient contested grounded pair: absent from proactive output; the same fact when flagged appears via the WARNING tier (not a contested tier); a fenced challenger never appears |
 | **I10e** | **(R7-1 + R8-1 + R11-2)** budget floors are PER-SURFACE, ENVELOPE-DERIVED, and enforced loudly at EVERY source: `floor(surface) = measured envelope + max(64-token item allowance, mandatory_contested_allowance) + marker reserve` (the allowance per §4c's mechanical definition, incl. the 48-token `group_heading_allowance`); a below-floor caller `token_budget` OR host-configured bound (query/wiki/proactive/item-cap/heading sub-cap) is REJECTED with a `ValueError` naming the surface, floor, and derivation; `contested_members_per_line < 2` is likewise rejected; the per-item cap covers framing PLUS content; data-dependent framing must have a bounded rendering (the §4c packing) | `test_below_floor_budgets_are_rejected_loudly` — `token_budget=1`, a 32-token item cap, AND a 64-token wiki-input config (below the wiki's ~254-token measured envelope) each raise with the derivation; a just-above-floor budget renders one framed clamped item + marker within bound (the §7b-ii inversion of the old survival test) · `test_k_below_two_is_rejected` — K=0 and K=1 configs each raise at config time · `test_oversized_subject_and_relation_are_heading_clamped` — a 10K-char subject and a 2K-char relation name render within the heading sub-cap with in-item elision |
