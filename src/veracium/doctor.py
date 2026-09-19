@@ -343,6 +343,16 @@ def _check_refs(rep: Report, conn, user: Optional[str], edges: dict, episodes: d
     if bad_contrib:
         rep.add("refs", "error", f"{len(bad_contrib)} ledger row(s) whose typed contributor does not "
                 "exist", bad_contrib)
+    # specs/0041 v15: redaction records name a target; episode events name an episode
+    if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='redactions'").fetchone():
+        ids = [r["id"] for r in conn.execute(f"SELECT id, user_id, target_kind, target_id FROM redactions {where}", args)
+               if (r["user_id"], r["target_id"]) not in (edges if r["target_kind"] == "edge" else episodes)]
+        if ids:
+            rep.add("refs", "error", f"{len(ids)} redaction record(s) naming a target that does not exist", ids)
+        ids = [r["episode_id"] for r in conn.execute(f"SELECT DISTINCT episode_id, user_id FROM episode_event {where}", args)
+               if (r["user_id"], r["episode_id"]) not in episodes]
+        if ids:
+            rep.add("refs", "error", f"{len(ids)} episode event(s) naming an episode that does not exist", ids)
     # embeddings
     ids = [r["edge_id"] for r in conn.execute(f"SELECT DISTINCT edge_id, user_id FROM edge_embedding {where}", args)
            if (r["user_id"], r["edge_id"]) not in edges]

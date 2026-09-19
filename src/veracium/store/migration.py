@@ -240,6 +240,11 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
             now_iso = datetime.now(timezone.utc).isoformat()   # ONE clock read
             journal_baselines(conn, now_iso)
             mint_store_epoch(conn, now_iso, 13)
+        # specs/0041 §4b/§4b-ii (v15): crossing INTO v15 adds `episode_event` and `redactions`
+        # — an attestation or an episode event exists only once the operation that writes
+        # them runs on an open v15 store, so there is no data step; rows already holding the
+        # marker bytes are UNATTESTED markers, admitted, neither refused nor quarantined
+        # (ruled v7) and enumerated by `unattested_marker_report` for the operator.
         # specs/0027 §4g (v14): crossing INTO v14 adds the `policy_receipt` table
         # and its index through the generic additive apply above and NOTHING else
         # — a receipt is written only by a recall on an open v14 store, so there is
@@ -315,3 +320,25 @@ from ..census import declare_site
 # decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
 _SITE_MIGRATION_VERSION = declare_site("store.migration.version")
 _SITE_DUPLICATE_OUTCOME_CHAIN = declare_site("store.migration.duplicate-outcome-chain")
+
+
+def unattested_marker_report(store) -> list:
+    """specs/0041 §4b (ruled v7): every stored record holding the marker byte string in a carrier with NO redaction
+    record attesting that (record, field) — an UNATTESTED marker: bytes that carry no user content and confer no
+    redacted status. Named per row AND per field, because a report that names the row without the carrier cannot
+    be acted on (round 5, finding 3). A read: it changes nothing, refuses nothing, and never defaults."""
+    import json as _json
+    from .. import redaction as _red
+    conn = store._conn
+    attested = set()
+    if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='redactions'").fetchone():
+        for kind, tid, fields in conn.execute("SELECT target_kind, target_id, fields FROM redactions"):
+            for f in _json.loads(fields):
+                attested.add((kind, tid, f))
+    rows = []
+    for table, kind in (("edges", "edge"), ("episodes", "episode")):
+        for rid, js in conn.execute(f"SELECT id, json FROM {table}"):
+            for field in _red.marker_fields(_json.loads(js)):
+                if (kind, rid, field) not in attested:
+                    rows.append({"target_kind": kind, "target_id": rid, "field": field})
+    return rows

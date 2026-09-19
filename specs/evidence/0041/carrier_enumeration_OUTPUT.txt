@@ -1,4 +1,4 @@
-A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V14 — 15 tables
+A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V15 — 17 tables
 
    confirmations            id, user_id, edge_id, confirmed_at, actor, call_path, correlation_id, request_digest
    consolidation_ops        operation_id, user_id, state, owner, lease_expires_at, claimed_ids
@@ -6,8 +6,10 @@ A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V14 — 15 tables
    edge_embedding           edge_id, user_id, embedder_id, content_digest, vec, built_at
    edge_event               user_id, edge_id, kind, reason, state, recorded_at
    edges                    id, user_id, subject ←DUPLICATES json, relation ←DUPLICATES json, object ←DUPLICATES json, json
+   episode_event            user_id, episode_id, kind, reason, state, recorded_at
    episodes                 id, user_id, date, json
    policy_receipt           user_id, recall_id, policy_id, policy_version, recorded_at, receipt
+   redactions               id, user_id, target_kind, target_id, fields, reason, event_ref, recorded_at
    source_revocations       user_id, identity_digest, action, at, reason
    store_epoch              started_at
    store_identity           origin

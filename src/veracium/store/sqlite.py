@@ -100,7 +100,8 @@ _ERASE_TABLES = ("contribution_ledger",
                  "edges", "episodes", "wiki", "write_counter",
                  "confirmations", "consolidation_ops",
                  "supersession_refusals", "supersession_operations",
-                 "edge_embedding", "edge_event", "policy_receipt")
+                 "edge_embedding", "edge_event", "policy_receipt",
+                 "episode_event", "redactions")          # specs/0041 v15: the episode journal and the attestation record are erasable per user
 EDGE_WRITE_SITE_RULINGS = {
     "_upsert_edge_row": {
         "ruling": "reads the persisted prior, upserts, journals through the choke "

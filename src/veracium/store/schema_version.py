@@ -547,12 +547,56 @@ SCHEMA_V14 = SCHEMA_V13 + (
                  REBUILDABLE),
 )
 
+# specs/0041 §4b / §4b-ii (v15, tranche 2, 2026-09-19) — the additive v15: two tables. `episode_event` is the
+# episode journal, the same shape as `edge_event` (0029's transaction-time journal: seq/txn allocated by the
+# same allocator, `state` the episode's json as found, `reason` D1's closed vocabulary), so an episode redaction is
+# durable in the record AND visible in the journal — the asymmetry round 2's F3 named. `redactions` is THE
+# ATTESTATION RECORD: a field is redacted iff a row here names that record and that field (§4b v7's rule; the
+# marker bytes alone confer nothing). Its `fields` column is the JSON list of the carriers treated (REPLACE /
+# CLEAR / DELETE), `reason` D1's vocabulary, the store version before and after, and `event_ref` the journal
+# event the redaction wrote. Policies: both tables REQUIRED (an attestation or an event is not derivable from
+# current state — the `edge_event` argument; absence is damage, not drift); the indexes REBUILDABLE. DDL only:
+# crossing INTO v15 adds the objects and nothing else — no redaction exists before the table does — so
+# `migrate_store` needs no data step and the constructor no row.
+SCHEMA_V15 = SCHEMA_V14 + (
+    SchemaObject("table", "episode_event", """CREATE TABLE episode_event (
+    user_id     TEXT    NOT NULL,
+    seq         INTEGER NOT NULL,
+    txn         INTEGER NOT NULL,
+    episode_id  TEXT    NOT NULL,
+    kind        TEXT    NOT NULL,
+    reason      TEXT,
+    state       TEXT    NOT NULL,
+    recorded_at TEXT    NOT NULL,
+    PRIMARY KEY (user_id, seq)
+)""", REQUIRED),
+    SchemaObject("index", "ix_episode_event_lookup",
+                 "CREATE INDEX ix_episode_event_lookup ON episode_event(user_id, episode_id, seq)",
+                 REBUILDABLE),
+    SchemaObject("table", "redactions", """CREATE TABLE redactions (
+    id                   TEXT NOT NULL PRIMARY KEY,
+    user_id              TEXT NOT NULL,
+    target_kind          TEXT NOT NULL,
+    target_id            TEXT NOT NULL,
+    fields               TEXT NOT NULL,
+    marker_version       INTEGER NOT NULL,
+    reason               TEXT NOT NULL,
+    store_version_before INTEGER NOT NULL,
+    store_version_after  INTEGER NOT NULL,
+    event_ref            TEXT,
+    recorded_at          TEXT NOT NULL
+)""", REQUIRED),
+    SchemaObject("index", "ix_redactions_target",
+                 "CREATE INDEX ix_redactions_target ON redactions(user_id, target_kind, target_id)",
+                 REBUILDABLE),
+)
+
 SCHEMAS = {1: SCHEMA_V1, 2: SCHEMA_V2, 3: SCHEMA_V3, 4: SCHEMA_V4, 5: SCHEMA_V5,
            6: SCHEMA_V6, 7: SCHEMA_V7, 8: SCHEMA_V8, 9: SCHEMA_V9,
            10: SCHEMA_V10,
-           11: SCHEMA_V11, 12: SCHEMA_V12, 13: SCHEMA_V13, 14: SCHEMA_V14}
+           11: SCHEMA_V11, 12: SCHEMA_V12, 13: SCHEMA_V13, 14: SCHEMA_V14, 15: SCHEMA_V15}
 
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 """**Declared, not inferred.**
 
 v6 used `max(SCHEMAS)`, so adding or removing a registry entry silently changed

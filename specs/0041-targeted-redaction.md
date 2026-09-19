@@ -261,6 +261,29 @@ first.*
 > migration report of unattested markers), tranche 3 (`redact()` itself over the 64-carrier map), tranche 4
 > (readers and the import contract), tranche 5 (delayed writers, the transition evidence, the closure rows).
 
+> **Implementation note, tranche 2 (2026-09-19).** The store schema moves 14 → 15 (0018's obligations
+> applied: additive DDL, no data step, every row byte-identical across the cross; the release record
+> re-derived at the commit; the migrated-shape record carries v15; the orchestrator's mint base and
+> ladder derive from the head). `episode_event` (§4b-ii: `edge_event`'s shape — seq/txn, kind, D1's
+> reason, `state` as found, recorded_at) and `redactions` (§4b, the ATTESTATION record: target kind and
+> id, the JSON list of fields treated, marker version, D1's reason, store version before/after, the
+> journal event it wrote, recorded_at), both REQUIRED, their indexes REBUILDABLE.
+> `migration.unattested_marker_report(store)` is §4b's report as ruled v7: a read over `edges` and
+> `episodes` returning `{target_kind, target_id, field}` for every marker-carrying field with no attesting
+> `redactions` row — it changes nothing, refuses nothing, never defaults; `test_C_the_migration_report…`
+> flips green on the frozen store's two planted rows and its strict mark comes off; the campaign's report
+> mutants restore the landed function and the landed report is that test's sixth positive control.
+> `forget_user` erases both tables (0017's per-user erasure reaches the new carriers); the doctor's `refs`
+> check names a redaction record whose target does not exist and an episode event whose episode does not
+> exist. The frozen v14 fixture stays frozen: the transition tests migrate their writable COPY before
+> opening it (a below-head store refuses to open; §4h(iii)'s rows are still the pre-restriction writer's).
+> Nothing writes either table yet — that is tranche 3's `redact()`. The carrier enumeration's §A (the column
+> census, `carrier_enumeration_OUTPUT.txt`) now lists 17 tables: `episode_event.state` holds an episode's json
+> as found — the same carrier set as the `Episode` model, to be tombstoned at redaction as `edge_event.state`
+> is (tranche 3) — and `redactions` is a non-carrier by construction (ids, field NAMES, D1's vocabulary,
+> versions, timestamps; never content); the 84 terminal identities, 64 carriers and 20 non-carriers are
+> model-derived and unchanged.
+
 ---
 
 ## 1. Problem and motivation
@@ -1737,9 +1760,9 @@ reviewer's three and no fourth.**
 
 **So the rule this section now carries: every strict xfail owes BOTH controls —
 a wrong implementation it refuses, AND an honest implementation under which it
-PASSES.** `specs/evidence/0041/xfail_mutant_campaign.py` runs 15: the reviewer's 5,
-5 more of ours, and **5 positive controls (the fifth added 2026-09-19 at 0041 tranche 1: the landed kind closure is the import-boundary test's positive control, and the reviewer's import-rule mutant now switches that closure off to stay a mutant) that install a correct implementation
-and require green**. 15 of 15 behave. 🔴 **Only 3 of those 4 cover a STRICT
+PASSES.** `specs/evidence/0041/xfail_mutant_campaign.py` runs 16: the reviewer's 5,
+5 more of ours, and **6 positive controls (the fifth added 2026-09-19 at 0041 tranche 1: the landed kind closure is the import-boundary test's positive control, and the reviewer's import-rule mutant now switches that closure off to stay a mutant; the sixth added the same day at tranche 2: the landed `migration.unattested_marker_report` is the migration-report test's positive control beside the in-process honest report, and every report mutant now restores the landed function instead of deleting it) that install a correct implementation
+and require green**. 16 of 16 behave. 🔴 **Only 3 of those 4 cover a STRICT
 xfail — the fourth covers an ordinary test — so EIGHT of the eleven strict
 xfails still await one, and that remainder is owed at implementation rather
 than claimed as done.** ⚠️ **Every figure in this paragraph is DERIVED from the

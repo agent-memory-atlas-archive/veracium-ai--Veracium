@@ -358,9 +358,9 @@ def test_schema_14_declares_the_receipt_table_required_and_its_index_rebuildable
     assert objs["ix_policy_receipt_time"].policy == sv.REBUILDABLE
     assert {o.key for o in sv.SCHEMAS[14]} - {o.key for o in sv.SCHEMAS[13]} == {
         ("table", "policy_receipt"), ("index", "ix_policy_receipt_time")}
-    assert sv.SCHEMA_VERSION == 14
+    assert sv.SCHEMA_VERSION >= 14                       # 14 was the head until 0041's v15 (2026-09-19)
     mem = _memory(tmp_path, "s.db")
-    assert mem.store._conn.execute("PRAGMA user_version").fetchone()[0] == 14
+    assert mem.store._conn.execute("PRAGMA user_version").fetchone()[0] == sv.SCHEMA_VERSION
     cols = [r[1] for r in mem.store._conn.execute("PRAGMA table_info(policy_receipt)")]
     assert cols == ["user_id", "recall_id", "policy_id", "policy_version", "recorded_at", "receipt"]
     mem.close()
@@ -386,9 +386,9 @@ def test_a_v13_store_migrates_to_v14_with_its_rows_intact(tmp_path):
     assert not c.execute("SELECT name FROM sqlite_master WHERE name='policy_receipt'").fetchall()
     c.close()
     result = migrate_store(old)
-    assert result == "migrated" and result.resulting_version == 14 and result.transaction_committed, result
+    assert result == "migrated" and result.resulting_version == sv.SCHEMA_VERSION and result.transaction_committed, result
     c = sqlite3.connect(old)
-    assert c.execute("PRAGMA user_version").fetchone()[0] == 14
+    assert c.execute("PRAGMA user_version").fetchone()[0] == sv.SCHEMA_VERSION   # v13 -> the head, through v14
     assert c.execute("SELECT COUNT(*) FROM edges").fetchone()[0] == n_edges
     assert c.execute("SELECT COUNT(*) FROM edge_event").fetchone()[0] == n_events    # no re-baseline
     assert c.execute("SELECT COUNT(*) FROM policy_receipt").fetchone()[0] == 0

@@ -38,6 +38,8 @@ tt = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tt)
 
 from veracium.store import migration as MIG  # noqa: E402
+_REAL_REPORT = MIG.unattested_marker_report   # 0041 tranche 2 (2026-09-19): the LANDED report; every mutant that
+                                              # overwrites it restores it — deleting it would strip the module
 
 RESULTS = []
 
@@ -160,8 +162,7 @@ def remove_correct():
     if cls is not None and hasattr(cls, "_0041_real_add_edge"):
         cls.add_edge = cls._0041_real_add_edge
         del cls._0041_real_add_edge
-    if hasattr(MIG, "unattested_marker_report"):
-        del MIG.unattested_marker_report
+    MIG.unattested_marker_report = _REAL_REPORT
 
 
 def stub(fn):
@@ -176,8 +177,7 @@ def drop_redact():
 
 
 def drop_report():
-    if hasattr(MIG, "unattested_marker_report"):
-        del MIG.unattested_marker_report
+    MIG.unattested_marker_report = _REAL_REPORT
 
 
 print(__doc__.strip().splitlines()[0])
@@ -216,6 +216,8 @@ check("a report that names the rows but not the carrier field", True, T2,
                     {"target_id": "e-mark-2", "field": "subject"}]), drop_report)
 check("POSITIVE CONTROL — an honest report", False, T2,
       install_correct, remove_correct)
+check("POSITIVE CONTROL — the landed report (0041 tranche 2): `migration.unattested_marker_report` names the frozen "
+      "store's two marker rows and their field, nothing installed", False, T2, lambda: None, lambda: None)
 
 print("\nT3 — test_C_after_attestation_the_same_write_is_refused")
 T3 = tt.test_C_after_attestation_the_same_write_is_refused
@@ -330,12 +332,12 @@ for _f in ("test_0041_transition_table.py", "test_0041_treatment_matrix.py",
            "test_0041_evidence.py"):
     _strict += (ROOT / "tests" / _f).read_text().count("xfail(strict=True")
 _covered = sorted({lbl for ok, lbl, _ in RESULTS if "POSITIVE CONTROL" in lbl})
-_strict_covered = [t for t in ("T1", "T2", "T3") ]
+_strict_covered = [t for t in ("T1", "T3") ]       # T2's test flipped at 0041 tranche 2 (2026-09-19): ordinary now
 print("\n" + "=" * 72)
 print("COVERAGE, derived:")
 print(f"  strict xfails in the 0041 modules      {_strict}")
 print(f"  positive controls in this campaign     {len(_covered)}")
-print(f"  of those, covering a STRICT xfail      {len(_strict_covered)}  (T4 covers an ORDINARY test)")
+print(f"  of those, covering a STRICT xfail      {len(_strict_covered)}  (T2 since tranche 2, and T4, cover ORDINARY tests)")
 print(f"  strict xfails still AWAITING one       {_strict - len(_strict_covered)}")
 print("  §11.4-bis requires BOTH controls of every strict xfail; the remainder is")
 print("  owed at implementation and is not claimed as done.")

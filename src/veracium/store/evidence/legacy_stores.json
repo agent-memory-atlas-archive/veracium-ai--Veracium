@@ -1,7 +1,7 @@
 {
   "manifest_algorithm": 13,
-  "head_digest": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
-  "head_schema_version": 14,
+  "head_digest": "c9e9e291d8df69aeb51465847c69ed4b228cd3abb5a99d23e92af9730460f024",
+  "head_schema_version": 15,
   "legacy_base_versions": [
     1
   ],

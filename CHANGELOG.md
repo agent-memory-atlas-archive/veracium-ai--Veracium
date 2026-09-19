@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- **BREAKING for existing stores — schema 14 → 15: the episode journal and the redaction
+  attestation record (specs/0041, tranche 2).** Two additive tables and their indexes:
+  `episode_event` (the episode-side transaction-time journal, `edge_event`'s shape — an episode
+  redaction will be durable in the record AND visible in the journal) and `redactions` (THE
+  attestation record: a field is redacted iff a row names that record and that field; the marker
+  bytes alone confer nothing). No data step — no redaction and no episode event exists before the
+  tables do, so every row crosses byte-identical. A store created by ≤ 0.26.1 must be migrated
+  offline before this build opens it — `veracium migrate --db X --i-have-quiesced --backup REF`
+  (the orchestrator now migrates v14 → v15; a store further behind takes the one-call library
+  path `veracium.store.migration.migrate_store`). **Who must act:** every operator with an
+  on-disk store. Hosts that implement `veracium.store.base.Store` need nothing yet: no operation
+  writes either table until `redact()` lands (tranche 3). Also: `migration.unattested_marker_report(store)`
+  enumerates every stored row holding the marker byte string in a field with no attesting record —
+  admitted, neither refused nor quarantined (§4b, ruled v7) — named per row AND per field; on the
+  frozen pre-restriction store it names the two planted rows and nothing else. `forget_user` erases
+  both tables for the user; the doctor reports a redaction record naming a target that does not exist
+  and an episode event naming an episode that does not exist as `refs` errors. The shipped release
+  record (`store/evidence/legacy_stores.json`) re-derived at the commit; the migrated-shape record
+  carries v15 like the additive bumps before it.
 - **Changed: three write-path refusals ahead of targeted redaction, and `redacted` as a registered
   invalidation reason (specs/0041, tranche 1).** A non-redaction write may no longer introduce the redaction
   marker byte string (`\x00veracium:redacted\x00`) into an edge or an episode, on any persistence path

@@ -75,8 +75,10 @@ def test_the_round1_reproduction_script_reports_every_claim_as_the_reviewer_foun
 def test_the_carrier_enumeration_reproduces_its_committed_output_byte_for_byte():
     """Research's carrier enumeration (their original sha16 50531999b8caf5f0 at
     research commit 2dfdf3ab; the packaged copy resolves the repository from its
-    own location) regenerates `carrier_enumeration_OUTPUT.txt` exactly: 15
-    tables, 84 terminal (model, field) identities, 64 carriers + 20 non-carriers.
+    own location) regenerates `carrier_enumeration_OUTPUT.txt` exactly: 17
+    tables at v15 (15 at v14 — §A, the column census, gained `episode_event` and
+    `redactions` at 0041 tranche 2; the identities below are MODEL-derived and did
+    not move), 84 terminal (model, field) identities, 64 carriers + 20 non-carriers.
     v3's §2 quotes those counts; this is the node that keeps them honest."""
     r = subprocess.run([sys.executable, str(EVIDENCE / "carrier_enumeration.py")],
                        cwd=EVIDENCE, env={"PATH": "/usr/bin:/bin"}, capture_output=True, text=True, timeout=300)

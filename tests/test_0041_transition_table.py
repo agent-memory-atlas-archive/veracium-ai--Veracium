@@ -300,8 +300,7 @@ def test_C_a_pre_existing_marker_row_is_admitted_and_is_not_a_redaction(tmp_path
     assert _edge(st, "e-m").object == "Porto"
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §4b: the migration REPORT enumerates unattested marker rows; "
-                                       "`veracium.store.migration` has no such report, so the call below raises")
+# (strict xfail until 0041 tranche 2, 2026-09-19: `migration.unattested_marker_report` now exists)
 def test_C_the_migration_report_enumerates_unattested_marker_rows(tmp_path):
     """ROUND-5 FINDING 3, rewritten. The previous body was `assert hasattr(...)`,
     which the reviewer satisfied with a helper that always returns an empty list:
@@ -627,6 +626,7 @@ def _frozen_memory(tmp_path):
     sibling of `_frozen_store`, for tests that need the API and not the store."""
     dst = tmp_path / "frozen.db"
     shutil.copy2(_FROZEN / "pre_restriction.sqlite", dst)
+    _migrate_copy(dst)                       # v14 bytes -> the head (DDL only; the rows are the frozen writer's)
     return _mem(tmp_path, name="frozen.db")
 
 
@@ -645,7 +645,21 @@ def _frozen_store(tmp_path):
     whose digest is asserted."""
     dst = tmp_path / "frozen.db"
     shutil.copy2(_FROZEN / "pre_restriction.sqlite", dst)
+    _migrate_copy(dst)
     return _mem(tmp_path, name="frozen.db").store
+
+
+def _migrate_copy(dst):
+    """The frozen store is v14; since 0041 tranche 2 the head is 15 and ordinary opening refuses a below-head
+    store (specs/0013: migration is OFFLINE). The writable copy is migrated — additive DDL, no data step, every
+    row byte-identical — before it is opened; the frozen bytes themselves are never touched."""
+    from veracium.store.migration import migrate_store
+    from veracium.store import schema_version as sv
+    import sqlite3 as _sq
+    c = _sq.connect(str(dst)); found = c.execute("PRAGMA user_version").fetchone()[0]; c.close()
+    if found < sv.SCHEMA_VERSION:
+        r = migrate_store(str(dst))
+        assert r == "migrated" and r.resulting_version == sv.SCHEMA_VERSION, r
 
 
 def test_the_frozen_pre_restriction_store_matches_its_manifest(tmp_path):
