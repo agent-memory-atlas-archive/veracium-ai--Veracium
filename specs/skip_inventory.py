@@ -185,6 +185,16 @@ INVENTORY = [
      "git-checkout", "specs/0039: each answer-shape transcript's header pins the "
      "commit its outcomes describe; the binding needs git history (ancestor + "
      "src/ unchanged since the pin) and cannot run in an extracted archive"),
+    ("tests/test_0042_inv7.py", "skip",
+     "the transcript's pin cannot be checked against history",
+     "git-checkout", "specs/0042 INV-7: the four-arm transcript's header pins the "
+     "commit it ran against; the binding needs git history (ancestor + src/ "
+     "unchanged since the pin) and cannot run in an extracted archive"),
+    ("tests/test_0042_inv7.py", "skip",
+     "the pin's ancestry cannot be checked",
+     "git-checkout", "specs/0042 INV-7: a SHALLOW checkout cannot answer whether the "
+     "transcript's pin is an ancestor of HEAD (git exit 128 is a fact about the "
+     "checkout); CI checks out with fetch-depth 0, so this is a last resort"),
     ("tests/test_spec_gate.py", "skip",
      "the retrospective obligation set derives from git history",
      "git-checkout", "0039 round-1 package finding: the security-hotfix "

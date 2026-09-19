@@ -139,8 +139,12 @@ def test_lexical_fallback_is_pre_feature_identical_unscoped(tmp_path):
              _edge("f2", "harbor:1", "hosts", "boat races", days=2),
              _edge("f3", "user", "drinks", "coffee", days=3)]
 
+    built = []                                   # one store per build: the file was named after id(embed),
+                                                 # and a REUSED address reopened an earlier build's store
+                                                 # (found by 0042's INV-7 control pair, 2026-09-19)
     def build(embed):
-        m = _mem(tmp_path, f"f-{id(embed)}.db", embed=embed)
+        built.append(embed)
+        m = _mem(tmp_path, f"f-{len(built)}.db", embed=embed)
         for e in edges:
             m.store.add_edge(e)
         return m

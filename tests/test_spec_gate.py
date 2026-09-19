@@ -2257,6 +2257,10 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # the convention is a PROXY for "is a checker" and this file would
         # have sat outside it for the same reason subject_census.py did.
         root / "specs" / "evidence" / "0041" / "pre_restriction_fixture.py",
+        # specs/0042 INV-7: the four-arm decision-trace harness VERDICTS (identical /
+        # divergent, the cross-checks) under a name the convention does not see;
+        # its matrix drives compare() on fabricated arms and fails it on each mutant
+        root / "specs" / "evidence" / "0042" / "inv7_harness.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

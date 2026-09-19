@@ -94,7 +94,18 @@ Spec-Status: accepted
 > `predicate-helper` decisions shared one reason whose escape clause ("where one exists") could not fail;
 > the generator now derives each helper's consumers from the source and names them — the consuming site
 > by id, the site-less consumers, or a hand-stated outside consumer — and refuses a helper with none.
-> What remains: the INV-7 harness with its fourth arm.
+> **6b — INV-7 as built:** the trace comes from an INDEPENDENT OBSERVER (`inv7_observer.py`), not the
+> census — every declared enforcement function wrapped from outside, one content-free (symbol, decision)
+> per exit; 95 of the 102 declared symbols are reachable that way and the seven nested functions are
+> excluded by name in the transcript. Four arms — healthy, forced-error, disabled (the bypass path) and the
+> uninstrumented twin at the commit the tranches began from — over 29 test files derived from this row's
+> sentence plus a greedy cover of every id the suite reaches (`inv7_reach_table.txt`,
+> `inv7_named_suites.json`), compared PER TEST after a control pair (the reference arm twice) names any
+> test whose own trace is not reproducible — the first run read DIVERGENT on exactly such a test, and the
+> bound ("under frozen replay inputs") is now enforced rather than assumed. `inv7_transcript.txt` is pinned
+> to its commit like 0039's; `tests/test_0042_inv7.py` binds the pin, the per-test verdict grammar, the
+> cross-checks, the in-process miniature over the runtime leg and the harness's mutation matrix. 0042's
+> implementation is complete on the dev side; the implementation-review package follows on the owner's word.
 
 ## 1. Problem and motivation
 

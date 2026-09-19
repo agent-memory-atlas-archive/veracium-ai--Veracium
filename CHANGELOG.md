@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Added: INV-7, the census's observation-only guarantee, as a FOUR-ARM decision-trace diff
+  (specs/0042, tranche 6b).** An independent observer (`specs/evidence/0042/inv7_observer.py`, a pytest
+  plugin) wraps every enforcement function the declaration names — 95 of 102; the 7 nested inside another
+  function are excluded by name — and records one content-free (symbol, decision) per exit. The harness
+  (`inv7_harness.py`) runs the suites that reach the sites — 29 files, derived: the spec-named 0027, gate,
+  ingest and schema files plus a greedy cover of every id the whole suite reaches (145 of 147; the two
+  others only the 0042 runtime leg exercises) — under counters healthy, forced to error, disabled (the
+  shipped default, the bypass path) and an UNINSTRUMENTED twin exported from the commit the tranches began
+  from, and compares the traces PER TEST after a control pair (the reference arm run twice) has named any
+  test whose own trace is not reproducible. The committed transcript reads IDENTICAL over 859 tests in all
+  four arms, one digest, none excluded; the census's fired sequence is a subsequence of the observer's in
+  both census arms; the failing arm is UNMEASURED on all 145 ids it reached; the twin registers no site.
+  The control pair found a test whose store file was named after an object address (a reused address
+  reopened an earlier build's store); it is fixed. An in-process miniature replays the runtime leg's 147
+  declining executions under three arms in the suite. No behaviour changes.
 - **Changed: every predicate-helper decision in the census review names its consumer (specs/0042,
   tranche 6a-bis).** Research's second read of the review's NOT half found that all 43 `predicate-helper`
   rows shared one reason — "the consumer's site is the enforcement point where one exists" — a sentence
