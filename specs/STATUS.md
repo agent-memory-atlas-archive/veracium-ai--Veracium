@@ -49,7 +49,7 @@ is the number that decides what can be built.
 | **0038** | the extraction's speech-act discipline | `accepted` | 2026-09-14 | 0 | 4 | 0 | 0 | 0 | — |
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
 | **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-09-17 | 0 | 8 | 0 | 0 | 0 | — |
-| **0042** | exercised guarantees — measuring whether what we specify is what runs | `accepted` | 2026-09-18 | 0 | 5 | 0 | 0 | 0 | — |
+| **0042** | exercised guarantees — measuring whether what we specify is what runs | `accepted` | 2026-09-19 | 0 | 5 | 0 | 0 | 0 | — |
 | **0043** | the refusal harness — measuring whether the gate declines when it should | `accepted` | 2026-09-18 | 0 | 4 | 0 | 0 | 0 | — |
 
 **Review archives** — the exact package sent for each round, with a sha256 per

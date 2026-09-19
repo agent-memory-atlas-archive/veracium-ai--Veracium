@@ -15,6 +15,7 @@ no extra classifier call, just the answer call the host would make anyway.
 """
 
 from __future__ import annotations
+from .census import declare_site
 
 from typing import Optional
 
@@ -32,6 +33,15 @@ from .schema import Edge, Episode, is_procedural
 PROCEDURAL_OUT_OF_SCOPE = "procedural_out_of_scope"
 
 
+# specs/0042: the enforcement points of this module, each a declared site the decision is
+# expressed THROUGH — consult() brackets the decision, fire() wraps the return it decides
+_SITE_EXCLUDE_PROCEDURAL = declare_site("gate.exclude-procedural", declines=lambda v: v[1] > 0)
+_SITE_SCOPED_INVISIBLE = declare_site("gate.scoped-assertable.invisible")
+_SITE_SCOPED_THIRD_PARTY = declare_site("gate.scoped-assertable.third-party-shaped")
+_SITE_SCOPED_ENTITLEMENT = declare_site("gate.scoped-assertable.entitlement")
+_SITE_PARTITION_PARTS = declare_site("gate.partition-parts", declines=lambda v: bool(v[2] or v[3]))
+
+
 def exclude_procedural(records: list) -> tuple[list, int]:
     """THE one exclusion every model-context render site reaches (specs/0037
     V-OUT-OF-PATH, V-RENDER-SITES): drop every record that is procedural BY
@@ -39,8 +49,9 @@ def exclude_procedural(records: list) -> tuple[list, int]:
     return the kept records with the count excluded under
     `PROCEDURAL_OUT_OF_SCOPE`. Applied BEFORE assertability is consulted.
     Episodes pass through (their stamp is always absent, V-NO-EPISODE)."""
-    kept = [r for r in records if not is_procedural(r)]
-    return kept, len(records) - len(kept)
+    with _SITE_EXCLUDE_PROCEDURAL.consult():
+        kept = [r for r in records if not is_procedural(r)]
+        return _SITE_EXCLUDE_PROCEDURAL.fire((kept, len(records) - len(kept)), "withhold")
 
 # Canonical local heuristic for "the gate declined to assert". Content-free and
 # never leaves the box: it turns the gate's OWN output into a boolean for
@@ -101,13 +112,15 @@ def scoped_assertable(record_assertable: bool, decision,
     `test_gate_seam_reserved_for_0011` fails if the parameter disappears or
     if any (entitlement × decision) cell grants."""
     visible, shape = decision
-    if not visible:
-        return False
-    if shape == "third-party-shaped":
-        return False
-    if subject_entitlement is False:        # the 0011 seam: RESTRICTS only
-        return False
-    return bool(record_assertable)
+    with _SITE_SCOPED_INVISIBLE.consult(), _SITE_SCOPED_THIRD_PARTY.consult(), \
+            _SITE_SCOPED_ENTITLEMENT.consult():
+        if not visible:
+            return _SITE_SCOPED_INVISIBLE.fire(False, "invisible")
+        if shape == "third-party-shaped":
+            return _SITE_SCOPED_THIRD_PARTY.fire(False, "third-party-shaped")
+        if subject_entitlement is False:        # the 0011 seam: RESTRICTS only
+            return _SITE_SCOPED_ENTITLEMENT.fire(False, "entitlement")
+        return bool(record_assertable)
 
 
 def partition(edges: list[Edge], episodes: list[Episode]) -> tuple[str, str]:
@@ -147,18 +160,19 @@ def partition_parts(edges: list[Edge], episodes: list[Episode]
     third-party-influenced episode lines). partition() is the joined view."""
     # specs/0037 §4a: procedural records are out of scope for this path —
     # excluded ONCE, here, by the stored rule, before assertability is asked
-    edges, _n_procedural = exclude_procedural(list(edges))
-    # render_edges returns "" for absorbed duplicates — drop those, not blank lines
-    edge_lines = [s for s in (render_edges([e]) for e in edges if e.assertable) if s]
-    claim_lines = [s for s in (render_edges([e]) for e in edges
-                               if e.quarantined or (e.active and e.use_only)) if s]
-    # 0023 §4a-iv: the grounded partition is the ASSERTABLE set; everything
-    # else routes to the fenced section — FENCED, not suppressed (Q5), so a
-    # quarantined claim stays visible as a claim rather than vanishing
-    ep_lines = [f"[{e.date}] {e.summary}" for e in episodes if e.assertable]
-    tp_ep_lines = [f"[{e.date}] {e.summary}" for e in episodes
-                   if not e.assertable]
-    return edge_lines, ep_lines, claim_lines, tp_ep_lines
+    with _SITE_PARTITION_PARTS.consult():
+        edges, _n_procedural = exclude_procedural(list(edges))
+        # render_edges returns "" for absorbed duplicates — drop those, not blank lines
+        edge_lines = [s for s in (render_edges([e]) for e in edges if e.assertable) if s]
+        claim_lines = [s for s in (render_edges([e]) for e in edges
+                                   if e.quarantined or (e.active and e.use_only)) if s]
+        # 0023 §4a-iv: the grounded partition is the ASSERTABLE set; everything
+        # else routes to the fenced section — FENCED, not suppressed (Q5), so a
+        # quarantined claim stays visible as a claim rather than vanishing
+        ep_lines = [f"[{e.date}] {e.summary}" for e in episodes if e.assertable]
+        tp_ep_lines = [f"[{e.date}] {e.summary}" for e in episodes
+                       if not e.assertable]
+        return _SITE_PARTITION_PARTS.fire((edge_lines, ep_lines, claim_lines, tp_ep_lines), "withhold")
 
 
 GATE_SYSTEM = (

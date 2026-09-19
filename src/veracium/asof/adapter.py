@@ -14,6 +14,7 @@ timestamps before any classifier could run, while 0030 must CLASSIFY them
 or to SCOPE_HIDDEN on the current leg under a view (V-FAILHIDDEN).
 """
 from __future__ import annotations
+from ..census import declare_site
 
 import json
 import typing as _typing
@@ -86,18 +87,25 @@ class Adapted:
     use_only: bool             # DERIVED — never read from the payload
 
 
+_SITE_DERIVE_QUARANTINED = declare_site("asof.adapter.derive-quarantined", declines=True)   # specs/0042
+_SITE_DERIVE_USE_ONLY = declare_site("asof.adapter.derive-use-only", declines=True)
+_SITE_ADAPT = declare_site("asof.adapter.adapt.refuse")                      # one id, every refusal
+
+
 def derive_quarantined(relation: str, disclosure: str) -> bool:
     """schema.py's `Edge.quarantined`: TWO disjuncts. A one-disjunct
     derivation lets a third-party CLAIM through whenever its own disclosure
     is not itself QUARANTINED."""
-    return (relation == QUARANTINE_RELATION
-            or disclosure == Disclosure.QUARANTINED.value)
+    with _SITE_DERIVE_QUARANTINED.consult():
+        return _SITE_DERIVE_QUARANTINED.fire(
+            relation == QUARANTINE_RELATION or disclosure == Disclosure.QUARANTINED.value, "quarantine")
 
 
 def derive_use_only(disclosure: str) -> bool:
     """schema.py's `Edge.use_only`: one disjunct, deliberately unlike
     `quarantined`."""
-    return disclosure == Disclosure.USE_ONLY.value
+    with _SITE_DERIVE_USE_ONLY.consult():
+        return _SITE_DERIVE_USE_ONLY.fire(disclosure == Disclosure.USE_ONLY.value, "withhold")
 
 
 def _field_rule(model, name):
@@ -145,58 +153,59 @@ def _identity_field(v) -> bool:
 def adapt(state_text: str, *, expect_id: str, expect_user: str) -> Optional[Adapted]:
     """TEXT → Adapted, or None (the single failure value)."""
     # 1. PARSE (C-1: the consumer's step), duplicate keys refused
-    try:
-        m = json.loads(state_text, object_pairs_hook=_strict_pairs)
-    except (ValueError, TypeError, RecursionError):
-        return None
-    if not isinstance(m, dict):
-        return None
-    # 2. IDENTITY against the ROW-sourced values (C-4 / V-CARRIER-AGREES)
-    if m.get("id") != expect_id or m.get("user_id") != expect_user:
-        return None
-    # 3. SCHEMA — missing is never defaulted (V-EXTRACT)
-    if not REQUIRED_KEYS.issubset(m):
-        return None
-    # 3b. TYPES AND BOUNDS, per field, derived from the model (presence is not validity)
-    if not all(_check_derived(Edge, k, m[k]) for k in
-               ("id", "user_id", "subject", "relation", "object", "note",
-                "valid_from", "invalidated_at", "invalidation_reason")):
-        return None
-    # 4. ENUMS: the reason's TYPE is required (an unknown STRING is coherent
-    #    and fences later, F8b); disclosure must be a real member — TYPE
-    #    BEFORE MEMBERSHIP (an unhashable value must never reach `in`).
-    r = m["invalidation_reason"]
-    if r is not None and not isinstance(r, str):
-        return None
-    prov = m.get("provenance")
-    if not isinstance(prov, dict):
-        return None
-    if not SCOPE_PROVENANCE_KEYS.issubset(prov):
-        return None
-    disc = prov["disclosure"]
-    if not isinstance(disc, str) or disc not in {d.value for d in Disclosure}:
-        return None
-    if not isinstance(prov["author_of_evidence"], str):
-        return None
-    try:
-        author = EvidenceAuthor(prov["author_of_evidence"])
-    except ValueError:
-        return None                       # an unknown author is not defaulted
-    if not all(_check_derived(Provenance, k, prov[k]) for k in
-               ("evidence_ref", "origin", "source_id")):
-        return None
-    if not (_identity_field(prov["origin"]) and _identity_field(prov["source_id"])):
-        return None
-    # 5. DERIVE the flags
-    return Adapted(
-        provenance=AdaptedProvenance(
-            author_of_evidence=author, origin=prov["origin"],
-            source_id=prov["source_id"], evidence_ref=prov["evidence_ref"],
-            disclosure=disc),
-        id=m["id"], user_id=m["user_id"], subject=m["subject"],
-        relation=m["relation"], object=m["object"], note=m["note"] or "",
-        valid_from=m["valid_from"], invalidated_at=m["invalidated_at"],
-        invalidation_reason=r, disclosure=disc,
-        quarantined=derive_quarantined(m["relation"], disc),
-        use_only=derive_use_only(disc),
-    )
+    with _SITE_ADAPT.consult():
+        try:
+            m = json.loads(state_text, object_pairs_hook=_strict_pairs)
+        except (ValueError, TypeError, RecursionError):
+            return _SITE_ADAPT.fire(None, "unparseable")
+        if not isinstance(m, dict):
+            return _SITE_ADAPT.fire(None, "not-an-object")
+        # 2. IDENTITY against the ROW-sourced values (C-4 / V-CARRIER-AGREES)
+        if m.get("id") != expect_id or m.get("user_id") != expect_user:
+            return _SITE_ADAPT.fire(None, "identity")
+        # 3. SCHEMA — missing is never defaulted (V-EXTRACT)
+        if not REQUIRED_KEYS.issubset(m):
+            return _SITE_ADAPT.fire(None, "schema")
+        # 3b. TYPES AND BOUNDS, per field, derived from the model (presence is not validity)
+        if not all(_check_derived(Edge, k, m[k]) for k in
+                   ("id", "user_id", "subject", "relation", "object", "note",
+                    "valid_from", "invalidated_at", "invalidation_reason")):
+            return _SITE_ADAPT.fire(None, "types-and-bounds")
+        # 4. ENUMS: the reason's TYPE is required (an unknown STRING is coherent
+        #    and fences later, F8b); disclosure must be a real member — TYPE
+        #    BEFORE MEMBERSHIP (an unhashable value must never reach `in`).
+        r = m["invalidation_reason"]
+        if r is not None and not isinstance(r, str):
+            return _SITE_ADAPT.fire(None, "reason-type")
+        prov = m.get("provenance")
+        if not isinstance(prov, dict):
+            return _SITE_ADAPT.fire(None, "provenance-shape")
+        if not SCOPE_PROVENANCE_KEYS.issubset(prov):
+            return _SITE_ADAPT.fire(None, "provenance-keys")
+        disc = prov["disclosure"]
+        if not isinstance(disc, str) or disc not in {d.value for d in Disclosure}:
+            return _SITE_ADAPT.fire(None, "disclosure")
+        if not isinstance(prov["author_of_evidence"], str):
+            return _SITE_ADAPT.fire(None, "author-type")
+        try:
+            author = EvidenceAuthor(prov["author_of_evidence"])
+        except ValueError:
+            return _SITE_ADAPT.fire(None, "author-unknown")                       # an unknown author is not defaulted
+        if not all(_check_derived(Provenance, k, prov[k]) for k in
+                   ("evidence_ref", "origin", "source_id")):
+            return _SITE_ADAPT.fire(None, "derived-fields")
+        if not (_identity_field(prov["origin"]) and _identity_field(prov["source_id"])):
+            return _SITE_ADAPT.fire(None, "identity-fields")
+        # 5. DERIVE the flags
+        return Adapted(
+            provenance=AdaptedProvenance(
+                author_of_evidence=author, origin=prov["origin"],
+                source_id=prov["source_id"], evidence_ref=prov["evidence_ref"],
+                disclosure=disc),
+            id=m["id"], user_id=m["user_id"], subject=m["subject"],
+            relation=m["relation"], object=m["object"], note=m["note"] or "",
+            valid_from=m["valid_from"], invalidated_at=m["invalidated_at"],
+            invalidation_reason=r, disclosure=disc,
+            quarantined=derive_quarantined(m["relation"], disc),
+            use_only=derive_use_only(disc),
+        )

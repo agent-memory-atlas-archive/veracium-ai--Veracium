@@ -11,6 +11,7 @@ from the SNAPSHOT alone; `status` — "may this be asserted as fact NOW",
 `held_at_K` AND the current caps, which only ever SUBTRACT.
 """
 from __future__ import annotations
+from ..census import declare_site
 
 from dataclasses import dataclass, field
 from typing import Optional
@@ -158,9 +159,13 @@ def classify_as_of(envelope, snapshot_raw, current_state, T, now, view=None) -> 
                   flags=frozenset({STALE_AT_RECALL}) if already_stale else frozenset())
 
 
+_SITE_ASSERTABLE_AS_OF = declare_site("asof.classify.assertable-as-of", declines=False)   # specs/0042
+
+
 def assertable_as_of(envelope, snapshot_raw, current_state, T, now, view=None) -> bool:
-    return classify_as_of(envelope, snapshot_raw, current_state,
-                          T, now, view).status == GROUNDED_AS_OF
+    with _SITE_ASSERTABLE_AS_OF.consult():
+        return _SITE_ASSERTABLE_AS_OF.fire(classify_as_of(envelope, snapshot_raw, current_state,
+                                                          T, now, view).status == GROUNDED_AS_OF, "withhold")
 
 
 __all__ = ["Result", "classify_as_of", "assertable_as_of", "STATUSES",

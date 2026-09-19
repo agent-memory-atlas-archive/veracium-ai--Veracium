@@ -15,6 +15,28 @@ Spec-Status: accepted
 
 ---
 
+> **Implementation note, tranche 2 (2026-09-19; the owner's word "implement all 3"; no
+> frozen invariant touched — INV-1, INV-2, INV-2b–2d, INV-7, INV-8 stand as accepted).** Twenty-eight
+> enforcement points in gate, schema, compile, grounding, authority and asof are now expressed
+> through declared sites (28 ids; `asof.adapter.adapt.refuse` binds thirteen refusals of one
+> function to one id, as §4a allows for one guarantee enforced at several branches). Two
+> refinements the accepted text did not foresee, because no product site existed when it was
+> written: **(i) a predicate site declares its declining value** — `declare_site(id,
+> declines=False)` (or `True`, or a callable over the returned tuple) — and returns BOTH verdicts
+> through `fire()`, so the return statement keeps the shape Part A-4's discovery finds and `fired`
+> moves only on the decline (an exception, `None` or `False` decline by default; a filter whose loss
+> is not in its return value passes `declined=` explicitly); **(ii) discovery looks through the
+> wrapper** — `NAME.fire(x, …)` is the decision `x`, since `fire` returns its first argument
+> unchanged — so an instrumented site keeps its kind at its statement and does not vanish from the
+> inventory it was reviewed in (the inventory grew 745 → 748 by the census module's own three
+> candidates, none an enforcement point). The runtime leg (`tests/test_0042_sites.py`) executes one
+> declining decision at every declared id and asserts Δconsulted == 1 and Δfired == 1; the two
+> as-of recall sites are inner functions driven through a recall with one candidate. Cost at the
+> shipped default (census OFF), measured on the rebuilt ten-conversation store over 180 timed
+> recalls: median 152.1 ms → 158.9 ms (+4.5 %), after the site became its own context manager
+> (1.00 µs → 0.20 µs per consult+fire disabled). The DECLARED/INSTALLED half of the reconciliation
+> holds per tranche; the DISCOVERED/REVIEWED half lands with the review file in the last tranche.
+
 ## 1. Problem and motivation
 
 **We assert guarantees we have never measured being exercised.** Two independent

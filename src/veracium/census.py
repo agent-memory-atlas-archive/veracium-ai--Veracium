@@ -22,7 +22,6 @@ The state table (Part A-1) is carried here VERBATIM in `STATE_TABLE`; the eviden
 """
 from __future__ import annotations
 
-import contextlib
 import os
 import threading
 import time
@@ -78,12 +77,25 @@ class Site:
     decision as taken and returns `x` unchanged so it wraps the raise or return itself. WHERE a site
     lives is not recorded here: the static scan (specs/evidence/0042/installed_sites.py) derives
     (module, line) from the source, and the 0031 surface refuses the frame machinery in src."""
-    __slots__ = ("site_id", "consulted", "fired", "errors", "_lock")
+    __slots__ = ("site_id", "consulted", "fired", "errors", "_lock", "_declines")
 
-    def __init__(self, site_id: str):
+    def __init__(self, site_id: str, declines=None):
         self.site_id = site_id
         self.consulted = self.fired = self.errors = 0
         self._lock = threading.Lock()
+        # WHICH returned value is the decline (tranche 2, 2026-09-19): a site whose decision is
+        # a predicate returns BOTH verdicts through fire() so the return statement keeps the
+        # shape discovery finds; `fired` moves only on the declining one. None → the default
+        # (an exception, None or False); a value → identity with it; a callable → its verdict.
+        self._declines = declines
+
+    def declined(self, decision) -> bool:
+        d = self._declines
+        if d is None:
+            return decision is None or decision is False or isinstance(decision, BaseException)
+        if callable(d):
+            return bool(d(decision))
+        return decision is d
 
     def _bump(self, field: str) -> None:
         """The one increment. Atomic per id; a raise here is the counter's OWN failure and lands in
@@ -97,8 +109,13 @@ class Site:
             else:
                 raise CensusError(f"unknown counter {field!r}")
 
-    @contextlib.contextmanager
     def consult(self):
+        """The bracket: `with SITE.consult():`. The Site is its own context manager (no generator,
+        no allocation) so a disabled census costs one global read per decision — the tranche-2
+        sites include `Edge.assertable` and its siblings, consulted per edge per recall."""
+        return self
+
+    def __enter__(self):
         if _ENABLED:
             try:
                 self._bump("consulted")
@@ -108,13 +125,25 @@ class Site:
                         self.errors += 1
                 except BaseException:
                     pass
-        yield self
+        return self
 
-    def fire(self, decision, label: Optional[str] = None):
-        """Count the decision as taken and return it UNCHANGED. `label` is the branch's fixed name
-        for the trace (a refusal class or a fixed word, never content); default: the exception's
-        class name, or "decision" for a value."""
-        if _ENABLED:
+    def __exit__(self, exc_type, exc, tb):
+        return False                          # never swallows the decision's raise
+
+    def fire(self, decision, label: Optional[str] = None, *, declined: Optional[bool] = None):
+        """Return the decision UNCHANGED, counting it as a decline when it IS one: by the site's
+        declared declining value (`declined()`), or by the caller's explicit `declined=` when the
+        decline is not visible in the value (a filter that reports what it withheld beside what
+        it kept). `label` is the branch's fixed name for the trace (a refusal class or a fixed
+        word, never content); default: the exception's class name, or "decision" for a value."""
+        if not _ENABLED:
+            return decision
+        if declined is None:
+            try:
+                declined = self.declined(decision)
+            except BaseException:
+                declined = False
+        if declined:
             try:
                 self._bump("fired")
             except BaseException:
@@ -140,16 +169,17 @@ def _label_of(decision) -> str:
     return "decision"
 
 
-def declare_site(site_id: str) -> Site:
+def declare_site(site_id: str, declines=None) -> Site:
     """Register an enforcement point at import time. The id is code-supplied (never caller-supplied);
     a duplicate id REFUSES, so two sites cannot share a row (a re-imported module is the test
-    harness's case and it clears the registry first)."""
+    harness's case and it clears the registry first). `declines` names the declining value for a
+    predicate site (see `Site.declined`); omitted, an exception, None or False is the decline."""
     if type(site_id) is not str or not site_id or any(c.isspace() for c in site_id):
         raise CensusError(f"site id must be a non-empty string without whitespace, got {site_id!r}")
     with _REGISTRY_LOCK:
         if site_id in _REGISTRY:
             raise CensusError(f"duplicate enforcement-point id {site_id!r}")
-        site = Site(site_id)
+        site = Site(site_id, declines)
         _REGISTRY[site_id] = site
         return site
 

@@ -29,6 +29,7 @@ txn 0 — 0030's own "no K given" fixture shape): v2 is valid-time only and
 reads no journal (§4d).
 """
 from __future__ import annotations
+from ..census import declare_site
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -223,14 +224,21 @@ def normalise_T(T) -> datetime:
     return as_utc(T)
 
 
+_SITE_HELD_AT = declare_site("asof.resolve.held-at", declines=False)     # specs/0042
+_SITE_FUTURE_T = declare_site("asof.resolve.future-T")
+_SITE_EDGE_UNCLASSIFIED = declare_site("asof.resolve.edge-unclassified")
+_SITE_EDGE_HIDDEN = declare_site("asof.resolve.edge-hidden-or-invalid")
+
+
 def held_at(edge: Edge, T: datetime) -> bool:
     """§4a step 1 — the half-open interval test, both ends normalised through
     the SAME helper (V-BOUNDARY): `valid_from ≤ T AND (invalidated_at IS NULL
     OR T < invalidated_at)`. `invalidated_at ≤ valid_from` is an empty
     interval, held at no T (V-EMPTY)."""
-    vf = as_utc_required(edge.valid_from)
-    ia = as_utc_optional(edge.invalidated_at)
-    return vf <= T and (ia is None or T < ia)
+    with _SITE_HELD_AT.consult():
+        vf = as_utc_required(edge.valid_from)
+        ia = as_utc_optional(edge.invalidated_at)
+        return _SITE_HELD_AT.fire(vf <= T and (ia is None or T < ia), "withhold")
 
 
 def resolve_as_of(store, user_id: str, T, *, principal=None, policy=None,
@@ -246,8 +254,9 @@ def resolve_as_of(store, user_id: str, T, *, principal=None, policy=None,
     T = normalise_T(T)
     # … then THE ONE CLOCK READ, at entry; threaded everywhere below.
     now = as_utc_required(store._now())
-    if T > now:
-        raise FutureAsOfRefused(T, now)
+    with _SITE_FUTURE_T.consult():
+        if T > now:
+            raise _SITE_FUTURE_T.fire(FutureAsOfRefused(T, now))
     if view is None and principal is not None:
         from ..scope_read import view_for
         view = view_for(store, user_id, principal, policy)
@@ -290,43 +299,44 @@ def _resolve_edge(store, user_id, e, rows, T, now, view, principal, policy,
     """§4a steps 2–3 for one held edge. None means "not a candidate to this
     caller" (the classifier's SCOPE_HIDDEN, or a row gone between reads —
     impossible inside one window, stated for totality)."""
-    res, _raw = _classify_live(store, user_id, e.id, T, now, view, principal, policy)
-    if res is None:
-        return None
-    st = res.status
-    base = dict(edge_id=e.id, valid_from=as_utc_required(e.valid_from),
-                invalidated_at=as_utc_optional(e.invalidated_at),
-                invalidation_reason=e.invalidation_reason,
-                status=st, flags=res.flags)
-    if st in (SCOPE_HIDDEN, NOT_VALID_AT_T):
-        return None
-    # V-MUTANT / V-NONE — the table is total over the TYPE, not over today's
-    # writers: an invalidated row whose reason is outside the registry, or
-    # None, is NOT_RETURNABLE before any other reading (fail closed; 0030
-    # reads a None reason on a retired row as MALFORMED, which this outranks).
-    if e.invalidated_at is not None and e.invalidation_reason not in RESOLUTION:
-        return Resolution(outcome=NOT_RETURNABLE, tag=TAG_UNKNOWN_REASON_EXCLUDED, **base)
-    if st in (MALFORMED, IDENTITY_UNBOUND):             # §3 (unclassifiable)
-        return Resolution(outcome=INDETERMINATE, tag=TAG_UNCLASSIFIABLE,
-                          cause=CAUSE_UNCLASSIFIABLE, **base)
-    if st == EXCLUDED:                                  # 0022 non-revival, any T
-        return Resolution(outcome=NOT_RETURNABLE, tag=TAG_REVOKED_EXCLUDED, **base)
-    if e.invalidated_at is None:                        # the `current` row
-        return Resolution(outcome=RETURN_SELF if st == GROUNDED_AS_OF else FENCED_SELF,
-                          tag=TAG_CURRENT, **base)
-    reason = e.invalidation_reason
-    outcome, tag = RESOLUTION[reason]
-    if outcome == NOT_RETURNABLE:
-        return Resolution(outcome=outcome, tag=tag, **base)
-    if outcome in GROUNDED_OUTCOMES and st != GROUNDED_AS_OF:
-        outcome = FENCED_SELF                           # V-NO-UPGRADE: the verdict caps the row
-    cause, pointer = None, None
-    if reason == "corrected":
-        pointer = _walk(store, user_id, e, rows, now, view, principal, policy, visible)
-    elif reason == "absorbed_duplicate":
-        outcome, tag, cause, pointer = _absorber(store, user_id, e, rows, now, view,
-                                                 principal, policy, visible)
-    return Resolution(outcome=outcome, tag=tag, cause=cause, pointer=pointer, **base)
+    with _SITE_EDGE_UNCLASSIFIED.consult(), _SITE_EDGE_HIDDEN.consult():
+        res, _raw = _classify_live(store, user_id, e.id, T, now, view, principal, policy)
+        if res is None:
+            return _SITE_EDGE_UNCLASSIFIED.fire(None, "unclassified")
+        st = res.status
+        base = dict(edge_id=e.id, valid_from=as_utc_required(e.valid_from),
+                    invalidated_at=as_utc_optional(e.invalidated_at),
+                    invalidation_reason=e.invalidation_reason,
+                    status=st, flags=res.flags)
+        if st in (SCOPE_HIDDEN, NOT_VALID_AT_T):
+            return _SITE_EDGE_HIDDEN.fire(None, "hidden-or-invalid")
+        # V-MUTANT / V-NONE — the table is total over the TYPE, not over today's
+        # writers: an invalidated row whose reason is outside the registry, or
+        # None, is NOT_RETURNABLE before any other reading (fail closed; 0030
+        # reads a None reason on a retired row as MALFORMED, which this outranks).
+        if e.invalidated_at is not None and e.invalidation_reason not in RESOLUTION:
+            return Resolution(outcome=NOT_RETURNABLE, tag=TAG_UNKNOWN_REASON_EXCLUDED, **base)
+        if st in (MALFORMED, IDENTITY_UNBOUND):             # §3 (unclassifiable)
+            return Resolution(outcome=INDETERMINATE, tag=TAG_UNCLASSIFIABLE,
+                              cause=CAUSE_UNCLASSIFIABLE, **base)
+        if st == EXCLUDED:                                  # 0022 non-revival, any T
+            return Resolution(outcome=NOT_RETURNABLE, tag=TAG_REVOKED_EXCLUDED, **base)
+        if e.invalidated_at is None:                        # the `current` row
+            return Resolution(outcome=RETURN_SELF if st == GROUNDED_AS_OF else FENCED_SELF,
+                              tag=TAG_CURRENT, **base)
+        reason = e.invalidation_reason
+        outcome, tag = RESOLUTION[reason]
+        if outcome == NOT_RETURNABLE:
+            return Resolution(outcome=outcome, tag=tag, **base)
+        if outcome in GROUNDED_OUTCOMES and st != GROUNDED_AS_OF:
+            outcome = FENCED_SELF                           # V-NO-UPGRADE: the verdict caps the row
+        cause, pointer = None, None
+        if reason == "corrected":
+            pointer = _walk(store, user_id, e, rows, now, view, principal, policy, visible)
+        elif reason == "absorbed_duplicate":
+            outcome, tag, cause, pointer = _absorber(store, user_id, e, rows, now, view,
+                                                     principal, policy, visible)
+        return Resolution(outcome=outcome, tag=tag, cause=cause, pointer=pointer, **base)
 
 
 def _walk(store, user_id, start, rows, now, view, principal, policy, visible) -> Pointer:

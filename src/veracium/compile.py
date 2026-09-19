@@ -11,6 +11,7 @@ the episode itself is withheld from the grounded compile.
 """
 
 from __future__ import annotations
+from .census import declare_site
 
 import hashlib
 import json
@@ -115,6 +116,9 @@ def _live_refusal_contention_edge_ids(store, user_id: str,
     return excluded
 
 
+_SITE_GROUNDED_INPUTS = declare_site("compile.grounded-inputs")   # specs/0042 (declined= is explicit)
+
+
 def _grounded_inputs(store, user_id: str, relations: dict[str, Relation]):
     """Only assertable material feeds the compile: active, non-quarantined edges
     that are NOT third-party inferences (use_only), plus episodes NOT authored by a
@@ -127,31 +131,34 @@ def _grounded_inputs(store, user_id: str, relations: dict[str, Relation]):
     specs/0003 §4c-ii: a contested functional group in a LIVE refusal contention is also
     excluded, so the "keep one current value" prompt only ever sees facts that HAVE one —
     a refusal never hands the LLM two competing values to collapse."""
-    contested = _live_refusal_contention_edge_ids(store, user_id, relations)
-    # specs/0019 §4c (F4 — reviewer-executed): the compiler stores an LLM's
-    # free-text output, and a code-owned marker cannot survive a re-rendering
-    # it does not control — so flagged facts are EXCLUDED from the compiler
-    # INPUT (the 0003 contested-exclusion precedent). The wiki is the curated
-    # grounded view; a possibly-fabricated specific has no place in it. The
-    # fact remains fully reachable through query recall, with its marker.
-    # specs/0037 §4a (V-RENDER-SITES): the wiki compiler's input IS model
-    # context — a procedural record is out of scope by its own stamp/basis
-    # (`gate.exclude_procedural`, PROCEDURAL_OUT_OF_SCOPE), before any
-    # other filter
-    from .gate import exclude_procedural
-    _in_scope, _n_procedural = exclude_procedural(
-        store.edges(user_id, active_only=True, include_quarantined=False))
-    edges = [e for e in _in_scope
-             if not e.use_only and e.id not in contested and not e.ungrounded]
-    # specs/0012 I8: the compiler INPUT collapses strictly-redundant duplicates —
-    # N restatements feed the wiki once; the store keeps every edge.
-    edges, _since = collapse_for_render(edges)
-    # 0023 §4a-iv (F1): the SHARED predicate, not an open-coded copy of the
-    # condition. assertable subsumes third-party influence AND the disclosure
-    # ingest now writes AND 0022's retirement axis — the wiki input is the
-    # assertable set, by the same rule every other consumer reads.
-    episodes = [e for e in store.episodes(user_id) if e.assertable]
-    return edges, episodes
+    with _SITE_GROUNDED_INPUTS.consult():
+        contested = _live_refusal_contention_edge_ids(store, user_id, relations)
+        # specs/0019 §4c (F4 — reviewer-executed): the compiler stores an LLM's
+        # free-text output, and a code-owned marker cannot survive a re-rendering
+        # it does not control — so flagged facts are EXCLUDED from the compiler
+        # INPUT (the 0003 contested-exclusion precedent). The wiki is the curated
+        # grounded view; a possibly-fabricated specific has no place in it. The
+        # fact remains fully reachable through query recall, with its marker.
+        # specs/0037 §4a (V-RENDER-SITES): the wiki compiler's input IS model
+        # context — a procedural record is out of scope by its own stamp/basis
+        # (`gate.exclude_procedural`, PROCEDURAL_OUT_OF_SCOPE), before any
+        # other filter
+        from .gate import exclude_procedural
+        _in_scope, _n_procedural = exclude_procedural(
+            store.edges(user_id, active_only=True, include_quarantined=False))
+        edges = [e for e in _in_scope
+                 if not e.use_only and e.id not in contested and not e.ungrounded]
+        # specs/0012 I8: the compiler INPUT collapses strictly-redundant duplicates —
+        # N restatements feed the wiki once; the store keeps every edge.
+        edges, _since = collapse_for_render(edges)
+        # 0023 §4a-iv (F1): the SHARED predicate, not an open-coded copy of the
+        # condition. assertable subsumes third-party influence AND the disclosure
+        # ingest now writes AND 0022's retirement axis — the wiki input is the
+        # assertable set, by the same rule every other consumer reads.
+        all_episodes = list(store.episodes(user_id))
+        episodes = [e for e in all_episodes if e.assertable]
+        withheld = _n_procedural + (len(_in_scope) - len(edges)) + (len(all_episodes) - len(episodes))
+        return _SITE_GROUNDED_INPUTS.fire((edges, episodes), "withhold", declined=withheld > 0)
 
 
 def needs_recompile(store, user_id: str, recompile_after: int,

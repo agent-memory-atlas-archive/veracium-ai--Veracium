@@ -22,6 +22,7 @@ already exists rather than splitting the enum (research's Q2 answer).
 """
 
 from __future__ import annotations
+from .census import declare_site
 
 import hashlib
 import json
@@ -59,10 +60,16 @@ def effective(author: EvidenceAuthor, derived_from: Optional[EvidenceAuthor]) ->
     return min(_RUNGS[author.value], _RUNGS[(derived_from or author).value])
 
 
+_SITE_PERMITTED = declare_site("authority.permitted", declines=False)         # specs/0042
+_SITE_SELF_ASSERTION = declare_site("authority.self-assertion", declines=True)
+
+
 def permitted(prior_author: EvidenceAuthor, prior_from: Optional[EvidenceAuthor],
               inc_author: EvidenceAuthor, inc_from: Optional[EvidenceAuthor]) -> bool:
     """A retirement is permitted only by an equal-or-better-entitled party (§4a)."""
-    return effective(inc_author, inc_from) >= effective(prior_author, prior_from)
+    with _SITE_PERMITTED.consult():
+        return _SITE_PERMITTED.fire(
+            effective(inc_author, inc_from) >= effective(prior_author, prior_from), "refuse")
 
 
 def self_assertion(author: EvidenceAuthor,
@@ -73,8 +80,9 @@ def self_assertion(author: EvidenceAuthor,
     None` let `derived(USER)` — identical authority — buy permission;
     keying on authority makes exactly two chains qualify, (USER, None)
     and (USER, USER), by construction rather than enumeration)."""
-    return effective(author, derived_from) == effective(
-        EvidenceAuthor.USER, None)
+    with _SITE_SELF_ASSERTION.consult():
+        return _SITE_SELF_ASSERTION.fire(
+            effective(author, derived_from) == effective(EvidenceAuthor.USER, None), "self-assertion")
 
 
 def edge_effective(edge: "Edge") -> int:

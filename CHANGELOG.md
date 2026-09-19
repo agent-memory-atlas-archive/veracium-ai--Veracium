@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Added: the exercised-guarantees census binds its first 28 product sites (specs/0042,
+  tranche 2)** — gate (the procedural exclusion, the three scoped-assertability restrictions, the
+  partition), schema (`Edge`/`Episode` `quarantined`, `use_only`, `valid_now`, `assertable`,
+  `Episode.active`), the compiler's grounded-input filter, the grounding downgrade, authority's
+  `permitted`/`self_assertion`, and the as-of adapter, classifier, recall and resolver refusals.
+  Each decision is returned through its declared site; a predicate site declares its declining
+  value so `fired` counts only declines. **Cost at the shipped default (census off), measured:**
+  recall median 152.1 ms → 158.9 ms (+4.5 %) on the rebuilt ten-conversation store over 180 timed
+  recalls, after the site became its own context manager (1.00 µs → 0.20 µs per decision disabled).
+  No behaviour changes; every site's tests still pass unchanged except one 0037 text pin re-pinned
+  to the predicate's conjuncts.
 - **Fixed: the reference Anthropic provider refuses an empty completion instead of returning
   `""`.** With the default `max_tokens` (4096) a hard prompt can spend the whole budget inside a
   `thinking` block; the API call succeeds with `stop_reason == "max_tokens"` and no text block, and

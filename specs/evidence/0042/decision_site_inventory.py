@@ -66,7 +66,9 @@ class _Walker(ast.NodeVisitor):
                     if isinstance(t, ast.Name): bound.add(t.id)
         self._filter_names = getattr(self, "_filter_names", []); self._filter_names.append(bound)
         returns = [n for n in ast.walk(node) if isinstance(n, ast.Return)]
-        has_value = any(r.value is not None and not (isinstance(r.value, ast.Constant) and r.value.value is None)
+        has_value = any(self._unwrap_fire(r.value) is not None
+                        and not (isinstance(self._unwrap_fire(r.value), ast.Constant)
+                                 and self._unwrap_fire(r.value).value is None)
                         for r in returns)
         self._fn_has_value = getattr(self, "_fn_has_value", [])
         self._fn_has_value.append(has_value)
@@ -74,6 +76,18 @@ class _Walker(ast.NodeVisitor):
         self._fn_has_value.pop(); self._filter_names.pop(); self.stack.pop()
 
     visit_FunctionDef = visit_AsyncFunctionDef = _visit_fn
+
+    @staticmethod
+    def _unwrap_fire(v):
+        """A decision expressed THROUGH a declared census site — `NAME.fire(x, ...)` — is the
+        decision x: `fire` returns its first argument unchanged (src/veracium/census.py), so the
+        statement keeps the kind of what it returns or raises. Discovery looks through the
+        wrapper (tranche 2, 2026-09-19); an instrumented site must not vanish from the
+        inventory it was reviewed in."""
+        if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "fire" \
+                and isinstance(v.func.value, ast.Name) and v.args:
+            return v.args[0]
+        return v
 
     def visit_Raise(self, node):
         self.rows.append({"module": self.module, "qualname": self._qual(), "line": node.lineno,
@@ -99,7 +113,7 @@ class _Walker(ast.NodeVisitor):
         return False
 
     def visit_Return(self, node):
-        v = node.value
+        v = self._unwrap_fire(node.value)
         if isinstance(v, (ast.BoolOp, ast.Compare)) or (isinstance(v, ast.UnaryOp) and isinstance(v.op, ast.Not)):
             self.rows.append({"module": self.module, "qualname": self._qual(), "line": node.lineno, "kind": "BOOL_RETURN"})
         elif self._is_filter(v) or self._returns_filtered_name(v):

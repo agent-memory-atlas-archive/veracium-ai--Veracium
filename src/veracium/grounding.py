@@ -18,6 +18,7 @@ per-span ISO judgment by character position, R3-1).
 """
 
 from __future__ import annotations
+from .census import declare_site
 
 import calendar
 import datetime
@@ -193,6 +194,9 @@ def _numeric_completions(s: str, session: datetime.date) -> list[datetime.date]:
     return out
 
 
+_SITE_UNGROUNDED = declare_site("grounding.ungrounded", declines=True)   # specs/0042: the §4b downgrade
+
+
 def ungrounded(obj_raw: str, event_text: str, session_date: str) -> bool:
     """The §4b predicate: True iff any specifics token of the object is not
     grounded in the event text — verbatim, or (for tokens INSIDE an ISO date
@@ -204,35 +208,36 @@ def ungrounded(obj_raw: str, event_text: str, session_date: str) -> bool:
     membership over a set (the round-3 nondeterminism). No iteration
     touches an unordered collection whose order matters; results are
     PYTHONHASHSEED-independent by construction."""
-    text_tokens = set(toks(event_text))
-    resolutions = None                        # computed lazily, once
+    with _SITE_UNGROUNDED.consult():
+        text_tokens = set(toks(event_text))
+        resolutions = None                        # computed lazily, once
 
-    # 1. judge each ISO span atomically, recording its grounded character range
-    grounded_spans: list[tuple[int, int]] = []
-    for m in ISO_DATE.finditer(obj_raw):
-        span_text = m.group(0)
-        if all(tok in text_tokens for tok in toks(span_text)):
-            grounded_spans.append(m.span())
-            continue                          # verbatim-grounded span
-        try:
-            d = datetime.date.fromisoformat(span_text)
-        except ValueError:
-            continue                          # malformed span: tokens judged plainly
-        if resolutions is None:
-            resolutions = resolution_set(event_text, session_date)
-        if d in resolutions:
-            grounded_spans.append(m.span())
+        # 1. judge each ISO span atomically, recording its grounded character range
+        grounded_spans: list[tuple[int, int]] = []
+        for m in ISO_DATE.finditer(obj_raw):
+            span_text = m.group(0)
+            if all(tok in text_tokens for tok in toks(span_text)):
+                grounded_spans.append(m.span())
+                continue                          # verbatim-grounded span
+            try:
+                d = datetime.date.fromisoformat(span_text)
+            except ValueError:
+                continue                          # malformed span: tokens judged plainly
+            if resolutions is None:
+                resolutions = resolution_set(event_text, session_date)
+            if d in resolutions:
+                grounded_spans.append(m.span())
 
-    def _in_grounded_span(pos: int) -> bool:
-        return any(a <= pos < b for a, b in grounded_spans)
+        def _in_grounded_span(pos: int) -> bool:
+            return any(a <= pos < b for a, b in grounded_spans)
 
-    # 2. every specifics token outside a grounded span must ground verbatim
-    for m in WORD.finditer(obj_raw):
-        token = m.group(0).lower()
-        if token not in specifics_tokens(obj_raw):
-            continue
-        if _in_grounded_span(m.start()):
-            continue
-        if token not in text_tokens:
-            return True
-    return False
+        # 2. every specifics token outside a grounded span must ground verbatim
+        for m in WORD.finditer(obj_raw):
+            token = m.group(0).lower()
+            if token not in specifics_tokens(obj_raw):
+                continue
+            if _in_grounded_span(m.start()):
+                continue
+            if token not in text_tokens:
+                return _SITE_UNGROUNDED.fire(True, "downgrade")
+        return _SITE_UNGROUNDED.fire(False)

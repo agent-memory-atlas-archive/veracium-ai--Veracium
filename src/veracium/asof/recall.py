@@ -11,8 +11,13 @@ building it runs the recall path's `assertable`. Lives under `asof/` so the
 recording-clock proof attributes every predicate access on this branch.
 """
 from __future__ import annotations
+from ..census import declare_site
 
 from .resolve import GROUNDED_OUTCOMES, AsOfAnswer, render_fn_for, resolve_as_of
+
+
+_SITE_RECALL_GROUNDED = declare_site("asof.recall.grounded", declines=False)   # specs/0042
+_SITE_RECALL_CLAIM = declare_site("asof.recall.claim", declines=True)
 
 
 def recall_at(mem, user_id: str, query: str, token_budget: int, *, as_of,
@@ -27,11 +32,13 @@ def recall_at(mem, user_id: str, query: str, token_budget: int, *, as_of,
     candidates = [f.edge for f in answer.facts]
 
     def grounded(e) -> bool:
-        r = by_res.get(e.id)
-        return r is not None and r.outcome in GROUNDED_OUTCOMES
+        with _SITE_RECALL_GROUNDED.consult():
+            r = by_res.get(e.id)
+            return _SITE_RECALL_GROUNDED.fire(r is not None and r.outcome in GROUNDED_OUTCOMES, "withhold")
 
     def claim(e) -> bool:
-        return not grounded(e)
+        with _SITE_RECALL_CLAIM.consult():
+            return _SITE_RECALL_CLAIM.fire(not grounded(e), "withhold")
 
     scored, relevant_ids, by_id = _lexical_scored(
         mem.store, user_id, query, view=view, candidates=candidates)

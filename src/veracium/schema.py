@@ -12,6 +12,7 @@ narrative the graph lacks, and an LLM curator compiles the working view. See the
 """
 
 from __future__ import annotations
+from .census import declare_site
 
 from datetime import datetime, timezone
 from enum import Enum
@@ -686,6 +687,19 @@ class SuccessorLookup:
                 f"successors=({', '.join(e.id for e in self.successors)}))")
 
 
+# specs/0042: the predicate sites of the two records — each verdict is returned THROUGH its
+# declared site; `declines=` names the withholding value so `fired` counts only declines
+_SITE_EDGE_QUARANTINED = declare_site("schema.edge.quarantined", declines=True)
+_SITE_EDGE_USE_ONLY = declare_site("schema.edge.use-only", declines=True)
+_SITE_EDGE_VALID_NOW = declare_site("schema.edge.valid-now", declines=False)
+_SITE_EDGE_ASSERTABLE = declare_site("schema.edge.assertable", declines=False)
+_SITE_EPISODE_QUARANTINED = declare_site("schema.episode.quarantined", declines=True)
+_SITE_EPISODE_USE_ONLY = declare_site("schema.episode.use-only", declines=True)
+_SITE_EPISODE_ACTIVE = declare_site("schema.episode.active", declines=False)
+_SITE_EPISODE_ASSERTABLE = declare_site("schema.episode.assertable", declines=False)
+_SITE_EPISODE_VALID_NOW = declare_site("schema.episode.valid-now", declines=False)
+
+
 class Edge(BaseModel):
     """A typed relational fact. `subject`/`object` are entity refs (e.g. 'user',
     'person:tansy', 'org:thornbury'). Bi-temporal: superseded/invalidated edges
@@ -755,14 +769,16 @@ class Edge(BaseModel):
         # as fact. Benign third-party *inferences* (employer learned from a
         # received email) are not quarantined; they're marked use_only at ingest
         # (finding B: content-type quarantine, not blanket sender distrust).
-        return (self.relation == QUARANTINE_RELATION
-                or self.provenance.disclosure == Disclosure.QUARANTINED)
+        with _SITE_EDGE_QUARANTINED.consult():
+            return _SITE_EDGE_QUARANTINED.fire((self.relation == QUARANTINE_RELATION
+                    or self.provenance.disclosure == Disclosure.QUARANTINED))
 
     @property
     def use_only(self) -> bool:
         # A benign third-party *inference* (finding B): may shape behavior, but
         # the user never confirmed it — never volunteered or asserted as fact.
-        return self.provenance.disclosure == Disclosure.USE_ONLY
+        with _SITE_EDGE_USE_ONLY.consult():
+            return _SITE_EDGE_USE_ONLY.fire(self.provenance.disclosure == Disclosure.USE_ONLY)
 
     @property
     def valid_now(self) -> bool:
@@ -780,7 +796,8 @@ class Edge(BaseModel):
         0030 §4e); with 0031 Phase A that window becomes agent-reachable,
         which is why the ruling sequences this BEFORE Phase A. UTC-aware
         comparison only."""
-        return as_utc(self.valid_from) <= utcnow()
+        with _SITE_EDGE_VALID_NOW.consult():
+            return _SITE_EDGE_VALID_NOW.fire(as_utc(self.valid_from) <= utcnow())
 
     @property
     def assertable(self) -> bool:
@@ -790,8 +807,9 @@ class Edge(BaseModel):
         else is context, not assertion material. A not-yet-valid edge stays
         stored and becomes assertable by itself when its `valid_from`
         arrives; nothing is rewritten."""
-        return (self.active and not self.quarantined and not self.use_only
-                and self.valid_now)
+        with _SITE_EDGE_ASSERTABLE.consult():
+            return _SITE_EDGE_ASSERTABLE.fire((self.active and not self.quarantined and not self.use_only
+                    and self.valid_now))
 
 
 class Outcome(str, Enum):
@@ -853,7 +871,8 @@ class Episode(BaseModel):
     # property nobody had derived for this type, so each invented its own.
     @property
     def quarantined(self) -> bool:
-        return self.provenance.disclosure == Disclosure.QUARANTINED
+        with _SITE_EPISODE_QUARANTINED.consult():
+            return _SITE_EPISODE_QUARANTINED.fire(self.provenance.disclosure == Disclosure.QUARANTINED)
 
     @property
     def use_only(self) -> bool:
@@ -863,13 +882,15 @@ class Episode(BaseModel):
         # derived property is the floor of both carriers; disclosure is the
         # forward carrier ingest now writes, and third_party_influenced keeps
         # every legacy row fenced exactly as the open-coded sites fenced it.
-        return (self.provenance.disclosure == Disclosure.USE_ONLY
-                or self.provenance.third_party_influenced)
+        with _SITE_EPISODE_USE_ONLY.consult():
+            return _SITE_EPISODE_USE_ONLY.fire((self.provenance.disclosure == Disclosure.USE_ONLY
+                    or self.provenance.third_party_influenced))
 
     @property
     def active(self) -> bool:
         # 0022 §4b-ii: retirement is the episode's active/inactive axis
-        return self.retired_reason is None
+        with _SITE_EPISODE_ACTIVE.consult():
+            return _SITE_EPISODE_ACTIVE.fire(self.retired_reason is None)
 
     @property
     def assertable(self) -> bool:
@@ -887,14 +908,16 @@ class Episode(BaseModel):
         true either, and is not rendered as narrative until its date
         arrives. `valid_now` compares ISO date strings (lexical order is
         chronological for ISO dates) against today's UTC date."""
-        return (self.active and not self.quarantined and not self.use_only
-                and self.valid_now)
+        with _SITE_EPISODE_ASSERTABLE.consult():
+            return _SITE_EPISODE_ASSERTABLE.fire((self.active and not self.quarantined and not self.use_only
+                    and self.valid_now))
 
     @property
     def valid_now(self) -> bool:
         """The episode's valid-time predicate at T = now: `date` (ISO date,
         possibly with a time part) is not after today's UTC date."""
-        return self.date[:10] <= utcnow().date().isoformat()
+        with _SITE_EPISODE_VALID_NOW.consult():
+            return _SITE_EPISODE_VALID_NOW.fire(self.date[:10] <= utcnow().date().isoformat())
 
     # --- specs/0009 outcome-authorship chain (append-only history) --------------
     # Store-assigned, OUTCOME-ONLY (None on any non-outcome episode). Never

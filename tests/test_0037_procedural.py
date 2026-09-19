@@ -469,8 +469,10 @@ def test_assertable_is_untouched():
     src = (SRC / "schema.py").read_text()
     body = src[src.index("    def assertable(self) -> bool:"):]
     body = body[:body.index("\n\n\n")]
-    assert ("return (self.active and not self.quarantined and not self.use_only\n"
-            "                and self.valid_now)") in body
+    # the predicate's four conjuncts, and nothing procedural: the 0042 census site wraps the
+    # withholding branch (2026-09-19) — the conjunction it decides on is unchanged
+    assert "self.active and not self.quarantined and not self.use_only" in body
+    assert "and self.valid_now" in body
     assert "procedural" not in body and "basis" not in body
 
 

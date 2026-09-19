@@ -3,7 +3,8 @@ previous evidence written to DEMONSTRATE clauses rather than attack them (a vali
 refused only the mutants its author imagined; an inventory over the kinds it could parse). These
 checks are the reviewer's: the state table is PARSED from the spec so the code cannot drift from
 it; every refusal is demonstrated on the input it refuses; the three-sets check is shown REFUSING
-on the real tree, which is the honest state until 738 decisions exist.
+on the real tree's DISCOVERED/REVIEWED half, which is the honest state until the review file lands
+with the last implementation tranche; the DECLARED/INSTALLED half reconciles per tranche.
 """
 import importlib.util
 import json
@@ -233,12 +234,24 @@ def test_a0quater_registry_refuses_a_registration_the_scan_does_not_show_and_a_s
     assert any("did not register" in x and "gate.answer.unverified-only" in x for x in ref)
 
 
-def test_a0quater_on_the_real_tree_installed_is_empty_so_only_an_empty_declaration_reconciles():
+def test_a0quater_on_the_real_tree_installed_equals_what_the_package_declares():
+    """The spec is ACCEPTED (v9.2) and the implementation is landing in tranches (2026-09-19):
+    INSTALLED on the real tree is exactly the set of ids the package declares at import — every
+    declared site is bound (consult AND fire in one body) and no bound site is undeclared. The
+    DISCOVERED/REVIEWED half of the reconciliation still bites until the review file lands with
+    the last tranche (`test_a0bis_…`)."""
     inst = _load("installed_sites")
-    real = inst.installed(inst.scan(inst.SRC))
-    assert real == set(), "src/ now carries bound declare_site calls — a draft spec authorises none; update this test with the spec's status"
-    assert inst.reconcile(set(), {}, set(), real, set()) == []
-    assert any("DECLARED but NOT INSTALLED" in x for x in inst.reconcile(set(), {}, {"gate.answer.unverified-only"}, real, set()))
+    scanned = inst.scan(inst.SRC)
+    declared = {r["id"] for r in scanned}                   # DECLARED, read from the SOURCE (order-free:
+    real = inst.installed(scanned)                          # the census tests clear the live registry)
+    assert real == declared, (sorted(declared - real), sorted(real - declared))
+    assert len(real) >= 28                                  # tranche 1 (module) + tranche 2 (28 sites)
+    from veracium import census
+    live = set(census.registry())                           # the live registry, when a fixture has not
+    assert not live or live <= declared, sorted(live - declared)   # cleared it, names only declared ids
+    probs = inst.reconcile(set(), {}, declared, real, set())
+    assert not any("NOT INSTALLED" in x or "not DECLARED" in x for x in probs), probs
+    assert any("DECLARED but NOT INSTALLED" in x for x in inst.reconcile(set(), {}, declared | {"gate.answer.unverified-only"}, real, set()))
 
 
 # ---- A4: discovery kinds -----------------------------------------------------------------
