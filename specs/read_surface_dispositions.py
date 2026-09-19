@@ -130,6 +130,18 @@ DISPOSITIONS: dict[str, dict] = {
                     "would leave residue the caller believes is gone, the "
                     "worst possible failure on this surface."),
 
+    "Memory.redact": dict(
+        returns_records=False, principal="none",
+        carriers="a `RedactionReceipt`: the target's kind and id, the carrier NAMES treated, the "
+                 "vocabulary reason, the marker and store versions, the journal event ref, the "
+                 "ids of derived records that may still carry the content (F6), the receipt "
+                 "domains it cannot vouch for — never content and never a content digest",
+        disposition="AN OPERATOR SURFACE BY DECISION (specs/0041 §3b), scoped to `user_id` by "
+                    "INV-5 (a cross-user or unknown target refuses with the same words, so the "
+                    "existence of another user's record is not disclosed). It is a WRITE that "
+                    "returns a receipt, the `forget` shape: the data subject's request must "
+                    "reach every carrier the map names or none, so no principal narrows it."),
+
     "Memory.edges_since": dict(
         returns_records=True, principal="none",
         carriers="`list[Edge]` — full record objects",

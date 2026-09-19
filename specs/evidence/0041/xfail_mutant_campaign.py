@@ -38,6 +38,8 @@ tt = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tt)
 
 from veracium.store import migration as MIG  # noqa: E402
+_REAL_REDACT = tt.Memory.redact                # 0041 tranche 3 (2026-09-19): the LANDED operation — restored by every
+                                              # mutant that overwrote it, never deleted (the tranche-2 lesson, again)
 _REAL_REPORT = MIG.unattested_marker_report   # 0041 tranche 2 (2026-09-19): the LANDED report; every mutant that
                                               # overwrites it restores it — deleting it would strip the module
 
@@ -155,9 +157,9 @@ def install_correct():
 
 
 def remove_correct():
-    for name in ("redact", "_0041_state"):
-        if hasattr(tt.Memory, name):
-            delattr(tt.Memory, name)
+    tt.Memory.redact = _REAL_REDACT
+    if hasattr(tt.Memory, "_0041_state"):
+        delattr(tt.Memory, "_0041_state")
     cls = getattr(tt, "_0041_store_cls", None)
     if cls is not None and hasattr(cls, "_0041_real_add_edge"):
         cls.add_edge = cls._0041_real_add_edge
@@ -172,8 +174,7 @@ def stub(fn):
 
 
 def drop_redact():
-    if hasattr(tt.Memory, "redact"):
-        del tt.Memory.redact
+    tt.Memory.redact = _REAL_REDACT
 
 
 def drop_report():
@@ -195,6 +196,8 @@ check("a receipt missing the `repeated` field entirely", True, T1,
       stub(lambda self, *a, **k: _Receipt(redacted_kind="edge")), drop_redact)
 check("POSITIVE CONTROL — an honest implementation", False, T1,
       install_correct, remove_correct)
+check("POSITIVE CONTROL — the landed operation (0041 tranche 3): `Memory.redact` returns the attestation record read "
+      "back, repeated=True on the second call, one journal event", False, T1, lambda: None, lambda: None)
 
 print("\nT2 — test_C_the_migration_report_enumerates_unattested_marker_rows")
 T2 = tt.test_C_the_migration_report_enumerates_unattested_marker_rows
@@ -226,6 +229,8 @@ check("the reviewer's mutant: a no-op redact(), no attestation created", True, T
       stub(lambda self, *a, **k: None), drop_redact)
 check("POSITIVE CONTROL — redaction attests, and only the attested write is refused",
       False, T3, install_correct, remove_correct)
+check("POSITIVE CONTROL — the landed operation (0041 tranche 3): the redaction record attests the fields and the store's "
+      "INV-11 refuses the ordinary write; the unattested marker row stays writable", False, T3, lambda: None, lambda: None)
 
 print("\nT4 — test_the_frozen_pre_restriction_store_matches_its_manifest (ROUND-6 FINDING 2)")
 T4 = tt.test_the_frozen_pre_restriction_store_matches_its_manifest
@@ -332,12 +337,12 @@ for _f in ("test_0041_transition_table.py", "test_0041_treatment_matrix.py",
            "test_0041_evidence.py"):
     _strict += (ROOT / "tests" / _f).read_text().count("xfail(strict=True")
 _covered = sorted({lbl for ok, lbl, _ in RESULTS if "POSITIVE CONTROL" in lbl})
-_strict_covered = [t for t in ("T1", "T3") ]       # T2's test flipped at 0041 tranche 2 (2026-09-19): ordinary now
+_strict_covered = []       # T1/T3 flipped at 0041 tranche 3 and T2 at tranche 2 (2026-09-19): every covered test is ordinary now
 print("\n" + "=" * 72)
 print("COVERAGE, derived:")
 print(f"  strict xfails in the 0041 modules      {_strict}")
 print(f"  positive controls in this campaign     {len(_covered)}")
-print(f"  of those, covering a STRICT xfail      {len(_strict_covered)}  (T2 since tranche 2, and T4, cover ORDINARY tests)")
+print(f"  of those, covering a STRICT xfail      {len(_strict_covered)}  (T1-T4 all cover ORDINARY tests since tranche 3)")
 print(f"  strict xfails still AWAITING one       {_strict - len(_strict_covered)}")
 print("  §11.4-bis requires BOTH controls of every strict xfail; the remainder is")
 print("  owed at implementation and is not claimed as done.")

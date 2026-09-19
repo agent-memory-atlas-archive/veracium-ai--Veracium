@@ -1070,4 +1070,72 @@ DECLINES.update({
     "store.episode.kind-not-recognised": lambda mp: _raises(ValueError, _mem().store.add_episode, _episode("ek1").model_copy(update={"kind": "told me in confidence"})),
     "store.import.episode-kind-not-recognised": _import_prose_kind,
 })
+
+
+# specs/0041 tranche 3 (2026-09-19): the operation's refusals and INV-11 keyed on the attestation record. The two
+# attested-redaction sites are TwoPhase: their SETUP is a redaction, which consults the redact sites outside the window.
+def _redacted_edge():
+    s = _store(); s.add_edge(_edge("ra1", obj="a secret")); s.redact(U, edge_id="ra1", reason="subject_request"); return (s,)
+
+
+def _upsert_attested(s):
+    with pytest.raises(ValueError):
+        s.add_edge(_edge("ra1", obj="repopulated"))
+    s.close()
+
+
+def _redacted_episode():
+    s = _store(); s.add_episode(_episode("rae1")); s.redact(U, episode_id="rae1", reason="subject_request"); return (s,)
+
+
+def _add_attested_episode(s):
+    with pytest.raises(ValueError):
+        s.add_episode(_episode("rae1"))
+    s.close()
+
+
+def _redact_bad_reason():
+    s = _store(); s.add_edge(_edge("rr1"))
+    with pytest.raises(ValueError):
+        s.redact(U, edge_id="rr1", reason="the user's HIV status")
+    s.close()
+
+
+def _redact_claimed(mp):
+    s = _store(); s.add_episode(_episode("rc1"))
+    mp.setattr(type(s), "_reserved_ids", lambda self, user_id: {"rc1"})
+    with pytest.raises(ValueError):
+        s.redact(U, episode_id="rc1", reason="subject_request")
+    s.close()
+
+
+def _redact_disposition(mp):
+    from veracium import redaction as _rd
+    s = _store(); s.add_edge(_edge("rd1"))
+    real = _rd.treat_edge
+    def flipping(dump, **kw):
+        d, treated = real(dump, **kw); d["invalidated_at"] = "2026-09-19T00:00:00+00:00"; return d, treated + ["invalidated_at"]
+    mp.setattr(_rd, "treat_edge", flipping)
+    with pytest.raises(ValueError):
+        s.redact(U, edge_id="rd1", reason="subject_request")
+    s.close()
+
+
+def _journal_bad_redaction_reason():
+    s = _store(); s.add_edge(_edge("jr"))
+    with pytest.raises(ValueError):
+        with s._write_txn():
+            s._journal_edge_write(U, "jr", '{"changed": 1}', "{}", kind="redacted", reason="prose")
+    s.close()
+
+
+DECLINES.update({
+    "store.redact.target": lambda mp: _raises(ValueError, _store().redact, U, edge_id="no-such-edge", reason="subject_request"),
+    "store.redact.reason-not-registered": lambda mp: _redact_bad_reason(),
+    "store.redact.input-claimed": _redact_claimed,
+    "store.redact.disposition-changed": _redact_disposition,
+    "store.upsert.attested-redaction": TwoPhase(lambda mp: _redacted_edge(), lambda st: _upsert_attested(*st)),
+    "store.episode.attested-redaction": TwoPhase(lambda mp: _redacted_episode(), lambda st: _add_attested_episode(*st)),
+    "store.journal.redaction-reason": lambda mp: _journal_bad_redaction_reason(),
+})
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})

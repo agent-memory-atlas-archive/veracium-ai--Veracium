@@ -374,12 +374,17 @@ class AgreementRecord(BaseModel):
     @field_validator("markers")
     @classmethod
     def _markers_closed(cls, v):
+        # specs/0041 §2d-iii-bis row 3 (tranche 3): a redaction REPLACES each entry with the marker, arity
+        # preserved, so the uniqueness rule admits REPEATED REDACTION MARKERS — and only those; any other
+        # duplicate is still refused. The marker is the redaction module's byte string, imported lazily
+        # (that module carries no schema import, so there is no cycle).
+        from .redaction import MARKER as _REDACTION_MARKER
         seen = set()
         for i, tok in enumerate(v):
             if not (1 <= len(tok) <= 64):
                 raise ValueError(f"markers[{i}] length {len(tok)} "
                                  f"outside [1, 64]")
-            if tok in seen:
+            if tok in seen and tok != _REDACTION_MARKER:
                 raise ValueError(f"markers[{i}] duplicates {tok!r}")
             seen.add(tok)
         return v

@@ -62,7 +62,8 @@ if a1 is not None:
           "| every content leaf is the marker:", all(getattr(a1, f) == MARKER for f in ("subject", "relation", "object", "note", "original_relation")),
           "| outcome_counts cleared:", a1.outcome_counts == {})
 print("C. the BLOCKED row — a two-marker agreement redacted per entry (§2d-iii-bis: INVALID until the uniqueness validator admits repeats)")
-validated("after (arity-2 markers) — expected REFUSED today", AgreementRecord, dict(markers=[MARKER, MARKER], direction="inbound", lexicon="lex-v1"))
+validated("after (arity-2 markers) — REFUSED until 0041 tranche 3 (2026-09-19), when the uniqueness validator began admitting repeated REDACTION markers (row 3)", AgreementRecord, dict(markers=[MARKER, MARKER], direction="inbound", lexicon="lex-v1"))
+validated("after (arity-2 markers) — a repeated NON-marker, still REFUSED (the amendment admits the marker and nothing else)", AgreementRecord, dict(markers=["clinic-letter", "clinic-letter"], direction="inbound", lexicon="lex-v1"))
 print("D. episode — before / after (summary REPLACED; kind PRESERVED when it is a recognised operational kind and REPLACED when prose —")
 print("   round-3 F1; retired_reason=None stays None — round-3 F2: absence is absence; a legacy PROSE retired_reason → marker)")
 ep = validated("before", Episode, dict(id="ep-31", user_id="u", date="2026-09-01", summary="User disclosed a diagnosis and asked that it not be shared.", kind="interaction", provenance=PROV))

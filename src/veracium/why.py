@@ -47,6 +47,8 @@ user's data (every read is keyed by the user id given).
 from __future__ import annotations
 
 import json
+
+from .redaction import MARKER as _REDACTION_MARKER
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -131,15 +133,22 @@ def gather(store, user_id: str, edge_id: str) -> Biography:
         # journal, with the mutation diff computed from consecutive states
         prev = None
         for ev in store.edge_events(user_id, edge_id=edge_id):
-            try:
-                state = json.loads(ev.state)
-            except (TypeError, ValueError):
-                state, note = {}, "state not JSON"
+            # specs/0041 §4c / INV-3 (tranche 3): a redacted edge's earlier states are TOMBSTONED to the
+            # marker and a `redacted` event closes the sequence — `why` renders "redacted" and never fails;
+            # what the edge said is no longer in the store, only that fields moved and when.
+            if ev.state == _REDACTION_MARKER:
+                state, note = {}, "redacted"
             else:
-                note = None
+                try:
+                    state = json.loads(ev.state)
+                except (TypeError, ValueError):
+                    state, note = {}, "state not JSON"
+                else:
+                    note = None
             bio.events.append({"seq": ev.seq, "txn": ev.txn, "kind": ev.kind,
                                "reason": ev.reason, "at": ev.recorded_at,
-                               "changed": _diff(prev, state) if ev.kind == "mutated" else [],
+                               "changed": (_diff(prev, state) if ev.kind == "mutated"
+                                           else [("content", None, "redacted")] if ev.kind == "redacted" else []),
                                **({"note": note} if note else {})})
             prev = state
 

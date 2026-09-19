@@ -74,7 +74,17 @@ try:
     AgreementRecord(markers=[MARKER, MARKER], direction="inbound", lexicon="lex-v1"); constructed = True
 except Exception:
     constructed = False
-print("F5a model_copy accepted two identical markers:", copied.markers == [MARKER, MARKER], "| the constructor refuses the same:", not constructed)
+try:
+    AgreementRecord(markers=["a", "a"], direction="inbound", lexicon="lex-v1"); dup_constructed = True
+except Exception:
+    dup_constructed = False
+# The reviewer's claim held at the pin: the constructor refused [MARKER, MARKER]. 0041 tranche 3 (2026-09-19) amended
+# the uniqueness validator for row 3 (arity-preserving replacement) to admit repeated REDACTION markers and nothing
+# else — so the claim is printed as it was found, and the flipped outcome beside it (the tranche-1 rule).
+print("F5a model_copy accepted two identical markers:", copied.markers == [MARKER, MARKER],
+      "| the constructor refused the same at the pin: True (the reviewer's claim)",
+      "| FLIPPED at 0041 tranche 3: the constructor admits repeated REDACTION markers:", constructed,
+      "| a repeated non-marker is still refused:", not dup_constructed)
 # ---- F5b: the contribution fixture's payload={} passes the model but fails the absorption-site validator
 rec = ContributionRecord(id="c-1", user_id=U, survivor_type="edge", survivor_id="e-1", site="absorption",
                          identity_digest=None, evidence_ref_digest=None, payload={}, op_key="k",

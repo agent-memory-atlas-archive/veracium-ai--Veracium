@@ -180,6 +180,14 @@ COMBINING_SITES = {
                    "synthesis"),
     (_STORE, "delete_episode"): SiteSpec(
         False, why="removes one record"),
+    (_STORE, "redact"): SiteSpec(
+        False, why="specs/0041 §4a (tranche 3): rewrites ONE record's content carriers in place "
+                   "from the treatment map — the marker, an empty shape, a registry value — and "
+                   "the side rows keyed to it (its confirmations' digest, its ledger digests, its "
+                   "refusal rows' copied relation, its embedding rows, its journal states, the wiki "
+                   "cache); the attestation record it inserts names that same record. No second "
+                   "record contributes and none is derived; a redaction never deletes a record or "
+                   "changes a disposition (§4d, §4h(i))"),
     (_STORE, "forget_user"): SiteSpec(
         False, why="0009 erasure — drops the tenant's tables wholesale "
                    "(ledger included), which moots membership rather than "

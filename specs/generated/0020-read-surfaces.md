@@ -5,7 +5,7 @@
 
 # specs/0020 §4f — public read-surface manifest
 
-**32 public surfaces** — every public method of `Memory` plus every public
+**33 public surfaces** — every public method of `Memory` plus every public
 `*_impl` in `mcp_server` — enumerated by **parsing the AST**, not by reading
 the spec's prose inventory. **5 of them return record objects.**
 
@@ -52,6 +52,7 @@ and 0020's claim is about the surfaces named here.
 | `Memory.recall` | **yes** | `principal=` **threaded** | rendered `context` + `Recall.edges` / `.episodes` / `.contested` (and each group's `.exposed`) | SCOPED. The visibility relation is applied to the EDGE and EPISODE sets before rendering, and every structured carrier is built from its output; the §4e filters run after scope, within the visible set. Queryless (the proactive briefing) takes the same lens on the same code path, before assembly. The compiled wiki is EXCLUDED from a principal-bearing response (§4d). |
 | `Memory.record_outcome` | no | none | `{edge_id, outcome, upgraded, times_used}` | WRITE path (engine-written, never MCP); no record set leaves. |
 | `Memory.record_procedure` | no | none | the new edge id | WRITE path (specs/0037 §4b) — the sole producer of a procedural record; returns an id, renders nothing. Disclosure is derived (quarantine-at-birth, then the three-axis rule), never host-supplied. |
+| `Memory.redact` | no | none | a `RedactionReceipt`: the target's kind and id, the carrier NAMES treated, the vocabulary reason, the marker and store versions, the journal event ref, the ids of derived records that may still carry the content (F6), the receipt domains it cannot vouch for — never content and never a content digest | AN OPERATOR SURFACE BY DECISION (specs/0041 §3b), scoped to `user_id` by INV-5 (a cross-user or unknown target refuses with the same words, so the existence of another user's record is not disclosed). It is a WRITE that returns a receipt, the `forget` shape: the data subject's request must reach every carrier the map names or none, so no principal narrows it. |
 | `Memory.remember` | no | none | ingest counters | WRITE path. 0020 changes no write, no lifecycle transition (§3); identity partitioning at write/maintain is 0021's. |
 | `Memory.report_error` | no | none | bool | Diagnostics channel, consent-gated; no record set. |
 | `Memory.self_check` | no | none | content-free pass/fail counters | Runs against a THROWAWAY store; touches neither this store nor any principal. |

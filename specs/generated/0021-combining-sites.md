@@ -5,7 +5,7 @@
 
 # specs/0021 §3 — combining-site manifest
 
-**27 record-mutating code paths**, enumerated by **parsing the store's SQL**
+**28 record-mutating code paths**, enumerated by **parsing the store's SQL**
 rather than by reading the spec's prose matrix. **11 of them COMBINE**:
 they write a record derived from, or mutate a record because of, MORE THAN
 ONE existing record — the definition §3 gives the registry.
@@ -62,6 +62,7 @@ outside the boundary by construction.
 | `src/veracium/store/sqlite.py` | `delete_episode` | `DELETE FROM episodes` | no | — | removes one record |
 | `src/veracium/store/sqlite.py` | `forget_user` | `DELETE FROM edge_event` · `DELETE FROM {}` | no | — | 0009 erasure — drops the tenant's tables wholesale (ledger included), which moots membership rather than deriving it |
 | `src/veracium/store/sqlite.py` | `invalidate_edge` | `DELETE FROM wiki` | no | — | drops the wiki CACHE for the user (the edge row itself is written by _invalidate_edge_row); a cache invalidation combines nothing |
+| `src/veracium/store/sqlite.py` | `redact` | `DELETE FROM edge_embedding` · `DELETE FROM wiki` · `INSERT INTO episode_event` · `INSERT INTO redactions` · `UPDATE confirmations` · `UPDATE contribution_ledger` · `UPDATE edge_event` · `UPDATE edges` · `UPDATE episodes` · `UPDATE supersession_refusals` | no | — | specs/0041 §4a (tranche 3): rewrites ONE record's content carriers in place from the treatment map — the marker, an empty shape, a registry value — and the side rows keyed to it (its confirmations' digest, its ledger digests, its refusal rows' copied relation, its embedding rows, its journal states, the wiki cache); the attestation record it inserts names that same record. No second record contributes and none is derived; a redaction never deletes a record or changes a disposition (§4d, §4h(i)) |
 | `src/veracium/store/sqlite.py` | `set_wiki` | `INSERT OR REPLACE INTO wiki` | **yes** | wiki-compilation | v1: the store-wide compile is UNCHANGED, and the wiki never reaches a principal-bearing response (0020 §4d excludes it). Per-scope compilation is the recorded widening (Q2), not a silent one |
 | `src/veracium/store/sqlite.py` | `upsert_embedding` | `INSERT INTO edge_embedding` | no | — | 0027 §4f: writes ONE derived-index row (a vector bound to one edge's content digest) — regenerable, trust-inert, never evidence; digest-conditional against the SINGLE live edge it derives from, so nothing is combined and no scope rule applies (visibility is enforced at read by semantic_candidates' visible-id filter, 0027 §4a Stage 1) |
 | `src/veracium/store/sqlite.py` | `write_consolidation_output_if_current` | `INSERT INTO episodes` | **yes** | consolidation | the derivative, written from the whole claimed set. Its identity is CLEARED (origin=None/source_id=None — §4a/W8): store-authored means store-identified, and membership travels through the ledger, never through a copied identity |

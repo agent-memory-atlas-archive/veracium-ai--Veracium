@@ -327,8 +327,7 @@ def test_C_the_migration_report_enumerates_unattested_marker_rows(tmp_path):
     assert fields == {"object"}
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §4b / INV-11 keyed on ATTESTED redaction: after a redaction record attests the field, "
-                                       "the same ordinary write is refused; no `redact` API exists, so the call below raises")
+# (strict xfail until 0041 tranche 3, 2026-09-19: `Memory.redact` writes the attestation and INV-11 keys on it)
 def test_C_after_attestation_the_same_write_is_refused(tmp_path):
     """ROUND-5 FINDING 3, rewritten. The previous body never called redaction and
     never created an attestation: its `Memory.redact` was a BARE EXPRESSION
@@ -369,8 +368,7 @@ def test_C_after_attestation_the_same_write_is_refused(tmp_path):
     assert _edge(st, un).object == "Porto"
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §4b repeat calls: repeated=True with the original receipt, or reconstructed=True "
-                                       "with explicit None where no receipt exists; no `redact` API exists, so the call below raises")
+# (strict xfail until 0041 tranche 3, 2026-09-19: the receipt is the attestation record read back; a repeat returns it)
 def test_F_a_repeated_call_returns_the_original_or_a_reconstructed_receipt(tmp_path):
     """ROUND-5 FINDING 3, rewritten. The previous body was `assert hasattr(Memory,
     "redact")`, which the reviewer satisfied with a no-op method — no receipt, no

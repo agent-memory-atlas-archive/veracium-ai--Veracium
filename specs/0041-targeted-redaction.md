@@ -284,6 +284,26 @@ first.*
 > versions, timestamps; never content); the 84 terminal identities, 64 carriers and 20 non-carriers are
 > model-derived and unchanged.
 
+> **Implementation note, tranche 3 (2026-09-19).** `Memory.redact` → `SqliteStore.redact`: one journaled
+> write transaction over §2d-iii-bis, the record's own carriers by the PURE `redaction.treat_edge` /
+> `treat_episode` (validated under the model before any row is written), the side tables by the map, the
+> journal tombstoned and closed by a `redacted` event (§4c; INV-4), the `episode_event` row (§4b-ii), the
+> wiki dropped. **The attestation record is the receipt**: `RedactionReceipt` is the `redactions` row read
+> back, so a repeat returns the original (`repeated=True`, one event); INV-11 keys on the row at
+> `_upsert_edge_row` and `add_episode`; `reconstructed` is reserved for the import contract (tranche 4).
+> §4h(i) executed: the frozen relation-only quarantine keeps `quarantined` through the disclosure set in the
+> same transaction, and a treatment that would move `active` / `quarantined` / `needs_confirmation` /
+> `ungrounded` (edges) or `active` / `quarantined` / `use_only` (episodes) refuses with nothing written. Row 3
+> landed by amending `AgreementRecord`'s uniqueness validator to admit repeated REDACTION markers and nothing
+> else (the before/after fixture carries the negative control). Two things the spec did not say and the
+> implementation had to decide, recorded here for the review package: (1) `episode_event` allocates its own
+> per-user seq/txn (its primary key is its own; sharing `edge_event`'s allocator would let an edge event and
+> an episode event collide on seq); (2) the ledger digests are cleared on rows the target SURVIVES **or
+> CONTRIBUTES to**, and the survivors of the latter are the F6 "surviving derived records" the receipt names
+> — INV-7's "for redacted content" reaches both directions of the absorption. Seven declared 0042 sites.
+> What remains: tranche 4 (readers — `edge_state_at`'s REDACTED state, `recall`, `describe_procedures`; export
+> and the import contract), tranche 5 (delayed writers, the transition evidence rows, the closure ledger).
+
 ---
 
 ## 1. Problem and motivation
@@ -1709,6 +1729,14 @@ REVOCATION** (`revoked_source`) — which v5 did not name at all.
 
 ## 11.4 Amendments to existing contracts
 
+> **Tranche 3 (2026-09-19), the two amendments §4c makes to accepted 0029:** (1) **V-KIND** — the kind vocabulary
+> is derived from the mutator surface, and `redact()` is a mutator, so `EVENT_KINDS` gains `redacted`, the one
+> kind beside `invalidated` whose `reason` is non-NULL (redaction's own vocabulary, §11.2/D1; prose refused at
+> the choke point). (2) **V-APPEND** — *no code path updates or deletes an event except erasure* admits exactly
+> one updater: `redact` tombstones `state` on the redacted edge's prior events (§4c's ruled approach) and touches
+> no other column; `tests/test_0029_carrier.py` binds both — the updater's name, its statement's shape, and the
+> six kinds.
+
 
 ### 11.4-bis. The two prerequisites, in executable form
 
@@ -1760,9 +1788,9 @@ reviewer's three and no fourth.**
 
 **So the rule this section now carries: every strict xfail owes BOTH controls —
 a wrong implementation it refuses, AND an honest implementation under which it
-PASSES.** `specs/evidence/0041/xfail_mutant_campaign.py` runs 16: the reviewer's 5,
-5 more of ours, and **6 positive controls (the fifth added 2026-09-19 at 0041 tranche 1: the landed kind closure is the import-boundary test's positive control, and the reviewer's import-rule mutant now switches that closure off to stay a mutant; the sixth added the same day at tranche 2: the landed `migration.unattested_marker_report` is the migration-report test's positive control beside the in-process honest report, and every report mutant now restores the landed function instead of deleting it) that install a correct implementation
-and require green**. 16 of 16 behave. 🔴 **Only 3 of those 4 cover a STRICT
+PASSES.** `specs/evidence/0041/xfail_mutant_campaign.py` runs 18: the reviewer's 5,
+5 more of ours, and **8 positive controls (the fifth added 2026-09-19 at 0041 tranche 1: the landed kind closure is the import-boundary test's positive control, and the reviewer's import-rule mutant now switches that closure off to stay a mutant; the sixth added the same day at tranche 2: the landed `migration.unattested_marker_report` is the migration-report test's positive control beside the in-process honest report, and every report mutant now restores the landed function instead of deleting it); the seventh and eighth added the same day at tranche 3: the landed `Memory.redact` is the positive control of the repeat test and of the after-attestation test, and every redact mutant restores the landed method that install a correct implementation
+and require green**. 18 of 18 behave. 🔴 **Only 3 of those 4 cover a STRICT
 xfail — the fourth covers an ordinary test — so EIGHT of the eleven strict
 xfails still await one, and that remainder is owed at implementation rather
 than claimed as done.** ⚠️ **Every figure in this paragraph is DERIVED from the

@@ -128,7 +128,9 @@ class ReceiptSchemaBoundaryError(SupersessionIntegrityError):
 #: §4b — the closed kind set. `baseline` is written ONLY by the v13 migration
 #: (§4e), never by a runtime mutator; V-KIND holds the vocabulary closed and
 #: the store refuses to write or read an unknown kind.
-EVENT_KINDS: tuple = ("created", "mutated", "invalidated", "reinstated", "baseline")
+EVENT_KINDS: tuple = ("created", "mutated", "invalidated", "reinstated", "baseline",
+                      "redacted")    # specs/0041 §4c (tranche 3): the redaction is a write, journaled as its own kind;
+                                     # 0029 V-KIND derives the vocabulary from the mutator surface, and redact() is a mutator
 
 
 class EdgeEvent(NamedTuple):
@@ -283,6 +285,15 @@ class Store(ABC):
         ...
 
     # -- specs/0027 §4g (v14): the durable policy receipt ----------------------
+
+    def redact(self, user_id: str, *, edge_id=None, episode_id=None, reason: str):
+        """specs/0041 §4a (tranche 3): targeted redaction — one transaction over the treatment map, returning
+        a `veracium.redaction.RedactionReceipt`. A host store that has not implemented it REFUSES rather than
+        drops (the 0027 receipt precedent): the caller asked for content to be removed, and a silent no-op is
+        the one answer that must never be given (INV-5's shape)."""
+        raise NotImplementedError(
+            "this Store does not implement redact (specs/0041 §4a) — a store without the "
+            "operation refuses rather than pretending the content was removed")
 
     def write_policy_receipt(self, user_id: str, row: dict) -> None:
         """Persist ONE receipt row — `{recall_id, policy_id, policy_version,

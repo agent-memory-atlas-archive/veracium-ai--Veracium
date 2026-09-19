@@ -377,7 +377,10 @@ def test_the_before_after_fixtures_validate_as_the_treatment_map_rules_them():
     assert "model_copy" not in (EVIDENCE / "fixtures_before_after.py").read_text().split('"""', 2)[2]   # never used outside the docstring
     assert "VALID    after (arity-1 markers)  (model)" in out
     assert "identity preserved: True | evidence_ref preserved: True | every content leaf is the marker: True | outcome_counts cleared: True" in out
-    assert "REFUSED  after (arity-2 markers) — expected REFUSED today" in out
+    # 0041 tranche 3 (2026-09-19): row 3's arity-preserving replacement validates — the uniqueness rule admits
+    # repeated REDACTION markers and nothing else (the negative control beside it)
+    assert "VALID    after (arity-2 markers) — REFUSED until 0041 tranche 3" in out
+    assert "REFUSED  after (arity-2 markers) — a repeated NON-marker, still REFUSED" in out
     assert "kind preserved: True | still active (retired_reason None): True" in out
     assert "kind preserved: True | seq preserved: True" in out
     assert "active unchanged by the redaction: True" in out
@@ -401,7 +404,9 @@ def test_the_round3_reproduction_script_reports_every_claim_as_the_reviewer_foun
     assert "F1 the next append restarted at seq 1: True" in out
     assert "F1 targeted deletion of the original (now marker-kind) record PERMITTED: True" in out
     assert "F2 retired_reason=None → active: True | retired_reason=MARKER → active: False | flipped: True" in out
-    assert "F5a model_copy accepted two identical markers: True | the constructor refuses the same: True" in out
+    assert ("F5a model_copy accepted two identical markers: True | the constructor refused the same at the pin: True "
+            "(the reviewer's claim) | FLIPPED at 0041 tranche 3: the constructor admits repeated REDACTION markers: True "
+            "| a repeated non-marker is still refused: True") in out
     assert "F5b payload={} passes the model: True | passes the absorption-site validator: False" in out
     assert "a widening onto invalidation_reason passes the mutation test: True" in out
     assert "G1 graph.py:333 — a LIVE replacement against a REDACTED prior: REFUSED" in out

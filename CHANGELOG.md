@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- **Added: targeted redaction — `Memory.redact(user_id, *, edge_id | episode_id, reason) -> RedactionReceipt`
+  (specs/0041, tranche 3).** Removes one record's CONTENT and keeps its structure, in ONE store transaction
+  over the accepted treatment map: the content carriers become the marker byte string, `outcome_counts` is
+  cleared, a prose reason becomes the registry value `redacted` (an absent or registered one is untouched),
+  a prose episode kind becomes the marker (a recognised kind is kept), the duplicated edge columns follow the
+  json, the confirmation's request digest and the refusal rows' copied relation become the marker, the
+  ledger's identity and evidence-ref digests are cleared, the embedding rows are deleted, every prior journal
+  event's state is tombstoned and a `redacted` event is appended with the reason, an episode gets its
+  `episode_event` row, and the wiki cache is dropped. A `redactions` row ATTESTS the treated fields: a repeat
+  call writes nothing and returns the original receipt with `repeated=True`, and an ordinary write to an
+  attested record is refused (INV-11) while a row merely holding the marker bytes stays writable. A
+  redaction never changes a derived disposition (a quarantine relation's edge stays quarantined through its
+  disclosure; any other change refuses with nothing written), never deletes a row, and is not an
+  entitlement operation (`forget` erases). `reason` is a closed vocabulary (`subject_request`,
+  `operator_policy`, `erroneous_capture`, `legal_obligation`, `imported_notice`), refused at the operation
+  and at the journal. The receipt never carries a content digest, reports `receipts_complete=False` with the
+  receipt domains it cannot vouch for, and NAMES the derived records that may still carry the content
+  (ledger survivors, consolidation outputs) so the caller can act on them. `why` renders a redacted edge as
+  "redacted" and never fails; `veracium.store.base.Store.redact` refuses by default, so a host store that
+  has not implemented it cannot pretend content was removed. **Who must act:** hosts that IMPLEMENT
+  `Store` and want the operation add `redact`; everyone else changes nothing. Two accepted-0029 amendments
+  ride with it (0041 §11.4): the journal kind vocabulary gains `redacted`, and `redact` is the one path
+  that updates a journal row (`state` only, the tombstone). Measured on the frozen pre-restriction store
+  (specs/0041 §4h(iii)): every transition claim of the treatment map, the seven §6 invariants with their
+  planted mutants, and the mutant campaign at 18 of 18.
 - **BREAKING for existing stores — schema 14 → 15: the episode journal and the redaction
   attestation record (specs/0041, tranche 2).** Two additive tables and their indexes:
   `episode_event` (the episode-side transaction-time journal, `edge_event`'s shape — an episode
