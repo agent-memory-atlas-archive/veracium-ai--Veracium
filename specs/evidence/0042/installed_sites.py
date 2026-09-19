@@ -177,7 +177,9 @@ def reconcile(discovered_ids: set[str], reviewed: dict, declared: set[str], inst
     for cid in sorted(discovered_ids):
         if cid not in reviewed:
             p.append(f"DISCOVERED candidate with NO DECISION: {cid}")
-    enforcement = {cid for cid, d in reviewed.items() if d.get("decision") == "enforcement"}
+    # a reviewed row names its SITE id (the generated review file, tranche 6); the fixture's rows
+    # carry none and their candidate id IS their site id
+    enforcement = {d.get("site", cid) for cid, d in reviewed.items() if d.get("decision") == "enforcement"}
     for x in sorted(enforcement - declared): p.append(f"REVIEWED-as-enforcement but NOT DECLARED: {x}")
     for x in sorted(declared - enforcement): p.append(f"DECLARED but not REVIEWED-as-enforcement: {x}")
     for x in sorted(declared - installed_ids): p.append(f"DECLARED but NOT INSTALLED (the scan shows no binding for it): {x}")

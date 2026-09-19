@@ -2,9 +2,9 @@
 previous evidence written to DEMONSTRATE clauses rather than attack them (a validator that
 refused only the mutants its author imagined; an inventory over the kinds it could parse). These
 checks are the reviewer's: the state table is PARSED from the spec so the code cannot drift from
-it; every refusal is demonstrated on the input it refuses; the three-sets check is shown REFUSING
-on the real tree's DISCOVERED/REVIEWED half, which is the honest state until the review file lands
-with the last implementation tranche; the DECLARED/INSTALLED half reconciles per tranche.
+it; every refusal is demonstrated on the input it refuses; the four-set reconciliation over the real
+tree is tests/test_0042_reconciliation.py's (tranche 6, 2026-09-19), and the refusals stay LIVE here
+against emptied inputs.
 """
 import importlib.util
 import json
@@ -117,14 +117,19 @@ def test_a0bis_the_three_sets_check_refuses_each_wrong_pair_and_passes_the_compl
     assert any("malformed" in x for x in rp.check_three_sets(rp.FIXTURE_DISCOVERED, malformed, rp.FIXTURE_DECLARED, rp.FIXTURE_DECLARED))
 
 
-def test_a0bis_on_the_real_tree_the_third_source_bites_because_no_decisions_exist_yet():
+def test_a0bis_on_the_real_tree_every_discovered_candidate_has_a_decision():
+    """Flipped 2026-09-19 (tranche 6): the review file exists, generated from the authored review —
+    the third source no longer bites on the real tree, and the full four-set reconciliation is
+    tests/test_0042_reconciliation.py's. This keeps the DISCOVERED/REVIEWED half's refusal LIVE:
+    with the review file emptied it must still bite."""
     rp = _load("reviewed_points")
     real = rp.load_discovered()
-    reviewed = rp.load_reviewed(rp.REVIEWED_PATH) if rp.REVIEWED_PATH.exists() else {}
-    probs = rp.check_three_sets(real, reviewed, set(), set())
-    undecided = sum(1 for x in probs if "NO DECISION" in x)
-    assert undecided == len(real) - len([c for c in reviewed if c in {rp.candidate_id(s) for s in real}])
-    assert undecided > 0, "every discovered candidate has a decision — update this test to assert the pass"
+    reviewed = rp.load_reviewed(rp.REVIEWED_PATH)
+    undecided = [x for x in rp.check_three_sets(real, reviewed, set(), set()) if "NO DECISION" in x]
+    assert undecided == [], undecided[:3]
+    assert len(reviewed) == len(real)
+    bites = [x for x in rp.check_three_sets(real, {}, set(), set()) if "NO DECISION" in x]
+    assert len(bites) == len(real), "the refusal must still bite on an empty review"
 
 
 # ---- Part A-0-quater: the site BINDS the decision (round 4) ----------------------------------

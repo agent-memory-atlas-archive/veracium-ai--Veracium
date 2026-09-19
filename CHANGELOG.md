@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Added: the census's REVIEWED set and DECLARATION exist, and the four sets reconcile on the real
+  tree (specs/0042, tranche 6a).** Every one of the 752 discovered decision candidates carries a
+  decision — 276 enforcement candidates bound to 147 site ids, 476 not (argument-check 97,
+  internal-invariant 239, control-flow 88, predicate-helper 43, cli-usage 9) — in a review file
+  GENERATED from the authored semantic review with, per decision, the candidate's stable key, its
+  line and the statement text it decided about; the spec-side declaration (id, governing spec,
+  invariant, file:symbol) is generated from the same review. DISCOVERED, REVIEWED, DECLARED and
+  INSTALLED reconcile with zero refusals, and every refusal is shown live against an emptied or
+  altered input. No behaviour changes.
 - **Added: the census binds the store's forty-six sites (specs/0042, tranche 5) — every enforcement
   point the semantic review named is now a declared site (147 ids).** Migration's unsupported-base and
   duplicate-chain refusals; revocation's unknown-state, ordinal-collision and integrity refusals and the

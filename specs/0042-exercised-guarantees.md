@@ -77,10 +77,20 @@ Spec-Status: accepted
 > id) bracketed once at the smallest statement containing all of its exits (an `elif` climbs to its
 > chain root, an except-handler exit takes its `try`); the instrumenter's own defect found and fixed
 > (`ast` columns are byte offsets — a `§` before the insertion point had put a parenthesis one
-> character too far, into whitespace, in every landed case). What remains: the generated review
-> file, the declaration, the reconciliation flip, and the INV-7 harness with its fourth arm. The
-> DECLARED/INSTALLED half of the reconciliation holds per tranche; the DISCOVERED/REVIEWED half
-> lands with the review file in the last tranche.
+> character too far, into whitespace, in every landed case). **Tranche 6a — the reconciliation
+> flip:** the REVIEWED set is `specs/evidence/0042/reviewed_points.json`, GENERATED
+> (`reviewed_points_gen.py`) from the authored review (`semantic_review.py`) and the inventory —
+> 752 decisions, one per DISCOVERED candidate, each carrying its stable key (module, qualname,
+> kind, ordinal), its line and the statement text it decided about, the NOT decisions grouped by
+> class with their reasons; the DECLARATION is `declaration.py`, generated from the same review
+> (id · spec · invariant · file:symbol · label, 147 rows). `tests/test_0042_reconciliation.py`
+> reconciles all four sets on the real tree with zero refusals and shows every refusal live
+> (a dropped decision, an undeclared enforcement candidate, a declared id nobody bound); it also
+> carries the second reader's mechanical checks — every decision's statement still at its line,
+> every key resolving, exactly one decision per candidate, the collapse shape re-swept against a
+> frozen hand-read set. The evidence reconciler now compares REVIEWED-as-enforcement to DECLARED by
+> SITE id (a reviewed row names its site; the fixture's rows, carrying none, keep their candidate
+> id) — the two coincided only in the fixture. What remains: the INV-7 harness with its fourth arm.
 
 ## 1. Problem and motivation
 
@@ -862,7 +872,7 @@ pytest node or the mutant campaign and runs anywhere.
 | **0042-R1-4** | external 1 | installed instrumentation was not separated from observed traffic (§4A-0/A; INV-1/2) | Part A-0 gained the three sets and Part A-1 the six-status state table (UNREACHED vs UNEXERCISED vs UNMEASURED; DISABLED as a status) — parsed from the spec by the evidence, not hand-listed | `$PY -m pytest tests/test_0042_evidence.py::test_a1_state_table_is_parsed_from_the_spec_and_the_code_conditions_match_it_one_to_one tests/test_0042_evidence.py::test_a1_every_tuple_maps_to_exactly_one_status_in_precedence_order` |
 | **0042-R1-5** | external 1 | the counter lifecycle and the observation-only contract were incomplete (§§4A, 5, 7, 10; INV-2/7) | Part A-2: the counter lifecycle, the three-arm decision-trace diff over exactly (seq, site_id, decision) with its bound stated | `$PY -m pytest tests/test_0042_evidence.py::test_a2_three_arm_trace_diff_compares_only_the_named_fields_and_refuses_extra_ones` |
 | **0042-R1-6** | external 1 | the baseline treatment was unspecified (§4B step 3; INV-5) | travelled to 0043: the baseline arm, replaced three times (merged prompt → examiner view → the CAPTURED model input under a stated transform, A6-ter), the history in 0043 §11 | `git show 1bc29178014016d040e8cdb1ee92d81420970244 -- specs/0043-refusal-harness.md # v1 A6 — the first baseline definition` |
-| **0042-R2-1** | external 2 | the AST inventory could not support the completeness claim: candidate discovery, reviewed enforcement points and installed instrumentation were one undifferentiated set | Part A-0-bis: DISCOVERED (derived by the inventory: RAISE, RETURN_FALSE, RETURN_NONE, BOOL_RETURN, FILTER_RETURN), REVIEWED (recorded decisions), DECLARED; the three-sets check refuses on this tree because no decisions exist yet | `$PY -m pytest tests/test_0042_evidence.py::test_a0bis_the_three_sets_check_refuses_each_wrong_pair_and_passes_the_complete_fixture tests/test_0042_evidence.py::test_a0bis_on_the_real_tree_the_third_source_bites_because_no_decisions_exist_yet tests/test_0042_evidence.py::test_a4_discovery_finds_the_four_symbols_round_2_named_and_states_its_unit` |
+| **0042-R2-1** | external 2 | the AST inventory could not support the completeness claim: candidate discovery, reviewed enforcement points and installed instrumentation were one undifferentiated set | Part A-0-bis: DISCOVERED (derived by the inventory: RAISE, RETURN_FALSE, RETURN_NONE, BOOL_RETURN, FILTER_RETURN), REVIEWED (recorded decisions), DECLARED; the three-sets check refused on the round-2 tree because no decisions existed; since tranche 6a every candidate carries a decision and the check still bites on an emptied review | `$PY -m pytest tests/test_0042_evidence.py::test_a0bis_the_three_sets_check_refuses_each_wrong_pair_and_passes_the_complete_fixture tests/test_0042_evidence.py::test_a0bis_on_the_real_tree_every_discovered_candidate_has_a_decision tests/test_0042_evidence.py::test_a4_discovery_finds_the_four_symbols_round_2_named_and_states_its_unit` |
 | **0042-R2-2** | external 2 | the census schema and the comparison contract were inconsistent across prose, schema and tests (statuses 4 vs 5; invalid counts; the compared trace fields unnamed) | Part A-1 is the single authority: the state table parsed from the spec with the count cross-checked against the prose; the report gate refuses every named defect; Part A-2 names the compared fields | `$PY -m pytest tests/test_0042_evidence.py::test_a1_parser_refuses_a_missing_table_and_a_count_that_disagrees_with_the_prose tests/test_0042_evidence.py::test_a1_report_gate_refuses_every_named_defect_and_emits_the_undeclared_row` |
 | **0042-R3-1** | external 3 | reviewed and declared does not establish installed: with every candidate reviewed, every point declared and no counters at all, the reconciliation passed | Part A-0-ter derived INSTALLED from a static scan checked by the import-time registry — itself found a proxy in round 4 and replaced by A-0-quater (the binding); see 0042-R4-1 | `git show 43c1c637cef4372dadcf315a23f06ae8e1c8100d -- specs/0042-exercised-guarantees.md # v6 Part A-0-ter` |
 | **0042-R3-2** | external 3 | A5 bounded: disabling measurement allowed an undeclared reporter to pass | structural reconciliation runs BEFORE status and does not depend on `enabled`: an undeclared reporter under enabled == false is emitted DISABLED and refused | `$PY -m pytest tests/test_0042_evidence.py::test_a5_an_undeclared_reporter_is_refused_even_when_measurement_is_off` |
