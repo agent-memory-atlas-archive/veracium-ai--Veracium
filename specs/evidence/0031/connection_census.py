@@ -637,14 +637,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: the 0042 census module (2026-09-19: `src/veracium/census.py` — the Site counters, the
 #: registry, the report; literal attribute names only) moved dotted/dataflow 5,950 -> 6,002, dotted/module-machinery 19 -> 20, dotted/module-plain 315 -> 326, the rest unchanged.
 #: the 0042 census module without the frame capture (2026-09-19: `inspect` refused by the connection inventory, rightly; the registry records ids only): moved dotted/dataflow 6,002 -> 5,987, dotted/module-machinery 20 -> 19, dotted/module-plain 326 -> 324, the rest unchanged.
+#: the contested-render cap (2026-09-19: `contested_render_share` in config and at the recall call site): moved dotted/dataflow 5,987 -> 5,992, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5987,
+    "dotted/dataflow": 5992,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 324,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6411
+SRC_ATTRIBUTE_TOTAL = 6416
 SRC_DATA_DUNDERS_IN_DATAFLOW = 131   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 
 

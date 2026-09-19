@@ -1133,14 +1133,19 @@ class Memory:
         contested_ids = {e.id for g in contested for e in g.exposed if e.assertable}
         detail_edges = [e for e in edges if e.id not in contested_ids]
 
-        # the contested surface gets FIRST claim on the budget — HIGH priority, ahead
-        # of ordinary query detail — so a refusal never demotes the prior below where it
-        # stood before it (the finite-budget form of I6a). It IS budget-gated, not an
-        # unbounded surface (round-8 blocker 2); truncation is deterministic and flagged.
-        # specs/0012 I10: recall is ALWAYS budgeted (the config default applies when the
-        # caller omits token_budget) — the old unbudgeted branch is gone.
+        # the contested surface renders FIRST — HIGH priority, ahead of ordinary query
+        # detail — so a refusal never demotes the prior below where it stood before it (the
+        # finite-budget form of I6a). It IS budget-gated, not an unbounded surface (round-8
+        # blocker 2); truncation is deterministic and flagged. specs/0012 I10: recall is
+        # ALWAYS budgeted (the config default applies when the caller omits token_budget).
+        # 2026-09-19 (the owner's word): its claim is CAPPED at `contested_render_share` of
+        # the budget — first claim on the WHOLE budget starved RELEVANT DETAIL of the very
+        # lines recall had ranked first (measured: 99.4% of the context was this block). The
+        # first group line stays unconditional inside the renderer (I6a), and what the block
+        # does not spend flows to detail below.
         contested_block, spent, c_trunc = self._render_contested(
-            contested, token_budget, self._est_tokens)
+            contested, max(1, int(token_budget * self.config.contested_render_share)),
+            self._est_tokens)
         if filter_report:                       # §4e M-3, charged before detail
             spent += self._est_tokens(filter_report)
         wiki, detail_grounded, unverified, d_trunc = self._fit_to_budget(

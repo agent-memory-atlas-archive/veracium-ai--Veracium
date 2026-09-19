@@ -182,127 +182,127 @@
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1458,
+   "line": 1463,
    "module": "__init__.py",
    "qualname": "Memory._fit_to_budget._claim_lines"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1599,
+   "line": 1604,
    "module": "__init__.py",
    "qualname": "Memory.answer"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1621,
+   "line": 1626,
    "module": "__init__.py",
    "qualname": "Memory.maintain"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1670,
+   "line": 1675,
    "module": "__init__.py",
    "qualname": "Memory.flush_telemetry"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1677,
+   "line": 1682,
    "module": "__init__.py",
    "qualname": "Memory.telemetry_preview"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1688,
+   "line": 1693,
    "module": "__init__.py",
    "qualname": "Memory.report_error"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1695,
+   "line": 1700,
    "module": "__init__.py",
    "qualname": "Memory.diagnostics_preview"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1724,
+   "line": 1729,
    "module": "__init__.py",
    "qualname": "Memory.introspect"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1750,
+   "line": 1755,
    "module": "__init__.py",
    "qualname": "Memory.edges_since"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1759,
+   "line": 1764,
    "module": "__init__.py",
    "qualname": "Memory._find_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1772,
+   "line": 1777,
    "module": "__init__.py",
    "qualname": "Memory.dispute"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1868,
+   "line": 1873,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1870,
+   "line": 1875,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1872,
+   "line": 1877,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1979,
+   "line": 1984,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1998,
+   "line": 2003,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2027,
+   "line": 2032,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2033,
+   "line": 2038,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2075,
+   "line": 2080,
    "module": "__init__.py",
    "qualname": "Memory.policy_receipts"
   },
@@ -719,56 +719,63 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 152,
+   "line": 163,
    "module": "config.py",
    "qualname": "MemoryConfig.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 156,
+   "line": 167,
    "module": "config.py",
    "qualname": "MemoryConfig.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 162,
+   "line": 173,
    "module": "config.py",
    "qualname": "MemoryConfig.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 164,
+   "line": 175,
    "module": "config.py",
    "qualname": "MemoryConfig.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 168,
+   "line": 178,
    "module": "config.py",
    "qualname": "MemoryConfig.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 176,
+   "line": 182,
    "module": "config.py",
    "qualname": "MemoryConfig.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 191,
+   "line": 190,
+   "module": "config.py",
+   "qualname": "MemoryConfig.__post_init__"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 205,
    "module": "config.py",
    "qualname": "MemoryConfig._validate_scope_policy"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 196,
+   "line": 210,
    "module": "config.py",
    "qualname": "MemoryConfig._validate_scope_policy"
   },
@@ -4949,7 +4956,7 @@
   "by_kind": {
    "BOOL_RETURN": 61,
    "FILTER_RETURN": 42,
-   "RAISE": 486,
+   "RAISE": 487,
    "RETURN_FALSE": 82,
    "RETURN_NONE": 72
   },
@@ -5050,7 +5057,7 @@
    "config.py": {
     "BOOL_RETURN": 0,
     "FILTER_RETURN": 0,
-    "RAISE": 11,
+    "RAISE": 12,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
@@ -5286,7 +5293,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 743,
+  "total": 744,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

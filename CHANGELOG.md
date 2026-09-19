@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+- **Changed: the contested-fact renderer is capped at a share of the recall budget
+  (`MemoryConfig.contested_render_share`, default `0.5`).** The `CONTESTED FUNCTIONAL
+  FACTS` block had first claim on the whole token budget, so on a store with many
+  contended functional facts it starved `RELEVANT DETAIL` of the lines recall had ranked
+  first: measured on a ten-conversation store, 99.4% of the rendered context was the
+  contested block and the answer-carrying record reached the model in 8 of 19 answerable
+  questions while ranking 4th of 834. The block now takes at most the configured share; its
+  first line stays unconditional (the higher-authority prior is never dropped, I6a); the
+  remainder goes to detail; `1.0` reproduces the previous behaviour. **Who should take
+  this:** anyone whose recall context is dominated by contested blocks. **What it cannot
+  fix:** a carrier inside a contested group is removed from detail by construction — that is
+  the functional-relation vocabulary question, which goes to its own spec round. The
+  acceptance measurement (answers reaching the rendered context at share 1.0 vs 0.5 on one
+  rebuilt store, in one run) is stated in the ledger with its own figures; the store the 8/19
+  was measured on no longer exists and is not reproducible. **Measured on the rebuilt store**
+  (ten LoCoMo conversations through the shipped extractor; 60 questions; one run per share;
+  the store carries 103 live contested groups and recall delivers all of them on every
+  question): answers reaching the rendered context 7 → 11 → 12 of 19 at shares 1.0 / 0.5 /
+  0.25, every gain a previously starved detail line. **The cost, stated:** contested group
+  lines rendered per question 64 → 32 → 16 of the 103 delivered (highest-priority first; the
+  rest dropped), the block's share of rendered characters 99% → 52% → 36%; every context
+  was truncated at every share, so the cap trades the tail of an already-cut contested list
+  for detail. **What the cut takes, stated:** the block renders its groups in `(subject,
+  relation)` order and the budget cut takes that order's tail — at every share, `1.0`
+  included, so this release changes how far down that order the block reaches, not what
+  decides it (on the rebuilt store the tail was every subject from `person:Gina` on, on every
+  question). The block is query-independent by design (0003 §4c-ii: it replaces the broad
+  channel the wiki used to provide), so relevance-ordering it is NOT the fix; what order a
+  static-plus-truncated block should take is open under 0003. **A drop the report does not
+  state, measured:** the `[budget: …]` line counts detail, SAFETY claim lines, clamps, wiki and
+  episodes, and the contested groups the block drops are in none of its figures; on the same
+  store at share `0.5`, 54 of 60 truncated contexts carried no budget line at all and the 6
+  that did reported `0 SAFETY`. That is a pre-existing gap against 0012 I10b (39 groups were
+  dropped silently at `1.0`), widened by this default; the count goes into the report as its
+  own change. Until both land the `0.5` default is a bound the owner set, not a tuned figure.
 - **Added: the exercised-guarantees census module (`veracium.census`, specs/0042 — accepted at the
   design level, external round 5; implementation begins here).** An enforcement point declares a
   site at module level and expresses its decision through it (`with SITE.consult(): … raise

@@ -162,3 +162,55 @@ def test_the_carrier_renders_every_distinct_grounded_value_not_a_pair(tmp_path):
     # by effective authority — never assuming a fixed count
     assert [e.object for e in g.exposed] == ["CFO at Acme", "unemployed"]
     assert [e.id for e in g.exposed] == ["p", "i"]                 # USER (3) before SYSTEM (2)
+
+
+# --- the 2026-09-19 cap: the contested block's share of the budget ----------------------
+def _starving_store(mem, n_detail=6):
+    """Five verbose contentions (as the unbounded test builds them) PLUS grounded detail lines
+    under a non-functional relation, each carrying a distinctive answer token."""
+    functional = ["works_as", "located_at", "prefers", "health_state", "deadline"]
+    for n, rel in enumerate(functional):
+        long_tail = " with an intentionally verbose qualifier occupying budget" * 3
+        mem.store.add_edge(_edge(f"p{n}", EvidenceAuthor.USER,
+                                 f"grounded value {n}{long_tail}").model_copy(update={"relation": rel}))
+        inc = _edge(f"i{n}", EvidenceAuthor.THIRD_PARTY, f"challenge {n}{long_tail}",
+                    disc=Disclosure.QUARANTINED).model_copy(update={"relation": rel})
+        apply_supersession(mem.store, inc, mem.config.relations)
+    for k in range(n_detail):
+        mem.store.add_edge(_edge(f"d{k}", EvidenceAuthor.USER, f"answer-token-{k} value").model_copy(
+            update={"relation": "uses_tool"}))
+
+
+def test_the_contested_share_cap_lets_ranked_detail_reach_the_context(tmp_path):
+    """At share 1.0 (the pre-cap behaviour) the contested block claims the whole tight budget and
+    NO detail line renders; at the default 0.5 the block is bounded at half the budget and detail
+    renders. The prior (the first group line) is present in both — I6a holds under the cap."""
+    budget = _floor_recall + 4
+    (tmp_path / "a").mkdir(); (tmp_path / "b").mkdir()
+    mem1 = _mem(tmp_path / "a"); mem1.config.contested_render_share = 1.0
+    _starving_store(mem1)
+    r1 = mem1.recall(U, "answer-token value", token_budget=budget)
+    assert "CONTESTED" in r1.context and "grounded value" in r1.context   # the first group line renders (whichever group ranks first)
+    assert "answer-token-" not in r1.context                       # starved: the block took it all
+    mem1.close()
+    mem2 = _mem(tmp_path / "b")                                     # default share 0.5
+    assert mem2.config.contested_render_share == 0.5
+    _starving_store(mem2)
+    r2 = mem2.recall(U, "answer-token value", token_budget=budget)
+    assert "CONTESTED" in r2.context and "grounded value" in r2.context   # a prior still renders under the cap (I6a)
+    assert "answer-token-" in r2.context                           # detail reaches the context
+    block = r2.context.split("## CONTESTED")[1].split("\n## ")[0] if "## CONTESTED" in r2.context else ""
+    assert mem2._est_tokens("## CONTESTED" + block) <= budget * 0.5 + mem2._est_tokens("## CONTESTED FUNCTIONAL FACTS (no single current value; do not assert one)\n")
+    assert r2.tokens_estimated <= budget
+    mem2.close()
+
+
+def test_the_contested_share_is_validated_and_one_reproduces_the_previous_behaviour(tmp_path):
+    import pytest
+    from veracium import MemoryConfig
+    for bad in (0, 0.0, 1.5, -0.1, True, "0.5"):
+        with pytest.raises(ValueError):
+            MemoryConfig(db_path=str(tmp_path / "x.db"), contested_render_share=bad)
+    MemoryConfig(db_path=str(tmp_path / "y.db"), contested_render_share=1.0)
+    MemoryConfig(db_path=str(tmp_path / "z.db"), contested_render_share=0.25)
+

@@ -113,6 +113,17 @@ class MemoryConfig:
     wiki_variant_cap: int = 4                  # per-group variant lines feeding the compiler
     contested_members_per_line: int = 6        # the §4c packing K (validated >= 2)
     wiki_render_share: float = 1 / 3           # recall-time clamp of the cached wiki body
+    # The CONTESTED FUNCTIONAL FACTS block's share of the recall budget (specs/0003 §4c-ii, the
+    # 2026-09-19 cap on the owner's word). Before the cap the block had FIRST CLAIM ON THE WHOLE
+    # budget: measured on a ten-conversation store, 99.4% of the rendered context was the
+    # contested block and the answer-carrying detail line reached the model in 8 of 19
+    # answerable questions — the carrier ranked 4th of 834 and never rendered. The cap bounds
+    # the block at this share; the first group line stays unconditional (I6a: the higher-
+    # authority prior is never dropped), and the remainder goes to RELEVANT DETAIL. 1.0
+    # reproduces the pre-cap behaviour. What the cap cannot reach: carriers INSIDE a contested
+    # group are removed from detail by construction; that is the vocabulary change's problem
+    # (a research spec round), not a budget number's.
+    contested_render_share: float = 0.5
     group_heading_allowance_tokens: int = 48   # sub-cap for a heading's clamped fields
     # specs/0020 §4a-ii — THE SCOPE POLICY, host-supplied and per-process (the
     # relations-registry precedent). READ-SIDE ONLY: it governs visibility and
@@ -162,6 +173,9 @@ class MemoryConfig:
             raise ValueError("wiki_variant_cap must be >= 1")
         if not (0 < self.wiki_render_share <= 1):
             raise ValueError("wiki_render_share must be in (0, 1]")
+        if isinstance(self.contested_render_share, bool) or not isinstance(self.contested_render_share, (int, float)) \
+                or not (0 < self.contested_render_share <= 1):
+            raise ValueError("contested_render_share must be a number in (0, 1]")
         from .budgets import MARKER_RESERVE
         if int(self.query_context_budget_tokens * self.wiki_render_share) < \
                 MIN_ITEM_ALLOWANCE + MARKER_RESERVE:
