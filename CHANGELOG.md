@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Fixed: the reference Anthropic provider refuses an empty completion instead of returning
+  `""`.** With the default `max_tokens` (4096) a hard prompt can spend the whole budget inside a
+  `thinking` block; the API call succeeds with `stop_reason == "max_tokens"` and no text block, and
+  `AnthropicComplete` returned an empty string with no signal (found by research, reproduced against
+  the SDK: block types `['thinking']`, 4096 output tokens, returns `''`). Every role reads emptiness
+  as a finding — an empty distill is "no triples", an empty compile is an empty wiki, and an empty
+  gate answer is what an abstention looks like, on the one surface where a negative result is a
+  product claim. Now the provider raises `veracium.llm.anthropic.EmptyCompletion` (a `RuntimeError`
+  carrying `stop_reason`, `output_tokens`, `block_types`, `max_tokens`, `model`) whenever no text
+  block came back, whatever the stop reason; a cut-off answer that has text is still returned. The
+  assembly is one pure function (`text_of`) the provider renders through, tested without the SDK.
+  **Who should take this:** anyone using `AnthropicComplete` on prompts long enough to think about —
+  raise `max_tokens` where the error names it. **Consumers, swept:** `Memory.answer` records the
+  error and re-raises; lifecycle pools classify it `llm-error`; the selfcheck reports it per check;
+  ingest and compile propagate it like any provider failure (the extraction retry path records it
+  as a retry with its cause, never a second call). No consumer turns it back into silence.
 - **Fixed: the recall budget report now states the contested block's losses, and appears
   whenever the block truncated.** The `[budget: …]` line was built from the detail fitter's own
   counts and emitted only when the fitter itself dropped something, while the `CONTESTED

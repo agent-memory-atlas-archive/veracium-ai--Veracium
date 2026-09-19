@@ -1381,7 +1381,14 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 36,
+   "line": 62,
+   "module": "llm/anthropic.py",
+   "qualname": "text_of"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 80,
    "module": "llm/anthropic.py",
    "qualname": "AnthropicComplete.__init__"
   },
@@ -4956,7 +4963,7 @@
   "by_kind": {
    "BOOL_RETURN": 61,
    "FILTER_RETURN": 42,
-   "RAISE": 487,
+   "RAISE": 488,
    "RETURN_FALSE": 82,
    "RETURN_NONE": 72
   },
@@ -5134,7 +5141,7 @@
    "llm/anthropic.py": {
     "BOOL_RETURN": 0,
     "FILTER_RETURN": 0,
-    "RAISE": 1,
+    "RAISE": 2,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
@@ -5293,7 +5300,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 744,
+  "total": 745,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

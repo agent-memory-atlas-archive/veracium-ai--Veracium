@@ -640,15 +640,18 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: the contested-render cap (2026-09-19: `contested_render_share` in config and at the recall call site): moved dotted/dataflow 5,987 -> 5,992, the rest unchanged.
 #: the recall report's contested class (I10b amended 2026-09-19): ContestedLoss carried from the renderer to the fitter; the recall report reserve 40: moved dotted/dataflow 5,992 -> 5,996, the rest unchanged.
 #: the report-line builders (recall_report_line / proactive_report_line) and the reserve control, same amendment: moved nothing, the rest unchanged.
+#: the provider refuses an empty completion (text_of / EmptyCompletion in llm/anthropic.py): moved dotted/dataflow 5,996 -> 6,004, getattr/dataflow 33 -> 38, the rest unchanged.
+#: text_of reads msg.content / stop_reason / usage.output_tokens as plain attributes (the 0031 getattr inventory refused five new literal getattr sites): moved dotted/dataflow 6,004 -> 6,009, getattr/dataflow 38 -> 33, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 5996,
+    "dotted/dataflow": 6009,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 324,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6420
-SRC_DATA_DUNDERS_IN_DATAFLOW = 131   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
+SRC_ATTRIBUTE_TOTAL = 6433
+SRC_DATA_DUNDERS_IN_DATAFLOW = 132   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
+#   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 
 
 def _classify_attribute(base, attr, ctx):

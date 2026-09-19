@@ -655,6 +655,13 @@ mem = Memory(llm=AnthropicComplete())                       # models per role, o
 mem = Memory(llm=AnthropicComplete(models={"gate": "claude-opus-4-8"}))
 ```
 
+`AnthropicComplete` never returns an empty string: when the model produces no text block
+(the default `max_tokens=4096` spent inside a `thinking` block, a refusal, an `end_turn` with
+nothing said) it raises `veracium.llm.anthropic.EmptyCompletion`, a `RuntimeError` whose message
+names the stop reason, the output tokens and the block types seen, and whose fields carry them.
+An empty completion is never a result — an empty gate answer would read as an abstention. Raise
+`max_tokens` when the error says the budget was spent before any text.
+
 Wrapping your agent's existing client is often simplest — see
 `examples/claude_cli_provider.py` for a subprocess-based example, or
 `examples/openai_provider.py` for an OpenAI-compatible one (OpenAI, vLLM,
