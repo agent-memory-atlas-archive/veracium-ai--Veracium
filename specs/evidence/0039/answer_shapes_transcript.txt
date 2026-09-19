@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — DEV's instrument (specs/evidence/0039/answer_shapes.py)
-# generated 2026-09-12 against veracium @ f73899d7237f5160ff1466169ef2032d993f324d
+# generated 2026-09-12 against veracium @ 0da385f319cf6014ba94f3ac98ffd547aac8ec25
+# RE-PINNED 2026-09-19 the renderer cap (contested_render_share) landed in 0da385f319cf6014ba94f3ac98ffd547aac8ec25: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-19 after 0042 tranche 1 (f73899d; src/veracium/census.py, __init__.py, config.py): bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-18 after the derived ladder diagnostic (bbeb024; src/veracium/store/release_migration.py): bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-18 after the MemoryConfig.relations doc line (87aa4c5; src/ moved by comment text only): bodies byte-identical; the pin moves to the commit that changed src/
