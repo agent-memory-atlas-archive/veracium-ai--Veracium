@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 2fcaa57
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 214964c
+# RE-PINNED 2026-09-19 0042 tranche 5 (the store's forty-six sites) landed in 214964caca9c65dd235652b5a09e4498cb060fdf: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-19 0042 tranche 4 (thirty-three more sites) landed in 2fcaa57ae4539ed85ddee54fbfe562f8c3bcd777: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-19 0042 tranche 3 (forty more sites) landed in 14ad68ce52a5c06f732b0c01a4d43fd87d53f000: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-19 0042 tranche 2b (the census bypass at the four hot Edge predicates) landed in 4002977d8f3e4641d199ccd9a9b6a484e6c0b49c: bodies byte-identical; the pin moves to the commit that changed src/
