@@ -224,9 +224,16 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     # that matters is asserted elsewhere: the uninstrumented arm registered zero sites. (A first version asserted
     # every listed commit was an 0042 tranche — true until the next spec touched src; a census of the moment
     # mistaken for a rule.)
-    block = text.split("src commits between the twin and HEAD", 1)[1].split("\n\n", 1)[0]
-    commits = [l.strip() for l in block.splitlines()[1:] if l.strip()]
-    assert commits and all(re.match(r"^[0-9a-f]{7,} ", c) for c in commits), commits
+    # the twin is DERIVED from HEAD by removing the instrumentation (2026-09-19; an exported old commit is a
+    # different product as soon as src/ moves for any other reason): the transcript states the derivation and
+    # the number of sites removed equals the declaration's ids at HEAD — the twin lacks exactly what HEAD declares
+    m = re.search(r"^twin \(uninstrumented\): derived from HEAD ([0-9a-f]{40}) by inv7_uninstrument\.py$", text, re.M)
+    assert m, "the transcript's twin is not the derived one"
+    assert m.group(1) == pin
+    d = re.search(r"^twin derivation: (\d+) declare_site removed, (\d+) fire\(\) unwrapped, (\d+) consult blocks spliced, (\d+) census-enabled bypass blocks removed", text, re.M)
+    assert d, "the transcript does not state the derivation"
+    assert int(d.group(1)) == len(declaration.DECLARED_IDS), (d.group(1), len(declaration.DECLARED_IDS))
+    assert int(d.group(2)) > 0 and int(d.group(3)) > 0 and int(d.group(4)) == 4       # the four hot-predicate bypasses
 
 
 # ---- leg 3: the harness's mutation matrix ------------------------------------------------------------

@@ -75,7 +75,20 @@ def sh(cmd, **kw):
 
 
 def export_twin(repo: pathlib.Path, commit: str, out: pathlib.Path) -> dict:
+    """The uninstrumented twin. `commit == "derive"` (the default since 2026-09-19): HEAD's src with the census
+    instrumentation REMOVED by `inv7_uninstrument.py` — the only twin that differs from HEAD by the instrumentation
+    alone once other specs touch src. A commit id keeps the historical form (an export of an old tree) for the
+    record; it is a different product as soon as src/ moved for any other reason."""
     twin = out / "twin"; twin.mkdir(parents=True, exist_ok=True)
+    if commit == "derive":
+        spec = importlib.util.spec_from_file_location("inv7_uninstrument", HERE / "inv7_uninstrument.py")
+        un = importlib.util.module_from_spec(spec); spec.loader.exec_module(un)
+        totals = un.derive(repo / "src" / "veracium", twin / "src" / "veracium")
+        problems = un.verify(twin / "src" / "veracium")
+        assert not problems, problems
+        head = sh(["git", "rev-parse", "HEAD"], cwd=repo).stdout.strip()
+        return {"commit": f"derived from HEAD {head} by inv7_uninstrument.py", "src": str(twin / "src"), "src_commits_since_twin": [],
+                "derivation": totals}
     full = sh(["git", "rev-parse", commit], cwd=repo).stdout.strip()
     p1 = subprocess.Popen(["git", "archive", full, "src/veracium"], cwd=repo, stdout=subprocess.PIPE)
     subprocess.run(["tar", "-x", "-C", str(twin)], stdin=p1.stdout, check=True); p1.wait()
@@ -236,7 +249,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mode", choices=("trace", "reach"))
     ap.add_argument("--repo", required=True); ap.add_argument("--out", required=True)
-    ap.add_argument("--twin"); ap.add_argument("--arms", default=",".join(ARMS))
+    ap.add_argument("--twin", default="derive", help="'derive' (HEAD minus the instrumentation, the default) or a commit to export"); ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--suites-from", help="a named_suites.json written by reach mode")
     ap.add_argument("--no-control", dest="control", action="store_false", help="skip the reference arm's control re-run")
     ap.add_argument("--ignore", action="append", default=[], help="passed to pytest as --ignore=<path> (reach mode: the census-toggling test files)")
@@ -272,7 +285,6 @@ def main():
         print("\n".join(lines[:3]))
         return 0
 
-    assert a.twin, "--twin <commit> is required for trace mode"
     arms = a.arms.split(",")
     twin = export_twin(repo, a.twin, out) if "uninstrumented" in arms else None
     summaries = {}
@@ -296,8 +308,14 @@ def main():
     L = [f"# generated {stamp} against veracium @ {head}",
          "# the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since",
          f"INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042", f"HEAD {head}" + ("  (src DIRTY: " + dirty.replace(chr(10), '; ') + ")" if dirty else ""),
-         f"twin (uninstrumented) commit {twin['commit'] if twin else '-'}", "src commits between the twin and HEAD (the uninstrumented arm runs the twin's src; its census registry is empty — asserted below):"]
-    L += [f"  {c}" for c in (twin["src_commits_since_twin"] if twin else [])]
+         f"twin (uninstrumented): {twin['commit'] if twin else '-'}"]
+    if twin and twin.get("derivation"):
+        d = twin["derivation"]
+        L += [f"twin derivation: {d['sites']} declare_site removed, {d['fires']} fire() unwrapped, {d['consults']} consult blocks spliced, "
+              f"{d['bypasses']} census-enabled bypass blocks removed, across {d['modules_changed']} modules; the twin's census registry is empty (asserted below)"]
+    elif twin:
+        L += ["src commits between the twin and HEAD (the uninstrumented arm runs the twin's src; its census registry is empty — asserted below):"]
+        L += [f"  {c}" for c in twin["src_commits_since_twin"]]
     L += ["", f"python {summaries[arms[0]]['python']}; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0", "suites: " + " ".join(suites), ""]
     L += ["ARM              RECORDS     SHA256(observer trace)                                            PYTEST"]
     for arm in arms:
