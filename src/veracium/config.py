@@ -129,6 +129,12 @@ class MemoryConfig:
     # at config load, never mid-recall (§7).
     scope_groups: Optional[dict] = None
     cross_scope_visible: bool = False
+    # specs/0042 Part A-2: the exercised-guarantees census is OPT-IN, DEFAULT OFF (the owner's
+    # ruling, 2026-09-18). True turns the PROCESS-WIDE switch on when this Memory is constructed
+    # (`veracium.census.enable`); counters are process-local, so the switch is too — a second
+    # Memory in the same process constructed with False does not turn it off (it never touched it).
+    # Off, every enforcement point is a no-op and the census reports DISABLED per declared id.
+    census_enabled: bool = False
 
     def __post_init__(self):
         from .budgets import MIN_ITEM_ALLOWANCE, validate_budget

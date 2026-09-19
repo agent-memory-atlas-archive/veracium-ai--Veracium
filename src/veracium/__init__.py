@@ -304,6 +304,9 @@ class Memory:
                  telemetry=None, diagnostics=None, audit=None,
                  _register_metering: bool = True):
         self.config = config or MemoryConfig()
+        if self.config.census_enabled:          # specs/0042 Part A-2: opt-in, default OFF, process-wide
+            from . import census as _census
+            _census.enable(True)
         self.store = store or SqliteStore(self.config.db_path)
         self.llm = llm
         self.embed = embed

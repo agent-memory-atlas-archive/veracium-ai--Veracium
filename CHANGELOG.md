@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Added: the exercised-guarantees census module (`veracium.census`, specs/0042 — accepted at the
+  design level, external round 5; implementation begins here).** An enforcement point declares a
+  site at module level and expresses its decision through it (`with SITE.consult(): … raise
+  SITE.fire(...)`), so the count and the decision are one call. Counters are process-local and
+  atomic per id; `fire()` returns the decision unchanged (observation only, INV-7); the report
+  carries ids and integers only (INV-8) and assigns one of six statuses per declared id from the
+  spec's state table, carried verbatim and asserted equal to the spec's own parsed table.
+  **Opt-in, default off** (`MemoryConfig(census_enabled=True)`): off, every site is a no-op and the
+  report reads `DISABLED` per id. No enforcement point is bound in this change — the sites land
+  module by module under the same trailer, with the review of every discovered candidate, the
+  declaration and the four-set reconciliation closing the tranche.
 - **Fixed: the release-migration orchestrator's `unsupported-base` diagnostic is
   derived from the store, not recited.** `veracium migrate` on a store more than one
   schema version behind refused correctly but said "store resolves to base v6" for
