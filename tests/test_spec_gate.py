@@ -2265,6 +2265,10 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # divergent, the cross-checks) under a name the convention does not see;
         # its matrix drives compare() on fabricated arms and fails it on each mutant
         root / "specs" / "evidence" / "0042" / "inv7_harness.py",
+        # specs/0043 tranche 2: the run driver whose OUTPUT is committed evidence (run_report.txt,
+        # run_ledger.json) — its exclusion screen, class join and support mapping are the
+        # decisions a mutant would move; the matrix drives them on canned inputs
+        root / "specs" / "evidence" / "0043" / "run_harness.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

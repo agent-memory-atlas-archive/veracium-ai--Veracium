@@ -195,6 +195,11 @@ INVENTORY = [
      "git-checkout", "specs/0042 INV-7: a SHALLOW checkout cannot answer whether the "
      "transcript's pin is an ancestor of HEAD (git exit 128 is a fact about the "
      "checkout); CI checks out with fetch-depth 0, so this is a last resort"),
+    ("tests/test_0043_run.py", "skip",
+     "the run's pin cannot be checked against history",
+     "git-checkout", "specs/0043 tranche 2: the committed run report pins the commit it "
+     "ran against; a SHALLOW checkout cannot answer whether that pin is an ancestor of "
+     "HEAD (git exit 128 is a fact about the checkout); CI checks out with fetch-depth 0"),
     ("tests/test_spec_gate.py", "skip",
      "the retrospective obligation set derives from git history",
      "git-checkout", "0039 round-1 package finding: the security-hotfix "

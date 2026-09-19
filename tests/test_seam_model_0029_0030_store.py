@@ -1255,7 +1255,10 @@ def test_every_control_was_executed_and_asserted():
                     "round-15 adjudication)")
     # ROUND-16 joint F1, the comparison half: membership is an id() lookup
     # against a registry that RETAINS its references (a held reference pins
-    # the id for the session, so no reuse), never set membership — sets
+    # the id for the session, so no reuse — and the members are admitted
+    # only as types.FunctionType above, so their modules retain them; a bound
+    # method would be a fresh temporary per access, and is refused there),
+    # never set membership — sets
     # compare by __eq__/__hash__, and the reviewer's two distinct
     # equal-comparing instances satisfied each other's entry.
     unexecuted = [f for f in discovered if id(f) not in EXECUTED]

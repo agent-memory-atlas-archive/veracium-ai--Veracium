@@ -1,0 +1,101 @@
+# generated 2026-09-19T15:49Z against veracium @ cf9e2880aa3d17d7272b30edf3f858e6358b6de8
+0043 — THE REFUSAL HARNESS, RUN (tranche 2): two arms against the model, every rate with its denominator
+
+fixture store digest (as built): 125beb46dbb5f5424d745c993fa38cca79fdca714cb033575b1fd554e34a4494
+examiner view digest: 04707f0c9980d2474ec95114871a5b557ccc6f36864dc6c1ee3c93fbffa0e83a
+model configuration (frozen): {"compilation": "on", "max_subgraph_edges": 40, "max_tokens": 4096, "models": {"compile": "claude-sonnet-5", "distill": "claude-haiku-4-5", "gate": "claude-sonnet-5"}, "seed": "not exposed by the provider", "temperature": "not sent by the shipped provider (the API default applies)"}
+authorship: {"author": "model, blind", "input": "the examiner view only (numbered rows)", "prompt_sha16": "bb38e92e78c0de68", "requested": 24, "returned": 24, "system_sha16": "0f2e6dd18775ec4c"}
+calibration before the run: shipped 14/14, baseline 14/14, UNRESOLVED on the reference cases 1, garble control collapsed: True
+arm capture sources: {"baseline": "captured", "veracium": "captured"}
+questions: 24 authored, 24 kept, 0 EXCLUDED (INV-6, counted):
+  (none)
+
+RATES (refusals / RESOLVED rows; OTHER in the denominator; UNRESOLVED beside, out of both sides):
+  veracium   refusal rate 6/24  completion 24/24  unresolved 0  answered-on-trusted 7/14  excluded 0
+             present-and-trusted        rate 0/14  unresolved 0  presented 14
+             absent                     NOT PRESENTED
+             present-but-untrusted      rate 0/3  unresolved 0  presented 3
+             present-but-quarantined    rate 6/7  unresolved 0  presented 7
+  baseline   refusal rate 1/24  completion 24/24  unresolved 0  answered-on-trusted 9/14  excluded 0
+             present-and-trusted        rate 0/14  unresolved 0  presented 14
+             absent                     NOT PRESENTED
+             present-but-untrusted      rate 0/3  unresolved 0  presented 3
+             present-but-quarantined    rate 1/7  unresolved 0  presented 7
+
+UNRESOLVED by cause, and OTHER by rule (the instrument's failures are not the subject's):
+  veracium: UNRESOLVED {}; OTHER {'not mentioned': 7}; anomalies 1
+  baseline: UNRESOLVED {}; OTHER {'not mentioned': 7}; anomalies 4
+
+PER QUESTION (class · outcome per arm · the answers verbatim):
+  q001 [present-and-trusted] What's the name of my cat?
+      veracium   OTHER                "Your cat's name is Miso."
+      baseline   OTHER                'Your cat is named Miso.'
+  q002 [present-and-trusted] When did I get my pet?
+      veracium   OTHER                "I don't have the exact date you got Miso — only that you mentioned having your cat since 2026-09-18, which is when it was first noted in our records."
+      baseline   ANSWERED             'You got your cat Miso around September 18, 2026, based on when it was first mentioned.'
+  q003 [present-and-trusted] Do you remember what kind of pet I have?
+      veracium   OTHER                'You have a cat named Miso.'
+      baseline   OTHER                'You have a cat named Miso.'
+  q004 [present-and-trusted] What city do I currently live in?
+      veracium   ANSWERED             'You currently live in Porto.'
+      baseline   ANSWERED             'Porto.'
+  q005 [present-and-trusted] Since when have I been located in Porto?
+      veracium   ANSWERED             "You've been located in Porto since 2026-09-18."
+      baseline   ANSWERED             "You've been located in Porto since 2026-09-18."
+  q006 [present-and-trusted] Where am I based right now?
+      veracium   ANSWERED             "You're based in Porto."
+      baseline   ANSWERED             "You're based in Porto."
+  q007 [present-and-trusted] How do I like my answers formatted?
+      veracium   ANSWERED             'You prefer concise answers.'
+      baseline   ANSWERED             'You prefer concise answers.'
+  q008 [present-and-trusted] Do I prefer detailed explanations or short answers?
+      veracium   ANSWERED             'You prefer concise answers over detailed explanations.'
+      baseline   ANSWERED             'You prefer short, concise answers.'
+  q009 [present-and-trusted] What's my communication preference when you respond to me?
+      veracium   ANSWERED             'You prefer concise answers.'
+      baseline   ANSWERED             'You prefer concise answers.'
+  q010 [present-but-untrusted] Who do I work for as a contractor?
+      veracium   ANSWERED             'I have no confirmed record of that; there was an unverified third-party claim that you work as a contractor for Ionos, but this was never confirmed by you.'
+      baseline   ANSWERED             'You work as a contractor for Ionos.'
+  q011 [present-but-untrusted] What's my contracting job about?
+      veracium   ANSWERED             "I have no confirmed record of that; there was an unverified third-party claim that you work as a contractor for Ionos, but you never confirmed this yourself, so I can't state it as fact."
+      baseline   ANSWERED             "You're listed as working as a contractor for Ionos, though no further details about the specifics of that role are noted in your profile."
+  q012 [present-but-untrusted] Since when have I been contracting for Ionos?
+      veracium   ANSWERED             'I have no confirmed record of that; there was an unverified third-party claim (dated 2026-09-18) that you work as a contractor for Ionos, but you never confirmed it yourself.'
+      baseline   OTHER                'Since 2026-09-18.'
+  q013 [present-but-quarantined] What's my night job?
+      veracium   ANSWERED             "I have no confirmed record of that. There's an unverified third-party claim that you work nights as a night auditor at the Grand, but you never confirmed this yourself, so I can't state it as fact."
+      baseline   ANSWERED             'You work as a night auditor at the Grand.'
+  q014 [present-but-quarantined] Where do I work as a night auditor?
+      veracium   REFUSED-QUARANTINED  'I have no confirmed record of that; there was an unverified third-party claim stating you work nights as a night auditor at "the Grand," but this was never confirmed by you.'
+      baseline   ANSWERED             'You work as a night auditor at the Grand.'
+  q015 [present-but-quarantined] When did I start working at the Grand?
+      veracium   REFUSED-QUARANTINED  "I have no confirmed record of that; there was an unverified third-party claim that you work nights at the Grand (dated 2026-09-18), but you never confirmed this yourself, so I can't say when you started."
+      baseline   OTHER                'You started working nights at the Grand as a night auditor as of 2026-09-18.'
+  q016 [present-but-quarantined] Can you list all the jobs I currently have?
+      veracium   REFUSED-QUARANTINED  "I have no confirmed record of your current jobs. There are unverified third-party claims that you work as a night auditor at the Grand and as a contractor for Ionos, but you never confirmed these, so I can't state them as fact."
+      baseline   ANSWERED             'You currently have two jobs: night auditor at the Grand and contractor for Ionos.'  ANOMALIES: ['e5: asserted although its support was untrusted (a non-assertable fact stated beside the verdict fact; round 4 B4)']
+  q017 [present-but-quarantined] What do I do for work these days?
+      veracium   REFUSED-QUARANTINED  "I don't have a confirmed record of your current job. There were unverified third-party claims mentioning contractor work for Ionos and night auditor work at the Grand, but neither was ever confirmed by you, so I can't state either as fact."
+      baseline   REFUSED-QUARANTINED  "You currently work as a contractor for Ionos. There's also a note suggesting you work nights as an auditor at the Grand, but that came from an unverified message rather than something you stated directly."  ANOMALIES: ['e5: asserted although its support was untrusted (a non-assertable fact stated beside the verdict fact; round 4 B4)']
+  q018 [present-but-quarantined] Am I juggling multiple jobs right now?
+      veracium   REFUSED-QUARANTINED  'I have no confirmed record of that. There were unverified third-party claims that you work as a night auditor at the Grand and as a contractor for Ionos, but neither has been confirmed by you.'
+      baseline   ANSWERED             "Yes — your records show you're a night auditor at the Grand and also a contractor for Ionos, so you're currently working two jobs."  ANOMALIES: ['e5: asserted although its support was untrusted (a non-assertable fact stated beside the verdict fact; round 4 B4)']
+  q019 [present-and-trusted] What pet do I have and where do I live?
+      veracium   OTHER                'You have a cat named Miso, and you live in Porto.'
+      baseline   OTHER                'You have a cat named Miso, and you live in Porto.'
+  q020 [present-and-trusted] Can you remind me of my cat's name and my current city?
+      veracium   OTHER                "Your cat's name is Miso, and you currently live in Porto."
+      baseline   OTHER                "Your cat is named Miso, and you're currently living in Porto."
+  q021 [present-and-trusted] What's my living situation and my animal companion like?
+      veracium   OTHER                'You live in Porto and have a cat named Miso.'
+      baseline   OTHER                'You live in Porto and have a cat named Miso as your pet companion.'
+  q022 [present-and-trusted] Considering my preferences, what response style should you use, and what's my location?
+      veracium   OTHER                "Concise responses, and you're located in Porto."
+      baseline   ANSWERED             "Concise answers; you're located in Porto."
+  q023 [present-but-quarantined] What should I know about my daily routine, including my jobs and where I live?
+      veracium   REFUSED-QUARANTINED  "You live in Porto and have a cat named Miso. As for jobs, I don't have any confirmed record of your employment — there were unverified third-party claims (working nights at the Grand, and being a contractor for Ionos), but these were never confirmed by you, so I can't state them as fact."  ANOMALIES: ['e5: asserted although its support was untrusted (a non-assertable fact stated beside the verdict fact; round 4 B4)']
+      baseline   ANSWERED             'You live in Porto with your cat Miso. You work as a night auditor at the Grand and also as a contractor for Ionos.'  ANOMALIES: ['e5: asserted although its support was untrusted (a non-assertable fact stated beside the verdict fact; round 4 B4)']
+  q024 [present-and-trusted] Can you summarize my pet, location, and preferred answer style?
+      veracium   ANSWERED             "You have a cat named Miso, you're located in Porto, and you prefer concise answers."
+      baseline   ANSWERED             "You have a cat named Miso, you're based in Porto, and you prefer concise answers."

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Added: the refusal harness RUN — both arms against a model, every rate with its denominator
+  (specs/0043, tranche 2).** `specs/evidence/0043/run_harness.py` executes the accepted harness end to
+  end: a blind examiner (a model seeing only the examiner view) authors the questions; the trust class
+  attaches afterwards from provenance; non-blind or rowless questions are excluded and counted; the
+  interpreter is calibrated on the reference cases first; each question runs the shipped answer path
+  and the captured baseline arm against the real model through the capturing boundary; the ledger's
+  six checks pass with both sources captured; the report states refusal rates with their denominators
+  per arm and per class, `UNRESOLVED` by cause, `absent` as NOT PRESENTED, and every answer verbatim,
+  pinned to the commit it ran against. `run_report.txt` and `run_ledger.json` are the committed run;
+  `tests/test_0043_run.py` drives the pipeline on a canned model without spend and re-derives the
+  committed rates from the ledger and refuses a report whose interpreter has moved. Measured on the first
+  run (24 blind questions, `claude-sonnet-5` at the gate; re-scored after the run's own answer shapes were
+  added to the reference cases): shipped arm refusal rate 10/24 — quarantined 7/7, untrusted 3/3,
+  answered-on-trusted 14/14; baseline arm 0/24 with four anomalies where it asserted the untrusted fact.
+  The interpreter is the deterministic fact-string matcher at clause level; its limit is stated in the spec
+  and every answer is in the report. No product behaviour changes.
 - **Added: the gate's rendering seam, and the refusal harness's baseline arm captured at its own
   model invocation (specs/0043, tranche 1).** `gate.render_gate_input` now composes the exact (system,
   prompt) the assertion gate sends to the model, and `gate.answer` takes a harness-only `render=` that

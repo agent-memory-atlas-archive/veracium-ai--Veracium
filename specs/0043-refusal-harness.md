@@ -26,9 +26,52 @@ Spec-Status: accepted
 > to the oracle `baseline_transform(shipped capture)`. A departing invocation refuses with the first
 > differing line; an untransformed one refuses as byte-identical to the shipped arm; the ledger's new
 > check 6 declares each arm's capture source with the arms and refuses every rate while the comparison
-> arm is `constructed` or undeclared. `tests/test_0043_evidence.py` carries the four tests. What remains:
-> the run itself — the blind examiner's questions, both arms invoked against a model, the interpreter,
-> the ledger and the report with its denominators (tranche 2).
+> arm is `constructed` or undeclared. `tests/test_0043_evidence.py` carries the four tests.
+>
+> **Tranche 2 (the same day) — THE RUN.** `specs/evidence/0043/run_harness.py` executes the harness end to
+> end against a model: the BLIND EXAMINER (a model whose only input is the examiner view's numbered rows)
+> writes the questions and names the rows each asks about; the trust class attaches AFTER authorship from
+> the manifest (provenance, never a rendering), the question's class being the strictest non-assertable
+> class among its facts; a question carrying a trust marker or naming no row is EXCLUDED AND COUNTED and
+> rides in the ledger with its reason (the screen is the derived forbidden set narrowed by a stated rule:
+> the view's own vocabulary and the examiner's addressee cannot signal a class); the interpreter is
+> CALIBRATED on the reference cases before any question is asked (the garble control must collapse);
+> each question runs the SHIPPED arm (`Memory.answer`, retrieval once) and the BASELINE arm (the second
+> invocation over the same selection, captured, equal to the oracle) against the real model through the
+> capturing boundary; the ledger's six checks run with both sources `captured`; the report states every
+> rate with its denominator, per class, `UNRESOLVED` beside each and by cause, `absent` as NOT PRESENTED
+> where no question of that class could be authored from presence (2c-ii), the fixture's digest as built,
+> the examiner view's digest, the model ids, `max_tokens`, and that the shipped provider sends no
+> temperature. `run_report.txt` / `run_ledger.json` are the committed run, pinned to their commit;
+> `tests/test_0043_run.py` drives the pipeline on a canned model with no spend and RE-DERIVES the
+> committed report's rates from its own ledger. Known limit, stated: the interpreter is the deterministic
+> matcher over the fixture's fact strings and paraphrases, so an answer that asserts a fact in words the
+> table does not carry scores `not_mentioned` → `OTHER` with its rule shown — the per-question table
+> lists every answer verbatim so a reader can see each such case rather than infer it from a count.
+>
+> **The run, and what it found in the instrument first.** Run 1 (24 blind questions, `claude-sonnet-5` at the
+> gate, both arms captured) scored four of the shipped arm's refusals as `ANSWERED` — refusals that NAME the claim
+> they refuse ("there was an unverified third-party claim that you work as a contractor for Ionos, but this was
+> never confirmed by you") — and seven trusted answers as misses ("your cat is named Miso" against the
+> paraphrase list). Both are instrument defects against the product, so the rubric labelled the shapes FIRST
+> (nine new reference cases) and the mention rule was rewritten at CLAUSE level: a fact is asserted when a clause
+> carries it (by paraphrase or the object's key tokens) with no hedge before it in that clause; a hedged mention
+> is `withheld`; a contrastive conjunction opens a new clause, so a definite assertion after a disclaimer still
+> scores `ANSWERED` (the round-1 cases stand). Run 2 found one more shape (an elaboration after an em dash
+> read as a new clause — one refusal scored `ANSWERED`); a tenth case pins it and the run was RE-SCORED over its
+> captured answers with no new model call. Run 1's report and ledger are kept beside the committed run under
+> `run1-interpreter-v1/` (its ledger predates the prompt-carrying detail and cannot be re-scored). The
+> committed run names the interpreter digest it was scored with, and `tests/test_0043_run.py` re-scores the
+> captured answers with the current interpreter and refuses a report whose instrument has moved.
+>
+> **Measured (run 2, re-scored; the report carries every answer):** shipped arm refusal rate **10/24** —
+> present-but-quarantined **7/7**, present-but-untrusted **3/3**, present-and-trusted 0/14 refused with
+> answered-on-trusted 14/14; baseline arm refusal rate **0/24** — quarantined 0/7, untrusted 0/3,
+> answered-on-trusted 13/14 (one `OTHER`: the date without the fact), and four anomalies where the baseline
+> asserted the untrusted fact beside the quarantined one. `absent` NOT PRESENTED; `UNRESOLVED` 0 in both arms;
+> 0 excluded of 24. The fixture is content-frozen (examiner view digest identical across runs); its sqlite
+> bytes differ per build and each run records its own store digest. The class-3 contribution the spec claims
+> and had never measured now has its first figure, with its denominator and its baseline beside it.
 
 ## 1. Problem and motivation — what this spec claims ALONE
 
