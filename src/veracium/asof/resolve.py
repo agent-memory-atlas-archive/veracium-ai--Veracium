@@ -86,6 +86,7 @@ TAG_NO_ABSORBER = "no-absorber"                    # §4b-iii, a corrupted-state
 TAG_CORRECTED_FENCED = "corrected-fenced"
 TAG_DISPUTED = "disputed"
 TAG_REVOKED_EXCLUDED = "revoked-excluded"
+TAG_REDACTED_EXCLUDED = "redacted-excluded"          # specs/0041 §4b: a rights-driven removal, revoked_source's precedent
 TAG_UNKNOWN_REASON_EXCLUDED = "unknown-reason-excluded"
 TAG_UNCLASSIFIABLE = "unclassifiable-indeterminate"   # §3's (unclassifiable) row
 
@@ -110,6 +111,7 @@ RESOLUTION: dict = {
     "corrected":          (FENCED_SELF, TAG_CORRECTED_FENCED),
     "disputed":           (FENCED_SELF, TAG_DISPUTED),
     "revoked_source":     (NOT_RETURNABLE, TAG_REVOKED_EXCLUDED),
+    "redacted":           (NOT_RETURNABLE, TAG_REDACTED_EXCLUDED),   # specs/0041: an as-of read never serves a tombstone
 }
 if set(RESOLUTION) != set(DISPOSITIONED_REASONS):
     raise ImportError(

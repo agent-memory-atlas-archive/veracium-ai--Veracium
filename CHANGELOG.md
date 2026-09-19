@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Changed: three write-path refusals ahead of targeted redaction, and `redacted` as a registered
+  invalidation reason (specs/0041, tranche 1).** A non-redaction write may no longer introduce the redaction
+  marker byte string (`\x00veracium:redacted\x00`) into an edge or an episode, on any persistence path
+  (INV-11's mirror); an edge carrying the quarantine relation must carry the QUARANTINED disclosure (§4h(i));
+  `Episode.kind` is closed to the recognised operational kinds (`interaction`, `outcome`) at the write path
+  and at import — never at read, so stored prose kinds still load. BREAKING for a host that wrote those
+  shapes through the store or an import: the write now raises `ValueError` naming the rule; ingest is
+  unaffected (it never produced them). `redacted` enters every reason registry (dispositioned `drop`;
+  as-of `excluded`; names no successor; resolves NOT_RETURNABLE) ahead of the operation that will produce
+  it. Each refusal is a declared 0042 census site. Consumers whose stores are written only through
+  `remember`, `correct`, `confirm` and import of their own exports see no change.
 - **Added: the refusal harness RUN — both arms against a model, every rate with its denominator
   (specs/0043, tranche 2).** `specs/evidence/0043/run_harness.py` executes the accepted harness end to
   end: a blind examiner (a model seeing only the examiner view) authors the questions; the trust class

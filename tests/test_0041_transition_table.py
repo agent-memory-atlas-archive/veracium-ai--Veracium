@@ -123,6 +123,24 @@ def _redaction_event_count(store, target_id):
     return rows[0]
 
 
+
+def _legacy_insert_edge(store, edge):
+    """The PRE-RESTRICTION writer's shape: the row as the product wrote it before 0041 tranche 1's
+    refusals (a marker-carrying or relation-only-quarantine record). Direct SQL, the same columns the
+    upsert fills — §4h(iii): a transition claim is shown on a record the restriction never saw."""
+    js = edge.model_dump_json()
+    store._conn.execute("INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) VALUES(?,?,?,?,?,?,?,?)",
+                        (edge.id, edge.user_id, edge.subject, edge.relation, edge.object, int(edge.active), int(edge.quarantined), js))
+    store._conn.commit()
+
+
+def _legacy_insert_episode(store, episode):
+    """The pre-restriction episode writer: a prose kind as older stores hold it."""
+    store._conn.execute("INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
+                        (episode.id, episode.user_id, episode.date, episode.model_dump_json()))
+    store._conn.commit()
+
+
 def _edge(store, eid):
     return [e for e in store.edges(U, active_only=False, include_quarantined=True) if e.id == eid][0]
 
@@ -134,8 +152,8 @@ def test_A_existing_relation_only_quarantine_keeps_its_quarantine_under_the_rule
     provenance.disclosure in the same write. The fixture is the pre-closure
     shape: relation carries the quarantine, the disclosure does not."""
     st = _mem(tmp_path).store
-    st.add_edge(Edge(id="e-q", user_id=U, subject="neighbour", relation=QUARANTINE_RELATION,
-                     object="says the user owes money", provenance=_prov()))
+    _legacy_insert_edge(st, Edge(id="e-q", user_id=U, subject="neighbour", relation=QUARANTINE_RELATION,   # the pre-closure shape, as a ROW
+                                 object="says the user owes money", provenance=_prov()))
     before = _edge(st, "e-q")
     assert before.quarantined and before.provenance.disclosure != Disclosure.QUARANTINED   # the pre-closure shape, stored
     _rewrite(st, "edges", "e-q", relation=MARKER, **{"provenance.disclosure": "quarantined"})   # the ruling's own shape: redact `relation`, re-establish through the disclosure
@@ -152,8 +170,8 @@ def test_A_control_the_naive_treatment_promotes_the_claim(tmp_path):
     untouched — the unverified claim is PROMOTED out of quarantine. Asserted as
     the wrong shape so the table shows what §4h refuses."""
     st = _mem(tmp_path).store
-    st.add_edge(Edge(id="e-q", user_id=U, subject="neighbour", relation=QUARANTINE_RELATION,
-                     object="says the user owes money", provenance=_prov()))
+    _legacy_insert_edge(st, Edge(id="e-q", user_id=U, subject="neighbour", relation=QUARANTINE_RELATION,   # the pre-closure shape, as a ROW
+                                 object="says the user owes money", provenance=_prov()))
     _rewrite(st, "edges", "e-q", relation=MARKER)                     # relation replaced, disclosure untouched
     assert not _edge(st, "e-q").quarantined
     text = _mem(tmp_path).recall(U, "neighbour owes money").context                      # and it RENDERS as grounded — the manufactured assertion
@@ -162,8 +180,8 @@ def test_A_control_the_naive_treatment_promotes_the_claim(tmp_path):
 
 def test_A_the_ruled_shape_survives_export_and_import(tmp_path):
     st = _mem(tmp_path).store
-    st.add_edge(Edge(id="e-q", user_id=U, subject="neighbour", relation=QUARANTINE_RELATION,
-                     object="says the user owes money", provenance=_prov()))
+    _legacy_insert_edge(st, Edge(id="e-q", user_id=U, subject="neighbour", relation=QUARANTINE_RELATION,   # the pre-closure shape, as a ROW
+                                 object="says the user owes money", provenance=_prov()))
     _rewrite(st, "edges", "e-q", subject=MARKER, relation=MARKER, object=MARKER, **{"provenance.disclosure": "quarantined"})
     out = tmp_path / "x.jsonl"; st.export_memory(U, out) if hasattr(st, "export_memory") else None
     m2 = _mem(tmp_path, "n.db")
@@ -188,8 +206,7 @@ def test_B_existing_prose_kind_is_retained_at_migration_and_readable(tmp_path):
     assert ep2.kind == MARKER and ep2.summary == MARKER              # the marker-valued record reads back today
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §4h / §11.4-bis: the recognised-kind closure binds the WRITE path; "
-                                       "an ordinary write of a NEW prose kind is not yet refused")
+# (strict xfail until 0041 tranche 1, 2026-09-19: the refusal / the registry value now exists)
 def test_B_an_ordinary_write_of_a_new_prose_kind_is_refused_while_the_stored_one_stays(tmp_path):
     # ROUND-7 CORRECTION 1: the historical record was WRITTEN here through the
     # ordinary writer, so the closure fires at SETUP and `ep-new` is never
@@ -204,8 +221,7 @@ def test_B_an_ordinary_write_of_a_new_prose_kind_is_refused_while_the_stored_one
     assert [e for e in st.episodes(U, include_retired=True) if e.id == stored][0].kind == "told me in confidence"
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §4h / §11.4-bis: the recognised-kind closure binds the IMPORT boundary; "
-                                       "an import carrying a prose kind is not yet refused")
+# (strict xfail until 0041 tranche 1, 2026-09-19: the refusal / the registry value now exists)
 def test_B_an_import_carrying_a_prose_kind_is_refused(tmp_path):
     from veracium.portability import export_memory, import_memory
     # ROUND-6 FINDING 1, EXTENDED. The reviewer named three tests that built their
@@ -243,8 +259,7 @@ def test_B_an_import_carrying_a_prose_kind_is_refused(tmp_path):
         import_memory(_mem(tmp_path, "d.db").store, out)
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §4b attestation: a marker-valued kind validates only when a redaction "
-                                       "record attests it; no attestation exists in the shipped code")
+# (strict xfail until 0041 tranche 1, 2026-09-19: the refusal / the registry value now exists)
 def test_B_a_marker_valued_kind_without_a_redaction_record_is_refused(tmp_path):
     """ROUND-5 FINDING 3, aligned with §4h's WRITE/READ distinction.
 
@@ -277,7 +292,7 @@ def test_C_a_pre_existing_marker_row_is_admitted_and_is_not_a_redaction(tmp_path
     marker — admitted at migration, conferring no redacted status. Today's
     store admits it (asserted); the status half is the xfail below."""
     st = _mem(tmp_path).store
-    st.add_edge(Edge(id="e-m", user_id=U, subject="user", relation="works_as", object=MARKER, provenance=_prov()))
+    _legacy_insert_edge(st, Edge(id="e-m", user_id=U, subject="user", relation="works_as", object=MARKER, provenance=_prov()))   # a pre-existing marker row
     e = _edge(st, "e-m")
     assert e.object == MARKER and e.active                             # admitted, live, untouched
     # an ORDINARY write to the marker-holding field SUCCEEDS: INV-11 is keyed on attested redaction, not on the bytes
@@ -464,8 +479,7 @@ def test_D_a_registry_reason_is_preserved(tmp_path):
     assert [e for e in st.episodes(U, include_retired=True) if e.id == "ep-s"][0].retired_reason == "superseded"
 
 
-@pytest.mark.xfail(strict=True, reason="0041 rows 30/49: `redacted` is a NEW registry value — DISPOSITIONED_REASONS and the "
-                                       "as-of RESOLUTION (an import-time equality gate) must carry it together; implementation follows acceptance")
+# (strict xfail until 0041 tranche 1, 2026-09-19: the refusal / the registry value now exists)
 def test_the_redacted_reason_is_dispositioned_twice():
     """ROUND-5 FINDING 3: assert the COMPLETE disposition, not its first element.
 

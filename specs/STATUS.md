@@ -40,7 +40,7 @@ is the number that decides what can be built.
 | **0025** | the relation vocabulary is closed, or it is not a vocabulary (L2) | `accepted` | 2026-09-13 | 2 | 24 | 2 | 0 | 0 | — |
 | **0026** | label/value agreement check | `accepted` | 2026-09-08 | 14 | 12 | 2 | 0 | 0 | — |
 | **0027** | semantic hybrid recall | `accepted` | 2026-09-18 | 0 | 0 | 0 | 0 | 0 | — |
-| **0028** | as-of / point-in-time query — FEATURE VERSION v2 (valid-time only) | `accepted` | 2026-09-15 | 0 | 7 | 0 | 0 | 0 | — |
+| **0028** | as-of / point-in-time query — FEATURE VERSION v2 (valid-time only) | `accepted` | 2026-09-19 | 0 | 7 | 0 | 0 | 0 | — |
 | **0029** | transaction-time carrier | `accepted` | 2026-09-07 | 1 | 0 | 0 | 0 | 0 | — |
 | **0030** | time-relative trust classification | `accepted` | 2026-09-08 | 0 | 18 | 0 | 0 | 0 | — |
 | **0031** | the agent-facing trust surface | `accepted` | 2026-09-08 | 0 | 16 | 0 | 0 | 0 | — |
@@ -48,7 +48,7 @@ is the number that decides what can be built.
 | **0037** | procedural records and the `basis` axis (stages 1–3) | `accepted` | 2026-09-15 | 0 | 5 | 0 | 0 | 0 | — |
 | **0038** | the extraction's speech-act discipline | `accepted` | 2026-09-14 | 0 | 4 | 0 | 0 | 0 | — |
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
-| **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-09-17 | 0 | 8 | 0 | 0 | 0 | — |
+| **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-09-19 | 0 | 8 | 0 | 0 | 0 | — |
 | **0042** | exercised guarantees — measuring whether what we specify is what runs | `accepted` | 2026-09-19 | 0 | 5 | 0 | 0 | 0 | — |
 | **0043** | the refusal harness — measuring whether the gate declines when it should | `accepted` | 2026-09-19 | 0 | 4 | 0 | 0 | 0 | — |
 

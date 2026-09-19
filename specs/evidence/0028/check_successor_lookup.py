@@ -151,6 +151,8 @@ NAMES_A_SUCCESSOR: dict = {
     "revoked_source":     False,   # 0022's withdrawal; no successor
     "lapsed":             False,   # staleness
     "decayed":            False,   # staleness
+    "redacted":           False,   # specs/0041 §4b (implemented 2026-09-19, tranche 1): content removed in place; nothing replaces the record — the registry
+                                   # extension 0041's acceptance ruled, not a change to 0028's design (the build gate demands every reason be ruled)
 }
 
 

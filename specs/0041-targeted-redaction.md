@@ -239,6 +239,28 @@ first.*
 > v19 is actually on main — the candidate should describe what is shipped, not
 > what is intended.)*
 
+> **Implementation note, tranche 1 (2026-09-19; the owner's word "implement all 3", 0042 and 0043 complete on
+> the dev side).** The two prerequisites §2d-v named and the registry value rows 30/49 require, before any
+> redaction exists: **INV-11's MIRROR** — a non-redaction write may not introduce the marker — as a refusal
+> at the edge upsert (every persistence path: `add_edge`, the supersession plan, correction) and at
+> `add_episode`; **§4h(i)** — a quarantine relation without the QUARANTINED disclosure refused at the same
+> upsert (ingest sets both; the model-and-store path never did); **§2d-iv's closure of `Episode.kind`** to the
+> recognised operational kinds at the WRITE path and at the IMPORT commit (never the read path: a stored
+> prose kind still loads, proved on the frozen pre-restriction store). Each is a declared 0042 census site
+> (five ids; the import commit's refusal is its own id — one id, one function) with a declining execution in
+> the runtime leg. The marker and the recognised-kind set live in `src/veracium/redaction.py`.
+> 🔴 **The registry extension is SIX sites, not four:** `DISPOSITIONED_REASONS`, `asof/resolve.RESOLUTION`
+> (`NOT_RETURNABLE`, `redacted-excluded`), the 0004 producer list and doctor as the table names — AND
+> `schema.AS_OF_DISPOSITION` (0030 §2a, `EXCLUDED`) and `schema.NAMES_A_SUCCESSOR` (0028 §5.1, `False`), each
+> behind a build-time gate that fails the import without it, plus the 0028 evidence checker's oracle copy. The
+> 0004 producer list gains the value only when a producer passes it (tranche 3, `redact()`): its test asserts
+> the literal in a producer. Seven strict xfails flipped green and their marks came off; the tests and the
+> round-2/round-3 reproduction scripts that had written restricted shapes through ordinary writers now plant
+> them as pre-restriction ROWS (§4h(iii)'s own rule), and the reproductions print the flipped outcome beside
+> the reviewer's claim. What remains: tranche 2 (the schema bump: `episode_event`, the redaction record, the
+> migration report of unattested markers), tranche 3 (`redact()` itself over the 64-carrier map), tranche 4
+> (readers and the import contract), tranche 5 (delayed writers, the transition evidence, the closure rows).
+
 ---
 
 ## 1. Problem and motivation
@@ -1715,9 +1737,9 @@ reviewer's three and no fourth.**
 
 **So the rule this section now carries: every strict xfail owes BOTH controls —
 a wrong implementation it refuses, AND an honest implementation under which it
-PASSES.** `specs/evidence/0041/xfail_mutant_campaign.py` runs 14: the reviewer's 5,
-5 more of ours, and **4 positive controls that install a correct implementation
-and require green**. 14 of 14 behave. 🔴 **Only 3 of those 4 cover a STRICT
+PASSES.** `specs/evidence/0041/xfail_mutant_campaign.py` runs 15: the reviewer's 5,
+5 more of ours, and **5 positive controls (the fifth added 2026-09-19 at 0041 tranche 1: the landed kind closure is the import-boundary test's positive control, and the reviewer's import-rule mutant now switches that closure off to stay a mutant) that install a correct implementation
+and require green**. 15 of 15 behave. 🔴 **Only 3 of those 4 cover a STRICT
 xfail — the fourth covers an ordinary test — so EIGHT of the eleven strict
 xfails still await one, and that remainder is owed at implementation rather
 than claimed as done.** ⚠️ **Every figure in this paragraph is DERIVED from the

@@ -261,14 +261,15 @@ def test_v_no_upgrade_no_row_outranks_the_0030_verdict(tmp_path, reason):
     expected = {"superseded": RETURN_SELF, "lapsed": RETURN_SELF_FLAGGED,
                 "decayed": RETURN_SELF_FLAGGED, "absorbed_duplicate": INDETERMINATE,
                 "corrected": FENCED_SELF, "disputed": FENCED_SELF,
-                "revoked_source": NOT_RETURNABLE}
+                "revoked_source": NOT_RETURNABLE,
+                "redacted": NOT_RETURNABLE}     # 0041: a tombstone is never a historical answer
     assert r.outcome == expected[reason], reason
     assert (verdict.status == GROUNDED_AS_OF) == (reason in
                                                   ("superseded", "lapsed", "decayed",
                                                    "absorbed_duplicate"))
 
 
-@pytest.mark.parametrize("reason", ["corrected", "disputed", "revoked_source"])
+@pytest.mark.parametrize("reason", ["corrected", "disputed", "revoked_source", "redacted"])
 def test_v_never_bypass_fenced_reasons_yield_no_assertable_value_at_any_t(tmp_path, reason):
     """Sampled inside the interval and at BOTH boundaries (0030's V-NEVER met
     on this axis): never a grounded outcome; revoked_source never returns."""
@@ -279,7 +280,7 @@ def test_v_never_bypass_fenced_reasons_yield_no_assertable_value_at_any_t(tmp_pa
     for T in (vf, vf + US, vf + 5 * D, ia - US, ia, ia + D):
         facts = _facts(store, T)
         r = facts.get(e.id)
-        if reason == "revoked_source":
+        if reason in ("revoked_source", "redacted"):      # withdrawn / removed: never returns
             assert r is None
         elif vf <= T < ia:
             assert r is not None and r.outcome == FENCED_SELF and r.status == FENCED_AS_OF

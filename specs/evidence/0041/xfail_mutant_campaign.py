@@ -276,12 +276,27 @@ import veracium.portability as _port
 _REAL_IMPORT = _port.import_memory
 
 
+class _Anything:
+    """A recognised-kind set that admits every value: the landed closure switched OFF for one mutant."""
+    def __contains__(self, item): return True
+    def __iter__(self): return iter(("interaction", "outcome"))
+
+
+import veracium.redaction as _red
+_REAL_KINDS = _red.RECOGNISED_EPISODE_KINDS
+
+
 def _marker_only_import():
     # ROUND-8 FOLLOW-UP 1: this mutant searched the RAW file text, and JSON escapes
     # the marker's NUL bytes — so it could never have found a marker in any export
     # and the "marker-only rule" it simulated was really a rule that does nothing.
     # A mutant that cannot do the wrong thing cannot prove a check refuses it.
     # It decodes now, through the same helper the test uses.
+    # 0041 TRANCHE 1 (2026-09-19): the kind closure is LANDED (store/sqlite.py refuses an
+    # unrecognised kind at the import commit), so a wrong import rule installed on top of
+    # the real store can no longer let a prose kind through — the mutant must also switch
+    # the landed closure OFF, or it is not a mutant of anything. It does, and restores it.
+    _red.RECOGNISED_EPISODE_KINDS = _Anything()
     def rule(store, path, *a, **k):
         if tt._exported_markers(pathlib.Path(path)):
             raise ValueError("marker rejected at import — NO kind validation performed")
@@ -291,10 +306,13 @@ def _marker_only_import():
 
 def _real_import():
     _port.import_memory = _REAL_IMPORT
+    _red.RECOGNISED_EPISODE_KINDS = _REAL_KINDS
 
 
 check("the reviewer's mutant: an import rule that rejects MARKERS and never looks "
       "at kinds", True, T5, _marker_only_import, _real_import)
+check("POSITIVE CONTROL — the landed closure (0041 tranche 1): the real store refuses the prose kind at the import commit",
+      False, T5, lambda: None, lambda: None)
 
 # ====================================================================
 # COVERAGE ACCOUNTING, corrected at round 7 and DERIVED rather than stated.

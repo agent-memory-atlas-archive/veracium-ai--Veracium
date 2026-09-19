@@ -38,6 +38,23 @@ def _edge(eid, **kw):
     return Edge(**base)
 
 
+def _legacy_insert_edge(store, edge):
+    """The PRE-RESTRICTION writer's shape: the row as the product wrote it before 0041 tranche 1's
+    refusals (a marker-carrying or relation-only-quarantine record). Direct SQL, the same columns the
+    upsert fills — §4h(iii): a transition claim is shown on a record the restriction never saw."""
+    js = edge.model_dump_json()
+    store._conn.execute("INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) VALUES(?,?,?,?,?,?,?,?)",
+                        (edge.id, edge.user_id, edge.subject, edge.relation, edge.object, int(edge.active), int(edge.quarantined), js))
+    store._conn.commit()
+
+
+def _legacy_insert_episode(store, episode):
+    """The pre-restriction episode writer: a prose kind as older stores hold it."""
+    store._conn.execute("INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
+                        (episode.id, episode.user_id, episode.date, episode.model_dump_json()))
+    store._conn.commit()
+
+
 def _rewrite_episode(store, eid, **changes):
     """The simulated treatment on a stored episode: full re-validation, then the row."""
     row = store._conn.execute("SELECT json FROM episodes WHERE id=?", (eid,)).fetchone()
@@ -71,7 +88,7 @@ def test_row46_the_two_branch_kind_treatment_keeps_the_outcome_chain_and_its_gua
 
 def test_row46_the_replace_branch_applies_to_prose_only(tmp_path):
     m = _mem(tmp_path); st = m.store
-    st.add_episode(Episode(id="ep-p", user_id=U, date="2026-09-01", summary="s", kind="told me in confidence",
+    _legacy_insert_episode(st, Episode(id="ep-p", user_id=U, date="2026-09-01", summary="s", kind="told me in confidence",   # a pre-closure row
                            provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev",
                                                  disclosure=Disclosure.MENTIONABLE)))
     _rewrite_episode(st, "ep-p", summary=MARKER, kind=_treat_kind("told me in confidence"))
@@ -80,8 +97,7 @@ def test_row46_the_replace_branch_applies_to_prose_only(tmp_path):
     assert _treat_kind("outcome") == "outcome" and _treat_kind("interaction") == "interaction"
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §11.4 / §2d-iv: the recognised-kind set is not yet closed by a refusal "
-                                       "at the model or at import (Episode.kind is a bare str); implementation follows acceptance")
+# (strict xfail until 0041 tranche 1, 2026-09-19: the refusal now exists)
 def test_row46_the_recognised_kind_set_is_closed_by_a_refusal(tmp_path):
     """ROUND-6 FINDING 1, moved to the boundary §4h names.
 
@@ -137,8 +153,7 @@ def test_relation_replacement_keeps_an_ingest_quarantined_edge_quarantined():
     assert e.quarantined and after.quarantined                 # the disclosure is the durable discriminator
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §11.4: a quarantine relation without the QUARANTINED disclosure is not yet "
-                                       "refused by add_edge/import (research's G4); implementation follows acceptance")
+# (strict xfail until 0041 tranche 1, 2026-09-19: the refusal now exists)
 def test_a_relation_only_quarantine_is_refused_at_the_write_path(tmp_path):
     m = _mem(tmp_path); st = m.store
     with pytest.raises(Exception):
@@ -146,8 +161,7 @@ def test_a_relation_only_quarantine_is_refused_at_the_write_path(tmp_path):
 
 
 # ---------------------------------------------------------------- INV-11's mirror (research's G1/G2)
-@pytest.mark.xfail(strict=True, reason="0041 §4b INV-11's MIRROR: a non-redaction write introducing the marker is not yet "
-                                       "refused (a marker-carrying replacement is admitted by the correction guard); implementation follows acceptance")
+# (strict xfail until 0041 tranche 1, 2026-09-19: the refusal now exists)
 def test_a_non_redaction_write_may_not_introduce_the_marker(tmp_path):
     m = _mem(tmp_path); st = m.store
     with pytest.raises(Exception):
@@ -160,6 +174,6 @@ def test_a_redacted_prior_cannot_be_corrected_the_caller_facing_consequence(tmp_
     those are markers, so a live replacement is refused. Asserted so the sentence
     in §8 is a behaviour, not a reading."""
     m = _mem(tmp_path); st = m.store
-    tomb = _edge("e-tomb", subject=MARKER, relation=MARKER, object=MARKER); st.add_edge(tomb)
+    tomb = _edge("e-tomb", subject=MARKER, relation=MARKER, object=MARKER); _legacy_insert_edge(st, tomb)   # a redacted prior, as a row (the mirror refuses the write path)
     with pytest.raises(ValueError):
         plan_correction(st, tomb, _edge("e-r", object="Braga"), op_id="op-x")

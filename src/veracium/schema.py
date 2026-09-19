@@ -577,6 +577,7 @@ DISPOSITIONED_REASONS: dict = {
     "lapsed": "retain",            # W3
     "decayed": "retain",           # W3
     "absorbed_duplicate": "retain",  # W8
+    "redacted": "drop",            # specs/0041 rows 30/49: a redacted record's wiki must not be retained
 }
 
 
@@ -603,6 +604,7 @@ AS_OF_DISPOSITION: dict = {    # every DISPOSITIONED_REASONS key, explicitly
     "corrected":          FENCED,       # retroactively false
     "disputed":           FENCED,       # trust revoked / contested at any T
     "revoked_source":     EXCLUDED,     # withdrawn — 0022 non-revival
+    "redacted":           EXCLUDED,     # specs/0041: a rights-driven removal; an as-of read never serves a tombstone
 }
 if set(AS_OF_DISPOSITION) != set(DISPOSITIONED_REASONS):   # the build gate (W5's shape)
     raise ImportError(
@@ -630,6 +632,7 @@ NAMES_A_SUCCESSOR: dict = {    # every DISPOSITIONED_REASONS key, explicitly
     "decayed":            False,   # low confidence now is not a successor
     "disputed":           False,   # trust revoked; nothing replaces it
     "revoked_source":     False,   # 0022 withdrawal, non-revival
+    "redacted":           False,   # specs/0041: content removed in place; nothing replaces the record
 }
 if set(NAMES_A_SUCCESSOR) != set(DISPOSITIONED_REASONS):
     raise ImportError(

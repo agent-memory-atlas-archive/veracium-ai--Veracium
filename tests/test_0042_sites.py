@@ -1039,3 +1039,35 @@ def test_the_enabled_and_bypassed_paths_agree_on_every_verdict(monkeypatch):
             finally:
                 census.enable(False)
             assert off == on, (prop, e.id, off, on)
+
+
+# ---- specs/0041 tranche 1 (2026-09-19): INV-11's mirror, the relation-only quarantine, the kind closure — 5 ids
+from veracium.redaction import MARKER as _MARKER
+from veracium.schema import QUARANTINE_RELATION as _QR
+
+
+def _import_prose_kind(mp):
+    """A plan whose episode carries a prose kind reaches the import commit's own refusal."""
+    from veracium.portability import export_memory, import_memory
+    import tempfile, pathlib, json
+    src = _mem(); ep = _episode("ek-src").model_copy(update={"kind": "interaction"}); src.store.add_episode(ep)
+    d = pathlib.Path(tempfile.mkdtemp()); out = d / "x.jsonl"; export_memory(src.store, U, out)
+    lines = out.read_text().splitlines()
+    rewritten = []
+    for ln in lines:
+        rec = json.loads(ln)
+        if rec.get("record") == "episode":          # format v2: the per-line marker is "record"; `kind` is the episode's own
+            rec["kind"] = "told me in confidence"
+        rewritten.append(json.dumps(rec))
+    out.write_text("\n".join(rewritten) + "\n")
+    return _raises(ValueError, import_memory, _mem().store, out)
+
+
+DECLINES.update({
+    "store.upsert.marker-introduced": lambda mp: _raises(ValueError, _mem().store.add_edge, _edge("m1", obj=_MARKER)),
+    "store.upsert.relation-only-quarantine": lambda mp: _raises(ValueError, _mem().store.add_edge, _edge("q1", rel=_QR)),
+    "store.episode.marker-introduced": lambda mp: _raises(ValueError, _mem().store.add_episode, _episode("em1").model_copy(update={"summary": _MARKER})),
+    "store.episode.kind-not-recognised": lambda mp: _raises(ValueError, _mem().store.add_episode, _episode("ek1").model_copy(update={"kind": "told me in confidence"})),
+    "store.import.episode-kind-not-recognised": _import_prose_kind,
+})
+SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})

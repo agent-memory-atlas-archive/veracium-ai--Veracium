@@ -892,7 +892,8 @@ def _indexed_output(base, *, op):
     rec = json.loads(json.dumps(base["episode"]))
     rec.update({
         "id": f"ep-{op}",
-        "kind": "consolidated",
+        "kind": "interaction",          # the kind consolidation outputs actually carry; "consolidated" was an invented value the
+                                        # product never writes, refused by 0041 tranche 1's import-boundary kind closure (2026-09-19)
         "lineage": ["hist:ep-src-1", "hist:ep-src-2"],
         "operation_id": op,
         "consolidation_output_index": 0,

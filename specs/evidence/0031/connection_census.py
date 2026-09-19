@@ -648,14 +648,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 0042 tranche 4: 33 more sites bound (scope, scope_linkage, scope_read, portability): moved dotted/dataflow 6,181 -> 6,288, the rest unchanged.
 #: 0042 tranche 5: the store's 46 sites bound (migration, revocation, revocation_sweep, schema_version, sqlite); 147 ids in all: moved dotted/dataflow 6,288 -> 6,437, the rest unchanged.
 #: 0043 tranche 1: the gate's rendering seam (render_gate_input) and answer(render=): moved nothing, the rest unchanged.
+#: 0041 tranche 1: redaction.py (new), the five refusal sites in sqlite.py, the registry rows: moved dotted/dataflow 6,437 -> 6,471, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 6437,
+    "dotted/dataflow": 6471,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 323,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6860
+SRC_ATTRIBUTE_TOTAL = 6894
 SRC_DATA_DUNDERS_IN_DATAFLOW = 132   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 

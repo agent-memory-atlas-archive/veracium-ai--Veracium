@@ -114,11 +114,20 @@ print("F5c fields unset in the round-2 fixture:", unset, "| a widening onto inva
 
 # ---- research's three CANDIDATE guards keyed on REPLACE targets (round-3 F1 generalised), simulated both directions
 from veracium.graph import plan_correction
+
+def legacy_insert_edge(store, edge):
+    """The PRE-RESTRICTION writer's shape (direct SQL): 0041 tranche 1's mirror refuses a marker-carrying
+    write, so a tombstone ROW is planted the way an older store holds one (§4h(iii))."""
+    js = edge.model_dump_json()
+    store._conn.execute("INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) VALUES(?,?,?,?,?,?,?,?)",
+                        (edge.id, edge.user_id, edge.subject, edge.relation, edge.object, int(edge.active), int(edge.quarantined), js))
+    store._conn.commit()
+
 def E(eid, subj="user", rel="works_as", obj="Porto", **kw):
     return Edge(id=eid, user_id=U, subject=subj, relation=rel, object=obj, provenance=PROV, **kw)
 m4 = mem("g.db"); st4 = m4.store
 st4.add_edge(E("e-live"))                                                # a live prior
-tomb = E("e-tomb", subj=MARKER, rel=MARKER, obj=MARKER); st4.add_edge(tomb)   # a REDACTED prior (every content leaf the marker)
+tomb = E("e-tomb", subj=MARKER, rel=MARKER, obj=MARKER); legacy_insert_edge(st4, tomb)   # a REDACTED prior as a ROW (the mirror refuses the write path)
 def plan(prior, repl):
     try:
         plan_correction(st4, prior, repl, op_id="op-x"); return "ADMITTED by the guard"
@@ -162,8 +171,14 @@ print("G4 ingest of a third_party_claim triple sets BOTH markers (relation AND d
       bool(ing) and all(e.provenance.disclosure == Disclosure.QUARANTINED for e in ing), "| edges:", len(ing))
 rel_only = Edge(id="e-q", user_id=U, subject="user", relation=QUARANTINE_RELATION, object="the neighbour says the user owes money",
                 provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="ev", disclosure=Disclosure.MENTIONABLE))
-m6.store.add_edge(rel_only); back = [e for e in m6.store.edges(U, active_only=False) if e.id == "e-q"][0]
-print("G4 a RELATION-ONLY quarantine is constructible through store.add_edge (no refusal):", back.quarantined and back.provenance.disclosure != Disclosure.QUARANTINED)
+try:
+    m6.store.add_edge(rel_only); refused_q = False
+except ValueError as exc:                                     # 0041 tranche 1: the write path refuses the relation-only shape
+    refused_q = "QUARANTINED disclosure" in str(exc)
+legacy_insert_edge(m6.store, rel_only)                        # the PRE-closure row, planted, for the promotion reproduction below
+back = [e for e in m6.store.edges(U, active_only=False) if e.id == "e-q"][0]
+print("G4 a RELATION-ONLY quarantine is constructible through store.add_edge (no refusal):", (not refused_q) and back.quarantined and back.provenance.disclosure != Disclosure.QUARANTINED,
+      "| REFUSED at the write path (0041 tranche 1):", refused_q)
 redacted_q = Edge.model_validate({**back.model_dump(mode="json"), "relation": MARKER, "subject": MARKER, "object": MARKER})
 print("G4 redacting relation on the relation-only edge PROMOTES it out of quarantine (quarantined False):", not redacted_q.quarantined,
       "| an ingest-quarantined edge (both markers) stays quarantined after the same redaction:",

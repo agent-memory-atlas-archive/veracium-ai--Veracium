@@ -8,7 +8,7 @@
 Un-instrumented enforcement ids keep their keys. Lives beside the review it maintains
 (specs/evidence/0042): inventory_at_plan.json is the plan-time inventory and override_at_plan.py the
 never-rewritten OVERRIDE literal. Usage:
-  derive_keys.py <src/veracium> <target OUTPUT.json> <semantic_review.py> <out.py>"""
+  derive_keys.py <src/veracium> <target OUTPUT.json> <semantic_review.py> <out.py> [<previous reviewed_points.json>]"""
 import ast, pathlib, re, sys, json, collections, importlib.util
 
 
@@ -67,9 +67,29 @@ def oi(sites):
     return d
 O, N = oi(old_inv), oi(inv); oldkey = {(x["module"], x["line"]): x for x in old_inv}
 ov_src = open(S / "override_at_plan.py").read()
+# When a group GAINED candidates since plan time (a new refusal inside a function that carries OVERRIDE
+# lines — 0041 tranche 1, commit_outcome_import_plan 8 -> 9 RAISEs), the ordinal hop is ambiguous. The
+# previous generation's reviewed_points.json (5th arg; the committed one) carries every candidate's
+# STATEMENT text at its stable key, so an override line is re-keyed by TEXT within its group instead:
+# plan-time line -> (group, ordinal) -> the statement the last generation recorded -> the one current
+# line in the group carrying that statement. Asserted unique, or refused.
+prev_rp = json.load(open(sys.argv[5]), object_pairs_hook=_strict_pairs) if len(sys.argv) > 5 else None
+src_lines = {}
+def stmt_at(module, line):
+    if module not in src_lines: src_lines[module] = (root / module).read_text().split("\n")
+    return src_lines[module][line - 1].strip()
 def sub_ov(m):
     mod, ln = m.group(1), int(m.group(2)); o = oldkey[(mod, ln)]; g = (o["module"], o["qualname"], o["kind"])
-    nl = N[g]; assert len(nl) == len(O[g]), (g, O[g], nl); return f'("{mod}", {nl[O[g].index(ln)]})'
+    nl = N[g]
+    if len(nl) == len(O[g]):
+        return f'("{mod}", {nl[O[g].index(ln)]})'
+    assert prev_rp is not None, (g, O[g], nl, "the group's candidate count changed; pass the previous reviewed_points.json to re-key by text")
+    key = f"{g[0]}:{g[1]}:{g[2]}:{O[g].index(ln) + 1}"
+    prev = [r for r in prev_rp.values() if r["key"] == key]
+    assert len(prev) == 1, (key, len(prev))
+    matches = [l for l in nl if stmt_at(mod, l) == prev[0]["statement"]]
+    assert len(matches) == 1, (key, prev[0]["statement"][:60], matches)
+    return f'("{mod}", {matches[0]})'
 ov_new = re.sub(r'\("([^"]+)",\s*(\d+)\)', sub_ov, ov_src.split("\n", 1)[1])
 s = re.sub(r"^OVERRIDE = \{.*?^\}\n", ov_new, s, flags=re.M | re.S)
 open(plan_out, "w").write(s)

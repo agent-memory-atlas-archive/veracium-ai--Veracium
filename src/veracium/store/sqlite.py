@@ -19,9 +19,10 @@ from pathlib import Path
 from typing import Optional
 
 from ..authority import RULE_VERSION, scope_fingerprint
+from .. import redaction as _redaction
 from ..schema import (ConsolidationOp, ConsolidationOutputDraft, ConsolidationState,
                       Confirmation, ConfirmationActor, ConfirmationCallPath,
-                      Disclosure, Edge, Episode, EvidenceAuthor, OutcomeJudgmentDraft,
+                      Disclosure, Edge, Episode, EvidenceAuthor, OutcomeJudgmentDraft, QUARANTINE_RELATION,
                       Provenance, RECOVERY_PENDING_STATES,
                       SupersessionPlan, SupersessionRefusal, SupersessionResult,
                       is_historical_id, to_historical_id,
@@ -40,6 +41,12 @@ from ..census import declare_site
 # specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
 # decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
 _SITE_JOURNAL_REASON = declare_site("store.journal.reason-not-dispositioned")
+# specs/0041 tranche 1: INV-11's MIRROR and the two closures the redaction spec found missing (§2d-v)
+_SITE_UPSERT_MARKER = declare_site("store.upsert.marker-introduced")
+_SITE_UPSERT_RELATION_ONLY_QUARANTINE = declare_site("store.upsert.relation-only-quarantine")
+_SITE_EPISODE_MARKER = declare_site("store.episode.marker-introduced")
+_SITE_EPISODE_KIND = declare_site("store.episode.kind-not-recognised")
+_SITE_IMPORT_EPISODE_KIND = declare_site("store.import.episode-kind-not-recognised")
 _SITE_READ_OUTPUT_NOT_VISIBLE = declare_site("store.read.output-not-visible", declines=False)
 _SITE_READ_INPUT_CLAIMED = declare_site("store.read.input-claimed", declines=False)
 _SITE_UPSERT_IMMUTABLE = declare_site("store.upsert.immutable")
@@ -453,6 +460,26 @@ class SqliteStore(Store):
         `add_edge` and `apply_supersession_plan` (specs/0003 §4f) both use it, so the
         ownership + needs_confirmation guards hold on every persistence path, not only
         the single-edge one."""
+        # specs/0041 §4b (INV-11's MIRROR): a NON-REDACTION write may not INTRODUCE the
+        # marker — every persistence path runs through here (add_edge, the supersession
+        # plan, correction), so the refusal is one line for all of them. Redaction itself
+        # (tranche 3) writes under its own transaction, never through this method.
+        with _SITE_UPSERT_MARKER.consult():
+            hit = _redaction.marker_fields(edge.model_dump(mode="json"))
+            if hit:
+                raise _SITE_UPSERT_MARKER.fire(ValueError(
+                    f"refused: edge {edge.id!r} would introduce the redaction marker in "
+                    f"{hit} — only a redaction writes the marker (specs/0041 §4b, INV-11's mirror)"))
+        # specs/0041 §4h(i): a quarantine RELATION must carry the QUARANTINED disclosure —
+        # the relation-only quarantine is held by one clause of `Edge.quarantined`, and a
+        # later relation replacement would silently promote the claim. Ingest sets both;
+        # this closes the model-and-store path that never did.
+        with _SITE_UPSERT_RELATION_ONLY_QUARANTINE.consult():
+            if edge.relation == QUARANTINE_RELATION and edge.provenance.disclosure != Disclosure.QUARANTINED:
+                raise _SITE_UPSERT_RELATION_ONLY_QUARANTINE.fire(ValueError(
+                    f"refused: edge {edge.id!r} carries the quarantine relation {QUARANTINE_RELATION!r} "
+                    f"without the QUARANTINED disclosure — the disclosure is the durable discriminator "
+                    f"(specs/0041 §4h(i))"))
         # specs/0008 §6d: may NOT clear `needs_confirmation` (True→False) when replacing
         # an edge of the same id — only `confirm_edge` may — and may NOT change an edge's
         # `user_id`. Compared against the PERSISTED prior state, so a reconstructed edge
@@ -1546,6 +1573,20 @@ class SqliteStore(Store):
 
     # -- episodes ----------------------------------------------------------
     def add_episode(self, episode: Episode) -> None:
+        # specs/0041 §4b (INV-11's mirror) and §2d-iv (the kind closure), at the WRITE
+        # path only: a stored prose kind still loads (the read path never refuses).
+        with _SITE_EPISODE_MARKER.consult():
+            hit = _redaction.marker_fields(episode.model_dump(mode="json"))
+            if hit:
+                raise _SITE_EPISODE_MARKER.fire(ValueError(
+                    f"refused: episode {episode.id!r} would introduce the redaction marker in "
+                    f"{hit} — only a redaction writes the marker (specs/0041 §4b, INV-11's mirror)"))
+        with _SITE_EPISODE_KIND.consult():
+            if episode.kind not in _redaction.RECOGNISED_EPISODE_KINDS:
+                raise _SITE_EPISODE_KIND.fire(ValueError(
+                    f"refused: episode {episode.id!r} kind {episode.kind!r} is not a recognised "
+                    f"operational kind {_redaction.RECOGNISED_EPISODE_KINDS} — the set is closed at the "
+                    f"write path (specs/0041 §2d-iv, §4h(ii))"))
         # specs/0014 §4c: store-assigned identity cannot be fabricated — a
         # caller-supplied consolidation_output_index on the generic path is
         # REFUSED; only write_consolidation_output_if_current assigns it.
@@ -1872,6 +1913,15 @@ class SqliteStore(Store):
                         self._journal_edge_write(user_id, edge.id, new_json,
                                                  prior[0] if prior is not None else None)
                     for ep in episodes:
+                        # specs/0041 §2d-iv / §4h(ii): the kind closure binds the IMPORT
+                        # boundary as well; a marker-valued kind validates only under
+                        # attestation (tranche 2) and is refused here until then
+                        with _SITE_IMPORT_EPISODE_KIND.consult():
+                            if ep.kind not in _redaction.RECOGNISED_EPISODE_KINDS:
+                                raise _SITE_IMPORT_EPISODE_KIND.fire(ValueError(
+                                    f"refused: imported episode {ep.id!r} kind {ep.kind!r} is not a "
+                                    f"recognised operational kind — the closure binds the import "
+                                    f"boundary (specs/0041 §2d-iv, §4h(ii))"))
                         self._conn.execute(
                             "INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
                             (ep.id, ep.user_id, ep.date, ep.model_dump_json()))

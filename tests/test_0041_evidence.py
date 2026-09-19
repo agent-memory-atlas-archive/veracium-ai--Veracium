@@ -314,8 +314,10 @@ def test_the_round2_reproduction_script_reports_every_claim_as_the_reviewer_foun
     assert "F1b widened embedder still passes on the PACKAGED fixture (subset holds): True" in out
     assert "F1b the same widening is caught once original_relation is POPULATED: True" in out
     assert "F2 sanitize_llm_body leaves the marker intact: True" in out
-    assert "F2 an edge whose object IS the marker was stored by remember() (no redaction happened): True" in out
-    assert "F3 existing disposition reasons: 7 " in out and "F3 ALL of them are outside the proposed vocabulary: True" in out
+    # as the reviewer found it at round 2: "... stored by remember(): True". FLIPPED at 0041 tranche 1 (2026-09-19): INV-11's mirror
+    assert "F2 an edge whose object IS the marker was stored by remember() (no redaction happened): False | REFUSED by INV-11's mirror (0041 tranche 1): True" in out
+    # 7 at round 2; 8 once 0041 tranche 1 dispositioned `redacted` (2026-09-19) — still all outside the proposed vocabulary
+    assert "F3 existing disposition reasons: 8 " in out and "F3 ALL of them are outside the proposed vocabulary: True" in out
     assert "F5 response is counts only (no ids): True | response names the prior id: False" in out
     assert "contribution_ledger has operation_id: False | supersession_refusals has operation_id: False | ledger rows: 1" in out
     assert "F6 prose key persisted in outcome_counts: True | exported verbatim: True" in out
@@ -402,9 +404,12 @@ def test_the_round3_reproduction_script_reports_every_claim_as_the_reviewer_foun
     assert "a widening onto invalidation_reason passes the mutation test: True" in out
     assert "G1 graph.py:333 — a LIVE replacement against a REDACTED prior: REFUSED" in out
     assert "against the redacted prior: ADMITTED by the guard" in out
-    assert "G3 sqlite.py:1512 — add_episode refuses a kind='outcome' link: True | refuses the same link once kind is the marker: False" in out
+    # as found at round 3: "... once kind is the marker: False". FLIPPED at 0041 tranche 1: the kind closure refuses an unrecognised kind
+    assert "G3 sqlite.py:1512 — add_episode refuses a kind='outcome' link: True | refuses the same link once kind is the marker: True" in out
     assert "G4 ingest of a third_party_claim triple sets BOTH markers (relation AND disclosure=QUARANTINED): True" in out
-    assert "G4 a RELATION-ONLY quarantine is constructible through store.add_edge (no refusal): True" in out
+    # as found at round 3: "constructible ... (no refusal): True". FLIPPED at 0041 tranche 1: the write path refuses; the promotion
+    # reproduction below still runs on a PLANTED pre-closure row (§4h(iii))
+    assert "G4 a RELATION-ONLY quarantine is constructible through store.add_edge (no refusal): False | REFUSED at the write path (0041 tranche 1): True" in out
     assert "G4 redacting relation on the relation-only edge PROMOTES it out of quarantine (quarantined False): True" in out
 
 

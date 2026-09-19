@@ -50,12 +50,21 @@ A, B = ma.store, mb.store
 A.add_edge(edge("e-1", "works at the clinic; hiv-positive since 2019"))
 orig = A.edges(U)[0]; d_orig = semantic.content_digest(orig)
 real = semantic.content_digest
+
+def legacy_insert_edge(store, edge):
+    """The PRE-RESTRICTION writer's shape (direct SQL): 0041 tranche 1's mirror refuses a marker-carrying
+    write, so a tombstone ROW is planted the way an older store holds one (§4h(iii))."""
+    js = edge.model_dump_json()
+    store._conn.execute("INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) VALUES(?,?,?,?,?,?,?,?)",
+                        (edge.id, edge.user_id, edge.subject, edge.relation, edge.object, int(edge.active), int(edge.quarantined), js))
+    store._conn.commit()
+
 def interleave(live):
     """Called by A's upsert_embedding BETWEEN its SELECT and its INSERT (no transaction
     is open on A). B commits a simulated redaction and removes the embedding here."""
     semantic.content_digest = real                 # one shot
     tomb = orig.model_copy(update={"subject": MARKER, "relation": MARKER, "object": MARKER, "note": MARKER})
-    B.add_edge(tomb)                              # the redaction, committed on B
+    legacy_insert_edge(B, tomb)                   # the redaction, committed on B (a planted row: the mirror refuses the write path)
     B._conn.execute("DELETE FROM edge_embedding WHERE edge_id='e-1'"); B._conn.commit()
     return real(live)                             # A checks the digest of the row it ALREADY read
 semantic.content_digest = interleave
@@ -102,9 +111,14 @@ def emitting(prompt, *, system=None, role="compile", json_schema=None):
         return json.dumps({"triples": [{"subject": "user", "relation": "works_as", "object": MARKER, "note": MARKER}],
                            "episode": "x", "instructions": []})
     return ""
-m2 = mem("b.db", emitting); m2.remember(U, "I work somewhere.", context=EvidenceContext.direct())
+m2 = mem("b.db", emitting)
+try:
+    m2.remember(U, "I work somewhere.", context=EvidenceContext.direct()); refused = False
+except ValueError as exc:                                     # 0041 tranche 1: INV-11's mirror at the upsert
+    refused = "redaction marker" in str(exc)
 stored = [e for e in m2.store.edges(U, active_only=False) if e.object == MARKER]
-print("F2 an edge whose object IS the marker was stored by remember() (no redaction happened):", len(stored) == 1)
+print("F2 an edge whose object IS the marker was stored by remember() (no redaction happened):", len(stored) == 1,
+      "| REFUSED by INV-11's mirror (0041 tranche 1):", refused)
 m2.close()
 
 # ---- F3: the proposed five-value vocabulary excludes every existing disposition reason
