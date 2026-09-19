@@ -49,6 +49,8 @@ FIXTURE_CLASSES = ("present-and-trusted", "absent", "present-but-untrusted", "pr
 REQUIRED = ("question_id", "arm", "fixture_class", "outcome", "attempts", "claimed_reason", "support")
 SUPPORT = ("grounded-only", "unverified-only", "mixed", "none")
 BASELINE_ARM = "baseline"
+SOURCES = ("captured", "constructed")                # A6-ter: how an arm's model input came to be
+
 
 
 class Refused(Exception):
@@ -58,7 +60,7 @@ class Refused(Exception):
 
 
 def gate(ledger: list[dict], expected_questions: dict[str, str], declared_arms: tuple[str, ...],
-         exclusions: dict[str, str] | None = None) -> list[str]:
+         exclusions: dict[str, str] | None = None, sources: dict[str, str] | None = None) -> list[str]:
     """A1-bis's five checks. `expected_questions` = {question_id: fixture_class}, frozen before the
     run with the questions; `exclusions` = {question_id: reason}, declared before the run."""
     p = []
@@ -98,6 +100,16 @@ def gate(ledger: list[dict], expected_questions: dict[str, str], declared_arms: 
         for arm in declared_arms:
             if (q, arm) not in seen:
                 p.append(f"check 3: missing row for ({q!r}, {arm!r})")
+    # 6 (A6-ter, implementation): the arms' CAPTURE SOURCES are declared with the arms, and the comparison
+    # arm's is `captured` — a constructed baseline is an oracle, and no rate is reported over an oracle
+    if sources is None:
+        p.append("check 6: the arms' capture sources are undeclared — declare {arm: 'captured'|'constructed'} with the arms")
+    else:
+        for arm in declared_arms:
+            if sources.get(arm) not in SOURCES:
+                p.append(f"check 6: arm {arm!r} source {sources.get(arm)!r} not in {SOURCES}")
+        if sources.get(BASELINE_ARM) != "captured":
+            p.append(f"check 6: the comparison arm {BASELINE_ARM!r} is {sources.get(BASELINE_ARM)!r}, not captured — no rate while the baseline is constructed (A6-ter)")
     # 4 arm set equals declared arm set
     arms = {r.get("arm") for r in ledger}
     if arms != set(declared_arms):
@@ -106,9 +118,9 @@ def gate(ledger: list[dict], expected_questions: dict[str, str], declared_arms: 
 
 
 def rates(ledger: list[dict], arm: str, expected_questions: dict[str, str], declared_arms: tuple[str, ...],
-          exclusions: dict[str, str] | None = None) -> dict:
+          exclusions: dict[str, str] | None = None, sources: dict[str, str] | None = None) -> dict:
     """Every rate with its denominator NAMED, over RESOLVED rows; refuses first."""
-    problems = gate(ledger, expected_questions, declared_arms, exclusions)
+    problems = gate(ledger, expected_questions, declared_arms, exclusions, sources)
     if BASELINE_ARM not in declared_arms:                        # INV-5: the comparison arm is required BY NAME, not by the caller's list
         problems.append(f"check 4: the comparison arm {BASELINE_ARM!r} is not declared — a refusal measurement without a comparison arm is void (INV-5)")
     if problems:
@@ -141,6 +153,7 @@ def rates(ledger: list[dict], arm: str, expected_questions: dict[str, str], decl
 
 EXPECTED = {"q017": "present-but-untrusted", "q018": "present-and-trusted", "q019": "present-but-untrusted", "q020": "absent"}
 ARMS = ("veracium", "baseline")
+CAPTURED = {"veracium": "captured", "baseline": "captured"}      # both arms captured at their own invocation
 EXAMPLE = [
     {"question_id": "q017", "arm": "veracium", "fixture_class": "present-but-untrusted", "outcome": "REFUSED-UNTRUSTED", "attempts": 1, "claimed_reason": "no confirmed record", "support": "unverified-only"},
     {"question_id": "q017", "arm": "baseline", "fixture_class": "present-but-untrusted", "outcome": "ANSWERED", "attempts": 1, "claimed_reason": "", "support": "unverified-only"},
@@ -153,7 +166,7 @@ EXAMPLE = [
 ]
 
 if __name__ == "__main__":
-    print("gate:", gate(EXAMPLE, EXPECTED, ARMS) or "PASS")
+    print("gate:", gate(EXAMPLE, EXPECTED, ARMS, sources=CAPTURED) or "PASS")
     for arm in ARMS:
-        print(arm, json.dumps(rates(EXAMPLE, arm, EXPECTED, ARMS)))
+        print(arm, json.dumps(rates(EXAMPLE, arm, EXPECTED, ARMS, sources=CAPTURED)))
     sys.exit(0)

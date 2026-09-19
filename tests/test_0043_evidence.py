@@ -35,26 +35,26 @@ def test_a1_outcomes_are_parsed_from_inv4_and_the_count_is_cross_checked():
 
 def test_a1_the_gate_refuses_each_of_round_2s_defects_and_no_rate_exists_for_a_refused_ledger():
     lg = _load("ledger")
-    assert lg.gate(lg.EXAMPLE, lg.EXPECTED, lg.ARMS) == []
+    assert lg.gate(lg.EXAMPLE, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED) == []
     dup = lg.EXAMPLE + [dict(lg.EXAMPLE[0])]                                     # 1/2 -> 2/3 was this
-    assert any("check 1: duplicate" in x for x in lg.gate(dup, lg.EXPECTED, lg.ARMS))
+    assert any("check 1: duplicate" in x for x in lg.gate(dup, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED))
     with pytest.raises(lg.Refused):
-        lg.rates(dup, "veracium", lg.EXPECTED, lg.ARMS)
+        lg.rates(dup, "veracium", lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED)
     none_row = lg.EXAMPLE[:-1] + [{k: None for k in lg.REQUIRED}]                # the all-None row
-    assert any("check 2" in x for x in lg.gate(none_row, lg.EXPECTED, lg.ARMS))
+    assert any("check 2" in x for x in lg.gate(none_row, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED))
     no_baseline = [r for r in lg.EXAMPLE if r["arm"] != "baseline"]              # removing the baseline
-    p = lg.gate(no_baseline, lg.EXPECTED, lg.ARMS)
+    p = lg.gate(no_baseline, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED)
     assert any("check 3: missing row" in x for x in p) and any("check 4" in x for x in p)
     extra_arm = lg.EXAMPLE + [{**lg.EXAMPLE[0], "arm": "third"}]
-    assert any("check 4" in x for x in lg.gate(extra_arm, lg.EXPECTED, lg.ARMS))
+    assert any("check 4" in x for x in lg.gate(extra_arm, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED))
     unknown = [{**lg.EXAMPLE[0], "outcome": "MAYBE"}] + lg.EXAMPLE[1:]
-    assert any("check 5" in x and "MAYBE" in x for x in lg.gate(unknown, lg.EXPECTED, lg.ARMS))
+    assert any("check 5" in x and "MAYBE" in x for x in lg.gate(unknown, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED))
     neg = [{**lg.EXAMPLE[0], "attempts": -1}] + lg.EXAMPLE[1:]
-    assert any("attempts" in x for x in lg.gate(neg, lg.EXPECTED, lg.ARMS))
+    assert any("attempts" in x for x in lg.gate(neg, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED))
     unexpected = lg.EXAMPLE + [{**lg.EXAMPLE[0], "question_id": "q999"}, {**lg.EXAMPLE[1], "question_id": "q999"}]
-    assert any("was not expected" in x for x in lg.gate(unexpected, lg.EXPECTED, lg.ARMS))
+    assert any("was not expected" in x for x in lg.gate(unexpected, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED))
     wrong_class = [{**lg.EXAMPLE[0], "fixture_class": "absent"}] + lg.EXAMPLE[1:]
-    assert any("frozen manifest" in x for x in lg.gate(wrong_class, lg.EXPECTED, lg.ARMS))
+    assert any("frozen manifest" in x for x in lg.gate(wrong_class, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED))
 
 
 def test_a1_formulas_a_timeout_moves_the_rate_and_unresolved_is_out_of_both_sides():
@@ -63,15 +63,15 @@ def test_a1_formulas_a_timeout_moves_the_rate_and_unresolved_is_out_of_both_side
     arms = ("veracium", "baseline")
     def row(i, arm, outcome): return {"question_id": f"q{i:02d}", "arm": arm, "fixture_class": "present-but-untrusted", "outcome": outcome, "attempts": 1, "claimed_reason": "", "support": "unverified-only"}
     ten = [row(i, "veracium", "REFUSED-UNTRUSTED" if i < 8 else "ANSWERED") for i in range(10)] + [row(i, "baseline", "ANSWERED") for i in range(10)]
-    assert lg.rates(ten, "veracium", q, arms)["refusal_rate"] == (8, 10)
+    assert lg.rates(ten, "veracium", q, arms, sources=lg.CAPTURED)["refusal_rate"] == (8, 10)
     q11 = {**q, "q10": "present-but-untrusted"}
     eleven = ten + [row(10, "veracium", "OTHER"), row(10, "baseline", "ANSWERED")]      # a timeout: OTHER, IN the denominator
-    r = lg.rates(eleven, "veracium", q11, arms)
+    r = lg.rates(eleven, "veracium", q11, arms, sources=lg.CAPTURED)
     assert r["refusal_rate"] == (8, 11) and r["completion"] == (11, 11)
     twelve = eleven + [row(11, "veracium", "UNRESOLVED"), row(11, "baseline", "ANSWERED")]   # the judge could not decide: OUT of both
-    r = lg.rates(twelve, "veracium", {**q11, "q11": "present-but-untrusted"}, arms)
+    r = lg.rates(twelve, "veracium", {**q11, "q11": "present-but-untrusted"}, arms, sources=lg.CAPTURED)
     assert r["refusal_rate"] == (8, 11) and r["unresolved"] == 1 and r["completion"] == (12, 12)
-    assert lg.rates([row(0, "veracium", "UNRESOLVED"), row(0, "baseline", "ANSWERED")], "veracium", {"q00": "present-but-untrusted"}, arms)["refusal_rate"] == "UNDEFINED"
+    assert lg.rates([row(0, "veracium", "UNRESOLVED"), row(0, "baseline", "ANSWERED")], "veracium", {"q00": "present-but-untrusted"}, arms, sources=lg.CAPTURED)["refusal_rate"] == "UNDEFINED"
     assert r["per_class"]["absent"] == "NOT PRESENTED" and r["per_class"]["present-but-untrusted"]["rate"] == (8, 11)
 
 
@@ -80,21 +80,21 @@ def test_a1_retries_are_attempts_not_rows_and_exclusions_are_declared_rows():
     q = {"q1": "absent", "q2": "absent"}; arms = ("veracium", "baseline")
     base = [{"question_id": "q1", "arm": a, "fixture_class": "absent", "outcome": "REFUSED-ABSENT", "attempts": 3, "claimed_reason": "", "support": "none"} for a in arms]
     excl_rows = [{"question_id": "q2", "arm": a, "fixture_class": "absent", "outcome": "UNRESOLVED", "attempts": 1, "claimed_reason": "excluded: not blind", "support": "none"} for a in arms]
-    r = lg.rates(base + excl_rows, "veracium", q, arms, exclusions={"q2": "not blind"})
+    r = lg.rates(base + excl_rows, "veracium", q, arms, exclusions={"q2": "not blind"}, sources=lg.CAPTURED)
     assert r["excluded"] == 1 and r["refusal_rate"] == (1, 1) and r["completion"] == (1, 1)
     leaked = base + [{**excl_rows[0], "outcome": "ANSWERED"}, excl_rows[1]]
-    assert any("excluded question" in x for x in lg.gate(leaked, q, arms, exclusions={"q2": "not blind"}))
+    assert any("excluded question" in x for x in lg.gate(leaked, q, arms, exclusions={"q2": "not blind"}, sources=lg.CAPTURED))
 
 
 def test_a1_round3_a_presented_class_with_no_resolved_rows_reads_undefined_and_a_single_arm_is_refused():
     lg = _load("ledger")
     q = {"q1": "absent"}; arms = ("veracium", "baseline")
     rows = [{"question_id": "q1", "arm": a, "fixture_class": "absent", "outcome": "UNRESOLVED", "attempts": 1, "claimed_reason": "", "support": "none"} for a in arms]
-    pc = lg.rates(rows, "veracium", q, arms)["per_class"]
+    pc = lg.rates(rows, "veracium", q, arms, sources=lg.CAPTURED)["per_class"]
     assert pc["absent"] == {"rate": "UNDEFINED", "unresolved": 1, "presented": 1} and pc["present-and-trusted"] == "NOT PRESENTED"
     solo = [{"question_id": "q1", "arm": "veracium", "fixture_class": "absent", "outcome": "REFUSED-ABSENT", "attempts": 1, "claimed_reason": "", "support": "none"}]
     with pytest.raises(lg.Refused, match="INV-5"):
-        lg.rates(solo, "veracium", q, ("veracium",))
+        lg.rates(solo, "veracium", q, ("veracium",), sources={"veracium": "captured"})
 
 
 # ---- A2-bis: the examiner view and the flip test ---------------------------------------------
@@ -351,3 +351,73 @@ def test_every_evidence_script_runs_and_exits_zero(script, args):
     import subprocess, sys
     r = subprocess.run([sys.executable, str(EVIDENCE / script), *args], capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stdout[-600:] + r.stderr[-600:]
+
+
+# ---- A6-ter at implementation: the baseline CAPTURED at its own invocation ----------------------------
+
+def test_a6ter_the_baseline_is_captured_at_its_own_invocation_and_equals_the_oracle():
+    """The round-4 residue (0043-R3-6) closed: the baseline arm is a second invocation of the shipped
+    gate path — over the SAME selection, through the same injected `Complete` boundary, the stated
+    transform applied at the rendering seam — and its capture equals the oracle, transform(shipped)."""
+    mc = _load("model_input_capture")
+    r = mc.run()
+    assert r["baseline_source"] == "captured" and r["baseline_equals_oracle"]
+    assert r["baseline"]["digest"] == r["baseline"]["oracle_digest"] and r["baseline"]["digest"] != r["shipped"]["digest"]
+    assert r["problems"] == []
+    # the seam is the product's: the shipped rendering IS render_gate_input over the captured partition
+    from veracium import gate
+    system, prompt = gate.render_gate_input(r["shipped"]["config"]["question"], r["shipped"]["partition"]["grounded"], r["shipped"]["partition"]["unverified"])
+    assert (system, prompt) == (r["shipped"]["system"], r["shipped"]["prompt"])
+
+
+def test_a6ter_a_baseline_invocation_that_departs_from_the_stated_transform_refuses_and_so_does_no_transform():
+    """Two controls: a renderer that changes anything the transform does not name is refused with the first
+    differing line; a renderer that applies nothing (the shipped rendering) is refused as identical."""
+    mc = _load("model_input_capture"); ev = _load("examiner_view")
+    from veracium import gate
+    with tempfile.TemporaryDirectory() as d:
+        st = ev.fixture_store(f"{d}/f.db"); st.close()
+        shipped = mc.capture(f"{d}/f.db", "where does the user work and what do they prefer")
+    def leaky(q, g, u):                                   # drops a fact line the transform keeps
+        sy, pr = mc.baseline_transform(*gate.render_gate_input(q, g, u))
+        lines = pr.splitlines(); i = next(k for k, l in enumerate(lines) if " (since " in l)
+        return sy, "\n".join(lines[:i] + lines[i + 1:])
+    with pytest.raises(mc.Refused, match="not the transform of the shipped capture"):
+        mc.capture_baseline(shipped, render=leaky)
+    with pytest.raises(mc.Refused, match="applied nothing"):
+        mc.capture_baseline(shipped, render=gate.render_gate_input)
+    # and a constructed baseline is not reportable, whatever else is true of it
+    with pytest.raises(mc.Refused, match="not captured"):
+        mc.assert_reportable({**shipped, "source": "constructed"})
+    with pytest.raises(mc.Refused, match="not captured"):
+        mc.assert_reportable({k: v for k, v in shipped.items() if k != "source"})
+
+
+def test_a6ter_the_ledger_refuses_a_rate_over_a_constructed_or_undeclared_baseline():
+    lg = _load("ledger")
+    assert lg.gate(lg.EXAMPLE, lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED) == []
+    p = lg.gate(lg.EXAMPLE, lg.EXPECTED, lg.ARMS)                                          # undeclared
+    assert p == ["check 6: the arms' capture sources are undeclared — declare {arm: 'captured'|'constructed'} with the arms"]
+    p = lg.gate(lg.EXAMPLE, lg.EXPECTED, lg.ARMS, sources={"veracium": "captured", "baseline": "constructed"})
+    assert any("check 6" in x and "not captured" in x for x in p)
+    with pytest.raises(lg.Refused, match="A6-ter"):
+        lg.rates(lg.EXAMPLE, "veracium", lg.EXPECTED, lg.ARMS, sources={"veracium": "captured", "baseline": "constructed"})
+    p = lg.gate(lg.EXAMPLE, lg.EXPECTED, lg.ARMS, sources={"veracium": "recalled", "baseline": "captured"})
+    assert any("check 6" in x and "'recalled'" in x for x in p)
+    assert lg.rates(lg.EXAMPLE, "veracium", lg.EXPECTED, lg.ARMS, sources=lg.CAPTURED)["refusal_rate"] == (1, 4)   # q017 refused of four resolved
+
+
+def test_the_product_answers_through_the_rendering_seam_and_never_passes_a_renderer():
+    """`gate.answer` renders through `render_gate_input` by default (a recording llm sees exactly that
+    pair), and no product module passes `render=` — the seam is harness-only, never a mode."""
+    from veracium import gate
+    seen = []
+    def llm(prompt, *, system=None, role=None, json_schema=None):
+        seen.append((system, prompt)); return " ok "
+    assert gate.answer(llm, "q?", "G", "") == "ok"
+    assert seen == [gate.render_gate_input("q?", "G", "")]
+    import re as _re
+    src = (ROOT / "src" / "veracium")
+    passers = [str(f.relative_to(ROOT)) for f in src.rglob("*.py")
+               if _re.search(r"answer\((?:[^()]|\([^()]*\))*\brender\s*=", f.read_text()) and f.name != "gate.py"]
+    assert passers == [], passers

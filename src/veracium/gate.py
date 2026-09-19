@@ -204,8 +204,22 @@ Answer using this rule:
 Answer in 1-3 sentences."""
 
 
-def answer(llm: Complete, query: str, grounded: str, unverified: str) -> str:
-    """Gate-disciplined answer over a grounded/unverified partition."""
-    return llm(GATE_PROMPT.format(grounded=grounded or "(nothing relevant)",
-                                  unverified=unverified or "(none)", query=query),
-               system=GATE_SYSTEM, role="gate").strip()
+def render_gate_input(query: str, grounded: str, unverified: str) -> tuple[str, str]:
+    """The exact (system, prompt) the gate sends to the model over a grounded/unverified
+    partition — THE RENDERING SEAM (specs/0043 A6-ter). The model-input boundary is the
+    `Complete` callable; this is the one function that composes what crosses it, so a harness
+    can capture the shipped rendering here and, for its baseline arm, hand `answer` a renderer
+    that applies a STATED transform to this function's output. Not a product mode: there is no
+    gate-off switch, and the default renderer is always this one."""
+    return (GATE_SYSTEM,
+            GATE_PROMPT.format(grounded=grounded or "(nothing relevant)",
+                               unverified=unverified or "(none)", query=query))
+
+
+def answer(llm: Complete, query: str, grounded: str, unverified: str, *,
+           render=None) -> str:
+    """Gate-disciplined answer over a grounded/unverified partition. `render` (harness use only,
+    specs/0043 A6-ter) replaces the rendering seam for ONE invocation; the product never passes
+    it, so the shipped path always renders through `render_gate_input`."""
+    system, prompt = (render or render_gate_input)(query, grounded, unverified)
+    return llm(prompt, system=system, role="gate").strip()

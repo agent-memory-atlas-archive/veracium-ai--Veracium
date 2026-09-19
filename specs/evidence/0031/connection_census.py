@@ -647,6 +647,7 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 0042 tranche 3: forty more sites bound (graph, proactive, ingest, procedures, procedural_gate, registry, mcp_server, __init__, diagnostics, telemetry): moved dotted/dataflow 6,085 -> 6,181, the rest unchanged.
 #: 0042 tranche 4: 33 more sites bound (scope, scope_linkage, scope_read, portability): moved dotted/dataflow 6,181 -> 6,288, the rest unchanged.
 #: 0042 tranche 5: the store's 46 sites bound (migration, revocation, revocation_sweep, schema_version, sqlite); 147 ids in all: moved dotted/dataflow 6,288 -> 6,437, the rest unchanged.
+#: 0043 tranche 1: the gate's rendering seam (render_gate_input) and answer(render=): moved nothing, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
     "dotted/dataflow": 6437,
     "dotted/module-machinery": 19,

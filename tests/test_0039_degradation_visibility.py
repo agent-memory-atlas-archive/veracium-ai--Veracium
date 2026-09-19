@@ -232,9 +232,9 @@ def test_no_site_calls_the_callback_directly():
     """Static half: no Call in ingest.py names `on_degrade` outside `_emit_degrade`."""
     tree = ast.parse((ROOT / "src" / "veracium" / "ingest.py").read_text())
     helper = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_emit_degrade")
-    inside = {id(x) for x in ast.walk(helper)}
-    direct = [n.lineno for n in ast.walk(tree)
-              if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "on_degrade" and id(n) not in inside]
+    inside = set(ast.walk(helper))          # membership by node identity (AST nodes hash by identity); never by id(),
+    direct = [n.lineno for n in ast.walk(tree)  # which rests on a lifetime assumption nobody wrote down (research, 2026-09-19)
+              if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "on_degrade" and n not in inside]
     assert direct == [], f"on_degrade called directly at lines {direct}"
     calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "_emit_degrade"]
     assert len(calls) >= 5, "the five sites invoke the helper"

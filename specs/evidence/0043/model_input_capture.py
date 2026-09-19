@@ -9,8 +9,9 @@ rendering, after the shipped path's own budget. `Memory.answer` reaches the mode
 and the grounded rendering carries the COMPILED context when compilation is on.
 
   shipped arm   the captured (system, prompt), verbatim, frozen by digest
-  baseline arm  the SAME captured prompt under a STATED TRANSFORM — every changed instruction is
-                named in CHANGED_INSTRUCTIONS and nothing else changes
+  baseline arm  CAPTURED at its OWN invocation (implementation, 2026-09-19): gate.answer over the same
+                selection, through the same boundary, with the stated transform applied at the rendering seam
+                — and asserted EQUAL to the oracle, baseline_transform(shipped capture); no rate while constructed
   record        the ADJUDICATION RECORD (A3-quater, round 5): edge id -> (subject, relation, object, original
                 class, unit) for every edge the product's own recall DELIVERED to the answer path — captured
                 at the same boundary as the prompt, once for both arms, in neither prompt
@@ -80,7 +81,52 @@ def capture(db_path: str, question: str, *, max_subgraph_edges: int = 40) -> dic
                   "class": edge_class(e), "unit": f"{e.relation}: {e.object} (since {e.valid_from.date()})"}
                  for e in recalls[0].edges]
     return {"system": c["system"], "prompt": c["prompt"], "digest": frozen, "delivered": delivered,
+            "source": "captured",
+            # the SELECTION the answer path used, handed to the baseline invocation unchanged (A6-bis:
+            # retrieval runs ONCE); the strings are the shipped path's own rendered, budgeted partitions
+            "partition": {"grounded": recalls[0].grounded, "unverified": recalls[0].unverified},
             "config": {"question": question, "max_subgraph_edges": max_subgraph_edges, "compilation": "on"}}
+
+
+def capture_baseline(shipped: dict, *, render=None) -> dict:
+    """THE BASELINE ARM, CAPTURED AT ITS OWN MODEL INVOCATION (A6-ter, the round-4 residue closed at
+    implementation): a second invocation of the shipped gate path — `gate.answer` over the SAME
+    selection the shipped arm used — through the same injected `Complete` boundary, with the stated
+    transform applied where the gate renders its instructions (the `render` seam). What the wrapper
+    records IS the baseline capture. It is then asserted EQUAL to the oracle, `baseline_transform`
+    over the shipped capture: a construction that PREDICTS a capture and is checked against it, never
+    one that stands in for it. `render` defaults to the transform; a harness may pass another renderer
+    only to prove the check refuses it."""
+    from veracium import gate
+    llm = CapturingLLM()
+    def transformed(query, grounded, unverified):
+        return baseline_transform(*gate.render_gate_input(query, grounded, unverified))
+    gate.answer(llm, shipped["config"]["question"], shipped["partition"]["grounded"], shipped["partition"]["unverified"],
+                render=render or transformed)
+    gate_calls = [c for c in llm.calls if c["role"] == "gate"]
+    if len(gate_calls) != 1:
+        raise RuntimeError(f"expected exactly one gate call at the boundary, saw {len(gate_calls)}")
+    c = gate_calls[0]
+    captured = {"system": c["system"], "prompt": c["prompt"],
+                "digest": hashlib.sha256((c["system"] + "\n\x00\n" + c["prompt"]).encode()).hexdigest(), "source": "captured"}
+    o_system, o_prompt = baseline_transform(shipped["system"], shipped["prompt"])
+    oracle = {"system": o_system, "prompt": o_prompt,
+              "digest": hashlib.sha256((o_system + "\n\x00\n" + o_prompt).encode()).hexdigest(), "source": "constructed"}
+    if captured["digest"] == shipped["digest"]:
+        raise Refused("the captured baseline is byte-identical to the shipped capture: the transform applied nothing")
+    if captured["digest"] != oracle["digest"]:
+        diff = next(((i, a, b) for i, (a, b) in enumerate(zip((captured["system"] + "\n" + captured["prompt"]).splitlines(),
+                                                             (oracle["system"] + "\n" + oracle["prompt"]).splitlines())) if a != b), None)
+        raise Refused(f"the CAPTURED baseline is not the transform of the shipped capture (first differing line {diff}) — "
+                      f"the invocation did something the stated transform does not")
+    captured["oracle_digest"] = oracle["digest"]
+    return captured
+
+
+def assert_reportable(baseline: dict) -> None:
+    """A6-ter: NO RATE while the baseline is constructed rather than captured."""
+    if baseline.get("source") != "captured":
+        raise Refused(f"the baseline arm is {baseline.get('source', 'undeclared')!r}, not captured — no rate may be reported")
 
 
 # ---- the ADJUDICATION RECORD (A3-quater: provenance ONCE, from the store; presence per arm) --------
@@ -221,19 +267,20 @@ def run(question: str = "where does the user work and what do they prefer") -> d
         st = ev.fixture_store(f"{d}/f.db"); st.close()
         shipped = capture(f"{d}/f.db", question)
         record = adjudication_record(shipped["delivered"])
-    b_system, b_prompt = baseline_transform(shipped["system"], shipped["prompt"])
-    baseline = {"system": b_system, "prompt": b_prompt, "digest": hashlib.sha256((b_system + "\n\x00\n" + b_prompt).encode()).hexdigest()}
+    baseline = capture_baseline(shipped)          # captured at its own invocation; equal to the oracle, or Refused
+    assert_reportable(baseline)
     problems = check(shipped, baseline)
     control = check(heading_without_body_control(shipped), baseline)
     return {"shipped": shipped, "baseline": baseline, "record": record, "problems": problems,
-            "control_refuses": bool(control), "control_problems": control, "changed_instructions": CHANGED_INSTRUCTIONS}
+            "control_refuses": bool(control), "control_problems": control, "changed_instructions": CHANGED_INSTRUCTIONS,
+            "baseline_source": baseline["source"], "baseline_equals_oracle": baseline["digest"] == baseline["oracle_digest"]}
 
 
 if __name__ == "__main__":
     r = run()
     print("--- captured shipped (system):", r["shipped"]["system"][:90], "…")
     print("--- captured shipped (prompt):"); print(r["shipped"]["prompt"])
-    print("--- baseline (prompt):"); print(r["baseline"]["prompt"])
+    print(f"--- baseline (prompt), source={r['baseline_source']}, equals the oracle: {r['baseline_equals_oracle']}:"); print(r["baseline"]["prompt"])
     print("--- evidence units (shipped):", evidence_units(r["shipped"]["prompt"]))
     print("--- ADJUDICATION RECORD (the DELIVERED identities, once):"); [print(f"    {eid}: {v}") for eid, v in r["record"].items()]
     print("CHANGED INSTRUCTIONS:"); [print("  -", c) for c in r["changed_instructions"]]

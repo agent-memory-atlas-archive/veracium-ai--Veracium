@@ -1350,7 +1350,11 @@ def test_the_count_of_closure_evidence_unrunnable_in_a_package_is_pinned():
     # superseded-wording rows; the A6 residue, OWED), plus 0043-R2-4, whose evidence opens
     # the limit the acceptance carries. The other rows cite pytest nodes and DO run in a
     # package.
-    UNRUNNABLE_IN_A_PACKAGE = 130
+    # MOVED 2026-09-19 at 0043 tranche 1: 130 -> 129, RECOMPUTED. The A6 residue (0043-R3-6),
+    # the one row the acceptance carried OWED, now cites the three pytest nodes that capture
+    # the baseline at its own invocation — evidence that RUNS in a package, which is the
+    # direction this pin prefers.
+    UNRUNNABLE_IN_A_PACKAGE = 129
     assert len(history) == UNRUNNABLE_IN_A_PACKAGE, (
         f"{len(history)} of {len(rows)} closure rows ({share:.1%}) cite `git show` and cannot "
         f"run in a packaged tree; the pin says {UNRUNNABLE_IN_A_PACKAGE}. A reviewer runs the "

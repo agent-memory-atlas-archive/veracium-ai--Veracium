@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Added: the gate's rendering seam, and the refusal harness's baseline arm captured at its own
+  model invocation (specs/0043, tranche 1).** `gate.render_gate_input` now composes the exact (system,
+  prompt) the assertion gate sends to the model, and `gate.answer` takes a harness-only `render=` that
+  replaces it for one invocation — a seam, not a mode: the shipped path always renders through the
+  default and no product module passes the parameter. The 0043 harness's baseline arm is no longer a
+  construction: it is a second invocation of the gate over the same selection through the same injected
+  boundary with the stated transform at the seam, asserted equal to the oracle; a departing invocation
+  or an untransformed one refuses, and the harness ledger refuses any rate while the comparison arm is
+  constructed or its capture source undeclared (check 6). Closes the one item the 0043 acceptance left
+  owed. Product behaviour unchanged.
 - **Added: INV-7, the census's observation-only guarantee, as a FOUR-ARM decision-trace diff
   (specs/0042, tranche 6b).** An independent observer (`specs/evidence/0042/inv7_observer.py`, a pytest
   plugin) wraps every enforcement function the declaration names — 95 of 102; the 7 nested inside another
