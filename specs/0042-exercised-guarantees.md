@@ -90,7 +90,11 @@ Spec-Status: accepted
 > every key resolving, exactly one decision per candidate, the collapse shape re-swept against a
 > frozen hand-read set. The evidence reconciler now compares REVIEWED-as-enforcement to DECLARED by
 > SITE id (a reviewed row names its site; the fixture's rows, carrying none, keep their candidate
-> id) — the two coincided only in the fixture. What remains: the INV-7 harness with its fourth arm.
+> id) — the two coincided only in the fixture. **6a-bis (research's second read):** the 43
+> `predicate-helper` decisions shared one reason whose escape clause ("where one exists") could not fail;
+> the generator now derives each helper's consumers from the source and names them — the consuming site
+> by id, the site-less consumers, or a hand-stated outside consumer — and refuses a helper with none.
+> What remains: the INV-7 harness with its fourth arm.
 
 ## 1. Problem and motivation
 

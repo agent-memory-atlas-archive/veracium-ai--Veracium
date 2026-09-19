@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Changed: every predicate-helper decision in the census review names its consumer (specs/0042,
+  tranche 6a-bis).** Research's second read of the review's NOT half found that all 43 `predicate-helper`
+  rows shared one reason — "the consumer's site is the enforcement point where one exists" — a sentence
+  true whether or not a consuming site exists, so a helper consumed by a declared site and one consumed by
+  nothing read identically. The generator now derives each helper's consumers from the source and writes
+  them into the reason: the consuming functions that carry a declared site, with the site ids; the
+  consumers that carry none, named; or, for a helper no product function references, a reading the review
+  states by hand (the `==` operator; a public meter read; a harness-only export). A helper with none of the
+  three refuses generation, and the test runs that refusal. Decisions unchanged; the escape clause is gone
+  from the class text. No behaviour changes.
 - **Added: the census's REVIEWED set and DECLARATION exist, and the four sets reconcile on the real
   tree (specs/0042, tranche 6a).** Every one of the 752 discovered decision candidates carries a
   decision — 276 enforcement candidates bound to 147 site ids, 476 not (argument-check 97,

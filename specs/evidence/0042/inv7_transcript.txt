@@ -1,0 +1,235 @@
+# generated 2026-09-19T13:40Z against veracium @ cb2add62891c88278ff2ee040df0232d4324c5fd
+# the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
+INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
+HEAD cb2add62891c88278ff2ee040df0232d4324c5fd
+twin (uninstrumented) commit 84f9515a94f05288debd697057cdb692b0872536
+src commits between the twin and HEAD (every one an instrumentation tranche):
+  214964c 0042 implementation, tranche 5: the store's forty-six sites bound — migration, revocation, the sweep's validators, schema version, sqlite — every reviewed enforcement point is now a declared site (147 ids)
+  2fcaa57 0042 implementation, tranche 4: thirty-three more sites bound — scope, scope_linkage, scope_read, portability — 101 ids on the tree; the review's keys derived from the source
+  14ad68c 0042 implementation, tranche 3: forty more sites bound — graph, proactive, ingest, procedures, the procedural gate, the registry, the MCP closed set, the Memory surface, diagnostics and telemetry — one declining execution per id in the runtime leg
+  4002977 0042 tranche 2b: the census bypass at the four hot Edge predicates — the shipped default costs nothing measurable; the trade against §4A-2's letter, the fourth arm and the rejected third option stated
+  30dea6c 0042 implementation, tranche 2: the first 28 product sites bound — gate, schema, compile, grounding, authority, asof — each decision returned through its declared site; the runtime leg executes one decline per site
+
+python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
+suites: tests/test_0027_policy_lane.py tests/test_0027_policy_receipt.py tests/test_0027_semantic_recall.py tests/test_compile_gate.py tests/test_0037_procedural.py tests/test_0019_ungrounded.py tests/test_0014_schema.py tests/test_schema_model.py tests/test_0003_supersession_contested.py tests/test_0003_supersession_guard.py tests/test_0003_supersession_recall.py tests/test_0003_supersession_store.py tests/test_0028_resolution.py tests/test_maintenance_invariant.py tests/test_0020_scope_vectors.py tests/test_0015_lifecycle.py tests/test_0011_entitlement.py tests/test_0009_import_migration.py tests/test_0010_consolidation_primitives.py tests/test_0014_receipt_split.py tests/test_0022_revocation_operation.py tests/test_0037_capture.py tests/eval/edge_events/test_0029_acceptance_corpus.py tests/test_0010_visibility_reservation.py tests/test_0020_read_surfaces.py tests/test_0022_sweep_vectors.py tests/test_0039_degradation_visibility.py tests/test_audit.py tests/test_confirm_contract_0008.py
+
+ARM              RECORDS     SHA256(observer trace)                                            PYTEST
+healthy              75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 101.00s (0:01:41) (exit 0, 101.9s)
+failing              75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 101.34s (0:01:41) (exit 0, 102.2s)
+off                  75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 102.00s (0:01:41) (exit 0, 102.9s)
+uninstrumented       75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 100.65s (0:01:40) (exit 0, 101.6s)
+
+VERDICT: observer traces IDENTICAL across 4 arms over 859 tests (reference: uninstrumented; 0 tests excluded as non-reproducible between two runs of the reference arm)
+  healthy: 859 tests compared, 0 differing, 0 not in both
+  failing: 859 tests compared, 0 differing, 0 not in both
+  off: 859 tests compared, 0 differing, 0 not in both
+
+EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between the two reference runs; inputs the run does not freeze):
+  (none)
+control run uninstrumented-control: records 75467, sha256 824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd, 859 passed, 2 warnings in 100.19s (0:01:40)
+
+CROSS-CHECKS:
+  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7277, "ids_consulted": 145, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7221}
+  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7277, "ids_with_errors": 145, "subsequence_holds": true, "subsequence_matched": 7221}
+  off: {"census_enabled": false, "registry_size": 147}
+  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace4/twin/src/veracium/__init__.py"}
+
+OBSERVED SYMBOLS: 95 wrapped of 102 declared; EXCLUDED (unreachable from outside, by name):
+  asof/recall.py:recall_at.claim: nested inside a function; unreachable from outside
+  asof/recall.py:recall_at.grounded: nested inside a function; unreachable from outside
+  graph.py:_absorption_scope_gate.same_scope: nested inside a function; unreachable from outside
+  graph.py:_build_supersession_plan._src_revoked: nested inside a function; unreachable from outside
+  proactive.py:assemble._eligible: nested inside a function; unreachable from outside
+  proactive.py:assemble._is_variant: nested inside a function; unreachable from outside
+  scope.py:close_absorption_rows.walk: nested inside a function; unreachable from outside
+from-import bindings rebound: 15
+
+HISTOGRAM (reference arm), symbol -> decision: count
+  __init__.py:Memory._build_scope_policy -> None: 257
+  __init__.py:Memory._build_scope_policy -> value: 221
+  __init__.py:Memory._find_edge -> value: 17
+  __init__.py:Memory._recall -> NotImplementedError: 1
+  __init__.py:Memory._recall -> OperationalError: 1
+  __init__.py:Memory._recall -> ScopeError: 7
+  __init__.py:Memory._recall -> TypeError: 2
+  __init__.py:Memory._recall -> ValueError: 7
+  __init__.py:Memory._recall -> value: 138
+  __init__.py:Memory.correct -> CorrectionRefused: 1
+  __init__.py:Memory.correct -> ProcedureValueError: 1
+  __init__.py:Memory.correct -> ValueError: 1
+  __init__.py:Memory.correct -> value: 1
+  __init__.py:Memory.dispute -> value: 1
+  __init__.py:Memory.recall -> NotImplementedError: 1
+  __init__.py:Memory.recall -> OperationalError: 1
+  __init__.py:Memory.recall -> ScopeError: 11
+  __init__.py:Memory.recall -> TypeError: 2
+  __init__.py:Memory.recall -> ValueError: 9
+  __init__.py:Memory.recall -> value: 153
+  __init__.py:Memory.record_outcome -> value: 2
+  asof/adapter.py:adapt -> value: 138
+  asof/adapter.py:derive_quarantined -> False: 132
+  asof/adapter.py:derive_quarantined -> True: 6
+  asof/adapter.py:derive_use_only -> False: 138
+  asof/resolve.py:_resolve_edge -> value: 52
+  asof/resolve.py:held_at -> False: 42
+  asof/resolve.py:held_at -> True: 43
+  asof/resolve.py:resolve_as_of -> FutureAsOfRefused: 2
+  asof/resolve.py:resolve_as_of -> ScopeError: 1
+  asof/resolve.py:resolve_as_of -> ValueError: 2
+  asof/resolve.py:resolve_as_of -> value: 64
+  authority.py:permitted -> False: 312
+  authority.py:permitted -> True: 556
+  authority.py:self_assertion -> False: 3
+  authority.py:self_assertion -> True: 7
+  compile.py:_grounded_inputs -> value: 36
+  diagnostics.py:Reporter.send -> True: 1
+  gate.py:exclude_procedural -> value: 256
+  gate.py:partition_parts -> value: 68
+  gate.py:scoped_assertable -> False: 182
+  gate.py:scoped_assertable -> True: 231
+  graph.py:_strictly_redundant -> True: 698
+  graph.py:apply_supersession -> ReceiptSchemaBoundaryError: 1
+  graph.py:apply_supersession -> SupersessionIntegrityError: 1
+  graph.py:apply_supersession -> value: 722
+  graph.py:collapse_for_render -> value: 233
+  graph.py:plan_correction -> ValueError: 1
+  graph.py:plan_correction -> value: 29
+  graph.py:semantic_duplicate_of -> False: 39
+  graph.py:semantic_duplicate_of -> True: 3
+  grounding.py:ungrounded -> False: 157
+  grounding.py:ungrounded -> True: 41
+  ingest.py:ingest_event -> RuntimeError: 7
+  ingest.py:ingest_event -> TypeError: 4
+  ingest.py:ingest_event -> ValueError: 3
+  ingest.py:ingest_event -> _Boom: 2
+  ingest.py:ingest_event -> value: 316
+  mcp_server.py:_closed_set -> None: 5
+  mcp_server.py:_closed_set -> ValueError: 1
+  portability.py:_preflight_and_commit -> ValueError: 6
+  portability.py:_preflight_and_commit -> value: 37
+  portability.py:_validate_incoming_chain -> ValueError: 10
+  portability.py:_validate_incoming_chain -> value: 12
+  portability.py:export_memory -> value: 19
+  portability.py:import_memory -> ValidationError: 7
+  portability.py:import_memory -> ValueError: 19
+  portability.py:import_memory -> value: 37
+  procedural_gate.py:actor_present -> False: 464
+  procedural_gate.py:actor_present -> True: 82
+  procedural_gate.py:positive_form -> False: 34
+  procedural_gate.py:positive_form -> True: 141
+  procedures.py:build_procedure_edge -> ProcedureTypeError: 12
+  procedures.py:build_procedure_edge -> ProcedureValueError: 15
+  procedures.py:build_procedure_edge -> value: 84
+  registry.py:effective_registry -> value: 328
+  schema.py:Edge.assertable -> False: 2930
+  schema.py:Edge.assertable -> True: 2226
+  schema.py:Edge.quarantined -> False: 12239
+  schema.py:Edge.quarantined -> True: 299
+  schema.py:Edge.use_only -> False: 5098
+  schema.py:Edge.use_only -> True: 1775
+  schema.py:Edge.valid_now -> False: 576
+  schema.py:Edge.valid_now -> True: 2617
+  schema.py:Episode.active -> True: 204
+  schema.py:Episode.assertable -> False: 62
+  schema.py:Episode.assertable -> True: 142
+  schema.py:Episode.quarantined -> False: 204
+  schema.py:Episode.use_only -> False: 142
+  schema.py:Episode.use_only -> True: 62
+  schema.py:Episode.valid_now -> True: 142
+  scope.py:Identity.groupable -> False: 10
+  scope.py:Identity.groupable -> True: 6158
+  scope.py:_revalidate -> None: 4660
+  scope.py:_revalidate -> ScopeError: 10
+  scope.py:apply_filters -> value: 7
+  scope.py:classify -> ScopeError: 14
+  scope.py:classify -> value: 4662
+  scope.py:membership -> ScopeError: 4
+  scope.py:membership -> value: 4851
+  scope.py:prune_absorbed_record -> ExportLinkageError: 6
+  scope.py:prune_absorbed_record -> value: 12
+  scope.py:validate_filters -> ScopeError: 7
+  scope.py:validate_filters -> value: 175
+  scope.py:validate_policy -> ScopeError: 18
+  scope.py:validate_policy -> value: 867
+  scope_linkage.py:_resolve_winner -> ImportLinkageError: 8
+  scope_linkage.py:_resolve_winner -> value: 22
+  scope_linkage.py:derive_absorbed_by -> ExportLinkageError: 2
+  scope_linkage.py:derive_absorbed_by -> None: 18
+  scope_linkage.py:derive_absorbed_by -> value: 40
+  scope_linkage.py:reconstruct_absorption_rows -> ImportLinkageError: 12
+  scope_linkage.py:reconstruct_absorption_rows -> ScopeError: 2
+  scope_linkage.py:reconstruct_absorption_rows -> value: 78
+  scope_read.py:ScopeView.__init__ -> None: 111
+  scope_read.py:ScopeView.__init__ -> ScopeError: 11
+  scope_read.py:ScopeView.scoped -> value: 45
+  scope_read.py:narrow_edges -> value: 39
+  store/migration.py:_apply_forward -> DuplicateOutcomeChainError: 1
+  store/migration.py:_apply_forward -> None: 8
+  store/migration.py:_migrate_outcome_chains -> DuplicateOutcomeChainError: 1
+  store/migration.py:_migrate_outcome_chains -> None: 3
+  store/revocation.py:_rollback_or_poison -> None: 4
+  store/revocation.py:_rollback_or_poison -> RevocationUnknownState: 1
+  store/revocation.py:revocation_operation -> OrdinalCollision: 1
+  store/revocation.py:revocation_operation -> RevocationEffectError: 1
+  store/revocation.py:revocation_operation -> RevocationIntegrityError: 1
+  store/revocation.py:revocation_operation -> RevocationUnknownState: 1
+  store/revocation.py:revocation_operation -> RuntimeError: 1
+  store/revocation.py:revocation_operation -> value: 28
+  store/revocation_sweep.py:validate_contribution_row -> RevocationLinkageError: 1
+  store/revocation_sweep.py:validate_contribution_row -> value: 399
+  store/revocation_sweep.py:validate_revocation_row -> value: 102
+  store/schema_version.py:_validated_current -> False: 36
+  store/schema_version.py:_validated_current -> StoreVersionError: 2
+  store/schema_version.py:open_versioned -> DuplicateOutcomeChainError: 1
+  store/schema_version.py:open_versioned -> StoreVersionError: 4
+  store/schema_version.py:open_versioned -> value: 1132
+  store/schema_version.py:runtime_supported -> False: 14
+  store/schema_version.py:runtime_supported -> True: 1140
+  store/sqlite.py:SqliteStore._journal_edge_write -> None: 5
+  store/sqlite.py:SqliteStore._journal_edge_write -> value: 3529
+  store/sqlite.py:SqliteStore._ordinary_read_visible -> False: 6
+  store/sqlite.py:SqliteStore._ordinary_read_visible -> True: 218
+  store/sqlite.py:SqliteStore._upsert_edge_row -> None: 3059
+  store/sqlite.py:SqliteStore._upsert_edge_row -> ValueError: 9
+  store/sqlite.py:SqliteStore._write_absorption_flattening -> None: 761
+  store/sqlite.py:SqliteStore._write_consolidation_contributions -> None: 8
+  store/sqlite.py:SqliteStore._write_contribution -> False: 29
+  store/sqlite.py:SqliteStore._write_contribution -> True: 24
+  store/sqlite.py:SqliteStore._write_txn -> value: 3163
+  store/sqlite.py:SqliteStore.abandon_consolidation_if_current -> False: 1
+  store/sqlite.py:SqliteStore.abandon_consolidation_if_current -> True: 2
+  store/sqlite.py:SqliteStore.add_episode -> None: 303
+  store/sqlite.py:SqliteStore.add_episode -> ValueError: 9
+  store/sqlite.py:SqliteStore.append_outcome_if_head -> value: 23
+  store/sqlite.py:SqliteStore.apply_supersession_plan -> CorrectionAuthorisationError: 8
+  store/sqlite.py:SqliteStore.apply_supersession_plan -> SupersessionIntegrityError: 39
+  store/sqlite.py:SqliteStore.apply_supersession_plan -> ValueError: 2
+  store/sqlite.py:SqliteStore.apply_supersession_plan -> value: 767
+  store/sqlite.py:SqliteStore.commit_outcome_import_plan -> value: 40
+  store/sqlite.py:SqliteStore.confirm_edge -> RuntimeError: 1
+  store/sqlite.py:SqliteStore.confirm_edge -> ValueError: 1
+  store/sqlite.py:SqliteStore.confirm_edge -> value: 15
+  store/sqlite.py:SqliteStore.create_or_takeover_consolidation -> None: 4
+  store/sqlite.py:SqliteStore.create_or_takeover_consolidation -> value: 29
+  store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current -> False: 1
+  store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current -> True: 5
+  store/sqlite.py:SqliteStore.delete_episode -> ValueError: 2
+  store/sqlite.py:SqliteStore.edge_state_at -> None: 6
+  store/sqlite.py:SqliteStore.edge_state_at -> PreEpochQuery: 1
+  store/sqlite.py:SqliteStore.edge_state_at -> value: 27
+  store/sqlite.py:SqliteStore.edges -> value: 3114
+  store/sqlite.py:SqliteStore.quiescent_episode_snapshot -> value: 21
+  store/sqlite.py:SqliteStore.renew_consolidation_lease -> False: 1
+  store/sqlite.py:SqliteStore.renew_consolidation_lease -> True: 1
+  store/sqlite.py:SqliteStore.transition_consolidation_if_current -> False: 4
+  store/sqlite.py:SqliteStore.transition_consolidation_if_current -> True: 27
+  store/sqlite.py:SqliteStore.upsert_embedding -> False: 2
+  store/sqlite.py:SqliteStore.upsert_embedding -> True: 24
+  store/sqlite.py:SqliteStore.write_consolidation_output_if_current -> False: 1
+  store/sqlite.py:SqliteStore.write_consolidation_output_if_current -> True: 13
+  telemetry.py:flush_if_due -> False: 5
+  telemetry.py:flush_if_due -> True: 10
+  telemetry.py:load_collector_if_enabled -> None: 2
+  telemetry.py:load_collector_if_enabled -> value: 10
+  telemetry.py:preview -> None: 5
+  telemetry.py:preview -> value: 4

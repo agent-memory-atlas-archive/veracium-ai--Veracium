@@ -107,7 +107,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
 REASON_TEXT = {
     "argument-check": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
     "internal-invariant": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
-    "predicate-helper": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+    "predicate-helper": "not an enforcement point: a Boolean/None helper whose consumer takes the decision",
     "control-flow": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
     "cli-usage": "not an enforcement point: command-line usage and exit handling",
 }
@@ -389,3 +389,13 @@ e("telemetry.py", 374, "telemetry.flush.invalid-consent", "0015", "§4", "withho
 e("telemetry.py", 380, "telemetry.flush.not-enabled", "0015", "§4", "withhold")
 e("telemetry.py", 345, "telemetry.preview.invalid-consent", "0015", "§4", "withhold")
 e("telemetry.py", 350, "telemetry.preview.not-enabled", "0015", "§4", "withhold")
+
+# THE PREDICATE-HELPER REASON'S SUBJECT (research's second read of the NOT half, 2026-09-19): the generator
+# derives each helper's consumers from the source and names them in the reason. For a helper NO product
+# function references, the review states the consumer by hand here; a helper with neither REFUSES generation.
+CONSUMED_OUTSIDE = {
+    "llm/metered.py:Metered.totals": "a public read of the meter (the host and tests); the product never branches on it",
+    "schema.py:EvidenceContext.__eq__": "the language's == operator (record equality); no product decision consumes it",
+    "schema.py:SuccessorLookup.__eq__": "the language's == operator (record equality); no product decision consumes it",
+    "scope.py:same_identity": "exported in scope's __all__ for the 0020 vector harness and tests; no product function calls it",
+}

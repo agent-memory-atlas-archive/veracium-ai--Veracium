@@ -6658,7 +6658,7 @@
  },
  "agreement.py:_is_possessive:219:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by agreement.py:_classify_source, agreement.py:_direction",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "agreement.py:_is_possessive:BOOL_RETURN:1",
@@ -6667,7 +6667,7 @@
  },
  "asof/adapter.py:_check_derived:137:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by asof/adapter.py:adapt [site asof.adapter.adapt.refuse]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/adapter.py:_check_derived:RETURN_FALSE:1",
@@ -6676,7 +6676,7 @@
  },
  "asof/adapter.py:_check_derived:139:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by asof/adapter.py:adapt [site asof.adapter.adapt.refuse]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/adapter.py:_check_derived:RETURN_FALSE:2",
@@ -6685,7 +6685,7 @@
  },
  "asof/adapter.py:_check_derived:141:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by asof/adapter.py:adapt [site asof.adapter.adapt.refuse]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/adapter.py:_check_derived:RETURN_FALSE:3",
@@ -6694,7 +6694,7 @@
  },
  "asof/adapter.py:_identity_field:150:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by asof/adapter.py:adapt [site asof.adapter.adapt.refuse]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/adapter.py:_identity_field:BOOL_RETURN:1",
@@ -6703,7 +6703,7 @@
  },
  "asof/classify.py:classify_as_of._coherent:113:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by asof/classify.py:classify_as_of",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/classify.py:classify_as_of._coherent:BOOL_RETURN:1",
@@ -6712,7 +6712,7 @@
  },
  "asof/classify.py:classify_as_of._coherent:114:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by asof/classify.py:classify_as_of",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/classify.py:classify_as_of._coherent:BOOL_RETURN:2",
@@ -6721,7 +6721,7 @@
  },
  "asof/resolve.py:is_head:202:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by asof/resolve.py:_walk",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/resolve.py:is_head:BOOL_RETURN:1",
@@ -6730,7 +6730,7 @@
  },
  "compile.py:needs_recompile:175:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by compile.py:ensure_wiki",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "compile.py:needs_recompile:BOOL_RETURN:1",
@@ -6739,7 +6739,7 @@
  },
  "diagnostics.py:Reporter._auto_send_due:216:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by diagnostics.py:Reporter.record_error",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "diagnostics.py:Reporter._auto_send_due:BOOL_RETURN:1",
@@ -6748,7 +6748,7 @@
  },
  "diagnostics.py:Reporter.has_pending:249:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by __init__.py:Memory.report_error",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "diagnostics.py:Reporter.has_pending:BOOL_RETURN:1",
@@ -6757,7 +6757,7 @@
  },
  "doctor.py:_check_sources.unsourced:376:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by doctor.py:_check_sources",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "doctor.py:_check_sources.unsourced:BOOL_RETURN:1",
@@ -6766,7 +6766,7 @@
  },
  "dryrun.py:DryRun.usable:68:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by cli.py:_memory_verbs, dryrun.py:to_json",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "dryrun.py:DryRun.usable:BOOL_RETURN:1",
@@ -6775,7 +6775,7 @@
  },
  "graph.py:_subsumes:71:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by graph.py:_build_supersession_plan, graph.py:value_groups",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "graph.py:_subsumes:RETURN_FALSE:1",
@@ -6784,7 +6784,7 @@
  },
  "graph.py:_value_key:56:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by graph.py:semantic_duplicate_of [site graph.semantic-duplicate.keep]; and by __init__.py:Memory._build_contested, compile.py:_live_refusal_contention_edge_ids, graph.py:_build_supersession_plan, graph.py:_collapse_survivor_order, graph.py:_permute_contention_groups, graph.py:value_groups (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "graph.py:_value_key:BOOL_RETURN:1",
@@ -6793,7 +6793,7 @@
  },
  "llm/metered.py:Metered.totals:138:FILTER_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no product consumer — a public read of the meter (the host and tests); the product never branches on it",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "llm/metered.py:Metered.totals:FILTER_RETURN:1",
@@ -6802,7 +6802,7 @@
  },
  "llm/metered.py:count_valid:59:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by llm/metered.py:Metered.__call__",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "llm/metered.py:count_valid:BOOL_RETURN:1",
@@ -6811,7 +6811,7 @@
  },
  "procedural_gate.py:_head_verb:173:RETURN_NONE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:positive_form [site procedural-gate.positive-form]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:_head_verb:RETURN_NONE:1",
@@ -6820,7 +6820,7 @@
  },
  "procedural_gate.py:_head_verb:175:RETURN_NONE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:positive_form [site procedural-gate.positive-form]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:_head_verb:RETURN_NONE:2",
@@ -6829,7 +6829,7 @@
  },
  "procedural_gate.py:_inside_open_quote:114:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:actor_present [site procedural-gate.actor-present]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:_inside_open_quote:BOOL_RETURN:1",
@@ -6838,7 +6838,7 @@
  },
  "procedural_gate.py:enclosure_structure:470:RETURN_NONE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by procedural_gate.py:sentence_segments",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:enclosure_structure:RETURN_NONE:1",
@@ -6847,7 +6847,7 @@
  },
  "procedural_gate.py:enclosure_structure:476:RETURN_NONE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by procedural_gate.py:sentence_segments",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:enclosure_structure:RETURN_NONE:2",
@@ -6856,7 +6856,7 @@
  },
  "procedural_gate.py:has_internal_boundary:533:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:actor_present [site procedural-gate.actor-present]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:has_internal_boundary:BOOL_RETURN:1",
@@ -6865,7 +6865,7 @@
  },
  "procedural_gate.py:sentence_segments:523:FILTER_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by procedural_gate.py:has_internal_boundary, procedural_gate.py:whole_sentence",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:sentence_segments:FILTER_RETURN:1",
@@ -6874,7 +6874,7 @@
  },
  "procedural_gate.py:whole_sentence:242:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:actor_present [site procedural-gate.actor-present]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:whole_sentence:RETURN_FALSE:1",
@@ -6883,7 +6883,7 @@
  },
  "procedural_gate.py:whole_sentence:244:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:actor_present [site procedural-gate.actor-present]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:whole_sentence:RETURN_FALSE:2",
@@ -6892,7 +6892,7 @@
  },
  "procedural_gate.py:whole_sentence:247:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:actor_present [site procedural-gate.actor-present]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:whole_sentence:RETURN_FALSE:3",
@@ -6901,7 +6901,7 @@
  },
  "procedural_gate.py:whole_sentence:249:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:actor_present [site procedural-gate.actor-present]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:whole_sentence:BOOL_RETURN:1",
@@ -6910,7 +6910,7 @@
  },
  "procedural_gate.py:whole_sentence:253:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:actor_present [site procedural-gate.actor-present]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:whole_sentence:BOOL_RETURN:2",
@@ -6919,7 +6919,7 @@
  },
  "procedural_gate.py:whole_sentence:254:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by procedural_gate.py:actor_present [site procedural-gate.actor-present]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "procedural_gate.py:whole_sentence:RETURN_FALSE:4",
@@ -6928,7 +6928,7 @@
  },
  "schema.py:Edge.active:765:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by __init__.py:Memory.correct [site memory.correct.inactive-edge, memory.correct.procedural, memory.correct.refused]; __init__.py:Memory.dispute [site memory.dispute.inactive-edge]; gate.py:partition_parts [site gate.partition-parts]; graph.py:collapse_for_render [site graph.collapse-for-render]; graph.py:semantic_duplicate_of [site graph.semantic-duplicate.keep]; schema.py:Edge.assertable [site schema.edge.assertable]; schema.py:Episode.assertable [site schema.episode.assertable]; store/sqlite.py:SqliteStore._upsert_edge_row [site store.upsert.immutable]; store/sqlite.py:SqliteStore.commit_outcome_import_plan [site store.import-plan]; and by __init__.py:Memory._build_contested, __init__.py:Memory._fit_to_budget, authority.py:scope_fingerprint, compile.py:_live_refusal_contention_edge_ids, graph.py:_lexical_scored, graph.py:_permute_contention_groups, graph.py:history_label, graph.py:render_edges, introspect.py:report, procedures.py:describe_outcome, selfcheck.py:_check_revocation, selfcheck.py:_check_supersession, store/revocation.py:_edge_record, why.py:find (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:Edge.active:BOOL_RETURN:1",
@@ -6937,7 +6937,7 @@
  },
  "schema.py:EvidenceContext.__eq__:326:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no product consumer — the language's == operator (record equality); no product decision consumes it",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:EvidenceContext.__eq__:BOOL_RETURN:1",
@@ -6946,7 +6946,7 @@
  },
  "schema.py:Provenance.procedural:237:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by ingest.py:ingest_event [site ingest.basis-via-remember, ingest.instructions-not-a-list, ingest.source-id-required]; and by schema.py:is_procedural (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:Provenance.procedural:BOOL_RETURN:1",
@@ -6955,7 +6955,7 @@
  },
  "schema.py:Provenance.third_party_influenced:244:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by schema.py:Episode.use_only [site schema.episode.use-only]; and by store/sqlite.py:SqliteStore._derive_output_metadata (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:Provenance.third_party_influenced:BOOL_RETURN:1",
@@ -6964,7 +6964,7 @@
  },
  "schema.py:SuccessorLookup.__eq__:681:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no product consumer — the language's == operator (record equality); no product decision consumes it",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:SuccessorLookup.__eq__:BOOL_RETURN:1",
@@ -6973,7 +6973,7 @@
  },
  "schema.py:is_procedural_relation:518:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by ingest.py:ingest_event [site ingest.basis-via-remember, ingest.instructions-not-a-list, ingest.source-id-required]; portability.py:import_memory [site portability.import.agreement-invalid, portability.import.file, portability.import.origin-missing, portability.import.race-exhausted, portability.import.record, portability.import.restore-not-bool, portability.import.restore-with-user]; procedures.py:build_procedure_edge [site procedures.source-id-required]; and by portability.py:import_memory._signals (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:is_procedural_relation:BOOL_RETURN:1",
@@ -6982,7 +6982,7 @@
  },
  "scope.py:is_legacy_derivative:385:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by scope.py:membership [site scope.membership.abandoned, scope.membership.unknown-state]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "scope.py:is_legacy_derivative:BOOL_RETURN:1",
@@ -6991,7 +6991,7 @@
  },
  "scope.py:same_identity:189:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no product consumer — exported in scope's __all__ for the 0020 vector harness and tests; no product function calls it",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "scope.py:same_identity:BOOL_RETURN:1",
@@ -7000,7 +7000,7 @@
  },
  "scope_linkage.py:_is_canonical:510:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by scope.py:prune_absorbed_record [site scope.prune.cycle]; scope_linkage.py:derive_absorbed_by [site scope-linkage.export.ambiguous-absorber]; and by asof/resolve.py:_absorber (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "scope_linkage.py:_is_canonical:BOOL_RETURN:1",
@@ -7009,7 +7009,7 @@
  },
  "scope_linkage.py:_is_canonical:511:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by scope.py:prune_absorbed_record [site scope.prune.cycle]; scope_linkage.py:derive_absorbed_by [site scope-linkage.export.ambiguous-absorber]; and by asof/resolve.py:_absorber (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "scope_linkage.py:_is_canonical:RETURN_FALSE:1",
@@ -7018,7 +7018,7 @@
  },
  "store/revocation.py:_is_ordinal_violation:56:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by store/revocation.py:revocation_operation [site store.revocation.integrity, store.revocation.ordinal-collision]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/revocation.py:_is_ordinal_violation:BOOL_RETURN:1",
@@ -7027,7 +7027,7 @@
  },
  "store/sqlite.py:SqliteStore._edge_in_refusal:798:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by store/sqlite.py:SqliteStore.apply_supersession_plan [site store.correction.authorisation, store.supersession.integrity, store.supersession.plan]; and by store/sqlite.py:SqliteStore.invalidate_edge (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/sqlite.py:SqliteStore._edge_in_refusal:BOOL_RETURN:1",
@@ -7036,7 +7036,7 @@
  },
  "store/sqlite.py:SqliteStore._lease_live:1929:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; the consumer's site is the enforcement point where one exists",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by store/sqlite.py:SqliteStore.abandon_consolidation_if_current [site store.consolidation.abandon-live-lease]; store/sqlite.py:SqliteStore.create_or_takeover_consolidation [site store.consolidation.contended]; store/sqlite.py:SqliteStore.renew_consolidation_lease [site store.consolidation.renew-refused]; store/sqlite.py:SqliteStore.transition_consolidation_if_current [site store.consolidation.transition]; store/sqlite.py:SqliteStore.write_consolidation_output_if_current [site store.consolidation.write-not-current]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/sqlite.py:SqliteStore._lease_live:BOOL_RETURN:1",

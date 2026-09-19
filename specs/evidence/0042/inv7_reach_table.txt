@@ -1,0 +1,177 @@
+INV-7 REACH — which test files consult which declared ids (census healthy; HEAD cb2add62891c; 3397 passed, 10 skipped, 11 xfailed, 2 warnings in 833.45s (0:13:53))
+declared ids: 147; reached by at least one file: 145; unreached: 2
+
+  76 ids  tests/test_0037_procedural.py
+  65 ids  tests/test_0019_ungrounded.py
+  62 ids  tests/test_0020_read_surfaces.py
+  56 ids  tests/test_0028_resolution.py
+  56 ids  tests/test_audit.py
+  55 ids  tests/test_0025_subject_grammar.py
+  54 ids  tests/test_0011_entitlement.py
+  54 ids  tests/test_0017_usage.py
+  54 ids  tests/test_selfcheck.py
+  52 ids  tests/test_0021_maintain_scope.py
+  49 ids  tests/eval/edge_events/test_0029_acceptance_corpus.py
+  49 ids  tests/test_outcomes.py
+  46 ids  tests/test_0005_import_boundary.py
+  46 ids  tests/test_0026_relay_lexicon.py
+  46 ids  tests/test_0037_capture.py
+  43 ids  tests/test_0027_semantic_recall.py
+  43 ids  tests/test_maintenance_invariant.py
+  42 ids  tests/test_0022_revoke_source.py
+  42 ids  tests/test_0037_producer_stamp.py
+  42 ids  tests/test_0041_transition_table.py
+  42 ids  tests/test_doctor_cli.py
+  41 ids  tests/test_0001_generated_content_trust.py
+  41 ids  tests/test_0006_source_identity.py
+  41 ids  tests/test_mcp.py
+  41 ids  tests/test_why_cli.py
+  40 ids  tests/test_0030_asof.py
+  40 ids  tests/test_feedback.py
+  40 ids  tests/test_lifecycle.py
+  40 ids  tests/test_portability.py
+  39 ids  tests/test_0012_budgets_render.py
+  39 ids  tests/test_0016_d1_deprecation.py
+  39 ids  tests/test_0016_d2_deletion.py
+  39 ids  tests/test_0031_phase_a.py
+  39 ids  tests/test_compile_gate.py
+  38 ids  tests/test_0009_runtime_invariants.py
+  38 ids  tests/test_0021_import_linkage.py
+  38 ids  tests/test_introspect_cli.py
+  38 ids  tests/test_proactive.py
+  38 ids  tests/test_telemetry.py
+  37 ids  tests/test_0012_collapse.py
+  37 ids  tests/test_0023_inventory.py
+  37 ids  tests/test_0023_resurfacing_pin.py
+  37 ids  tests/test_smoke.py
+  34 ids  tests/test_0015_counters.py
+  34 ids  tests/test_0028_v_no_upgrade_load_bearing.py
+  33 ids  tests/test_0027_policy_receipt.py
+  32 ids  tests/test_0009_import_migration.py
+  32 ids  tests/test_0010_consolidate_recovery.py
+  32 ids  tests/test_0014_maintenance_attribution.py
+  31 ids  tests/test_0014_ledger.py
+  31 ids  tests/test_0014_portability.py
+  31 ids  tests/test_0021_schema_v8.py
+  31 ids  tests/test_0028_successor_lookup.py
+  31 ids  tests/test_0029_carrier.py
+  31 ids  tests/test_0041_evidence.py
+  30 ids  tests/test_0015_lifecycle.py
+  30 ids  tests/test_0023_quarantine_at_birth.py
+  29 ids  tests/test_0043_evidence.py
+  29 ids  tests/test_absorption.py
+  28 ids  tests/longmemeval/test_run_wiring.py
+  28 ids  tests/test_dryrun_cli.py
+  28 ids  tests/test_seam_model_0029_0030_store.py
+  27 ids  tests/test_0006_require_source_id.py
+  27 ids  tests/test_0011_policy_matrix.py
+  26 ids  tests/test_0003_supersession_contested.py
+  26 ids  tests/test_0014_receipt_split.py
+  25 ids  tests/test_0004_wiki_revocation.py
+  25 ids  tests/test_0024_authorship.py
+  25 ids  tests/test_0038_instruction_enforcement.py
+  25 ids  tests/test_0041_treatment_matrix.py
+  25 ids  tests/test_confirm_contract_0008.py
+  25 ids  tests/test_host_queries.py
+  25 ids  tests/test_omitted_date_defaults_to_utc.py
+  24 ids  tests/test_0039_degradation_visibility.py
+  23 ids  tests/test_0011_mutant_registry.py
+  23 ids  tests/test_0025_enforcement.py
+  23 ids  tests/test_0039_answer_shapes.py
+  23 ids  tests/test_consolidation_provenance.py
+  23 ids  tests/test_metered.py
+  22 ids  tests/eval/test_semantic_recall_gate.py
+  22 ids  tests/test_0003_supersession_recall.py
+  22 ids  tests/test_0025_receipt_states.py
+  22 ids  tests/test_staleness_clearing_0008.py
+  20 ids  tests/test_0012_budgets.py
+  20 ids  tests/test_0023_assertable.py
+  20 ids  tests/test_0023_non_revival.py
+  19 ids  tests/test_0003_supersession_store.py
+  19 ids  tests/test_0010_consolidation_primitives.py
+  18 ids  tests/test_0003_supersession_guard.py
+  18 ids  tests/test_0020_scope_vectors.py
+  18 ids  tests/test_seam_model_0029_0030.py
+  17 ids  tests/test_0010_visibility_reservation.py
+  16 ids  tests/test_0012_currency_renewal.py
+  12 ids  tests/test_0020_scope_core.py
+  12 ids  tests/test_0028_window_transcript.py
+  12 ids  tests/test_0029_lock_refusal_form.py
+  11 ids  tests/test_diagnostics.py
+  11 ids  tests/test_s2_valid_from_predicate.py
+  10 ids  tests/test_0022_sweep_vectors.py
+  10 ids  tests/test_schema_v3_migration.py
+   9 ids  tests/test_0022_revocation_operation.py
+   8 ids  tests/test_0013_presend_gates.py
+   8 ids  tests/test_0014_schema.py
+   8 ids  tests/test_0018_orchestrator.py
+   8 ids  tests/test_migrate_cli.py
+   8 ids  tests/test_store_versioning.py
+   7 ids  tests/test_0027_policy_lane.py
+   7 ids  tests/test_migrations_0013.py
+   6 ids  tests/test_0031_proposal_ddl.py
+   6 ids  tests/test_schema_model.py
+   2 ids  tests/test_render_origin.py
+   1 ids  tests/test_spec_gate.py
+   0 ids  tests/longmemeval/test_exposure.py
+   0 ids  tests/longmemeval/test_freeze.py
+   0 ids  tests/longmemeval/test_manifest.py
+   0 ids  tests/test_0022_evidence_records_bound.py
+   0 ids  tests/test_0028_asof_absence.py
+   0 ids  tests/test_0028_reason_resolution_table.py
+   0 ids  tests/test_0030_closure_ledger.py
+   0 ids  tests/test_0031_phase_a_docs.py
+   0 ids  tests/test_0036_journal_limit_published.py
+   0 ids  tests/test_0037_corpus_pin.py
+   0 ids  tests/test_0037_cost_histogram.py
+   0 ids  tests/test_0038_corpus_pin.py
+   0 ids  tests/test_0038_oracle_pin.py
+   0 ids  tests/test_0042_evidence.py
+   0 ids  tests/test_0042_reconciliation.py
+   0 ids  tests/test_collected_header.py
+   0 ids  tests/test_confirmation_types_0008.py
+   0 ids  tests/test_eval.py
+   0 ids  tests/test_llm_anthropic_empty_completion.py
+   0 ids  tests/test_longmemeval.py
+   0 ids  tests/test_oracle_set_disposition.py
+   0 ids  tests/test_printed_verification_instructions.py
+   0 ids  tests/test_robustness.py
+   0 ids  tests/test_spec_allocation.py
+   0 ids  tests/test_spec_closure_present.py
+   0 ids  tests/test_telemetry_claims.py
+   0 ids  tests/test_withdrawn_gate_bites.py
+
+UNREACHED (no test file consults the site — the 0042 runtime leg is its only exerciser):
+  asof.classify.assertable-as-of
+  store.confirm.correlation
+
+NAMED SUITES for the four-arm run (29 files: the 12 spec-named, then a greedy cover of every reached id):
+  tests/test_0027_policy_lane.py
+  tests/test_0027_policy_receipt.py
+  tests/test_0027_semantic_recall.py
+  tests/test_compile_gate.py
+  tests/test_0037_procedural.py
+  tests/test_0019_ungrounded.py
+  tests/test_0014_schema.py
+  tests/test_schema_model.py
+  tests/test_0003_supersession_contested.py
+  tests/test_0003_supersession_guard.py
+  tests/test_0003_supersession_recall.py
+  tests/test_0003_supersession_store.py
+  tests/test_0028_resolution.py
+  tests/test_maintenance_invariant.py
+  tests/test_0020_scope_vectors.py
+  tests/test_0015_lifecycle.py
+  tests/test_0011_entitlement.py
+  tests/test_0009_import_migration.py
+  tests/test_0010_consolidation_primitives.py
+  tests/test_0014_receipt_split.py
+  tests/test_0022_revocation_operation.py
+  tests/test_0037_capture.py
+  tests/eval/edge_events/test_0029_acceptance_corpus.py
+  tests/test_0010_visibility_reservation.py
+  tests/test_0020_read_surfaces.py
+  tests/test_0022_sweep_vectors.py
+  tests/test_0039_degradation_visibility.py
+  tests/test_audit.py
+  tests/test_confirm_contract_0008.py

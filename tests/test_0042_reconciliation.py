@@ -199,4 +199,47 @@ def test_not_decisions_are_grouped_by_class_with_their_reasons():
     assert len(seen) == len(set(seen)), f"a class appears in more than one run: {seen}"
     assert seen[0] == "enforcement"
     review = _load("semantic_review")
-    assert all(r["reason"] == review.REASON_TEXT[r["class"]] for r in rows.values() if r["decision"] == "not")
+    for r in rows.values():
+        if r["decision"] != "not":
+            continue
+        if r["class"] == "predicate-helper":      # the class text, then the SUBJECT (who consumes the helper)
+            assert r["reason"].startswith(review.REASON_TEXT[r["class"]] + "; "), r["reason"]
+        else:
+            assert r["reason"] == review.REASON_TEXT[r["class"]]
+
+
+def test_every_predicate_helper_reason_names_its_consumer_and_an_unresolved_helper_refuses(tmp_path):
+    """Research's finding on 6a: 43 rows shared one sentence that could not be wrong ("the consumer's site is
+    the enforcement point where one exists"). Now each names its consumer: a consuming SITE by id, or the
+    consumers that carry none, or a hand-stated outside consumer — and a helper with none of the three
+    refuses generation (the control runs the generator with the stated readings removed)."""
+    import re
+    rows = _rows()
+    ph = {cid: r for cid, r in rows.items() if r["class"] == "predicate-helper"}
+    assert ph
+    forms = {"site": 0, "no-site": 0, "outside": 0}
+    for cid, r in ph.items():
+        tail = r["reason"].split("; ", 1)[1]
+        if tail.startswith("consumed (by name) by ") and "[site " in tail:
+            forms["site"] += 1
+        elif tail.startswith("no consuming site — consumed (by name) by "):
+            forms["no-site"] += 1
+        elif tail.startswith("no product consumer — "):
+            forms["outside"] += 1
+        else:
+            raise AssertionError(f"{cid}: reason without a subject: {r['reason']}")
+        # a named consuming site is a site the review declares
+        for sid in re.findall(r"\[site ([^\]]+)\]", tail):
+            for one in sid.split(", "):
+                assert any(x["decision"] == "enforcement" and x["site"] == one for x in rows.values()), (cid, one)
+    assert all(forms.values()), forms      # every form is REACHED, or the branch it names was never tested
+    # the control: strip the stated readings → the generator refuses and names a helper
+    review = (EVIDENCE / "semantic_review.py").read_text()
+    assert "CONSUMED_OUTSIDE = {" in review
+    stripped = review[:review.index("CONSUMED_OUTSIDE = {")] + "CONSUMED_OUTSIDE = {}\n"
+    (tmp_path / "semantic_review.py").write_text(stripped)
+    inv = EVIDENCE / "decision_site_inventory_OUTPUT.json"
+    out = subprocess.run([sys.executable, str(EVIDENCE / "reviewed_points_gen.py"), str(SRC), str(inv), str(tmp_path / "semantic_review.py"), str(tmp_path / "r.json")],
+                         capture_output=True, text=True, cwd=ROOT)
+    assert out.returncode != 0 and "REFUSED: predicate-helper" in (out.stderr + out.stdout), (out.returncode, out.stderr[-300:])
+    assert not (tmp_path / "r.json").exists()
