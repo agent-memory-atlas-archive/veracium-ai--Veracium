@@ -1,8 +1,9 @@
-# generated 2026-09-19T20:50Z against veracium @ 935c41ec80cc39608603d5ba95ec2bafa5969e1c
+# generated 2026-09-19T20:50Z against veracium @ 8581f5542c9de47945ed37c53b10dc4504c79b1b
+# RE-PINNED 2026-09-19 0041 tranche 2 (schema 14 -> 15) landed in 8581f5542c9de47945ed37c53b10dc4504c79b1b: body byte-identical; the run was made on the working tree this commit then committed, so the pin moves to it
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD 935c41ec80cc39608603d5ba95ec2bafa5969e1c  (src DIRTY: M src/veracium/doctor.py;  M src/veracium/store/evidence/schema_versions.json;  M src/veracium/store/evidence/sqlite_runtimes.json;  M src/veracium/store/migration.py;  M src/veracium/store/schema_version.py;  M src/veracium/store/sqlite.py)
-twin (uninstrumented): derived from HEAD 935c41ec80cc39608603d5ba95ec2bafa5969e1c by inv7_uninstrument.py
+HEAD 8581f5542c9de47945ed37c53b10dc4504c79b1b
+twin (uninstrumented): derived from HEAD 8581f5542c9de47945ed37c53b10dc4504c79b1b by inv7_uninstrument.py
 twin derivation: 152 declare_site removed, 279 fire() unwrapped, 139 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
 
 python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
