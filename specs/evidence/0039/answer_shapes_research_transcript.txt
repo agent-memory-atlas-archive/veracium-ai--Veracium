@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ bbeb024
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ f73899d
+# RE-PINNED 2026-09-19 after 0042 tranche 1 (f73899d; src/veracium/census.py, __init__.py, config.py): bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-18 after the derived ladder diagnostic (bbeb024; src/veracium/store/release_migration.py): bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-18 after the MemoryConfig.relations doc line (87aa4c5; src/ moved by comment text only): bodies byte-identical
 # RE-PINNED 2026-09-18 after the v0.26.1 schema-evidence regeneration (legacy_stores.json records the new release; no product change): bodies byte-identical
