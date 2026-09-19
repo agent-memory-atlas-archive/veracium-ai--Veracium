@@ -220,10 +220,13 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     listed = re.findall(r"^  (tests/\S+)$", reach_text.split("NAMED SUITES", 1)[1], re.M)
     assert listed == named
     assert all(f in named for f in harness.SPEC_NAMED_SUITES if f in reach_text), "a spec-named suite the reach measured is missing from the named set"
-    # every src commit between the twin and the pin is an instrumentation tranche
+    # the src commits between the twin and the pin are LISTED (a reader sees what the twin lacks); the claim
+    # that matters is asserted elsewhere: the uninstrumented arm registered zero sites. (A first version asserted
+    # every listed commit was an 0042 tranche — true until the next spec touched src; a census of the moment
+    # mistaken for a rule.)
     block = text.split("src commits between the twin and HEAD", 1)[1].split("\n\n", 1)[0]
     commits = [l.strip() for l in block.splitlines()[1:] if l.strip()]
-    assert commits and all("0042" in c for c in commits), commits
+    assert commits and all(re.match(r"^[0-9a-f]{7,} ", c) for c in commits), commits
 
 
 # ---- leg 3: the harness's mutation matrix ------------------------------------------------------------

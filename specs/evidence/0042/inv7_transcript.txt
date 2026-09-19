@@ -1,9 +1,10 @@
-# generated 2026-09-19T13:40Z against veracium @ cb2add62891c88278ff2ee040df0232d4324c5fd
+# generated 2026-09-19T16:39Z against veracium @ cf9e2880aa3d17d7272b30edf3f858e6358b6de8
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD cb2add62891c88278ff2ee040df0232d4324c5fd
+HEAD cf9e2880aa3d17d7272b30edf3f858e6358b6de8
 twin (uninstrumented) commit 84f9515a94f05288debd697057cdb692b0872536
-src commits between the twin and HEAD (every one an instrumentation tranche):
+src commits between the twin and HEAD (the uninstrumented arm runs the twin's src; its census registry is empty — asserted below):
+  d2eaaba 0043 implementation, tranche 1: the gate's rendering seam, and the harness's baseline arm captured at its own model invocation — the acceptance's one owed item closed
   214964c 0042 implementation, tranche 5: the store's forty-six sites bound — migration, revocation, the sweep's validators, schema version, sqlite — every reviewed enforcement point is now a declared site (147 ids)
   2fcaa57 0042 implementation, tranche 4: thirty-three more sites bound — scope, scope_linkage, scope_read, portability — 101 ids on the tree; the review's keys derived from the source
   14ad68c 0042 implementation, tranche 3: forty more sites bound — graph, proactive, ingest, procedures, the procedural gate, the registry, the MCP closed set, the Memory surface, diagnostics and telemetry — one declining execution per id in the runtime leg
@@ -14,10 +15,10 @@ python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PY
 suites: tests/test_0027_policy_lane.py tests/test_0027_policy_receipt.py tests/test_0027_semantic_recall.py tests/test_compile_gate.py tests/test_0037_procedural.py tests/test_0019_ungrounded.py tests/test_0014_schema.py tests/test_schema_model.py tests/test_0003_supersession_contested.py tests/test_0003_supersession_guard.py tests/test_0003_supersession_recall.py tests/test_0003_supersession_store.py tests/test_0028_resolution.py tests/test_maintenance_invariant.py tests/test_0020_scope_vectors.py tests/test_0015_lifecycle.py tests/test_0011_entitlement.py tests/test_0009_import_migration.py tests/test_0010_consolidation_primitives.py tests/test_0014_receipt_split.py tests/test_0022_revocation_operation.py tests/test_0037_capture.py tests/eval/edge_events/test_0029_acceptance_corpus.py tests/test_0010_visibility_reservation.py tests/test_0020_read_surfaces.py tests/test_0022_sweep_vectors.py tests/test_0039_degradation_visibility.py tests/test_audit.py tests/test_confirm_contract_0008.py
 
 ARM              RECORDS     SHA256(observer trace)                                            PYTEST
-healthy              75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 101.00s (0:01:41) (exit 0, 101.9s)
-failing              75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 101.34s (0:01:41) (exit 0, 102.2s)
-off                  75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 102.00s (0:01:41) (exit 0, 102.9s)
-uninstrumented       75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 100.65s (0:01:40) (exit 0, 101.6s)
+healthy              75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 99.82s (0:01:39) (exit 0, 100.7s)
+failing              75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 99.83s (0:01:39) (exit 0, 100.7s)
+off                  75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 99.91s (0:01:39) (exit 0, 100.8s)
+uninstrumented       75467  824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd  859 passed, 2 warnings in 100.68s (0:01:40) (exit 0, 101.6s)
 
 VERDICT: observer traces IDENTICAL across 4 arms over 859 tests (reference: uninstrumented; 0 tests excluded as non-reproducible between two runs of the reference arm)
   healthy: 859 tests compared, 0 differing, 0 not in both
@@ -26,13 +27,13 @@ VERDICT: observer traces IDENTICAL across 4 arms over 859 tests (reference: unin
 
 EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between the two reference runs; inputs the run does not freeze):
   (none)
-control run uninstrumented-control: records 75467, sha256 824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd, 859 passed, 2 warnings in 100.19s (0:01:40)
+control run uninstrumented-control: records 75467, sha256 824036655d64d3b133d7b58ba36012994679033ddc939d1e5aa3d88b9121fcdd, 859 passed, 2 warnings in 101.53s (0:01:41)
 
 CROSS-CHECKS:
   healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7277, "ids_consulted": 145, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7221}
   failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7277, "ids_with_errors": 145, "subsequence_holds": true, "subsequence_matched": 7221}
   off: {"census_enabled": false, "registry_size": 147}
-  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace4/twin/src/veracium/__init__.py"}
+  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace6/twin/src/veracium/__init__.py"}
 
 OBSERVED SYMBOLS: 95 wrapped of 102 declared; EXCLUDED (unreachable from outside, by name):
   asof/recall.py:recall_at.claim: nested inside a function; unreachable from outside

@@ -296,7 +296,7 @@ def main():
     L = [f"# generated {stamp} against veracium @ {head}",
          "# the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since",
          f"INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042", f"HEAD {head}" + ("  (src DIRTY: " + dirty.replace(chr(10), '; ') + ")" if dirty else ""),
-         f"twin (uninstrumented) commit {twin['commit'] if twin else '-'}", "src commits between the twin and HEAD (every one an instrumentation tranche):"]
+         f"twin (uninstrumented) commit {twin['commit'] if twin else '-'}", "src commits between the twin and HEAD (the uninstrumented arm runs the twin's src; its census registry is empty — asserted below):"]
     L += [f"  {c}" for c in (twin["src_commits_since_twin"] if twin else [])]
     L += ["", f"python {summaries[arms[0]]['python']}; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0", "suites: " + " ".join(suites), ""]
     L += ["ARM              RECORDS     SHA256(observer trace)                                            PYTEST"]
