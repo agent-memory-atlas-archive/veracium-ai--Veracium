@@ -59,6 +59,21 @@ from .llm.metered import METERING_CAPABILITY, count_valid as _count_valid
 from .usage import (ATTRIBUTED_PAIRS, ROLE_FIELDS, ArmingComplete,
                     active_call as _active_call,
                     routing_frame as _routing_frame)
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_SCOPE_LOCAL_ORIGIN = declare_site("memory.scope.local-origin-missing")
+_SITE_ASOF_ON_PROACTIVE = declare_site("memory.recall.as-of-on-proactive")
+_SITE_POLICY_WITH_ASOF = declare_site("memory.recall.policy-with-as-of")
+_SITE_EDGE_UNKNOWN_TARGET = declare_site("memory.edge.unknown-target")
+_SITE_DISPUTE_INACTIVE = declare_site("memory.dispute.inactive-edge")
+_SITE_OUTCOME_ACTOR = declare_site("memory.record-outcome.actor-vocabulary")
+_SITE_OUTCOME_HUMAN = declare_site("memory.record-outcome.human-judgment")
+_SITE_OUTCOME_SYSTEM = declare_site("memory.record-outcome.system-judgment")
+_SITE_CORRECT_INACTIVE = declare_site("memory.correct.inactive-edge")
+_SITE_CORRECT_PROCEDURAL = declare_site("memory.correct.procedural")
+_SITE_CORRECT_REFUSED = declare_site("memory.correct.refused")
 
 __all__ = ["Memory", "MemoryConfig", "Recall", "PolicyLane", "PolicyReceipt", "FutureAsOfRefused", "AsOfAnswer",
            "AsOfFact", "Store", "SqliteStore",
@@ -376,11 +391,12 @@ class Memory:
             return None
         from .scope import ScopeError, validate_policy
         local = getattr(self.store, "local_origin", None)
-        if local is None:
-            raise ScopeError(
-                f"a scope policy is configured but {type(self.store).__name__} "
-                f"has no local_origin() — scope keys on the 0006 identity "
-                f"namespace, which this store does not provide")
+        with _SITE_SCOPE_LOCAL_ORIGIN.consult():
+            if local is None:
+                raise _SITE_SCOPE_LOCAL_ORIGIN.fire(ScopeError(
+                    f"a scope policy is configured but {type(self.store).__name__} "
+                    f"has no local_origin() — scope keys on the 0006 identity "
+                    f"namespace, which this store does not provide"))
         return validate_policy(self.config.scope_groups,
                                self.config.cross_scope_visible,
                                local_origin=local())
@@ -880,9 +896,10 @@ class Memory:
             raise ValueError("token_budget must be a positive number of tokens")
         from .scope import validate_filters
         filters = validate_filters(filters or None)   # the CLOSED §4e grammar
-        if query is None and as_of is not None:
-            raise ValueError("as_of is refused on the proactive path: a briefing is a "
-                             "statement about now (specs/0028 §4c)")
+        with _SITE_ASOF_ON_PROACTIVE.consult():
+            if query is None and as_of is not None:
+                raise _SITE_ASOF_ON_PROACTIVE.fire(ValueError("as_of is refused on the proactive path: a briefing is a "
+                                 "statement about now (specs/0028 §4c)"))
         try:
             if query is None:
                 # proactive is LLM-free; the frame is pushed for uniformity
@@ -997,8 +1014,9 @@ class Memory:
         view = self._scope_view(user_id, principal, filters)
         if policy is not None and not isinstance(policy, PolicyLane):
             raise TypeError("policy must be a veracium.PolicyLane")
-        if policy is not None and as_of is not None:
-            raise ValueError("recall(policy=...) is not combinable with as_of= (specs/0027 v13 §4c: the as-of path carries no receipt)")
+        with _SITE_POLICY_WITH_ASOF.consult():
+            if policy is not None and as_of is not None:
+                raise _SITE_POLICY_WITH_ASOF.fire(ValueError("recall(policy=...) is not combinable with as_of= (specs/0027 v13 §4c: the as-of path carries no receipt)"))
         if as_of is not None:
             # specs/0028 §4c — the as-of branch: the §4a resolution is the
             # pre-filter; ranking and budget run over its candidates with the
@@ -1780,10 +1798,11 @@ class Memory:
 
     # -- user feedback verbs -------------------------------------------------
     def _find_edge(self, user_id: str, edge_id: str) -> Edge:
-        for e in self.store.edges(user_id, active_only=False, include_quarantined=True):
-            if e.id == edge_id:
-                return e
-        raise ValueError(f"no edge {edge_id!r} for user {user_id!r}")
+        with _SITE_EDGE_UNKNOWN_TARGET.consult():
+            for e in self.store.edges(user_id, active_only=False, include_quarantined=True):
+                if e.id == edge_id:
+                    return e
+            raise _SITE_EDGE_UNKNOWN_TARGET.fire(ValueError(f"no edge {edge_id!r} for user {user_id!r}"))
 
     def dispute(self, user_id: str, edge_id: str, *, reason: str = "",
                 actor: str = "user") -> dict:
@@ -1795,9 +1814,10 @@ class Memory:
         `remember()`. Not exposed over MCP (an agent-callable suppress verb is
         a prompt-injection target); hosts wire it to a real user action."""
         edge = self._find_edge(user_id, edge_id)
-        if not edge.active:
-            raise ValueError(f"edge {edge_id!r} is not active (already "
-                             f"{edge.invalidation_reason or 'invalidated'})")
+        with _SITE_DISPUTE_INACTIVE.consult():
+            if not edge.active:
+                raise _SITE_DISPUTE_INACTIVE.fire(ValueError(f"edge {edge_id!r} is not active (already "
+                                 f"{edge.invalidation_reason or 'invalidated'})"))
         today = _today_utc()
         self.store.invalidate_edge(edge_id, utcnow(), "disputed")
         note = f" — {reason}" if reason else ""
@@ -1891,12 +1911,15 @@ class Memory:
         from .schema import Outcome
         outcome = Outcome(outcome)
         author = self._OUTCOME_ACTORS.get(actor)
-        if author is None:
-            raise ValueError(f"actor must be 'user' or 'system', not {actor!r}")
-        if outcome in (Outcome.CONFIRMED, Outcome.CORRECTED) and actor != "user":
-            raise ValueError(f"{outcome.value} is a human judgment (actor='user')")
-        if outcome in (Outcome.CHALLENGED, Outcome.CONCURRED) and actor != "system":
-            raise ValueError(f"{outcome.value} is a system judgment (actor='system')")
+        with _SITE_OUTCOME_ACTOR.consult():
+            if author is None:
+                raise _SITE_OUTCOME_ACTOR.fire(ValueError(f"actor must be 'user' or 'system', not {actor!r}"))
+        with _SITE_OUTCOME_HUMAN.consult():
+            if outcome in (Outcome.CONFIRMED, Outcome.CORRECTED) and actor != "user":
+                raise _SITE_OUTCOME_HUMAN.fire(ValueError(f"{outcome.value} is a human judgment (actor='user')"))
+        with _SITE_OUTCOME_SYSTEM.consult():
+            if outcome in (Outcome.CHALLENGED, Outcome.CONCURRED) and actor != "system":
+                raise _SITE_OUTCOME_SYSTEM.fire(ValueError(f"{outcome.value} is a system judgment (actor='system')"))
         edge = self._find_edge(user_id, edge_id)
         date = _event_dt(date or _today_utc()).date().isoformat()
 
@@ -2002,9 +2025,10 @@ class Memory:
         # is apply_supersession's own shape: PlanStale → re-read, recompute.
         for _ in range(graph._MAX_PLAN_ATTEMPTS):
             edge = self._find_edge(user_id, edge_id)
-            if not edge.active:
-                raise ValueError(f"edge {edge_id!r} is not active (already "
-                                 f"{edge.invalidation_reason or 'invalidated'})")
+            with _SITE_CORRECT_INACTIVE.consult():
+                if not edge.active:
+                    raise _SITE_CORRECT_INACTIVE.fire(ValueError(f"edge {edge_id!r} is not active (already "
+                                     f"{edge.invalidation_reason or 'invalidated'})"))
             # specs/0026 §3b at the THIRD establishment boundary
             # (research's implementation red-team: correct() preserved
             # the note at default-MENTIONABLE with no floor and no
@@ -2020,12 +2044,13 @@ class Memory:
             # dropping it rendered the record. Neither is honest: a procedural
             # record is not corrected — it is retired and restated through the
             # producer that can attest it (record_procedure, or the user again).
-            if is_procedural(edge):
-                from .procedures import ProcedureValueError
-                raise ProcedureValueError(
-                    "correction_of_procedure",
-                    f"edge {edge_id!r} is a procedural record; correct() does not mint a successor for one "
-                    "(specs/0037 §4a-iii, V-NO-CORRECTION-OF-PROCEDURES) — retire it and restate the procedure")
+            with _SITE_CORRECT_PROCEDURAL.consult():
+                if is_procedural(edge):
+                    from .procedures import ProcedureValueError
+                    raise _SITE_CORRECT_PROCEDURAL.fire(ProcedureValueError(
+                        "correction_of_procedure",
+                        f"edge {edge_id!r} is a procedural record; correct() does not mint a successor for one "
+                        "(specs/0037 §4a-iii, V-NO-CORRECTION-OF-PROCEDURES) — retire it and restate the procedure"))
             _disc = Disclosure.MENTIONABLE
             if _agreement.relay_markers(edge.note, corrected_value):
                 _disc = Disclosure.USE_ONLY
@@ -2054,10 +2079,11 @@ class Memory:
             raise RuntimeError(
                 f"correction of {edge_id!r} kept returning PlanStale after "
                 f"{graph._MAX_PLAN_ATTEMPTS} attempts (specs/0003 §4f)")
-        if refused:
-            # the durable refusal row committed with the plan; the correction
-            # itself is loud (specs/0011 §4b applies to corrections)
-            raise graph.CorrectionRefused(edge_id, authority.RULE_VERSION)
+        with _SITE_CORRECT_REFUSED.consult():
+            if refused:
+                # the durable refusal row committed with the plan; the correction
+                # itself is loud (specs/0011 §4b applies to corrections)
+                raise _SITE_CORRECT_REFUSED.fire(graph.CorrectionRefused(edge_id, authority.RULE_VERSION))
         self.store.add_episode(Episode(
             id=f"ep-{uuid4().hex[:12]}", user_id=user_id, date=date,
             summary=(f"({actor}) corrected '{edge.relation}: {edge.object}' "

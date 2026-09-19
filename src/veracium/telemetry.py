@@ -27,6 +27,15 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_PREVIEW_INVALID_CONSENT = declare_site("telemetry.preview.invalid-consent")
+_SITE_PREVIEW_NOT_ENABLED = declare_site("telemetry.preview.not-enabled")
+_SITE_FLUSH_INVALID_CONSENT = declare_site("telemetry.flush.invalid-consent")
+_SITE_FLUSH_NOT_ENABLED = declare_site("telemetry.flush.not-enabled")
+_SITE_COLLECTOR_NOT_ENABLED = declare_site("telemetry.collector.not-enabled")
 
 # --- the content-free event schema (whitelist of scalar fields per event) ---
 # Anything not listed here is silently dropped by record(). Values are coerced to
@@ -330,13 +339,15 @@ def preview(config: TelemetryConfig, collector: Collector):
         return None
     try:
         status, cfg = _read_config_status()
-        if status != "valid":
-            collector.tombstone()
-            return None
+        with _SITE_PREVIEW_INVALID_CONSENT.consult():
+            if status != "valid":
+                collector.tombstone()
+                return _SITE_PREVIEW_INVALID_CONSENT.fire(None, "invalid-consent")
         cfg = _normalize_epoch_locked(cfg)
         collector.adopt_consent(cfg)
-        if not cfg.enabled:
-            return None
+        with _SITE_PREVIEW_NOT_ENABLED.consult():
+            if not cfg.enabled:
+                return _SITE_PREVIEW_NOT_ENABLED.fire(None, "not-enabled")
         return _payload(cfg, collector)
     finally:
         _release_lock(fd)
@@ -357,14 +368,16 @@ def flush_if_due(config: TelemetryConfig, collector: Collector, *,
         # tombstone, NO write, NO normalization (a deleted config is never
         # recreated; malformed never rewritten)
         status, cfg = _read_config_status()
-        if status != "valid":
-            collector.tombstone()
-            return False
+        with _SITE_FLUSH_INVALID_CONSENT.consult():
+            if status != "valid":
+                collector.tombstone()
+                return _SITE_FLUSH_INVALID_CONSENT.fire(False, "invalid-consent")
         cfg = _normalize_epoch_locked(cfg)
         collector.adopt_consent(cfg)   # adoption precedes eligibility (R8-2)
         # (d) eligibility — adoption has already happened
-        if not (cfg.enabled and cfg.endpoint):
-            return False
+        with _SITE_FLUSH_NOT_ENABLED.consult():
+            if not (cfg.enabled and cfg.endpoint):
+                return _SITE_FLUSH_NOT_ENABLED.fire(False, "not-enabled")
         if cfg.last_sent and (now - cfg.last_sent) < cfg.interval_days * 86400:
             return False
         payload = _payload(cfg, collector)
@@ -527,8 +540,9 @@ def load_collector_if_enabled() -> Optional[Collector]:
         return None  # specs/0015 R8-3: no collector at all beats an unnormalized one
     try:
         status, cfg = _read_config_status()
-        if status != "valid" or not cfg.enabled:
-            return None
+        with _SITE_COLLECTOR_NOT_ENABLED.consult():
+            if status != "valid" or not cfg.enabled:
+                return _SITE_COLLECTOR_NOT_ENABLED.fire(None, "not-enabled")
         cfg = _normalize_epoch_locked(cfg)
         return Collector(consent_epoch=cfg.consent_epoch,
                          schema_version=cfg.schema_version)

@@ -7,6 +7,8 @@ have an entry here (completeness), and every entry must name a declared id; the 
 census (the shipped default) moves nothing.
 
 Tranche 2 (2026-09-19): gate, schema, compile, grounding, authority, asof — 28 sites.
+Tranche 3 (2026-09-19): graph, proactive, ingest, procedures, the procedural gate, the registry,
+the MCP closed set, the Memory surface, diagnostics, telemetry — 40 more ids.
 """
 from __future__ import annotations
 
@@ -137,6 +139,245 @@ SURFACE_DRIVEN = {
 }
 
 
+# ---- tranche 3 (2026-09-19): graph, proactive, ingest, procedures, procedural_gate, registry, mcp,
+# the package module, diagnostics, telemetry — 40 ids ------------------------------------------
+from veracium import graph, procedural_gate, registry as registry_mod, mcp_server, telemetry as T
+from veracium import diagnostics as D
+import veracium.procedures  # noqa: F401 — lazily imported by the package; declares its site
+from veracium.ingest import EvidenceContext, SourceIdRequired, ingest_event
+from veracium.proactive import assemble
+from veracium.schema import Outcome, RESERVED_RELATIONS, Relation, UNCLASSIFIED_RELATION
+from veracium.store.base import ReceiptSchemaBoundaryError, SupersessionIntegrityError
+import json as _json
+
+
+def _store():
+    return SqliteStore(":memory:")
+
+
+def _mem(**cfg):
+    return veracium.Memory(llm=lambda p, **k: "", config=MemoryConfig(db_path=":memory:", **cfg))
+
+
+def _llm_emitting(payload):
+    text = _json.dumps(payload)
+    return lambda prompt, *, system=None, role="distill", json_schema=None: text
+
+
+def _receipt_boundary():
+    s = _store(); e = _edge("legacy")
+    s._conn.execute("INSERT INTO supersession_operations(user_id,operation_id,logical_request_digest,"
+                    "status,request_digest,response,outcome_digest_version) VALUES(?,?,?,?,NULL,?,?)",
+                    (U, f"sup-{e.id}", "pre-split", "applied", None, 1))
+    s._conn.commit()
+    with pytest.raises(ReceiptSchemaBoundaryError):
+        graph.apply_supersession(s, e, DEFAULT_RELATIONS)
+    s.close()
+
+
+def _replay_mismatch():
+    s = _store()
+    graph.apply_supersession(s, _edge("same", "Miso"), DEFAULT_RELATIONS)
+    with pytest.raises(SupersessionIntegrityError):
+        graph.apply_supersession(s, _edge("same", "COMPLETELY different"), DEFAULT_RELATIONS)
+    s.close()
+
+
+def _sourced(eid, obj="v", source="mb-a"):
+    e = _edge(eid, obj)
+    return e.model_copy(update={"provenance": e.provenance.model_copy(update={"source_id": source})})
+
+
+def _absorption(mp, case):
+    s = _store()
+    if case == "unresolved":                          # the incoming's own evidence UNRESOLVED (controlled)
+        from veracium import scope_read
+        from veracium.scope import UNRESOLVED
+        mp.setattr(scope_read.MembershipResolver, "evidence_of_unwritten", lambda self, record: UNRESOLVED)
+        gate = graph._absorption_scope_gate(s, _sourced("inc")); prior = _sourced("prior")
+        s.add_edge(prior); gate(prior)
+    elif case == "cross-scope":                        # two identities: the prior's evidence differs
+        prior = _sourced("prior", source="mb-b"); s.add_edge(prior)
+        gate = graph._absorption_scope_gate(s, _sourced("inc", source="mb-a")); gate(prior)
+    else:                                              # same scope, the prior's closure is None
+        from veracium import scope_read
+        mp.setattr(scope_read.MembershipResolver, "flattening_plan", lambda self, kind, rid: None)
+        prior = _sourced("prior"); s.add_edge(prior)
+        gate = graph._absorption_scope_gate(s, _sourced("inc")); gate(prior)
+    s.close()
+
+
+def _src_revoked(mp):
+    from veracium import scope_linkage
+    mp.setattr(SqliteStore, "standing_revocations", lambda self, uid: {"d"})
+    mp.setattr(scope_linkage, "identity_digest_of", lambda *a, **k: "d")
+    s = _store(); graph.apply_supersession(s, _sourced("inc"), DEFAULT_RELATIONS); s.close()
+
+
+def _inactive(e):
+    return e.model_copy(update={"invalidated_at": NOW, "invalidation_reason": "superseded"})
+
+
+def _collapse():
+    a = _edge("a", "same value"); b = _edge("b", "same value")
+    graph.collapse_for_render([a, b])
+
+
+def _assemble_with(*edges):
+    s = _store()
+    for e in edges: s.add_edge(e)
+    assemble(s, U, MemoryConfig(db_path=":memory:"), now=NOW); s.close()
+
+
+def _ingest(**kw):
+    s = _store()
+    try:
+        ingest_event(s, _llm_emitting({"triples": [], "episode": "ep"}), U, event_text="t",
+                     author=kw.pop("author", EvidenceAuthor.USER), date="2026-09-19",
+                     relations=DEFAULT_RELATIONS, **kw)
+    finally:
+        s.close()
+
+
+def _procedure_source_id():
+    mem = _mem(require_source_id=True)
+    with pytest.raises(SourceIdRequired):
+        mem.record_procedure(U, "Rotate service credentials every quarter.", author=EvidenceAuthor.THIRD_PARTY,
+                             context=EvidenceContext.direct(basis="stated"))
+    mem.close()
+
+
+def _memory_raises(exc, fn):
+    mem = _mem()
+    try:
+        with pytest.raises(exc):
+            fn(mem)
+    finally:
+        mem.close()
+
+
+def _local_origin_missing(mp):
+    mp.delattr(SqliteStore, "local_origin")
+    from veracium.scope import ScopeError
+    with pytest.raises(ScopeError):
+        veracium.Memory(llm=lambda p, **k: "", config=MemoryConfig(db_path=":memory:", scope_groups={}))
+
+
+class TwoPhase:
+    """A site whose SETUP would consult the same site (disputing an edge to make it inactive consults
+    the dispute site): `setup` runs OUTSIDE the counting window, `run` inside it."""
+    def __init__(self, setup, run): self.setup, self.run = setup, run
+
+
+def _with_inactive_edge():
+    mem = _mem(); e = _edge("d1"); mem.store.add_edge(e); mem.dispute(U, e.id); return (mem, e.id)
+
+
+def _inactive_edge_in(mem):
+    e = _edge("d1"); mem.store.add_edge(e); mem.dispute(U, e.id); return e.id
+
+
+def _procedural_edge_in(mem):
+    return mem.record_procedure(U, "Rotate service credentials every quarter.", author=EvidenceAuthor.USER,
+                                context=EvidenceContext.direct(basis="stated"))
+
+
+def _other_subject_prior_in(mem):
+    e = _edge("p9", "nurse").model_copy(update={"subject": "user's sister", "provenance": _edge("p9").provenance.model_copy(
+        update={"author_of_evidence": EvidenceAuthor.SYSTEM, "derived_from": EvidenceAuthor.THIRD_PARTY})})
+    mem.store.add_edge(e); return e.id
+
+
+def _reporter_not_consented():
+    r = D.Reporter(); r.config.endpoint = "https://example.invalid/collect"
+    assert r.send(interactive=False) is False
+
+
+def _telemetry(mp, fn, enabled=None):
+    mp.setenv("XDG_CONFIG_HOME", str(__import__("tempfile").mkdtemp()))
+    if enabled is not None:
+        T.set_enabled(enabled)
+    cfg = T.TelemetryConfig.load(); c = T.Collector(); c.record("recall", {"subgraph_edges": 1})
+    return fn(cfg, c)
+
+
+DECLINES.update({
+    "graph.supersession.receipt-boundary": lambda mp: _receipt_boundary(),
+    "graph.supersession.replay-mismatch": lambda mp: _replay_mismatch(),
+    "graph.absorption.scope-unresolved": lambda mp: _absorption(mp, "unresolved"),
+    "graph.absorption.cross-scope": lambda mp: _absorption(mp, "cross-scope"),
+    "graph.absorption.no-flattening-plan": lambda mp: _absorption(mp, "no-plan"),
+    "graph.correction.identity-mismatch": lambda mp: _raises(
+        ValueError, graph.plan_correction, _store(), _edge("p"), _edge("r").model_copy(update={"subject": "other"}), op_id="op-x"),
+    "graph.correction.prior-not-active": lambda mp: _raises(ValueError, graph.plan_correction, _store(), _edge("p"), _edge("r"), op_id="op-x"),
+    "graph.src-revoked": lambda mp: _src_revoked(mp),
+    "graph.semantic-duplicate.keep": lambda mp: graph.semantic_duplicate_of(_inactive(_edge("m")), _edge("s")),
+    "graph.strictly-redundant": lambda mp: graph._strictly_redundant(
+        _edge("m").model_copy(update={"note": "extra"}), _edge("s")),
+    "graph.collapse-for-render": lambda mp: _collapse(),
+    "ingest.source-id-required": lambda mp: _raises(SourceIdRequired, _ingest_third_party_unsourced),
+    "ingest.basis-via-remember": lambda mp: _raises(ValueError, lambda: _ingest(context=EvidenceContext.direct(basis="stated"))),
+    "ingest.instructions-not-a-list": lambda mp: _ingest_instructions_not_a_list(),
+    "procedures.source-id-required": lambda mp: _procedure_source_id(),
+    "procedural-gate.positive-form": lambda mp: procedural_gate.positive_form(""),
+    "procedural-gate.actor-present": lambda mp: procedural_gate.actor_present(""),
+    "registry.empty-refused": lambda mp: _raises(registry_mod.RegistryError, registry_mod.effective_registry, {}),
+    "registry.reserved-shadowed": lambda mp: _raises(
+        registry_mod.RegistryError, registry_mod.effective_registry,
+        {UNCLASSIFIED_RELATION: Relation(name=UNCLASSIFIED_RELATION, functional=True, desc="shadowed")}),
+    "mcp.closed-set.author": lambda mp: _raises(ValueError, mcp_server._closed_set, "author", "system"),
+    "mcp.closed-set.trust-field": lambda mp: _raises(ValueError, mcp_server._closed_set, "derived_from", "bogus"),
+    "memory.scope.local-origin-missing": lambda mp: _local_origin_missing(mp),
+    "memory.recall.as-of-on-proactive": lambda mp: _memory_raises(ValueError, lambda m: m.recall(U, None, as_of=NOW)),
+    "memory.recall.policy-with-as-of": lambda mp: _memory_raises(ValueError, lambda m: m.recall(
+        U, "q", policy=veracium.PolicyLane(policy_id="p", policy_version="1", tags_matched=("t",), ranks={}), as_of=NOW)),
+    "memory.edge.unknown-target": lambda mp: _memory_raises(ValueError, lambda m: m.dispute(U, "nope")),
+    "memory.dispute.inactive-edge": TwoPhase(lambda mp: _with_inactive_edge(), lambda st: _raises(ValueError, st[0].dispute, U, st[1])),
+    "memory.record-outcome.actor-vocabulary": lambda mp: _memory_raises(ValueError, lambda m: m.record_outcome(
+        U, "x", outcome=Outcome.CONFIRMED, evidence_ref="r", actor="bogus")),
+    "memory.record-outcome.human-judgment": lambda mp: _memory_raises(ValueError, lambda m: m.record_outcome(
+        U, "x", outcome=Outcome.CONFIRMED, evidence_ref="r", actor="system")),
+    "memory.record-outcome.system-judgment": lambda mp: _memory_raises(ValueError, lambda m: m.record_outcome(
+        U, "x", outcome=Outcome.CHALLENGED, evidence_ref="r", actor="user")),
+    "memory.correct.inactive-edge": lambda mp: _memory_raises(ValueError, lambda m: m.correct(U, _inactive_edge_in(m), "new")),
+    "memory.correct.procedural": lambda mp: _memory_raises(
+        __import__("veracium.procedures", fromlist=["ProcedureValueError"]).ProcedureValueError,
+        lambda m: m.correct(U, _procedural_edge_in(m), "new")),
+    "memory.correct.refused": lambda mp: _memory_raises(graph.CorrectionRefused, lambda m: m.correct(U, _other_subject_prior_in(m), "surgeon")),
+    "diagnostics.send.not-consented": lambda mp: _reporter_not_consented(),
+    "telemetry.preview.invalid-consent": lambda mp: _telemetry(mp, T.preview),
+    "telemetry.preview.not-enabled": lambda mp: _telemetry(mp, T.preview, enabled=False),
+    "telemetry.flush.invalid-consent": lambda mp: _telemetry(mp, lambda cfg, c: T.flush_if_due(cfg, c, poster=lambda u, p: None)),
+    "telemetry.flush.not-enabled": lambda mp: _telemetry(mp, lambda cfg, c: T.flush_if_due(cfg, c, poster=lambda u, p: None), enabled=False),
+    "telemetry.collector.not-enabled": lambda mp: _telemetry(mp, lambda cfg, c: T.load_collector_if_enabled()),
+})
+
+
+def _ingest_third_party_unsourced():
+    _ingest(author=EvidenceAuthor.THIRD_PARTY, require_source_id=True)
+
+
+def _ingest_instructions_not_a_list():
+    s = _store()
+    ingest_event(s, _llm_emitting({"triples": [], "episode": "ep", "instructions": "x"}), U, event_text="t",
+                 author=EvidenceAuthor.USER, date="2026-09-19", relations=DEFAULT_RELATIONS)
+    s.close()
+
+
+SURFACE_DRIVEN.update({
+    # a variant needs an ELIGIBLE group (a survivor is chosen among class rank < 9): transient
+    # members, one value, two distinct notes (neither strictly redundant) → one survivor, one variant
+    "proactive.variant": lambda: _assemble_with(
+        _edge("a", "same value").model_copy(update={"note": "one note", "volatility": Volatility.TRANSIENT}),
+        _edge("b", "same value").model_copy(update={"note": "another note", "volatility": Volatility.TRANSIENT})),
+    "proactive.eligible": lambda: _assemble_with(_edge("durable", "a plain durable fact")),
+})
+
+
+# the lazily imported modules declared their sites only now: refresh the snapshot the leg measures
+SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
+
+
 @pytest.fixture
 def enabled():
     census.enable(True)
@@ -162,7 +403,12 @@ def test_every_declared_site_has_one_declining_execution_here_and_vice_versa():
 
 @pytest.mark.parametrize("site_id", sorted(DECLINES))
 def test_one_declining_decision_moves_the_counters_by_exactly_one(site_id, enabled, monkeypatch):
-    dc, df, de = _delta(site_id, lambda: DECLINES[site_id](monkeypatch))
+    entry = DECLINES[site_id]
+    if isinstance(entry, TwoPhase):
+        state = entry.setup(monkeypatch)
+        dc, df, de = _delta(site_id, lambda: entry.run(state))
+    else:
+        dc, df, de = _delta(site_id, lambda: entry(monkeypatch))
     assert (dc, df, de) == (1, 1, 0), f"{site_id}: consulted moved {dc}, fired moved {df}, errors {de}"
 
 
@@ -174,8 +420,12 @@ def test_the_surface_driven_sites_decline_once_per_candidate(site_id, enabled):
 
 def test_the_disabled_census_moves_nothing(monkeypatch):
     assert not census.enabled()
-    for site_id, run in DECLINES.items():
-        assert _delta(site_id, lambda: run(monkeypatch)) == (0, 0, 0), site_id
+    for site_id, entry in DECLINES.items():
+        if isinstance(entry, TwoPhase):
+            state = entry.setup(monkeypatch); run = lambda st=state, e=entry: e.run(st)
+        else:
+            run = lambda e=entry: e(monkeypatch)
+        assert _delta(site_id, run) == (0, 0, 0), site_id
 
 
 def test_the_trace_names_the_branch_not_the_content(enabled, monkeypatch):

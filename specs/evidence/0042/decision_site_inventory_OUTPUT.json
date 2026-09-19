@@ -3,161 +3,133 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 146,
+   "line": 161,
    "module": "__init__.py",
    "qualname": "_require_identifier"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 176,
+   "line": 191,
    "module": "__init__.py",
    "qualname": "PolicyLane.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 178,
+   "line": 193,
    "module": "__init__.py",
    "qualname": "PolicyLane.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 194,
+   "line": 209,
    "module": "__init__.py",
    "qualname": "PolicyLane.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 196,
+   "line": 211,
    "module": "__init__.py",
    "qualname": "PolicyLane.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 201,
+   "line": 216,
    "module": "__init__.py",
    "qualname": "PolicyLane.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 278,
+   "line": 293,
    "module": "__init__.py",
    "qualname": "receipt_from_row"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 285,
+   "line": 300,
    "module": "__init__.py",
    "qualname": "receipt_from_row"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 376,
+   "line": 391,
    "module": "__init__.py",
    "qualname": "Memory._build_scope_policy"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 380,
+   "line": 396,
    "module": "__init__.py",
    "qualname": "Memory._build_scope_policy"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 456,
+   "line": 472,
    "module": "__init__.py",
    "qualname": "Memory._usage_operation"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 584,
+   "line": 600,
    "module": "__init__.py",
    "qualname": "Memory.remember"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 780,
+   "line": 796,
    "module": "__init__.py",
    "qualname": "Memory.describe_procedures"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 782,
+   "line": 798,
    "module": "__init__.py",
    "qualname": "Memory.describe_procedures"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 785,
+   "line": 801,
    "module": "__init__.py",
    "qualname": "Memory.describe_procedures"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 880,
+   "line": 896,
    "module": "__init__.py",
    "qualname": "Memory.recall"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 884,
+   "line": 901,
    "module": "__init__.py",
    "qualname": "Memory.recall"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 900,
+   "line": 917,
    "module": "__init__.py",
    "qualname": "Memory.recall"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 916,
+   "line": 933,
    "module": "__init__.py",
    "qualname": "Memory.facts_valid_at"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 977,
-   "module": "__init__.py",
-   "qualname": "Memory._recall"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 981,
-   "module": "__init__.py",
-   "qualname": "Memory._recall"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 985,
-   "module": "__init__.py",
-   "qualname": "Memory._recall"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 992,
-   "module": "__init__.py",
-   "qualname": "Memory._recall"
   },
   {
    "bare": false,
@@ -169,140 +141,168 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 999,
+   "line": 998,
    "module": "__init__.py",
    "qualname": "Memory._recall"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1001,
+   "line": 1002,
+   "module": "__init__.py",
+   "qualname": "Memory._recall"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1009,
+   "module": "__init__.py",
+   "qualname": "Memory._recall"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1011,
+   "module": "__init__.py",
+   "qualname": "Memory._recall"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1016,
+   "module": "__init__.py",
+   "qualname": "Memory._recall"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1019,
    "module": "__init__.py",
    "qualname": "Memory._recall"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1485,
+   "line": 1503,
    "module": "__init__.py",
    "qualname": "Memory._fit_to_budget._claim_lines"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1626,
+   "line": 1644,
    "module": "__init__.py",
    "qualname": "Memory.answer"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1648,
+   "line": 1666,
    "module": "__init__.py",
    "qualname": "Memory.maintain"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1697,
+   "line": 1715,
    "module": "__init__.py",
    "qualname": "Memory.flush_telemetry"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1704,
+   "line": 1722,
    "module": "__init__.py",
    "qualname": "Memory.telemetry_preview"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1715,
+   "line": 1733,
    "module": "__init__.py",
    "qualname": "Memory.report_error"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1722,
+   "line": 1740,
    "module": "__init__.py",
    "qualname": "Memory.diagnostics_preview"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1751,
+   "line": 1769,
    "module": "__init__.py",
    "qualname": "Memory.introspect"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1777,
+   "line": 1795,
    "module": "__init__.py",
    "qualname": "Memory.edges_since"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1786,
+   "line": 1805,
    "module": "__init__.py",
    "qualname": "Memory._find_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1799,
+   "line": 1819,
    "module": "__init__.py",
    "qualname": "Memory.dispute"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1895,
+   "line": 1916,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1897,
+   "line": 1919,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1899,
+   "line": 1922,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2006,
+   "line": 2030,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2025,
+   "line": 2050,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2054,
+   "line": 2079,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2060,
+   "line": 2086,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2102,
+   "line": 2128,
    "module": "__init__.py",
    "qualname": "Memory.policy_receipts"
   },
@@ -990,51 +990,39 @@
   },
   {
    "kind": "RETURN_NONE",
-   "line": 149,
+   "line": 154,
    "module": "diagnostics.py",
    "qualname": "Reporter._get_logger"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 211,
+   "line": 216,
    "module": "diagnostics.py",
    "qualname": "Reporter._auto_send_due"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 244,
+   "line": 249,
    "module": "diagnostics.py",
    "qualname": "Reporter.has_pending"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 250,
+   "line": 255,
    "module": "diagnostics.py",
    "qualname": "Reporter._confirm"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 257,
+   "line": 262,
    "module": "diagnostics.py",
    "qualname": "Reporter._confirm"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 259,
+   "line": 264,
    "module": "diagnostics.py",
    "qualname": "Reporter._confirm"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 268,
-   "module": "diagnostics.py",
-   "qualname": "Reporter.send"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 270,
-   "module": "diagnostics.py",
-   "qualname": "Reporter.send"
   },
   {
    "kind": "RETURN_FALSE",
@@ -1044,7 +1032,19 @@
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 277,
+   "line": 276,
+   "module": "diagnostics.py",
+   "qualname": "Reporter.send"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 279,
+   "module": "diagnostics.py",
+   "qualname": "Reporter.send"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 283,
    "module": "diagnostics.py",
    "qualname": "Reporter.send"
   },
@@ -1134,151 +1134,151 @@
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 41,
+   "line": 56,
    "module": "graph.py",
    "qualname": "_value_key"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 56,
+   "line": 71,
    "module": "graph.py",
    "qualname": "_subsumes"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 168,
+   "line": 184,
    "module": "graph.py",
    "qualname": "apply_supersession"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 193,
+   "line": 210,
    "module": "graph.py",
    "qualname": "apply_supersession"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 213,
+   "line": 230,
    "module": "graph.py",
    "qualname": "apply_supersession"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 268,
+   "line": 286,
    "module": "graph.py",
    "qualname": "_absorption_scope_gate.same_scope"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 270,
+   "line": 288,
    "module": "graph.py",
    "qualname": "_absorption_scope_gate.same_scope"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 271,
+   "line": 289,
    "module": "graph.py",
    "qualname": "_absorption_scope_gate.same_scope"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 336,
+   "line": 355,
    "module": "graph.py",
    "qualname": "plan_correction"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 347,
+   "line": 367,
    "module": "graph.py",
    "qualname": "plan_correction"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 404,
+   "line": 425,
    "module": "graph.py",
    "qualname": "_build_supersession_plan._src_revoked"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 408,
+   "line": 429,
    "module": "graph.py",
    "qualname": "_build_supersession_plan._src_revoked"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 619,
+   "line": 640,
    "module": "graph.py",
    "qualname": "_tokens"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 805,
+   "line": 827,
    "module": "graph.py",
    "qualname": "semantic_duplicate_of"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 811,
+   "line": 833,
    "module": "graph.py",
    "qualname": "semantic_duplicate_of"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 813,
+   "line": 835,
    "module": "graph.py",
    "qualname": "semantic_duplicate_of"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 815,
+   "line": 837,
    "module": "graph.py",
    "qualname": "semantic_duplicate_of"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 817,
+   "line": 839,
    "module": "graph.py",
    "qualname": "semantic_duplicate_of"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 819,
+   "line": 841,
    "module": "graph.py",
    "qualname": "semantic_duplicate_of"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 866,
+   "line": 888,
    "module": "graph.py",
    "qualname": "fused_subgraph"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 887,
+   "line": 909,
    "module": "graph.py",
    "qualname": "fused_subgraph._order"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1030,
+   "line": 1052,
    "module": "graph.py",
    "qualname": "_stage4_and_5"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1176,
+   "line": 1199,
    "module": "graph.py",
    "qualname": "_strictly_redundant"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1270,
+   "line": 1294,
    "module": "graph.py",
    "qualname": "collapse_for_render"
   },
@@ -1297,34 +1297,21 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 119,
+   "line": 126,
    "module": "ingest.py",
    "qualname": "_event_dt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 125,
+   "line": 132,
    "module": "ingest.py",
    "qualname": "_event_dt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 163,
-   "module": "ingest.py",
-   "qualname": "_resolve_context"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 169,
-   "module": "ingest.py",
-   "qualname": "_resolve_context"
-  },
-  {
-   "kind": "RETURN_NONE",
-   "line": 173,
+   "line": 170,
    "module": "ingest.py",
    "qualname": "_resolve_context"
   },
@@ -1336,30 +1323,43 @@
    "qualname": "_resolve_context"
   },
   {
+   "kind": "RETURN_NONE",
+   "line": 180,
+   "module": "ingest.py",
+   "qualname": "_resolve_context"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
-   "line": 273,
+   "line": 183,
+   "module": "ingest.py",
+   "qualname": "_resolve_context"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 280,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 291,
+   "line": 299,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 301,
+   "line": 310,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 361,
+   "line": 371,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
@@ -1425,42 +1425,42 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 104,
+   "line": 111,
    "module": "mcp_server.py",
    "qualname": "_closed_set"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 110,
+   "line": 117,
    "module": "mcp_server.py",
    "qualname": "_closed_set"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 548,
+   "line": 555,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 554,
+   "line": 561,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 558,
+   "line": 565,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 570,
+   "line": 577,
    "module": "mcp_server.py",
    "qualname": "main"
   },
@@ -1710,71 +1710,53 @@
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 81,
+   "line": 88,
    "module": "proactive.py",
    "qualname": "assemble._is_variant"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 85,
+   "line": 92,
    "module": "proactive.py",
    "qualname": "assemble._is_variant"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 141,
+   "line": 149,
    "module": "proactive.py",
    "qualname": "assemble._eligible"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 266,
+   "line": 274,
    "module": "proactive.py",
    "qualname": "assemble"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 43,
+   "line": 49,
    "module": "procedural_gate.py",
    "qualname": "norm_ws"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 108,
+   "line": 114,
    "module": "procedural_gate.py",
    "qualname": "_inside_open_quote"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 167,
+   "line": 173,
    "module": "procedural_gate.py",
    "qualname": "_head_verb"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 169,
+   "line": 175,
    "module": "procedural_gate.py",
    "qualname": "_head_verb"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 178,
-   "module": "procedural_gate.py",
-   "qualname": "positive_form"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 181,
-   "module": "procedural_gate.py",
-   "qualname": "positive_form"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 183,
-   "module": "procedural_gate.py",
-   "qualname": "positive_form"
   },
   {
    "kind": "RETURN_FALSE",
@@ -1783,154 +1765,165 @@
    "qualname": "positive_form"
   },
   {
-   "kind": "BOOL_RETURN",
-   "line": 186,
+   "kind": "RETURN_FALSE",
+   "line": 188,
    "module": "procedural_gate.py",
    "qualname": "positive_form"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 195,
+   "line": 190,
+   "module": "procedural_gate.py",
+   "qualname": "positive_form"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 192,
+   "module": "procedural_gate.py",
+   "qualname": "positive_form"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 193,
+   "module": "procedural_gate.py",
+   "qualname": "positive_form"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 203,
    "module": "procedural_gate.py",
    "qualname": "actor_present"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 197,
+   "line": 205,
    "module": "procedural_gate.py",
    "qualname": "actor_present"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 199,
+   "line": 207,
    "module": "procedural_gate.py",
    "qualname": "actor_present"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 204,
+   "line": 212,
    "module": "procedural_gate.py",
    "qualname": "actor_present"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 206,
+   "line": 214,
    "module": "procedural_gate.py",
    "qualname": "actor_present"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 209,
+   "line": 217,
    "module": "procedural_gate.py",
    "qualname": "actor_present"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 234,
+   "line": 242,
    "module": "procedural_gate.py",
    "qualname": "whole_sentence"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 236,
+   "line": 244,
    "module": "procedural_gate.py",
    "qualname": "whole_sentence"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 239,
+   "line": 247,
    "module": "procedural_gate.py",
    "qualname": "whole_sentence"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 241,
+   "line": 249,
    "module": "procedural_gate.py",
    "qualname": "whole_sentence"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 245,
+   "line": 253,
    "module": "procedural_gate.py",
    "qualname": "whole_sentence"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 246,
+   "line": 254,
    "module": "procedural_gate.py",
    "qualname": "whole_sentence"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 462,
+   "line": 470,
    "module": "procedural_gate.py",
    "qualname": "enclosure_structure"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 468,
+   "line": 476,
    "module": "procedural_gate.py",
    "qualname": "enclosure_structure"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 515,
+   "line": 523,
    "module": "procedural_gate.py",
    "qualname": "sentence_segments"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 525,
+   "line": 533,
    "module": "procedural_gate.py",
    "qualname": "has_internal_boundary"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 85,
+   "line": 90,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 87,
+   "line": 92,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 91,
+   "line": 96,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 93,
+   "line": 98,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 99,
+   "line": 104,
    "module": "procedures.py",
    "qualname": "build_procedure_edge._opt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 101,
+   "line": 106,
    "module": "procedures.py",
    "qualname": "build_procedure_edge._opt"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 109,
-   "module": "procedures.py",
-   "qualname": "build_procedure_edge"
   },
   {
    "bare": false,
@@ -1949,14 +1942,7 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 130,
-   "module": "procedures.py",
-   "qualname": "build_procedure_edge"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 132,
+   "line": 124,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
@@ -1970,80 +1956,80 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 139,
+   "line": 137,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 143,
+   "line": 140,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 146,
+   "line": 144,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 159,
+   "line": 148,
+   "module": "procedures.py",
+   "qualname": "build_procedure_edge"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 151,
+   "module": "procedures.py",
+   "qualname": "build_procedure_edge"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 165,
    "module": "procedures.py",
    "qualname": "build_procedure_edge"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 241,
+   "line": 247,
    "module": "procedures.py",
    "qualname": "_imperative_clause"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 244,
+   "line": 250,
    "module": "procedures.py",
    "qualname": "_imperative_clause"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 249,
+   "line": 255,
    "module": "procedures.py",
    "qualname": "_imperative_clause"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 251,
+   "line": 257,
    "module": "procedures.py",
    "qualname": "_imperative_clause"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 263,
+   "line": 269,
    "module": "procedures.py",
    "qualname": "matches_executable_detail"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 358,
+   "line": 364,
    "module": "procedures.py",
    "qualname": "describe_outcome"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 46,
-   "module": "registry.py",
-   "qualname": "effective_registry"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 48,
-   "module": "registry.py",
-   "qualname": "effective_registry"
   },
   {
    "bare": false,
@@ -2055,7 +2041,21 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 61,
+   "line": 54,
+   "module": "registry.py",
+   "qualname": "effective_registry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 59,
+   "module": "registry.py",
+   "qualname": "effective_registry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 69,
    "module": "registry.py",
    "qualname": "effective_registry"
   },
@@ -4915,21 +4915,9 @@
   },
   {
    "kind": "RETURN_NONE",
-   "line": 153,
+   "line": 162,
    "module": "telemetry.py",
    "qualname": "_acquire_lock"
-  },
-  {
-   "kind": "RETURN_NONE",
-   "line": 330,
-   "module": "telemetry.py",
-   "qualname": "preview"
-  },
-  {
-   "kind": "RETURN_NONE",
-   "line": 335,
-   "module": "telemetry.py",
-   "qualname": "preview"
   },
   {
    "kind": "RETURN_NONE",
@@ -4938,65 +4926,77 @@
    "qualname": "preview"
   },
   {
+   "kind": "RETURN_NONE",
+   "line": 345,
+   "module": "telemetry.py",
+   "qualname": "preview"
+  },
+  {
+   "kind": "RETURN_NONE",
+   "line": 350,
+   "module": "telemetry.py",
+   "qualname": "preview"
+  },
+  {
    "kind": "RETURN_FALSE",
-   "line": 354,
+   "line": 365,
    "module": "telemetry.py",
    "qualname": "flush_if_due"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 362,
+   "line": 374,
    "module": "telemetry.py",
    "qualname": "flush_if_due"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 367,
+   "line": 380,
    "module": "telemetry.py",
    "qualname": "flush_if_due"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 369,
+   "line": 382,
    "module": "telemetry.py",
    "qualname": "flush_if_due"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 381,
+   "line": 394,
    "module": "telemetry.py",
    "qualname": "flush_if_due"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 453,
+   "line": 466,
    "module": "telemetry.py",
    "qualname": "prompt_consent"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 474,
+   "line": 487,
    "module": "telemetry.py",
    "qualname": "set_enabled"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 501,
+   "line": 514,
    "module": "telemetry.py",
    "qualname": "accept_current_consent"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 527,
+   "line": 540,
    "module": "telemetry.py",
    "qualname": "load_collector_if_enabled"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 531,
+   "line": 545,
    "module": "telemetry.py",
    "qualname": "load_collector_if_enabled"
   }

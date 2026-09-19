@@ -41,6 +41,13 @@ def _instruction_key(text: str) -> str:
 
 
 from .procedural_gate import check_capture as _check_capture, norm_ws as _norm_ws   # specs/0037 v19–v21 §4a-iii
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_SOURCE_ID_REQUIRED = declare_site("ingest.source-id-required")
+_SITE_BASIS_VIA_REMEMBER = declare_site("ingest.basis-via-remember")
+_SITE_INSTRUCTIONS_TYPE = declare_site("ingest.instructions-not-a-list")
 
 
 def _uid(prefix: str) -> str:
@@ -285,23 +292,25 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
     # nothing, and absence of a declaration is not a claim about the source.
     # This is the one site that can tell the floor from a declaration; the
     # stored payload cannot (the doctor's `sources` check keys on the author).
-    if require_source_id and source_id is None and (
-            author == EvidenceAuthor.THIRD_PARTY
-            or (declared and derived_from == EvidenceAuthor.THIRD_PARTY)):
-        raise SourceIdRequired(
-            "source_id is required for third-party-authored evidence and declared "
-            "third-party-derived content when MemoryConfig.require_source_id is on "
-            "(specs/0006 §4 rule 9): a record without one has no source identity and "
-            "no revocation can ever reach it; nothing was written")
+    with _SITE_SOURCE_ID_REQUIRED.consult():
+        if require_source_id and source_id is None and (
+                author == EvidenceAuthor.THIRD_PARTY
+                or (declared and derived_from == EvidenceAuthor.THIRD_PARTY)):
+            raise _SITE_SOURCE_ID_REQUIRED.fire(SourceIdRequired(
+                "source_id is required for third-party-authored evidence and declared "
+                "third-party-derived content when MemoryConfig.require_source_id is on "
+                "(specs/0006 §4 rule 9): a record without one has no source identity and "
+                "no revocation can ever reach it; nothing was written"))
     # specs/0037 §4b (V-BASIS-SCOPE): the extractor path cannot produce a
     # procedural record, so a basis on its context is a caller error —
     # REFUSED, nothing written; accepting it silently would ship declarative
     # basis as a hidden feature. `Memory.record_procedure` is the surface.
-    if context is not None and getattr(context, "basis", None) is not None:
-        raise ValueError(
-            f"basis={context.basis!r} is not applicable to a declarative event — "
-            "the extractor path writes no procedural record; record a procedure "
-            "through Memory.record_procedure (specs/0037 §4b, V-BASIS-SCOPE)")
+    with _SITE_BASIS_VIA_REMEMBER.consult():
+        if context is not None and getattr(context, "basis", None) is not None:
+            raise _SITE_BASIS_VIA_REMEMBER.fire(ValueError(
+                f"basis={context.basis!r} is not applicable to a declarative event — "
+                "the extractor path writes no procedural record; record a procedure "
+                "through Memory.record_procedure (specs/0037 §4b, V-BASIS-SCOPE)"))
     evidence_ref = evidence_ref or _uid("ev")
     # specs/0025 §4b-ii: the host registry is validated AS SUPPLIED and
     # extracted into the ONE frozen per-event snapshot that feeds prompt
@@ -356,9 +365,10 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
         # a dict, null) is a malformed response, not a malformed member — the
         # unparseable branch below, with every counter present at zero. Row 1
         # (absent) is NOT this: an omitting provider is processed as today.
-        if "instructions" in data and not isinstance(data["instructions"], list):
-            unparseable_cause = "instructions_type"
-            raise ValueError("instructions: expected a list")
+        with _SITE_INSTRUCTIONS_TYPE.consult():
+            if "instructions" in data and not isinstance(data["instructions"], list):
+                unparseable_cause = "instructions_type"
+                raise _SITE_INSTRUCTIONS_TYPE.fire(ValueError("instructions: expected a list"))
     except ValueError:
         # specs/0039 §2c: the unparseable site — ONE record from the handler,
         # content-free (the extractor's own message embeds text[:200] of the

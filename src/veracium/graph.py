@@ -20,6 +20,21 @@ from .schema import (DEFAULT_RELATIONS, ContributionDraft, Edge, EvidenceAuthor,
                      Relation, SupersessionPlan, SupersessionRefusalDraft)
 from .store.base import (PLAN_STALE, ReceiptSchemaBoundaryError,
                          SupersessionIntegrityError)
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_RECEIPT_BOUNDARY = declare_site("graph.supersession.receipt-boundary")
+_SITE_REPLAY_MISMATCH = declare_site("graph.supersession.replay-mismatch")
+_SITE_ABSORB_UNRESOLVED = declare_site("graph.absorption.scope-unresolved", declines=False)
+_SITE_ABSORB_CROSS_SCOPE = declare_site("graph.absorption.cross-scope", declines=False)
+_SITE_ABSORB_NO_PLAN = declare_site("graph.absorption.no-flattening-plan", declines=False)
+_SITE_CORRECTION_IDENTITY = declare_site("graph.correction.identity-mismatch")
+_SITE_CORRECTION_PRIOR_INACTIVE = declare_site("graph.correction.prior-not-active")
+_SITE_SRC_REVOKED = declare_site("graph.src-revoked", declines=True)
+_SITE_SEMDUP_KEEP = declare_site("graph.semantic-duplicate.keep", declines=False)
+_SITE_STRICTLY_REDUNDANT = declare_site("graph.strictly-redundant", declines=False)
+_SITE_COLLAPSE_FOR_RENDER = declare_site("graph.collapse-for-render")
 
 
 # Filler words that never change a value's meaning. Deliberately tiny: a false
@@ -164,15 +179,16 @@ def apply_supersession(store, edge: Edge, relations: dict[str, Relation]) -> "Su
         # the receipt is unclassifiable and takes the same conservative
         # refusal (fail closed, never fail open into a digest comparison).
         stored_ver = receipt.get("outcome_digest_version")
-        if stored_ver is None or stored_ver < 4:
-            raise ReceiptSchemaBoundaryError(
-                f"operation_id {op_id!r} for user {edge.user_id!r} committed "
-                f"under a pre-D2 receipt era (outcome_digest_version "
-                f"{stored_ver}): its digest basis included the deleted "
-                f"source_type field, so this resubmission is not replay-"
-                f"verifiable across the removal — refused on sight, no digest "
-                f"computed, a legitimate retry indistinguishable from a "
-                f"different request (specs/0016 D2; 0003 §4f as amended)")
+        with _SITE_RECEIPT_BOUNDARY.consult():
+            if stored_ver is None or stored_ver < 4:
+                raise _SITE_RECEIPT_BOUNDARY.fire(ReceiptSchemaBoundaryError(
+                    f"operation_id {op_id!r} for user {edge.user_id!r} committed "
+                    f"under a pre-D2 receipt era (outcome_digest_version "
+                    f"{stored_ver}): its digest basis included the deleted "
+                    f"source_type field, so this resubmission is not replay-"
+                    f"verifiable across the removal — refused on sight, no digest "
+                    f"computed, a legitimate retry indistinguishable from a "
+                    f"different request (specs/0016 D2; 0003 §4f as amended)"))
         stored_rd = receipt.get("request_digest")
         # specs/0025 §4b-v: the cross-era decision matrix — the stored
         # domain selects the comparison (NULL = migrated → dual-domain;
@@ -181,18 +197,19 @@ def apply_supersession(store, edge: Edge, relations: dict[str, Relation]) -> "Su
         # above PRECEDES this, so no digest is computed for stored_ver < 4.
         matches = receipt_request_matches(
             stored_rd, receipt.get("request_digest_domain"), snapshot)
-        if matches is not None:
-            if matches:
-                # branch 1: REPLAY — the recorded response stands in for the
-                # committed op; NO re-planning occurs (the post-commit re-plan
-                # is never computed, so no outcome comparison can reject a
-                # legitimate lost-response retry — the R5-2 live defect closed).
-                # specs/0015 I2: a replay performs no work in THIS call.
-                return SupersessionCounts(replayed=True)
-            # branch 2: a truly different resubmission reusing an op id
-            raise SupersessionIntegrityError(
-                f"operation_id {op_id!r} already committed a DIFFERENT request "
-                f"for user {edge.user_id!r} (specs/0014 §4b phase 1)")
+        with _SITE_REPLAY_MISMATCH.consult():
+            if matches is not None:
+                if matches:
+                    # branch 1: REPLAY — the recorded response stands in for the
+                    # committed op; NO re-planning occurs (the post-commit re-plan
+                    # is never computed, so no outcome comparison can reject a
+                    # legitimate lost-response retry — the R5-2 live defect closed).
+                    # specs/0015 I2: a replay performs no work in THIS call.
+                    return SupersessionCounts(replayed=True)
+                # branch 2: a truly different resubmission reusing an op id
+                raise _SITE_REPLAY_MISMATCH.fire(SupersessionIntegrityError(
+                    f"operation_id {op_id!r} already committed a DIFFERENT request "
+                    f"for user {edge.user_id!r} (specs/0014 §4b phase 1)"))
         # branch 3: NULL stored digest (either legal NULL form) — request
         # identity UNAVAILABLE, never "different": continue to planning and
         # phase 2, where the version-selected outcome comparison governs.
@@ -255,20 +272,21 @@ def _absorption_scope_gate(store, edge: Edge):
     state: dict = {}
 
     def same_scope(prior) -> bool:
-        if "resolver" not in state:
-            r = MembershipResolver(store, edge.user_id)
-            state["resolver"] = r
-            # the incoming is a NEW row: its evidence is its own shape with
-            # NO ledger rows. Asked through the same method the atomic
-            # primitive re-derives it with, so planner and store cannot
-            # answer this differently.
-            state["incoming"] = r.evidence_of_unwritten(edge)
-        r, inc = state["resolver"], state["incoming"]
-        if inc == UNRESOLVED:
-            return False
-        if r.evidence(prior) != inc:
-            return False              # cross-scope, or the prior UNRESOLVED
-        return r.flattening_plan("edge", prior.id) is not None
+        with _SITE_ABSORB_UNRESOLVED.consult(), _SITE_ABSORB_CROSS_SCOPE.consult(), _SITE_ABSORB_NO_PLAN.consult():
+            if "resolver" not in state:
+                r = MembershipResolver(store, edge.user_id)
+                state["resolver"] = r
+                # the incoming is a NEW row: its evidence is its own shape with
+                # NO ledger rows. Asked through the same method the atomic
+                # primitive re-derives it with, so planner and store cannot
+                # answer this differently.
+                state["incoming"] = r.evidence_of_unwritten(edge)
+            r, inc = state["resolver"], state["incoming"]
+            if inc == UNRESOLVED:
+                return _SITE_ABSORB_UNRESOLVED.fire(False, "unresolved")
+            if r.evidence(prior) != inc:
+                return _SITE_ABSORB_CROSS_SCOPE.fire(False, "cross-scope")              # cross-scope, or the prior UNRESOLVED
+            return _SITE_ABSORB_NO_PLAN.fire(r.flattening_plan("edge", prior.id) is not None, "no-flattening-plan")
 
     return same_scope
 
@@ -330,24 +348,26 @@ def plan_correction(store, prior: Edge, replacement: Edge,
     subject cell and the authority ladder are checked against the NAMED prior,
     and a refused correction produces a refusal-only plan (nothing retired,
     nothing inserted, the durable refusal row recorded)."""
-    if (replacement.subject != prior.subject
-            or replacement.relation != prior.relation
-            or replacement.user_id != prior.user_id):
-        raise ValueError(
-            "a correction replaces a value IN PLACE: the replacement must "
-            "share the prior's (user, subject, relation)")
+    with _SITE_CORRECTION_IDENTITY.consult():
+        if (replacement.subject != prior.subject
+                or replacement.relation != prior.relation
+                or replacement.user_id != prior.user_id):
+            raise _SITE_CORRECTION_IDENTITY.fire(ValueError(
+                "a correction replaces a value IN PLACE: the replacement must "
+                "share the prior's (user, subject, relation)"))
     scope = store.edges(prior.user_id, subject=prior.subject,
                         relation=prior.relation, active_only=True,
                         include_quarantined=True)
-    if not any(p.id == prior.id for p in scope):
-        # the prior was retired between the caller's read and this plan: a
-        # corrected retirement may only target an edge the CAS fingerprint
-        # PINS AS ACTIVE — otherwise the commit would double-retire it and
-        # overwrite its recorded reason (the diff-scan race, closed here)
-        raise ValueError(
-            f"edge {prior.id!r} is not active in its (user, subject, "
-            f"relation) scope — a correction cannot retire a prior the CAS "
-            f"token does not pin (specs/0011 §4e)")
+    with _SITE_CORRECTION_PRIOR_INACTIVE.consult():
+        if not any(p.id == prior.id for p in scope):
+            # the prior was retired between the caller's read and this plan: a
+            # corrected retirement may only target an edge the CAS fingerprint
+            # PINS AS ACTIVE — otherwise the commit would double-retire it and
+            # overwrite its recorded reason (the diff-scan race, closed here)
+            raise _SITE_CORRECTION_PRIOR_INACTIVE.fire(ValueError(
+                f"edge {prior.id!r} is not active in its (user, subject, "
+                f"relation) scope — a correction cannot retire a prior the CAS "
+                f"token does not pin (specs/0011 §4e)"))
     expected = authority.scope_fingerprint(scope)
     draft = SupersessionRefusalDraft(
         prior_edge_id=prior.id, incoming_edge_id=replacement.id,
@@ -400,12 +420,13 @@ def _build_supersession_plan(store, edge: Edge, relations: dict[str, Relation],
     standing = store.standing_revocations(edge.user_id)
 
     def _src_revoked(e) -> bool:
-        if not standing or not hasattr(store, "local_origin"):
-            return False
-        from .scope_linkage import identity_digest_of
-        d = identity_digest_of(e.provenance.origin, e.provenance.source_id,
-                               store.local_origin())
-        return d is not None and d in standing
+        with _SITE_SRC_REVOKED.consult():
+            if not standing or not hasattr(store, "local_origin"):
+                return _SITE_SRC_REVOKED.fire(False, "no-standing")
+            from .scope_linkage import identity_digest_of
+            d = identity_digest_of(e.provenance.origin, e.provenance.source_id,
+                                   store.local_origin())
+            return _SITE_SRC_REVOKED.fire(d is not None and d in standing, "revoked")
 
     inc_revoked = _src_revoked(edge)
 
@@ -801,23 +822,24 @@ def semantic_duplicate_of(m: Edge, survivor: Edge) -> bool:
        survivor);
     5. warning-carrier preservation — `m` carries no flag the survivor lacks
        (suppressing it would drop a warning from the surface)."""
-    if not (m.active and survivor.active):
-        return False
-    if (m.subject, m.relation, m.provenance.disclosure,
-            m.provenance.author_of_evidence, m.provenance.derived_from) != \
-       (survivor.subject, survivor.relation, survivor.provenance.disclosure,
-            survivor.provenance.author_of_evidence,
-            survivor.provenance.derived_from):
-        return False
-    if _value_key(m.object) != _value_key(survivor.object):
-        return False
-    if not _strictly_redundant(m, survivor):
-        return False
-    if m.needs_confirmation and not survivor.needs_confirmation:
-        return False
-    if m.ungrounded and not survivor.ungrounded:
-        return False
-    return True
+    with _SITE_SEMDUP_KEEP.consult():
+        if not (m.active and survivor.active):
+            return _SITE_SEMDUP_KEEP.fire(False, "inactive")
+        if (m.subject, m.relation, m.provenance.disclosure,
+                m.provenance.author_of_evidence, m.provenance.derived_from) != \
+           (survivor.subject, survivor.relation, survivor.provenance.disclosure,
+                survivor.provenance.author_of_evidence,
+                survivor.provenance.derived_from):
+            return _SITE_SEMDUP_KEEP.fire(False, "envelope")
+        if _value_key(m.object) != _value_key(survivor.object):
+            return _SITE_SEMDUP_KEEP.fire(False, "value")
+        if not _strictly_redundant(m, survivor):
+            return _SITE_SEMDUP_KEEP.fire(False, "not-strictly-redundant")
+        if m.needs_confirmation and not survivor.needs_confirmation:
+            return _SITE_SEMDUP_KEEP.fire(False, "flag-carrier")
+        if m.ungrounded and not survivor.ungrounded:
+            return _SITE_SEMDUP_KEEP.fire(False, "grounding-carrier")
+        return True
 
 
 def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
@@ -1173,11 +1195,12 @@ def _strictly_redundant(m: Edge, survivor: Edge) -> bool:
     """True iff `m` adds NO carrier-visible information beyond the survivor
     (0012 §4c suppression predicate). The flag is handled by the caller's
     one-warning-carrier rule, not here."""
-    return ((m.note == "" or m.note == survivor.note)
-            and m.volatility == survivor.volatility
-            and (m.times_used == 0 or m.times_used == survivor.times_used)
-            and (not m.outcome_counts or m.outcome_counts == survivor.outcome_counts)
-            and (m.last_outcome is None or m.last_outcome == survivor.last_outcome))
+    with _SITE_STRICTLY_REDUNDANT.consult():
+        return (_SITE_STRICTLY_REDUNDANT.fire((m.note == "" or m.note == survivor.note)
+                and m.volatility == survivor.volatility
+                and (m.times_used == 0 or m.times_used == survivor.times_used)
+                and (not m.outcome_counts or m.outcome_counts == survivor.outcome_counts)
+                and (m.last_outcome is None or m.last_outcome == survivor.last_outcome), "withhold"))
 
 
 def value_groups(members: list[Edge]) -> dict:
@@ -1224,50 +1247,51 @@ def collapse_for_render(edges: list[Edge]) -> tuple[list[Edge], dict]:
     exactly ONE per group per recall (I8h); other flagged-but-redundant members
     are suppressed and counted.
     """
-    actives = [e for e in edges if e.active]
-    suppressed: set[str] = set()
-    info: dict[str, dict] = {}
+    with _SITE_COLLAPSE_FOR_RENDER.consult():
+        actives = [e for e in edges if e.active]
+        suppressed: set[str] = set()
+        info: dict[str, dict] = {}
 
-    by_key: dict[tuple, list[Edge]] = {}
-    for e in actives:
-        k = (e.subject, e.relation, e.provenance.disclosure,
-             e.provenance.author_of_evidence, e.provenance.derived_from)
-        by_key.setdefault(k, []).append(e)
+        by_key: dict[tuple, list[Edge]] = {}
+        for e in actives:
+            k = (e.subject, e.relation, e.provenance.disclosure,
+                 e.provenance.author_of_evidence, e.provenance.derived_from)
+            by_key.setdefault(k, []).append(e)
 
-    for members in by_key.values():
-        if len(members) < 2:
-            continue
-        groups = value_groups(members)
-
-        for group in groups.values():
-            if len(group) < 2:
+        for members in by_key.values():
+            if len(members) < 2:
                 continue
-            survivor = min(group, key=_collapse_survivor_order)
-            flagged = [m for m in group if m.needs_confirmation]
-            carrier = (survivor if survivor.needs_confirmation else
-                       (max(flagged, key=lambda m:
-                            (m.provenance.observed_at, m.id)) if flagged else None))
-            hidden = flagged_hidden = 0
-            for m in group:
-                if m is survivor or m is carrier:
-                    continue
-                if m.needs_confirmation:
-                    if _strictly_redundant(m, survivor):
-                        suppressed.add(m.id)         # the ×N pin (I8h)
-                        hidden += 1
-                        flagged_hidden += 1
-                    # a flagged member with distinct info surfaces (I8g)
-                elif _strictly_redundant(m, survivor):
-                    suppressed.add(m.id)
-                    hidden += 1
-            if hidden:
-                info[survivor.id] = {
-                    "since": min(m.valid_from for m in group),
-                    "hidden": hidden, "flagged_hidden": flagged_hidden}
+            groups = value_groups(members)
 
-    if not suppressed:
-        return list(edges), info
-    return [e for e in edges if e.id not in suppressed], info
+            for group in groups.values():
+                if len(group) < 2:
+                    continue
+                survivor = min(group, key=_collapse_survivor_order)
+                flagged = [m for m in group if m.needs_confirmation]
+                carrier = (survivor if survivor.needs_confirmation else
+                           (max(flagged, key=lambda m:
+                                (m.provenance.observed_at, m.id)) if flagged else None))
+                hidden = flagged_hidden = 0
+                for m in group:
+                    if m is survivor or m is carrier:
+                        continue
+                    if m.needs_confirmation:
+                        if _strictly_redundant(m, survivor):
+                            suppressed.add(m.id)         # the ×N pin (I8h)
+                            hidden += 1
+                            flagged_hidden += 1
+                        # a flagged member with distinct info surfaces (I8g)
+                    elif _strictly_redundant(m, survivor):
+                        suppressed.add(m.id)
+                        hidden += 1
+                if hidden:
+                    info[survivor.id] = {
+                        "since": min(m.valid_from for m in group),
+                        "hidden": hidden, "flagged_hidden": flagged_hidden}
+
+        if not suppressed:
+            return list(edges), info
+        return _SITE_COLLAPSE_FOR_RENDER.fire(([e for e in edges if e.id not in suppressed], info), "withhold", declined=bool(suppressed))
 
 
 def render_edges(edges: list[Edge], since: Optional[dict] = None) -> str:

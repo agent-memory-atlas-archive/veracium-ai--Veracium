@@ -35,6 +35,11 @@ from dataclasses import asdict, dataclass
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_SEND_NOT_CONSENTED = declare_site("diagnostics.send.not-consented")
 
 SCHEMA_VERSION = 1
 _LOGGER_NAME = "veracium.diagnostics"
@@ -266,8 +271,9 @@ class Reporter:
         cfg = self.config
         if not cfg.endpoint:
             return False
-        if not cfg.report_enabled and not self._confirm(interactive):
-            return False
+        with _SITE_SEND_NOT_CONSENTED.consult():
+            if not cfg.report_enabled and not self._confirm(interactive):
+                return _SITE_SEND_NOT_CONSENTED.fire(False, "not-consented")
         payload = self.build_payload(reason)
         if not payload["log_tail"]:
             return False

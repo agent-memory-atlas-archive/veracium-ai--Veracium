@@ -2,22 +2,33 @@
 
 ## Unreleased
 
+- **Added: the census binds forty more sites (specs/0042, tranche 3)** — the supersession
+  receipt boundary and replay mismatch, the absorption gate's three scope refusals, the
+  correction planner's two refusals, the source-revocation verdict, the semantic-duplicate keep
+  rule, strict redundancy, the render collapse, the proactive variant and eligibility verdicts,
+  ingest's three refusals, the procedure's source-id requirement, the procedural gate's two
+  predicates, the registry's two refusals, the MCP closed set, eleven `Memory` refusals, the
+  diagnostics send consent and telemetry's five consent gates. 68 sites are bound in all; the
+  runtime leg executes one declining decision at every one. No behaviour changes.
 - **Added: the exercised-guarantees census binds its first 28 product sites (specs/0042,
   tranche 2)** — gate (the procedural exclusion, the three scoped-assertability restrictions, the
   partition), schema (`Edge`/`Episode` `quarantined`, `use_only`, `valid_now`, `assertable`,
   `Episode.active`), the compiler's grounded-input filter, the grounding downgrade, authority's
   `permitted`/`self_assertion`, and the as-of adapter, classifier, recall and resolver refusals.
   Each decision is returned through its declared site; a predicate site declares its declining
-  value so `fired` counts only declines. **Cost at the shipped default (census off), measured:**
-  with the plain idiom at every site, recall median 152.1 ms → 158.9 ms (+4.5 %) on the rebuilt
-  ten-conversation store over 180 timed recalls, 12,385 of a recall's 12,527 census decisions being
-  the four `Edge` predicates; so those four skip the census machinery when it is off (the decision
-  computed once, the count taken after it — a predicate that raises is therefore uncounted there,
-  and both paths are asserted to raise and return identically). Re-measured alternating the
-  pre-tranche tree and this one, twice: 149.9 / 151.1 ms against 150.5 / 147.6 ms — inside
-  run-to-run noise; the figure is from the alternating run only. No behaviour changes; every
-  site's tests still pass unchanged except one 0037 text pin re-pinned to the predicate's
-  conjuncts.
+  value so `fired` counts only declines. **Cost at the shipped default (census off), measured on
+  the rebuilt ten-conversation store, 180 timed recalls per tree, the two trees run adjacently and
+  alternated:** with the plain idiom at every site, the pre-tranche tree against this one read
+  145.3 → 154.2 ms and 143.7 → 146.0 ms — two alternations, +1.6 % and +6.1 %: the cost is real
+  (both positive) and its magnitude is not established at two alternations; an earlier single
+  adjacent pair had read +4.5 %. A recall executes 12,527 census decisions and 12,385 of them are
+  the four `Edge` predicates, so those four skip the census machinery when it is off — the
+  structural reason: a disabled feature should not execute its machinery on the hottest path — the
+  decision computed once and the count taken after it (a predicate that raises is therefore
+  uncounted at those four, and both paths are asserted to raise and return identically). With the
+  bypass, alternated twice: 149.9 / 151.1 ms against 150.5 / 147.6 ms — inside run-to-run noise.
+  No behaviour changes; every site's tests still pass unchanged except one 0037 text pin re-pinned
+  to the predicate's conjuncts.
 - **Fixed: the reference Anthropic provider refuses an empty completion instead of returning
   `""`.** With the default `max_tokens` (4096) a hard prompt can spend the whole budget inside a
   `thinking` block; the API call succeeds with `stop_reason == "max_tokens"` and no text block, and

@@ -26,6 +26,12 @@ from typing import Callable, Optional
 
 from .graph import collapse_for_render
 from .schema import Edge, Episode, Volatility
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_VARIANT = declare_site("proactive.variant", declines=True)
+_SITE_ELIGIBLE = declare_site("proactive.eligible", declines=False)
 
 _ISO_DATE = re.compile(r"\b(20\d{2}-\d{2}-\d{2})\b")
 
@@ -76,13 +82,14 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
     variants: list[tuple[str, Edge]] = []
     seen: set[str] = set()
     def _is_variant(e):
-        k = _full_group_of.get(e.id)
-        if k is None:
-            return False
-        surv = _survivor_of.get(k)
-        # the group's I8j survivor is never a variant; everyone else in the
-        # group is (R-impl5-1 — first-seen registration was input-order)
-        return surv is not None and e.id != surv
+        with _SITE_VARIANT.consult():
+            k = _full_group_of.get(e.id)
+            if k is None:
+                return _SITE_VARIANT.fire(False, "ungrouped")
+            surv = _survivor_of.get(k)
+            # the group's I8j survivor is never a variant; everyone else in the
+            # group is (R-impl5-1 — first-seen registration was input-order)
+            return _SITE_VARIANT.fire(surv is not None and e.id != surv, "withhold")
 
     # specs/0012 I8: collapse strictly-redundant duplicates BEFORE categorization
     # (a suppressed member is category-identical to its survivor: distinct notes,
@@ -138,7 +145,8 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
         return 9                                   # ineligible for this surface
 
     def _eligible(_m):
-        return _class_rank(_m) < 9
+        with _SITE_ELIGIBLE.consult():
+            return _SITE_ELIGIBLE.fire(_class_rank(_m) < 9, "withhold")
 
     for _bk, _members in _env_buckets.items():
         for _vk, _ms in _value_groups(_members).items():

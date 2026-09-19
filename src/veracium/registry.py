@@ -22,6 +22,12 @@ from types import MappingProxyType
 from typing import NamedTuple
 
 from .schema import QUARANTINE_RELATION, RESERVED_RELATIONS, UNCLASSIFIED_RELATION
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_REGISTRY_EMPTY = declare_site("registry.empty-refused")
+_SITE_RESERVED_SHADOWED = declare_site("registry.reserved-shadowed")
 
 
 class FrozenRel(NamedTuple):
@@ -48,20 +54,22 @@ def effective_registry(host: dict) -> MappingProxyType:
             raise RegistryError(f"key {k!r} != Relation.name {v.name!r} — "
                                 f"membership and lookup would disagree")
     # 2. empty — AS SUPPLIED (X5)
-    if not host:
-        raise RegistryError("empty registry refused — every relation would "
-                            "be off-vocabulary, silently")
+    with _SITE_REGISTRY_EMPTY.consult():
+        if not host:
+            raise _SITE_REGISTRY_EMPTY.fire(RegistryError("empty registry refused — every relation would "
+                                "be off-vocabulary, silently"))
     # 3. conflicting shadows only; the canonical form is COMPLETE (desc
     #    included, empty is drift)
     for name, canon in RESERVED_RELATIONS.items():
         if name in host:
             v = host[name]
-            if (bool(v.functional) != canon.functional
-                    or getattr(v, "desc", "") != canon.desc):
-                raise RegistryError(
-                    f"reserved name conflictingly shadowed: {name!r} — the "
-                    f"canonical form is (functional={canon.functional}, "
-                    f"desc={canon.desc!r})")
+            with _SITE_RESERVED_SHADOWED.consult():
+                if (bool(v.functional) != canon.functional
+                        or getattr(v, "desc", "") != canon.desc):
+                    raise _SITE_RESERVED_SHADOWED.fire(RegistryError(
+                        f"reserved name conflictingly shadowed: {name!r} — the "
+                        f"canonical form is (functional={canon.functional}, "
+                        f"desc={canon.desc!r})"))
     # 4. injection — any reserved member not already (canonically) present
     eff = {k: FrozenRel(v.name, bool(v.functional), getattr(v, "desc", ""),
                         getattr(v, "relation_kind", "declarative"))

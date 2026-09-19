@@ -26,6 +26,12 @@ from .ingest import SourceIdRequired   # specs/0006 §4 rule 9: the tool refusal
 
 from . import Memory, MemoryConfig
 from .schema import EvidenceAuthor, EvidenceContext
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_CLOSED_SET_AUTHOR = declare_site("mcp.closed-set.author")
+_SITE_CLOSED_SET_TRUST = declare_site("mcp.closed-set.trust-field")
 
 _log = logging.getLogger("veracium.mcp")
 
@@ -99,17 +105,18 @@ def _closed_set(field: str, value) -> None:
     closed-set check "still RAISES rather than defaulting"). Wrong types are
     malformed too — `123 in _AUTHOR` is False, an unhashable value would raise
     TypeError from the lookup; both are refusals, made explicit here."""
-    if not isinstance(value, str) or value not in _AUTHOR:
-        if field == "author":
-            raise ValueError(
-                f"author={value!r} is not accepted here. Use "
-                f"{sorted(_AUTHOR)}. 'system' is deliberately unavailable through "
-                f"the MCP surface: it denotes veracium's own maintenance output, "
-                f"and a trust-bearing field must not be settable by the party whose "
-                f"trust it describes.")
-        raise ValueError(
-            f"derived_from={value!r} is not accepted. Use "
-            f"{sorted(_AUTHOR)} or omit it.")
+    with _SITE_CLOSED_SET_AUTHOR.consult(), _SITE_CLOSED_SET_TRUST.consult():
+        if not isinstance(value, str) or value not in _AUTHOR:
+            if field == "author":
+                raise _SITE_CLOSED_SET_AUTHOR.fire(ValueError(
+                    f"author={value!r} is not accepted here. Use "
+                    f"{sorted(_AUTHOR)}. 'system' is deliberately unavailable through "
+                    f"the MCP surface: it denotes veracium's own maintenance output, "
+                    f"and a trust-bearing field must not be settable by the party whose "
+                    f"trust it describes."))
+            raise _SITE_CLOSED_SET_TRUST.fire(ValueError(
+                f"derived_from={value!r} is not accepted. Use "
+                f"{sorted(_AUTHOR)} or omit it."))
 
 
 def remember_report(mem: Memory, user_id: str, text: str,

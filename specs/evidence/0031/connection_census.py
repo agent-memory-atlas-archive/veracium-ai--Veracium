@@ -644,14 +644,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: text_of reads msg.content / stop_reason / usage.output_tokens as plain attributes (the 0031 getattr inventory refused five new literal getattr sites): moved dotted/dataflow 6,004 -> 6,009, getattr/dataflow 38 -> 33, the rest unchanged.
 #: 0042 tranche 2: 28 sites bound in gate, schema, compile, grounding, authority, asof (consult brackets, fire wraps); census Site is its own context manager with a declared declining value: moved dotted/dataflow 6,009 -> 6,081, dotted/module-plain 324 -> 323, the rest unchanged.
 #: 0042 tranche 2b: the census bypass at the four hot Edge predicates (q computed once; machinery only when enabled) and discovery's Boolean-name rule: moved dotted/dataflow 6,081 -> 6,085, the rest unchanged.
+#: 0042 tranche 3: forty more sites bound (graph, proactive, ingest, procedures, procedural_gate, registry, mcp_server, __init__, diagnostics, telemetry): moved dotted/dataflow 6,085 -> 6,181, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 6085,
+    "dotted/dataflow": 6181,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 323,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 6508
+SRC_ATTRIBUTE_TOTAL = 6604
 SRC_DATA_DUNDERS_IN_DATAFLOW = 132   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 

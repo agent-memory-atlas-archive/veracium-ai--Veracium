@@ -31,6 +31,12 @@ from __future__ import annotations
 
 import re
 from typing import Optional
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_POSITIVE_FORM = declare_site("procedural-gate.positive-form", declines=False)
+_SITE_ACTOR_PRESENT = declare_site("procedural-gate.actor-present", declines=False)
 
 # --------------------------------------------------------------- normalisation
 def norm_ws(text: str) -> str:
@@ -173,41 +179,43 @@ def positive_form(span: str) -> bool:
     """v20: True only when the span opens with an enumerated head shape whose
     head verb is a lexical ACTION verb — not an auxiliary or modal, not in the
     cognitive/volitional class."""
-    v = _head_verb(norm_ws(span))
-    if v is None:
-        return False
-    low = v.lower()
-    if low in _AUX:
-        return False
-    if _stem(low) in _DIRECTIVE:              # v21 (round-2 F2): "I request that you…" is a request
-        return False
-    if any(tok in _SECOND_PERSON for tok in tokens(span)):   # v21: a span addressed to someone is not the user's own routine
-        return False
-    return _stem(low) not in _COGNITIVE
+    with _SITE_POSITIVE_FORM.consult():
+        v = _head_verb(norm_ws(span))
+        if v is None:
+            return _SITE_POSITIVE_FORM.fire(False, "no-head-verb")
+        low = v.lower()
+        if low in _AUX:
+            return _SITE_POSITIVE_FORM.fire(False, "auxiliary")
+        if _stem(low) in _DIRECTIVE:              # v21 (round-2 F2): "I request that you…" is a request
+            return _SITE_POSITIVE_FORM.fire(False, "directive")
+        if any(tok in _SECOND_PERSON for tok in tokens(span)):   # v21: a span addressed to someone is not the user's own routine
+            return _SITE_POSITIVE_FORM.fire(False, "second-person")
+        return _SITE_POSITIVE_FORM.fire(_stem(low) not in _COGNITIVE, "cognitive")
 
 
 def actor_present(span: str, event_text: Optional[str] = None, left_window: int = 120) -> bool:
     """The grammar. `span` is the (normalised) quoted span; when `event_text`
     is given the span's LEFT CONTEXT in the event is checked for a quotation
     or attribution frame (research §2: containment is not position)."""
-    s = norm_ws(span)
-    if not s or not _HEAD.match(s) or _MARKERS.search(s) or _PAST_VERB.match(s):
-        return False
-    if has_internal_boundary(s):              # v21/v24: a span is ONE plain sentence — a second sentence, an ambiguous
-        return False                          # join or a question is not the same assertion (the kinds, gate-only)
-    if not positive_form(s):                  # v20: fail CLOSED on every unenumerated form
-        return False
-    if event_text is not None:
-        ev = norm_ws(event_text)
-        i = ev.find(s)
-        if i < 0:
-            return False
-        if not whole_sentence(s, ev, i):          # v22 (round-3 F2/F3): the span is ONE WHOLE SENTENCE of the event
-            return False
-        left = ev[max(0, i - left_window):i]
-        if _FRAME_TAIL.search(left) or _inside_open_quote(left):
-            return False
-    return True
+    with _SITE_ACTOR_PRESENT.consult():
+        s = norm_ws(span)
+        if not s or not _HEAD.match(s) or _MARKERS.search(s) or _PAST_VERB.match(s):
+            return _SITE_ACTOR_PRESENT.fire(False, "head")
+        if has_internal_boundary(s):              # v21/v24: a span is ONE plain sentence — a second sentence, an ambiguous
+            return _SITE_ACTOR_PRESENT.fire(False, "internal-boundary")                          # join or a question is not the same assertion (the kinds, gate-only)
+        if not positive_form(s):                  # v20: fail CLOSED on every unenumerated form
+            return _SITE_ACTOR_PRESENT.fire(False, "form")
+        if event_text is not None:
+            ev = norm_ws(event_text)
+            i = ev.find(s)
+            if i < 0:
+                return _SITE_ACTOR_PRESENT.fire(False, "not-in-event")
+            if not whole_sentence(s, ev, i):          # v22 (round-3 F2/F3): the span is ONE WHOLE SENTENCE of the event
+                return _SITE_ACTOR_PRESENT.fire(False, "not-a-whole-sentence")
+            left = ev[max(0, i - left_window):i]
+            if _FRAME_TAIL.search(left) or _inside_open_quote(left):
+                return _SITE_ACTOR_PRESENT.fire(False, "framed")
+        return True
 
 
 def whole_sentence(span: str, event: str, at: int) -> bool:

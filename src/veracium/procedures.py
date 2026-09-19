@@ -36,6 +36,11 @@ from typing import Optional
 
 from .schema import (Disclosure, Edge, EvidenceAuthor, EvidenceContext, Provenance,
                      is_procedural, is_procedural_relation, utcnow)
+from .census import declare_site
+
+# specs/0042 (tranche 3): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_PROC_SOURCE_ID_REQUIRED = declare_site("procedures.source-id-required")
 
 # ----------------------------------------------------------------- refusals
 class ProcedureValueError(ValueError):
@@ -152,14 +157,15 @@ def build_procedure_edge(store, relations, user_id: str, summary: str, *, author
     #    procedure with no source_id has no source identity and no revocation
     #    can reach it; refused before any write when the host's config says so
     #    (the context is always explicit here, so its derivation IS a declaration)
-    if require_source_id and source_id is None and (
-            author == EvidenceAuthor.THIRD_PARTY
-            or context.derived_from == EvidenceAuthor.THIRD_PARTY):
-        from .ingest import SourceIdRequired
-        raise SourceIdRequired(
-            "source_id is required for a third-party-authored or third-party-derived procedure "
-            "when MemoryConfig.require_source_id is on (specs/0006 §4 rule 9, v9): a record "
-            "without one has no source identity and cannot be revoked by source; nothing was written")
+    with _SITE_PROC_SOURCE_ID_REQUIRED.consult():
+        if require_source_id and source_id is None and (
+                author == EvidenceAuthor.THIRD_PARTY
+                or context.derived_from == EvidenceAuthor.THIRD_PARTY):
+            from .ingest import SourceIdRequired
+            raise _SITE_PROC_SOURCE_ID_REQUIRED.fire(SourceIdRequired(
+                "source_id is required for a third-party-authored or third-party-derived procedure "
+                "when MemoryConfig.require_source_id is on (specs/0006 §4 rule 9, v9): a record "
+                "without one has no source identity and cannot be revoked by source; nothing was written"))
     # -- construction (§4b): id minted like remember's, subject "user"
     edge_id = _uid("e")
     valid_from = when or utcnow()
