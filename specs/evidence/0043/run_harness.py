@@ -267,7 +267,17 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
     garble = ip.garble_control(probe["shipped"]["prompt"], probe["record"])
     if not (cal_s["calibrated"] and cal_b["calibrated"] and garble["collapsed"]):
         raise Refused(f"the interpreter is not calibrated: shipped {cal_s['agreement']} baseline {cal_b['agreement']} garble collapsed={garble['collapsed']} — the run does not start")
-    calibration = {"shipped": cal_s["agreement"], "baseline": cal_b["agreement"], "unresolved_on_reference": cal_s["unresolved"], "garble_collapsed": garble["collapsed"]}
+    # the UNRESOLVED count on the reference cases, split: EXPECTED (a case whose labelled outcome IS UNRESOLVED — the
+    # ambiguity control) vs UNEXPECTED (a case with a known answer the judge could not resolve). The gate is bright:
+    # an unexpected one means the judge is not calibrated and the run does not start (A3-bis).
+    expected_unres = sum(1 for q, ans, ex, exp_out, exp_cf in ip.REFERENCE if exp_out == "UNRESOLVED")
+    unexpected_unres = cal_s["unresolved"] - expected_unres
+    if unexpected_unres != 0:
+        raise Refused(f"the interpreter left {unexpected_unres} reference case(s) with a known answer UNRESOLVED — not calibrated; the run does not start")
+    calibration = {"shipped": cal_s["agreement"], "baseline": cal_b["agreement"], "unresolved_on_reference": cal_s["unresolved"],
+                   "unresolved_expected": expected_unres, "unresolved_unexpected": unexpected_unres, "garble_collapsed": garble["collapsed"],
+                   "reference_cases": len(ip.REFERENCE), "interpreter_sha16": interpreter_sha16(),
+                   "independence": "the reference cases include answer shapes learned from runs 1 and 2 of this harness; this run's questions were authored AFTER the interpreter was frozen at the digest above, so its calibration predates its data"}
     # the examiner, blind
     if questions_override is not None:
         questions, authorship = questions_override, {"author": "override (a test's canned set)", "requested": len(questions_override), "returned": len(questions_override)}
@@ -363,8 +373,11 @@ def report(res: dict) -> str:
          f"scored with interpreter.py sha16 {res.get('interpreter_sha16')}" + (f" — RE-SCORED {res['rescored_at']} over the captured answers (no new model call)" if res.get("rescored") else ""),
          f"model configuration (frozen): {json.dumps(res['config'], sort_keys=True)}",
          f"authorship: {json.dumps(res['authorship'], sort_keys=True)}",
-         f"calibration before the run: shipped {_ratio(res['calibration']['shipped'])}, baseline {_ratio(res['calibration']['baseline'])}, "
-         f"UNRESOLVED on the reference cases {res['calibration']['unresolved_on_reference']}, garble control collapsed: {res['calibration']['garble_collapsed']}",
+         f"calibration before the run: shipped {_ratio(res['calibration']['shipped'])}, baseline {_ratio(res['calibration']['baseline'])} over "
+         f"{res['calibration'].get('reference_cases', '?')} reference cases; UNRESOLVED on them {res['calibration']['unresolved_on_reference']} "
+         f"(expected — a case whose labelled outcome is UNRESOLVED, the ambiguity control: {res['calibration'].get('unresolved_expected', '?')}; "
+         f"unexpected — a known answer the judge could not resolve: {res['calibration'].get('unresolved_unexpected', '?')}); garble control collapsed: {res['calibration']['garble_collapsed']}",
+         f"calibration independence: {res['calibration'].get('independence', 'not stated (a run before tranche 2b)')}",
          f"arm capture sources: {json.dumps(res['sources'], sort_keys=True)}",
          f"questions: {len(res['questions'])} authored, {len(res['kept'])} kept, {len(res['excluded'])} EXCLUDED (INV-6, counted):"]
     L += [f"  {qid}: {why}" for qid, why in res["excluded"].items()] or ["  (none)"]

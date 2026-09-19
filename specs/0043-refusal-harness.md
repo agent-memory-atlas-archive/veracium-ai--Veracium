@@ -59,8 +59,9 @@ Spec-Status: accepted
 > is `withheld`; a contrastive conjunction opens a new clause, so a definite assertion after a disclaimer still
 > scores `ANSWERED` (the round-1 cases stand). Run 2 found one more shape (an elaboration after an em dash
 > read as a new clause — one refusal scored `ANSWERED`); a tenth case pins it and the run was RE-SCORED over its
-> captured answers with no new model call. Run 1's report and ledger are kept beside the committed run under
-> `run1-interpreter-v1/` (its ledger predates the prompt-carrying detail and cannot be re-scored). The
+> captured answers with no new model call. Runs 1 and 2 are kept beside the committed run under
+> `run1-interpreter-v1/` and `run2-instrument-fitting/` (run 1's ledger predates the prompt-carrying detail
+> and cannot be re-scored; run 2 is the run the instrument was fitted on — tranche 2b, below). The
 > committed run names the interpreter digest it was scored with, and `tests/test_0043_run.py` re-scores the
 > captured answers with the current interpreter and refuses a report whose instrument has moved.
 >
@@ -72,6 +73,17 @@ Spec-Status: accepted
 > 0 excluded of 24. The fixture is content-frozen (examiner view digest identical across runs); its sqlite
 > bytes differ per build and each run records its own store digest. The class-3 contribution the spec claims
 > and had never measured now has its first figure, with its denominator and its baseline beside it.
+>
+> **Tranche 2b (the same day; research's read of the report).** The calibration line now names its
+> `UNRESOLVED` (the ambiguity control, expected 1; unexpected 0 — an unexpected one refuses the run); the
+> report states that the reference cases include shapes learned from runs 1 and 2; and **the committed run
+> is run 3 — a FRESH question set authored after the interpreter was frozen at its digest, scored without
+> re-scoring, so its calibration predates its data.** Measured (run 3): shipped arm refusal rate **11/24** —
+> quarantined **8/8**, untrusted **3/3**, trusted 0/13 refused with answered-on-trusted 13/13; baseline **2/24**
+> — quarantined 2/8, untrusted 0/3, answered-on-trusted 13/13, three anomalies (the untrusted fact asserted
+> beside the quarantined one); `OTHER` 0 and `UNRESOLVED` 0 in both arms. §8 gains the two limits this run
+> made plain: `REFUSED-ABSENT` is unreachable by a blind examiner writing from presence, and a class under
+> ten questions is a direction, not a figure.
 
 ## 1. Problem and motivation — what this spec claims ALONE
 
@@ -598,6 +610,20 @@ with every denominator named.
   that refuses everything scores perfectly here and is useless**, which is why
   `ANSWERED`-on-first-party-stated is reported beside it *(moved from 0042 v3.1
   §8, where it described this spec's measurement, not the census's)*
+- 🔴 **`REFUSED-ABSENT` — the class this harness CANNOT reach (implementation, tranche 2, 2026-09-19).** A
+  blind examiner writes from PRESENCE (A2-bis: the view is the records that exist); nobody can author a
+  question about what is missing from a view of what is there, so no `absent` question exists to ask and the
+  class reads NOT PRESENTED on every run, whatever the corpus. *A limit of the instrument, not of a run — a
+  second examiner input (a list of relations the vocabulary admits that the user has no record under) would
+  reach it and is not built.*
+- **a per-class rate on a class of few questions.** The first run presented three `present-but-untrusted`
+  questions; a rate over three moves by a third on one differently worded answer. Every per-class rate
+  travels with its `presented` count, and §10's question — how many per class before a rate is worth
+  publishing — is still open; until it is answered, a class under ten is a direction, not a figure.
+- **an independent calibration of the first runs.** The reference cases include answer shapes LEARNED from
+  runs 1 and 2 (the refusal that names the claim it refuses; the elaboration after an em dash). A run scored
+  with an interpreter fitted to it measures the gate with an instrument fitted to that run; the committed run
+  is a FRESH question set authored after the interpreter was frozen, and its report says so.
 
 ## 9. Brief for the external reviewer — ROUND 4
 

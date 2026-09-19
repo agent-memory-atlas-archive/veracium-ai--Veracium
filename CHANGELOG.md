@@ -29,6 +29,14 @@
   answered-on-trusted 14/14; baseline arm 0/24 with four anomalies where it asserted the untrusted fact.
   The interpreter is the deterministic fact-string matcher at clause level; its limit is stated in the spec
   and every answer is in the report. No product behaviour changes.
+- **Changed: the refusal-harness report names its calibration gate and its independence, and the committed
+  run is a fresh question set scored with the frozen interpreter (specs/0043, tranche 2b).** The calibration
+  line splits `UNRESOLVED` on the reference cases into the ambiguity control (expected) and known answers the
+  judge could not resolve (an unexpected one refuses the run); the report states that the reference cases
+  include shapes learned from the first two runs; run 3 — questions authored after the interpreter was
+  frozen — is the committed run: shipped arm 11/24 refusals (quarantined 8/8, untrusted 3/3, trusted answered
+  13/13) against a baseline of 2/24. Runs 1 and 2 are kept beside it. The spec's limits gain the absent
+  class, unreachable by a blind examiner, and the small-class caveat. No product behaviour changes.
 - **Added: the gate's rendering seam, and the refusal harness's baseline arm captured at its own
   model invocation (specs/0043, tranche 1).** `gate.render_gate_input` now composes the exact (system,
   prompt) the assertion gate sends to the model, and `gate.answer` takes a harness-only `render=` that

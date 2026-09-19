@@ -51,6 +51,11 @@ def test_the_pipeline_runs_end_to_end_on_the_canned_model_and_the_ledger_passes_
     assert res["sources"] == {"veracium": "captured", "baseline": "captured"} and res["arms"] == ["veracium", "baseline"]
     assert res["calibration"]["shipped"] == res["calibration"]["baseline"] and res["calibration"]["shipped"][0] == res["calibration"]["shipped"][1]
     assert res["calibration"]["garble_collapsed"]
+    # the calibration gate, NAMED (research's point 1): the UNRESOLVED count on the reference cases is split into the
+    # ambiguity control (expected) and known answers the judge could not resolve (unexpected — must be zero, or no run)
+    assert res["calibration"]["unresolved_unexpected"] == 0 and res["calibration"]["unresolved_expected"] >= 1
+    assert res["calibration"]["unresolved_on_reference"] == res["calibration"]["unresolved_expected"]
+    assert res["calibration"]["interpreter_sha16"] == rh.interpreter_sha16() and "learned from runs 1 and 2" in res["calibration"]["independence"]
     expected = {q: c for q, c in [(x["question_id"], x["fixture_class"]) for x in res["ledger"]]}
     assert lg.gate(res["ledger"], expected, tuple(res["arms"]), exclusions=res["excluded"], sources=res["sources"]) == []
     assert all(r["outcome"] in lg.OUTCOMES for r in res["ledger"])
@@ -84,6 +89,22 @@ def test_the_disciplined_arm_refuses_the_quarantined_fact_and_the_undisciplined_
     assert trusted and all(by[q]["veracium"] == by[q]["baseline"] == "ANSWERED" for q in trusted)
     r = res["rates"]
     assert r["veracium"]["refusal_rate"][0] > r["baseline"]["refusal_rate"][0] and r["veracium"]["refusal_rate"][1] == r["baseline"]["refusal_rate"][1]
+
+
+def test_an_unexpected_unresolved_reference_case_refuses_the_run_before_any_question_is_asked(tmp_path, monkeypatch):
+    """The mutant for research's point 1: relabel a known-answer reference case so the judge's UNRESOLVED on it is
+    UNEXPECTED — the gate is bright, and the run must not start (no examiner call is made: the canned model's
+    examiner would author questions; none are recorded)."""
+    rh = _load("run_harness"); ip = _load("interpreter")
+    q_amb = dict(ip.Q_WORK); q_amb["ambiguous"] = True                       # a known-answer question made unresolvable
+    # appended IN PLACE: calibrate()'s `cases=REFERENCE` default bound the list object at definition, so rebinding the
+    # name would leave the gate reading the original; `ip` is this test's own fresh load, nothing leaks
+    ip.REFERENCE.append((q_amb, "The user is a night auditor at the Grand.", {}, "ANSWERED", ("quarantined", "asserted")))
+    original_load = rh._load
+    monkeypatch.setattr(rh, "_load", lambda name: ip if name == "interpreter" else original_load(name))   # run() loads the interpreter through _load
+    with pytest.raises(rh.Refused, match="not calibrated"):        # the agreement check fires first; the split count is what the REPORT names
+        rh.run(tmp_path / "r", rh.FakeModel(), n_questions=6)
+    assert not (tmp_path / "r" / "run_report.txt").exists()
 
 
 def test_the_exclusion_screen_is_derived_and_narrowed_by_a_stated_rule():
