@@ -44,6 +44,20 @@ from .scope_linkage import (derive_absorbed_by, plan_row_id,
                             reconstruct_absorption_rows)
 from .source_identity import resolve_origin
 from .store.base import DESTINATION_CHANGED, NON_QUIESCENT
+from .census import declare_site
+
+# specs/0042 (tranche 4): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_EXPORT_NON_QUIESCENT = declare_site("portability.export.non-quiescent")
+_SITE_IMPORT_CHAIN = declare_site("portability.import.chain")
+_SITE_IMPORT_RESTORE_NOT_BOOL = declare_site("portability.import.restore-not-bool")
+_SITE_IMPORT_RESTORE_WITH_USER = declare_site("portability.import.restore-with-user")
+_SITE_IMPORT_FILE = declare_site("portability.import.file")
+_SITE_IMPORT_AGREEMENT_INVALID = declare_site("portability.import.agreement-invalid")
+_SITE_IMPORT_ORIGIN_MISSING = declare_site("portability.import.origin-missing")
+_SITE_IMPORT_RECORD = declare_site("portability.import.record")
+_SITE_IMPORT_RACE_EXHAUSTED = declare_site("portability.import.race-exhausted")
+_SITE_IMPORT_PREFLIGHT = declare_site("portability.import.preflight")
 
 # specs/0014 §4c/§7a (R5-4): the exported Episode.consolidation_output_index
 # field bumps the format 4→5 per accepted 0010's refuse-don't-drop rule — an
@@ -109,10 +123,11 @@ def export_memory(store, user_id: str, path) -> dict:
     # claim starting mid-export yields NON_QUIESCENT, never a dangling `claimed_by`.
     # Export never mutates; the caller runs consolidate()/maintain() first and retries.
     episodes = store.quiescent_episode_snapshot(user_id)
-    if episodes is NON_QUIESCENT:
-        raise ValueError(
-            f"export refuses: a consolidation is in flight for {user_id!r} — run "
-            f"consolidate()/maintain() to settle it, then retry (specs/0010 §4f)")
+    with _SITE_EXPORT_NON_QUIESCENT.consult():
+        if episodes is NON_QUIESCENT:
+            raise _SITE_EXPORT_NON_QUIESCENT.fire(ValueError(
+                f"export refuses: a consolidation is in flight for {user_id!r} — run "
+                f"consolidate()/maintain() to settle it, then retry (specs/0010 §4f)"))
     edges = store.edges(user_id, active_only=False, include_quarantined=True)
     # specs/0006 §4 rule 3/6 — MATERIALISE the resolved origin on export so the file is
     # self-describing (I6). A local record (origin absent) is written with THIS store's
@@ -216,50 +231,51 @@ def _validate_incoming_chain(members: list, key, path) -> tuple:
     """specs/0009 §4c per-chain topology: a valid outcome chain is a single
     `1`-rooted, dense-`+1`, single-leaf path within one identity — no branch, no
     cycle, no gap. Refuse (never repair) anything else. Returns (root, leaf)."""
-    by_id = {m.id: m for m in members}
-    roots = [m for m in members if m.supersedes_episode is None]
-    if len(roots) != 1:
-        raise ValueError(f"{path}: outcome chain {key} has {len(roots)} roots — "
-                         f"import refuses rather than repairing (specs/0009 §4c/H5)")
-    root = roots[0]
-    if (root.seq or 0) != 1:
-        raise ValueError(f"{path}: outcome chain {key} root seq={root.seq!r} != 1 — "
-                         f"imported history must inhabit the store's state space "
-                         f"(specs/0009 §4c/H5)")
-    child_of: dict = {}
-    for m in members:
-        if m.supersedes_episode is None:
-            continue
-        pred = by_id.get(m.supersedes_episode)
-        if pred is None:
-            raise ValueError(f"{path}: outcome chain {key} link {m.id!r} supersedes "
-                             f"{m.supersedes_episode!r}, absent from this chain — "
-                             f"refuse (specs/0009 §4c/H5)")
-        if (m.seq or 0) != (pred.seq or 0) + 1:
-            raise ValueError(f"{path}: outcome chain {key} is not dense +1 at "
-                             f"{m.id!r} (seq {m.seq!r} on parent {pred.seq!r}) — "
-                             f"refuse (specs/0009 §4c/H5)")
-        if m.supersedes_episode in child_of:
-            raise ValueError(f"{path}: outcome chain {key} branches at "
-                             f"{m.supersedes_episode!r} — refuse (specs/0009 §4c/H5)")
-        child_of[m.supersedes_episode] = m
-    leaves = [m for m in members if m.id not in child_of]
-    if len(leaves) != 1:
-        raise ValueError(f"{path}: outcome chain {key} has {len(leaves)} leaves — "
-                         f"refuse (specs/0009 §4c/H5)")
-    leaf = leaves[0]
-    seen: set = set()
-    cur = leaf
-    while cur is not None:
-        if cur.id in seen:
-            raise ValueError(f"{path}: outcome chain {key} has a cycle — refuse "
-                             f"(specs/0009 §4c/H5)")
-        seen.add(cur.id)
-        cur = by_id.get(cur.supersedes_episode) if cur.supersedes_episode else None
-    if len(seen) != len(members) or (leaf.seq or 0) != len(members):
-        raise ValueError(f"{path}: outcome chain {key} is disconnected or has a "
-                         f"seq gap — refuse (specs/0009 §4c/H5)")
-    return root, leaf
+    with _SITE_IMPORT_CHAIN.consult():
+        by_id = {m.id: m for m in members}
+        roots = [m for m in members if m.supersedes_episode is None]
+        if len(roots) != 1:
+            raise _SITE_IMPORT_CHAIN.fire(ValueError(f"{path}: outcome chain {key} has {len(roots)} roots — "
+                             f"import refuses rather than repairing (specs/0009 §4c/H5)"), "roots")
+        root = roots[0]
+        if (root.seq or 0) != 1:
+            raise _SITE_IMPORT_CHAIN.fire(ValueError(f"{path}: outcome chain {key} root seq={root.seq!r} != 1 — "
+                             f"imported history must inhabit the store's state space "
+                             f"(specs/0009 §4c/H5)"), "root-seq")
+        child_of: dict = {}
+        for m in members:
+            if m.supersedes_episode is None:
+                continue
+            pred = by_id.get(m.supersedes_episode)
+            if pred is None:
+                raise _SITE_IMPORT_CHAIN.fire(ValueError(f"{path}: outcome chain {key} link {m.id!r} supersedes "
+                                 f"{m.supersedes_episode!r}, absent from this chain — "
+                                 f"refuse (specs/0009 §4c/H5)"), "absent-predecessor")
+            if (m.seq or 0) != (pred.seq or 0) + 1:
+                raise _SITE_IMPORT_CHAIN.fire(ValueError(f"{path}: outcome chain {key} is not dense +1 at "
+                                 f"{m.id!r} (seq {m.seq!r} on parent {pred.seq!r}) — "
+                                 f"refuse (specs/0009 §4c/H5)"), "not-dense")
+            if m.supersedes_episode in child_of:
+                raise _SITE_IMPORT_CHAIN.fire(ValueError(f"{path}: outcome chain {key} branches at "
+                                 f"{m.supersedes_episode!r} — refuse (specs/0009 §4c/H5)"), "branches")
+            child_of[m.supersedes_episode] = m
+        leaves = [m for m in members if m.id not in child_of]
+        if len(leaves) != 1:
+            raise _SITE_IMPORT_CHAIN.fire(ValueError(f"{path}: outcome chain {key} has {len(leaves)} leaves — "
+                             f"refuse (specs/0009 §4c/H5)"), "leaves")
+        leaf = leaves[0]
+        seen: set = set()
+        cur = leaf
+        while cur is not None:
+            if cur.id in seen:
+                raise _SITE_IMPORT_CHAIN.fire(ValueError(f"{path}: outcome chain {key} has a cycle — refuse "
+                                 f"(specs/0009 §4c/H5)"), "cycle")
+            seen.add(cur.id)
+            cur = by_id.get(cur.supersedes_episode) if cur.supersedes_episode else None
+        if len(seen) != len(members) or (leaf.seq or 0) != len(members):
+            raise _SITE_IMPORT_CHAIN.fire(ValueError(f"{path}: outcome chain {key} is disconnected or has a "
+                             f"seq gap — refuse (specs/0009 §4c/H5)"), "disconnected")
+        return root, leaf
 
 
 def import_memory(store, path, *, user_id: Optional[str] = None,
@@ -291,678 +307,679 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
     skipped as plan-row-id-equal on an idempotent re-import)."""
     # specs/0005 §4a — the two argument gates, in order, BEFORE the file is
     # opened: the closed bool predicate (P13), then mutual exclusion (P5).
-    if type(restore) is not bool:
-        raise TypeError(
-            f"restore must be a bool, got {type(restore).__name__!s} — no "
-            f"truthiness coercion at a trust boundary (specs/0005 P13)")
-    if restore and user_id is not None:
-        raise ValueError(
-            "restore and user_id are mutually exclusive — a restore is this "
-            "store's own history and never remaps (specs/0005 P5)")
-    path = Path(path)
-    with path.open() as f:
-        lines = [ln for ln in (l.strip() for l in f) if ln]
-    if not lines:
-        raise ValueError(f"{path}: empty file")
-    header = json.loads(lines[0])
-    if header.get("kind") != "veracium-export":
-        raise ValueError(f"{path}: not a Veracium export (missing header)")
-    src_version = header.get("version", 0)
-    if src_version > FORMAT_VERSION:
-        raise ValueError(f"{path}: export version {src_version} is newer "
-                         f"than this Veracium understands ({FORMAT_VERSION})")
-    target_uid = user_id or header.get("user_id")
+    with _SITE_IMPORT_RESTORE_NOT_BOOL.consult(), _SITE_IMPORT_RESTORE_WITH_USER.consult(), _SITE_IMPORT_FILE.consult(), _SITE_IMPORT_AGREEMENT_INVALID.consult(), _SITE_IMPORT_ORIGIN_MISSING.consult(), _SITE_IMPORT_RECORD.consult(), _SITE_IMPORT_RACE_EXHAUSTED.consult():
+        if type(restore) is not bool:
+            raise _SITE_IMPORT_RESTORE_NOT_BOOL.fire(TypeError(
+                f"restore must be a bool, got {type(restore).__name__!s} — no "
+                f"truthiness coercion at a trust boundary (specs/0005 P13)"))
+        if restore and user_id is not None:
+            raise _SITE_IMPORT_RESTORE_WITH_USER.fire(ValueError(
+                "restore and user_id are mutually exclusive — a restore is this "
+                "store's own history and never remaps (specs/0005 P5)"))
+        path = Path(path)
+        with path.open() as f:
+            lines = [ln for ln in (l.strip() for l in f) if ln]
+        if not lines:
+            raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: empty file"), "empty")
+        header = json.loads(lines[0])
+        if header.get("kind") != "veracium-export":
+            raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: not a Veracium export (missing header)"), "not-an-export")
+        src_version = header.get("version", 0)
+        if src_version > FORMAT_VERSION:
+            raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: export version {src_version} is newer "
+                             f"than this Veracium understands ({FORMAT_VERSION})"), "newer-version")
+        target_uid = user_id or header.get("user_id")
 
-    # (1) parse every record
-    edge_recs: list = []
-    ep_recs: list = []
-    for ln in lines[1:]:
-        rec = json.loads(ln)
-        marker = rec.pop("record", None)
-        if marker is None and rec.get("kind") in ("edge", "episode"):
-            marker = rec.pop("kind")   # format v1: the record marker was named "kind"
-        if marker not in ("edge", "episode"):
-            raise ValueError(f"{path}: unknown record kind {marker!r}")
-        rec["user_id"] = target_uid
-        (edge_recs if marker == "edge" else ep_recs).append(rec)
+        # (1) parse every record
+        edge_recs: list = []
+        ep_recs: list = []
+        for ln in lines[1:]:
+            rec = json.loads(ln)
+            marker = rec.pop("record", None)
+            if marker is None and rec.get("kind") in ("edge", "episode"):
+                marker = rec.pop("kind")   # format v1: the record marker was named "kind"
+            if marker not in ("edge", "episode"):
+                raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: unknown record kind {marker!r}"), "unknown-kind")
+            rec["user_id"] = target_uid
+            (edge_recs if marker == "edge" else ep_recs).append(rec)
 
-    # (1a) specs/0037 §4e / §2c (round-3 F2, round-4 F1): THE PROCEDURAL
-    # BOUNDARY, evaluated on the RAW record BEFORE any version normalization,
-    # for every declared format version, PER RECORD (never per file — a
-    # mixed file keeps its declarative records). DEFAULT path: a record is
-    # refused as procedural when ANY of THREE independent signals fires —
-    # (1) its stamp is "procedural", (2) its basis is present, (3) the
-    # RECEIVING host's active registry declares its relation procedural —
-    # naming the FIRST that fires in that order, and `raw: true` when the
-    # envelope declared a version below the key (the presence is the
-    # evidence). A basis in a foreign file is another host's declaration
-    # (0005: an importing store's knowledge begins at ITS import). RESTORE
-    # path: the operator asserts the file is this store's own history, which
-    # is exactly the attestation basis requires — a CONSISTENT procedural
-    # record (stamp AND basis in domain, or neither) restores VERBATIM;
-    # either marker without the other, or an out-of-domain basis, is
-    # MALFORMED and refused per record; the registry signal does NOT fire on
-    # restore (the registry may have changed since). Only the records that
-    # remain admissible are normalized, so the I10 strip has nothing
-    # procedural to strip from them.
-    reg = relations if relations is not None else DEFAULT_RELATIONS
-    procedural_refusals: list = []
-    admitted: list = []
-    # specs/0037 v24.2 (round-6 finding 2): the inheritance lookup is built from the
-    # RAW records BEFORE any refusal, so a predecessor refused as procedural on the
-    # default path keeps constraining its successors — refusing a predecessor must
-    # not erase its successors' requirements. Also the destination's existing
-    # records, so the lookup is independent of file order and of what is already
-    # stored. Procedural-ness is by LINEAGE: a record whose predecessor is
-    # procedural by lineage is procedural whatever markers it carries (a chain
-    # that drops the markers one hop later is the same laundering, one hop later).
-    # specs/0037 v24.4 (round-8 finding 1): CONFLICTING IDS ARE RESOLVED BEFORE
-    # LINEAGE IS DERIVED. `raw_by_id` kept the LAST incoming record per id and
-    # the lineage helper preferred it over the destination's stored record, so
-    # (a) a REFUSED incomplete copy of a stored procedural predecessor hid the
-    # stored producer and a successor with another producer restored, and (b)
-    # a file naming one id twice gave a file-order-dependent disposition. Now:
-    # every incoming copy of an id the file names more than once is refused
-    # (`duplicate_id` — a file cannot say two things about one record, and
-    # both orders refuse the same copies); the lineage helper reads EVERY copy
-    # of an id together with the destination's stored record, the stored
-    # record's constraints taking precedence (a persisted stamp or producer is
-    # never erased by an incoming copy, admitted or refused), and copies that
-    # disagree about a constraint leave it UNRESOLVED, which fails every
-    # successor's check (fail closed, order-independent by construction —
-    # sets, never "the last one seen").
-    raw_copies: dict = {}
-    for rec in edge_recs:
-        raw_copies.setdefault(rec.get("id"), []).append(rec)
-    duplicate_ids = {rid for rid, copies in raw_copies.items() if len(copies) > 1}
-    existing_by_id = {e.id: e for e in store.edges(target_uid, active_only=False,
-                                                    include_quarantined=True)}
-    _lineage: dict = {}
-    # a constraint the file's copies disagree about: a UNIQUE object, never a
-    # value a record could carry (research's pre-seal red team, 2026-09-14: a
-    # string sentinel shared the producer's value space and was held out of
-    # the check only by the closed producer lexicon — an accident, not a rule)
-    _UNRESOLVED = object()
+        # (1a) specs/0037 §4e / §2c (round-3 F2, round-4 F1): THE PROCEDURAL
+        # BOUNDARY, evaluated on the RAW record BEFORE any version normalization,
+        # for every declared format version, PER RECORD (never per file — a
+        # mixed file keeps its declarative records). DEFAULT path: a record is
+        # refused as procedural when ANY of THREE independent signals fires —
+        # (1) its stamp is "procedural", (2) its basis is present, (3) the
+        # RECEIVING host's active registry declares its relation procedural —
+        # naming the FIRST that fires in that order, and `raw: true` when the
+        # envelope declared a version below the key (the presence is the
+        # evidence). A basis in a foreign file is another host's declaration
+        # (0005: an importing store's knowledge begins at ITS import). RESTORE
+        # path: the operator asserts the file is this store's own history, which
+        # is exactly the attestation basis requires — a CONSISTENT procedural
+        # record (stamp AND basis in domain, or neither) restores VERBATIM;
+        # either marker without the other, or an out-of-domain basis, is
+        # MALFORMED and refused per record; the registry signal does NOT fire on
+        # restore (the registry may have changed since). Only the records that
+        # remain admissible are normalized, so the I10 strip has nothing
+        # procedural to strip from them.
+        reg = relations if relations is not None else DEFAULT_RELATIONS
+        procedural_refusals: list = []
+        admitted: list = []
+        # specs/0037 v24.2 (round-6 finding 2): the inheritance lookup is built from the
+        # RAW records BEFORE any refusal, so a predecessor refused as procedural on the
+        # default path keeps constraining its successors — refusing a predecessor must
+        # not erase its successors' requirements. Also the destination's existing
+        # records, so the lookup is independent of file order and of what is already
+        # stored. Procedural-ness is by LINEAGE: a record whose predecessor is
+        # procedural by lineage is procedural whatever markers it carries (a chain
+        # that drops the markers one hop later is the same laundering, one hop later).
+        # specs/0037 v24.4 (round-8 finding 1): CONFLICTING IDS ARE RESOLVED BEFORE
+        # LINEAGE IS DERIVED. `raw_by_id` kept the LAST incoming record per id and
+        # the lineage helper preferred it over the destination's stored record, so
+        # (a) a REFUSED incomplete copy of a stored procedural predecessor hid the
+        # stored producer and a successor with another producer restored, and (b)
+        # a file naming one id twice gave a file-order-dependent disposition. Now:
+        # every incoming copy of an id the file names more than once is refused
+        # (`duplicate_id` — a file cannot say two things about one record, and
+        # both orders refuse the same copies); the lineage helper reads EVERY copy
+        # of an id together with the destination's stored record, the stored
+        # record's constraints taking precedence (a persisted stamp or producer is
+        # never erased by an incoming copy, admitted or refused), and copies that
+        # disagree about a constraint leave it UNRESOLVED, which fails every
+        # successor's check (fail closed, order-independent by construction —
+        # sets, never "the last one seen").
+        raw_copies: dict = {}
+        for rec in edge_recs:
+            raw_copies.setdefault(rec.get("id"), []).append(rec)
+        duplicate_ids = {rid for rid, copies in raw_copies.items() if len(copies) > 1}
+        existing_by_id = {e.id: e for e in store.edges(target_uid, active_only=False,
+                                                        include_quarantined=True)}
+        _lineage: dict = {}
+        # a constraint the file's copies disagree about: a UNIQUE object, never a
+        # value a record could carry (research's pre-seal red team, 2026-09-14: a
+        # string sentinel shared the producer's value space and was held out of
+        # the check only by the closed producer lexicon — an accident, not a rule)
+        _UNRESOLVED = object()
 
-    def _signals(stamp, basis, producer, relation):
-        """v24.3 (round-7 finding 2) / v24.4 (research's pre-seal red team,
-        finding A): ONE reading of procedural-ness for BOTH custody states —
-        the SAME four signals the filter above reads: stamp, basis, producer,
-        and on the default path the receiving registry's kind for the
-        relation. The stored record's `Provenance.procedural` is stamp-or-basis
-        only; reading it for the destination's record gave a registry-only
-        predecessor opposite dispositions depending on whether it was stored
-        or incoming. A shared helper is what stops the two sides disagreeing a
-        third time."""
-        own = (stamp == "procedural" or basis is not None or producer is not None
-               or (not restore and is_procedural_relation(reg, relation)))
-        return own, producer
+        def _signals(stamp, basis, producer, relation):
+            """v24.3 (round-7 finding 2) / v24.4 (research's pre-seal red team,
+            finding A): ONE reading of procedural-ness for BOTH custody states —
+            the SAME four signals the filter above reads: stamp, basis, producer,
+            and on the default path the receiving registry's kind for the
+            relation. The stored record's `Provenance.procedural` is stamp-or-basis
+            only; reading it for the destination's record gave a registry-only
+            predecessor opposite dispositions depending on whether it was stored
+            or incoming. A shared helper is what stops the two sides disagreeing a
+            third time."""
+            own = (stamp == "procedural" or basis is not None or producer is not None
+                   or (not restore and is_procedural_relation(reg, relation)))
+            return own, producer
 
-    def _raw_markers(rec):
-        prov = rec.get("provenance") if isinstance(rec.get("provenance"), dict) else {}
-        return _signals(prov.get("record_kind"), prov.get("basis"), prov.get("producer"),
-                        rec.get("relation"))
+        def _raw_markers(rec):
+            prov = rec.get("provenance") if isinstance(rec.get("provenance"), dict) else {}
+            return _signals(prov.get("record_kind"), prov.get("basis"), prov.get("producer"),
+                            rec.get("relation"))
 
-    def _stored_markers(e):
-        return _signals(e.provenance.record_kind, e.provenance.basis, e.provenance.producer,
-                        e.relation)
+        def _stored_markers(e):
+            return _signals(e.provenance.record_kind, e.provenance.basis, e.provenance.producer,
+                            e.relation)
 
-    def _one_or_unresolved(values):
-        """The single agreed value of a constraint over a set of readings, None
-        when no reading names one, `_UNRESOLVED` when readings disagree (or any
-        reading is itself unresolved)."""
-        named = [v for v in values if v is not None]
-        if not named:
-            return None
-        if any(v is _UNRESOLVED for v in named) or len(set(named)) > 1:
-            return _UNRESOLVED
-        return named[0]
+        def _one_or_unresolved(values):
+            """The single agreed value of a constraint over a set of readings, None
+            when no reading names one, `_UNRESOLVED` when readings disagree (or any
+            reading is itself unresolved)."""
+            named = [v for v in values if v is not None]
+            if not named:
+                return None
+            if any(v is _UNRESOLVED for v in named) or len(set(named)) > 1:
+                return _UNRESOLVED
+            return named[0]
 
-    def lineage(rid, _seen=()):
-        """(procedural_by_lineage, validated_producer) for record `rid`, read
-        from the RESOLVED description of the id: the destination's stored
-        record when there is one (its stamp and producer take precedence —
-        v24.4), together with EVERY incoming copy (a copy's markers can only
-        add procedural-ness; a copy's producer counts only where nothing is
-        stored). The validated producer is INHERITED down the chain: a record
-        whose own producer disagrees with its predecessor's validated producer
-        is a rejected intermediate, and the constraint it violated carries on
-        to its successors unchanged (round-7 finding 2: the raw field of a
-        rejected intermediate must never substitute for validated
-        inheritance). A constraint the copies disagree about, or a cycle, is
-        `_UNRESOLVED`, which no successor can satisfy."""
-        if rid in _lineage:
-            return _lineage[rid]
-        if rid in _seen:                                   # a cycle: fail closed
-            return True, _UNRESOLVED
-        e = existing_by_id.get(rid)
-        copies = raw_copies.get(rid, [])
-        if e is None and not copies:
-            _lineage[rid] = (False, None)
-            return _lineage[rid]
-        marks = [_raw_markers(c) for c in copies]
-        stored_own, stored_producer = _stored_markers(e) if e is not None else (False, None)
-        own = stored_own or any(m[0] for m in marks)
-        if stored_producer is not None:
-            own_producer = stored_producer
-        else:
-            own_producer = _one_or_unresolved(m[1] for m in marks)
-        # ADDS, NEVER REMOVES, for the predecessor set too (research's pre-seal
-        # red team, finding C): a stored declarative X must not shadow an
-        # incoming X's claim to a procedural predecessor — X's own successor
-        # would inherit from the shadow instead of the chain.
-        preds = ({e.supersedes} if e is not None and e.supersedes is not None else set()) | {
-            c.get("supersedes") for c in copies if c.get("supersedes") is not None}
-        if not preds:
-            result = (own, own_producer)
-        else:
-            chain = [lineage(pr, _seen + (rid,)) for pr in sorted(preds)]
-            pred_proc = any(pp for pp, _ in chain)
-            pred_producer = _one_or_unresolved(pv for _, pv in chain)
+        def lineage(rid, _seen=()):
+            """(procedural_by_lineage, validated_producer) for record `rid`, read
+            from the RESOLVED description of the id: the destination's stored
+            record when there is one (its stamp and producer take precedence —
+            v24.4), together with EVERY incoming copy (a copy's markers can only
+            add procedural-ness; a copy's producer counts only where nothing is
+            stored). The validated producer is INHERITED down the chain: a record
+            whose own producer disagrees with its predecessor's validated producer
+            is a rejected intermediate, and the constraint it violated carries on
+            to its successors unchanged (round-7 finding 2: the raw field of a
+            rejected intermediate must never substitute for validated
+            inheritance). A constraint the copies disagree about, or a cycle, is
+            `_UNRESOLVED`, which no successor can satisfy."""
+            if rid in _lineage:
+                return _lineage[rid]
+            if rid in _seen:                                   # a cycle: fail closed
+                return True, _UNRESOLVED
+            e = existing_by_id.get(rid)
+            copies = raw_copies.get(rid, [])
+            if e is None and not copies:
+                _lineage[rid] = (False, None)
+                return _lineage[rid]
+            marks = [_raw_markers(c) for c in copies]
+            stored_own, stored_producer = _stored_markers(e) if e is not None else (False, None)
+            own = stored_own or any(m[0] for m in marks)
             if stored_producer is not None:
-                # v24.5 (round-9 F1): a PERSISTED producer is the constraint.
-                # The store enforced inheritance when the row was written, so
-                # the stored record is never a "rejected intermediate" — a
-                # claimed ancestry, from an admitted or a refused copy, can add
-                # procedural-ness and never replace the persisted producer
-                # (round 9: a refused copy of stored P claiming Q as its
-                # predecessor had let an `extractor` successor of a `host` P
-                # restore, because the chain's producer overrode the stored one).
-                validated = stored_producer
+                own_producer = stored_producer
             else:
-                validated = pred_producer if pred_producer is not None else own_producer
-            result = (own or pred_proc, validated)
-        _lineage[rid] = result
-        return result
+                own_producer = _one_or_unresolved(m[1] for m in marks)
+            # ADDS, NEVER REMOVES, for the predecessor set too (research's pre-seal
+            # red team, finding C): a stored declarative X must not shadow an
+            # incoming X's claim to a procedural predecessor — X's own successor
+            # would inherit from the shadow instead of the chain.
+            preds = ({e.supersedes} if e is not None and e.supersedes is not None else set()) | {
+                c.get("supersedes") for c in copies if c.get("supersedes") is not None}
+            if not preds:
+                result = (own, own_producer)
+            else:
+                chain = [lineage(pr, _seen + (rid,)) for pr in sorted(preds)]
+                pred_proc = any(pp for pp, _ in chain)
+                pred_producer = _one_or_unresolved(pv for _, pv in chain)
+                if stored_producer is not None:
+                    # v24.5 (round-9 F1): a PERSISTED producer is the constraint.
+                    # The store enforced inheritance when the row was written, so
+                    # the stored record is never a "rejected intermediate" — a
+                    # claimed ancestry, from an admitted or a refused copy, can add
+                    # procedural-ness and never replace the persisted producer
+                    # (round 9: a refused copy of stored P claiming Q as its
+                    # predecessor had let an `extractor` successor of a `host` P
+                    # restore, because the chain's producer overrode the stored one).
+                    validated = stored_producer
+                else:
+                    validated = pred_producer if pred_producer is not None else own_producer
+                result = (own or pred_proc, validated)
+            _lineage[rid] = result
+            return result
 
-    for rec in edge_recs:
-        prov = rec.get("provenance")
-        prov = prov if isinstance(prov, dict) else {}
-        stamp = prov.get("record_kind")
-        basis = prov.get("basis")
-        producer = prov.get("producer")
-        raw = src_version < _PROCEDURAL_VERSION
-        if rec.get("id") in duplicate_ids:                 # v24.4: resolved before anything else
-            procedural_refusals.append(
-                {"id": rec.get("id"), "refusal": "duplicate_id", "signal": "id", "raw": raw})
-            continue
-        if not restore:
-            # specs/0037 v23: the producer stamp is a FOURTH independent
-            # signal — a record carrying one is procedural by its own word
-            signal = ("stamp" if stamp == "procedural"
-                      else "basis" if basis is not None
-                      else "producer" if producer is not None
-                      else "registry" if is_procedural_relation(reg, rec.get("relation"))
+        for rec in edge_recs:
+            prov = rec.get("provenance")
+            prov = prov if isinstance(prov, dict) else {}
+            stamp = prov.get("record_kind")
+            basis = prov.get("basis")
+            producer = prov.get("producer")
+            raw = src_version < _PROCEDURAL_VERSION
+            if rec.get("id") in duplicate_ids:                 # v24.4: resolved before anything else
+                procedural_refusals.append(
+                    {"id": rec.get("id"), "refusal": "duplicate_id", "signal": "id", "raw": raw})
+                continue
+            if not restore:
+                # specs/0037 v23: the producer stamp is a FOURTH independent
+                # signal — a record carrying one is procedural by its own word
+                signal = ("stamp" if stamp == "procedural"
+                          else "basis" if basis is not None
+                          else "producer" if producer is not None
+                          else "registry" if is_procedural_relation(reg, rec.get("relation"))
+                          else None)
+                if signal is not None:
+                    procedural_refusals.append(
+                        {"id": rec.get("id"), "refusal": "procedural_import_refused",
+                         "signal": signal, "raw": raw})
+                    continue
+            else:
+                consistent = ((stamp is None and basis is None and producer is None)
+                              or (stamp == "procedural" and basis in ("stated", "observed")
+                                  and producer in (None, "host", "extractor")))
+                if not consistent:
+                    # the signal names the marker that is out of place: a producer
+                    # outside its domain or without the kind stamp; otherwise the
+                    # present half of a stamp/basis pair (or the invalid one)
+                    producer_bad = producer is not None and (
+                        producer not in ("host", "extractor") or stamp != "procedural")
+                    procedural_refusals.append(
+                        {"id": rec.get("id"), "refusal": "malformed_procedural_marker",
+                         "signal": ("producer" if producer_bad
+                                    else "stamp" if stamp is not None else "basis"), "raw": raw})
+                    continue
+            admitted.append(rec)
+        edge_recs = admitted
+        if src_version < _PROCEDURAL_VERSION:
+            for rec in edge_recs:             # I10: nothing procedural left, by construction
+                prov = rec.get("provenance")
+                if isinstance(prov, dict):
+                    prov.pop("record_kind", None)
+                    prov.pop("basis", None)
+        if src_version < FORMAT_VERSION:
+            for rec in edge_recs:             # I10: a producer in a pre-12 envelope is never trusted
+                prov = rec.get("provenance")  # (the record imports as pre-stamp: `procedural_unstamped`)
+                if isinstance(prov, dict):
+                    prov.pop("producer", None)
+
+        # specs/0037 v24.1 (round-5 finding 3): the INHERITANCE rules the store's
+        # choke point applies to an ordinary write — a successor of a procedural
+        # predecessor is procedural (V-STAMP-INHERITED) and carries the SAME
+        # producer (V-PRODUCER-INHERITED) — are applied here, at the boundary and
+        # before anything commits, because the import commit writes rows directly.
+        # The predecessor is looked up by id among the incoming records OR the
+        # destination's existing records, so the check is independent of file
+        # order; a violating successor is refused PER RECORD and counted.
+        kept: list = []
+        for rec in edge_recs:
+            sid = rec.get("supersedes")
+            if sid is None:
+                kept.append(rec)
+                continue
+            if sid in raw_copies or sid in existing_by_id:         # RAW copies, refused or not, AND the stored record
+                pred_proc, pred_producer = lineage(sid)              # …and the VALIDATED inherited producer
+            else:
+                kept.append(rec)                                     # no predecessor to inherit from
+                continue
+            prov = rec.get("provenance") or {}
+            succ_proc = prov.get("record_kind") == "procedural" or prov.get("basis") is not None
+            # an UNRESOLVED inherited producer is one no successor can match (v24.4)
+            signal = ("stamp" if pred_proc and not succ_proc
+                      else "producer" if pred_producer is not None and prov.get("producer") != pred_producer
                       else None)
             if signal is not None:
                 procedural_refusals.append(
-                    {"id": rec.get("id"), "refusal": "procedural_import_refused",
-                     "signal": signal, "raw": raw})
+                    {"id": rec.get("id"), "refusal": "inheritance_violation", "signal": signal,
+                     "predecessor": sid, "raw": src_version < _PROCEDURAL_VERSION})
                 continue
-        else:
-            consistent = ((stamp is None and basis is None and producer is None)
-                          or (stamp == "procedural" and basis in ("stated", "observed")
-                              and producer in (None, "host", "extractor")))
-            if not consistent:
-                # the signal names the marker that is out of place: a producer
-                # outside its domain or without the kind stamp; otherwise the
-                # present half of a stamp/basis pair (or the invalid one)
-                producer_bad = producer is not None and (
-                    producer not in ("host", "extractor") or stamp != "procedural")
-                procedural_refusals.append(
-                    {"id": rec.get("id"), "refusal": "malformed_procedural_marker",
-                     "signal": ("producer" if producer_bad
-                                else "stamp" if stamp is not None else "basis"), "raw": raw})
-                continue
-        admitted.append(rec)
-    edge_recs = admitted
-    if src_version < _PROCEDURAL_VERSION:
-        for rec in edge_recs:             # I10: nothing procedural left, by construction
-            prov = rec.get("provenance")
-            if isinstance(prov, dict):
-                prov.pop("record_kind", None)
-                prov.pop("basis", None)
-    if src_version < FORMAT_VERSION:
-        for rec in edge_recs:             # I10: a producer in a pre-12 envelope is never trusted
-            prov = rec.get("provenance")  # (the record imports as pre-stamp: `procedural_unstamped`)
-            if isinstance(prov, dict):
-                prov.pop("producer", None)
-
-    # specs/0037 v24.1 (round-5 finding 3): the INHERITANCE rules the store's
-    # choke point applies to an ordinary write — a successor of a procedural
-    # predecessor is procedural (V-STAMP-INHERITED) and carries the SAME
-    # producer (V-PRODUCER-INHERITED) — are applied here, at the boundary and
-    # before anything commits, because the import commit writes rows directly.
-    # The predecessor is looked up by id among the incoming records OR the
-    # destination's existing records, so the check is independent of file
-    # order; a violating successor is refused PER RECORD and counted.
-    kept: list = []
-    for rec in edge_recs:
-        sid = rec.get("supersedes")
-        if sid is None:
             kept.append(rec)
-            continue
-        if sid in raw_copies or sid in existing_by_id:         # RAW copies, refused or not, AND the stored record
-            pred_proc, pred_producer = lineage(sid)              # …and the VALIDATED inherited producer
-        else:
-            kept.append(rec)                                     # no predecessor to inherit from
-            continue
-        prov = rec.get("provenance") or {}
-        succ_proc = prov.get("record_kind") == "procedural" or prov.get("basis") is not None
-        # an UNRESOLVED inherited producer is one no successor can match (v24.4)
-        signal = ("stamp" if pred_proc and not succ_proc
-                  else "producer" if pred_producer is not None and prov.get("producer") != pred_producer
-                  else None)
-        if signal is not None:
-            procedural_refusals.append(
-                {"id": rec.get("id"), "refusal": "inheritance_violation", "signal": signal,
-                 "predecessor": sid, "raw": src_version < _PROCEDURAL_VERSION})
-            continue
-        kept.append(rec)
-    edge_recs = kept
+        edge_recs = kept
 
-    # (1b) specs/0020 §4a-iii — the LINKAGE SNAPSHOT, taken over the file's
-    # OWN id universe BEFORE the cross-user remap mutates ids (winner
-    # resolution is defined in the file's universe; `id_remap` translates
-    # only the OUTPUT keys/refs). The FORMAT-7 rider field is DETACHED from
-    # the record here — it is a linkage carrier consumed by reconstruction,
-    # never persisted state — and per 0006 I10 a pre-v7 envelope's
-    # `absorbed_by_id` is STRIPPED, never trusted (the file takes the legacy
-    # note rule); identity fields follow the same I10 rule as gate (2b).
-    linkage_recs: list = []
-    for rec in edge_recs:
-        prov = rec.get("provenance")
-        prov = prov if isinstance(prov, dict) else {}
-        ab = rec.pop("absorbed_by_id", None)
-        linkage_recs.append({
-            "id": rec.get("id"),
-            "invalidation_reason": rec.get("invalidation_reason"),
-            "note": rec.get("note"),
-            "absorbed_by_id": (ab if src_version >= 7 else None),
-            "origin": (prov.get("origin") if src_version >= 4 else None),
-            "source_id": (prov.get("source_id") if src_version >= 4 else None),
-            "evidence_ref": prov.get("evidence_ref"),
-        })
+        # (1b) specs/0020 §4a-iii — the LINKAGE SNAPSHOT, taken over the file's
+        # OWN id universe BEFORE the cross-user remap mutates ids (winner
+        # resolution is defined in the file's universe; `id_remap` translates
+        # only the OUTPUT keys/refs). The FORMAT-7 rider field is DETACHED from
+        # the record here — it is a linkage carrier consumed by reconstruction,
+        # never persisted state — and per 0006 I10 a pre-v7 envelope's
+        # `absorbed_by_id` is STRIPPED, never trusted (the file takes the legacy
+        # note rule); identity fields follow the same I10 rule as gate (2b).
+        linkage_recs: list = []
+        for rec in edge_recs:
+            prov = rec.get("provenance")
+            prov = prov if isinstance(prov, dict) else {}
+            ab = rec.pop("absorbed_by_id", None)
+            linkage_recs.append({
+                "id": rec.get("id"),
+                "invalidation_reason": rec.get("invalidation_reason"),
+                "note": rec.get("note"),
+                "absorbed_by_id": (ab if src_version >= 7 else None),
+                "origin": (prov.get("origin") if src_version >= 4 else None),
+                "source_id": (prov.get("source_id") if src_version >= 4 else None),
+                "evidence_ref": prov.get("evidence_ref"),
+            })
 
-    # (2) cross-user remap — a COPY, not a move: edge ids are global primary keys, so
-    # importing another user's ids would collide/overwrite (and add_edge refuses a
-    # user_id change, specs/0008 §6d). Mint fresh ids and remap EVERY reference:
-    # edge.supersedes, episode.edge_id, AND episode.supersedes_episode (§4c Corr. B —
-    # the new episode→episode ref the v2 importer never remapped).
-    remapping = user_id is not None and user_id != header.get("user_id")
-    id_map: dict = {}
-    if remapping:
+        # (2) cross-user remap — a COPY, not a move: edge ids are global primary keys, so
+        # importing another user's ids would collide/overwrite (and add_edge refuses a
+        # user_id change, specs/0008 §6d). Mint fresh ids and remap EVERY reference:
+        # edge.supersedes, episode.edge_id, AND episode.supersedes_episode (§4c Corr. B —
+        # the new episode→episode ref the v2 importer never remapped).
+        remapping = user_id is not None and user_id != header.get("user_id")
+        id_map: dict = {}
+        if remapping:
+            for rec in edge_recs:
+                if rec.get("id") is not None:
+                    id_map[rec["id"]] = f"imp-e-{uuid4().hex[:12]}"
+            for rec in ep_recs:
+                if rec.get("id") is not None:
+                    id_map[rec["id"]] = f"imp-ep-{uuid4().hex[:12]}"
+
+        def _remap(v):
+            return id_map.get(v, v) if remapping else v
+
         for rec in edge_recs:
             if rec.get("id") is not None:
-                id_map[rec["id"]] = f"imp-e-{uuid4().hex[:12]}"
+                rec["id"] = _remap(rec["id"])
+            if rec.get("supersedes") is not None:
+                rec["supersedes"] = _remap(rec["supersedes"])
         for rec in ep_recs:
             if rec.get("id") is not None:
-                id_map[rec["id"]] = f"imp-ep-{uuid4().hex[:12]}"
+                rec["id"] = _remap(rec["id"])
+            if rec.get("edge_id") is not None:
+                rec["edge_id"] = _remap(rec["edge_id"])
+            if rec.get("supersedes_episode") is not None:
+                rec["supersedes_episode"] = _remap(rec["supersedes_episode"])
 
-    def _remap(v):
-        return id_map.get(v, v) if remapping else v
+        # (2a) specs/0020 §4a-iii — PRE-COMMIT absorption reconstruction over the
+        # linkage snapshot: structured `absorbed_by_id` first (the FORMAT-7 rider
+        # carrier); the decidable LAST-tag note rule for legacy records; digests
+        # propagate transitively to every absorber (born-closed row sets); a
+        # missing, unresolvable, ambiguous, contradictory, or cyclic linkage
+        # raises `ImportLinkageError` HERE — before any destination write, so a
+        # refused import leaves the destination byte-identical (R7-2). The ONE
+        # `op-<12hex>` import operation id is minted here; the reconstructed rows
+        # ride the SAME atomic commit as the records (the amended 0009 §4c
+        # primitive), keyed by the importer's own old→new table under a remap.
+        import_op = f"op-{uuid4().hex[:12]}"
+        reconstructed = reconstruct_absorption_rows(
+            linkage_recs, store.local_origin(),
+            id_remap=(id_map if remapping else None), import_op=import_op)
+        contrib_rows: list = []
+        for surv in sorted(reconstructed):
+            for row in reconstructed[surv]:
+                contrib_rows.append({
+                    "id": plan_row_id(target_uid, "edge", surv, row, "import",
+                                      op=import_op),
+                    "user_id": target_uid, "survivor_type": "edge",
+                    "survivor_id": surv, **row})
 
-    for rec in edge_recs:
-        if rec.get("id") is not None:
-            rec["id"] = _remap(rec["id"])
-        if rec.get("supersedes") is not None:
-            rec["supersedes"] = _remap(rec["supersedes"])
-    for rec in ep_recs:
-        if rec.get("id") is not None:
-            rec["id"] = _remap(rec["id"])
-        if rec.get("edge_id") is not None:
-            rec["edge_id"] = _remap(rec["edge_id"])
-        if rec.get("supersedes_episode") is not None:
-            rec["supersedes_episode"] = _remap(rec["supersedes_episode"])
-
-    # (2a) specs/0020 §4a-iii — PRE-COMMIT absorption reconstruction over the
-    # linkage snapshot: structured `absorbed_by_id` first (the FORMAT-7 rider
-    # carrier); the decidable LAST-tag note rule for legacy records; digests
-    # propagate transitively to every absorber (born-closed row sets); a
-    # missing, unresolvable, ambiguous, contradictory, or cyclic linkage
-    # raises `ImportLinkageError` HERE — before any destination write, so a
-    # refused import leaves the destination byte-identical (R7-2). The ONE
-    # `op-<12hex>` import operation id is minted here; the reconstructed rows
-    # ride the SAME atomic commit as the records (the amended 0009 §4c
-    # primitive), keyed by the importer's own old→new table under a remap.
-    import_op = f"op-{uuid4().hex[:12]}"
-    reconstructed = reconstruct_absorption_rows(
-        linkage_recs, store.local_origin(),
-        id_remap=(id_map if remapping else None), import_op=import_op)
-    contrib_rows: list = []
-    for surv in sorted(reconstructed):
-        for row in reconstructed[surv]:
-            contrib_rows.append({
-                "id": plan_row_id(target_uid, "edge", surv, row, "import",
-                                  op=import_op),
-                "user_id": target_uid, "survivor_type": "edge",
-                "survivor_id": surv, **row})
-
-    # (2c) specs/0005 §4a/§4c — THE IMPORT TRUST CAP, the boundary this spec
-    # exists for. Sequence per §4c-ii: each record's provenance is VALIDATED
-    # first (a malformed or null trust value raises here per the shipped
-    # 9-cell matrix — never silently normalized into a valid capped value,
-    # R1-4/P14), then the three levers are applied to the validated model:
-    # author_of_evidence := THIRD_PARTY (the claim made true relative to the
-    # target owner, R1-1), derived_from := THIRD_PARTY (min, never raised),
-    # disclosure floored to USE_ONLY (QUARANTINED never weakened). The cap
-    # runs BEFORE every comparison gate below — the 0006 origin gates, the
-    # 0014 identity projection (which per its 0005 rider receives the
-    # path-transformed incoming form), and the 0009 record-equality
-    # preflight — so no gate ever sees an uncapped record. `capped` counts
-    # the records the cap CHANGED, over the parsed file, pre-skip: a pure
-    # function of (file, flags), never of destination state (N1/P11).
-    # restore=True skips exactly this block (trust-field-faithful, R1-3).
-    # specs/0026 §3d — THE AGREEMENT MODE-SPLIT, per the accepted ONE
-    # decision table (import_matrix.MATRIX, V6a). I10 first: a field
-    # newer than the declared format is STRIPPED, never trusted. Then:
-    # restore=True validates every present record against the CLOSED
-    # SHAPE and RAISES on malformed BEFORE any destination write
-    # (grammar membership is VERSION-SCOPED — a well-typed record under
-    # a FOREIGN lexicon version restores verbatim, its markers opaque;
-    # the R1-4 ruling: garbage declares something untrue). Default mode
-    # never consumes the incoming value at all: it is compared for the
-    # diagnostic counter, then discarded for the recomputation (below,
-    # after the cap fixes final disclosure).
-    from .schema import AgreementRecord as _AgreementRecord
-    agreement_mismatches = 0
-    for rec in edge_recs:
-        if src_version < _PRE_PROCEDURAL_VERSION:   # I10: `agreement` is the format-10 key
-            rec.pop("agreement", None)
-    if restore:
+        # (2c) specs/0005 §4a/§4c — THE IMPORT TRUST CAP, the boundary this spec
+        # exists for. Sequence per §4c-ii: each record's provenance is VALIDATED
+        # first (a malformed or null trust value raises here per the shipped
+        # 9-cell matrix — never silently normalized into a valid capped value,
+        # R1-4/P14), then the three levers are applied to the validated model:
+        # author_of_evidence := THIRD_PARTY (the claim made true relative to the
+        # target owner, R1-1), derived_from := THIRD_PARTY (min, never raised),
+        # disclosure floored to USE_ONLY (QUARANTINED never weakened). The cap
+        # runs BEFORE every comparison gate below — the 0006 origin gates, the
+        # 0014 identity projection (which per its 0005 rider receives the
+        # path-transformed incoming form), and the 0009 record-equality
+        # preflight — so no gate ever sees an uncapped record. `capped` counts
+        # the records the cap CHANGED, over the parsed file, pre-skip: a pure
+        # function of (file, flags), never of destination state (N1/P11).
+        # restore=True skips exactly this block (trust-field-faithful, R1-3).
+        # specs/0026 §3d — THE AGREEMENT MODE-SPLIT, per the accepted ONE
+        # decision table (import_matrix.MATRIX, V6a). I10 first: a field
+        # newer than the declared format is STRIPPED, never trusted. Then:
+        # restore=True validates every present record against the CLOSED
+        # SHAPE and RAISES on malformed BEFORE any destination write
+        # (grammar membership is VERSION-SCOPED — a well-typed record under
+        # a FOREIGN lexicon version restores verbatim, its markers opaque;
+        # the R1-4 ruling: garbage declares something untrue). Default mode
+        # never consumes the incoming value at all: it is compared for the
+        # diagnostic counter, then discarded for the recomputation (below,
+        # after the cap fixes final disclosure).
+        from .schema import AgreementRecord as _AgreementRecord
+        agreement_mismatches = 0
         for rec in edge_recs:
-            agr = rec.get("agreement")
-            if agr is None:
-                continue
-            try:
-                _AgreementRecord.model_validate(agr)
-            except Exception as exc:
-                raise ValueError(
-                    f"{path}: malformed AgreementRecord on edge "
-                    f"{rec.get('id')!r} — verbatim restore into a typed "
-                    f"carrier is impossible for garbage; RAISES, nothing "
-                    f"written (specs/0026 §3d V6a): {exc}") from exc
-    capped_count = 0
-    if not restore:
+            if src_version < _PRE_PROCEDURAL_VERSION:   # I10: `agreement` is the format-10 key
+                rec.pop("agreement", None)
+        if restore:
+            for rec in edge_recs:
+                agr = rec.get("agreement")
+                if agr is None:
+                    continue
+                try:
+                    _AgreementRecord.model_validate(agr)
+                except Exception as exc:
+                    raise _SITE_IMPORT_AGREEMENT_INVALID.fire(ValueError(
+                        f"{path}: malformed AgreementRecord on edge "
+                        f"{rec.get('id')!r} — verbatim restore into a typed "
+                        f"carrier is impossible for garbage; RAISES, nothing "
+                        f"written (specs/0026 §3d V6a): {exc}")) from exc
+        capped_count = 0
+        if not restore:
+            for rec in edge_recs + ep_recs:
+                prov = rec.get("provenance")
+                if not isinstance(prov, dict):
+                    continue   # absent/non-dict provenance: judged by full model validation below
+                model = Provenance.model_validate(prov)   # malformed/null -> raises, whole-import
+                capped = model.model_copy(update={
+                    "author_of_evidence": EvidenceAuthor.THIRD_PARTY,
+                    "derived_from": EvidenceAuthor.THIRD_PARTY,
+                    "disclosure": (Disclosure.QUARANTINED
+                                   if model.disclosure == Disclosure.QUARANTINED
+                                   else Disclosure.USE_ONLY),
+                })
+                if capped != model:
+                    capped_count += 1
+                rec["provenance"] = json.loads(capped.model_dump_json())
+            # specs/0026 §3d — the default-mode RECOMPUTATION half: the
+            # incoming agreement value (any state — absent, present, forged,
+            # malformed, foreign-version) is compared for the diagnostic
+            # counter and DISCARDED; the ONE derivation site recomputes
+            # under the CURRENT lexicon from the record's own note/object
+            # and its post-cap disclosure, so a forged record cannot enter
+            # Q5's corpus and a stripped one cannot launder a relay past
+            # the floor (the cap above already holds disclosure at
+            # USE_ONLY/QUARANTINED, so the MENTIONABLE->USE_ONLY floor has
+            # nothing left to lower here).
+            from . import agreement as _agreement
+            for rec in edge_recs:
+                incoming = rec.pop("agreement", None)
+                derived = _agreement.derive_record(
+                    str(rec.get("note", "") or ""),
+                    str(rec.get("object", "") or ""),
+                    Disclosure(rec.get("provenance", {}).get(
+                        "disclosure", "use_only")),
+                    relation=rec.get("relation"))
+                derived_dict = (json.loads(derived.model_dump_json())
+                                if derived is not None else None)
+                if derived_dict is not None:
+                    rec["agreement"] = derived_dict
+                if incoming != derived_dict:
+                    agreement_mismatches += 1
+
+        # (2b) specs/0006 — source-identity ingress gates, BEFORE any record enters the store.
+        #  - I10: a field NEWER than the declared FORMAT_VERSION is STRIPPED, never trusted — a
+        #    pre-v4 file that hand-adds source_id/origin has an UNKNOWN identity, so drop both.
+        #  - I14: a current-format (v4+) record MUST carry a non-null origin. An absent origin is
+        #    MALFORMED and REJECTED — it is NEVER resolved to this store's singleton (that
+        #    resolution is for LOCAL stored rows only, §4 rule 6). A PRESENT foreign origin is
+        #    preserved as-is (I2b), never localised; trust of it is 0005's boundary, applied first.
+        # specs/0019 §2c: a pre-v6 envelope carrying `ungrounded` is STRIPPED,
+        # never trusted (the 0006 I10 rule — a field newer than the declared
+        # FORMAT_VERSION has unknown provenance); post-v6 absent → StrictBool
+        # default False at model validation. Non-bool values REFUSE there (F7).
+        if src_version < 6:
+            for rec in edge_recs:
+                rec.pop("ungrounded", None)
+
+        # specs/0016 D2 (FORMAT 7): `Provenance.source_type` is DELETED. A ≤6
+        # file legitimately carries the historical key — it is DROPPED on import
+        # with the rest of the record intact (§2c row 1); ANY carried value
+        # (including a crafted one) is never read (§2c row 5). Explicit here so
+        # the drop is a stated boundary rule, not an accident of extra=ignore.
+        if src_version < 7:
+            for rec in edge_recs + ep_recs:
+                prov = rec.get("provenance")
+                if isinstance(prov, dict):
+                    prov.pop("source_type", None)
+
+        dest_origin = store.local_origin() if src_version >= 4 else None
         for rec in edge_recs + ep_recs:
             prov = rec.get("provenance")
             if not isinstance(prov, dict):
-                continue   # absent/non-dict provenance: judged by full model validation below
-            model = Provenance.model_validate(prov)   # malformed/null -> raises, whole-import
-            capped = model.model_copy(update={
-                "author_of_evidence": EvidenceAuthor.THIRD_PARTY,
-                "derived_from": EvidenceAuthor.THIRD_PARTY,
-                "disclosure": (Disclosure.QUARANTINED
-                               if model.disclosure == Disclosure.QUARANTINED
-                               else Disclosure.USE_ONLY),
-            })
-            if capped != model:
-                capped_count += 1
-            rec["provenance"] = json.loads(capped.model_dump_json())
-        # specs/0026 §3d — the default-mode RECOMPUTATION half: the
-        # incoming agreement value (any state — absent, present, forged,
-        # malformed, foreign-version) is compared for the diagnostic
-        # counter and DISCARDED; the ONE derivation site recomputes
-        # under the CURRENT lexicon from the record's own note/object
-        # and its post-cap disclosure, so a forged record cannot enter
-        # Q5's corpus and a stripped one cannot launder a relay past
-        # the floor (the cap above already holds disclosure at
-        # USE_ONLY/QUARANTINED, so the MENTIONABLE->USE_ONLY floor has
-        # nothing left to lower here).
-        from . import agreement as _agreement
-        for rec in edge_recs:
-            incoming = rec.pop("agreement", None)
-            derived = _agreement.derive_record(
-                str(rec.get("note", "") or ""),
-                str(rec.get("object", "") or ""),
-                Disclosure(rec.get("provenance", {}).get(
-                    "disclosure", "use_only")),
-                relation=rec.get("relation"))
-            derived_dict = (json.loads(derived.model_dump_json())
-                            if derived is not None else None)
-            if derived_dict is not None:
-                rec["agreement"] = derived_dict
-            if incoming != derived_dict:
-                agreement_mismatches += 1
+                continue
+            if src_version < 4:
+                prov.pop("source_id", None)          # I10 — newer field in an older envelope
+                prov.pop("origin", None)
+            elif prov.get("origin") is None:
+                raise _SITE_IMPORT_ORIGIN_MISSING.fire(ValueError(
+                    f"{path}: v{src_version} record {rec.get('id')!r} carries provenance with "
+                    f"no origin — a current-format import MUST carry origin; a missing one is "
+                    f"malformed and is NEVER resolved to this store (specs/0006 I14)"))
+            elif prov["origin"] == dest_origin:
+                # A LOCAL record coming home (its materialised origin IS this store's singleton):
+                # canonicalise back to absent so it resolves to us and stores byte-identically to
+                # the original local row — that is what makes an export→re-import idempotent and
+                # groups the two as ONE source (I9). A genuinely FOREIGN origin is left untouched
+                # (I2b) — trust of it is 0005's import boundary, applied first (I7).
+                prov["origin"] = None
 
-    # (2b) specs/0006 — source-identity ingress gates, BEFORE any record enters the store.
-    #  - I10: a field NEWER than the declared FORMAT_VERSION is STRIPPED, never trusted — a
-    #    pre-v4 file that hand-adds source_id/origin has an UNKNOWN identity, so drop both.
-    #  - I14: a current-format (v4+) record MUST carry a non-null origin. An absent origin is
-    #    MALFORMED and REJECTED — it is NEVER resolved to this store's singleton (that
-    #    resolution is for LOCAL stored rows only, §4 rule 6). A PRESENT foreign origin is
-    #    preserved as-is (I2b), never localised; trust of it is 0005's boundary, applied first.
-    # specs/0019 §2c: a pre-v6 envelope carrying `ungrounded` is STRIPPED,
-    # never trusted (the 0006 I10 rule — a field newer than the declared
-    # FORMAT_VERSION has unknown provenance); post-v6 absent → StrictBool
-    # default False at model validation. Non-bool values REFUSE there (F7).
-    if src_version < 6:
-        for rec in edge_recs:
-            rec.pop("ungrounded", None)
-
-    # specs/0016 D2 (FORMAT 7): `Provenance.source_type` is DELETED. A ≤6
-    # file legitimately carries the historical key — it is DROPPED on import
-    # with the rest of the record intact (§2c row 1); ANY carried value
-    # (including a crafted one) is never read (§2c row 5). Explicit here so
-    # the drop is a stated boundary rule, not an accident of extra=ignore.
-    if src_version < 7:
+        # (2d) specs/0023 N8 — THE DESTINATION-STANDING CAP, after identity has
+        # SETTLED (the strip/materialise/canonicalise rules above decide what each
+        # record's resolved identity IS; capping earlier would quarantine on an
+        # identity the gates were about to change). A record whose resolved
+        # identity stands revoked IN THE DESTINATION arrives QUARANTINED — in
+        # BOTH modes, restore included: the 0005 cap is about the FILE's trust and
+        # restore rightly skips it, but this cap is about THIS STORE's standing
+        # state, which no flag on an import file may override (§3b). Covers the
+        # export→revoke→reimport sequence into the same store: the come-home
+        # canonicalisation above maps the record back to the local identity the
+        # revocation named. QUARANTINED is a floor — never weakened, never
+        # widened; Q2: a later lift does not revisit it.
+        from .scope_linkage import identity_digest_of as _idg
+        _standing_cache: dict = {}
         for rec in edge_recs + ep_recs:
             prov = rec.get("provenance")
-            if isinstance(prov, dict):
-                prov.pop("source_type", None)
-
-    dest_origin = store.local_origin() if src_version >= 4 else None
-    for rec in edge_recs + ep_recs:
-        prov = rec.get("provenance")
-        if not isinstance(prov, dict):
-            continue
-        if src_version < 4:
-            prov.pop("source_id", None)          # I10 — newer field in an older envelope
-            prov.pop("origin", None)
-        elif prov.get("origin") is None:
-            raise ValueError(
-                f"{path}: v{src_version} record {rec.get('id')!r} carries provenance with "
-                f"no origin — a current-format import MUST carry origin; a missing one is "
-                f"malformed and is NEVER resolved to this store (specs/0006 I14)")
-        elif prov["origin"] == dest_origin:
-            # A LOCAL record coming home (its materialised origin IS this store's singleton):
-            # canonicalise back to absent so it resolves to us and stores byte-identically to
-            # the original local row — that is what makes an export→re-import idempotent and
-            # groups the two as ONE source (I9). A genuinely FOREIGN origin is left untouched
-            # (I2b) — trust of it is 0005's import boundary, applied first (I7).
-            prov["origin"] = None
-
-    # (2d) specs/0023 N8 — THE DESTINATION-STANDING CAP, after identity has
-    # SETTLED (the strip/materialise/canonicalise rules above decide what each
-    # record's resolved identity IS; capping earlier would quarantine on an
-    # identity the gates were about to change). A record whose resolved
-    # identity stands revoked IN THE DESTINATION arrives QUARANTINED — in
-    # BOTH modes, restore included: the 0005 cap is about the FILE's trust and
-    # restore rightly skips it, but this cap is about THIS STORE's standing
-    # state, which no flag on an import file may override (§3b). Covers the
-    # export→revoke→reimport sequence into the same store: the come-home
-    # canonicalisation above maps the record back to the local identity the
-    # revocation named. QUARANTINED is a floor — never weakened, never
-    # widened; Q2: a later lift does not revisit it.
-    from .scope_linkage import identity_digest_of as _idg
-    _standing_cache: dict = {}
-    for rec in edge_recs + ep_recs:
-        prov = rec.get("provenance")
-        if not isinstance(prov, dict) or prov.get("source_id") is None:
-            continue                      # N11: no source_id, no digest, unreachable
-        uid = rec.get("user_id")
-        if uid not in _standing_cache:
-            _standing_cache[uid] = store.standing_revocations(uid)
-        if not _standing_cache[uid]:
-            continue
-        d = _idg(prov.get("origin"), prov["source_id"], store.local_origin())
-        if d is not None and d in _standing_cache[uid]:
-            prov["disclosure"] = Disclosure.QUARANTINED.value
-
-    # (3) legacy-format outcome conversion (§4f-ii) OR v3 explicit-field check (H13).
-    # Pinned to the OUTCOME-field format version (3, specs/0009), NOT FORMAT_VERSION: the
-    # 0006 v3→v4 bump introduced source-identity fields, not outcome fields, so v3 AND v4
-    # both carry explicit outcome fields and must take the H13 branch. Keying this on
-    # FORMAT_VERSION would wrongly legacy-convert a v3 export after the bump.
-    outcome_recs = [r for r in ep_recs if r.get("kind") == "outcome"]
-    if src_version < 3:
-        # group by identity first: a pre-v3 export can hold two outcome records for
-        # one (edge_id, evidence_ref); rooting each would branch — REFUSE instead.
-        groups: dict = {}
-        for r in outcome_recs:
-            groups.setdefault(
-                (r.get("edge_id"), (r.get("provenance") or {}).get("evidence_ref")),
-                []).append(r)
-        for gk, members in groups.items():
-            if len(members) > 1:
-                raise ValueError(
-                    f"{path}: legacy import holds {len(members)} outcome records for "
-                    f"chain {gk} — refuse rather than branch (specs/0009 §4f-ii)")
-        for r in outcome_recs:   # the same honest conversion as the on-disk migration
-            r["seq"] = 1
-            r["supersedes_episode"] = None
-            r["judgment_time_known"] = False
-    else:
-        for r in outcome_recs:   # a v3 outcome record MUST be explicit (H13)
-            jtk = r.get("judgment_time_known")
-            if jtk is None:
-                raise ValueError(
-                    f"{path}: v3 outcome record {r.get('id')!r} omits "
-                    f"judgment_time_known — refuse (specs/0009 H13)")
-            # state-space rule (§ Episode fields, round-5 Correction B): a
-            # False label is a LEGACY-ROOT-ONLY state — never a non-root.
-            if jtk is False and (r.get("seq") != 1
-                                 or r.get("supersedes_episode") is not None):
-                raise ValueError(
-                    f"{path}: v3 outcome record {r.get('id')!r} has "
-                    f"judgment_time_known=False but is not a root (seq="
-                    f"{r.get('seq')!r}, supersedes_episode="
-                    f"{r.get('supersedes_episode')!r}) — refuse (specs/0009)")
-
-    # (3b) specs/0010 X18/X19: consolidation shapes cross the boundary honestly.
-    for r in ep_recs:
-        if r.get("claimed_by") is not None:
-            raise ValueError(
-                f"{path}: episode {r.get('id')!r} is a CLAIMED input whose "
-                f"consolidation op is non-portable — refuse rather than orphan it "
-                f"(specs/0010 X18)")
-        # specs/0014 §4c/§2c — the store-assigned output index at the import
-        # boundary. 0006 I10 first: a field NEWER than the declared
-        # FORMAT_VERSION is STRIPPED, never trusted — a pre-v5 envelope cannot
-        # legitimately carry the index, so it is dropped (matching the
-        # source_id/origin treatment above), and the v5 gates below never see
-        # it. For v5+ files: explicit null is MALFORMED (the export path omits
-        # None — R7-3); type gates mirror the generic path; a NON-output
-        # carrying an index is fabricated store identity and is refused.
-        if src_version < 5:
-            r.pop("consolidation_output_index", None)     # I10 — newer field
-        idx_present = "consolidation_output_index" in r
-        idx = r.get("consolidation_output_index")
-        if idx_present and idx is None:
-            raise ValueError(
-                f"{path}: episode {r.get('id')!r} carries an explicit null "
-                f"consolidation_output_index — the exporter omits None, so an "
-                f"explicit null is malformed (specs/0014 §4c R7-3)")
-        if idx is not None and (isinstance(idx, bool)
-                                or not isinstance(idx, int) or idx < 0):
-            raise ValueError(
-                f"{path}: episode {r.get('id')!r} consolidation_output_index "
-                f"{idx!r} is not a non-negative integer (specs/0014 §2c)")
-        if idx is not None and not r.get("lineage"):
-            raise ValueError(
-                f"{path}: episode {r.get('id')!r} carries a consolidation_output_"
-                f"index but no lineage — store-assigned identity cannot be "
-                f"fabricated on a plain episode (specs/0014 §4c)")
-        if r.get("lineage"):                      # a consolidation OUTPUT
-            lin = r["lineage"]
-            if not (isinstance(lin, list)
-                    and all(isinstance(x, str) and is_historical_id(x) for x in lin)):
-                raise ValueError(
-                    f"{path}: episode {r.get('id')!r} has a malformed lineage shape — "
-                    f"every lineage id must be historical (specs/0010 X18)")
-            # X19: a finalized output's operation_id becomes a destination-local
-            # HISTORICAL reference (deterministic, retry-stable — no persisted map) that
-            # no LIVE local op id can inhabit, so it can never collide on import or after
-            # a later local finalization. lineage ids are already historical.
-            if r.get("operation_id") is not None:
-                r["operation_id"] = to_historical_id(r["operation_id"])
-
-    # specs/0014 §2c (R8-3/R9-5/R10-5/R11-2/R11-3/R12-2/R13-2): indexed-output
-    # identity at the import boundary. The uniqueness domain is incoming ∪
-    # EXISTING DESTINATION STATE over the tenant-scoped origin-namespaced key
-    # (destination user, resolved origin, operation_id, index) — partial history
-    # explains GAPS, never DUPLICATES. A colliding incoming output is accepted
-    # IFF SOURCE-IDENTICAL under the two-set projection (a true re-import
-    # resolves idempotently — the record is SKIPPED, ordinary records keep the
-    # shipped remap-copy semantics); ANY projected difference REJECTS.
-    def _out_key(rec):
-        origin = (rec.get("provenance") or {}).get("origin")   # post-canonical
-        return (origin, rec.get("operation_id"), rec["consolidation_output_index"])
-
-    incoming_indexed = [r for r in ep_recs
-                        if r.get("lineage")
-                        and r.get("consolidation_output_index") is not None]
-    seen_keys = {}
-    for r in incoming_indexed:
-        k = _out_key(r)
-        if k in seen_keys:
-            raise ValueError(
-                f"{path}: two lineage-bearing outputs claim the same "
-                f"(origin, operation_id, index) {k!r} within one import — "
-                f"partial history explains gaps, never duplicates "
-                f"(specs/0014 §2c R8-3)")
-        seen_keys[k] = r
-    skip_ids = set()
-    if incoming_indexed:
-        dest_uid = user_id if user_id is not None else header.get("user_id")
-        dest_by_key = {}
-        for dep in store.episodes(dest_uid):
-            if dep.lineage and dep.consolidation_output_index is not None:
-                drec = json.loads(dep.model_dump_json())
-                dest_by_key[_out_key(drec)] = drec
-        for r in incoming_indexed:
-            hit = dest_by_key.get(_out_key(r))
-            if hit is None:
+            if not isinstance(prov, dict) or prov.get("source_id") is None:
+                continue                      # N11: no source_id, no digest, unreachable
+            uid = rec.get("user_id")
+            if uid not in _standing_cache:
+                _standing_cache[uid] = store.standing_revocations(uid)
+            if not _standing_cache[uid]:
                 continue
-            if (source_identity_projection(r)
-                    == source_identity_projection(hit)):
-                skip_ids.add(r["id"])              # idempotent re-import: no-op
-            else:
-                raise ValueError(
-                    f"{path}: incoming output {r.get('id')!r} claims the "
-                    f"existing identity {_out_key(r)!r} with a DIFFERENT "
-                    f"source-identity projection — rejected "
-                    f"(specs/0014 §2c R9-5/R11-3)")
-    if skip_ids:
-        ep_recs = [r for r in ep_recs if r["id"] not in skip_ids]
+            d = _idg(prov.get("origin"), prov["source_id"], store.local_origin())
+            if d is not None and d in _standing_cache[uid]:
+                prov["disclosure"] = Disclosure.QUARANTINED.value
 
-    edges = [Edge.model_validate(r) for r in edge_recs]
-    eps = [Episode.model_validate(r) for r in ep_recs]
+        # (3) legacy-format outcome conversion (§4f-ii) OR v3 explicit-field check (H13).
+        # Pinned to the OUTCOME-field format version (3, specs/0009), NOT FORMAT_VERSION: the
+        # 0006 v3→v4 bump introduced source-identity fields, not outcome fields, so v3 AND v4
+        # both carry explicit outcome fields and must take the H13 branch. Keying this on
+        # FORMAT_VERSION would wrongly legacy-convert a v3 export after the bump.
+        outcome_recs = [r for r in ep_recs if r.get("kind") == "outcome"]
+        if src_version < 3:
+            # group by identity first: a pre-v3 export can hold two outcome records for
+            # one (edge_id, evidence_ref); rooting each would branch — REFUSE instead.
+            groups: dict = {}
+            for r in outcome_recs:
+                groups.setdefault(
+                    (r.get("edge_id"), (r.get("provenance") or {}).get("evidence_ref")),
+                    []).append(r)
+            for gk, members in groups.items():
+                if len(members) > 1:
+                    raise _SITE_IMPORT_RECORD.fire(ValueError(
+                        f"{path}: legacy import holds {len(members)} outcome records for "
+                        f"chain {gk} — refuse rather than branch (specs/0009 §4f-ii)"), "legacy-outcome-multiplicity")
+            for r in outcome_recs:   # the same honest conversion as the on-disk migration
+                r["seq"] = 1
+                r["supersedes_episode"] = None
+                r["judgment_time_known"] = False
+        else:
+            for r in outcome_recs:   # a v3 outcome record MUST be explicit (H13)
+                jtk = r.get("judgment_time_known")
+                if jtk is None:
+                    raise _SITE_IMPORT_RECORD.fire(ValueError(
+                        f"{path}: v3 outcome record {r.get('id')!r} omits "
+                        f"judgment_time_known — refuse (specs/0009 H13)"), "v3-outcome-key")
+                # state-space rule (§ Episode fields, round-5 Correction B): a
+                # False label is a LEGACY-ROOT-ONLY state — never a non-root.
+                if jtk is False and (r.get("seq") != 1
+                                     or r.get("supersedes_episode") is not None):
+                    raise _SITE_IMPORT_RECORD.fire(ValueError(
+                        f"{path}: v3 outcome record {r.get('id')!r} has "
+                        f"judgment_time_known=False but is not a root (seq="
+                        f"{r.get('seq')!r}, supersedes_episode="
+                        f"{r.get('supersedes_episode')!r}) — refuse (specs/0009)"), "v3-outcome-chain-fields")
 
-    # (4) per-chain incoming topology (static — independent of the live destination)
-    incoming_chains: dict = {}
-    for ep in eps:
-        if ep.kind == "outcome":
-            incoming_chains.setdefault(_chain_id(ep), []).append(ep)
-    for key, members in incoming_chains.items():
-        _validate_incoming_chain(members, key, path)
+        # (3b) specs/0010 X18/X19: consolidation shapes cross the boundary honestly.
+        for r in ep_recs:
+            if r.get("claimed_by") is not None:
+                raise _SITE_IMPORT_RECORD.fire(ValueError(
+                    f"{path}: episode {r.get('id')!r} is a CLAIMED input whose "
+                    f"consolidation op is non-portable — refuse rather than orphan it "
+                    f"(specs/0010 X18)"), "claimed-input")
+            # specs/0014 §4c/§2c — the store-assigned output index at the import
+            # boundary. 0006 I10 first: a field NEWER than the declared
+            # FORMAT_VERSION is STRIPPED, never trusted — a pre-v5 envelope cannot
+            # legitimately carry the index, so it is dropped (matching the
+            # source_id/origin treatment above), and the v5 gates below never see
+            # it. For v5+ files: explicit null is MALFORMED (the export path omits
+            # None — R7-3); type gates mirror the generic path; a NON-output
+            # carrying an index is fabricated store identity and is refused.
+            if src_version < 5:
+                r.pop("consolidation_output_index", None)     # I10 — newer field
+            idx_present = "consolidation_output_index" in r
+            idx = r.get("consolidation_output_index")
+            if idx_present and idx is None:
+                raise _SITE_IMPORT_RECORD.fire(ValueError(
+                    f"{path}: episode {r.get('id')!r} carries an explicit null "
+                    f"consolidation_output_index — the exporter omits None, so an "
+                    f"explicit null is malformed (specs/0014 §4c R7-3)"), "null-output-index")
+            if idx is not None and (isinstance(idx, bool)
+                                    or not isinstance(idx, int) or idx < 0):
+                raise _SITE_IMPORT_RECORD.fire(ValueError(
+                    f"{path}: episode {r.get('id')!r} consolidation_output_index "
+                    f"{idx!r} is not a non-negative integer (specs/0014 §2c)"), "output-index-shape")
+            if idx is not None and not r.get("lineage"):
+                raise _SITE_IMPORT_RECORD.fire(ValueError(
+                    f"{path}: episode {r.get('id')!r} carries a consolidation_output_"
+                    f"index but no lineage — store-assigned identity cannot be "
+                    f"fabricated on a plain episode (specs/0014 §4c)"), "index-without-lineage")
+            if r.get("lineage"):                      # a consolidation OUTPUT
+                lin = r["lineage"]
+                if not (isinstance(lin, list)
+                        and all(isinstance(x, str) and is_historical_id(x) for x in lin)):
+                    raise _SITE_IMPORT_RECORD.fire(ValueError(
+                        f"{path}: episode {r.get('id')!r} has a malformed lineage shape — "
+                        f"every lineage id must be historical (specs/0010 X18)"), "lineage-shape")
+                # X19: a finalized output's operation_id becomes a destination-local
+                # HISTORICAL reference (deterministic, retry-stable — no persisted map) that
+                # no LIVE local op id can inhabit, so it can never collide on import or after
+                # a later local finalization. lineage ids are already historical.
+                if r.get("operation_id") is not None:
+                    r["operation_id"] = to_historical_id(r["operation_id"])
 
-    # (5) combined-destination validation + atomic commit, retried on a lost race so
-    # NOTHING is ever partially imported (§4c). The destination is re-read each pass.
-    for _attempt in range(_IMPORT_RETRIES):
-        outcome = _preflight_and_commit(store, path, target_uid, edges, eps,
-                                        incoming_chains, contrib_rows,
-                                        capped_path=not restore)
-        if outcome is not DESTINATION_CHANGED:
-            return {**outcome, "capped": capped_count,
-                    "agreement_mismatches": agreement_mismatches,
-                    # specs/0037 §4e: refused PER RECORD before the commit,
-                    # the admitted set committed atomically as one transaction
-                    "procedural_refused": len(procedural_refusals),
-                    "procedural_refusals": procedural_refusals,
-                    "user_id": target_uid}
-    raise ValueError(f"{path}: import kept losing a race against concurrent writes "
-                     f"after {_IMPORT_RETRIES} attempts — refused (specs/0009 §4c)")
+        # specs/0014 §2c (R8-3/R9-5/R10-5/R11-2/R11-3/R12-2/R13-2): indexed-output
+        # identity at the import boundary. The uniqueness domain is incoming ∪
+        # EXISTING DESTINATION STATE over the tenant-scoped origin-namespaced key
+        # (destination user, resolved origin, operation_id, index) — partial history
+        # explains GAPS, never DUPLICATES. A colliding incoming output is accepted
+        # IFF SOURCE-IDENTICAL under the two-set projection (a true re-import
+        # resolves idempotently — the record is SKIPPED, ordinary records keep the
+        # shipped remap-copy semantics); ANY projected difference REJECTS.
+        def _out_key(rec):
+            origin = (rec.get("provenance") or {}).get("origin")   # post-canonical
+            return (origin, rec.get("operation_id"), rec["consolidation_output_index"])
+
+        incoming_indexed = [r for r in ep_recs
+                            if r.get("lineage")
+                            and r.get("consolidation_output_index") is not None]
+        seen_keys = {}
+        for r in incoming_indexed:
+            k = _out_key(r)
+            if k in seen_keys:
+                raise _SITE_IMPORT_RECORD.fire(ValueError(
+                    f"{path}: two lineage-bearing outputs claim the same "
+                    f"(origin, operation_id, index) {k!r} within one import — "
+                    f"partial history explains gaps, never duplicates "
+                    f"(specs/0014 §2c R8-3)"), "duplicate-lineage-key")
+            seen_keys[k] = r
+        skip_ids = set()
+        if incoming_indexed:
+            dest_uid = user_id if user_id is not None else header.get("user_id")
+            dest_by_key = {}
+            for dep in store.episodes(dest_uid):
+                if dep.lineage and dep.consolidation_output_index is not None:
+                    drec = json.loads(dep.model_dump_json())
+                    dest_by_key[_out_key(drec)] = drec
+            for r in incoming_indexed:
+                hit = dest_by_key.get(_out_key(r))
+                if hit is None:
+                    continue
+                if (source_identity_projection(r)
+                        == source_identity_projection(hit)):
+                    skip_ids.add(r["id"])              # idempotent re-import: no-op
+                else:
+                    raise _SITE_IMPORT_RECORD.fire(ValueError(
+                        f"{path}: incoming output {r.get('id')!r} claims the "
+                        f"existing identity {_out_key(r)!r} with a DIFFERENT "
+                        f"source-identity projection — rejected "
+                        f"(specs/0014 §2c R9-5/R11-3)"), "lineage-claims-foreign")
+        if skip_ids:
+            ep_recs = [r for r in ep_recs if r["id"] not in skip_ids]
+
+        edges = [Edge.model_validate(r) for r in edge_recs]
+        eps = [Episode.model_validate(r) for r in ep_recs]
+
+        # (4) per-chain incoming topology (static — independent of the live destination)
+        incoming_chains: dict = {}
+        for ep in eps:
+            if ep.kind == "outcome":
+                incoming_chains.setdefault(_chain_id(ep), []).append(ep)
+        for key, members in incoming_chains.items():
+            _validate_incoming_chain(members, key, path)
+
+        # (5) combined-destination validation + atomic commit, retried on a lost race so
+        # NOTHING is ever partially imported (§4c). The destination is re-read each pass.
+        for _attempt in range(_IMPORT_RETRIES):
+            outcome = _preflight_and_commit(store, path, target_uid, edges, eps,
+                                            incoming_chains, contrib_rows,
+                                            capped_path=not restore)
+            if outcome is not DESTINATION_CHANGED:
+                return {**outcome, "capped": capped_count,
+                        "agreement_mismatches": agreement_mismatches,
+                        # specs/0037 §4e: refused PER RECORD before the commit,
+                        # the admitted set committed atomically as one transaction
+                        "procedural_refused": len(procedural_refusals),
+                        "procedural_refusals": procedural_refusals,
+                        "user_id": target_uid}
+        raise _SITE_IMPORT_RACE_EXHAUSTED.fire(ValueError(f"{path}: import kept losing a race against concurrent writes "
+                         f"after {_IMPORT_RETRIES} attempts — refused (specs/0009 §4c)"))
 
 
 def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
@@ -977,116 +994,117 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
     the commonest trigger is an own-store re-import whose stored originals
     differ from the capped incoming form (P10); the warning is never a bare
     remedy (P15). Restore-path refusals keep the plain message."""
-    _tail = f". {_RESTORE_WARNING}" if capped_path else ""
-    existing_edges = {e.id: e for e in store.edges(
-        target_uid, active_only=False, include_quarantined=True)}
-    existing_eps = {ep.id: ep for ep in store.episodes(target_uid)}
-    importing_edge_ids = {e.id for e in edges}
+    with _SITE_IMPORT_PREFLIGHT.consult():
+        _tail = f". {_RESTORE_WARNING}" if capped_path else ""
+        existing_edges = {e.id: e for e in store.edges(
+            target_uid, active_only=False, include_quarantined=True)}
+        existing_eps = {ep.id: ep for ep in store.episodes(target_uid)}
+        importing_edge_ids = {e.id for e in edges}
 
-    plan_edges: list = []
-    plan_eps: list = []
-    skipped = 0
-    edge_ids_expected: dict = {}     # id -> expected-present
-    ep_records_expected: dict = {}   # id -> current-persisted-json (None if absent)
-    chain_heads_expected: dict = {}  # (edge_id, evidence_ref) -> head id or None
+        plan_edges: list = []
+        plan_eps: list = []
+        skipped = 0
+        edge_ids_expected: dict = {}     # id -> expected-present
+        ep_records_expected: dict = {}   # id -> current-persisted-json (None if absent)
+        chain_heads_expected: dict = {}  # (edge_id, evidence_ref) -> head id or None
 
-    # edges: record-equal existing → idempotent skip; differing → refuse; new → insert
-    for edge in edges:
-        prior = existing_edges.get(edge.id)
-        if prior is not None:
-            if prior.model_dump() != edge.model_dump():
-                raise ValueError(f"{path}: edge {edge.id!r} already exists with "
-                                 f"different content — refuse (specs/0009 §4c){_tail}")
-            skipped += 1
-            edge_ids_expected[edge.id] = True
-        else:
-            plan_edges.append(edge)
-            edge_ids_expected[edge.id] = False
-
-    # every outcome chain's edge_id must resolve to an Edge owned by the target user
-    for (edge_id, _evref) in incoming_chains:
-        if edge_id not in importing_edge_ids and edge_id not in existing_edges:
-            raise ValueError(f"{path}: outcome chain references edge {edge_id!r}, "
-                             f"which is missing or foreign to {target_uid!r} — refuse "
-                             f"(specs/0009 §4c)")
-        edge_ids_expected.setdefault(edge_id, edge_id in existing_edges)
-
-    # non-outcome episodes: same record-equality idempotency as edges
-    for ep in eps:
-        if ep.kind == "outcome":
-            continue
-        prior = existing_eps.get(ep.id)
-        ep_records_expected[ep.id] = None if prior is None else prior.model_dump_json()
-        if prior is not None:
-            if prior.model_dump() != ep.model_dump():
-                raise ValueError(f"{path}: episode {ep.id!r} already exists with "
-                                 f"different content — refuse (specs/0009 §4c){_tail}")
-            skipped += 1
-        else:
-            plan_eps.append(ep)
-
-    # outcome chains: prefix-extend-or-refuse against the COMBINED destination graph
-    for key, members in incoming_chains.items():
-        edge_id, evref = key
-        dest = [ep for ep in existing_eps.values()
-                if ep.kind == "outcome" and _chain_id(ep) == key]
-        dest_by_id = {m.id: m for m in dest}
-        dest_head = max(dest, key=lambda m: m.seq or 0) if dest else None
-        chain_heads_expected[key] = dest_head.id if dest_head else None
-
-        new_members = []
-        for m in sorted(members, key=lambda m: m.seq or 0):
-            ep_records_expected[m.id] = (
-                dest_by_id[m.id].model_dump_json() if m.id in dest_by_id else None)
-            prior = dest_by_id.get(m.id)
+        # edges: record-equal existing → idempotent skip; differing → refuse; new → insert
+        for edge in edges:
+            prior = existing_edges.get(edge.id)
             if prior is not None:
-                if prior.model_dump() != m.model_dump():   # RECORD equality, not id
-                    raise ValueError(
-                        f"{path}: outcome link {m.id!r} already exists with different "
-                        f"content — refuse the whole import (specs/0009 §4c){_tail}")
+                if prior.model_dump() != edge.model_dump():
+                    raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: edge {edge.id!r} already exists with "
+                                     f"different content — refuse (specs/0009 §4c){_tail}"), "edge-conflict")
+                skipped += 1
+                edge_ids_expected[edge.id] = True
+            else:
+                plan_edges.append(edge)
+                edge_ids_expected[edge.id] = False
+
+        # every outcome chain's edge_id must resolve to an Edge owned by the target user
+        for (edge_id, _evref) in incoming_chains:
+            if edge_id not in importing_edge_ids and edge_id not in existing_edges:
+                raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: outcome chain references edge {edge_id!r}, "
+                                 f"which is missing or foreign to {target_uid!r} — refuse "
+                                 f"(specs/0009 §4c)"), "chain-edge-missing")
+            edge_ids_expected.setdefault(edge_id, edge_id in existing_edges)
+
+        # non-outcome episodes: same record-equality idempotency as edges
+        for ep in eps:
+            if ep.kind == "outcome":
+                continue
+            prior = existing_eps.get(ep.id)
+            ep_records_expected[ep.id] = None if prior is None else prior.model_dump_json()
+            if prior is not None:
+                if prior.model_dump() != ep.model_dump():
+                    raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: episode {ep.id!r} already exists with "
+                                     f"different content — refuse (specs/0009 §4c){_tail}"), "episode-conflict")
                 skipped += 1
             else:
-                new_members.append(m)
-        if new_members:
-            first_new = new_members[0]
-            if first_new.supersedes_episode != (dest_head.id if dest_head else None):
-                raise ValueError(
-                    f"{path}: outcome chain {key} does not extend the destination head "
-                    f"{(dest_head.id if dest_head else None)!r} (would branch or "
-                    f"diverge) — refuse (specs/0009 §4c)")
-            plan_eps.extend(new_members)
+                plan_eps.append(ep)
 
-    # specs/0009 §4c as amended (0020/0021): the contribution preflight —
-    # for every survivor the reconstructed rows attribute, the destination's
-    # current ledger rows must be ABSENT (first import) or EXACTLY EQUAL by
-    # plan_row_id set equality (idempotent re-import → the rows skip). A
-    # conflicting recorded history refuses the WHOLE import here, cleanly;
-    # the primitive re-runs the same gate atomically (a mid-flight race
-    # surfaces as DESTINATION_CHANGED and this preflight re-reads).
-    contribution_state: dict = {}
-    contrib_survivors = sorted({r["survivor_id"] for r in contrib_rows})
-    for sid in contrib_survivors:
-        current = [c.id for c in store.contributions(target_uid, "edge", sid)]
-        planned = {r["id"] for r in contrib_rows if r["survivor_id"] == sid}
-        if current and set(current) != planned:
-            raise ValueError(
-                f"{path}: destination record {sid!r} already carries a "
-                f"DIFFERENT recorded absorption history ({len(current)} "
-                f"ledger row(s) not plan-row-equal to the reconstruction) — "
-                f"a different history is refused whole, nothing written "
-                f"(specs/0009 §4c as amended by 0020/0021)")
-        contribution_state[sid] = sorted(current)
+        # outcome chains: prefix-extend-or-refuse against the COMBINED destination graph
+        for key, members in incoming_chains.items():
+            edge_id, evref = key
+            dest = [ep for ep in existing_eps.values()
+                    if ep.kind == "outcome" and _chain_id(ep) == key]
+            dest_by_id = {m.id: m for m in dest}
+            dest_head = max(dest, key=lambda m: m.seq or 0) if dest else None
+            chain_heads_expected[key] = dest_head.id if dest_head else None
 
-    plan = {"edges": plan_edges, "episodes": plan_eps,
-            "contributions": contrib_rows}
-    expected = {"edge_ids": edge_ids_expected,
-                "episode_records": ep_records_expected,
-                "chain_heads": chain_heads_expected,
-                "contribution_state": contribution_state}
-    result = store.commit_outcome_import_plan(target_uid, plan, expected)
-    if result is DESTINATION_CHANGED:
-        return DESTINATION_CHANGED
-    return {"edges": result["edges"],
-            "episodes": result["episodes"], "skipped": skipped,
-            "contributions": result.get("contributions", 0),
-            "contributions_existing": result.get("contributions_existing", 0)}
+            new_members = []
+            for m in sorted(members, key=lambda m: m.seq or 0):
+                ep_records_expected[m.id] = (
+                    dest_by_id[m.id].model_dump_json() if m.id in dest_by_id else None)
+                prior = dest_by_id.get(m.id)
+                if prior is not None:
+                    if prior.model_dump() != m.model_dump():   # RECORD equality, not id
+                        raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
+                            f"{path}: outcome link {m.id!r} already exists with different "
+                            f"content — refuse the whole import (specs/0009 §4c){_tail}"), "outcome-link-conflict")
+                    skipped += 1
+                else:
+                    new_members.append(m)
+            if new_members:
+                first_new = new_members[0]
+                if first_new.supersedes_episode != (dest_head.id if dest_head else None):
+                    raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
+                        f"{path}: outcome chain {key} does not extend the destination head "
+                        f"{(dest_head.id if dest_head else None)!r} (would branch or "
+                        f"diverge) — refuse (specs/0009 §4c)"), "chain-head-mismatch")
+                plan_eps.extend(new_members)
+
+        # specs/0009 §4c as amended (0020/0021): the contribution preflight —
+        # for every survivor the reconstructed rows attribute, the destination's
+        # current ledger rows must be ABSENT (first import) or EXACTLY EQUAL by
+        # plan_row_id set equality (idempotent re-import → the rows skip). A
+        # conflicting recorded history refuses the WHOLE import here, cleanly;
+        # the primitive re-runs the same gate atomically (a mid-flight race
+        # surfaces as DESTINATION_CHANGED and this preflight re-reads).
+        contribution_state: dict = {}
+        contrib_survivors = sorted({r["survivor_id"] for r in contrib_rows})
+        for sid in contrib_survivors:
+            current = [c.id for c in store.contributions(target_uid, "edge", sid)]
+            planned = {r["id"] for r in contrib_rows if r["survivor_id"] == sid}
+            if current and set(current) != planned:
+                raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
+                    f"{path}: destination record {sid!r} already carries a "
+                    f"DIFFERENT recorded absorption history ({len(current)} "
+                    f"ledger row(s) not plan-row-equal to the reconstruction) — "
+                    f"a different history is refused whole, nothing written "
+                    f"(specs/0009 §4c as amended by 0020/0021)"), "scope-rows-conflict")
+            contribution_state[sid] = sorted(current)
+
+        plan = {"edges": plan_edges, "episodes": plan_eps,
+                "contributions": contrib_rows}
+        expected = {"edge_ids": edge_ids_expected,
+                    "episode_records": ep_records_expected,
+                    "chain_heads": chain_heads_expected,
+                    "contribution_state": contribution_state}
+        result = store.commit_outcome_import_plan(target_uid, plan, expected)
+        if result is DESTINATION_CHANGED:
+            return DESTINATION_CHANGED
+        return {"edges": result["edges"],
+                "episodes": result["episodes"], "skipped": skipped,
+                "contributions": result.get("contributions", 0),
+                "contributions_existing": result.get("contributions_existing", 0)}

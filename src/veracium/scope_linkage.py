@@ -48,6 +48,13 @@ from typing import Optional
 
 from .contribution import evidence_ref_digest
 from .source_identity import resolve_origin, source_identity_digest
+from .census import declare_site
+
+# specs/0042 (tranche 4): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_IMPORT_WINNER = declare_site("scope-linkage.import.winner")
+_SITE_IMPORT_ROWS = declare_site("scope-linkage.import.rows")
+_SITE_EXPORT_AMBIGUOUS_ABSORBER = declare_site("scope-linkage.export.ambiguous-absorber")
 
 #: the REAL import operation-id shape (`op-<12hex>`, minted once per import)
 _OP_ID = re.compile(r"^op-[0-9a-f]{12}$")
@@ -374,39 +381,40 @@ def _resolve_winner(record: dict, file_ids: set) -> str:
        (missing/unresolvable); MORE THAN ONE refuses (the legacy carrier
        is genuinely ambiguous there — the structured field is the fix,
        refusal is the fallback)."""
-    rid = record.get("id")
-    structured = record.get("absorbed_by_id")
-    if structured is not None:
-        if structured not in file_ids:
-            raise ImportLinkageError(
-                f"absorbed_duplicate record {rid!r} carries structured "
-                f"absorbed_by_id {structured!r} naming no record in the "
-                f"file — unresolvable linkage; the import REFUSES")
-        return structured
-    note = record.get("note") or ""
-    idx = note.rfind("absorbed_by:")
-    if idx < 0:
-        raise ImportLinkageError(
-            f"absorbed_duplicate record {rid!r} carries no absorbed_by "
-            f"linkage — unreconstructable absorption history; the import "
-            f"REFUSES (R6-1)")
-    rest = note[idx + len("absorbed_by:"):]
-    candidates = [w for w in file_ids
-                  if isinstance(w, str)
-                  and (rest == w or rest.startswith(w + " (restated as ")
-                       or rest.startswith(w + "; "))]
-    if len(candidates) == 1:
-        return candidates[0]
-    if not candidates:
-        raise ImportLinkageError(
-            f"absorbed_duplicate record {rid!r} names a winner resolving "
-            f"to no record in the file — unresolvable linkage; the import "
-            f"REFUSES (R6-1)")
-    raise ImportLinkageError(
-        f"absorbed_duplicate record {rid!r}'s linkage matches "
-        f"{len(candidates)} file ids — the legacy note carrier is "
-        f"AMBIGUOUS here; the import REFUSES (R7-2; re-export under the "
-        f"structured absorbed_by_id carrier)")
+    with _SITE_IMPORT_WINNER.consult():
+        rid = record.get("id")
+        structured = record.get("absorbed_by_id")
+        if structured is not None:
+            if structured not in file_ids:
+                raise _SITE_IMPORT_WINNER.fire(ImportLinkageError(
+                    f"absorbed_duplicate record {rid!r} carries structured "
+                    f"absorbed_by_id {structured!r} naming no record in the "
+                    f"file — unresolvable linkage; the import REFUSES"), "structured-not-in-file")
+            return structured
+        note = record.get("note") or ""
+        idx = note.rfind("absorbed_by:")
+        if idx < 0:
+            raise _SITE_IMPORT_WINNER.fire(ImportLinkageError(
+                f"absorbed_duplicate record {rid!r} carries no absorbed_by "
+                f"linkage — unreconstructable absorption history; the import "
+                f"REFUSES (R6-1)"), "no-absorbed-by")
+        rest = note[idx + len("absorbed_by:"):]
+        candidates = [w for w in file_ids
+                      if isinstance(w, str)
+                      and (rest == w or rest.startswith(w + " (restated as ")
+                           or rest.startswith(w + "; "))]
+        if len(candidates) == 1:
+            return candidates[0]
+        if not candidates:
+            raise _SITE_IMPORT_WINNER.fire(ImportLinkageError(
+                f"absorbed_duplicate record {rid!r} names a winner resolving "
+                f"to no record in the file — unresolvable linkage; the import "
+                f"REFUSES (R6-1)"), "winner-unresolvable")
+        raise _SITE_IMPORT_WINNER.fire(ImportLinkageError(
+            f"absorbed_duplicate record {rid!r}'s linkage matches "
+            f"{len(candidates)} file ids — the legacy note carrier is "
+            f"AMBIGUOUS here; the import REFUSES (R7-2; re-export under the "
+            f"structured absorbed_by_id carrier)"), "linkage-ambiguous")
 
 
 def reconstruct_absorption_rows(export_records: list, local_origin: str,
@@ -436,53 +444,54 @@ def reconstruct_absorption_rows(export_records: list, local_origin: str,
     These rows are ATTRIBUTION evidence for scope membership ONLY —
     they are NOT 0014 §4a absorption payloads and provide NO reversal
     (R6-2)."""
-    if not _OP_ID.fullmatch(import_op or ""):
-        raise ScopeError(f"import_op must be the minted op-<12hex> "
-                         f"operation id (R7-3/R8-3), got {import_op!r}")
-    id_remap = id_remap or {}
-    file_ids = {r.get("id") for r in export_records}
-    winner_of: dict = {}
-    for r in export_records:
-        if r.get("invalidation_reason") == "absorbed_duplicate":
-            winner_of[r.get("id")] = _resolve_winner(r, file_ids)
-        elif r.get("absorbed_by_id") is not None:
-            raise ImportLinkageError(
-                f"record {r.get('id')!r} carries absorbed_by_id but is not "
-                f"absorbed_duplicate — a contradictory file; the import "
-                f"REFUSES (fail-closed)")
-    out: dict = {}
-    for r in export_records:
-        rid = r.get("id")
-        if rid not in winner_of:
-            continue
-        d = identity_digest_of(r.get("origin"), r.get("source_id"),
-                               local_origin)
-        ev = evidence_digest_of(r.get("origin"), r.get("evidence_ref"),
-                                local_origin)
-        cref = id_remap.get(rid, rid)
-        # propagate to the direct winner and every transitive absorber —
-        # DIRECT links land at imported-absorption; transitive copies at
-        # scope-attribution (R10-1)
-        hop, visited, direct = winner_of[rid], {rid}, True
-        while True:
-            if hop in visited:
-                raise ImportLinkageError(
-                    f"absorption linkage from {rid!r} is CYCLIC at "
-                    f"{hop!r} — corrupt history; the import REFUSES (R7-1)")
-            visited.add(hop)
-            surv = id_remap.get(hop, hop)
-            site = SITE_IMPORTED if direct else SITE_ATTRIBUTION
-            payload = ({"reconstructed": True} if direct
-                       else {"flattened": True, "reconstructed": True})
-            out.setdefault(surv, []).append(construct_plan_row(
-                "import", import_op, surv, site=site, identity_digest=d,
-                evidence_ref_digest=ev, contributor_ref=cref,
-                payload=payload))
-            if hop not in winner_of:
-                break
-            hop = winner_of[hop]
-            direct = False
-    return out
+    with _SITE_IMPORT_ROWS.consult():
+        if not _OP_ID.fullmatch(import_op or ""):
+            raise ScopeError(f"import_op must be the minted op-<12hex> "
+                             f"operation id (R7-3/R8-3), got {import_op!r}")
+        id_remap = id_remap or {}
+        file_ids = {r.get("id") for r in export_records}
+        winner_of: dict = {}
+        for r in export_records:
+            if r.get("invalidation_reason") == "absorbed_duplicate":
+                winner_of[r.get("id")] = _resolve_winner(r, file_ids)
+            elif r.get("absorbed_by_id") is not None:
+                raise _SITE_IMPORT_ROWS.fire(ImportLinkageError(
+                    f"record {r.get('id')!r} carries absorbed_by_id but is not "
+                    f"absorbed_duplicate — a contradictory file; the import "
+                    f"REFUSES (fail-closed)"), "absorbed-by-on-non-duplicate")
+        out: dict = {}
+        for r in export_records:
+            rid = r.get("id")
+            if rid not in winner_of:
+                continue
+            d = identity_digest_of(r.get("origin"), r.get("source_id"),
+                                   local_origin)
+            ev = evidence_digest_of(r.get("origin"), r.get("evidence_ref"),
+                                    local_origin)
+            cref = id_remap.get(rid, rid)
+            # propagate to the direct winner and every transitive absorber —
+            # DIRECT links land at imported-absorption; transitive copies at
+            # scope-attribution (R10-1)
+            hop, visited, direct = winner_of[rid], {rid}, True
+            while True:
+                if hop in visited:
+                    raise _SITE_IMPORT_ROWS.fire(ImportLinkageError(
+                        f"absorption linkage from {rid!r} is CYCLIC at "
+                        f"{hop!r} — corrupt history; the import REFUSES (R7-1)"), "cyclic")
+                visited.add(hop)
+                surv = id_remap.get(hop, hop)
+                site = SITE_IMPORTED if direct else SITE_ATTRIBUTION
+                payload = ({"reconstructed": True} if direct
+                           else {"flattened": True, "reconstructed": True})
+                out.setdefault(surv, []).append(construct_plan_row(
+                    "import", import_op, surv, site=site, identity_digest=d,
+                    evidence_ref_digest=ev, contributor_ref=cref,
+                    payload=payload))
+                if hop not in winner_of:
+                    break
+                hop = winner_of[hop]
+                direct = False
+        return out
 
 
 # ---- the export reverse link (0020 §4a-iii R9-1) ---------------------------
@@ -521,9 +530,10 @@ def derive_absorbed_by(contributor_id: str, ledger_rows: dict):
                 hits.append(survivor)
     if not hits:
         return None
-    if len(hits) > 1:
-        raise ExportLinkageError(
-            f"contributor {contributor_id!r} has {len(hits)} canonical "
-            f"absorber rows ({sorted(set(hits))}) — corrupt linkage; the "
-            f"export REFUSES (R9-1)")
+    with _SITE_EXPORT_AMBIGUOUS_ABSORBER.consult():
+        if len(hits) > 1:
+            raise _SITE_EXPORT_AMBIGUOUS_ABSORBER.fire(ExportLinkageError(
+                f"contributor {contributor_id!r} has {len(hits)} canonical "
+                f"absorber rows ({sorted(set(hits))}) — corrupt linkage; the "
+                f"export REFUSES (R9-1)"))
     return hits[0]

@@ -1467,49 +1467,28 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 113,
+   "line": 128,
    "module": "portability.py",
    "qualname": "export_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 222,
+   "line": 238,
    "module": "portability.py",
    "qualname": "_validate_incoming_chain"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 226,
+   "line": 242,
    "module": "portability.py",
    "qualname": "_validate_incoming_chain"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 235,
-   "module": "portability.py",
-   "qualname": "_validate_incoming_chain"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 239,
-   "module": "portability.py",
-   "qualname": "_validate_incoming_chain"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 243,
-   "module": "portability.py",
-   "qualname": "_validate_incoming_chain"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 248,
+   "line": 251,
    "module": "portability.py",
    "qualname": "_validate_incoming_chain"
   },
@@ -1523,37 +1502,30 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 260,
+   "line": 259,
    "module": "portability.py",
    "qualname": "_validate_incoming_chain"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 295,
+   "line": 264,
    "module": "portability.py",
-   "qualname": "import_memory"
+   "qualname": "_validate_incoming_chain"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 299,
+   "line": 271,
    "module": "portability.py",
-   "qualname": "import_memory"
+   "qualname": "_validate_incoming_chain"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 306,
+   "line": 276,
    "module": "portability.py",
-   "qualname": "import_memory"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 309,
-   "module": "portability.py",
-   "qualname": "import_memory"
+   "qualname": "_validate_incoming_chain"
   },
   {
    "bare": false,
@@ -1565,55 +1537,76 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 325,
+   "line": 316,
+   "module": "portability.py",
+   "qualname": "import_memory"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 323,
+   "module": "portability.py",
+   "qualname": "import_memory"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 326,
+   "module": "portability.py",
+   "qualname": "import_memory"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 329,
+   "module": "portability.py",
+   "qualname": "import_memory"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 342,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 416,
+   "line": 433,
    "module": "portability.py",
    "qualname": "import_memory._one_or_unresolved"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 680,
+   "line": 697,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 763,
+   "line": 780,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 818,
+   "line": 835,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 829,
+   "line": 846,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 836,
-   "module": "portability.py",
-   "qualname": "import_memory"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 845,
+   "line": 853,
    "module": "portability.py",
    "qualname": "import_memory"
   },
@@ -1627,84 +1620,91 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 868,
+   "line": 879,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 872,
+   "line": 885,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 880,
+   "line": 889,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 909,
+   "line": 897,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 931,
+   "line": 926,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 964,
+   "line": 948,
    "module": "portability.py",
    "qualname": "import_memory"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 998,
+   "line": 981,
+   "module": "portability.py",
+   "qualname": "import_memory"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1016,
    "module": "portability.py",
    "qualname": "_preflight_and_commit"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1009,
+   "line": 1027,
    "module": "portability.py",
    "qualname": "_preflight_and_commit"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1022,
+   "line": 1040,
    "module": "portability.py",
    "qualname": "_preflight_and_commit"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1044,
+   "line": 1062,
    "module": "portability.py",
    "qualname": "_preflight_and_commit"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1053,
+   "line": 1071,
    "module": "portability.py",
    "qualname": "_preflight_and_commit"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1072,
+   "line": 1090,
    "module": "portability.py",
    "qualname": "_preflight_and_commit"
   },
@@ -2329,102 +2329,67 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 135,
+   "line": 154,
    "module": "scope.py",
    "qualname": "Identity.__post_init__"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 143,
+   "line": 163,
    "module": "scope.py",
    "qualname": "Identity.groupable"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 149,
+   "line": 169,
    "module": "scope.py",
    "qualname": "resolve"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 169,
+   "line": 189,
    "module": "scope.py",
    "qualname": "same_identity"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 209,
+   "line": 229,
    "module": "scope.py",
    "qualname": "_canonical_groups_ok"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 212,
+   "line": 232,
    "module": "scope.py",
    "qualname": "_canonical_groups_ok"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 214,
+   "line": 234,
    "module": "scope.py",
    "qualname": "_canonical_groups_ok"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 237,
+   "line": 257,
    "module": "scope.py",
    "qualname": "ScopePolicy.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 241,
+   "line": 261,
    "module": "scope.py",
    "qualname": "ScopePolicy.__post_init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 245,
+   "line": 265,
    "module": "scope.py",
    "qualname": "ScopePolicy.__post_init__"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 258,
-   "module": "scope.py",
-   "qualname": "validate_policy"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 262,
-   "module": "scope.py",
-   "qualname": "validate_policy"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 267,
-   "module": "scope.py",
-   "qualname": "validate_policy"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 269,
-   "module": "scope.py",
-   "qualname": "validate_policy"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 276,
-   "module": "scope.py",
-   "qualname": "validate_policy"
   },
   {
    "bare": false,
@@ -2436,271 +2401,299 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 284,
+   "line": 283,
    "module": "scope.py",
    "qualname": "validate_policy"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 328,
+   "line": 288,
+   "module": "scope.py",
+   "qualname": "validate_policy"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 290,
+   "module": "scope.py",
+   "qualname": "validate_policy"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 297,
+   "module": "scope.py",
+   "qualname": "validate_policy"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 300,
+   "module": "scope.py",
+   "qualname": "validate_policy"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 305,
+   "module": "scope.py",
+   "qualname": "validate_policy"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 350,
    "module": "scope.py",
    "qualname": "_revalidate"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 331,
+   "line": 353,
    "module": "scope.py",
    "qualname": "_revalidate"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 336,
+   "line": 358,
    "module": "scope.py",
    "qualname": "_revalidate"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 341,
+   "line": 363,
    "module": "scope.py",
    "qualname": "_revalidate"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 351,
+   "line": 373,
    "module": "scope.py",
    "qualname": "_revalidate"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 363,
+   "line": 385,
    "module": "scope.py",
    "qualname": "is_legacy_derivative"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 422,
+   "line": 445,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 443,
+   "line": 466,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 455,
+   "line": 478,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 459,
+   "line": 482,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 461,
+   "line": 484,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 467,
+   "line": 490,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 469,
+   "line": 492,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 472,
+   "line": 495,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 475,
+   "line": 498,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 477,
+   "line": 500,
    "module": "scope.py",
    "qualname": "close_absorption_rows.walk"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 526,
+   "line": 550,
    "module": "scope.py",
    "qualname": "prune_absorbed_record"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 538,
+   "line": 562,
    "module": "scope.py",
    "qualname": "prune_absorbed_record"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 570,
+   "line": 594,
    "module": "scope.py",
    "qualname": "prune_absorbed_record"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 613,
+   "line": 638,
    "module": "scope.py",
    "qualname": "membership"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 616,
+   "line": 642,
    "module": "scope.py",
    "qualname": "membership"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 662,
+   "line": 688,
    "module": "scope.py",
    "qualname": "_group_of_digest"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 676,
+   "line": 703,
    "module": "scope.py",
    "qualname": "classify"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 681,
+   "line": 709,
    "module": "scope.py",
    "qualname": "classify"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 688,
-   "module": "scope.py",
-   "qualname": "classify"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 714,
-   "module": "scope.py",
-   "qualname": "validate_filters"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 717,
    "module": "scope.py",
+   "qualname": "classify"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 744,
+   "module": "scope.py",
    "qualname": "validate_filters"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 720,
+   "line": 748,
+   "module": "scope.py",
+   "qualname": "validate_filters"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 752,
    "module": "scope.py",
    "qualname": "validate_filters"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 732,
+   "line": 765,
    "module": "scope.py",
    "qualname": "apply_filters"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 99,
+   "line": 106,
    "module": "scope_linkage.py",
    "qualname": "canonical_payload"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 108,
+   "line": 115,
    "module": "scope_linkage.py",
    "qualname": "identity_digest_of"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 119,
+   "line": 126,
    "module": "scope_linkage.py",
    "qualname": "evidence_digest_of"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 173,
+   "line": 180,
    "module": "scope_linkage.py",
    "qualname": "validate_plan_site_payload"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 176,
+   "line": 183,
    "module": "scope_linkage.py",
    "qualname": "validate_plan_site_payload"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 188,
+   "line": 195,
    "module": "scope_linkage.py",
    "qualname": "validate_plan_site_payload"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 209,
+   "line": 216,
    "module": "scope_linkage.py",
    "qualname": "validate_row_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 213,
+   "line": 220,
    "module": "scope_linkage.py",
    "qualname": "validate_row_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 218,
+   "line": 225,
    "module": "scope_linkage.py",
    "qualname": "validate_row_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 221,
-   "module": "scope_linkage.py",
-   "qualname": "validate_row_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 226,
+   "line": 228,
    "module": "scope_linkage.py",
    "qualname": "validate_row_plan"
   },
@@ -2714,72 +2707,72 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 238,
+   "line": 240,
    "module": "scope_linkage.py",
    "qualname": "validate_row_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 242,
+   "line": 245,
    "module": "scope_linkage.py",
    "qualname": "validate_row_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 253,
+   "line": 249,
    "module": "scope_linkage.py",
    "qualname": "validate_row_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 262,
+   "line": 260,
    "module": "scope_linkage.py",
    "qualname": "validate_row_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 299,
+   "line": 269,
+   "module": "scope_linkage.py",
+   "qualname": "validate_row_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 306,
    "module": "scope_linkage.py",
    "qualname": "row_op_key"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 301,
+   "line": 308,
    "module": "scope_linkage.py",
    "qualname": "row_op_key"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 317,
+   "line": 324,
    "module": "scope_linkage.py",
    "qualname": "native_row_op_key"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 344,
+   "line": 351,
    "module": "scope_linkage.py",
    "qualname": "construct_plan_row"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 346,
+   "line": 353,
    "module": "scope_linkage.py",
    "qualname": "construct_plan_row"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 381,
-   "module": "scope_linkage.py",
-   "qualname": "_resolve_winner"
   },
   {
    "bare": false,
@@ -2791,23 +2784,23 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 401,
+   "line": 397,
    "module": "scope_linkage.py",
    "qualname": "_resolve_winner"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 405,
+   "line": 409,
    "module": "scope_linkage.py",
    "qualname": "_resolve_winner"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 440,
+   "line": 413,
    "module": "scope_linkage.py",
-   "qualname": "reconstruct_absorption_rows"
+   "qualname": "_resolve_winner"
   },
   {
    "bare": false,
@@ -2819,83 +2812,90 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 469,
+   "line": 458,
+   "module": "scope_linkage.py",
+   "qualname": "reconstruct_absorption_rows"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 478,
    "module": "scope_linkage.py",
    "qualname": "reconstruct_absorption_rows"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 501,
+   "line": 510,
    "module": "scope_linkage.py",
    "qualname": "_is_canonical"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 502,
+   "line": 511,
    "module": "scope_linkage.py",
    "qualname": "_is_canonical"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 523,
+   "line": 532,
    "module": "scope_linkage.py",
    "qualname": "derive_absorbed_by"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 525,
+   "line": 535,
    "module": "scope_linkage.py",
    "qualname": "derive_absorbed_by"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 252,
+   "line": 261,
    "module": "scope_read.py",
    "qualname": "MembershipResolver.flattening_plan"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 277,
+   "line": 286,
    "module": "scope_read.py",
    "qualname": "MembershipResolver.flattening_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 295,
+   "line": 305,
    "module": "scope_read.py",
    "qualname": "ScopeView.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 302,
+   "line": 313,
    "module": "scope_read.py",
    "qualname": "ScopeView.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 308,
+   "line": 320,
    "module": "scope_read.py",
    "qualname": "ScopeView.__init__"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 402,
+   "line": 417,
    "module": "scope_read.py",
    "qualname": "ScopeView.scoped"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 434,
+   "line": 451,
    "module": "scope_read.py",
    "qualname": "narrow_edges"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 442,
+   "line": 459,
    "module": "scope_read.py",
    "qualname": "view_for"
   },

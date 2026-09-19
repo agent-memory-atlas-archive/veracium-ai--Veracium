@@ -42,6 +42,15 @@ from .scope import (DECISION_TABLE, UNRESOLVED, Identity, ScopeError,
                     apply_filters, classify, close_absorption_rows,
                     digest_of, membership)
 from .scope_linkage import MEMBERSHIP_SITES
+from .census import declare_site
+
+# specs/0042 (tranche 4): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_VIEW_PRINCIPAL_NOT_IDENTITY = declare_site("scope-read.view.principal-not-identity")
+_SITE_VIEW_NO_POLICY = declare_site("scope-read.view.no-policy")
+_SITE_VIEW_UNGROUPABLE = declare_site("scope-read.view.principal-ungroupable")
+_SITE_VIEW_SCOPED = declare_site("scope-read.scoped")
+_SITE_NARROW_EDGES = declare_site("scope-read.narrow-edges")
 
 #: the LEGACY (pre-amendment) absorption link, as the shipped writer emits
 #: it on the ABSORBED record: `graph.py`'s
@@ -291,21 +300,24 @@ class ScopeView:
 
     def __init__(self, store, user_id: str, principal: Identity,
                  policy, *, filters: Optional[dict] = None):
-        if not isinstance(principal, Identity):
-            raise ScopeError(
-                f"principal must be a veracium.scope.Identity, got "
-                f"{type(principal).__name__} (strict types, 0020 §2c)")
+        with _SITE_VIEW_PRINCIPAL_NOT_IDENTITY.consult():
+            if not isinstance(principal, Identity):
+                raise _SITE_VIEW_PRINCIPAL_NOT_IDENTITY.fire(ScopeError(
+                    f"principal must be a veracium.scope.Identity, got "
+                    f"{type(principal).__name__} (strict types, 0020 §2c)"))
         # feature-disabled REFUSES a principal-bearing call (§4a-ii, R2-2) —
         # raised HERE as well as inside `classify`, so the refusal happens
         # before a single record is read rather than per-record.
-        if policy is None:
-            raise ScopeError(
-                "a principal was supplied but no scope policy is configured — "
-                "feature-disabled cannot honour a principal-bearing call "
-                "(0020 §4a-ii); configure MemoryConfig.scope_groups (`{}` is "
-                "the valid configured-empty state)")
-        if not principal.groupable:
-            raise ScopeError("a principal must carry a source_id (0006 I13)")
+        with _SITE_VIEW_NO_POLICY.consult():
+            if policy is None:
+                raise _SITE_VIEW_NO_POLICY.fire(ScopeError(
+                    "a principal was supplied but no scope policy is configured — "
+                    "feature-disabled cannot honour a principal-bearing call "
+                    "(0020 §4a-ii); configure MemoryConfig.scope_groups (`{}` is "
+                    "the valid configured-empty state)"))
+        with _SITE_VIEW_UNGROUPABLE.consult():
+            if not principal.groupable:
+                raise _SITE_VIEW_UNGROUPABLE.fire(ScopeError("a principal must carry a source_id (0006 I13)"))
         self.store = store
         self.user_id = user_id
         self.principal = principal
@@ -399,7 +411,10 @@ class ScopeView:
         """THE VISIBILITY RELATION on a record set: drop every record the
         relation makes invisible (CROSS_HIDDEN and UNRESOLVED), shape what
         remains."""
-        return [self.shape(r) for r in records if self.visible(r)]
+        with _SITE_VIEW_SCOPED.consult():
+            records = list(records)
+            out = [self.shape(r) for r in records if self.visible(r)]
+            return _SITE_VIEW_SCOPED.fire(out, "withhold", declined=len(out) < len(records))
 
     def narrow(self, edges: list) -> list:
         """§4e M-2: the filters, AFTER scope and WITHIN the visible set —
@@ -431,7 +446,9 @@ def narrow_edges(edges: list, filters: dict) -> list:
                    "volatility": e.volatility.value}, e) for e in edges]
     keep = apply_filters([p for p, _ in projected], filters)
     keep_ids = {id(p) for p in keep}
-    return [e for p, e in projected if id(p) in keep_ids]
+    with _SITE_NARROW_EDGES.consult():
+        out = [e for p, e in projected if id(p) in keep_ids]
+        return _SITE_NARROW_EDGES.fire(out, "withhold", declined=len(out) < len(projected))
 
 
 def view_for(store, user_id: str, principal, policy,

@@ -66,9 +66,15 @@ Spec-Status: accepted
 > their `return False` exits are the non-declining branch of one decision (`declines=True`), not
 > enforcement points of their own; a structural sweep of the whole review for that shape (a
 > function carrying more than one id on non-raising exits) found seven functions, every one a set
-> of DISTINCT declining reasons on hand-reading — no further instance. The DECLARED/INSTALLED half
-> of the reconciliation holds per tranche; the DISCOVERED/REVIEWED half lands with the review file
-> in the last tranche.
+> of DISTINCT declining reasons on hand-reading — no further instance. **Tranche 4:** thirty-three
+> more ids in scope, scope_linkage, scope_read and portability — 101 bound; a check whose `if` sits
+> inside a loop brackets the function body instead (one consult per call, not per iteration), and a
+> raise inside an `elif` does the same. The review's keys are now DERIVED from the source (every
+> `fire()`-wrapped candidate binds its statement to its id; the per-line NOT overrides re-keyed by
+> (qualname, kind, ordinal) in one hop from the plan-time inventory) after a sequential re-key had
+> drifted two keys onto neighbouring statements — the review file will be generated the same way.
+> The DECLARED/INSTALLED half of the reconciliation holds per tranche; the DISCOVERED/REVIEWED half
+> lands with the review file in the last tranche.
 
 ## 1. Problem and motivation
 

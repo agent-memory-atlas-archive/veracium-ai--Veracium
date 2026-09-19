@@ -691,6 +691,11 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0037_producer_stamp.py",
      "test_a_persisted_producer_is_never_replaced_by_claimed_ancestry"): "restore",
     ("test_0037_producer_stamp.py", "run"): "both",          # that test's helper: default for the lineages, restore for the chains
+    # specs/0042: the census runtime leg executes one DECLINING import per site — the helper
+    # carries whatever path the entry names (restore for the agreement-record and the
+    # restore-with-user refusals, default otherwise); the preflight conflict is a restore
+    ("test_0042_sites.py", "_import"): "both",
+    ("test_0042_sites.py", "_preflight_conflict"): "restore",
     # specs/0026 V6a: the accepted import decision table driven over
     # BOTH modes deliberately — default-recompute (forged discarded,
     # counted) and restore (verbatim-valid, foreign-opaque,

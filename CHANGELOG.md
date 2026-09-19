@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Added: the census binds thirty-three more sites (specs/0042, tranche 4)** — the scope policy's
+  validator and revalidation, the absorption closure walk, the prune's cycle refusal, membership's
+  and classification's refusals, the filter grammar and its application, the import linkage
+  reconstruction and export linkage refusals, the scope view's construction refusals and its two
+  lenses, and portability's export and import refusals (the outcome chain, the file envelope, the
+  agreement record, the origin requirement, the record shape, the retry bound and the preflight).
+  101 sites are bound in all. No behaviour changes.
 - **Added: the census binds forty more sites (specs/0042, tranche 3)** — the supersession
   receipt boundary and replay mismatch, the absorption gate's three scope refusals, the
   correction planner's two refusals, the source-revocation verdict, the semantic-duplicate keep

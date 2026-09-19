@@ -9,6 +9,7 @@ census (the shipped default) moves nothing.
 Tranche 2 (2026-09-19): gate, schema, compile, grounding, authority, asof — 28 sites.
 Tranche 3 (2026-09-19): graph, proactive, ingest, procedures, the procedural gate, the registry,
 the MCP closed set, the Memory surface, diagnostics, telemetry — 40 more ids.
+Tranche 4 (2026-09-19): scope, scope_linkage, scope_read, portability — 33 more ids.
 """
 from __future__ import annotations
 
@@ -378,6 +379,143 @@ SURFACE_DRIVEN.update({
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
 
 
+# ---- tranche 4 (2026-09-19): scope, scope_linkage, scope_read, portability — 33 ids ----------------
+from veracium import portability, scope, scope_linkage, scope_read
+from veracium.scope import Identity, ScopeError, validate_policy
+import veracium.portability  # noqa: F401 — lazily imported by the package; declares its sites
+
+_LOCAL = "org-local-1234"
+_A1 = Identity("org-a", "agent-1")
+_B1 = Identity("org-b", "agent-9")
+
+
+def _pol(local=_LOCAL):
+    return validate_policy({"team-a": [Identity("org-a", "agent-1"), Identity("org-a", "agent-2")],
+                            "team-b": [Identity("org-b", "agent-9")]}, False, local_origin=local)
+
+
+def _ungroupable():
+    return Identity("org-a", None)
+
+
+def _row(ref, **payload):
+    return {"site": "absorption", "identity_digest": "d", "op_key": None, "evidence_ref_digest": None,
+            "contributor_ref": ref, "payload": payload}
+
+
+def _export_lines(records, version=12, uid=U):
+    head = {"kind": "veracium-export", "version": version, "user_id": uid, "exported_at": "2026-01-01T00:00:00+00:00"}
+    return [_json.dumps(head)] + [_json.dumps(r) for r in records]
+
+
+def _edge_rec(eid="e1", origin="org-x", **over):
+    rec = _json.loads(_edge(eid).model_dump_json()); rec["provenance"]["origin"] = origin
+    rec.update(over); return {"record": "edge", **rec}
+
+
+def _episode_rec(eid="ep1", origin="org-x", **over):
+    rec = _json.loads(_episode(eid).model_dump_json()); rec["provenance"]["origin"] = origin
+    rec.pop("consolidation_output_index", None); rec.update(over); return {"record": "episode", **rec}
+
+
+def _import(lines, **kw):
+    import tempfile, os
+    d = tempfile.mkdtemp(); p = os.path.join(d, "e.jsonl")
+    with open(p, "w") as f:
+        f.write("\n".join(lines) + ("\n" if lines else ""))
+    s = _store()
+    try:
+        return portability.import_memory(s, p, **kw)
+    finally:
+        s.close()
+
+
+def _import_raises(lines, exc=ValueError, **kw):
+    with pytest.raises(exc):
+        _import(lines, **kw)
+
+
+def _export_non_quiescent(mp):
+    mp.setattr(SqliteStore, "quiescent_episode_snapshot", lambda self, *a, **k: portability.NON_QUIESCENT)
+    s = _store()
+    with pytest.raises(ValueError):
+        portability.export_memory(s, U, "/dev/null")
+    s.close()
+
+
+def _preflight_conflict():
+    s = _store(); s.add_edge(_edge("e1", "stored value"))
+    import tempfile, os
+    p = os.path.join(tempfile.mkdtemp(), "e.jsonl")
+    with open(p, "w") as f:
+        f.write("\n".join(_export_lines([_edge_rec("e1", object="a different value")])) + "\n")
+    with pytest.raises(ValueError):
+        portability.import_memory(s, p, restore=True)
+    s.close()
+
+
+def _race_exhausted(mp):
+    mp.setattr(portability, "_IMPORT_RETRIES", 0)
+    _import_raises(_export_lines([_edge_rec("e1")]))
+
+
+def _scoped_view_hides():
+    s = _store(); pol = _pol(s.local_origin())
+    v = scope_read.ScopeView(s, U, _A1, pol)
+    e = _edge("x"); e = e.model_copy(update={"provenance": e.provenance.model_copy(update={"source_id": "agent-9", "origin": "org-b"})})
+    v.scoped([e])
+    s.close()
+
+
+DECLINES.update({
+    "scope.identity.groupable": lambda mp: _ungroupable().groupable,
+    "scope.policy.non-groupable-member": lambda mp: _raises(ScopeError, validate_policy, {"g": [_ungroupable()]}, local_origin=_LOCAL),
+    "scope.policy.digest-overlap": lambda mp: _raises(
+        ScopeError, validate_policy, {"g1": [Identity("org-a", "agent-1")], "g2": [Identity("org-a", "agent-1")]}, local_origin=_LOCAL),
+    "scope.revalidate": lambda mp: _raises(ScopeError, scope._revalidate, "not a policy", _LOCAL),
+    "scope.closure.walk": lambda mp: scope.close_absorption_rows("S", {"S": [_row(None)]}),
+    "scope.prune.cycle": lambda mp: _raises(
+        scope.ExportLinkageError, scope.prune_absorbed_record, "B",
+        {"B": [_row("C")], "C": [_row("B")]}, prune_op="op-000000000001"),
+    "scope.membership.unknown-state": lambda mp: _raises(
+        ScopeError, scope.membership, {"author": "user", "origin": "o", "source_id": "s", "evidence_ref": "r", "lineage": False}, [], "bogus", _LOCAL),
+    "scope.membership.abandoned": lambda mp: _raises(
+        ScopeError, scope.membership, {"author": "user", "origin": "o", "source_id": "s", "evidence_ref": "r", "lineage": False}, [], "abandoned", _LOCAL),
+    "scope.classify.no-policy": lambda mp: _raises(ScopeError, scope.classify, scope.digest_of(_A1, _LOCAL), _A1, None, _LOCAL),
+    "scope.classify.principal-ungroupable": lambda mp: _raises(ScopeError, scope.classify, scope.digest_of(_A1, _LOCAL), _ungroupable(), _pol(), _LOCAL),
+    "scope.classify.evidence-not-digest": lambda mp: _raises(ScopeError, scope.classify, "not-a-digest", _A1, _pol(), _LOCAL),
+    "scope.filters.not-mapping": lambda mp: _raises(ScopeError, scope.validate_filters, 5),
+    "scope.filters.unknown-field": lambda mp: _raises(ScopeError, scope.validate_filters, {"bogus": "x"}),
+    "scope.filters.bad-value": lambda mp: _raises(ScopeError, scope.validate_filters, {"subject": ""}),
+    "scope.filters.apply": lambda mp: scope.apply_filters([{"subject": "a"}], {"subject": "b"}),
+    "scope-linkage.import.winner": lambda mp: _raises(
+        scope_linkage.ImportLinkageError, scope_linkage._resolve_winner, {"id": "r", "absorbed_by_id": "gone"}, {"r"}),
+    "scope-linkage.import.rows": lambda mp: _raises(
+        scope_linkage.ImportLinkageError, scope_linkage.reconstruct_absorption_rows,
+        [{"id": "r", "invalidation_reason": "superseded", "absorbed_by_id": "w"}, {"id": "w"}], "org-dest-1", import_op="op-feedbeef0042"),
+    "scope-linkage.export.ambiguous-absorber": lambda mp: _raises(
+        scope.ExportLinkageError, scope.derive_absorbed_by, "A", {"B": [_row("A")], "C": [_row("A")]}),
+    "scope-read.view.principal-not-identity": lambda mp: _raises(ScopeError, scope_read.ScopeView, _store(), U, "not-an-identity", _pol()),
+    "scope-read.view.no-policy": lambda mp: _raises(ScopeError, scope_read.ScopeView, _store(), U, _A1, None),
+    "scope-read.view.principal-ungroupable": lambda mp: _raises(ScopeError, scope_read.ScopeView, _store(), U, _ungroupable(), _pol()),
+    "scope-read.scoped": lambda mp: _scoped_view_hides(),
+    "scope-read.narrow-edges": lambda mp: scope_read.narrow_edges([_edge("n")], {"subject": "nobody"}),
+    "portability.export.non-quiescent": lambda mp: _export_non_quiescent(mp),
+    "portability.import.chain": lambda mp: _raises(ValueError, portability._validate_incoming_chain, [], "k", "p"),
+    "portability.import.restore-not-bool": lambda mp: _import_raises(_export_lines([]), TypeError, restore="yes"),
+    "portability.import.restore-with-user": lambda mp: _import_raises(_export_lines([]), restore=True, user_id="v"),
+    "portability.import.file": lambda mp: _import_raises([]),
+    "portability.import.agreement-invalid": lambda mp: _import_raises(
+        _export_lines([_edge_rec("e1", agreement={"malformed": True})]), restore=True),
+    "portability.import.origin-missing": lambda mp: _import_raises(_export_lines([_edge_rec("e1", origin=None)])),
+    "portability.import.record": lambda mp: _import_raises(_export_lines([_episode_rec("ep1", claimed_by="op-x")])),
+    "portability.import.race-exhausted": lambda mp: _race_exhausted(mp),
+    "portability.import.preflight": lambda mp: _preflight_conflict(),
+})
+
+SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
+
+
 @pytest.fixture
 def enabled():
     census.enable(True)
@@ -421,11 +559,12 @@ def test_the_surface_driven_sites_decline_once_per_candidate(site_id, enabled):
 def test_the_disabled_census_moves_nothing(monkeypatch):
     assert not census.enabled()
     for site_id, entry in DECLINES.items():
-        if isinstance(entry, TwoPhase):
-            state = entry.setup(monkeypatch); run = lambda st=state, e=entry: e.run(st)
-        else:
-            run = lambda e=entry: e(monkeypatch)
-        assert _delta(site_id, run) == (0, 0, 0), site_id
+        with monkeypatch.context() as mp:          # one entry's patches never reach the next
+            if isinstance(entry, TwoPhase):
+                state = entry.setup(mp); run = lambda st=state, e=entry: e.run(st)
+            else:
+                run = lambda e=entry, m=mp: e(m)
+            assert _delta(site_id, run) == (0, 0, 0), site_id
 
 
 def test_the_trace_names_the_branch_not_the_content(enabled, monkeypatch):

@@ -157,7 +157,7 @@ DISPOSITIONS = {
     "`test_takeover_of_expired_generating_cleans_first` · `test_a_live_lease_is_not_preempted`"),
 
  # -- portability ------------------------------------------------------------
- ("src/veracium/portability.py", "_preflight_and_commit", "commit_outcome_import_plan", "83f7d603598f"):
+ ("src/veracium/portability.py", "_preflight_and_commit", "commit_outcome_import_plan", "982326a4b277"):
    (W, "**every trust field, reconstructed from a file** — edges AND whole outcome chains; a cross-user remap mints fresh ids (a COPY, never a transfer) and now remaps `supersedes_episode` too (`specs/0009` §4c Correction B)", "transfer",
     "specs/0009 (ACCEPTED) §4c CLOSED: import is now WHOLE-FILE validate-or-refuse — the entire plan is parsed, remapped, legacy-converted and topology-checked BEFORE any write, then committed through this ONE atomic primitive (no partial import, H5; no branch and linearized against append_outcome_if_head, H4; H14 fences outcome rows out of the generic mutators). **specs/0005 (ACCEPTED, implemented) CLOSED the residual M6 cap concern: every default import applies the unconditional three-lever trust cap (author/derived_from → THIRD_PARTY, disclosure floored USE_ONLY) on the validated records BEFORE this commit primitive ever sees them; `restore=True` is the operator's explicit, closed-bool opt-out, mutually exclusive with the remap.**", "test_default_import_caps_every_record · test_handwritten_export_cannot_evade_the_cap · test_every_import_caps_by_default [M6-import closed]"),
 }
@@ -204,5 +204,5 @@ STATES = {
   ("src/veracium/lifecycle.py", "_recover", "transition_consolidation_if_current", "6e0ea1c3cdf2"): "clean",
   ("src/veracium/lifecycle.py", "_recover", "delete_claimed_inputs_if_current", "49d3539863c9"): "clean",
   ("src/veracium/lifecycle.py", "_recover", "abandon_consolidation_if_current", "3796d339c301"): "clean",
-  ("src/veracium/portability.py", "_preflight_and_commit", "commit_outcome_import_plan", "83f7d603598f"): "clean",
+  ("src/veracium/portability.py", "_preflight_and_commit", "commit_outcome_import_plan", "982326a4b277"): "clean",
 }

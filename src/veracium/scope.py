@@ -82,6 +82,25 @@ from .scope_linkage import (SITE_ATTRIBUTION, ExportLinkageError,
                             plan_row_id, reconstruct_absorption_rows,
                             row_op_key, validate_row_plan,
                             MEMBERSHIP_SITES)
+from .census import declare_site
+
+# specs/0042 (tranche 4): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_IDENTITY_GROUPABLE = declare_site("scope.identity.groupable", declines=False)
+_SITE_POLICY_NON_GROUPABLE = declare_site("scope.policy.non-groupable-member")
+_SITE_POLICY_DIGEST_OVERLAP = declare_site("scope.policy.digest-overlap")
+_SITE_REVALIDATE = declare_site("scope.revalidate")
+_SITE_CLOSURE_WALK = declare_site("scope.closure.walk", declines=False)
+_SITE_PRUNE_CYCLE = declare_site("scope.prune.cycle")
+_SITE_MEMBERSHIP_UNKNOWN_STATE = declare_site("scope.membership.unknown-state")
+_SITE_MEMBERSHIP_ABANDONED = declare_site("scope.membership.abandoned")
+_SITE_CLASSIFY_NO_POLICY = declare_site("scope.classify.no-policy")
+_SITE_CLASSIFY_UNGROUPABLE = declare_site("scope.classify.principal-ungroupable")
+_SITE_CLASSIFY_EVIDENCE = declare_site("scope.classify.evidence-not-digest")
+_SITE_FILTERS_NOT_MAPPING = declare_site("scope.filters.not-mapping")
+_SITE_FILTERS_UNKNOWN_FIELD = declare_site("scope.filters.unknown-field")
+_SITE_FILTERS_BAD_VALUE = declare_site("scope.filters.bad-value")
+_SITE_FILTERS_APPLY = declare_site("scope.filters.apply")
 
 #: the reference's error name, bound to THE SAME class (see module doc)
 PolicyError = ScopeError
@@ -140,7 +159,8 @@ class Identity:
     def groupable(self) -> bool:
         """0006 I13: an absent `source_id` yields NO groupable identity —
         REGARDLESS of origin."""
-        return self.source_id is not None
+        with _SITE_IDENTITY_GROUPABLE.consult():
+            return _SITE_IDENTITY_GROUPABLE.fire(self.source_id is not None, "withhold")
 
 
 def resolve(identity: Identity, local_origin: str) -> Identity:
@@ -254,57 +274,58 @@ def validate_policy(groups, cross_scope_visible=False,
     members; non-groupable members (I13); resolved-DIGEST overlap across
     groups; `cross_scope_visible` not a REAL bool. The caller's input is
     never retained — canonical frozen copies only."""
-    if not isinstance(cross_scope_visible, bool):
-        raise ScopeError(
-            f"cross_scope_visible must be a real bool, got "
-            f"{cross_scope_visible!r}")
-    if not isinstance(groups, dict):
-        raise ScopeError("groups must be a mapping")
-    seen: dict = {}
-    frozen_groups, frozen_digests = {}, {}
-    for name, members in groups.items():
-        if not isinstance(name, str) or not name:
-            raise ScopeError(f"group name {name!r} is not a non-empty string")
-        if not isinstance(members, (list, tuple)):
+    with _SITE_POLICY_NON_GROUPABLE.consult(), _SITE_POLICY_DIGEST_OVERLAP.consult():
+        if not isinstance(cross_scope_visible, bool):
             raise ScopeError(
-                f"group {name!r} members must be a list or tuple, got "
-                f"{type(members).__name__} (sets and other iterables are "
-                f"REFUSED — unordered inputs are not a rule grammar)")
-        out, digs = [], set()
-        for m in members:
-            if not isinstance(m, Identity):
-                raise ScopeError(f"group {name!r} carries a non-Identity "
-                                 f"rule shape {m!r}")
-            if not m.groupable:
+                f"cross_scope_visible must be a real bool, got "
+                f"{cross_scope_visible!r}")
+        if not isinstance(groups, dict):
+            raise ScopeError("groups must be a mapping")
+        seen: dict = {}
+        frozen_groups, frozen_digests = {}, {}
+        for name, members in groups.items():
+            if not isinstance(name, str) or not name:
+                raise ScopeError(f"group name {name!r} is not a non-empty string")
+            if not isinstance(members, (list, tuple)):
                 raise ScopeError(
-                    f"group {name!r} contains a source_id-less identity "
-                    f"(0006 I13 — no groupable identity)")
-            d = digest_of(m, local_origin)
-            if d in seen and seen[d] != name:
-                raise ScopeError(
-                    f"identity digest {d[:12]}… appears in groups "
-                    f"{seen[d]!r} and {name!r} — overlap is REFUSED at load")
-            seen[d] = name
-            out.append(m)
-            digs.add(d)
-        frozen_groups[name] = tuple(out)
-        frozen_digests[name] = frozenset(digs)
-    proxy = MappingProxyType(frozen_groups)   # backing dict is LOCAL —
-    pol = ScopePolicy(groups=proxy,           # no caller ever held it
-                      cross_scope_visible=cross_scope_visible,
-                      group_digests=MappingProxyType(frozen_digests),
-                      seal=_seal(frozen_groups, cross_scope_visible,
-                                 local_origin))
-    # the validator-owned snapshot, RECURSIVELY IMMUTABLE — LITERALLY:
-    # it holds only PRIMITIVE strings/bools/frozensets from here down, so
-    # no leaf is shared with the policy and `object.__setattr__` on a
-    # member cannot mutate both references (R7-4)
-    _REGISTRY[pol] = (_prim_groups(frozen_groups),
-                      cross_scope_visible,
-                      tuple(sorted((k, frozenset(v))
-                                   for k, v in frozen_digests.items())),
-                      pol.seal)
-    return pol
+                    f"group {name!r} members must be a list or tuple, got "
+                    f"{type(members).__name__} (sets and other iterables are "
+                    f"REFUSED — unordered inputs are not a rule grammar)")
+            out, digs = [], set()
+            for m in members:
+                if not isinstance(m, Identity):
+                    raise ScopeError(f"group {name!r} carries a non-Identity "
+                                     f"rule shape {m!r}")
+                if not m.groupable:
+                    raise _SITE_POLICY_NON_GROUPABLE.fire(ScopeError(
+                        f"group {name!r} contains a source_id-less identity "
+                        f"(0006 I13 — no groupable identity)"))
+                d = digest_of(m, local_origin)
+                if d in seen and seen[d] != name:
+                    raise _SITE_POLICY_DIGEST_OVERLAP.fire(ScopeError(
+                        f"identity digest {d[:12]}… appears in groups "
+                        f"{seen[d]!r} and {name!r} — overlap is REFUSED at load"))
+                seen[d] = name
+                out.append(m)
+                digs.add(d)
+            frozen_groups[name] = tuple(out)
+            frozen_digests[name] = frozenset(digs)
+        proxy = MappingProxyType(frozen_groups)   # backing dict is LOCAL —
+        pol = ScopePolicy(groups=proxy,           # no caller ever held it
+                          cross_scope_visible=cross_scope_visible,
+                          group_digests=MappingProxyType(frozen_digests),
+                          seal=_seal(frozen_groups, cross_scope_visible,
+                                     local_origin))
+        # the validator-owned snapshot, RECURSIVELY IMMUTABLE — LITERALLY:
+        # it holds only PRIMITIVE strings/bools/frozensets from here down, so
+        # no leaf is shared with the policy and `object.__setattr__` on a
+        # member cannot mutate both references (R7-4)
+        _REGISTRY[pol] = (_prim_groups(frozen_groups),
+                          cross_scope_visible,
+                          tuple(sorted((k, frozenset(v))
+                                       for k, v in frozen_digests.items())),
+                          pol.seal)
+        return pol
 
 
 def _prim_groups(groups) -> tuple:
@@ -324,34 +345,35 @@ def _revalidate(policy: ScopePolicy, local_origin: str) -> None:
     validator-owned registry snapshot. The registry, not the seal, is the
     authority; the seal is COMPARED against the registered value as
     tamper-evidence and never recomputed here."""
-    if not isinstance(policy, ScopePolicy):
-        raise ScopeError("policy must be a ScopePolicy")
-    if not isinstance(policy.cross_scope_visible, bool) \
-            or not _canonical_groups_ok(policy.groups):
-        raise ScopeError("policy failed consumption revalidation")
-    expected_digs = {name: frozenset(digest_of(m, local_origin)
-                                     for m in members)
-                     for name, members in policy.groups.items()}
-    if dict(policy.group_digests) != expected_digs:
-        raise ScopeError(
-            "group_digests is not the canonical projection of groups — "
-            "a direct construction or a mutated backing map")
-    reg = _REGISTRY.get(policy)
-    if reg is None:
-        raise ScopeError(
-            "the policy is not in the validator's registry — constructed "
-            "outside validate_policy")
-    reg_groups, reg_xv, reg_digs, reg_seal = reg
-    if (policy.cross_scope_visible is not reg_xv
-            or _prim_groups(policy.groups) != reg_groups
-            or tuple(sorted((k, frozenset(v))
-                            for k, v in policy.group_digests.items()))
-            != reg_digs
-            or policy.seal != reg_seal):
-        raise ScopeError(
-            "the policy's visible state diverges from the validator-owned "
-            "snapshot — mutated after validation; RE-SIGNING DOES NOT HELP: "
-            "the registry, not the seal, is the authority")
+    with _SITE_REVALIDATE.consult():
+        if not isinstance(policy, ScopePolicy):
+            raise _SITE_REVALIDATE.fire(ScopeError("policy must be a ScopePolicy"), "not-a-policy")
+        if not isinstance(policy.cross_scope_visible, bool) \
+                or not _canonical_groups_ok(policy.groups):
+            raise _SITE_REVALIDATE.fire(ScopeError("policy failed consumption revalidation"), "consumption-revalidation")
+        expected_digs = {name: frozenset(digest_of(m, local_origin)
+                                         for m in members)
+                         for name, members in policy.groups.items()}
+        if dict(policy.group_digests) != expected_digs:
+            raise _SITE_REVALIDATE.fire(ScopeError(
+                "group_digests is not the canonical projection of groups — "
+                "a direct construction or a mutated backing map"), "digests-not-canonical")
+        reg = _REGISTRY.get(policy)
+        if reg is None:
+            raise _SITE_REVALIDATE.fire(ScopeError(
+                "the policy is not in the validator's registry — constructed "
+                "outside validate_policy"), "not-registered")
+        reg_groups, reg_xv, reg_digs, reg_seal = reg
+        if (policy.cross_scope_visible is not reg_xv
+                or _prim_groups(policy.groups) != reg_groups
+                or tuple(sorted((k, frozenset(v))
+                                for k, v in policy.group_digests.items()))
+                != reg_digs
+                or policy.seal != reg_seal):
+            raise _SITE_REVALIDATE.fire(ScopeError(
+                "the policy's visible state diverges from the validator-owned "
+                "snapshot — mutated after validation; RE-SIGNING DOES NOT HELP: "
+                "the registry, not the seal, is the authority"), "diverged")
 
 
 # ---- the record→membership RESOLVER — DIGEST SPACE -------------------------
@@ -418,64 +440,65 @@ def close_absorption_rows(survivor_id: str, ledger_rows: dict,
     visited = set()
 
     def walk(node, path, verify_only=False):
-        if node in path:
-            return False                   # cyclic path — corrupt
-        if node in visited:
-            return True                    # DAG shortcut revisit — done
-        visited.add(node)
-        rows = ledger_rows.get(node, [])
-        node_digs = {r.get("identity_digest") for r in rows
-                     if r.get("site") in MEMBERSHIP_SITES}
-        if not verify_only:
-            out.extend(rows)
-        unattributed = []
-        for r in rows:
-            if r.get("site") not in MEMBERSHIP_SITES:
-                continue
-            ref = r.get("contributor_ref")
-            payload = r.get("payload") or {}
-            if payload == {"closure": "incomplete"}:
-                continue                   # the marker's None digest fails
-                                           # membership closed; it is never
-                                           # a link and never walked
-            if payload.get("flattened"):
-                if ref is None:
-                    return False           # a marker-only row would bypass
-                                           # BOTH accounting paths
-                continue                   # digest counted; subtree covered
-            if ref is not None:
-                # direct rows and REPARENTED links (reparenting is an
-                # INSERTED scope-attribution row, never a mutation).
-                # Closed by the write invariant (0021 W14/§4c: flattening
-                # and the ref land together). OPPORTUNISTIC verification
-                # only — under accepted 0014 A10 a pruned contributor's
-                # rows are legitimately GONE, so absence proves nothing
-                # and fails nothing; presence is checked.
-                if absorber_of.setdefault(ref, node) != node:
-                    return False           # two absorbers — corrupt
-                for cr in ledger_rows.get(ref, []):
-                    if cr.get("site") in MEMBERSHIP_SITES \
-                            and cr.get("identity_digest") not in node_digs:
-                        return False       # flattening incomplete — corrupt
-                if not walk(ref, path | {node}, verify_only=True):
-                    return False
-            else:
-                unattributed.append(r.get("identity_digest"))
-        if unattributed:
-            linked = legacy_links.get(node)
-            if not linked:
-                return False               # the pruned-legacy cell
-            if any(x not in legacy_digests for x in linked):
-                return False
-            if sorted(legacy_digests[x] or "" for x in linked) != \
-                    sorted(d or "" for d in unattributed):
-                return False               # multiset mismatch — unaccounted
-            for prior in linked:
-                if absorber_of.setdefault(prior, node) != node:
-                    return False
-                if not walk(prior, path | {node}):
-                    return False
-        return True
+        with _SITE_CLOSURE_WALK.consult():
+            if node in path:
+                return _SITE_CLOSURE_WALK.fire(False, "cyclic")                   # cyclic path — corrupt
+            if node in visited:
+                return True                    # DAG shortcut revisit — done
+            visited.add(node)
+            rows = ledger_rows.get(node, [])
+            node_digs = {r.get("identity_digest") for r in rows
+                         if r.get("site") in MEMBERSHIP_SITES}
+            if not verify_only:
+                out.extend(rows)
+            unattributed = []
+            for r in rows:
+                if r.get("site") not in MEMBERSHIP_SITES:
+                    continue
+                ref = r.get("contributor_ref")
+                payload = r.get("payload") or {}
+                if payload == {"closure": "incomplete"}:
+                    continue                   # the marker's None digest fails
+                                               # membership closed; it is never
+                                               # a link and never walked
+                if payload.get("flattened"):
+                    if ref is None:
+                        return _SITE_CLOSURE_WALK.fire(False, "marker-only-row")           # a marker-only row would bypass
+                                               # BOTH accounting paths
+                    continue                   # digest counted; subtree covered
+                if ref is not None:
+                    # direct rows and REPARENTED links (reparenting is an
+                    # INSERTED scope-attribution row, never a mutation).
+                    # Closed by the write invariant (0021 W14/§4c: flattening
+                    # and the ref land together). OPPORTUNISTIC verification
+                    # only — under accepted 0014 A10 a pruned contributor's
+                    # rows are legitimately GONE, so absence proves nothing
+                    # and fails nothing; presence is checked.
+                    if absorber_of.setdefault(ref, node) != node:
+                        return _SITE_CLOSURE_WALK.fire(False, "two-absorbers")           # two absorbers — corrupt
+                    for cr in ledger_rows.get(ref, []):
+                        if cr.get("site") in MEMBERSHIP_SITES \
+                                and cr.get("identity_digest") not in node_digs:
+                            return _SITE_CLOSURE_WALK.fire(False, "flattening-incomplete")       # flattening incomplete — corrupt
+                    if not walk(ref, path | {node}, verify_only=True):
+                        return _SITE_CLOSURE_WALK.fire(False, "verify-failed")
+                else:
+                    unattributed.append(r.get("identity_digest"))
+            if unattributed:
+                linked = legacy_links.get(node)
+                if not linked:
+                    return _SITE_CLOSURE_WALK.fire(False, "pruned-legacy")               # the pruned-legacy cell
+                if any(x not in legacy_digests for x in linked):
+                    return _SITE_CLOSURE_WALK.fire(False, "unknown-linked-digest")
+                if sorted(legacy_digests[x] or "" for x in linked) != \
+                        sorted(d or "" for d in unattributed):
+                    return _SITE_CLOSURE_WALK.fire(False, "multiset-mismatch")               # multiset mismatch — unaccounted
+                for prior in linked:
+                    if absorber_of.setdefault(prior, node) != node:
+                        return _SITE_CLOSURE_WALK.fire(False, "two-absorbers-legacy")
+                    if not walk(prior, path | {node}):
+                        return _SITE_CLOSURE_WALK.fire(False, "prior-walk-failed")
+            return True
 
     return out if walk(survivor_id, frozenset()) else None
 
@@ -522,52 +545,53 @@ def prune_absorbed_record(record_id: str, ledger_rows: dict,
     behaviour to agree with; on every input the reference terminates on,
     this function returns exactly what it returns (checked
     differentially, and by the pinned vectors)."""
-    if not _OP_ID.fullmatch(prune_op or ""):
-        raise ScopeError(f"prune_op must be op-<12hex>, got {prune_op!r}")
-    out = {k: [dict(r, payload=dict(r.get("payload") or {}))
-               for r in v] for k, v in ledger_rows.items()}
-    absorber = derive_absorbed_by(record_id, out)
-    # DOMAIN CLOSURE (research's 0018 R1-4 lens): self-absorption is the
-    # cycle of length 1, and guarding only n=1 was BOUNDED-WRONG — a 2-cycle
-    # terminated but MANUFACTURED a self-absorbing row on the absorber
-    # (executed against both implementations). Corrupt linkage is corrupt at
-    # every length: walk the whole absorber chain, refuse on ANY revisit.
-    _seen, _hop = {record_id}, absorber
-    while _hop is not None:
-        if _hop in _seen:
-            raise ExportLinkageError(
-                f"the canonical absorber chain from {record_id!r} is CYCLIC "
-                f"at {_hop!r} — corrupt ledger state (a record cannot absorb "
-                f"itself, directly or transitively); the prune REFUSES rather "
-                f"than reparenting into a cycle")
-        _seen.add(_hop)
-        _hop = derive_absorbed_by(_hop, out)
-    if absorber is not None:
-        # the iteration is over a SNAPSHOT and the appends land on a
-        # DIFFERENT survivor's list (guaranteed by the refusal above) —
-        # the loop can never observe a row it just wrote
-        for r in list(out.get(record_id, [])):
-            if not _is_canonical(r):
-                continue
-            x = r.get("contributor_ref")
-            if x is None:
-                continue                        # legacy row — nothing typed
-            has_copy = any(
-                t.get("contributor_ref") == x
-                and (t.get("payload") or {}).get("flattened")
-                for t in out.get(absorber, []))
-            new = construct_plan_row(
-                "prune", prune_op, absorber, site=SITE_ATTRIBUTION,
-                identity_digest=(r.get("identity_digest") if has_copy
-                                 else None),
-                evidence_ref_digest=(r.get("evidence_ref_digest")
-                                     if has_copy else None),
-                contributor_ref=x,
-                payload=({"reparented_from": record_id} if has_copy
-                         else {"closure": "incomplete"}))
-            out.setdefault(absorber, []).append(new)
-    out.pop(record_id, None)                    # the A10 drop
-    return out
+    with _SITE_PRUNE_CYCLE.consult():
+        if not _OP_ID.fullmatch(prune_op or ""):
+            raise ScopeError(f"prune_op must be op-<12hex>, got {prune_op!r}")
+        out = {k: [dict(r, payload=dict(r.get("payload") or {}))
+                   for r in v] for k, v in ledger_rows.items()}
+        absorber = derive_absorbed_by(record_id, out)
+        # DOMAIN CLOSURE (research's 0018 R1-4 lens): self-absorption is the
+        # cycle of length 1, and guarding only n=1 was BOUNDED-WRONG — a 2-cycle
+        # terminated but MANUFACTURED a self-absorbing row on the absorber
+        # (executed against both implementations). Corrupt linkage is corrupt at
+        # every length: walk the whole absorber chain, refuse on ANY revisit.
+        _seen, _hop = {record_id}, absorber
+        while _hop is not None:
+            if _hop in _seen:
+                raise _SITE_PRUNE_CYCLE.fire(ExportLinkageError(
+                    f"the canonical absorber chain from {record_id!r} is CYCLIC "
+                    f"at {_hop!r} — corrupt ledger state (a record cannot absorb "
+                    f"itself, directly or transitively); the prune REFUSES rather "
+                    f"than reparenting into a cycle"))
+            _seen.add(_hop)
+            _hop = derive_absorbed_by(_hop, out)
+        if absorber is not None:
+            # the iteration is over a SNAPSHOT and the appends land on a
+            # DIFFERENT survivor's list (guaranteed by the refusal above) —
+            # the loop can never observe a row it just wrote
+            for r in list(out.get(record_id, [])):
+                if not _is_canonical(r):
+                    continue
+                x = r.get("contributor_ref")
+                if x is None:
+                    continue                        # legacy row — nothing typed
+                has_copy = any(
+                    t.get("contributor_ref") == x
+                    and (t.get("payload") or {}).get("flattened")
+                    for t in out.get(absorber, []))
+                new = construct_plan_row(
+                    "prune", prune_op, absorber, site=SITE_ATTRIBUTION,
+                    identity_digest=(r.get("identity_digest") if has_copy
+                                     else None),
+                    evidence_ref_digest=(r.get("evidence_ref_digest")
+                                         if has_copy else None),
+                    contributor_ref=x,
+                    payload=({"reparented_from": record_id} if has_copy
+                             else {"closure": "incomplete"}))
+                out.setdefault(absorber, []).append(new)
+        out.pop(record_id, None)                    # the A10 drop
+        return out
 
 
 def membership(record: dict, rows: Optional[list], op_state: str,
@@ -609,12 +633,14 @@ def membership(record: dict, rows: Optional[list], op_state: str,
       Mixed → UNRESOLVED.
     - ordinary host record, no rows: own digest, or SHARED when
       non-groupable (C3's floor — HOST-produced only)."""
-    if op_state not in OP_STATES:
-        raise ScopeError(f"unknown operation state {op_state!r} — the set "
-                         f"is closed: {OP_STATES}")
-    if op_state == "abandoned":
-        raise ScopeError("an abandoned operation has no surviving output "
-                         "(0010) — a record claiming one is malformed")
+    with _SITE_MEMBERSHIP_UNKNOWN_STATE.consult():
+        if op_state not in OP_STATES:
+            raise _SITE_MEMBERSHIP_UNKNOWN_STATE.fire(ScopeError(f"unknown operation state {op_state!r} — the set "
+                             f"is closed: {OP_STATES}"))
+    with _SITE_MEMBERSHIP_ABANDONED.consult():
+        if op_state == "abandoned":
+            raise _SITE_MEMBERSHIP_ABANDONED.fire(ScopeError("an abandoned operation has no surviving output "
+                             "(0010) — a record claiming one is malformed"))
     if is_legacy_derivative(record):
         return UNRESOLVED
     if op_state == "generating":
@@ -672,21 +698,24 @@ def classify(record_evidence, principal: Optional[Identity],
     (I13). The policy is REVALIDATED at consumption."""
     if principal is None:
         return "OWN"
-    if policy is None:
-        raise ScopeError(
-            "a principal was supplied but no scope policy is configured — "
-            "feature-disabled cannot honour a principal-bearing call")
+    with _SITE_CLASSIFY_NO_POLICY.consult():
+        if policy is None:
+            raise _SITE_CLASSIFY_NO_POLICY.fire(ScopeError(
+                "a principal was supplied but no scope policy is configured — "
+                "feature-disabled cannot honour a principal-bearing call"))
     _revalidate(policy, local_origin)
-    if not principal.groupable:
-        raise ScopeError("a principal must carry a source_id (0006 I13)")
+    with _SITE_CLASSIFY_UNGROUPABLE.consult():
+        if not principal.groupable:
+            raise _SITE_CLASSIFY_UNGROUPABLE.fire(ScopeError("a principal must carry a source_id (0006 I13)"))
     if record_evidence == UNRESOLVED:
         return "UNRESOLVED"
     if record_evidence == SHARED:
         return "SHARED"
-    if not (isinstance(record_evidence, str)
-            and _HEX64.fullmatch(record_evidence)):
-        raise ScopeError(f"record evidence {record_evidence!r} is not a "
-                         f"digest / SHARED_POOL / UNRESOLVED")
+    with _SITE_CLASSIFY_EVIDENCE.consult():
+        if not (isinstance(record_evidence, str)
+                and _HEX64.fullmatch(record_evidence)):
+            raise _SITE_CLASSIFY_EVIDENCE.fire(ScopeError(f"record evidence {record_evidence!r} is not a "
+                             f"digest / SHARED_POOL / UNRESOLVED"))
     pd = digest_of(principal, local_origin)
     if record_evidence == pd:
         return "OWN"
@@ -710,15 +739,18 @@ def validate_filters(filters: Optional[dict]) -> dict:
     operator, at most one term per field (a mapping cannot carry two)."""
     if filters is None:
         return {}
-    if not isinstance(filters, dict):
-        raise ScopeError("filters must be a mapping of field -> value")
+    with _SITE_FILTERS_NOT_MAPPING.consult():
+        if not isinstance(filters, dict):
+            raise _SITE_FILTERS_NOT_MAPPING.fire(ScopeError("filters must be a mapping of field -> value"))
     for k, v in filters.items():
-        if k not in VALID_FILTER_FIELDS:
-            raise ScopeError(f"unknown filter field {k!r} — the field set "
-                             f"is CLOSED: {VALID_FILTER_FIELDS}")
-        if not isinstance(v, str) or not v:
-            raise ScopeError(f"filter {k!r} value must be a non-empty "
-                             f"string (eq is the only v1 operator)")
+        with _SITE_FILTERS_UNKNOWN_FIELD.consult():
+            if k not in VALID_FILTER_FIELDS:
+                raise _SITE_FILTERS_UNKNOWN_FIELD.fire(ScopeError(f"unknown filter field {k!r} — the field set "
+                                 f"is CLOSED: {VALID_FILTER_FIELDS}"))
+        with _SITE_FILTERS_BAD_VALUE.consult():
+            if not isinstance(v, str) or not v:
+                raise _SITE_FILTERS_BAD_VALUE.fire(ScopeError(f"filter {k!r} value must be a non-empty "
+                                 f"string (eq is the only v1 operator)"))
     return dict(filters)
 
 
@@ -726,7 +758,8 @@ def apply_filters(records: list, filters: dict) -> list:
     """M-2: after scope, within the visible set; NARROW ONLY. A
     `source_id` filter never matches a cleared derivative (its field is
     None; the ledger holds only a one-way digest)."""
-    out = records
-    for k, v in filters.items():
-        out = [r for r in out if r.get(k) is not None and str(r.get(k)) == v]
-    return out
+    with _SITE_FILTERS_APPLY.consult():
+        out = records
+        for k, v in filters.items():
+            out = [r for r in out if r.get(k) is not None and str(r.get(k)) == v]
+        return _SITE_FILTERS_APPLY.fire(out, "withhold", declined=len(out) < len(records))
