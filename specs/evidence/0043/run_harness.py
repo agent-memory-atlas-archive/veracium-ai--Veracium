@@ -365,6 +365,75 @@ def _ratio(x):
     return "UNDEFINED" if x == "UNDEFINED" else f"{x[0]}/{x[1]}"
 
 
+COMPILED_WIKI_OPEN = "## USER MODEL\n"
+COMPILED_WIKI_MARKER = "[[veracium-wiki-compile:"
+
+
+def strip_compiled_wiki(prompt: str) -> tuple[str, str]:
+    """Split a captured gate prompt into (the prompt with the compiled-wiki block removed, the block). The block
+    runs from the `## USER MODEL` heading through the compile marker line inclusive: it is the COMPILE-role model
+    output the run recorded, and the one part of the input a no-spend re-derivation cannot rebuild. Refuses a
+    prompt without exactly one such block (the shape the run captured)."""
+    i = prompt.find(COMPILED_WIKI_OPEN)
+    j = prompt.find(COMPILED_WIKI_MARKER, i)
+    if i < 0 or j < 0 or prompt.count(COMPILED_WIKI_OPEN) != 1:
+        raise Refused("the prompt does not carry exactly one compiled-wiki block")
+    k = prompt.index("\n", j) + 1
+    return prompt[:i] + prompt[k:], prompt[i:k]
+
+
+def reverify(res: dict, inner=None) -> dict:
+    """THE COMMITTED RUN'S INPUTS, RE-DERIVED AT HEAD WITHOUT THE MODEL (2026-09-19, after 0041 tranche 1 moved src/
+    under the run's pin). A pin says which tree the run was made on; it cannot say whether THIS tree would have put
+    the same question in front of the model. This does, for the part of the input that is code: the fixture is
+    rebuilt and its examiner-view digest compared; every kept question is captured again through the shipped path
+    with a canned model, and the gate SYSTEM text and the gate PROMPT OUTSIDE THE COMPILED-WIKI BLOCK are compared
+    byte-for-byte to the ledger's; the baseline input is re-derived by the transform from the ledger's SHIPPED
+    capture and compared to the ledger's baseline digest. What is NOT re-derived, named: the compiled-wiki block
+    (a compile-role model output — the run's own record, carried in the prompt and compared to itself) and the
+    fixture FILE digest (sqlite page bytes vary between builds; the view digest is the content). The answers are
+    the run's; this establishes that they are answers to inputs this tree produces."""
+    import tempfile
+    ev, mc = _load("examiner_view"), _load("model_input_capture")
+    inner = inner or FakeModel()
+    by = {(x["question_id"], x["arm"]): x for x in res["detail"]}
+    qs = {q["id"]: q["text"] for q in res["questions"]}
+    out = {"head": subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip(),
+           "run_head": res["head"], "kept": len(res["kept"]), "view_digest_equal": None, "system_equal": 0, "prompt_outside_compiled_equal": 0,
+           "compiled_block_present": 0, "baseline_transform_equal": 0, "mismatches": []}
+    with tempfile.TemporaryDirectory() as d:
+        db = pathlib.Path(d) / "fixture.db"
+        st = ev.fixture_store(str(db)); rows = ev.view(st, "u"); _, vd = ev.freeze(rows); st.close()
+        out["view_digest_equal"] = (vd == res["view_digest"])
+        for qid in res["kept"]:
+            old_s, old_b = by[(qid, "veracium")], by[(qid, "baseline")]
+            cap = capture_shipped(str(db), qs[qid], inner)
+            s_ok = cap["system"] == old_s["system"]
+            new_rest, _ = strip_compiled_wiki(cap["prompt"]); old_rest, old_block = strip_compiled_wiki(old_s["prompt"])
+            p_ok = new_rest == old_rest
+            c_ok = bool(old_block) and old_block in old_s["prompt"]
+            try:                                    # the transform REFUSES a capture that is not the shipped gate's shape
+                o_sys, o_pr = mc.baseline_transform(old_s["system"], old_s["prompt"])
+                b_ok = hashlib.sha256((o_sys + "\n\x00\n" + o_pr).encode()).hexdigest() == old_b["prompt_digest"]
+            except (AssertionError, Refused):
+                b_ok = False
+            out["system_equal"] += s_ok; out["prompt_outside_compiled_equal"] += p_ok; out["compiled_block_present"] += c_ok; out["baseline_transform_equal"] += b_ok
+            if not (s_ok and p_ok and c_ok and b_ok):
+                out["mismatches"].append({"question_id": qid, "system": s_ok, "prompt_outside_compiled": p_ok, "compiled_block": c_ok, "baseline_transform": b_ok})
+    n = out["kept"]
+    out["verdict"] = ("REVERIFIED" if out["view_digest_equal"] and not out["mismatches"] and n > 0 else "NOT REVERIFIED")
+    return out
+
+
+def reverify_lines(v: dict) -> str:
+    n = v["kept"]
+    return (f"{v['verdict']} at {v['head'][:12]} (run pinned at {v['run_head'][:12]}): examiner view digest "
+            f"{'equal' if v['view_digest_equal'] else 'DIFFERENT'}; gate system {v['system_equal']}/{n}; gate prompt outside the "
+            f"compiled-wiki block {v['prompt_outside_compiled_equal']}/{n}; compiled-wiki block carried {v['compiled_block_present']}/{n} "
+            f"(a compile-role model output, the run's own — not re-derived); baseline input = transform(shipped) {v['baseline_transform_equal']}/{n}"
+            + (f"; mismatches {v['mismatches']}" if v["mismatches"] else ""))
+
+
 def report(res: dict) -> str:
     lg = _load("ledger")
     L = [f"# generated {res['generated']} against veracium @ {res['head']}",
@@ -432,10 +501,15 @@ class FakeModel:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", required=True); ap.add_argument("--questions", type=int, default=24); ap.add_argument("--fake", action="store_true")
+    ap.add_argument("--out", required=False); ap.add_argument("--questions", type=int, default=24); ap.add_argument("--fake", action="store_true")
     ap.add_argument("--rescore", help="a committed run_ledger.json: re-interpret its captured answers with the current interpreter, no model call")
+    ap.add_argument("--reverify", help="a committed run_ledger.json: re-derive its inputs at HEAD without the model and print the verdict")
     a = ap.parse_args()
+    if a.reverify:
+        v = reverify(json.loads(pathlib.Path(a.reverify).read_text(), object_pairs_hook=_strict_pairs)); print(reverify_lines(v)); sys.exit(0 if v["verdict"] == "REVERIFIED" else 1)
     if a.rescore:
+        if not a.out:
+            ap.error("--rescore needs --out")
         res = rescore(json.loads(pathlib.Path(a.rescore).read_text(), object_pairs_hook=_strict_pairs))
         out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
         (out / "run_ledger.json").write_text(json.dumps(res, indent=1, sort_keys=True, ensure_ascii=False) + "\n")
@@ -445,5 +519,7 @@ if __name__ == "__main__":
     else:
         from veracium.llm.anthropic import AnthropicComplete
         inner = AnthropicComplete()
+    if not a.out:
+        ap.error("a run needs --out")
     res = run(pathlib.Path(a.out), inner, n_questions=a.questions)
     print((pathlib.Path(a.out) / "run_report.txt").read_text())

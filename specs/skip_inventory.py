@@ -198,8 +198,14 @@ INVENTORY = [
     ("tests/test_0043_run.py", "skip",
      "the run's pin cannot be checked against history",
      "git-checkout", "specs/0043 tranche 2: the committed run report pins the commit it "
-     "ran against; a SHALLOW checkout cannot answer whether that pin is an ancestor of "
-     "HEAD (git exit 128 is a fact about the checkout); CI checks out with fetch-depth 0"),
+     "ran against; the binding needs git history and cannot run where there is no "
+     "repository (an sdist) — named by git's own 'not a git repository'; any OTHER git "
+     "failure is an error, never a skip (the vacuous-branch defect closed 2026-09-19)"),
+    ("tests/test_0043_run.py", "skip",
+     "not enough history to check the run's pin",
+     "git-checkout", "specs/0043 tranche 2: a SHALLOW checkout cannot answer whether the "
+     "run's pin is an ancestor of HEAD; CI checks out with fetch-depth 0, so this is a "
+     "last resort there"),
     ("tests/test_spec_gate.py", "skip",
      "the retrospective obligation set derives from git history",
      "git-checkout", "0039 round-1 package finding: the security-hotfix "

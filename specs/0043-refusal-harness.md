@@ -44,7 +44,15 @@ Spec-Status: accepted
 > the examiner view's digest, the model ids, `max_tokens`, and that the shipped provider sends no
 > temperature. `run_report.txt` / `run_ledger.json` are the committed run, pinned to their commit;
 > `tests/test_0043_run.py` drives the pipeline on a canned model with no spend and RE-DERIVES the
-> committed report's rates from its own ledger. Known limit, stated: the interpreter is the deterministic
+> committed report's rates from its own ledger — and, since 2026-09-19, the run's INPUTS at HEAD without
+> the model (`run_harness.reverify`): the fixture rebuilt and its view digest compared, every kept
+> question captured again through the shipped path with the gate system and the prompt outside the
+> compiled-wiki block compared byte-for-byte, the baseline input re-derived by the transform from the
+> ledger's shipped capture; the compiled-wiki block is the run's own compile-role output, carried and not
+> re-derived — a decision, not a hole: the first re-derivation matched 0 of 48 inputs because the canned
+> model compiles a different wiki, which is how the code part and the model-output part of the input were
+> told apart (a named exclusion, shown by a mutant inside the block that is deliberately not caught). A src change therefore does not force a re-run or a
+> re-pin; it asks whether THIS tree puts the same question in front of the model. Known limit, stated: the interpreter is the deterministic
 > matcher over the fixture's fact strings and paraphrases, so an answer that asserts a fact in words the
 > table does not carry scores `not_mentioned` → `OTHER` with its rule shown — the per-question table
 > lists every answer verbatim so a reader can see each such case rather than infer it from a count.

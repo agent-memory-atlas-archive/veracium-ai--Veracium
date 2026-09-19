@@ -7,7 +7,10 @@ captured (the baseline equal to the oracle), every row lands in one of the six o
 six checks pass with both sources `captured`, and the rates carry their denominators with `absent` NOT
 PRESENTED. The report test reads `run_ledger.json` (the committed real run), re-runs the ledger gate
 and recomputes every rate from the rows, and asserts the report's figures are those — a measured
-artifact re-derived, never quoted — with the pin an ancestor of HEAD and src/ unchanged since.
+artifact re-derived, never quoted — with the pin an ancestor of HEAD and the run's INPUTS re-derived at
+HEAD without the model (`run_harness.reverify`): the fixture's view digest, the gate system, the prompt
+outside the compiled-wiki block and the baseline transform, per kept question; the compiled-wiki block is
+the run's own compile-role output and is carried, not re-derived — the one named exclusion.
 """
 from __future__ import annotations
 
@@ -137,6 +140,27 @@ def _git(*args):
     return subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True)
 
 
+def _pin_is_history_of_head(pin: str) -> None:
+    """The pin check with NO vacuous branch (2026-09-19, the open gate defect: the previous form ran the whole check
+    only `if rev-parse --is-inside-work-tree == 0`, so ANY git failure — a fork refused or a process killed under the
+    closure runner's parallel load — passed the test silently). Now: no repository (an sdist) SKIPS by name; a
+    shallow clone SKIPS by name; any other git failure is an ERROR that names git's stderr; the pin must be an object
+    here and an ancestor of HEAD. The 0039 transcript test's shape."""
+    wt = _git("rev-parse", "--is-inside-work-tree")
+    if wt.returncode != 0:
+        if "not a git repository" in wt.stderr:
+            pytest.skip("no repository here (an sdist): the run's pin cannot be checked against history")
+        raise AssertionError(f"git could not answer whether this is a work tree (exit {wt.returncode}): {wt.stderr.strip()!r} — "
+                             "a git failure is not a pass")
+    shallow = _git("rev-parse", "--is-shallow-repository")
+    assert shallow.returncode == 0, f"git --is-shallow-repository failed (exit {shallow.returncode}): {shallow.stderr.strip()!r}"
+    if shallow.stdout.strip() == "true":
+        pytest.skip("shallow repository: not enough history to check the run's pin")
+    present = _git("cat-file", "-e", f"{pin}^{{commit}}")
+    assert present.returncode == 0, f"pin {pin[:7]} is not a commit in this repository: {present.stderr.strip()!r}"
+    anc = _git("merge-base", "--is-ancestor", pin, "HEAD")
+    assert anc.returncode == 0, f"pin {pin[:7]} exists but is not an ancestor of HEAD (exit {anc.returncode}): {anc.stderr.strip()!r}"
+
 def test_the_committed_run_report_is_this_tree_and_its_rates_re_derive_from_its_ledger():
     lg = _load("ledger")
     path = EVIDENCE / "run_ledger.json"
@@ -144,13 +168,20 @@ def test_the_committed_run_report_is_this_tree_and_its_rates_re_derive_from_its_
     text = (EVIDENCE / "run_report.txt").read_text()
     pin = re.search(r"^# generated \S+ against veracium @ ([0-9a-f]{40})$", text, re.M).group(1)
     assert pin == res["head"]
-    if _git("rev-parse", "--is-inside-work-tree").returncode == 0:
-        anc = _git("merge-base", "--is-ancestor", pin, "HEAD")
-        if anc.returncode == 128:
-            pytest.skip("shallow repository: the run's pin cannot be checked against history")
-        assert anc.returncode == 0, f"pin {pin[:7]} is not an ancestor of HEAD"
-        moved = _git("diff", "--name-only", pin, "HEAD", "--", "src/").stdout.split()
-        assert moved == [], f"src/ changed since the run's pin: {moved} — re-run the harness and re-pin"
+    _pin_is_history_of_head(pin)
+    # THE RUN'S INPUTS RE-DERIVE AT THIS TREE (2026-09-19; replaces "src/ unchanged since the pin", which 0041
+    # tranche 1 broke by touching src/ under the run — a pin names the tree the run was made on, this asks whether
+    # THIS tree puts the same question in front of the model). Executed, not asserted from history: the fixture
+    # rebuilt and its view digest equal; every kept question captured again through the shipped path on a canned
+    # model, the gate system and the prompt OUTSIDE the compiled-wiki block byte-identical to the ledger's; the
+    # baseline input re-derived by the transform from the ledger's shipped capture. The compiled-wiki block is a
+    # compile-role model output — the run's own record, carried, NOT re-derived (the mutant below shows the limit).
+    rh = _load("run_harness")
+    v = rh.reverify(res)
+    n = len(res["kept"])
+    assert v["verdict"] == "REVERIFIED", rh.reverify_lines(v)
+    assert v["view_digest_equal"] and v["system_equal"] == n and v["prompt_outside_compiled_equal"] == n \
+        and v["compiled_block_present"] == n and v["baseline_transform_equal"] == n and v["mismatches"] == [] and n == 24, rh.reverify_lines(v)
     # the ledger passes its own gate and the rates re-derive
     expected = {r["question_id"]: r["fixture_class"] for r in res["ledger"]}
     assert lg.gate(res["ledger"], expected, tuple(res["arms"]), exclusions=res["excluded"], sources=res["sources"]) == []
@@ -176,3 +207,97 @@ def test_the_committed_run_report_is_this_tree_and_its_rates_re_derive_from_its_
     # every kept question was answered by BOTH arms against the model (a captured answer, or an error named)
     for x in res["detail"]:
         assert (x["answer"] is not None and x["answer"] != "") or x["error"], x["question_id"]
+
+
+def _committed_run():
+    return json.loads((EVIDENCE / "run_ledger.json").read_text(), object_pairs_hook=_strict_pairs)
+
+
+def test_reverify_refuses_a_run_whose_inputs_this_tree_would_not_produce():
+    """The mutants, one per comparison: each moves exactly the cell it names and nothing else, and the verdict
+    reads NOT REVERIFIED with that cell counted short. Deep copies of the committed run; the file is untouched."""
+    import copy
+    rh = _load("run_harness")
+    res = _committed_run(); n = len(res["kept"])
+    # the fixture's content moved
+    m = copy.deepcopy(res); m["view_digest"] = "0" * 64
+    v = rh.reverify(m); assert v["verdict"] == "NOT REVERIFIED" and v["view_digest_equal"] is False and v["mismatches"] == []
+    # the question this tree renders is not the question the run put in front of the model (outside the block)
+    m = copy.deepcopy(res); q0 = m["kept"][0]
+    row = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "veracium")
+    assert "Question: " in row["prompt"]
+    row["prompt"] = row["prompt"].replace("Question: ", "Question: (edited) ", 1)
+    v = rh.reverify(m)
+    assert v["verdict"] == "NOT REVERIFIED" and v["prompt_outside_compiled_equal"] == n - 1 and [x["question_id"] for x in v["mismatches"]] == [q0]
+    assert v["mismatches"][0]["prompt_outside_compiled"] is False and v["mismatches"][0]["baseline_transform"] is False   # the baseline is the transform of the edited shipped capture
+    # the system text moved
+    m = copy.deepcopy(res); row = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "veracium"); row["system"] = row["system"] + " "
+    v = rh.reverify(m); assert v["verdict"] == "NOT REVERIFIED" and v["system_equal"] == n - 1 and v["mismatches"][0]["system"] is False \
+        and v["mismatches"][0]["baseline_transform"] is False   # the transform refuses a foreign system text: counted, not crashed
+    # the baseline row's digest is not the transform of the shipped capture
+    m = copy.deepcopy(res); rowb = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "baseline"); rowb["prompt_digest"] = "f" * 64
+    v = rh.reverify(m); assert v["verdict"] == "NOT REVERIFIED" and v["baseline_transform_equal"] == n - 1 and v["mismatches"][0]["baseline_transform"] is False \
+        and v["mismatches"][0]["prompt_outside_compiled"] is True and v["mismatches"][0]["system"] is True
+    # a captured prompt without the compiled-wiki block is not the shape the run captured: refused, not scored
+    m = copy.deepcopy(res); row = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "veracium")
+    row["prompt"] = row["prompt"].replace(rh.COMPILED_WIKI_OPEN, "## USER MODEL (renamed)\n", 1)
+    with pytest.raises(rh.Refused):
+        rh.reverify(m)
+
+
+def test_reverify_does_not_see_inside_the_compiled_wiki_block_and_says_so():
+    """THE NAMED LIMIT, executed: the compiled-wiki block is a compile-role model output carried from the run; an
+    edit INSIDE it is invisible to the re-derivation by design. The verdict line names the exclusion, so a reader
+    cannot take REVERIFIED for more than it is."""
+    import copy
+    rh = _load("run_harness")
+    res = _committed_run(); q0 = res["kept"][0]
+    m = copy.deepcopy(res); row = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "veracium")
+    rest, block = rh.strip_compiled_wiki(row["prompt"])
+    assert block.startswith(rh.COMPILED_WIKI_OPEN) and rh.COMPILED_WIKI_MARKER in block and rest + block != row["prompt"]  # the block sits inside, not at an end
+    edited = block.replace("Miso", "Mochi") if "Miso" in block else block.replace("\n", "\n- (edited)\n", 1)
+    assert edited != block
+    row["prompt"] = row["prompt"].replace(block, edited, 1)
+    # the baseline row keeps its digest bound to the ORIGINAL shipped capture, so that comparison is not what catches
+    # the edit either: re-bind it to the edited capture to isolate the block
+    mc = _load("model_input_capture"); import hashlib
+    o_sys, o_pr = mc.baseline_transform(row["system"], row["prompt"])
+    next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "baseline")["prompt_digest"] = hashlib.sha256((o_sys + "\n\x00\n" + o_pr).encode()).hexdigest()
+    v = rh.reverify(m)
+    assert v["verdict"] == "REVERIFIED" and v["mismatches"] == []
+    assert "not re-derived" in rh.reverify_lines(v) and "compiled-wiki block" in rh.reverify_lines(v)
+
+
+def test_the_pin_check_treats_a_git_failure_as_an_error_and_only_a_missing_repository_as_a_skip(monkeypatch):
+    """THE CONTROL FOR THE OPEN GATE DEFECT: the previous check passed whenever git failed. Each git outcome is
+    injected; a failure that is not 'no repository' must ERROR (never pass, never skip), 'not a git repository' must
+    SKIP, a shallow clone must SKIP, a pin that is not an ancestor must FAIL, and the honest tree PASSES."""
+    import subprocess as _sp
+    me = sys.modules[__name__]
+    def fake(outcomes):
+        def _g(*args):
+            key = args[1] if args[0] == "rev-parse" else args[0]
+            rc, out, err = outcomes.get(key, (0, "", ""))
+            return _sp.CompletedProcess(list(args), rc, out, err)
+        return _g
+    pin = "0" * 40
+    # a killed / refused git is an ERROR, not a pass
+    monkeypatch.setattr(me, "_git", fake({"--is-inside-work-tree": (137, "", "")}))
+    with pytest.raises(AssertionError, match="not a pass"):
+        _pin_is_history_of_head(pin)
+    monkeypatch.setattr(me, "_git", fake({"--is-inside-work-tree": (128, "", "fatal: not a git repository")}))
+    with pytest.raises(pytest.skip.Exception):
+        _pin_is_history_of_head(pin)
+    monkeypatch.setattr(me, "_git", fake({"--is-shallow-repository": (0, "true\n", "")}))
+    with pytest.raises(pytest.skip.Exception):
+        _pin_is_history_of_head(pin)
+    monkeypatch.setattr(me, "_git", fake({"cat-file": (1, "", "")}))
+    with pytest.raises(AssertionError, match="not a commit"):
+        _pin_is_history_of_head(pin)
+    monkeypatch.setattr(me, "_git", fake({"merge-base": (1, "", "")}))
+    with pytest.raises(AssertionError, match="not an ancestor"):
+        _pin_is_history_of_head(pin)
+    monkeypatch.undo()
+    # the honest tree: the committed run's pin passes the real check (or the environment skips by name)
+    res = _committed_run(); _pin_is_history_of_head(res["head"])
+
