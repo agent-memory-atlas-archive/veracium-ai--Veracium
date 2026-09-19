@@ -10,6 +10,8 @@ Tranche 2 (2026-09-19): gate, schema, compile, grounding, authority, asof — 28
 Tranche 3 (2026-09-19): graph, proactive, ingest, procedures, the procedural gate, the registry,
 the MCP closed set, the Memory surface, diagnostics, telemetry — 40 more ids.
 Tranche 4 (2026-09-19): scope, scope_linkage, scope_read, portability — 33 more ids.
+Tranche 5 (2026-09-19): the store — migration, revocation, the sweep's validators, schema
+version, sqlite — 46 more ids; 147 in all, every id the semantic review named.
 """
 from __future__ import annotations
 
@@ -512,6 +514,421 @@ DECLINES.update({
     "portability.import.race-exhausted": lambda mp: _race_exhausted(mp),
     "portability.import.preflight": lambda mp: _preflight_conflict(),
 })
+
+SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
+
+
+# ---- tranche 5 (2026-09-19): the store — migration, revocation, the sweep's validators, schema
+# version, sqlite — 46 ids ---------------------------------------------------------------------
+import contextlib as _contextlib
+import sqlite3 as _sqlite3
+import tempfile as _tempfile
+
+from veracium import contribution as _C
+from veracium.graph import _build_supersession_plan, apply_supersession, plan_correction
+from veracium.schema import (ConfirmationActor, ConfirmationCallPath, ConsolidationOutputDraft,
+                             ConsolidationState, ContributionDraft)
+from veracium.store import migration as _migration, revocation as _rv, revocation_sweep as _rvs
+from veracium.store import schema_version as _sv
+from veracium.store.base import (NON_QUIESCENT, CorrectionAuthorisationError, PreEpochQuery,
+                                 ReceiptSchemaBoundaryError, SupersessionIntegrityError)
+from veracium.store.schema_version import StoreVersionError
+
+
+def _dbpath():
+    return _tempfile.mktemp(suffix=".db")
+
+
+def _sourced5(eid, obj="v", source="src-A", days=1):
+    e = _edge(eid, obj, valid_from=NOW - timedelta(days=days))
+    return e.model_copy(update={"provenance": e.provenance.model_copy(update={"source_id": source})})
+
+
+def _seeded(n=3):
+    s = _store()
+    for i in range(1, n + 1):
+        s.add_episode(_episode(f"e{i}", date=f"2026-01-0{i}"))
+    return s
+
+
+def _claimed(ids=("e1", "e2")):
+    s = _seeded(); op = s.create_or_takeover_consolidation(U, list(ids), "w1", 60); assert op is not None
+    return s, op
+
+
+def _v2_conn_with_duplicate_legacy_outcome():
+    p = _dbpath(); conn = _sqlite3.connect(p)
+    for o in _sv.SCHEMA_V2:
+        conn.execute(o.ddl)
+    legacy = {"id": "leg-1", "user_id": U, "date": "2026-05-05", "summary": "legacy use", "kind": "outcome",
+              "edge_id": "e1", "outcome": "concurred", "provenance": {"author_of_evidence": "system", "evidence_ref": "run-1"}}
+    for eid in ("leg-1", "leg-2"):
+        conn.execute("INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)", (eid, U, "2026-05-05", _json.dumps(dict(legacy, id=eid))))
+    conn.execute("PRAGMA user_version = 2"); conn.commit(); return conn
+
+
+class _RollbackFails:
+    def __init__(self, conn): self._c = conn
+    def __getattr__(self, n): return getattr(self._c, n)
+    def execute(self, sql, *a):
+        if sql == "ROLLBACK":
+            raise _sqlite3.OperationalError("disk gone")
+        return self._c.execute(sql, *a)
+
+
+class _CommitFails:
+    def __init__(self, conn): self._c = conn
+    def __getattr__(self, n): return getattr(self._c, n)
+    def commit(self):
+        raise _sqlite3.OperationalError("database is locked")
+
+
+def _stamped_foreign_file():
+    p = _dbpath(); c = _sqlite3.connect(p); c.execute("CREATE TABLE not_ours (x)")
+    c.execute(f"PRAGMA user_version = {_sv.SCHEMA_VERSION}"); c.commit(); c.close(); return p
+
+
+def _stamped(version):
+    p = _dbpath(); SqliteStore(p).close(); c = _sqlite3.connect(p); c.execute(f"PRAGMA user_version = {version}"); c.commit(); c.close(); return p
+
+
+def _legacy_v1_file():
+    p = _dbpath(); c = _sqlite3.connect(p); c.executescript(";\n".join(o.ddl for o in _sv.SCHEMA_V1) + ";\n"); c.commit(); c.close(); return p
+
+
+def _open_locked():
+    p = _dbpath(); holder = SqliteStore(p)
+    try:
+        holder._conn.execute("BEGIN IMMEDIATE")
+        with pytest.raises(StoreVersionError) as ei:
+            SqliteStore(p, busy_timeout_ms=100)
+        assert ei.value.reason == "locked"
+    finally:
+        with _contextlib.suppress(_sqlite3.OperationalError):
+            holder._conn.execute("ROLLBACK")
+        holder.close()
+
+
+def _txn_locked():
+    p = _dbpath(); holder = SqliteStore(p); writer = SqliteStore(p, busy_timeout_ms=100)
+    try:
+        holder._conn.execute("BEGIN IMMEDIATE")
+        with pytest.raises(_sqlite3.OperationalError, match="could not take the write lock"):
+            writer.add_edge(_edge("x"))
+    finally:
+        with _contextlib.suppress(_sqlite3.OperationalError):
+            holder._conn.execute("ROLLBACK")
+        holder.close(); writer.close()
+
+
+def _txn_commit_lost():
+    s = _store(); s._conn = _CommitFails(s._conn)
+    with pytest.raises(_sqlite3.OperationalError, match="could not COMMIT"):
+        s.add_edge(_edge("x"))
+
+
+def _journal_bad_reason():
+    s = _store(); s.add_edge(_edge("j"))
+    with pytest.raises(ValueError):
+        with s._write_txn():
+            s._journal_edge_write(U, "j", '{"changed": 1}', "{}", kind="invalidated", reason="bogus")   # a changed row reaches the reason check
+    s.close()
+
+
+def _upsert_changes_user():
+    s = _store(); e = _edge("u1"); s.add_edge(e)
+    with pytest.raises(ValueError):
+        with s._write_txn():
+            s._upsert_edge_row(e.model_copy(update={"user_id": "someone-else"}))
+    s.close()
+
+
+def _flattening_unresolved(mp):
+    from veracium import scope_read
+    from veracium.scope import UNRESOLVED
+    mp.setattr(scope_read.MembershipResolver, "evidence_of_unwritten", lambda self, record: UNRESOLVED)
+    s = _store(); inc = _sourced5("inc")
+    plan = NS(incoming_edge=inc, contribution_drafts=[ContributionDraft(
+        site="absorption", survivor_type="edge", survivor_id=inc.id, contributor_type="edge", contributor_id="prior")])
+    with pytest.raises(SupersessionIntegrityError):
+        s._write_absorption_flattening(U, plan)
+    s.close()
+
+
+def _consolidation_output_without_index(mp):
+    s = _store()
+    out = _episode("out1").model_copy(update={"lineage": ["e1"], "consolidation_output_index": None, "operation_id": "op-x"})
+    mp.setattr(SqliteStore, "_episodes_for_operation", lambda self, uid, op: [(None, out)])
+    with pytest.raises(SupersessionIntegrityError):
+        s._write_consolidation_contributions(NS(user_id=U, operation_id="op-x", claimed_ids=["e1"]))
+    s.close()
+
+
+def _receipt_boundary_in_store():
+    s = _store(); e = _sourced5("eb")
+    plan, _ = _build_supersession_plan(s, e, DEFAULT_RELATIONS, "op-boundary")
+    plan.raw_request = _C.raw_request_snapshot(e)
+    s._conn.execute("INSERT INTO supersession_operations(user_id,operation_id,logical_request_digest,status,"
+                    "request_digest,response,outcome_digest_version) VALUES(?,?,?,?,?,?,?)",
+                    (U, "op-boundary", "stored-pre-d2", "applied", None, None, 1))
+    s._conn.commit()
+    with pytest.raises(ReceiptSchemaBoundaryError):
+        s.apply_supersession_plan(plan)
+    s.close()
+
+
+def _correction_without_authorisation():
+    s = _store(); prior = _sourced5("p1", "nurse"); s.add_edge(prior)
+    plan = plan_correction(s, prior, _sourced5("r1", "surgeon"), op_id="op-c")[0]
+    with pytest.raises(CorrectionAuthorisationError):
+        s.apply_supersession_plan(plan)
+    s.close()
+
+
+def _absorption_drafts_mismatch():
+    s = _store()
+    prior = _sourced5("e-prior", "Miso", days=3); apply_supersession(s, prior, DEFAULT_RELATIONS)
+    winner = _sourced5("e-winner", "cat Miso", days=0)
+    plan, _ = _build_supersession_plan(s, winner, DEFAULT_RELATIONS, "op-abs")
+    assert plan.contribution_drafts, "the fixture must absorb (same source, more specific value)"
+    plan.contribution_drafts.append(plan.contribution_drafts[0])
+    with pytest.raises(SupersessionIntegrityError):
+        s.apply_supersession_plan(plan)
+    s.close()
+
+
+def _confirm(s, **over):
+    kw = dict(actor=ConfirmationActor.USER, call_path=ConfirmationCallPath.HOST_API,
+              correlation_id="k1", request_digest="d1", confirmed_at=NOW)
+    kw.update(over); return s.confirm_edge(U, "c1", **kw)
+
+
+def _confirm_correlation_race():
+    """The concurrent-duplicate branch: the UNIQUE(user_id, correlation_id) row appears between the
+    replay check and the INSERT, with a DIFFERENT request digest."""
+    s = _store(); s.add_edge(_edge("c1")); real = s._conn
+    class Racing:
+        done = False
+        def __getattr__(self, n): return getattr(real, n)
+        def execute(self, sql, *a):
+            if sql.lstrip().upper().startswith("INSERT INTO CONFIRMATIONS") and not Racing.done:
+                Racing.done = True
+                params = list(a[0]); params[params.index("d1")] = "OTHER"     # same id, other digest, first
+                real.execute(sql, tuple(params))
+            return real.execute(sql, *a)
+    s._conn = Racing()
+    with pytest.raises(ValueError, match="conflict"):
+        _confirm(s)
+    s.close()
+
+
+def _outcome_episode_id(mem):
+    e = _edge("o1"); mem.store.add_edge(e)
+    mem.record_outcome(U, e.id, outcome=Outcome.CONCURRED, evidence_ref="run-1", actor="system")
+    return next(ep.id for ep in mem.store.episodes(U) if ep.kind == "outcome")
+
+
+def _delete_outcome_episode():
+    mem = _mem(); eid = _outcome_episode_id(mem)
+    with pytest.raises(ValueError):
+        mem.store.delete_episode(eid)
+    mem.close()
+
+
+def _delete_reserved_episode():
+    s, op = _claimed(("e1",))
+    with pytest.raises(ValueError):
+        s.delete_episode("e1")
+    s.close()
+
+
+def _pre_epoch(mp):
+    mp.setattr(SqliteStore, "epoch_txn", lambda self, uid: 5)
+    s = _store()
+    with pytest.raises(PreEpochQuery):
+        s.edge_state_at(U, "e", 1)
+    s.close()
+
+
+def _non_quiescent_snapshot():
+    s, op = _claimed(); assert s.quiescent_episode_snapshot(U) is NON_QUIESCENT; s.close()
+
+
+def _contended_claim():
+    s = _seeded(); a = s.create_or_takeover_consolidation(U, ["e1", "e2"], "w1", 60)
+    assert a is not None and s.create_or_takeover_consolidation(U, ["e2", "e3"], "w2", 60) is None; s.close()
+
+
+def _delete_not_current():
+    s, op = _claimed(); assert s.delete_claimed_inputs_if_current(op.operation_id, op.fence) is False; s.close()
+
+
+def _abandon_live():
+    s, op = _claimed(); assert s.abandon_consolidation_if_current(op.operation_id, op.fence) is False; s.close()
+
+
+def _embedding(edge_exists, digest):
+    s = _store()
+    if edge_exists:
+        s.add_edge(_edge("emb"))
+    assert s.upsert_embedding(edge_id="emb", user_id=U, embedder_id="x", content_digest=digest,
+                              dim=2, vec=[0.0, 0.0], built_at=NOW) is False
+    s.close()
+
+
+def _import_plan_missing_fields():
+    s = _store()
+    with pytest.raises(ValueError):
+        s.commit_outcome_import_plan(U, {"edges": [], "episodes": [], "contributions": [{"id": "x"}]}, {})
+    s.close()
+
+
+def _visible(**over):
+    return _episode("v1").model_copy(update=over)
+
+
+DECLINES.update({
+    "store.migration.version": lambda mp: _raises(StoreVersionError, _migration._apply_forward, _sqlite3.connect(":memory:"), 99),
+    "store.migration.duplicate-outcome-chain": lambda mp: _raises(
+        _migration.DuplicateOutcomeChainError, _migration._migrate_outcome_chains, _v2_conn_with_duplicate_legacy_outcome()),
+    "store.revocation.unknown-state": lambda mp: _raises(
+        _rv.RevocationUnknownState, _rv._rollback_or_poison, _RollbackFails(_store()._conn), RuntimeError("boom")),
+    "store.revocation.ordinal-collision": lambda mp: _ordinal_collision(),
+    "store.revocation.integrity": lambda mp: _raises(
+        _rv.RevocationIntegrityError, _rv.revocation_operation, _store()._conn, U, "d1", "resurrect", "r",
+        "2026-01-01T00:00:00Z", plan=lambda st: [], apply_effect=lambda c, e: None),
+    "store.revocation.self-linkage": lambda mp: _raises(
+        _rvs.RevocationLinkageError, _rvs.validate_contribution_row,
+        {"user_id": U, "survivor_type": "edge", "survivor_id": "a", "site": "absorption", "identity_digest": "0" * 64,
+         "evidence_ref_digest": None, "payload": {}, "op_key": None, "contributor_type": "edge", "contributor_ref": "a"}),
+    "store.revocation.source-not-revocable": lambda mp: _raises(
+        _rvs.RevocationError, _rvs.validate_revocation_row,
+        {"user_id": U, "identity_digest": "not-a-digest", "action": "revoke", "at": "2026-01-01T00:00:00Z", "seq": 1, "reason": "r"}),
+    "store.open.unaccepted-shape": lambda mp: _raises(StoreVersionError, SqliteStore, _stamped_foreign_file()),
+    "store.open.runtime-unsupported": lambda mp: (mp.setattr(_sv, "runtime_supported", lambda: False),
+                                                  _raises(StoreVersionError, SqliteStore, _dbpath())),
+    "store.open.locked": TwoPhase(lambda mp: _lock_holder(), lambda st: _open_while_held(st)),
+    "store.open.invalid-version": TwoPhase(lambda mp: _stamped(-1), lambda p: _raises(StoreVersionError, SqliteStore, p)),
+    "store.open.newer": TwoPhase(lambda mp: _stamped(_sv.SCHEMA_VERSION + 1), lambda p: _raises(StoreVersionError, SqliteStore, p)),
+    "store.open.legacy": lambda mp: _raises(StoreVersionError, SqliteStore, _legacy_v1_file()),
+    "store.runtime-supported": lambda mp: (mp.setattr(_sv, "artifact_problems", lambda records: ["bad"]), _sv.runtime_supported()),
+    "store.journal.reason-not-dispositioned": lambda mp: _journal_bad_reason(),
+    "store.read.output-not-visible": lambda mp: SqliteStore._ordinary_read_visible(
+        _visible(lineage=["e1"], operation_id="op"), {"op": ConsolidationState.CLAIMED}),
+    "store.read.input-claimed": lambda mp: SqliteStore._ordinary_read_visible(
+        _visible(operation_id="op"), {"op": ConsolidationState.OUTPUTS_DURABLE}),
+    "store.upsert.immutable": TwoPhase(lambda mp: _stored_edge(), lambda st: _upsert_other_user(*st)),
+    "store.flattening": lambda mp: _flattening_unresolved(mp),
+    "store.consolidation-contribution": lambda mp: _consolidation_output_without_index(mp),
+    "store.contribution": lambda mp: _raises(
+        SupersessionIntegrityError, _store()._write_contribution, U,
+        ContributionDraft(site="consolidation", survivor_type="edge", survivor_id="a", contributor_type="edge", contributor_id="b"), None),
+    "store.txn.locked": lambda mp: _txn_locked(),
+    "store.txn.locked-retry": lambda mp: _txn_commit_lost(),
+    "store.consolidation.abandon-live-lease": lambda mp: _abandon_live(),
+    "store.add-episode": lambda mp: _raises(ValueError, _store().add_episode, _episode("bad").model_copy(update={"consolidation_output_index": 1})),
+    "store.outcome.context-ref": TwoPhase(lambda mp: _outcome_chain_state(), lambda st: _raises(ValueError, st[0].store.append_outcome_if_head, *st[1])),
+    "store.supersession.integrity": lambda mp: _receipt_boundary_in_store(),
+    "store.correction.authorisation": lambda mp: _correction_without_authorisation(),
+    "store.supersession.plan": TwoPhase(lambda mp: _absorption_plan_with_duplicate_draft(), lambda st: _raises(SupersessionIntegrityError, st[0].apply_supersession_plan, st[1])),
+    "store.import-plan": lambda mp: _import_plan_missing_fields(),
+    "store.confirm.unknown-edge": lambda mp: _raises(KeyError, _confirm, _store()),
+    "store.confirm.not-assertable": TwoPhase(lambda mp: _quarantined_store(), lambda s: _raises(ValueError, _confirm, s)),
+    "store.confirm.request-digest": TwoPhase(lambda mp: _confirmed_once(), lambda s: _raises(ValueError, _confirm, s, request_digest="DIFFERENT")),
+    "store.confirm.correlation": lambda mp: _confirm_correlation_race(),
+    "store.consolidation.contended": TwoPhase(lambda mp: _first_claim(), lambda s: s.create_or_takeover_consolidation(U, ["e2", "e3"], "w2", 60)),
+    "store.consolidation.delete-not-current": lambda mp: _delete_not_current(),
+    "store.delete-episode.outcome": lambda mp: _delete_outcome_episode(),
+    "store.delete-episode.reserved": lambda mp: _delete_reserved_episode(),
+    "store.journal.pre-epoch": lambda mp: _pre_epoch(mp),
+    "store.edges.read-fence": lambda mp: _store().edges(U, include_quarantined=False),
+    "store.export.non-quiescent": lambda mp: _non_quiescent_snapshot(),
+    "store.consolidation.renew-refused": lambda mp: _store().renew_consolidation_lease("nope", "f", "w"),
+    "store.consolidation.transition": lambda mp: _store().transition_consolidation_if_current("nope", "f", "w", "generating"),
+    "store.embedding.delayed-writer": lambda mp: _embedding(False, "d"),
+    "store.embedding.stale-content": lambda mp: _embedding(True, "not-the-digest"),
+    "store.consolidation.write-not-current": lambda mp: _store().write_consolidation_output_if_current(
+        "nope", "f", "w", ConsolidationOutputDraft(summary="m", date_start="2026-01-01", date_end="2026-01-02")),
+})
+
+
+def _ordinal_collision():
+    s = _store()
+    _rv.revocation_operation(s._conn, U, "d1", "revoke", "r", "2026-08-21T00:00:00Z", plan=lambda st: [], apply_effect=lambda c, e: None)
+    def plan_preinsert(st):
+        s._conn.execute("INSERT INTO source_revocations(user_id, seq, identity_digest, action, at, reason) VALUES(?,?,?,?,?,?)",
+                        (U, 1, "other", "revoke", "2026-01-01T00:00:00Z", "r"))
+        return []
+    with pytest.raises(_rv.OrdinalCollision):
+        _rv.revocation_operation(s._conn, U, "d2", "revoke", "r", "2026-08-21T00:00:00Z", plan=plan_preinsert, apply_effect=lambda c, e: None)
+    s.close()
+
+
+def _quarantined_store():
+    s = _store(); s.add_edge(_edge("c1", disc=Disclosure.QUARANTINED, author=EvidenceAuthor.THIRD_PARTY)); return s
+
+
+def _confirmed_once():
+    s = _store(); s.add_edge(_edge("c1")); _confirm(s); return s
+
+
+def _outcome_chain_state():
+    """A head whose context_ref is X; the run then appends a draft with context_ref Y."""
+    from veracium.schema import OutcomeJudgmentDraft
+    mem = _mem(); e = _edge("o2"); mem.store.add_edge(e)
+    ts = "2026-01-01T00:00:00+00:00"
+    first = OutcomeJudgmentDraft(outcome=Outcome.CONCURRED, author=EvidenceAuthor.SYSTEM, context_ref="ctx-a",
+                                 summary="s", event_timestamp=ts)
+    mem.store.append_outcome_if_head(U, e.id, "run-1", None, first)
+    head = mem.store._chain_head(U, e.id, "run-1")
+    second = OutcomeJudgmentDraft(outcome=Outcome.CONCURRED, author=EvidenceAuthor.SYSTEM, context_ref="ctx-b",
+                                  summary="s", event_timestamp=ts)
+    return (mem, (U, e.id, "run-1", head.id, second))
+
+
+SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
+
+
+def _first_claim():
+    s = _seeded(); assert s.create_or_takeover_consolidation(U, ["e1", "e2"], "w1", 60) is not None; return s
+
+
+def _lock_holder():
+    p = _dbpath(); holder = SqliteStore(p); holder._conn.execute("BEGIN IMMEDIATE"); return (p, holder)
+
+
+def _open_while_held(st):
+    p, holder = st
+    try:
+        with pytest.raises(StoreVersionError) as ei:
+            SqliteStore(p, busy_timeout_ms=100)
+        assert ei.value.reason == "locked"
+    finally:
+        with _contextlib.suppress(_sqlite3.OperationalError):
+            holder._conn.execute("ROLLBACK")
+        holder.close()
+
+
+def _absorption_plan_with_duplicate_draft():
+    s = _store()
+    prior = _sourced5("e-prior", "Miso", days=3); apply_supersession(s, prior, DEFAULT_RELATIONS)
+    winner = _sourced5("e-winner", "cat Miso", days=0)
+    plan, _ = _build_supersession_plan(s, winner, DEFAULT_RELATIONS, "op-abs")
+    assert plan.contribution_drafts, "the fixture must absorb (same source, more specific value)"
+    plan.contribution_drafts.append(plan.contribution_drafts[0])
+    return (s, plan)
+
+
+def _stored_edge():
+    s = _store(); e = _edge("u1"); s.add_edge(e); return (s, e)
+
+
+def _upsert_other_user(s, e):
+    with pytest.raises(ValueError):
+        with s._write_txn():
+            s._upsert_edge_row(e.model_copy(update={"user_id": "someone-else"}))
+    s.close()
+
 
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
 

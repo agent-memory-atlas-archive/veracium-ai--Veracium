@@ -311,13 +311,20 @@ def test_instrumenting_a_site_never_removes_its_statement_from_discovered():
 
 
 def _returns_true_through_fire(module, line):
-    """`return NAME.fire(True, …)` is the non-declining branch of a predicate split across
-    statements (grounding.ungrounded's final `return`): `return True` is not a discovery kind
-    unwrapped either, so its absence is not a removal."""
+    """A fire-wrapped statement whose UNWRAPPED value is not a discovery kind is not a removal:
+    `return NAME.fire(True, …)` (the non-declining branch of a predicate split across statements,
+    grounding.ungrounded's final `return`) and `return NAME.fire(<bare Name>, …)` where the Name
+    is a module constant, not a filter- or Boolean-bound local (the store's NON_QUIESCENT
+    sentinel, tranche 5). Everything else must be listed."""
     import ast
     src = (ROOT / "src/veracium" / module).read_text().split("\n")[line - 1]
     try:
         v = ast.parse(src.strip()).body[0].value
     except SyntaxError:
         return False
-    return isinstance(v, ast.Call) and v.args and isinstance(v.args[0], ast.Constant) and v.args[0].value is True
+    if not (isinstance(v, ast.Call) and v.args):
+        return False
+    a = v.args[0]
+    if isinstance(a, ast.Constant) and a.value is True:
+        return True
+    return isinstance(a, ast.Name) and a.id.isupper()          # a module-level sentinel constant

@@ -92,6 +92,12 @@ import math as _math
 import re
 from datetime import datetime as _datetime
 from typing import Optional
+from ..census import declare_site
+
+# specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_REVOCATION_SELF_LINKAGE = declare_site("store.revocation.self-linkage")
+_SITE_REVOCATION_SOURCE_NOT_REVOCABLE = declare_site("store.revocation.source-not-revocable")
 
 # ---- the shipped digest construction, mirrored EXACTLY (0006 §4 rules 6-7) --
 
@@ -218,13 +224,14 @@ def validate_revocation_row(row) -> dict:
     if not isinstance(row["user_id"], str) or not row["user_id"]:
         raise RevocationError("user_id must be a non-empty str")
     d = row["identity_digest"]
-    if not isinstance(d, str) or not _DIGEST_RE.fullmatch(d):
-        # A NULL digest must never reach this table: it would be a
-        # `(resolved_origin, NULL)` pseudo-source, which 0006 forbids, and it
-        # would revoke every unknown-source record in one row.
-        raise RevocationError(
-            f"identity_digest must be 64 lowercase hex — got {d!r}; an absent "
-            f"source_id has NO digest and is not revocable by source")
+    with _SITE_REVOCATION_SOURCE_NOT_REVOCABLE.consult():
+        if not isinstance(d, str) or not _DIGEST_RE.fullmatch(d):
+            # A NULL digest must never reach this table: it would be a
+            # `(resolved_origin, NULL)` pseudo-source, which 0006 forbids, and it
+            # would revoke every unknown-source record in one row.
+            raise _SITE_REVOCATION_SOURCE_NOT_REVOCABLE.fire(RevocationError(
+                f"identity_digest must be 64 lowercase hex — got {d!r}; an absent "
+                f"source_id has NO digest and is not revocable by source"))
     if row["action"] not in ACTIONS:
         raise RevocationError(
             f"action must be one of {ACTIONS} — got {row['action']!r}")
@@ -346,14 +353,15 @@ def validate_contribution_row(row) -> dict:
         raise RevocationError(
             f"contributor_type and contributor_ref must be present together "
             f"or absent together — got {ctype!r} / {ref!r}")
-    if row["contributor_ref"] is not None \
-            and row["contributor_ref"] == row["survivor_id"] \
-            and row["contributor_type"] == row["survivor_type"]:
-        raise RevocationLinkageError(
-            f"contribution row names its own survivor "
-            f"({row['survivor_type']}:{row['survivor_id']}) as its "
-            f"contributor — corrupt linkage REFUSES; a walker that treated "
-            f"this as data would not terminate")
+    with _SITE_REVOCATION_SELF_LINKAGE.consult():
+        if row["contributor_ref"] is not None \
+                and row["contributor_ref"] == row["survivor_id"] \
+                and row["contributor_type"] == row["survivor_type"]:
+            raise _SITE_REVOCATION_SELF_LINKAGE.fire(RevocationLinkageError(
+                f"contribution row names its own survivor "
+                f"({row['survivor_type']}:{row['survivor_id']}) as its "
+                f"contributor — corrupt linkage REFUSES; a walker that treated "
+                f"this as data would not terminate"))
     return row
 
 

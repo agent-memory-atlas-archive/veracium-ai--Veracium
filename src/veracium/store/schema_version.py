@@ -28,6 +28,17 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 from typing import NamedTuple
+from ..census import declare_site
+
+# specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_OPEN_UNACCEPTED_SHAPE = declare_site("store.open.unaccepted-shape")
+_SITE_OPEN_RUNTIME_UNSUPPORTED = declare_site("store.open.runtime-unsupported")
+_SITE_OPEN_LOCKED = declare_site("store.open.locked")
+_SITE_OPEN_INVALID_VERSION = declare_site("store.open.invalid-version")
+_SITE_OPEN_NEWER = declare_site("store.open.newer")
+_SITE_OPEN_LEGACY = declare_site("store.open.legacy")
+_SITE_RUNTIME_SUPPORTED = declare_site("store.runtime-supported")
 
 log = logging.getLogger(__name__)
 
@@ -1259,34 +1270,35 @@ def runtime_supported() -> bool:
     # False — the caller's closed outcome is `unsupported-sqlite`, never an
     # implementation exception escaping into the open path. The release check
     # is where diagnostics belong; this predicate only answers the question.
-    try:
-        records = qualified_runtimes()
-        # Round 10, finding 1: the production-facing predicate must see
-        # artifact-level conflicts, not only the generator.
-        if artifact_problems(records):
-            return False
-        me = runtime_identity()
-        for r in records:
-            # Superseded records contribute nothing and cannot disqualify
-            # (round 13, finding 3); malformed CURRENT records already poisoned
-            # the artifact above.
-            if not isinstance(r, dict) or runtime_record_problems(r):
-                continue
-            # Canonical build identity, never raw dict equality: `1 == True` in
-            # Python, so a mistyped probe made the two disagree (round 12).
-            if build_identity(r) != build_identity({**me,
-                    "manifest_algorithm": MANIFEST_ALGORITHM,
-                    "schema_version": SCHEMA_VERSION}):
-                continue
-            if any(_constructor_digest(int(v)) != d
-                   for v, d in r["constructor_digests"].items()):
-                return False
-            # The complete manifestation, including rebuildable objects.
-            return all(r["manifestations"].get(f"constructor v{v}")
-                       == _constructor_objects(v) for v in SCHEMAS)
-        return False
-    except Exception:
-        return False
+    with _SITE_RUNTIME_SUPPORTED.consult():
+        try:
+            records = qualified_runtimes()
+            # Round 10, finding 1: the production-facing predicate must see
+            # artifact-level conflicts, not only the generator.
+            if artifact_problems(records):
+                return _SITE_RUNTIME_SUPPORTED.fire(False, "artifact-problems")
+            me = runtime_identity()
+            for r in records:
+                # Superseded records contribute nothing and cannot disqualify
+                # (round 13, finding 3); malformed CURRENT records already poisoned
+                # the artifact above.
+                if not isinstance(r, dict) or runtime_record_problems(r):
+                    continue
+                # Canonical build identity, never raw dict equality: `1 == True` in
+                # Python, so a mistyped probe made the two disagree (round 12).
+                if build_identity(r) != build_identity({**me,
+                        "manifest_algorithm": MANIFEST_ALGORITHM,
+                        "schema_version": SCHEMA_VERSION}):
+                    continue
+                if any(_constructor_digest(int(v)) != d
+                       for v, d in r["constructor_digests"].items()):
+                    return _SITE_RUNTIME_SUPPORTED.fire(False, "constructor-digests")
+                # The complete manifestation, including rebuildable objects.
+                return all(r["manifestations"].get(f"constructor v{v}")
+                           == _constructor_objects(v) for v in SCHEMAS)
+            return _SITE_RUNTIME_SUPPORTED.fire(False, "no-manifestation")
+        except Exception:
+            return _SITE_RUNTIME_SUPPORTED.fire(False, "raised")
 
 
 def _digest_of_identity(objs: dict, version: int) -> str:
@@ -1530,22 +1542,23 @@ def _validated_current(conn: sqlite3.Connection, spath: str, found) -> bool:
     Shared by the current branch and the post-migration re-check, so a store a
     migration hook returns is held to exactly the standard a stamped-current
     store is held to — one validator, not two."""
-    accepted = accepted_digests(SCHEMA_VERSION)
-    objs = manifest(conn)
-    if digest(objs, SCHEMA_VERSION) not in accepted:
-        raise StoreVersionError(spath, found, SCHEMA_VERSION,
-                                "stamped-shape-mismatch",
-                                diff=_shape_diff(objs, SCHEMA_VERSION))
-    if drift(objs, SCHEMA_VERSION):
-        _repair_drift(conn, SCHEMA_VERSION)
-        after = manifest(conn)      # S33: complete revalidation
-        if (digest(after, SCHEMA_VERSION) not in accepted
-                or drift(after, SCHEMA_VERSION)):
-            raise StoreVersionError(spath, found, SCHEMA_VERSION,
+    with _SITE_OPEN_UNACCEPTED_SHAPE.consult():
+        accepted = accepted_digests(SCHEMA_VERSION)
+        objs = manifest(conn)
+        if digest(objs, SCHEMA_VERSION) not in accepted:
+            raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,
                                     "stamped-shape-mismatch",
-                                    diff=_shape_diff(after, SCHEMA_VERSION))
-        return True
-    return False
+                                    diff=_shape_diff(objs, SCHEMA_VERSION)), "stamped")
+        if drift(objs, SCHEMA_VERSION):
+            _repair_drift(conn, SCHEMA_VERSION)
+            after = manifest(conn)      # S33: complete revalidation
+            if (digest(after, SCHEMA_VERSION) not in accepted
+                    or drift(after, SCHEMA_VERSION)):
+                raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,
+                                        "stamped-shape-mismatch",
+                                        diff=_shape_diff(after, SCHEMA_VERSION)), "drifted")
+            return True
+        return False
 
 
 def open_versioned(conn: sqlite3.Connection, path: str, *,
@@ -1609,173 +1622,178 @@ def open_versioned(conn: sqlite3.Connection, path: str, *,
         raise ValueError(f"store path exceeds {_AUDIT_STRING_CAP} bytes")
 
     # The runtime gate runs before ANY version or shape decision (§4a-viii).
-    if not runtime_supported():
-        raise StoreVersionError(
-            spath, found=None, expected=SCHEMA_VERSION,
-            reason="unsupported-sqlite",
-            diff=f"sqlite {sqlite3.sqlite_version} is not a qualified runtime "
-                 f"build identity; regenerate the evidence there "
-                 f"(schema_evidence.py --runtime --write)")
+    with _SITE_OPEN_RUNTIME_UNSUPPORTED.consult():
+        if not runtime_supported():
+            raise _SITE_OPEN_RUNTIME_UNSUPPORTED.fire(StoreVersionError(
+                spath, found=None, expected=SCHEMA_VERSION,
+                reason="unsupported-sqlite",
+                diff=f"sqlite {sqlite3.sqlite_version} is not a qualified runtime "
+                     f"build identity; regenerate the evidence there "
+                     f"(schema_evidence.py --runtime --write)"))
 
     prev_isolation = conn.isolation_level
     conn.isolation_level = None              # explicit transaction control
     committed_event = None
     try:
-        try:
-            conn.execute("BEGIN IMMEDIATE")
-        except sqlite3.OperationalError as exc:
-            raise StoreVersionError(
-                spath, found=None, expected=SCHEMA_VERSION, reason="locked",
-                diff="another connection holds the write lock; refused loudly "
-                     "rather than hanging (busy_timeout elapsed)") from exc
+        with _SITE_OPEN_LOCKED.consult():
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+            except sqlite3.OperationalError as exc:
+                raise _SITE_OPEN_LOCKED.fire(StoreVersionError(
+                    spath, found=None, expected=SCHEMA_VERSION, reason="locked",
+                    diff="another connection holds the write lock; refused loudly "
+                         "rather than hanging (busy_timeout elapsed)")) from exc
 
-        try:
-            found = conn.execute("PRAGMA user_version").fetchone()[0]
-            objs = manifest(conn)
-            accepted = accepted_digests(SCHEMA_VERSION)
+        with _SITE_OPEN_LEGACY.consult():
+            try:
+                found = conn.execute("PRAGMA user_version").fetchone()[0]
+                objs = manifest(conn)
+                accepted = accepted_digests(SCHEMA_VERSION)
 
-            if found < 0:
-                raise StoreVersionError(spath, found, SCHEMA_VERSION,
-                                        "invalid-version")
-            if found > SCHEMA_VERSION:
-                raise StoreVersionError(
-                    spath, found, SCHEMA_VERSION, "newer",
-                    diff="this build cannot know what it does not know; "
-                         "install a build whose SCHEMA_VERSION covers the store")
+                with _SITE_OPEN_INVALID_VERSION.consult():
+                    if found < 0:
+                        raise _SITE_OPEN_INVALID_VERSION.fire(StoreVersionError(spath, found, SCHEMA_VERSION,
+                                                "invalid-version"))
+                with _SITE_OPEN_NEWER.consult():
+                    if found > SCHEMA_VERSION:
+                        raise _SITE_OPEN_NEWER.fire(StoreVersionError(
+                            spath, found, SCHEMA_VERSION, "newer",
+                            diff="this build cannot know what it does not know; "
+                                 "install a build whose SCHEMA_VERSION covers the store"))
 
-            if found == SCHEMA_VERSION:
-                repaired = _validated_current(conn, spath, found)
-                # Build and validate the result BEFORE COMMIT (round 9): after
-                # COMMIT only `return` runs, so a post-commit internal defect
-                # that hides a committed store is impossible.
-                result = OpenResult("current", store_changed=repaired,
-                                    transaction_committed=repaired,
-                                    resulting_version=SCHEMA_VERSION)
-                conn.execute("COMMIT")
-                if on_committed is not None:
-                    on_committed(result)      # facts reach the caller before
-                return result                 # any post-commit cleanup
+                if found == SCHEMA_VERSION:
+                    repaired = _validated_current(conn, spath, found)
+                    # Build and validate the result BEFORE COMMIT (round 9): after
+                    # COMMIT only `return` runs, so a post-commit internal defect
+                    # that hides a committed store is impossible.
+                    result = OpenResult("current", store_changed=repaired,
+                                        transaction_committed=repaired,
+                                        resulting_version=SCHEMA_VERSION)
+                    conn.execute("COMMIT")
+                    if on_committed is not None:
+                        on_committed(result)      # facts reach the caller before
+                    return result                 # any post-commit cleanup
 
-            if 0 < found < SCHEMA_VERSION:
-                # §4's *older* row: a stamped store this build predates on.
-                # Migrating it forward is specs/0013's contract; without its
-                # hook the row is a package-consistency impossibility —
-                # unreachable while SCHEMA_VERSION == 1 — not a store property.
-                if older is None:
-                    raise PackageConsistencyError(
-                        f"store {spath!r} is stamped v{found} and this build "
-                        f"is v{SCHEMA_VERSION} with no migration hook "
-                        f"installed; migrating forward is specs/0013's "
-                        f"contract")
-                older(conn, spath, found, objs, found)
-                _validated_current(conn, spath, found)
-                result = OpenResult("migrated", store_changed=True,
-                                    transaction_committed=True,
-                                    resulting_version=SCHEMA_VERSION)
-                conn.execute("COMMIT")
-                if on_committed is not None:
-                    on_committed(result)
-                return result
+                if 0 < found < SCHEMA_VERSION:
+                    # §4's *older* row: a stamped store this build predates on.
+                    # Migrating it forward is specs/0013's contract; without its
+                    # hook the row is a package-consistency impossibility —
+                    # unreachable while SCHEMA_VERSION == 1 — not a store property.
+                    if older is None:
+                        raise PackageConsistencyError(
+                            f"store {spath!r} is stamped v{found} and this build "
+                            f"is v{SCHEMA_VERSION} with no migration hook "
+                            f"installed; migrating forward is specs/0013's "
+                            f"contract")
+                    older(conn, spath, found, objs, found)
+                    _validated_current(conn, spath, found)
+                    result = OpenResult("migrated", store_changed=True,
+                                        transaction_committed=True,
+                                        resulting_version=SCHEMA_VERSION)
+                    conn.execute("COMMIT")
+                    if on_committed is not None:
+                        on_committed(result)
+                    return result
 
-            # found == 0 — unstamped
-            if not objs:                        # §4 "new": no non-internal object
-                if new is not None:
-                    new(conn, spath, found, objs)
-                    raise PackageConsistencyError(
-                        "the new-row hook returned instead of raising")
-                create(conn, SCHEMA_VERSION)
+                # found == 0 — unstamped
+                if not objs:                        # §4 "new": no non-internal object
+                    if new is not None:
+                        new(conn, spath, found, objs)
+                        raise PackageConsistencyError(
+                            "the new-row hook returned instead of raising")
+                    create(conn, SCHEMA_VERSION)
+                    after = manifest(conn)
+                    if (digest(after, SCHEMA_VERSION) not in accepted
+                            or drift(after, SCHEMA_VERSION)):
+                        # Not a property of the store on disk: the constructor and
+                        # the shipped evidence disagree, i.e. the package is broken.
+                        raise PackageConsistencyError(
+                            "constructor output is not in the accepted manifest "
+                            "set — the package's evidence artifacts disagree with "
+                            "its schema registry")
+                    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+                    result = OpenResult("created", store_changed=True,
+                                        transaction_committed=True,
+                                        resulting_version=SCHEMA_VERSION)
+                    conn.execute("COMMIT")
+                    if on_committed is not None:
+                        on_committed(result)
+                    return result
+
+                # §4 "legacy" / "foreign": resolve against the evidenced bases only
+                base = resolve(objs, version_records(),
+                               candidates=legacy_base_versions())
+                if base is None:
+                    raise _SITE_OPEN_LEGACY.fire(StoreVersionError(
+                        spath, found, SCHEMA_VERSION, "foreign-shape",
+                        diff=_shape_diff(objs, SCHEMA_VERSION)), "foreign-shape")
+                if base != SCHEMA_VERSION:
+                    # An unstamped store whose evidenced base is BELOW current:
+                    # 0013's migration path, reached through the same older-row
+                    # seam. Without the hook, refuse exactly as before — this
+                    # cannot arise while SCHEMA_VERSION == 1, because no legacy
+                    # base below 1 exists.
+                    if older is None:
+                        raise _SITE_OPEN_LEGACY.fire(StoreVersionError(
+                            spath, found, SCHEMA_VERSION, "migration-required",
+                            diff=f"store resolves to base version {base}, below the "
+                                 f"head version {SCHEMA_VERSION}; migration is OFFLINE "
+                                 f"(specs/0013 §5b) — quiesce access and run "
+                                 f"veracium.store.migration.migrate_store(path)"), "migration-required")
+                    older(conn, spath, found, objs, base)
+                    _validated_current(conn, spath, found)
+                    result = OpenResult("migrated", store_changed=True,
+                                        transaction_committed=True,
+                                        resulting_version=SCHEMA_VERSION)
+                    conn.execute("COMMIT")
+                    if on_committed is not None:
+                        on_committed(result)
+                    return result
+                if not allow_adopt:
+                    raise _SITE_OPEN_LEGACY.fire(StoreVersionError(
+                        spath, found, SCHEMA_VERSION, "adoption-refused",
+                        diff="allow_adopt=False: this host refuses unstamped "
+                             "stores rather than adopting them"), "adoption-refused")
+
+                adoption_id = str(uuid.uuid4())
+                _repair_drift(conn, SCHEMA_VERSION)
                 after = manifest(conn)
                 if (digest(after, SCHEMA_VERSION) not in accepted
                         or drift(after, SCHEMA_VERSION)):
-                    # Not a property of the store on disk: the constructor and
-                    # the shipped evidence disagree, i.e. the package is broken.
-                    raise PackageConsistencyError(
-                        "constructor output is not in the accepted manifest "
-                        "set — the package's evidence artifacts disagree with "
-                        "its schema registry")
+                    raise _SITE_OPEN_LEGACY.fire(StoreVersionError(
+                        spath, found, SCHEMA_VERSION, "foreign-shape",
+                        diff=_shape_diff(after, SCHEMA_VERSION)), "foreign-shape-after")
+                provenance = accepted_provenance(after, SCHEMA_VERSION) or ""
+                source_digest = digest(after, SCHEMA_VERSION)
                 conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-                result = OpenResult("created", store_changed=True,
-                                    transaction_committed=True,
-                                    resulting_version=SCHEMA_VERSION)
+
+                attempted = _event("adoption_attempted", adoption_id, spath,
+                                   0, SCHEMA_VERSION, source_digest, provenance)
+                if audit_sink is not None:
+                    # Inside the transaction: a sink that raises aborts the
+                    # adoption, so an unrecorded adoption cannot exist (§4e).
+                    audit_sink(attempted)
+                else:
+                    log.info("adopting unstamped store %s as schema v%s (%s); no "
+                             "audit sink configured, so no durability is claimed",
+                             spath, SCHEMA_VERSION, adoption_id)
                 conn.execute("COMMIT")
-                if on_committed is not None:
-                    on_committed(result)
-                return result
-
-            # §4 "legacy" / "foreign": resolve against the evidenced bases only
-            base = resolve(objs, version_records(),
-                           candidates=legacy_base_versions())
-            if base is None:
-                raise StoreVersionError(
-                    spath, found, SCHEMA_VERSION, "foreign-shape",
-                    diff=_shape_diff(objs, SCHEMA_VERSION))
-            if base != SCHEMA_VERSION:
-                # An unstamped store whose evidenced base is BELOW current:
-                # 0013's migration path, reached through the same older-row
-                # seam. Without the hook, refuse exactly as before — this
-                # cannot arise while SCHEMA_VERSION == 1, because no legacy
-                # base below 1 exists.
-                if older is None:
-                    raise StoreVersionError(
-                        spath, found, SCHEMA_VERSION, "migration-required",
-                        diff=f"store resolves to base version {base}, below the "
-                             f"head version {SCHEMA_VERSION}; migration is OFFLINE "
-                             f"(specs/0013 §5b) — quiesce access and run "
-                             f"veracium.store.migration.migrate_store(path)")
-                older(conn, spath, found, objs, base)
-                _validated_current(conn, spath, found)
-                result = OpenResult("migrated", store_changed=True,
-                                    transaction_committed=True,
-                                    resulting_version=SCHEMA_VERSION)
-                conn.execute("COMMIT")
-                if on_committed is not None:
-                    on_committed(result)
-                return result
-            if not allow_adopt:
-                raise StoreVersionError(
-                    spath, found, SCHEMA_VERSION, "adoption-refused",
-                    diff="allow_adopt=False: this host refuses unstamped "
-                         "stores rather than adopting them")
-
-            adoption_id = str(uuid.uuid4())
-            _repair_drift(conn, SCHEMA_VERSION)
-            after = manifest(conn)
-            if (digest(after, SCHEMA_VERSION) not in accepted
-                    or drift(after, SCHEMA_VERSION)):
-                raise StoreVersionError(
-                    spath, found, SCHEMA_VERSION, "foreign-shape",
-                    diff=_shape_diff(after, SCHEMA_VERSION))
-            provenance = accepted_provenance(after, SCHEMA_VERSION) or ""
-            source_digest = digest(after, SCHEMA_VERSION)
-            conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-
-            attempted = _event("adoption_attempted", adoption_id, spath,
-                               0, SCHEMA_VERSION, source_digest, provenance)
-            if audit_sink is not None:
-                # Inside the transaction: a sink that raises aborts the
-                # adoption, so an unrecorded adoption cannot exist (§4e).
-                audit_sink(attempted)
-            else:
-                log.info("adopting unstamped store %s as schema v%s (%s); no "
-                         "audit sink configured, so no durability is claimed",
-                         spath, SCHEMA_VERSION, adoption_id)
-            conn.execute("COMMIT")
-            committed_event = attempted._replace(
-                event="adoption_committed",
-                occurred_at=datetime.now(timezone.utc).isoformat())
-        except BaseException:
-            # Round 12, finding 1: publish the rollback RESULT, do not discard
-            # it. A caller that records terminal facts must not claim the store
-            # was restored to its source unless the rollback is CONFIRMED.
-            status = "rollback-failed"
-            try:
-                conn.execute("ROLLBACK")
-                status = "rolled-back"
-            except sqlite3.Error:
+                committed_event = attempted._replace(
+                    event="adoption_committed",
+                    occurred_at=datetime.now(timezone.utc).isoformat())
+            except BaseException:
+                # Round 12, finding 1: publish the rollback RESULT, do not discard
+                # it. A caller that records terminal facts must not claim the store
+                # was restored to its source unless the rollback is CONFIRMED.
                 status = "rollback-failed"
-            if on_rolled_back is not None:
-                on_rolled_back(status)
-            raise
+                try:
+                    conn.execute("ROLLBACK")
+                    status = "rolled-back"
+                except sqlite3.Error:
+                    status = "rollback-failed"
+                if on_rolled_back is not None:
+                    on_rolled_back(status)
+                raise
     finally:
         conn.isolation_level = prev_isolation
 

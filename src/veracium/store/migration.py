@@ -57,11 +57,12 @@ def _migrate_outcome_chains(conn: sqlite3.Connection) -> None:
         groups.setdefault(
             (ep.user_id, ep.edge_id, ep.provenance.evidence_ref), []).append(eid)
     for gk, ids in groups.items():
-        if len(ids) > 1:
-            raise DuplicateOutcomeChainError(
-                f"v2→v3 migration: {len(ids)} legacy outcome episodes for chain {gk} "
-                f"({', '.join(ids)}) — refuse rather than branch; resolve the "
-                f"duplicate identities and retry (specs/0009 §4f)")
+        with _SITE_DUPLICATE_OUTCOME_CHAIN.consult():
+            if len(ids) > 1:
+                raise _SITE_DUPLICATE_OUTCOME_CHAIN.fire(DuplicateOutcomeChainError(
+                    f"v2→v3 migration: {len(ids)} legacy outcome episodes for chain {gk} "
+                    f"({', '.join(ids)}) — refuse rather than branch; resolve the "
+                    f"duplicate identities and retry (specs/0009 §4f)"))
     for eid, ep in outcome_rows:
         converted = ep.model_copy(update={"seq": 1, "supersedes_episode": None,
                                           "judgment_time_known": False})
@@ -112,138 +113,139 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
     (v1→v3) gets BOTH deltas in one apply, because the object set is diffed against the
     actual base, not a fixed step. `open_versioned` revalidates the result against the
     head validator before committing, so a wrong DDL cannot land."""
-    if base not in SCHEMAS or base >= SCHEMA_VERSION:
-        raise StoreVersionError(
-            "", base, SCHEMA_VERSION, "unsupported-migration",
-            diff=f"no migration path from base {base} to head {SCHEMA_VERSION} "
-                 f"is defined")
-    base_keys = {o.key for o in SCHEMAS[base]}
-    for o in SCHEMAS[SCHEMA_VERSION]:
-        if o.key not in base_keys:                     # only what the head ADDS over base
-            conn.execute(o.ddl)
-    # specs/0009 §4f: crossing INTO v3 from below also transforms legacy outcome
-    # episodes into honest chain roots (a DATA migration the additive DDL cannot do).
-    # Guarded to base<3<=head so a future v3→v4 bump never re-roots valid v3 chains.
-    if base < 3 <= SCHEMA_VERSION:
-        _migrate_outcome_chains(conn)
-    # specs/0003 §4c-ii / §7a: crossing INTO v4 must invalidate every wiki cache. A v3
-    # store may hold a wiki compiled under pre-0003 "one current value" semantics over a
-    # pair that is now a contention (§4e reorders PRE-EXISTING contentions), and the
-    # additive-table migration would leave that cache judged fresh. Dropping the cached
-    # rows forces recompilation on the first recall after migration, not eight writes
-    # later. A DATA step the additive DDL cannot express — the same shape as the outcome
-    # re-rooting above. Guarded base<4<=head so it fires exactly once, on the v3→v4 cross.
-    if base < 4 <= SCHEMA_VERSION:
-        _drop_wiki_cache(conn)
-    # specs/0006 §4.2 / Migration: crossing INTO v5 mints the durable `store_identity`
-    # origin singleton, transactionally, in the SAME migration transaction. A DATA step
-    # the additive `store_identity` table DDL cannot express (the table is empty until
-    # its one row exists). No per-record change and NO backfill — existing edge rows keep
-    # `origin` absent and resolve to this singleton at read (§4 rule 6). Guarded
-    # base<5<=head so it fires exactly once, on the v4→v5 cross.
-    if base < 5 <= SCHEMA_VERSION:
-        _mint_store_identity(conn)
-    # specs/0014 §4b/§7a: crossing INTO v6 ALTERs `supersession_operations` — the repo's
-    # FIRST ALTER of an existing table, which the additive diff-by-key above cannot
-    # express (the table's typed key exists in the base, so its CHANGED DDL is invisible
-    # to the object diff). The three ADD COLUMNs run in the frozen order; the DEFAULT 1
-    # on `outcome_digest_version` both makes the ALTER legal on a populated table and IS
-    # the migration stamp (every pre-upgrade receipt reads version 1 — the pre-split
-    # digest projection; post-upgrade writes stamp 2 explicitly). The resulting stored
-    # DDL must byte-match the REVIEWED constant `ALTER_PATH_V6_SQL` (0014 §4b): the
-    # expectation was authored independently and authorized by review — a mismatch here
-    # means this migration (or the runtime) is wrong, and `open_versioned`'s
-    # revalidation against `accepted_digests(6)` (which carries the reviewed ALTER-path
-    # manifest per `0013` §4e) refuses the result rather than adopting it.
-    # Guarded 4 <= base: `supersession_operations` entered the schema at v4, so only
-    # v4/v5 bases carry a table to ALTER — for bases 1-3 the additive diff above already
-    # created the table in its v6 CONSTRUCTOR form (columns inline), and those paths
-    # land on the CONSTRUCTOR manifest, which is equally accepted.
-    if 4 <= base < 6 <= SCHEMA_VERSION:
-        from .schema_version import ALTERS_V5_TO_V6, ALTER_PATH_V6_SQL
-        for stmt in ALTERS_V5_TO_V6:
-            conn.execute(stmt)
-        stored = conn.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' "
-            "AND name='supersession_operations'").fetchone()[0]
-        if stored != ALTER_PATH_V6_SQL:
-            raise StoreVersionError(
+    with _SITE_MIGRATION_VERSION.consult():
+        if base not in SCHEMAS or base >= SCHEMA_VERSION:
+            raise _SITE_MIGRATION_VERSION.fire(StoreVersionError(
                 "", base, SCHEMA_VERSION, "unsupported-migration",
-                diff="the v5->v6 ALTER produced DDL that does not byte-match the "
-                     "reviewed expectation (0014 §4b) — the migration or runtime is "
-                     "wrong; the expectation never moves")
-    # 0019 rider (as amended by 0020/0021, C1–C3) / 0021 §7b: crossing INTO v8 ALTERs
-    # `contribution_ledger` — the typed contributor link (`contributor_type TEXT`,
-    # `contributor_ref TEXT`, nullable; legacy rows NULL). The same shape as the v6
-    # block above: the table's typed key exists in the base, so its CHANGED DDL is
-    # invisible to the additive object diff. The two ADD COLUMNs are the migration's
-    # 0013-declared steps, sha-pinned in the RECORDED evidence
-    # (`specs/evidence/0020/schema_v8_evidence.txt` [4]); the resulting stored DDL
-    # must byte-match the recorded ALTER-path manifestation (`ALTER_PATH_V8_SQL`,
-    # evidence [2]) — the expectation was recorded independently and the migration may
-    # not define its own destination (0013 §4c); `open_versioned`'s revalidation
-    # against `accepted_digests(8)` refuses a mismatched result rather than adopting
-    # it. Guarded 6 <= base: `contribution_ledger` entered the schema at v6, so only
-    # v6/v7 bases carry a table to ALTER — for bases ≤5 the additive diff above
-    # already created the table in its v8 CONSTRUCTOR form (columns inline), and
-    # those paths land on the CONSTRUCTOR manifest, which is equally accepted.
-    if 6 <= base < 8 <= SCHEMA_VERSION:
-        from .schema_version import ALTERS_V7_TO_V8, ALTER_PATH_V8_SQL
-        for stmt in ALTERS_V7_TO_V8:
-            conn.execute(stmt)
-        stored = conn.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' "
-            "AND name='contribution_ledger'").fetchone()[0]
-        if stored != ALTER_PATH_V8_SQL:
-            raise StoreVersionError(
-                "", base, SCHEMA_VERSION, "unsupported-migration",
-                diff="the v7->v8 ALTER produced DDL that does not byte-match the "
-                     "recorded evidence (0019 rider C2 / 0021 §7b) — the migration "
-                     "or runtime is wrong; the expectation never moves")
-    # specs/0025 §4b-v (the confirmed 0014 amendment): crossing INTO v10
-    # ALTERs `supersession_operations` — the nullable cross-era domain
-    # column. Same shape as the v6/v8 blocks: the table's typed key exists
-    # in the base (v4+), its CHANGED DDL is invisible to the additive diff,
-    # and the ONE ADD COLUMN's measured result must byte-match a frozen
-    # expectation. TWO accepted expectations exist because v9 stores hold
-    # the table in two accepted DDL variants (fresh-constructor vs the
-    # v5->v6 ALTER path); the migration may not define its own destination.
-    # Migrated rows keep request_digest_domain NULL — §4b-v's dual-domain
-    # comparison row; the migration NEVER fabricates a domain.
-    if 4 <= base < 10 <= SCHEMA_VERSION:
-        from .schema_version import (ALTER_PATH_V10_FROM_CONSTRUCTOR_SQL,
-                                     ALTER_PATH_V10_FROM_V6_ALTERPATH_SQL,
-                                     ALTERS_V9_TO_V10)
-        for stmt in ALTERS_V9_TO_V10:
-            conn.execute(stmt)
-        stored = conn.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' "
-            "AND name='supersession_operations'").fetchone()[0]
-        if stored not in (ALTER_PATH_V10_FROM_CONSTRUCTOR_SQL,
-                          ALTER_PATH_V10_FROM_V6_ALTERPATH_SQL):
-            raise StoreVersionError(
-                "", base, SCHEMA_VERSION, "unsupported-migration",
-                diff="the v9->v10 ALTER produced DDL matching NEITHER frozen "
-                     "expectation (0025 §4b-v) — the migration or runtime is "
-                     "wrong; the expectations never move")
-    # specs/0029 §4e: crossing INTO v13 journals the EPOCH BASELINE — every
-    # pre-existing edge row once, as found (bytes), reason NULL, one batch per
-    # user — and mints the per-store `store_epoch` row, in THIS transaction
-    # with the stamp: partial states are unrepresentable and a crash-retry
-    # (base still 12) mints exactly one baseline. A DATA step the additive
-    # DDL cannot express, the `store_identity` mint's shape. Guarded
-    # base<13<=head so it fires exactly once, on the v12→v13 cross.
-    if base < 13 <= SCHEMA_VERSION:
-        from .edge_events import journal_baselines, mint_store_epoch
-        now_iso = datetime.now(timezone.utc).isoformat()   # ONE clock read
-        journal_baselines(conn, now_iso)
-        mint_store_epoch(conn, now_iso, 13)
-    # specs/0027 §4g (v14): crossing INTO v14 adds the `policy_receipt` table
-    # and its index through the generic additive apply above and NOTHING else
-    # — a receipt is written only by a recall on an open v14 store, so there is
-    # no pre-existing data to carry and no row to mint. Stated here so the
-    # absence of a v14 step reads as a decision, not an omission.
-    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+                diff=f"no migration path from base {base} to head {SCHEMA_VERSION} "
+                     f"is defined"), "unsupported-base")
+        base_keys = {o.key for o in SCHEMAS[base]}
+        for o in SCHEMAS[SCHEMA_VERSION]:
+            if o.key not in base_keys:                     # only what the head ADDS over base
+                conn.execute(o.ddl)
+        # specs/0009 §4f: crossing INTO v3 from below also transforms legacy outcome
+        # episodes into honest chain roots (a DATA migration the additive DDL cannot do).
+        # Guarded to base<3<=head so a future v3→v4 bump never re-roots valid v3 chains.
+        if base < 3 <= SCHEMA_VERSION:
+            _migrate_outcome_chains(conn)
+        # specs/0003 §4c-ii / §7a: crossing INTO v4 must invalidate every wiki cache. A v3
+        # store may hold a wiki compiled under pre-0003 "one current value" semantics over a
+        # pair that is now a contention (§4e reorders PRE-EXISTING contentions), and the
+        # additive-table migration would leave that cache judged fresh. Dropping the cached
+        # rows forces recompilation on the first recall after migration, not eight writes
+        # later. A DATA step the additive DDL cannot express — the same shape as the outcome
+        # re-rooting above. Guarded base<4<=head so it fires exactly once, on the v3→v4 cross.
+        if base < 4 <= SCHEMA_VERSION:
+            _drop_wiki_cache(conn)
+        # specs/0006 §4.2 / Migration: crossing INTO v5 mints the durable `store_identity`
+        # origin singleton, transactionally, in the SAME migration transaction. A DATA step
+        # the additive `store_identity` table DDL cannot express (the table is empty until
+        # its one row exists). No per-record change and NO backfill — existing edge rows keep
+        # `origin` absent and resolve to this singleton at read (§4 rule 6). Guarded
+        # base<5<=head so it fires exactly once, on the v4→v5 cross.
+        if base < 5 <= SCHEMA_VERSION:
+            _mint_store_identity(conn)
+        # specs/0014 §4b/§7a: crossing INTO v6 ALTERs `supersession_operations` — the repo's
+        # FIRST ALTER of an existing table, which the additive diff-by-key above cannot
+        # express (the table's typed key exists in the base, so its CHANGED DDL is invisible
+        # to the object diff). The three ADD COLUMNs run in the frozen order; the DEFAULT 1
+        # on `outcome_digest_version` both makes the ALTER legal on a populated table and IS
+        # the migration stamp (every pre-upgrade receipt reads version 1 — the pre-split
+        # digest projection; post-upgrade writes stamp 2 explicitly). The resulting stored
+        # DDL must byte-match the REVIEWED constant `ALTER_PATH_V6_SQL` (0014 §4b): the
+        # expectation was authored independently and authorized by review — a mismatch here
+        # means this migration (or the runtime) is wrong, and `open_versioned`'s
+        # revalidation against `accepted_digests(6)` (which carries the reviewed ALTER-path
+        # manifest per `0013` §4e) refuses the result rather than adopting it.
+        # Guarded 4 <= base: `supersession_operations` entered the schema at v4, so only
+        # v4/v5 bases carry a table to ALTER — for bases 1-3 the additive diff above already
+        # created the table in its v6 CONSTRUCTOR form (columns inline), and those paths
+        # land on the CONSTRUCTOR manifest, which is equally accepted.
+        if 4 <= base < 6 <= SCHEMA_VERSION:
+            from .schema_version import ALTERS_V5_TO_V6, ALTER_PATH_V6_SQL
+            for stmt in ALTERS_V5_TO_V6:
+                conn.execute(stmt)
+            stored = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' "
+                "AND name='supersession_operations'").fetchone()[0]
+            if stored != ALTER_PATH_V6_SQL:
+                raise _SITE_MIGRATION_VERSION.fire(StoreVersionError(
+                    "", base, SCHEMA_VERSION, "unsupported-migration",
+                    diff="the v5->v6 ALTER produced DDL that does not byte-match the "
+                         "reviewed expectation (0014 §4b) — the migration or runtime is "
+                         "wrong; the expectation never moves"), "v6-alter-path")
+        # 0019 rider (as amended by 0020/0021, C1–C3) / 0021 §7b: crossing INTO v8 ALTERs
+        # `contribution_ledger` — the typed contributor link (`contributor_type TEXT`,
+        # `contributor_ref TEXT`, nullable; legacy rows NULL). The same shape as the v6
+        # block above: the table's typed key exists in the base, so its CHANGED DDL is
+        # invisible to the additive object diff. The two ADD COLUMNs are the migration's
+        # 0013-declared steps, sha-pinned in the RECORDED evidence
+        # (`specs/evidence/0020/schema_v8_evidence.txt` [4]); the resulting stored DDL
+        # must byte-match the recorded ALTER-path manifestation (`ALTER_PATH_V8_SQL`,
+        # evidence [2]) — the expectation was recorded independently and the migration may
+        # not define its own destination (0013 §4c); `open_versioned`'s revalidation
+        # against `accepted_digests(8)` refuses a mismatched result rather than adopting
+        # it. Guarded 6 <= base: `contribution_ledger` entered the schema at v6, so only
+        # v6/v7 bases carry a table to ALTER — for bases ≤5 the additive diff above
+        # already created the table in its v8 CONSTRUCTOR form (columns inline), and
+        # those paths land on the CONSTRUCTOR manifest, which is equally accepted.
+        if 6 <= base < 8 <= SCHEMA_VERSION:
+            from .schema_version import ALTERS_V7_TO_V8, ALTER_PATH_V8_SQL
+            for stmt in ALTERS_V7_TO_V8:
+                conn.execute(stmt)
+            stored = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' "
+                "AND name='contribution_ledger'").fetchone()[0]
+            if stored != ALTER_PATH_V8_SQL:
+                raise _SITE_MIGRATION_VERSION.fire(StoreVersionError(
+                    "", base, SCHEMA_VERSION, "unsupported-migration",
+                    diff="the v7->v8 ALTER produced DDL that does not byte-match the "
+                         "recorded evidence (0019 rider C2 / 0021 §7b) — the migration "
+                         "or runtime is wrong; the expectation never moves"), "v8-alter-path")
+        # specs/0025 §4b-v (the confirmed 0014 amendment): crossing INTO v10
+        # ALTERs `supersession_operations` — the nullable cross-era domain
+        # column. Same shape as the v6/v8 blocks: the table's typed key exists
+        # in the base (v4+), its CHANGED DDL is invisible to the additive diff,
+        # and the ONE ADD COLUMN's measured result must byte-match a frozen
+        # expectation. TWO accepted expectations exist because v9 stores hold
+        # the table in two accepted DDL variants (fresh-constructor vs the
+        # v5->v6 ALTER path); the migration may not define its own destination.
+        # Migrated rows keep request_digest_domain NULL — §4b-v's dual-domain
+        # comparison row; the migration NEVER fabricates a domain.
+        if 4 <= base < 10 <= SCHEMA_VERSION:
+            from .schema_version import (ALTER_PATH_V10_FROM_CONSTRUCTOR_SQL,
+                                         ALTER_PATH_V10_FROM_V6_ALTERPATH_SQL,
+                                         ALTERS_V9_TO_V10)
+            for stmt in ALTERS_V9_TO_V10:
+                conn.execute(stmt)
+            stored = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' "
+                "AND name='supersession_operations'").fetchone()[0]
+            if stored not in (ALTER_PATH_V10_FROM_CONSTRUCTOR_SQL,
+                              ALTER_PATH_V10_FROM_V6_ALTERPATH_SQL):
+                raise _SITE_MIGRATION_VERSION.fire(StoreVersionError(
+                    "", base, SCHEMA_VERSION, "unsupported-migration",
+                    diff="the v9->v10 ALTER produced DDL matching NEITHER frozen "
+                         "expectation (0025 §4b-v) — the migration or runtime is "
+                         "wrong; the expectations never move"), "v10-alter-path")
+        # specs/0029 §4e: crossing INTO v13 journals the EPOCH BASELINE — every
+        # pre-existing edge row once, as found (bytes), reason NULL, one batch per
+        # user — and mints the per-store `store_epoch` row, in THIS transaction
+        # with the stamp: partial states are unrepresentable and a crash-retry
+        # (base still 12) mints exactly one baseline. A DATA step the additive
+        # DDL cannot express, the `store_identity` mint's shape. Guarded
+        # base<13<=head so it fires exactly once, on the v12→v13 cross.
+        if base < 13 <= SCHEMA_VERSION:
+            from .edge_events import journal_baselines, mint_store_epoch
+            now_iso = datetime.now(timezone.utc).isoformat()   # ONE clock read
+            journal_baselines(conn, now_iso)
+            mint_store_epoch(conn, now_iso, 13)
+        # specs/0027 §4g (v14): crossing INTO v14 adds the `policy_receipt` table
+        # and its index through the generic additive apply above and NOTHING else
+        # — a receipt is written only by a recall on an open v14 store, so there is
+        # no pre-existing data to carry and no row to mint. Stated here so the
+        # absence of a v14 step reads as a decision, not an omission.
+        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
 
 def migrate_store(path: str, *,
@@ -307,3 +309,9 @@ from .release_migration import (  # noqa: E402
     MigrationAuthority, MigrationResult, MintError, PreflightResolution,
     ReadbackResult, TerminalFacts, mint_release_authority, read_terminal,
     run_release_migration)
+from ..census import declare_site
+
+# specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_MIGRATION_VERSION = declare_site("store.migration.version")
+_SITE_DUPLICATE_OUTCOME_CHAIN = declare_site("store.migration.duplicate-outcome-chain")

@@ -62,16 +62,17 @@ def _rollback_or_poison(conn, cause):
     BaseException, NOT Exception (R6-1): the operation catches BaseException,
     and the two boundaries must be the SAME boundary or the narrower one is a
     hole in the wider one's guarantee."""
-    try:
-        conn.execute("ROLLBACK")
-    except BaseException as rb:
+    with _SITE_REVOCATION_UNKNOWN_STATE.consult():
         try:
-            conn.close()
-        except BaseException:
-            pass
-        raise RevocationUnknownState(
-            f"ROLLBACK failed after {type(cause).__name__}; the transaction's "
-            f"disposition is unknown and the connection is closed") from rb
+            conn.execute("ROLLBACK")
+        except BaseException as rb:
+            try:
+                conn.close()
+            except BaseException:
+                pass
+            raise _SITE_REVOCATION_UNKNOWN_STATE.fire(RevocationUnknownState(
+                f"ROLLBACK failed after {type(cause).__name__}; the transaction's "
+                f"disposition is unknown and the connection is closed")) from rb
 
 
 def standing_revocations(conn, user_id: str) -> frozenset:
@@ -109,37 +110,39 @@ def revocation_operation(conn, user_id: str, identity_digest: str,
                 raise
             time.sleep(0.01)
             continue                      # contention: re-acquire, RE-READ
-        try:
-            # the ordinal, from MAX(seq), INSIDE the transaction (R19)
-            seq = 1 + (conn.execute(
-                "SELECT COALESCE(MAX(seq), -1) FROM source_revocations "
-                "WHERE user_id=?", (user_id,)).fetchone()[0])
-            standing = standing_revocations(conn, user_id)
-            if _gate is not None:
-                _gate.wait()
-            effects = list(plan(standing))
-            conn.execute(
-                "INSERT INTO source_revocations(user_id, seq, identity_digest,"
-                " action, at, reason) VALUES(?,?,?,?,?,?)",
-                (user_id, seq, identity_digest, action, at, reason))
-            if _fault is not None:
-                _fault()                  # between the row and the effects
-            for e in effects:
-                apply_effect(conn, e)
-            conn.execute("COMMIT")
-            return seq, standing, effects
-        except sqlite3.IntegrityError as e:
-            # WHICH constraint fired decides which invariant reports (R5-1).
-            ordinal = _is_ordinal_violation(e)
-            _rollback_or_poison(conn, e)
-            if ordinal:
-                raise OrdinalCollision(str(e)) from e
-            raise RevocationIntegrityError(str(e)) from e
-        except BaseException as e:
-            # the row, the effects, all of it — and if that cannot be
-            # established, say so rather than pretending (R5-1)
-            _rollback_or_poison(conn, e)
-            raise
+        with _SITE_REVOCATION_INTEGRITY.consult():
+            try:
+                # the ordinal, from MAX(seq), INSIDE the transaction (R19)
+                seq = 1 + (conn.execute(
+                    "SELECT COALESCE(MAX(seq), -1) FROM source_revocations "
+                    "WHERE user_id=?", (user_id,)).fetchone()[0])
+                standing = standing_revocations(conn, user_id)
+                if _gate is not None:
+                    _gate.wait()
+                effects = list(plan(standing))
+                conn.execute(
+                    "INSERT INTO source_revocations(user_id, seq, identity_digest,"
+                    " action, at, reason) VALUES(?,?,?,?,?,?)",
+                    (user_id, seq, identity_digest, action, at, reason))
+                if _fault is not None:
+                    _fault()                  # between the row and the effects
+                for e in effects:
+                    apply_effect(conn, e)
+                conn.execute("COMMIT")
+                return seq, standing, effects
+            except sqlite3.IntegrityError as e:
+                # WHICH constraint fired decides which invariant reports (R5-1).
+                ordinal = _is_ordinal_violation(e)
+                _rollback_or_poison(conn, e)
+                with _SITE_REVOCATION_ORDINAL.consult():
+                    if ordinal:
+                        raise _SITE_REVOCATION_ORDINAL.fire(OrdinalCollision(str(e))) from e
+                raise _SITE_REVOCATION_INTEGRITY.fire(RevocationIntegrityError(str(e))) from e
+            except BaseException as e:
+                # the row, the effects, all of it — and if that cannot be
+                # established, say so rather than pretending (R5-1)
+                _rollback_or_poison(conn, e)
+                raise
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +156,13 @@ def revocation_operation(conn, user_id: str, identity_digest: str,
 import json as _json
 
 from . import revocation_sweep as _sw
+from ..census import declare_site
+
+# specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_REVOCATION_UNKNOWN_STATE = declare_site("store.revocation.unknown-state")
+_SITE_REVOCATION_ORDINAL = declare_site("store.revocation.ordinal-collision")
+_SITE_REVOCATION_INTEGRITY = declare_site("store.revocation.integrity")
 
 
 def _iso_z(dt) -> str:

@@ -73,7 +73,13 @@ Spec-Status: accepted
 > `fire()`-wrapped candidate binds its statement to its id; the per-line NOT overrides re-keyed by
 > (qualname, kind, ordinal) in one hop from the plan-time inventory) after a sequential re-key had
 > drifted two keys onto neighbouring statements — the review file will be generated the same way.
-> The DECLARED/INSTALLED half of the reconciliation holds per tranche; the DISCOVERED/REVIEWED half
+> **Tranche 5:** the store's forty-six ids — 147 bound, every id the review named; each (function,
+> id) bracketed once at the smallest statement containing all of its exits (an `elif` climbs to its
+> chain root, an except-handler exit takes its `try`); the instrumenter's own defect found and fixed
+> (`ast` columns are byte offsets — a `§` before the insertion point had put a parenthesis one
+> character too far, into whitespace, in every landed case). What remains: the generated review
+> file, the declaration, the reconciliation flip, and the INV-7 harness with its fourth arm. The
+> DECLARED/INSTALLED half of the reconciliation holds per tranche; the DISCOVERED/REVIEWED half
 > lands with the review file in the last tranche.
 
 ## 1. Problem and motivation

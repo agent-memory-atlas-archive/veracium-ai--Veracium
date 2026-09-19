@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Added: the census binds the store's forty-six sites (specs/0042, tranche 5) — every enforcement
+  point the semantic review named is now a declared site (147 ids).** Migration's unsupported-base and
+  duplicate-chain refusals; revocation's unknown-state, ordinal-collision and integrity refusals and the
+  sweep's two row validators; the store-open refusals (shape, runtime, lock, version, legacy) and the
+  runtime gate; and sqlite's journal, read-visibility, immutable-field, flattening, contribution,
+  transaction-lock, consolidation, outcome-chain, supersession, correction-authorisation, import-plan,
+  confirmation, deletion, read-fence and embedding refusals. The runtime leg executes one declining
+  decision at every id. No behaviour changes.
 - **Added: the census binds thirty-three more sites (specs/0042, tranche 4)** — the scope policy's
   validator and revalidation, the absorption closure walk, the prune's cycle refusal, membership's
   and classification's refusals, the filter grammar and its application, the import linkage

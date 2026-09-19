@@ -35,6 +35,42 @@ from .edge_events import (append_event, mint_recorded_at, next_seq,  # noqa: F40
 from .schema_version import (SCHEMA_V1, SCHEMA_VERSION, SCHEMAS,  # noqa: F401
                              PostCommitAuditError,
                              StoreVersionError, open_versioned)
+from ..census import declare_site
+
+# specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
+# decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
+_SITE_JOURNAL_REASON = declare_site("store.journal.reason-not-dispositioned")
+_SITE_READ_OUTPUT_NOT_VISIBLE = declare_site("store.read.output-not-visible", declines=False)
+_SITE_READ_INPUT_CLAIMED = declare_site("store.read.input-claimed", declines=False)
+_SITE_UPSERT_IMMUTABLE = declare_site("store.upsert.immutable")
+_SITE_FLATTENING = declare_site("store.flattening")
+_SITE_CONSOLIDATION_CONTRIBUTION = declare_site("store.consolidation-contribution")
+_SITE_CONTRIBUTION = declare_site("store.contribution")
+_SITE_TXN_LOCKED = declare_site("store.txn.locked")
+_SITE_TXN_LOCKED_RETRY = declare_site("store.txn.locked-retry")
+_SITE_ABANDON_LIVE_LEASE = declare_site("store.consolidation.abandon-live-lease")
+_SITE_ADD_EPISODE = declare_site("store.add-episode")
+_SITE_OUTCOME_CONTEXT_REF = declare_site("store.outcome.context-ref")
+_SITE_SUPERSESSION_INTEGRITY = declare_site("store.supersession.integrity")
+_SITE_CORRECTION_AUTHORISATION = declare_site("store.correction.authorisation")
+_SITE_SUPERSESSION_PLAN = declare_site("store.supersession.plan")
+_SITE_IMPORT_PLAN = declare_site("store.import-plan")
+_SITE_CONFIRM_UNKNOWN_EDGE = declare_site("store.confirm.unknown-edge")
+_SITE_CONFIRM_NOT_ASSERTABLE = declare_site("store.confirm.not-assertable")
+_SITE_CONFIRM_REQUEST_DIGEST = declare_site("store.confirm.request-digest")
+_SITE_CONFIRM_CORRELATION = declare_site("store.confirm.correlation")
+_SITE_CONSOLIDATION_CONTENDED = declare_site("store.consolidation.contended")
+_SITE_DELETE_NOT_CURRENT = declare_site("store.consolidation.delete-not-current")
+_SITE_DELETE_EPISODE_OUTCOME = declare_site("store.delete-episode.outcome")
+_SITE_DELETE_EPISODE_RESERVED = declare_site("store.delete-episode.reserved")
+_SITE_JOURNAL_PRE_EPOCH = declare_site("store.journal.pre-epoch")
+_SITE_EDGES_READ_FENCE = declare_site("store.edges.read-fence")
+_SITE_EXPORT_NON_QUIESCENT = declare_site("store.export.non-quiescent", declines=NON_QUIESCENT)
+_SITE_RENEW_REFUSED = declare_site("store.consolidation.renew-refused")
+_SITE_TRANSITION = declare_site("store.consolidation.transition")
+_SITE_EMBEDDING_DELAYED_WRITER = declare_site("store.embedding.delayed-writer")
+_SITE_EMBEDDING_STALE_CONTENT = declare_site("store.embedding.stale-content")
+_SITE_WRITE_NOT_CURRENT = declare_site("store.consolidation.write-not-current")
 
 # The schema is DERIVED from the versioning registry — one declaration, which
 # is 0007 §4a-vi's "honest end state": there is no second copy to drift, and
@@ -178,13 +214,14 @@ class SqliteStore(Store):
             if self._conn.in_transaction:
                 yield
                 return
-            try:
-                self._conn.execute("BEGIN IMMEDIATE")
-            except sqlite3.OperationalError as e:
-                raise sqlite3.OperationalError(
-                    f"could not take the write lock for a journaled edge write "
-                    f"({e}) — refusing rather than allocating under a DEFERRED "
-                    f"schedule (specs/0029 §4a; 0007 §4c)") from e
+            with _SITE_TXN_LOCKED.consult():
+                try:
+                    self._conn.execute("BEGIN IMMEDIATE")
+                except sqlite3.OperationalError as e:
+                    raise _SITE_TXN_LOCKED.fire(sqlite3.OperationalError(
+                        f"could not take the write lock for a journaled edge write "
+                        f"({e}) — refusing rather than allocating under a DEFERRED "
+                        f"schedule (specs/0029 §4a; 0007 §4c)")) from e
             try:
                 yield
             except BaseException:
@@ -193,23 +230,24 @@ class SqliteStore(Store):
                 raise
             else:
                 if self._conn.in_transaction:
-                    try:
-                        self._conn.commit()
-                    except sqlite3.OperationalError as e:
-                        # specs/0029 v10 §4a, V-LOCK-REFUSAL-FORM: the COMMIT-time lock — a
-                        # reader's SHARED lock outliving our busy_timeout under the default
-                        # journal (0028 §5, measured 2026-09-07). SQLite has already rolled
-                        # the batch back; refuse in the SAME form as the BEGIN, naming the
-                        # site, same exception type (callers catching OperationalError are
-                        # unchanged), the bare text kept as the cause. The explicit rollback
-                        # is belt and braces for a state probed and not found.
-                        if self._conn.in_transaction:
-                            self._conn.rollback()
-                        raise sqlite3.OperationalError(
-                            f"could not COMMIT a journaled edge write ({e}) — the write lock "
-                            f"was lost at COMMIT after busy_timeout; no part of the batch is "
-                            f"applied and the connection is reusable (specs/0029 §4a "
-                            f"V-LOCK-REFUSAL-FORM; 0007 §4c)") from e
+                    with _SITE_TXN_LOCKED_RETRY.consult():
+                        try:
+                            self._conn.commit()
+                        except sqlite3.OperationalError as e:
+                            # specs/0029 v10 §4a, V-LOCK-REFUSAL-FORM: the COMMIT-time lock — a
+                            # reader's SHARED lock outliving our busy_timeout under the default
+                            # journal (0028 §5, measured 2026-09-07). SQLite has already rolled
+                            # the batch back; refuse in the SAME form as the BEGIN, naming the
+                            # site, same exception type (callers catching OperationalError are
+                            # unchanged), the bare text kept as the cause. The explicit rollback
+                            # is belt and braces for a state probed and not found.
+                            if self._conn.in_transaction:
+                                self._conn.rollback()
+                            raise _SITE_TXN_LOCKED_RETRY.fire(sqlite3.OperationalError(
+                                f"could not COMMIT a journaled edge write ({e}) — the write lock "
+                                f"was lost at COMMIT after busy_timeout; no part of the batch is "
+                                f"applied and the connection is reusable (specs/0029 §4a "
+                                f"V-LOCK-REFUSAL-FORM; 0007 §4c)")) from e
 
     _SITE_KINDS = frozenset({"invalidated", "reinstated"})
 
@@ -244,10 +282,11 @@ class SqliteStore(Store):
         elif kind is None:
             kind = "mutated"
         if kind == "invalidated":
-            if reason not in DISPOSITIONED_REASONS:
-                raise ValueError(
-                    f"invalidation reason {reason!r} is not registered in "
-                    f"DISPOSITIONED_REASONS — the write is refused (specs/0029 V-KIND)")
+            with _SITE_JOURNAL_REASON.consult():
+                if reason not in DISPOSITIONED_REASONS:
+                    raise _SITE_JOURNAL_REASON.fire(ValueError(
+                        f"invalidation reason {reason!r} is not registered in "
+                        f"DISPOSITIONED_REASONS — the write is refused (specs/0029 V-KIND)"))
         else:
             reason = None
         alloc = self._txn_alloc
@@ -290,10 +329,11 @@ class SqliteStore(Store):
         epoch (V-EPOCH: a migrated store fabricates no pre-epoch knowledge)."""
         k = self._cutoff(until_txn)
         epoch = self.epoch_txn(user_id)
-        if k < epoch:
-            raise PreEpochQuery(
-                f"until_txn {k} precedes user {user_id!r}'s journaling epoch "
-                f"(txn {epoch}) — no state is known before it (specs/0029 §4e)")
+        with _SITE_JOURNAL_PRE_EPOCH.consult():
+            if k < epoch:
+                raise _SITE_JOURNAL_PRE_EPOCH.fire(PreEpochQuery(
+                    f"until_txn {k} precedes user {user_id!r}'s journaling epoch "
+                    f"(txn {epoch}) — no state is known before it (specs/0029 §4e)"))
         row = self._conn.execute(
             "SELECT edge_id, user_id, state, txn, seq, kind, recorded_at "
             "FROM edge_event WHERE user_id=? AND edge_id=? AND txn<=? "
@@ -417,94 +457,95 @@ class SqliteStore(Store):
         # an edge of the same id — only `confirm_edge` may — and may NOT change an edge's
         # `user_id`. Compared against the PERSISTED prior state, so a reconstructed edge
         # cannot slip the transition past the write path (C1, C10).
-        prior = self._conn.execute(
-            "SELECT user_id, json FROM edges WHERE id=?", (edge.id,)).fetchone()
-        if prior is not None:
-            if prior[0] != edge.user_id:
-                raise ValueError(
-                    f"cannot change edge {edge.id!r}'s user_id "
-                    f"({prior[0]!r} → {edge.user_id!r}) — ownership is not "
-                    f"transferable through the upsert path (specs/0008 §6d)")
-            prior_edge = Edge.model_validate_json(prior[1])
-            if prior_edge.needs_confirmation and not edge.needs_confirmation:
-                raise ValueError(
-                    f"cannot clear needs_confirmation (True→False) on "
-                    f"edge {edge.id!r} — only confirm_edge may (specs/0008 §6d, C1)")
-            # specs/0019 §3b/§4d (R2-4, U4): a STORED row's `ungrounded` never
-            # changes — the same-ID replace path refuses EVERY transition, in
-            # BOTH directions, with no exception (absorption inserts a NEW
-            # survivor whose flag is the N-ary OR computed pre-insert, so no
-            # discriminator is needed here). Compared against the PERSISTED
-            # prior state, the 0008 §6d guard shape.
-            if prior_edge.ungrounded != edge.ungrounded:
-                raise ValueError(
-                    f"cannot change ungrounded "
-                    f"({prior_edge.ungrounded} → {edge.ungrounded}) on edge "
-                    f"{edge.id!r} — a stored flag is immutable in both "
-                    f"directions (specs/0019 §4d, U4)")
-            # specs/0037 §3 (V-BASIS-IMMUTABLE, the 0019 U4 shape): a STORED
-            # basis and a STORED kind stamp never change on same-id replace,
-            # in either direction — a promotion (observed → stated) is the
-            # cap-only rule's mutant; a demotion or a stamp flip is a
-            # laundering route in the other direction. Refused, nothing
-            # written. Absorption inserts a NEW survivor carrying the
-            # whole-set minimum, so no discriminator is needed here.
-            if prior_edge.provenance.basis != edge.provenance.basis:
-                raise ValueError(
-                    f"cannot change basis ({prior_edge.provenance.basis!r} → "
-                    f"{edge.provenance.basis!r}) on edge {edge.id!r} — a stored "
-                    f"procedural marker is immutable in both directions "
-                    f"(specs/0037 §3, V-BASIS-IMMUTABLE)")
-            if prior_edge.provenance.record_kind != edge.provenance.record_kind:
-                raise ValueError(
-                    f"cannot change record_kind ({prior_edge.provenance.record_kind!r} → "
-                    f"{edge.provenance.record_kind!r}) on edge {edge.id!r} — a stored "
-                    f"procedural marker is immutable in both directions "
-                    f"(specs/0037 §3, V-BASIS-IMMUTABLE)")
-            # specs/0037 v23 (V-PRODUCER-IMMUTABLE): the producer stamp is a
-            # write-time fact; a same-id replace that names a different
-            # producer — or drops or adds one — is refused the same way.
-            if prior_edge.provenance.producer != edge.provenance.producer:
-                raise ValueError(
-                    f"cannot change producer ({prior_edge.provenance.producer!r} → "
-                    f"{edge.provenance.producer!r}) on edge {edge.id!r} — a stored "
-                    f"producer stamp is immutable in both directions "
-                    f"(specs/0037 v23 §4a-iii, V-PRODUCER-IMMUTABLE)")
-        # specs/0037 v19 (V-STAMP-INHERITED; research's red team, 2026-09-13): a
-        # SUCCESSOR of a procedural record must itself be procedural. correct()
-        # minted one without the stamp and the note rendered; correct() now refuses
-        # a procedural prior, and this choke point refuses any path that would
-        # drop the markers across a `supersedes` link — keyed on the PERSISTED
-        # predecessor's own stamp/basis, never on the registry.
-        if edge.supersedes:
-            pred = self._conn.execute("SELECT json FROM edges WHERE id=?", (edge.supersedes,)).fetchone()
-            if pred is not None:
-                pp = (json.loads(pred[0]).get("provenance") or {})
-                if (pp.get("record_kind") == "procedural" or pp.get("basis") is not None) and not (
-                        edge.provenance.record_kind == "procedural" or edge.provenance.basis is not None):
-                    raise ValueError(
-                        f"edge {edge.id!r} would supersede procedural record {edge.supersedes!r} without the "
-                        f"procedural markers — a successor of a procedural record is procedural "
-                        f"(specs/0037 §4a-iii, V-STAMP-INHERITED); nothing written")
-                # specs/0037 v23 (V-PRODUCER-INHERITED): the successor of a
-                # producer-stamped record carries the SAME producer — the path
-                # that minted the predecessor is a fact about the lineage, and
-                # a successor naming another producer (or none) would let the
-                # doctor's split drift across a supersession.
-                if pp.get("producer") is not None and edge.provenance.producer != pp.get("producer"):
-                    raise ValueError(
-                        f"edge {edge.id!r} would supersede procedural record {edge.supersedes!r} with a "
-                        f"different producer ({pp.get('producer')!r} → {edge.provenance.producer!r}) — "
-                        f"the producer stamp is inherited across a supersession "
-                        f"(specs/0037 v23 §4a-iii, V-PRODUCER-INHERITED); nothing written")
-        new_json = edge.model_dump_json()
-        self._conn.execute(
-            "INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
-            "VALUES(?,?,?,?,?,?,?,?)",
-            (edge.id, edge.user_id, edge.subject, edge.relation, edge.object,
-             int(edge.active), int(edge.quarantined), new_json))
-        self._journal_edge_write(edge.user_id, edge.id, new_json,
-                                 prior[1] if prior is not None else None)
+        with _SITE_UPSERT_IMMUTABLE.consult():
+            prior = self._conn.execute(
+                "SELECT user_id, json FROM edges WHERE id=?", (edge.id,)).fetchone()
+            if prior is not None:
+                if prior[0] != edge.user_id:
+                    raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                        f"cannot change edge {edge.id!r}'s user_id "
+                        f"({prior[0]!r} → {edge.user_id!r}) — ownership is not "
+                        f"transferable through the upsert path (specs/0008 §6d)"), "user-id")
+                prior_edge = Edge.model_validate_json(prior[1])
+                if prior_edge.needs_confirmation and not edge.needs_confirmation:
+                    raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                        f"cannot clear needs_confirmation (True→False) on "
+                        f"edge {edge.id!r} — only confirm_edge may (specs/0008 §6d, C1)"), "needs-confirmation")
+                # specs/0019 §3b/§4d (R2-4, U4): a STORED row's `ungrounded` never
+                # changes — the same-ID replace path refuses EVERY transition, in
+                # BOTH directions, with no exception (absorption inserts a NEW
+                # survivor whose flag is the N-ary OR computed pre-insert, so no
+                # discriminator is needed here). Compared against the PERSISTED
+                # prior state, the 0008 §6d guard shape.
+                if prior_edge.ungrounded != edge.ungrounded:
+                    raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                        f"cannot change ungrounded "
+                        f"({prior_edge.ungrounded} → {edge.ungrounded}) on edge "
+                        f"{edge.id!r} — a stored flag is immutable in both "
+                        f"directions (specs/0019 §4d, U4)"), "ungrounded")
+                # specs/0037 §3 (V-BASIS-IMMUTABLE, the 0019 U4 shape): a STORED
+                # basis and a STORED kind stamp never change on same-id replace,
+                # in either direction — a promotion (observed → stated) is the
+                # cap-only rule's mutant; a demotion or a stamp flip is a
+                # laundering route in the other direction. Refused, nothing
+                # written. Absorption inserts a NEW survivor carrying the
+                # whole-set minimum, so no discriminator is needed here.
+                if prior_edge.provenance.basis != edge.provenance.basis:
+                    raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                        f"cannot change basis ({prior_edge.provenance.basis!r} → "
+                        f"{edge.provenance.basis!r}) on edge {edge.id!r} — a stored "
+                        f"procedural marker is immutable in both directions "
+                        f"(specs/0037 §3, V-BASIS-IMMUTABLE)"), "basis")
+                if prior_edge.provenance.record_kind != edge.provenance.record_kind:
+                    raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                        f"cannot change record_kind ({prior_edge.provenance.record_kind!r} → "
+                        f"{edge.provenance.record_kind!r}) on edge {edge.id!r} — a stored "
+                        f"procedural marker is immutable in both directions "
+                        f"(specs/0037 §3, V-BASIS-IMMUTABLE)"), "record-kind")
+                # specs/0037 v23 (V-PRODUCER-IMMUTABLE): the producer stamp is a
+                # write-time fact; a same-id replace that names a different
+                # producer — or drops or adds one — is refused the same way.
+                if prior_edge.provenance.producer != edge.provenance.producer:
+                    raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                        f"cannot change producer ({prior_edge.provenance.producer!r} → "
+                        f"{edge.provenance.producer!r}) on edge {edge.id!r} — a stored "
+                        f"producer stamp is immutable in both directions "
+                        f"(specs/0037 v23 §4a-iii, V-PRODUCER-IMMUTABLE)"), "producer")
+            # specs/0037 v19 (V-STAMP-INHERITED; research's red team, 2026-09-13): a
+            # SUCCESSOR of a procedural record must itself be procedural. correct()
+            # minted one without the stamp and the note rendered; correct() now refuses
+            # a procedural prior, and this choke point refuses any path that would
+            # drop the markers across a `supersedes` link — keyed on the PERSISTED
+            # predecessor's own stamp/basis, never on the registry.
+            if edge.supersedes:
+                pred = self._conn.execute("SELECT json FROM edges WHERE id=?", (edge.supersedes,)).fetchone()
+                if pred is not None:
+                    pp = (json.loads(pred[0]).get("provenance") or {})
+                    if (pp.get("record_kind") == "procedural" or pp.get("basis") is not None) and not (
+                            edge.provenance.record_kind == "procedural" or edge.provenance.basis is not None):
+                        raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                            f"edge {edge.id!r} would supersede procedural record {edge.supersedes!r} without the "
+                            f"procedural markers — a successor of a procedural record is procedural "
+                            f"(specs/0037 §4a-iii, V-STAMP-INHERITED); nothing written"), "supersedes-procedural")
+                    # specs/0037 v23 (V-PRODUCER-INHERITED): the successor of a
+                    # producer-stamped record carries the SAME producer — the path
+                    # that minted the predecessor is a fact about the lineage, and
+                    # a successor naming another producer (or none) would let the
+                    # doctor's split drift across a supersession.
+                    if pp.get("producer") is not None and edge.provenance.producer != pp.get("producer"):
+                        raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                            f"edge {edge.id!r} would supersede procedural record {edge.supersedes!r} with a "
+                            f"different producer ({pp.get('producer')!r} → {edge.provenance.producer!r}) — "
+                            f"the producer stamp is inherited across a supersession "
+                            f"(specs/0037 v23 §4a-iii, V-PRODUCER-INHERITED); nothing written"), "supersedes-producer")
+            new_json = edge.model_dump_json()
+            self._conn.execute(
+                "INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                (edge.id, edge.user_id, edge.subject, edge.relation, edge.object,
+                 int(edge.active), int(edge.quarantined), new_json))
+            self._journal_edge_write(edge.user_id, edge.id, new_json,
+                                     prior[1] if prior is not None else None)
 
     def add_edge(self, edge: Edge) -> None:
         with self._lock, self._write_txn():
@@ -527,15 +568,17 @@ class SqliteStore(Store):
             row = self._conn.execute(
                 "SELECT json FROM edges WHERE id=? AND user_id=?",
                 (edge_id, user_id)).fetchone()
-            if row is None:
-                raise KeyError(
-                    f"edge {edge_id!r} not found for user {user_id!r}")
+            with _SITE_CONFIRM_UNKNOWN_EDGE.consult():
+                if row is None:
+                    raise _SITE_CONFIRM_UNKNOWN_EDGE.fire(KeyError(
+                        f"edge {edge_id!r} not found for user {user_id!r}"))
             edge = Edge.model_validate_json(row[0])
-            if not edge.assertable:
-                raise ValueError(
-                    f"edge {edge_id!r} is not assertable (quarantined/use_only/"
-                    f"inactive) — a user affirming a claim is new evidence: ingest "
-                    f"it via remember(author=USER) instead")
+            with _SITE_CONFIRM_NOT_ASSERTABLE.consult():
+                if not edge.assertable:
+                    raise _SITE_CONFIRM_NOT_ASSERTABLE.fire(ValueError(
+                        f"edge {edge_id!r} is not assertable (quarantined/use_only/"
+                        f"inactive) — a user affirming a claim is new evidence: ingest "
+                        f"it via remember(author=USER) instead"))
             # Idempotency, checked BEFORE any mutation: a prior confirmation under
             # this tenant-scoped correlation id is a replay if the canonical request
             # matches, an integrity conflict otherwise (specs/0008 §6c).
@@ -543,10 +586,11 @@ class SqliteStore(Store):
                 f"SELECT {_COLS} FROM confirmations WHERE user_id=? AND "
                 f"correlation_id=?", (user_id, correlation_id)).fetchone()
             if prior is not None:
-                if prior[7] != request_digest:
-                    raise ValueError(
-                        f"correlation_id {correlation_id!r} was already used for a "
-                        f"DIFFERENT request — integrity conflict (specs/0008 §6c)")
+                with _SITE_CONFIRM_REQUEST_DIGEST.consult():
+                    if prior[7] != request_digest:
+                        raise _SITE_CONFIRM_REQUEST_DIGEST.fire(ValueError(
+                            f"correlation_id {correlation_id!r} was already used for a "
+                            f"DIFFERENT request — integrity conflict (specs/0008 §6c)"))
                 out = self._confirmation_from_row(prior)
                 return out.model_copy(update={"replayed": True})
             edge.needs_confirmation = False
@@ -596,9 +640,10 @@ class SqliteStore(Store):
                 other = self._conn.execute(
                     f"SELECT {_COLS} FROM confirmations WHERE user_id=? AND "
                     f"correlation_id=?", (user_id, correlation_id)).fetchone()
-                if other is None or other[7] != request_digest:
-                    raise ValueError(
-                        f"correlation_id {correlation_id!r} conflict (specs/0008 §6c)")
+                with _SITE_CONFIRM_CORRELATION.consult():
+                    if other is None or other[7] != request_digest:
+                        raise _SITE_CONFIRM_CORRELATION.fire(ValueError(
+                            f"correlation_id {correlation_id!r} conflict (specs/0008 §6c)"))
                 return self._confirmation_from_row(other).model_copy(
                     update={"replayed": True})
             except BaseException:
@@ -771,18 +816,19 @@ class SqliteStore(Store):
 
     def edges(self, user_id, *, active_only=True, subject=None, relation=None,
               include_quarantined=True) -> list[Edge]:
-        q = "SELECT json FROM edges WHERE user_id=?"
-        args: list = [user_id]
-        if active_only:
-            q += " AND active=1"
-        if subject is not None:
-            q += " AND subject=?"; args.append(subject)
-        if relation is not None:
-            q += " AND relation=?"; args.append(relation)
-        if not include_quarantined:
-            q += " AND quarantined=0"
-        rows = self._conn.execute(q, args).fetchall()
-        return [Edge.model_validate_json(r[0]) for r in rows]
+        with _SITE_EDGES_READ_FENCE.consult():
+            q = "SELECT json FROM edges WHERE user_id=?"
+            args: list = [user_id]
+            if active_only:
+                q += " AND active=1"
+            if subject is not None:
+                q += " AND subject=?"; args.append(subject)
+            if relation is not None:
+                q += " AND relation=?"; args.append(relation)
+            if not include_quarantined:
+                q += " AND quarantined=0"
+            rows = self._conn.execute(q, args).fetchall()
+            return _SITE_EDGES_READ_FENCE.fire([Edge.model_validate_json(r[0]) for r in rows], "fence-applied", declined=not include_quarantined)
 
     # -- supersession (specs/0003) ----------------------------------------
     @staticmethod
@@ -933,247 +979,250 @@ class SqliteStore(Store):
         from .base import CorrectionAuthorisationError
         inc = plan.incoming_edge
         user_id = inc.user_id
-        with self._lock, self._write_txn():
-            # 1. receipt check — PRECEDES the CAS check, so a committed op REPLAYS rather
-            #    than tripping PlanStale on its own now-stale expected_state (§4f, r9 B3),
-            #    AND precedes EVERY digest computation: the 0016 D2 era boundary fires
-            #    ON SIGHT of a stored version < 4 — no digest is computed (not even the
-            #    plan's own request digest), no comparison branch exists; the
-            #    exploding-sentinel regressions pin exactly this ordering.
-            #    PHASE 2 is REQUEST-FIRST where request identity exists on both sides
-            #    (R8-1): matching raw_request → replay the PERSISTED effects, the
-            #    submitted plan's re-planned outcome DISCARDED unconsulted (the
-            #    concurrent-preflight loser lands here); differing → conflict. The
-            #    outcome digest governs ONLY receipts/plans WITHOUT request identity —
-            #    always the v4 projection: the era gate admits no other stored version.
-            row = self._conn.execute(
-                "SELECT logical_request_digest, request_digest, response, "
-                "outcome_digest_version, request_digest_domain "
-                "FROM supersession_operations "
-                "WHERE user_id=? AND operation_id=?", (user_id, plan.operation_id)).fetchone()
-            if row is not None:
-                stored_outcome, stored_rd, stored_resp, stored_ver, stored_dom = row
-                self.validate_receipt_state(stored_rd, stored_ver, stored_resp)
-                if stored_ver < 4:
-                    raise ReceiptSchemaBoundaryError(
-                        f"operation_id {plan.operation_id!r} for user {user_id!r} "
-                        f"committed under a pre-D2 receipt era (outcome_digest_"
-                        f"version {stored_ver}): its digest basis included the "
-                        f"deleted source_type field, so no historical projection "
-                        f"is computable and this resubmission is not replay-"
-                        f"verifiable across the removal — refused on sight, no "
-                        f"digest computed, a legitimate retry indistinguishable "
-                        f"from a different request (specs/0016 D2; 0003 §4f as "
-                        f"amended)")
-            # specs/0014 §4b: a present snapshot is verified against the plan under
-            # the exhaustive field partition BEFORE any use (forged/malformed →
-            # abort); the store derives the request digest ITSELF (R7-1).
-            plan_rd = None
-            if plan.raw_request is not None:
-                try:
-                    verify_snapshot_against_plan(plan.raw_request, plan)
-                except ValueError as e:
-                    raise SupersessionIntegrityError(str(e)) from e
-                plan_rd = request_digest_under(CURRENT_DIGEST_DOMAIN,
-                                               plan.raw_request)
-            digest = self._outcome_digest_v2(plan)
-            if row is not None:
-                # specs/0025 §4b-v: the cross-era matrix at the STORE site —
-                # the stored domain selects the comparison (NULL = migrated →
-                # dual-domain; a valid domain → that domain only; the
-                # fail-closed cells raise from the matrix). The pre-D2
-                # boundary above PRECEDES this — no digest logic for < 4.
-                matches = receipt_request_matches(
-                    stored_rd, stored_dom,
-                    plan.raw_request if plan.raw_request is not None else None)
-                if matches is not None:
-                    if matches:
-                        return self._replay_from_effects(stored_resp)
-                    raise SupersessionIntegrityError(
-                        f"operation_id {plan.operation_id!r} already committed a "
-                        f"DIFFERENT request for user {user_id!r} (specs/0014 §4b "
-                        f"phase 2, request-first)")
-                if stored_outcome != digest:
-                    raise SupersessionIntegrityError(
-                        f"operation_id {plan.operation_id!r} already committed a DIFFERENT "
-                        f"logical operation for user {user_id!r} — a reused id is a caller "
-                        f"integrity bug, not a race (specs/0003 §4f; projection "
-                        f"v{stored_ver})")
-                # every version-4 receipt persists its effects (validated above)
-                return self._replay_from_effects(stored_resp)
-            # 2/3. CAS: revalidate the COMPLETE scope fingerprint inside the txn; stale →
-            #      PlanStale, no write, receipt NOT consumed (the caller retries).
-            scope = self.edges(user_id, subject=inc.subject, relation=inc.relation,
-                               active_only=True, include_quarantined=True)
-            if scope_fingerprint(scope) != plan.expected_state:
-                return PLAN_STALE
-            # 4. apply all-or-nothing (one transaction). ANY failure mid-apply rolls the
-            #    WHOLE plan back — no incoming edge, no prior mutations, no refusal rows,
-            #    no receipt — so there is never a durable partial state (§4f failure rule).
-            # specs/0011 §4e (E5): in-transaction verification of the
-            # correction binding — the 0014 snapshot-verification shape,
-            # FAIL CLOSED in both directions. Every `corrected` retirement
-            # requires an authorisation whose five bound elements match
-            # what THIS plan actually does; a dangling authorisation (no
-            # corrected retirement to bind) is refused too. The replay
-            # branch above returns earlier by design: a receipt exists
-            # only for a commit that already passed this check.
-            _corrected = [eid for eid, _at, r in plan.prior_invalidations
-                          if r == "corrected"]
-            if _corrected and authorisation is None:
-                raise CorrectionAuthorisationError(
-                    f"plan {plan.operation_id!r} retires "
-                    f"{sorted(_corrected)} as 'corrected' with no "
-                    f"CorrectionAuthorisation — corrections reach storage "
-                    f"only through the verified binding (specs/0011 §4e)")
-            if authorisation is not None:
-                if type(authorisation) is not CorrectionAuthorisation:
-                    raise CorrectionAuthorisationError(
-                        f"authorisation must be a CorrectionAuthorisation; "
-                        f"got {type(authorisation).__name__}")
-                if len(_corrected) != 1:
-                    raise CorrectionAuthorisationError(
-                        f"an authorisation binds exactly ONE 'corrected' "
-                        f"retirement; this plan carries {len(_corrected)}")
-                if authorisation.kind != "corrected":
-                    raise CorrectionAuthorisationError(
-                        f"authorisation.kind={authorisation.kind!r} does "
-                        f"not authorise a 'corrected' retirement")
-                if authorisation.prior_edge_id != _corrected[0]:
-                    raise CorrectionAuthorisationError(
-                        f"authorisation is bound to prior "
-                        f"{authorisation.prior_edge_id!r} but the plan "
-                        f"retires {_corrected[0]!r} — replay against a "
-                        f"different prior refused")
-                if authorisation.origin != self.local_origin():
-                    raise CorrectionAuthorisationError(
-                        "authorisation was minted for a different store "
-                        "origin — foreign or stale mint refused")
-                if (authorisation.replacement_digest
-                        != correction_digest(inc.object)):
-                    raise CorrectionAuthorisationError(
-                        "authorisation is bound to a different replacement "
-                        "value — rebinding refused")
-                if authorisation.principal != acting_principal:
-                    raise CorrectionAuthorisationError(
-                        f"authorisation was minted under principal "
-                        f"{authorisation.principal!r} but is being applied "
-                        f"as {acting_principal!r} — cross-principal replay "
-                        f"refused")
-            # specs/0014 §4b: EXACT SET EQUALITY between the plan's absorption
-            # drafts and its absorbed_duplicate invalidations (R5-1) — one draft
-            # per absorbed prior, no omissions, no duplicates, no extras. Checked
-            # and written BEFORE the contributor rows are invalidated, inside this
-            # same transaction (A7: rows atomic with the op).
-            absorbed_ids = [eid for eid, _at, r in plan.prior_invalidations
-                            if r == "absorbed_duplicate"]
-            draft_ids = [d.contributor_id for d in plan.contribution_drafts
-                         if d.site == "absorption"]
-            if (sorted(absorbed_ids) != sorted(set(absorbed_ids))
-                    or sorted(draft_ids) != sorted(set(draft_ids))
-                    or set(absorbed_ids) != set(draft_ids)):
-                raise SupersessionIntegrityError(
-                    f"absorption drafts {sorted(draft_ids)} != absorbed priors "
-                    f"{sorted(absorbed_ids)} — the draft set must equal the "
-                    f"absorbed_duplicate set exactly (specs/0014 §4b, R5-1)")
-            contributor_flags = [self._write_contribution(user_id, d, plan)
-                                 for d in plan.contribution_drafts]
-            # specs/0021 §4c — WRITE-TIME FLATTENING, in THIS transaction:
-            # the survivor's rows gain copies of every absorbed prior's
-            # TRANSITIVELY CLOSED set, so a post-0021 survivor's row set is
-            # its whole ancestry BY CONSTRUCTION (the A→B→C chain that
-            # defeated the single-level read cannot recur on rows we write).
-            self._write_absorption_flattening(user_id, plan)
-            # specs/0019 §4d / 0014 §2c as amended (U2b): the committed
-            # survivor's `ungrounded` must be EXACTLY the N-ary OR over
-            # {the raw incoming} ∪ {every absorbed contributor} —
-            # recomputed here from the plan's full contributor set against
-            # the AUTHORITATIVE rows just read. Any other flag difference
-            # aborts. Without a snapshot (phase-2 semantics) the raw
-            # incoming flag is unknowable; the laundering direction is
-            # still fully checkable: a flagged contributor forces a
-            # flagged survivor.
-            if any(contributor_flags) and inc.ungrounded is not True:
-                raise SupersessionIntegrityError(
-                    "a flagged contributor was absorbed but the survivor "
-                    "is unflagged — the N-ary OR never launders the "
-                    "signal (specs/0019 §4d; 0014 §2c as amended)")
-            if plan.raw_request is not None:
-                expected = (bool(plan.raw_request.get("ungrounded"))
-                            or any(contributor_flags))
-                if inc.ungrounded is not expected:
-                    raise SupersessionIntegrityError(
-                        f"survivor ungrounded={inc.ungrounded!r} is not "
-                        f"the N-ary OR of the raw submission and its "
-                        f"absorbed contributors (={expected!r}) — the "
-                        f"verifier accepts exactly that transform "
-                        f"(specs/0019; 0014 §2c as amended)")
-            for e in plan.prior_upserts:
-                self._upsert_edge_row(e)
-            for eid, at, reason in plan.prior_invalidations:
-                self._invalidate_edge_row(eid, at, reason)
-            if plan.insert_incoming:
-                self._upsert_edge_row(inc)
-            now = self._now().isoformat()
-            for d in plan.refusals:
-                # BIND the refusal: it may only reference the plan's incoming edge and
-                # an existing edge of THIS user (round-6 correction C) — a caller cannot
-                # forge a refusal against an edge this commit does not write or another
-                # tenant's.
-                if d.incoming_edge_id != inc.id:
-                    raise ValueError(
-                        "refusal.incoming_edge_id must equal the plan's incoming edge id")
-                prow = self._conn.execute(
-                    "SELECT user_id FROM edges WHERE id=?", (d.prior_edge_id,)).fetchone()
-                if prow is None or prow[0] != user_id:
-                    raise ValueError(
-                        "refusal.prior_edge_id must be an existing edge of this user")
-                self._conn.execute(
-                    "INSERT INTO supersession_refusals(refusal_id,user_id,prior_edge_id,"
-                    "incoming_edge_id,relation,prior_effective,incoming_effective,"
-                    "rule_version,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                    (f"ref-{uuid.uuid4().hex[:12]}", user_id, d.prior_edge_id, inc.id,
-                     d.relation, d.prior_effective, d.incoming_effective, RULE_VERSION, now))
-            # the durable receipt commits atomically with the effects (§4f
-            # idempotency; 0014 R9-1/R9-2/R10-1): the persisted EFFECT payload
-            # (result minus the runtime replayed flag), the store-computed
-            # request digest (NULL when no snapshot), and the projection
-            # version stamped EXPLICITLY — never relying on the DEFAULT.
-            result = SupersessionResult(
-                inserted_incoming=plan.insert_incoming,
-                invalidated=len(plan.prior_invalidations),
-                refused=len(plan.refusals))
-            resp_json = effect_payload(result)
-            # specs/0016 D2 (0019 rider A1): post-D2 writers stamp version
-            # 4 — the source_type-less snapshot era
-            self.validate_receipt_state(plan_rd, 4, resp_json)  # refused at write
-            self._conn.execute(
-                "INSERT INTO supersession_operations(user_id,operation_id,"
-                "logical_request_digest,status,request_digest,response,"
-                "outcome_digest_version,request_digest_domain) "
-                "VALUES(?,?,?,?,?,?,?,?)",
-                (user_id, plan.operation_id, digest, "applied",
-                 plan_rd, resp_json, 4,
-                 # specs/0025 §4b-v, the write rule: the domain is
-                 # stamped iff the receipt carries a digest — a NEW
-                 # digest-less receipt stores NULL/NULL (the writer
-                 # invariant, NEW WRITES ONLY).
-                 CURRENT_DIGEST_DOMAIN.decode() if plan_rd is not None
-                 else None))
-            self._bump(user_id)                   # a recall-bearing edge changed
-            # A live_refusal_contention transition — INTO it (this plan records a
-            # refusal) OR OUT of it (this plan retires an edge that a refusal row
-            # references) — is a derived-view invalidation event, symmetric per
-            # round-10 blocker 1. Drop the wiki cache in the SAME commit (§4c-ii,
-            # immediate not batched). The refusal rows still reference a retired
-            # member (retention is "while either edge exists"), so the resolution
-            # check reads them post-invalidation.
-            touches_contention = bool(plan.refusals) or any(
-                self._edge_in_refusal(user_id, eid)
-                for eid, _at, _reason in plan.prior_invalidations)
-            if touches_contention:
-                self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))
-            return result
+        with _SITE_SUPERSESSION_INTEGRITY.consult():
+            with _SITE_CORRECTION_AUTHORISATION.consult():
+                with _SITE_SUPERSESSION_PLAN.consult():
+                    with self._lock, self._write_txn():
+                        # 1. receipt check — PRECEDES the CAS check, so a committed op REPLAYS rather
+                        #    than tripping PlanStale on its own now-stale expected_state (§4f, r9 B3),
+                        #    AND precedes EVERY digest computation: the 0016 D2 era boundary fires
+                        #    ON SIGHT of a stored version < 4 — no digest is computed (not even the
+                        #    plan's own request digest), no comparison branch exists; the
+                        #    exploding-sentinel regressions pin exactly this ordering.
+                        #    PHASE 2 is REQUEST-FIRST where request identity exists on both sides
+                        #    (R8-1): matching raw_request → replay the PERSISTED effects, the
+                        #    submitted plan's re-planned outcome DISCARDED unconsulted (the
+                        #    concurrent-preflight loser lands here); differing → conflict. The
+                        #    outcome digest governs ONLY receipts/plans WITHOUT request identity —
+                        #    always the v4 projection: the era gate admits no other stored version.
+                        row = self._conn.execute(
+                            "SELECT logical_request_digest, request_digest, response, "
+                            "outcome_digest_version, request_digest_domain "
+                            "FROM supersession_operations "
+                            "WHERE user_id=? AND operation_id=?", (user_id, plan.operation_id)).fetchone()
+                        if row is not None:
+                            stored_outcome, stored_rd, stored_resp, stored_ver, stored_dom = row
+                            self.validate_receipt_state(stored_rd, stored_ver, stored_resp)
+                            if stored_ver < 4:
+                                raise _SITE_SUPERSESSION_INTEGRITY.fire(ReceiptSchemaBoundaryError(
+                                    f"operation_id {plan.operation_id!r} for user {user_id!r} "
+                                    f"committed under a pre-D2 receipt era (outcome_digest_"
+                                    f"version {stored_ver}): its digest basis included the "
+                                    f"deleted source_type field, so no historical projection "
+                                    f"is computable and this resubmission is not replay-"
+                                    f"verifiable across the removal — refused on sight, no "
+                                    f"digest computed, a legitimate retry indistinguishable "
+                                    f"from a different request (specs/0016 D2; 0003 §4f as "
+                                    f"amended)"), "receipt-era")
+                        # specs/0014 §4b: a present snapshot is verified against the plan under
+                        # the exhaustive field partition BEFORE any use (forged/malformed →
+                        # abort); the store derives the request digest ITSELF (R7-1).
+                        plan_rd = None
+                        if plan.raw_request is not None:
+                            try:
+                                verify_snapshot_against_plan(plan.raw_request, plan)
+                            except ValueError as e:
+                                raise _SITE_SUPERSESSION_INTEGRITY.fire(SupersessionIntegrityError(str(e)), "digest") from e
+                            plan_rd = request_digest_under(CURRENT_DIGEST_DOMAIN,
+                                                           plan.raw_request)
+                        digest = self._outcome_digest_v2(plan)
+                        if row is not None:
+                            # specs/0025 §4b-v: the cross-era matrix at the STORE site —
+                            # the stored domain selects the comparison (NULL = migrated →
+                            # dual-domain; a valid domain → that domain only; the
+                            # fail-closed cells raise from the matrix). The pre-D2
+                            # boundary above PRECEDES this — no digest logic for < 4.
+                            matches = receipt_request_matches(
+                                stored_rd, stored_dom,
+                                plan.raw_request if plan.raw_request is not None else None)
+                            if matches is not None:
+                                if matches:
+                                    return self._replay_from_effects(stored_resp)
+                                raise _SITE_SUPERSESSION_INTEGRITY.fire(SupersessionIntegrityError(
+                                    f"operation_id {plan.operation_id!r} already committed a "
+                                    f"DIFFERENT request for user {user_id!r} (specs/0014 §4b "
+                                    f"phase 2, request-first)"), "different-request")
+                            if stored_outcome != digest:
+                                raise _SITE_SUPERSESSION_INTEGRITY.fire(SupersessionIntegrityError(
+                                    f"operation_id {plan.operation_id!r} already committed a DIFFERENT "
+                                    f"logical operation for user {user_id!r} — a reused id is a caller "
+                                    f"integrity bug, not a race (specs/0003 §4f; projection "
+                                    f"v{stored_ver})"), "different-outcome")
+                            # every version-4 receipt persists its effects (validated above)
+                            return self._replay_from_effects(stored_resp)
+                        # 2/3. CAS: revalidate the COMPLETE scope fingerprint inside the txn; stale →
+                        #      PlanStale, no write, receipt NOT consumed (the caller retries).
+                        scope = self.edges(user_id, subject=inc.subject, relation=inc.relation,
+                                           active_only=True, include_quarantined=True)
+                        if scope_fingerprint(scope) != plan.expected_state:
+                            return PLAN_STALE
+                        # 4. apply all-or-nothing (one transaction). ANY failure mid-apply rolls the
+                        #    WHOLE plan back — no incoming edge, no prior mutations, no refusal rows,
+                        #    no receipt — so there is never a durable partial state (§4f failure rule).
+                        # specs/0011 §4e (E5): in-transaction verification of the
+                        # correction binding — the 0014 snapshot-verification shape,
+                        # FAIL CLOSED in both directions. Every `corrected` retirement
+                        # requires an authorisation whose five bound elements match
+                        # what THIS plan actually does; a dangling authorisation (no
+                        # corrected retirement to bind) is refused too. The replay
+                        # branch above returns earlier by design: a receipt exists
+                        # only for a commit that already passed this check.
+                        _corrected = [eid for eid, _at, r in plan.prior_invalidations
+                                      if r == "corrected"]
+                        if _corrected and authorisation is None:
+                            raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError(
+                                f"plan {plan.operation_id!r} retires "
+                                f"{sorted(_corrected)} as 'corrected' with no "
+                                f"CorrectionAuthorisation — corrections reach storage "
+                                f"only through the verified binding (specs/0011 §4e)"), "missing")
+                        if authorisation is not None:
+                            if type(authorisation) is not CorrectionAuthorisation:
+                                raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError(
+                                    f"authorisation must be a CorrectionAuthorisation; "
+                                    f"got {type(authorisation).__name__}"), "type")
+                            if len(_corrected) != 1:
+                                raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError(
+                                    f"an authorisation binds exactly ONE 'corrected' "
+                                    f"retirement; this plan carries {len(_corrected)}"), "cardinality")
+                            if authorisation.kind != "corrected":
+                                raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError(
+                                    f"authorisation.kind={authorisation.kind!r} does "
+                                    f"not authorise a 'corrected' retirement"), "kind")
+                            if authorisation.prior_edge_id != _corrected[0]:
+                                raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError(
+                                    f"authorisation is bound to prior "
+                                    f"{authorisation.prior_edge_id!r} but the plan "
+                                    f"retires {_corrected[0]!r} — replay against a "
+                                    f"different prior refused"), "prior")
+                            if authorisation.origin != self.local_origin():
+                                raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError(
+                                    "authorisation was minted for a different store "
+                                    "origin — foreign or stale mint refused"), "origin")
+                            if (authorisation.replacement_digest
+                                    != correction_digest(inc.object)):
+                                raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError(
+                                    "authorisation is bound to a different replacement "
+                                    "value — rebinding refused"), "replacement")
+                            if authorisation.principal != acting_principal:
+                                raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError(
+                                    f"authorisation was minted under principal "
+                                    f"{authorisation.principal!r} but is being applied "
+                                    f"as {acting_principal!r} — cross-principal replay "
+                                    f"refused"), "principal")
+                        # specs/0014 §4b: EXACT SET EQUALITY between the plan's absorption
+                        # drafts and its absorbed_duplicate invalidations (R5-1) — one draft
+                        # per absorbed prior, no omissions, no duplicates, no extras. Checked
+                        # and written BEFORE the contributor rows are invalidated, inside this
+                        # same transaction (A7: rows atomic with the op).
+                        absorbed_ids = [eid for eid, _at, r in plan.prior_invalidations
+                                        if r == "absorbed_duplicate"]
+                        draft_ids = [d.contributor_id for d in plan.contribution_drafts
+                                     if d.site == "absorption"]
+                        if (sorted(absorbed_ids) != sorted(set(absorbed_ids))
+                                or sorted(draft_ids) != sorted(set(draft_ids))
+                                or set(absorbed_ids) != set(draft_ids)):
+                            raise _SITE_SUPERSESSION_PLAN.fire(SupersessionIntegrityError(
+                                f"absorption drafts {sorted(draft_ids)} != absorbed priors "
+                                f"{sorted(absorbed_ids)} — the draft set must equal the "
+                                f"absorbed_duplicate set exactly (specs/0014 §4b, R5-1)"), "drafts")
+                        contributor_flags = [self._write_contribution(user_id, d, plan)
+                                             for d in plan.contribution_drafts]
+                        # specs/0021 §4c — WRITE-TIME FLATTENING, in THIS transaction:
+                        # the survivor's rows gain copies of every absorbed prior's
+                        # TRANSITIVELY CLOSED set, so a post-0021 survivor's row set is
+                        # its whole ancestry BY CONSTRUCTION (the A→B→C chain that
+                        # defeated the single-level read cannot recur on rows we write).
+                        self._write_absorption_flattening(user_id, plan)
+                        # specs/0019 §4d / 0014 §2c as amended (U2b): the committed
+                        # survivor's `ungrounded` must be EXACTLY the N-ary OR over
+                        # {the raw incoming} ∪ {every absorbed contributor} —
+                        # recomputed here from the plan's full contributor set against
+                        # the AUTHORITATIVE rows just read. Any other flag difference
+                        # aborts. Without a snapshot (phase-2 semantics) the raw
+                        # incoming flag is unknowable; the laundering direction is
+                        # still fully checkable: a flagged contributor forces a
+                        # flagged survivor.
+                        if any(contributor_flags) and inc.ungrounded is not True:
+                            raise _SITE_SUPERSESSION_PLAN.fire(SupersessionIntegrityError(
+                                "a flagged contributor was absorbed but the survivor "
+                                "is unflagged — the N-ary OR never launders the "
+                                "signal (specs/0019 §4d; 0014 §2c as amended)"), "flag-carrier")
+                        if plan.raw_request is not None:
+                            expected = (bool(plan.raw_request.get("ungrounded"))
+                                        or any(contributor_flags))
+                            if inc.ungrounded is not expected:
+                                raise _SITE_SUPERSESSION_PLAN.fire(SupersessionIntegrityError(
+                                    f"survivor ungrounded={inc.ungrounded!r} is not "
+                                    f"the N-ary OR of the raw submission and its "
+                                    f"absorbed contributors (={expected!r}) — the "
+                                    f"verifier accepts exactly that transform "
+                                    f"(specs/0019; 0014 §2c as amended)"), "ungrounded")
+                        for e in plan.prior_upserts:
+                            self._upsert_edge_row(e)
+                        for eid, at, reason in plan.prior_invalidations:
+                            self._invalidate_edge_row(eid, at, reason)
+                        if plan.insert_incoming:
+                            self._upsert_edge_row(inc)
+                        now = self._now().isoformat()
+                        for d in plan.refusals:
+                            # BIND the refusal: it may only reference the plan's incoming edge and
+                            # an existing edge of THIS user (round-6 correction C) — a caller cannot
+                            # forge a refusal against an edge this commit does not write or another
+                            # tenant's.
+                            if d.incoming_edge_id != inc.id:
+                                raise _SITE_SUPERSESSION_PLAN.fire(ValueError(
+                                    "refusal.incoming_edge_id must equal the plan's incoming edge id"), "refusal-incoming")
+                            prow = self._conn.execute(
+                                "SELECT user_id FROM edges WHERE id=?", (d.prior_edge_id,)).fetchone()
+                            if prow is None or prow[0] != user_id:
+                                raise _SITE_SUPERSESSION_PLAN.fire(ValueError(
+                                    "refusal.prior_edge_id must be an existing edge of this user"), "refusal-prior")
+                            self._conn.execute(
+                                "INSERT INTO supersession_refusals(refusal_id,user_id,prior_edge_id,"
+                                "incoming_edge_id,relation,prior_effective,incoming_effective,"
+                                "rule_version,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                                (f"ref-{uuid.uuid4().hex[:12]}", user_id, d.prior_edge_id, inc.id,
+                                 d.relation, d.prior_effective, d.incoming_effective, RULE_VERSION, now))
+                        # the durable receipt commits atomically with the effects (§4f
+                        # idempotency; 0014 R9-1/R9-2/R10-1): the persisted EFFECT payload
+                        # (result minus the runtime replayed flag), the store-computed
+                        # request digest (NULL when no snapshot), and the projection
+                        # version stamped EXPLICITLY — never relying on the DEFAULT.
+                        result = SupersessionResult(
+                            inserted_incoming=plan.insert_incoming,
+                            invalidated=len(plan.prior_invalidations),
+                            refused=len(plan.refusals))
+                        resp_json = effect_payload(result)
+                        # specs/0016 D2 (0019 rider A1): post-D2 writers stamp version
+                        # 4 — the source_type-less snapshot era
+                        self.validate_receipt_state(plan_rd, 4, resp_json)  # refused at write
+                        self._conn.execute(
+                            "INSERT INTO supersession_operations(user_id,operation_id,"
+                            "logical_request_digest,status,request_digest,response,"
+                            "outcome_digest_version,request_digest_domain) "
+                            "VALUES(?,?,?,?,?,?,?,?)",
+                            (user_id, plan.operation_id, digest, "applied",
+                             plan_rd, resp_json, 4,
+                             # specs/0025 §4b-v, the write rule: the domain is
+                             # stamped iff the receipt carries a digest — a NEW
+                             # digest-less receipt stores NULL/NULL (the writer
+                             # invariant, NEW WRITES ONLY).
+                             CURRENT_DIGEST_DOMAIN.decode() if plan_rd is not None
+                             else None))
+                        self._bump(user_id)                   # a recall-bearing edge changed
+                        # A live_refusal_contention transition — INTO it (this plan records a
+                        # refusal) OR OUT of it (this plan retires an edge that a refusal row
+                        # references) — is a derived-view invalidation event, symmetric per
+                        # round-10 blocker 1. Drop the wiki cache in the SAME commit (§4c-ii,
+                        # immediate not batched). The refusal rows still reference a retired
+                        # member (retention is "while either edge exists"), so the resolution
+                        # check reads them post-invalidation.
+                        touches_contention = bool(plan.refusals) or any(
+                            self._edge_in_refusal(user_id, eid)
+                            for eid, _at, _reason in plan.prior_invalidations)
+                        if touches_contention:
+                            self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))
+                        return result
 
     def refusals(self, user_id: str) -> list[SupersessionRefusal]:
         rows = self._conn.execute(
@@ -1192,63 +1241,64 @@ class SqliteStore(Store):
         draft (R2-1), inside the consuming transaction, BEFORE the contributor
         is invalidated. Everything is read from authoritative rows; the closed
         §4a schema is validated as a self-check (a failure aborts the op, A7)."""
-        from ..contribution import (canonical_payload, evidence_ref_digest,
-                                    validate_payload)
-        from ..source_identity import resolve_origin, source_identity_digest
-        if draft.site != "absorption":
-            raise SupersessionIntegrityError(
-                f"site {draft.site!r} cannot appear on the supersession path — "
-                f"consolidation rows are store-derived at the cutover (0014 §4b)")
-        if plan.absorption_pre_image is None:
-            raise SupersessionIntegrityError(
-                "an absorption draft requires the plan's absorption_pre_image "
-                "(specs/0014 §4b R3-1)")
-        row = self._conn.execute(
-            "SELECT json FROM edges WHERE id=?", (draft.contributor_id,)).fetchone()
-        if row is None:
-            raise SupersessionIntegrityError(
-                f"draft contributor {draft.contributor_id!r} does not resolve to a "
-                f"row this transaction is consuming (0014 §4b)")
-        contributor = Edge.model_validate_json(row[0])
-        if contributor.user_id != user_id:
-            raise SupersessionIntegrityError(
-                "draft contributor belongs to another tenant (0014 §4b)")
-        local = self.local_origin()
-        ident = source_identity_digest(
-            resolve_origin(contributor.provenance.origin, local),
-            contributor.provenance.source_id)
-        ev = evidence_ref_digest(
-            resolve_origin(contributor.provenance.origin, local),
-            contributor.provenance.evidence_ref)
-        from ..contribution import json_datetime
-        side = {
-            "observed_at": json_datetime(contributor.provenance.observed_at),
-            "confidence": contributor.provenance.confidence,
-            "valid_from": json_datetime(contributor.valid_from),
-            "disclosure": contributor.provenance.disclosure.value,
-        }
-        if contributor.provenance.derived_from is not None:
-            side["derived_from"] = contributor.provenance.derived_from.value
-        payload = {"base": dict(plan.absorption_pre_image), "contributor": side}
-        validate_payload("absorption", payload)
-        # 0021 §7b (the 0014 amendment, clause 3) / the 0019 rider: the TYPED
-        # CONTRIBUTOR LINK — persisted on every new native absorption row from
-        # the fields the shipped draft ALREADY carries (draft `contributor_id`
-        # -> column `contributor_ref`); legacy rows stay NULL. The accepted
-        # {base, contributor} payload above is NOT amended.
-        self._conn.execute(
-            "INSERT INTO contribution_ledger(id,user_id,survivor_type,survivor_id,"
-            "site,identity_digest,evidence_ref_digest,payload,op_key,created_at,"
-            "contributor_type,contributor_ref) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-            (f"contrib-{uuid.uuid4().hex[:12]}", user_id, draft.survivor_type,
-             draft.survivor_id, "absorption", ident, ev,
-             canonical_payload(payload), None, self._now().isoformat(),
-             draft.contributor_type, draft.contributor_id))
-        # specs/0019: the contributor's authoritative flag feeds the caller's
-        # N-ary OR verification (U2b) — read from the row this transaction is
-        # consuming, never from the draft.
-        return contributor.ungrounded
+        with _SITE_CONTRIBUTION.consult():
+            from ..contribution import (canonical_payload, evidence_ref_digest,
+                                        validate_payload)
+            from ..source_identity import resolve_origin, source_identity_digest
+            if draft.site != "absorption":
+                raise _SITE_CONTRIBUTION.fire(SupersessionIntegrityError(
+                    f"site {draft.site!r} cannot appear on the supersession path — "
+                    f"consolidation rows are store-derived at the cutover (0014 §4b)"), "site")
+            if plan.absorption_pre_image is None:
+                raise _SITE_CONTRIBUTION.fire(SupersessionIntegrityError(
+                    "an absorption draft requires the plan's absorption_pre_image "
+                    "(specs/0014 §4b R3-1)"), "no-pre-image")
+            row = self._conn.execute(
+                "SELECT json FROM edges WHERE id=?", (draft.contributor_id,)).fetchone()
+            if row is None:
+                raise _SITE_CONTRIBUTION.fire(SupersessionIntegrityError(
+                    f"draft contributor {draft.contributor_id!r} does not resolve to a "
+                    f"row this transaction is consuming (0014 §4b)"), "contributor-unresolvable")
+            contributor = Edge.model_validate_json(row[0])
+            if contributor.user_id != user_id:
+                raise _SITE_CONTRIBUTION.fire(SupersessionIntegrityError(
+                    "draft contributor belongs to another tenant (0014 §4b)"), "other-tenant")
+            local = self.local_origin()
+            ident = source_identity_digest(
+                resolve_origin(contributor.provenance.origin, local),
+                contributor.provenance.source_id)
+            ev = evidence_ref_digest(
+                resolve_origin(contributor.provenance.origin, local),
+                contributor.provenance.evidence_ref)
+            from ..contribution import json_datetime
+            side = {
+                "observed_at": json_datetime(contributor.provenance.observed_at),
+                "confidence": contributor.provenance.confidence,
+                "valid_from": json_datetime(contributor.valid_from),
+                "disclosure": contributor.provenance.disclosure.value,
+            }
+            if contributor.provenance.derived_from is not None:
+                side["derived_from"] = contributor.provenance.derived_from.value
+            payload = {"base": dict(plan.absorption_pre_image), "contributor": side}
+            validate_payload("absorption", payload)
+            # 0021 §7b (the 0014 amendment, clause 3) / the 0019 rider: the TYPED
+            # CONTRIBUTOR LINK — persisted on every new native absorption row from
+            # the fields the shipped draft ALREADY carries (draft `contributor_id`
+            # -> column `contributor_ref`); legacy rows stay NULL. The accepted
+            # {base, contributor} payload above is NOT amended.
+            self._conn.execute(
+                "INSERT INTO contribution_ledger(id,user_id,survivor_type,survivor_id,"
+                "site,identity_digest,evidence_ref_digest,payload,op_key,created_at,"
+                "contributor_type,contributor_ref) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                (f"contrib-{uuid.uuid4().hex[:12]}", user_id, draft.survivor_type,
+                 draft.survivor_id, "absorption", ident, ev,
+                 canonical_payload(payload), None, self._now().isoformat(),
+                 draft.contributor_type, draft.contributor_id))
+            # specs/0019: the contributor's authoritative flag feeds the caller's
+            # N-ary OR verification (U2b) — read from the row this transaction is
+            # consuming, never from the draft.
+            return contributor.ungrounded
 
     def _write_absorption_flattening(self, user_id: str, plan) -> None:
         """specs/0021 §4c / §7b SITE MATRIX row 2 — the NATIVE flattened
@@ -1279,77 +1329,78 @@ class SqliteStore(Store):
         new plan member would either change that projection for every existing
         receipt or ride along unbound. The store derives and validates; the
         caller references (0014 §4b R2-1)."""
-        drafts = [d for d in plan.contribution_drafts if d.site == "absorption"]
-        if not drafts:
-            return
-        from ..contribution import canonical_payload
-        from ..scope import (SITE_ATTRIBUTION, UNRESOLVED, ScopeError,
-                             construct_plan_row)
-        from ..scope_read import MembershipResolver
-        resolver = MembershipResolver(self, user_id)
-        survivor = plan.incoming_edge
-        own_evidence = resolver.evidence_of_unwritten(survivor)
-        if own_evidence == UNRESOLVED:
-            raise SupersessionIntegrityError(
-                f"survivor {survivor.id!r} presents UNRESOLVED membership "
-                f"evidence — specs/0021 §4c: it absorbs nothing (fail closed)")
-        now = self._now().isoformat()
-        written: set = set()
-        for d in drafts:
-            copies = resolver.flattening_plan(d.contributor_type,
-                                              d.contributor_id)
-            if copies is None:
-                raise SupersessionIntegrityError(
-                    f"absorbed prior {d.contributor_id!r} has NO transitively "
-                    f"closed absorption row set (UNRESOLVED) — specs/0021 §4c: "
-                    f"such a prior never absorbs or is absorbed, and a survivor "
-                    f"cannot flatten a set that does not close")
-            prow = self._conn.execute(
-                "SELECT json FROM edges WHERE id=?",
-                (d.contributor_id,)).fetchone()
-            if prow is None:
-                raise SupersessionIntegrityError(
-                    f"absorbed prior {d.contributor_id!r} does not resolve to "
-                    f"a row this transaction is consuming (0014 §4b)")
-            evidence = resolver.evidence(Edge.model_validate_json(prow[0]))
-            if evidence == UNRESOLVED or evidence != own_evidence:
-                raise SupersessionIntegrityError(
-                    f"absorbed prior {d.contributor_id!r} presents membership "
-                    f"evidence {evidence!r}, the survivor {own_evidence!r} — "
-                    f"specs/0021 §4c/W2: absorption never crosses a scope "
-                    f"boundary, and the atomic primitive refuses it "
-                    f"independently of the planner")
-            for c in copies:
-                ref = c["contributor_ref"]
-                if ref in written or ref == d.contributor_id:
-                    continue          # one row per contributor: the direct
-                                      # link is the native row, and a ref can
-                                      # have only one absorber (the closure
-                                      # refuses two), so this only ever
-                                      # collapses a re-reached DAG node
-                written.add(ref)
-                try:
-                    row = construct_plan_row(
-                        "native", plan.operation_id, d.survivor_id,
-                        site=SITE_ATTRIBUTION,
-                        identity_digest=c["identity_digest"],
-                        evidence_ref_digest=c["evidence_ref_digest"],
-                        contributor_ref=ref, payload={"flattened": True})
-                except ScopeError as e:
-                    raise SupersessionIntegrityError(
-                        f"the flattened attribution row for contributor "
-                        f"{ref!r} does not satisfy the 0009 §4c writer "
-                        f"contract: {e}") from e
-                self._conn.execute(
-                    "INSERT INTO contribution_ledger(id,user_id,survivor_type,"
-                    "survivor_id,site,identity_digest,evidence_ref_digest,"
-                    "payload,op_key,created_at,contributor_type,"
-                    "contributor_ref) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (f"contrib-{uuid.uuid4().hex[:12]}", user_id,
-                     d.survivor_type, d.survivor_id, SITE_ATTRIBUTION,
-                     row["identity_digest"], row["evidence_ref_digest"],
-                     canonical_payload(row["payload"]), row["op_key"], now,
-                     row["contributor_type"], ref))
+        with _SITE_FLATTENING.consult():
+            drafts = [d for d in plan.contribution_drafts if d.site == "absorption"]
+            if not drafts:
+                return
+            from ..contribution import canonical_payload
+            from ..scope import (SITE_ATTRIBUTION, UNRESOLVED, ScopeError,
+                                 construct_plan_row)
+            from ..scope_read import MembershipResolver
+            resolver = MembershipResolver(self, user_id)
+            survivor = plan.incoming_edge
+            own_evidence = resolver.evidence_of_unwritten(survivor)
+            if own_evidence == UNRESOLVED:
+                raise _SITE_FLATTENING.fire(SupersessionIntegrityError(
+                    f"survivor {survivor.id!r} presents UNRESOLVED membership "
+                    f"evidence — specs/0021 §4c: it absorbs nothing (fail closed)"), "survivor-unresolved")
+            now = self._now().isoformat()
+            written: set = set()
+            for d in drafts:
+                copies = resolver.flattening_plan(d.contributor_type,
+                                                  d.contributor_id)
+                if copies is None:
+                    raise _SITE_FLATTENING.fire(SupersessionIntegrityError(
+                        f"absorbed prior {d.contributor_id!r} has NO transitively "
+                        f"closed absorption row set (UNRESOLVED) — specs/0021 §4c: "
+                        f"such a prior never absorbs or is absorbed, and a survivor "
+                        f"cannot flatten a set that does not close"), "no-closure")
+                prow = self._conn.execute(
+                    "SELECT json FROM edges WHERE id=?",
+                    (d.contributor_id,)).fetchone()
+                if prow is None:
+                    raise _SITE_FLATTENING.fire(SupersessionIntegrityError(
+                        f"absorbed prior {d.contributor_id!r} does not resolve to "
+                        f"a row this transaction is consuming (0014 §4b)"), "prior-unresolvable")
+                evidence = resolver.evidence(Edge.model_validate_json(prow[0]))
+                if evidence == UNRESOLVED or evidence != own_evidence:
+                    raise _SITE_FLATTENING.fire(SupersessionIntegrityError(
+                        f"absorbed prior {d.contributor_id!r} presents membership "
+                        f"evidence {evidence!r}, the survivor {own_evidence!r} — "
+                        f"specs/0021 §4c/W2: absorption never crosses a scope "
+                        f"boundary, and the atomic primitive refuses it "
+                        f"independently of the planner"), "membership-differs")
+                for c in copies:
+                    ref = c["contributor_ref"]
+                    if ref in written or ref == d.contributor_id:
+                        continue          # one row per contributor: the direct
+                                          # link is the native row, and a ref can
+                                          # have only one absorber (the closure
+                                          # refuses two), so this only ever
+                                          # collapses a re-reached DAG node
+                    written.add(ref)
+                    try:
+                        row = construct_plan_row(
+                            "native", plan.operation_id, d.survivor_id,
+                            site=SITE_ATTRIBUTION,
+                            identity_digest=c["identity_digest"],
+                            evidence_ref_digest=c["evidence_ref_digest"],
+                            contributor_ref=ref, payload={"flattened": True})
+                    except ScopeError as e:
+                        raise _SITE_FLATTENING.fire(SupersessionIntegrityError(
+                            f"the flattened attribution row for contributor "
+                            f"{ref!r} does not satisfy the 0009 §4c writer "
+                            f"contract: {e}"), "row-invalid") from e
+                    self._conn.execute(
+                        "INSERT INTO contribution_ledger(id,user_id,survivor_type,"
+                        "survivor_id,site,identity_digest,evidence_ref_digest,"
+                        "payload,op_key,created_at,contributor_type,"
+                        "contributor_ref) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (f"contrib-{uuid.uuid4().hex[:12]}", user_id,
+                         d.survivor_type, d.survivor_id, SITE_ATTRIBUTION,
+                         row["identity_digest"], row["evidence_ref_digest"],
+                         canonical_payload(row["payload"]), row["op_key"], now,
+                         row["contributor_type"], ref))
 
     def _write_consolidation_contributions(self, op) -> None:
         """specs/0014 §4b/§4c: the N×M rows at the OUTPUTS_DURABLE cutover —
@@ -1368,68 +1419,69 @@ class SqliteStore(Store):
         outputs = list(enumerate(bound))   # index over OUTPUTS only, write order
         local = self.local_origin()
         now = self._now().isoformat()
-        for _, out_ep in outputs:
-            idx = out_ep.consolidation_output_index
-            if idx is None:
-                raise SupersessionIntegrityError(
-                    f"output {out_ep.id!r} reached the cutover without a "
-                    f"store-assigned index (0014 §4c)")
-            for eid in op.claimed_ids:
-                row = self._conn.execute(
-                    "SELECT json FROM episodes WHERE id=? AND user_id=?",
-                    (eid, op.user_id)).fetchone()
-                if row is None:
-                    raise SupersessionIntegrityError(
-                        f"claimed input {eid!r} vanished before the cutover — the "
-                        f"N×M contribution set cannot be complete (0014 §4b/A7)")
-                inp = Episode.model_validate_json(row[0])
-                ident = source_identity_digest(
-                    resolve_origin(inp.provenance.origin, local),
-                    inp.provenance.source_id)
-                ev = evidence_ref_digest(
-                    resolve_origin(inp.provenance.origin, local),
-                    inp.provenance.evidence_ref)
-                from ..contribution import json_datetime
-                side = {
-                    "observed_at": json_datetime(inp.provenance.observed_at),
-                    "confidence": inp.provenance.confidence,
-                    "disclosure": inp.provenance.disclosure.value,
-                    "author_of_evidence": inp.provenance.author_of_evidence.value,
-                    "date": inp.date,
-                }
-                if inp.provenance.derived_from is not None:
-                    side["derived_from"] = inp.provenance.derived_from.value
-                payload = {"input": side, "output_index": idx}
-                validate_payload("consolidation", payload)
-                key = consolidation_op_key(op.operation_id, idx, "episode", eid)
-                canon = canonical_payload(payload)
-                existing = self._conn.execute(
-                    "SELECT user_id,survivor_type,survivor_id,site,identity_digest,"
-                    "evidence_ref_digest,payload FROM contribution_ledger "
-                    "WHERE op_key=?", (key,)).fetchone()
-                if existing is not None:
-                    # R3-3: a conflict VERIFIES, never ignores — append-only (A8)
-                    want = (op.user_id, "episode", out_ep.id, "consolidation",
-                            ident, ev, canon)
-                    if tuple(existing) != want:
-                        raise SupersessionIntegrityError(
-                            f"op_key {key!r} exists with DIFFERENT deterministic "
-                            f"fields — a mis-keyed second output would lose its "
-                            f"attribution invisibly (0014 §4a R3-3)")
-                    continue
-                # The contributor columns stay NULL here: the 0021 §7b typed link
-                # is scoped to the draft-carried plan/absorption sites, and the
-                # R3-3 verify above compares the deterministic fields of PRE-v8
-                # rows — a recovered op resuming across the v7→v8 migration must
-                # keep matching its own legacy rows (NULL) field-for-field.
-                self._conn.execute(
-                    "INSERT INTO contribution_ledger(id,user_id,survivor_type,"
-                    "survivor_id,site,identity_digest,evidence_ref_digest,payload,"
-                    "op_key,created_at,contributor_type,contributor_ref) "
-                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (f"contrib-{uuid.uuid4().hex[:12]}", op.user_id, "episode",
-                     out_ep.id, "consolidation", ident, ev, canon, key, now,
-                     None, None))
+        with _SITE_CONSOLIDATION_CONTRIBUTION.consult():
+            for _, out_ep in outputs:
+                idx = out_ep.consolidation_output_index
+                if idx is None:
+                    raise _SITE_CONSOLIDATION_CONTRIBUTION.fire(SupersessionIntegrityError(
+                        f"output {out_ep.id!r} reached the cutover without a "
+                        f"store-assigned index (0014 §4c)"), "no-index")
+                for eid in op.claimed_ids:
+                    row = self._conn.execute(
+                        "SELECT json FROM episodes WHERE id=? AND user_id=?",
+                        (eid, op.user_id)).fetchone()
+                    if row is None:
+                        raise _SITE_CONSOLIDATION_CONTRIBUTION.fire(SupersessionIntegrityError(
+                            f"claimed input {eid!r} vanished before the cutover — the "
+                            f"N×M contribution set cannot be complete (0014 §4b/A7)"), "input-vanished")
+                    inp = Episode.model_validate_json(row[0])
+                    ident = source_identity_digest(
+                        resolve_origin(inp.provenance.origin, local),
+                        inp.provenance.source_id)
+                    ev = evidence_ref_digest(
+                        resolve_origin(inp.provenance.origin, local),
+                        inp.provenance.evidence_ref)
+                    from ..contribution import json_datetime
+                    side = {
+                        "observed_at": json_datetime(inp.provenance.observed_at),
+                        "confidence": inp.provenance.confidence,
+                        "disclosure": inp.provenance.disclosure.value,
+                        "author_of_evidence": inp.provenance.author_of_evidence.value,
+                        "date": inp.date,
+                    }
+                    if inp.provenance.derived_from is not None:
+                        side["derived_from"] = inp.provenance.derived_from.value
+                    payload = {"input": side, "output_index": idx}
+                    validate_payload("consolidation", payload)
+                    key = consolidation_op_key(op.operation_id, idx, "episode", eid)
+                    canon = canonical_payload(payload)
+                    existing = self._conn.execute(
+                        "SELECT user_id,survivor_type,survivor_id,site,identity_digest,"
+                        "evidence_ref_digest,payload FROM contribution_ledger "
+                        "WHERE op_key=?", (key,)).fetchone()
+                    if existing is not None:
+                        # R3-3: a conflict VERIFIES, never ignores — append-only (A8)
+                        want = (op.user_id, "episode", out_ep.id, "consolidation",
+                                ident, ev, canon)
+                        if tuple(existing) != want:
+                            raise _SITE_CONSOLIDATION_CONTRIBUTION.fire(SupersessionIntegrityError(
+                                f"op_key {key!r} exists with DIFFERENT deterministic "
+                                f"fields — a mis-keyed second output would lose its "
+                                f"attribution invisibly (0014 §4a R3-3)"), "op-key-conflict")
+                        continue
+                    # The contributor columns stay NULL here: the 0021 §7b typed link
+                    # is scoped to the draft-carried plan/absorption sites, and the
+                    # R3-3 verify above compares the deterministic fields of PRE-v8
+                    # rows — a recovered op resuming across the v7→v8 migration must
+                    # keep matching its own legacy rows (NULL) field-for-field.
+                    self._conn.execute(
+                        "INSERT INTO contribution_ledger(id,user_id,survivor_type,"
+                        "survivor_id,site,identity_digest,evidence_ref_digest,payload,"
+                        "op_key,created_at,contributor_type,contributor_ref) "
+                        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (f"contrib-{uuid.uuid4().hex[:12]}", op.user_id, "episode",
+                         out_ep.id, "consolidation", ident, ev, canon, key, now,
+                         None, None))
 
     @staticmethod
     def _contribution_record(r):
@@ -1497,50 +1549,51 @@ class SqliteStore(Store):
         # specs/0014 §4c: store-assigned identity cannot be fabricated — a
         # caller-supplied consolidation_output_index on the generic path is
         # REFUSED; only write_consolidation_output_if_current assigns it.
-        if episode.consolidation_output_index is not None:
-            raise ValueError(
-                f"add_episode refuses episode {episode.id!r} with a "
-                f"caller-supplied consolidation_output_index — the index is "
-                f"store-assigned by the consolidation primitive only "
-                f"(specs/0014 §4c)")
-        # specs/0009 H14: outcome-chain rows carry append-only trust state (seq,
-        # supersedes_episode, authorship) and may enter ONLY through the sanctioned
-        # writers — `append_outcome_if_head` (runtime) or `commit_outcome_import_plan`
-        # (import) — never the generic, replace-capable mutator. This refusal is the
-        # fence: it closes caller-minted seqs, head-siblings, AND an INSERT-OR-REPLACE
-        # of an existing outcome id (the unfenced-door class, cf. 0010 X21).
-        if episode.kind == "outcome":
-            raise ValueError(
-                f"add_episode refuses kind=='outcome' episode {episode.id!r} — "
-                f"outcome-chain links enter only via append_outcome_if_head or "
-                f"commit_outcome_import_plan (specs/0009 H14)")
-        # specs/0010 X18: the generic mutator cannot FABRICATE claimed/provisional/output
-        # state — those fields are store-minted by the fenced consolidation primitives.
-        if (episode.claimed_by is not None or episode.operation_id is not None
-                or episode.lineage):
-            raise ValueError(
-                f"add_episode refuses episode {episode.id!r} carrying consolidation "
-                f"state (claimed_by/operation_id/lineage) — that state is minted only "
-                f"by the fenced consolidation primitives (specs/0010 X18)")
-        # specs/0010 X19: a LIVE episode id can never inhabit the historical namespace
-        # that finalized lineage ids live in, so the two can never collide.
-        if is_historical_id(episode.id):
-            raise ValueError(
-                f"add_episode refuses id {episode.id!r} — the '{episode.id[:5]}' "
-                f"namespace is reserved for historical lineage ids (specs/0010 X19)")
-        with self._lock:
-            # specs/0010 X21: an id RESERVED by a non-quiescent op is refused — the
-            # reservation survives the input's physical deletion until the op finalizes
-            # or cleanly abandons (so a deleted-but-reserved id cannot be recreated).
-            if episode.id in self._reserved_ids(episode.user_id):
-                raise ValueError(
-                    f"add_episode refuses reserved id {episode.id!r} — it is claimed by "
-                    f"an in-flight consolidation (specs/0010 X21)")
-            self._conn.execute(
-                "INSERT OR REPLACE INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
-                (episode.id, episode.user_id, episode.date, episode.model_dump_json()))
-            self._bump(episode.user_id)
-            self._conn.commit()
+        with _SITE_ADD_EPISODE.consult():
+            if episode.consolidation_output_index is not None:
+                raise _SITE_ADD_EPISODE.fire(ValueError(
+                    f"add_episode refuses episode {episode.id!r} with a "
+                    f"caller-supplied consolidation_output_index — the index is "
+                    f"store-assigned by the consolidation primitive only "
+                    f"(specs/0014 §4c)"), "output-index")
+            # specs/0009 H14: outcome-chain rows carry append-only trust state (seq,
+            # supersedes_episode, authorship) and may enter ONLY through the sanctioned
+            # writers — `append_outcome_if_head` (runtime) or `commit_outcome_import_plan`
+            # (import) — never the generic, replace-capable mutator. This refusal is the
+            # fence: it closes caller-minted seqs, head-siblings, AND an INSERT-OR-REPLACE
+            # of an existing outcome id (the unfenced-door class, cf. 0010 X21).
+            if episode.kind == "outcome":
+                raise _SITE_ADD_EPISODE.fire(ValueError(
+                    f"add_episode refuses kind=='outcome' episode {episode.id!r} — "
+                    f"outcome-chain links enter only via append_outcome_if_head or "
+                    f"commit_outcome_import_plan (specs/0009 H14)"), "outcome-kind")
+            # specs/0010 X18: the generic mutator cannot FABRICATE claimed/provisional/output
+            # state — those fields are store-minted by the fenced consolidation primitives.
+            if (episode.claimed_by is not None or episode.operation_id is not None
+                    or episode.lineage):
+                raise _SITE_ADD_EPISODE.fire(ValueError(
+                    f"add_episode refuses episode {episode.id!r} carrying consolidation "
+                    f"state (claimed_by/operation_id/lineage) — that state is minted only "
+                    f"by the fenced consolidation primitives (specs/0010 X18)"), "consolidation-fields")
+            # specs/0010 X19: a LIVE episode id can never inhabit the historical namespace
+            # that finalized lineage ids live in, so the two can never collide.
+            if is_historical_id(episode.id):
+                raise _SITE_ADD_EPISODE.fire(ValueError(
+                    f"add_episode refuses id {episode.id!r} — the '{episode.id[:5]}' "
+                    f"namespace is reserved for historical lineage ids (specs/0010 X19)"), "historical-id")
+            with self._lock:
+                # specs/0010 X21: an id RESERVED by a non-quiescent op is refused — the
+                # reservation survives the input's physical deletion until the op finalizes
+                # or cleanly abandons (so a deleted-but-reserved id cannot be recreated).
+                if episode.id in self._reserved_ids(episode.user_id):
+                    raise _SITE_ADD_EPISODE.fire(ValueError(
+                        f"add_episode refuses reserved id {episode.id!r} — it is claimed by "
+                        f"an in-flight consolidation (specs/0010 X21)"), "reserved-id")
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
+                    (episode.id, episode.user_id, episode.date, episode.model_dump_json()))
+                self._bump(episode.user_id)
+                self._conn.commit()
 
     def episodes(self, user_id, *, limit=None,
                  include_retired=False) -> list[Episode]:
@@ -1575,10 +1628,12 @@ class SqliteStore(Store):
         A claimed INPUT is hidden once its op reaches OUTPUTS_DURABLE (the cutover flips
         visibility); it is visible while CLAIMED/GENERATING. Everything else is visible."""
         S = ConsolidationState
-        if ep.lineage:                                   # a consolidation OUTPUT
-            return op_state.get(ep.operation_id) not in (S.CLAIMED, S.GENERATING)
-        if ep.operation_id is not None:                  # a claimed INPUT
-            return op_state.get(ep.operation_id) is not S.OUTPUTS_DURABLE
+        with _SITE_READ_OUTPUT_NOT_VISIBLE.consult():
+            if ep.lineage:                                   # a consolidation OUTPUT
+                return _SITE_READ_OUTPUT_NOT_VISIBLE.fire(op_state.get(ep.operation_id) not in (S.CLAIMED, S.GENERATING), "withhold")
+        with _SITE_READ_INPUT_CLAIMED.consult():
+            if ep.operation_id is not None:                  # a claimed INPUT
+                return _SITE_READ_INPUT_CLAIMED.fire(op_state.get(ep.operation_id) is not S.OUTPUTS_DURABLE, "withhold")
         return True
 
     def delete_episode(self, episode_id) -> None:
@@ -1589,18 +1644,20 @@ class SqliteStore(Store):
             # specs/0009 H14: an outcome-chain link leaves ONLY via forget_user
             # (wholesale erasure) — never a targeted delete, which would punch a
             # gap in append-only history or orphan a superseding child.
-            if row is not None and Episode.model_validate_json(row[1]).kind == "outcome":
-                raise ValueError(
-                    f"delete_episode refuses outcome-chain link {episode_id!r} — "
-                    f"outcome history is append-only and leaves only via forget_user "
-                    f"(specs/0009 H14)")
+            with _SITE_DELETE_EPISODE_OUTCOME.consult():
+                if row is not None and Episode.model_validate_json(row[1]).kind == "outcome":
+                    raise _SITE_DELETE_EPISODE_OUTCOME.fire(ValueError(
+                        f"delete_episode refuses outcome-chain link {episode_id!r} — "
+                        f"outcome history is append-only and leaves only via forget_user "
+                        f"(specs/0009 H14)"))
             # specs/0010 X21: a reserved (claimed) input leaves only via the fenced
             # batch-delete or forget_user — never a targeted generic delete.
-            if row is not None and episode_id in self._reserved_ids(row[0]):
-                raise ValueError(
-                    f"delete_episode refuses reserved id {episode_id!r} — it is claimed "
-                    f"by an in-flight consolidation; it is removed only by the fenced "
-                    f"batch-delete or forget_user (specs/0010 X21)")
+            with _SITE_DELETE_EPISODE_RESERVED.consult():
+                if row is not None and episode_id in self._reserved_ids(row[0]):
+                    raise _SITE_DELETE_EPISODE_RESERVED.fire(ValueError(
+                        f"delete_episode refuses reserved id {episode_id!r} — it is claimed "
+                        f"by an in-flight consolidation; it is removed only by the fenced "
+                        f"batch-delete or forget_user (specs/0010 X21)"))
             self._conn.execute("DELETE FROM episodes WHERE id=?", (episode_id,))
             if row:
                 # specs/0014 A10: rows live while their survivor does — type-keyed
@@ -1639,14 +1696,15 @@ class SqliteStore(Store):
             else:
                 seq = (head.seq or 0) + 1               # contiguous per-chain seq
                 # context_ref: omitted → inherit; non-None must equal the chain's
-                if draft.context_ref is None:
-                    context_ref = head.context_ref
-                elif draft.context_ref != head.context_ref:
-                    raise ValueError(
-                        "context_ref may not change within an outcome chain "
-                        f"({draft.context_ref!r} != {head.context_ref!r})")
-                else:
-                    context_ref = draft.context_ref
+                with _SITE_OUTCOME_CONTEXT_REF.consult():
+                    if draft.context_ref is None:
+                        context_ref = head.context_ref
+                    elif draft.context_ref != head.context_ref:
+                        raise _SITE_OUTCOME_CONTEXT_REF.fire(ValueError(
+                            "context_ref may not change within an outcome chain "
+                            f"({draft.context_ref!r} != {head.context_ref!r})"))
+                    else:
+                        context_ref = draft.context_ref
             ep = Episode(
                 id=f"ep-{uuid.uuid4().hex[:12]}", user_id=user_id,
                 date=draft.event_timestamp, summary=draft.summary, kind="outcome",
@@ -1681,162 +1739,163 @@ class SqliteStore(Store):
         (absent → write; plan_row_id-set-equal → skip-as-existing; anything
         else → DESTINATION_CHANGED writing nothing), and installed in the SAME
         single atomic commit as the records."""
-        from ..contribution import canonical_payload, validate_payload
-        from ..scope_linkage import plan_row_id as _derive_row_id
-        edges = plan.get("edges", [])
-        episodes = plan.get("episodes", [])
-        contributions = plan.get("contributions", [])
-        # (0) validate the contribution row-plans — pure derivation checks,
-        # before the lock and before ANY write. Presence first (R11-2), then
-        # the ONE-minted-op rule, then the exact in-primitive derivation of
-        # op_key AND row id (R13-1: keys are derived, never selected — the
-        # validator inside plan_row_id consumes the op domain and requires
-        # exact key equality; the id equality below closes the same door for
-        # the PRIMARY-KEY-riding dedup identity).
-        plan_edge_ids = {e.id for e in edges}
-        contrib_by_surv: dict = {}
-        import_op = None
-        for row in contributions:
-            missing = [f for f in ("id", "user_id", "survivor_type",
-                                   "survivor_id", "op_key") if f not in row]
-            if missing:
-                raise ValueError(
-                    f"contribution row-plan is missing {missing} — the plan "
-                    f"row is TOTAL over the stored field set (0009 §4c as "
-                    f"amended, R11-2)")
-            if row["user_id"] != user_id:
-                raise ValueError(
-                    "contribution row-plan names another tenant — refused "
-                    "(0009 §4c as amended)")
-            if row["survivor_type"] != "edge":
-                raise ValueError(
-                    f"contribution row-plan survivor_type "
-                    f"{row['survivor_type']!r} — the import plan sites "
-                    f"attribute EDGE survivors only (0020 §4a-iii)")
-            op_key = row["op_key"]
-            if not isinstance(op_key, str) or ":" not in op_key:
-                raise ValueError(
-                    f"contribution row op_key {op_key!r} is not the "
-                    f"injective {{op}}:{{site}}:{{digest}} form (R9-2)")
-            op = op_key.split(":", 1)[0]
-            if import_op is None:
-                import_op = op
-            elif op != import_op:
-                raise ValueError(
-                    f"contribution rows carry TWO operation ids "
-                    f"({import_op!r}, {op!r}) — the import mints ONE "
-                    f"op-<12hex> id (0009 §4c as amended, R7-3)")
-            derived_id = _derive_row_id(user_id, "edge", row["survivor_id"],
-                                        row, "import", op=op)
-            if row["id"] != derived_id:
-                raise ValueError(
-                    f"contribution row id {row['id']!r} is not the canonical "
-                    f"plan_row_id projection — the id is DERIVED in-primitive, "
-                    f"never selected (0009 §4c as amended, R9-3/R13-1)")
-            validate_payload(row["site"], row["payload"])   # site registry
-            contrib_by_surv.setdefault(row["survivor_id"], []).append(row)
-        with self._lock, self._write_txn():
-            # (1) Revalidate EVERY destination assumption the preflight reasoned
-            # about (round-6 Correction B) — atomically, before any write.
-            for eid, expect_present in expected_destination_state.get(
-                    "edge_ids", {}).items():
-                row = self._conn.execute(
-                    "SELECT user_id FROM edges WHERE id=?", (eid,)).fetchone()
-                present = row is not None
-                if present != expect_present:
-                    return DESTINATION_CHANGED       # created/removed under us
-                if present and row[0] != user_id:
-                    return DESTINATION_CHANGED       # ownership changed under us
-            for ep_id, expect_json in expected_destination_state.get(
-                    "episode_records", {}).items():
-                row = self._conn.execute(
-                    "SELECT json FROM episodes WHERE id=?", (ep_id,)).fetchone()
-                current = row[0] if row is not None else None
-                if current != expect_json:           # RECORD equality, not id
-                    return DESTINATION_CHANGED
-            for (edge_id, evidence_ref), expect_head in \
-                    expected_destination_state.get("chain_heads", {}).items():
-                head = self._chain_head(user_id, edge_id, evidence_ref)
-                head_id = head.id if head is not None else None
-                if head_id != expect_head:           # linearize vs append_outcome_if_head
-                    return DESTINATION_CHANGED
-            # (1b) 0009 §4c as amended: the contribution gate — EVERY decision
-            # is taken here, BEFORE any write, so DESTINATION_CHANGED writes
-            # nothing (records included). Per survivor: the current row-id set
-            # must equal the caller's expected `contribution_state` (drift is
-            # a lost race); then ABSENT → write, plan_row_id-set-EQUAL → skip
-            # as existing, anything else → a different recorded history,
-            # refused whole.
-            contribution_state = expected_destination_state.get(
-                "contribution_state", {})
-            contrib_writes: list = []
-            contrib_existing = 0
-            for surv, rows in sorted(contrib_by_surv.items()):
-                if surv not in plan_edge_ids:
-                    hit = self._conn.execute(
-                        "SELECT user_id FROM edges WHERE id=?",
-                        (surv,)).fetchone()
-                    if hit is None or hit[0] != user_id:
-                        raise ValueError(
-                            f"contribution rows attribute survivor {surv!r}, "
-                            f"which is neither a plan record nor an "
-                            f"already-present record of this user — the "
-                            f"preflight refuses (0009 §4c as amended)")
-                current = {r[0] for r in self._conn.execute(
-                    "SELECT id FROM contribution_ledger WHERE user_id=? AND "
-                    "survivor_type='edge' AND survivor_id=?",
-                    (user_id, surv)).fetchall()}
-                if current != set(contribution_state.get(surv, ())):
-                    return DESTINATION_CHANGED       # rows moved under us
-                planned = {r["id"] for r in rows}
-                if current == planned:
-                    contrib_existing += len(rows)    # idempotent re-import
-                elif not current:
-                    contrib_writes.extend(rows)
-                else:
-                    # different contributors or a different history SHAPE —
-                    # a different history, refused whole, writing NOTHING
-                    return DESTINATION_CHANGED
-            # (2) Install ALL records as one logical commit (edges before episodes so
-            # an outcome link's edge_id always resolves; contribution rows ride
-            # the SAME transaction — nothing is durable after a prefix).
-            try:
-                for edge in edges:
-                    prior = self._conn.execute(
-                        "SELECT json FROM edges WHERE id=?", (edge.id,)).fetchone()
-                    new_json = edge.model_dump_json()
-                    self._conn.execute(
-                        "INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
-                        "VALUES(?,?,?,?,?,?,?,?)",
-                        (edge.id, edge.user_id, edge.subject, edge.relation, edge.object,
-                         int(edge.active), int(edge.quarantined), new_json))
-                    self._journal_edge_write(user_id, edge.id, new_json,
-                                             prior[0] if prior is not None else None)
-                for ep in episodes:
-                    self._conn.execute(
-                        "INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
-                        (ep.id, ep.user_id, ep.date, ep.model_dump_json()))
-                now = self._now().isoformat()
-                for row in contrib_writes:
-                    self._conn.execute(
-                        "INSERT INTO contribution_ledger(id,user_id,"
-                        "survivor_type,survivor_id,site,identity_digest,"
-                        "evidence_ref_digest,payload,op_key,created_at,"
-                        "contributor_type,contributor_ref) "
-                        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                        (row["id"], user_id, "edge", row["survivor_id"],
-                         row["site"], row["identity_digest"],
-                         row["evidence_ref_digest"],
-                         canonical_payload(row["payload"]), row["op_key"],
-                         now, row["contributor_type"],
-                         row["contributor_ref"]))
-                self._bump(user_id)
-            except BaseException:
-                self._conn.rollback()                # ONE atomic commit —
-                raise                                # nothing after a prefix
-        return {"edges": len(edges), "episodes": len(episodes),
-                "contributions": len(contrib_writes),
-                "contributions_existing": contrib_existing}
+        with _SITE_IMPORT_PLAN.consult():
+            from ..contribution import canonical_payload, validate_payload
+            from ..scope_linkage import plan_row_id as _derive_row_id
+            edges = plan.get("edges", [])
+            episodes = plan.get("episodes", [])
+            contributions = plan.get("contributions", [])
+            # (0) validate the contribution row-plans — pure derivation checks,
+            # before the lock and before ANY write. Presence first (R11-2), then
+            # the ONE-minted-op rule, then the exact in-primitive derivation of
+            # op_key AND row id (R13-1: keys are derived, never selected — the
+            # validator inside plan_row_id consumes the op domain and requires
+            # exact key equality; the id equality below closes the same door for
+            # the PRIMARY-KEY-riding dedup identity).
+            plan_edge_ids = {e.id for e in edges}
+            contrib_by_surv: dict = {}
+            import_op = None
+            for row in contributions:
+                missing = [f for f in ("id", "user_id", "survivor_type",
+                                       "survivor_id", "op_key") if f not in row]
+                if missing:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"contribution row-plan is missing {missing} — the plan "
+                        f"row is TOTAL over the stored field set (0009 §4c as "
+                        f"amended, R11-2)"), "missing-rows")
+                if row["user_id"] != user_id:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        "contribution row-plan names another tenant — refused "
+                        "(0009 §4c as amended)"), "other-tenant")
+                if row["survivor_type"] != "edge":
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"contribution row-plan survivor_type "
+                        f"{row['survivor_type']!r} — the import plan sites "
+                        f"attribute EDGE survivors only (0020 §4a-iii)"), "survivor-type")
+                op_key = row["op_key"]
+                if not isinstance(op_key, str) or ":" not in op_key:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"contribution row op_key {op_key!r} is not the "
+                        f"injective {{op}}:{{site}}:{{digest}} form (R9-2)"), "op-key-shape")
+                op = op_key.split(":", 1)[0]
+                if import_op is None:
+                    import_op = op
+                elif op != import_op:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"contribution rows carry TWO operation ids "
+                        f"({import_op!r}, {op!r}) — the import mints ONE "
+                        f"op-<12hex> id (0009 §4c as amended, R7-3)"), "two-operations")
+                derived_id = _derive_row_id(user_id, "edge", row["survivor_id"],
+                                            row, "import", op=op)
+                if row["id"] != derived_id:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"contribution row id {row['id']!r} is not the canonical "
+                        f"plan_row_id projection — the id is DERIVED in-primitive, "
+                        f"never selected (0009 §4c as amended, R9-3/R13-1)"), "row-id")
+                validate_payload(row["site"], row["payload"])   # site registry
+                contrib_by_surv.setdefault(row["survivor_id"], []).append(row)
+            with self._lock, self._write_txn():
+                # (1) Revalidate EVERY destination assumption the preflight reasoned
+                # about (round-6 Correction B) — atomically, before any write.
+                for eid, expect_present in expected_destination_state.get(
+                        "edge_ids", {}).items():
+                    row = self._conn.execute(
+                        "SELECT user_id FROM edges WHERE id=?", (eid,)).fetchone()
+                    present = row is not None
+                    if present != expect_present:
+                        return DESTINATION_CHANGED       # created/removed under us
+                    if present and row[0] != user_id:
+                        return DESTINATION_CHANGED       # ownership changed under us
+                for ep_id, expect_json in expected_destination_state.get(
+                        "episode_records", {}).items():
+                    row = self._conn.execute(
+                        "SELECT json FROM episodes WHERE id=?", (ep_id,)).fetchone()
+                    current = row[0] if row is not None else None
+                    if current != expect_json:           # RECORD equality, not id
+                        return DESTINATION_CHANGED
+                for (edge_id, evidence_ref), expect_head in \
+                        expected_destination_state.get("chain_heads", {}).items():
+                    head = self._chain_head(user_id, edge_id, evidence_ref)
+                    head_id = head.id if head is not None else None
+                    if head_id != expect_head:           # linearize vs append_outcome_if_head
+                        return DESTINATION_CHANGED
+                # (1b) 0009 §4c as amended: the contribution gate — EVERY decision
+                # is taken here, BEFORE any write, so DESTINATION_CHANGED writes
+                # nothing (records included). Per survivor: the current row-id set
+                # must equal the caller's expected `contribution_state` (drift is
+                # a lost race); then ABSENT → write, plan_row_id-set-EQUAL → skip
+                # as existing, anything else → a different recorded history,
+                # refused whole.
+                contribution_state = expected_destination_state.get(
+                    "contribution_state", {})
+                contrib_writes: list = []
+                contrib_existing = 0
+                for surv, rows in sorted(contrib_by_surv.items()):
+                    if surv not in plan_edge_ids:
+                        hit = self._conn.execute(
+                            "SELECT user_id FROM edges WHERE id=?",
+                            (surv,)).fetchone()
+                        if hit is None or hit[0] != user_id:
+                            raise _SITE_IMPORT_PLAN.fire(ValueError(
+                                f"contribution rows attribute survivor {surv!r}, "
+                                f"which is neither a plan record nor an "
+                                f"already-present record of this user — the "
+                                f"preflight refuses (0009 §4c as amended)"), "survivor-foreign")
+                    current = {r[0] for r in self._conn.execute(
+                        "SELECT id FROM contribution_ledger WHERE user_id=? AND "
+                        "survivor_type='edge' AND survivor_id=?",
+                        (user_id, surv)).fetchall()}
+                    if current != set(contribution_state.get(surv, ())):
+                        return DESTINATION_CHANGED       # rows moved under us
+                    planned = {r["id"] for r in rows}
+                    if current == planned:
+                        contrib_existing += len(rows)    # idempotent re-import
+                    elif not current:
+                        contrib_writes.extend(rows)
+                    else:
+                        # different contributors or a different history SHAPE —
+                        # a different history, refused whole, writing NOTHING
+                        return DESTINATION_CHANGED
+                # (2) Install ALL records as one logical commit (edges before episodes so
+                # an outcome link's edge_id always resolves; contribution rows ride
+                # the SAME transaction — nothing is durable after a prefix).
+                try:
+                    for edge in edges:
+                        prior = self._conn.execute(
+                            "SELECT json FROM edges WHERE id=?", (edge.id,)).fetchone()
+                        new_json = edge.model_dump_json()
+                        self._conn.execute(
+                            "INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
+                            "VALUES(?,?,?,?,?,?,?,?)",
+                            (edge.id, edge.user_id, edge.subject, edge.relation, edge.object,
+                             int(edge.active), int(edge.quarantined), new_json))
+                        self._journal_edge_write(user_id, edge.id, new_json,
+                                                 prior[0] if prior is not None else None)
+                    for ep in episodes:
+                        self._conn.execute(
+                            "INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
+                            (ep.id, ep.user_id, ep.date, ep.model_dump_json()))
+                    now = self._now().isoformat()
+                    for row in contrib_writes:
+                        self._conn.execute(
+                            "INSERT INTO contribution_ledger(id,user_id,"
+                            "survivor_type,survivor_id,site,identity_digest,"
+                            "evidence_ref_digest,payload,op_key,created_at,"
+                            "contributor_type,contributor_ref) "
+                            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                            (row["id"], user_id, "edge", row["survivor_id"],
+                             row["site"], row["identity_digest"],
+                             row["evidence_ref_digest"],
+                             canonical_payload(row["payload"]), row["op_key"],
+                             now, row["contributor_type"],
+                             row["contributor_ref"]))
+                    self._bump(user_id)
+                except BaseException:
+                    self._conn.rollback()                # ONE atomic commit —
+                    raise                                # nothing after a prefix
+            return {"edges": len(edges), "episodes": len(episodes),
+                    "contributions": len(contrib_writes),
+                    "contributions_existing": contrib_existing}
 
     # -- crash-safe consolidation (specs/0010) --------------------------------
     _OP_COLS = ("operation_id", "user_id", "fence", "state", "owner",
@@ -1945,8 +2004,9 @@ class SqliteStore(Store):
                 live = [op for op in intersecting
                         if op.state == ConsolidationState.OUTPUTS_DURABLE
                         or self._lease_live(op)]
-                if live:
-                    return None                  # contended (X7/X11 — no partial claim)
+                with _SITE_CONSOLIDATION_CONTENDED.consult():
+                    if live:
+                        return _SITE_CONSOLIDATION_CONTENDED.fire(None, "contended")                  # contended (X7/X11 — no partial claim)
                 if intersecting:                 # all expired pre-cutover → clean first
                     for op in intersecting:
                         self._abandon(op)
@@ -1973,11 +2033,12 @@ class SqliteStore(Store):
     def renew_consolidation_lease(self, operation_id, fence, owner) -> bool:
         with self._lock:
             op = self._load_op(operation_id)
-            if (op is None or op.fence != fence or op.owner != owner
-                    or op.state not in (ConsolidationState.CLAIMED,
-                                        ConsolidationState.GENERATING)
-                    or not self._lease_live(op)):        # cannot resurrect an expired lease
-                return False
+            with _SITE_RENEW_REFUSED.consult():
+                if (op is None or op.fence != fence or op.owner != owner
+                        or op.state not in (ConsolidationState.CLAIMED,
+                                            ConsolidationState.GENERATING)
+                        or not self._lease_live(op)):        # cannot resurrect an expired lease
+                    return _SITE_RENEW_REFUSED.fire(False, "refuse")
             expires = (self._now() + timedelta(seconds=op.lease_duration)).isoformat()
             self._write_op(op.model_copy(update={"lease_expires_at": expires}))
             self._conn.commit()
@@ -1987,10 +2048,11 @@ class SqliteStore(Store):
                                               draft: ConsolidationOutputDraft) -> bool:
         with self._lock:
             op = self._load_op(operation_id)
-            if (op is None or op.fence != fence or op.owner != owner
-                    or op.state != ConsolidationState.GENERATING
-                    or not self._lease_live(op)):
-                return False
+            with _SITE_WRITE_NOT_CURRENT.consult():
+                if (op is None or op.fence != fence or op.owner != owner
+                        or op.state != ConsolidationState.GENERATING
+                        or not self._lease_live(op)):
+                    return _SITE_WRITE_NOT_CURRENT.fire(False, "refuse")
             inputs = []
             for eid in op.claimed_ids:
                 row = self._conn.execute(
@@ -2067,54 +2129,56 @@ class SqliteStore(Store):
     def transition_consolidation_if_current(self, operation_id, fence, owner,
                                             to_state) -> bool:
         to_state = ConsolidationState(to_state)
-        with self._lock:
-            op = self._load_op(operation_id)
-            if op is None or op.fence != fence:
-                return False
-            S = ConsolidationState
-            if to_state is S.GENERATING:
-                if (op.state is not S.CLAIMED or op.owner != owner
-                        or not self._lease_live(op)):
-                    return False
-                self._write_op(op.model_copy(update={"state": S.GENERATING}))
-            elif to_state is S.OUTPUTS_DURABLE:
-                if (op.state is not S.GENERATING or op.owner != owner
-                        or not self._lease_live(op)):
-                    return False
-                # X22: refuse the cutover unless ≥1 correctly-bound output exists
-                bound = [ep for _, ep in
-                         self._episodes_for_operation(op.user_id, operation_id)
-                         if ep.lineage]
-                if not bound:
-                    return False
-                # specs/0014 §4b/§4c: the N×M contribution rows are written AT
-                # the cutover, in this same transaction, while the claimed inputs
-                # are still readable (they are deleted only after OUTPUTS_DURABLE).
-                self._write_consolidation_contributions(op)
-                self._write_op(op.model_copy(update={"state": S.OUTPUTS_DURABLE}))
-                self._bump(op.user_id)           # X14: the visibility cutover bumps
-            elif to_state is S.FINALIZED:
-                if op.state is not S.OUTPUTS_DURABLE:     # ownerless, recovery-safe
-                    return False
-                # X20: unreachable until every claimed input is deleted
-                remaining = self._conn.execute(
-                    "SELECT COUNT(*) FROM episodes WHERE user_id=? AND id IN ({})".format(
-                        ",".join("?" * len(op.claimed_ids))),
-                    (op.user_id, *op.claimed_ids)).fetchone()[0] if op.claimed_ids else 0
-                if remaining > 0:
-                    return False
-                self._write_op(op.model_copy(update={"state": S.FINALIZED}))
-            else:
-                return False
-            self._conn.commit()
-            return True
+        with _SITE_TRANSITION.consult():
+            with self._lock:
+                op = self._load_op(operation_id)
+                if op is None or op.fence != fence:
+                    return _SITE_TRANSITION.fire(False, "fence")
+                S = ConsolidationState
+                if to_state is S.GENERATING:
+                    if (op.state is not S.CLAIMED or op.owner != owner
+                            or not self._lease_live(op)):
+                        return _SITE_TRANSITION.fire(False, "generating-refused")
+                    self._write_op(op.model_copy(update={"state": S.GENERATING}))
+                elif to_state is S.OUTPUTS_DURABLE:
+                    if (op.state is not S.GENERATING or op.owner != owner
+                            or not self._lease_live(op)):
+                        return _SITE_TRANSITION.fire(False, "cutover-refused")
+                    # X22: refuse the cutover unless ≥1 correctly-bound output exists
+                    bound = [ep for _, ep in
+                             self._episodes_for_operation(op.user_id, operation_id)
+                             if ep.lineage]
+                    if not bound:
+                        return _SITE_TRANSITION.fire(False, "no-bound-output")
+                    # specs/0014 §4b/§4c: the N×M contribution rows are written AT
+                    # the cutover, in this same transaction, while the claimed inputs
+                    # are still readable (they are deleted only after OUTPUTS_DURABLE).
+                    self._write_consolidation_contributions(op)
+                    self._write_op(op.model_copy(update={"state": S.OUTPUTS_DURABLE}))
+                    self._bump(op.user_id)           # X14: the visibility cutover bumps
+                elif to_state is S.FINALIZED:
+                    if op.state is not S.OUTPUTS_DURABLE:     # ownerless, recovery-safe
+                        return _SITE_TRANSITION.fire(False, "not-durable")
+                    # X20: unreachable until every claimed input is deleted
+                    remaining = self._conn.execute(
+                        "SELECT COUNT(*) FROM episodes WHERE user_id=? AND id IN ({})".format(
+                            ",".join("?" * len(op.claimed_ids))),
+                        (op.user_id, *op.claimed_ids)).fetchone()[0] if op.claimed_ids else 0
+                    if remaining > 0:
+                        return _SITE_TRANSITION.fire(False, "inputs-remaining")
+                    self._write_op(op.model_copy(update={"state": S.FINALIZED}))
+                else:
+                    return _SITE_TRANSITION.fire(False, "unknown-transition")
+                self._conn.commit()
+                return True
 
     def delete_claimed_inputs_if_current(self, operation_id, fence) -> bool:
         with self._lock:
             op = self._load_op(operation_id)
-            if (op is None or op.fence != fence
-                    or op.state is not ConsolidationState.OUTPUTS_DURABLE):
-                return False
+            with _SITE_DELETE_NOT_CURRENT.consult():
+                if (op is None or op.fence != fence
+                        or op.state is not ConsolidationState.OUTPUTS_DURABLE):
+                    return _SITE_DELETE_NOT_CURRENT.fire(False, "refuse")
             for eid in op.claimed_ids:           # idempotent all-or-nothing re-delete
                 self._conn.execute(
                     "DELETE FROM episodes WHERE id=? AND user_id=?", (eid, op.user_id))
@@ -2124,11 +2188,12 @@ class SqliteStore(Store):
     def abandon_consolidation_if_current(self, operation_id, fence) -> bool:
         with self._lock:
             op = self._load_op(operation_id)
-            if (op is None or op.fence != fence
-                    or op.state not in (ConsolidationState.CLAIMED,
-                                        ConsolidationState.GENERATING)
-                    or self._lease_live(op)):    # expired-lease only (X7)
-                return False
+            with _SITE_ABANDON_LIVE_LEASE.consult():
+                if (op is None or op.fence != fence
+                        or op.state not in (ConsolidationState.CLAIMED,
+                                            ConsolidationState.GENERATING)
+                        or self._lease_live(op)):    # expired-lease only (X7)
+                    return _SITE_ABANDON_LIVE_LEASE.fire(False, "refuse")
             self._abandon(op)
             self._conn.commit()
             return True
@@ -2141,12 +2206,13 @@ class SqliteStore(Store):
     def quiescent_episode_snapshot(self, user_id):
         # X17: ONE atomic observation — the quiescence check and the episode snapshot
         # under the same lock, linearizable against create_or_takeover_consolidation.
-        with self._lock:
-            if any(op.state in RECOVERY_PENDING_STATES
-                   for op in self._ops_for_user(user_id)):
-                return NON_QUIESCENT
-            return [Episode.model_validate_json(r[0]) for r in self._conn.execute(
-                "SELECT json FROM episodes WHERE user_id=? ORDER BY date", (user_id,))]
+        with _SITE_EXPORT_NON_QUIESCENT.consult():
+            with self._lock:
+                if any(op.state in RECOVERY_PENDING_STATES
+                       for op in self._ops_for_user(user_id)):
+                    return _SITE_EXPORT_NON_QUIESCENT.fire(NON_QUIESCENT, "non-quiescent")
+                return _SITE_EXPORT_NON_QUIESCENT.fire([Episode.model_validate_json(r[0]) for r in self._conn.execute(
+                    "SELECT json FROM episodes WHERE user_id=? ORDER BY date", (user_id,))], "snapshot")
 
     # -- host/admin queries ---------------------------------------------------
     def list_users(self) -> list[dict]:
@@ -2235,17 +2301,19 @@ class SqliteStore(Store):
             row = self._conn.execute(
                 "SELECT json FROM edges WHERE id=? AND user_id=?",
                 (edge_id, user_id)).fetchone()
-            if row is None:
-                # erase-vs-worker: after forget_user there is no live edge —
-                # the delayed worker writes nothing (0027 §4f)
-                self._conn.rollback()
-                return False
+            with _SITE_EMBEDDING_DELAYED_WRITER.consult():
+                if row is None:
+                    # erase-vs-worker: after forget_user there is no live edge —
+                    # the delayed worker writes nothing (0027 §4f)
+                    self._conn.rollback()
+                    return _SITE_EMBEDDING_DELAYED_WRITER.fire(False, "refuse")
             live = Edge.model_validate_json(row[0])
-            if _semantic.content_digest(live) != content_digest:
-                # update-vs-worker: the edge moved under the worker — drop it;
-                # the re-embed of the NEW content writes its own tuple
-                self._conn.rollback()
-                return False
+            with _SITE_EMBEDDING_STALE_CONTENT.consult():
+                if _semantic.content_digest(live) != content_digest:
+                    # update-vs-worker: the edge moved under the worker — drop it;
+                    # the re-embed of the NEW content writes its own tuple
+                    self._conn.rollback()
+                    return _SITE_EMBEDDING_STALE_CONTENT.fire(False, "refuse")
             self._conn.execute(
                 "INSERT INTO edge_embedding(edge_id, user_id, embedder_id, "
                 "content_digest, dim, vec, built_at) VALUES(?,?,?,?,?,?,?) "
