@@ -232,16 +232,30 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     assert re.search(r'^  off: \{"census_enabled": false, "registry_size": (\d+)\}', text, re.M).group(1) == str(len(declaration.DECLARED_IDS))
     assert re.search(r'^  uninstrumented: \{"census_enabled": false, "registry_size": 0', text, re.M)
     # the tests the run could not compare are NAMED (a reader sees the boundary of the claim), each a node id
-    m = re.search(r"^EXCLUDED AS NON-REPRODUCIBLE.*$", text, re.M); assert m, "the transcript does not state its exclusions"
-    over = re.search(r"over (\d+) tests \(reference: uninstrumented; (\d+) tests excluded", text); assert over
-    assert int(over.group(1)) > 0
-    tail = []
-    for line in text[m.end():].splitlines()[1:]:      # the indented lines under the heading, and nothing after
-        if not line.startswith("  "):
-            break
-        tail.append(line.strip())
-    excluded_tests = [l for l in tail if l and l != "(none)"]
-    assert len(excluded_tests) == int(over.group(2)) and all("::" in t for t in excluded_tests), excluded_tests
+    # round 7c: the exclusions are the STANDING list (by name, with a cause) plus any NEWLY non-reproducible test —
+    # the verdict line counts both apart, the two headings list them, and a NEW one is a finding the harness's exit
+    # refuses, so a committed transcript carries none
+    over = re.search(r"over (\d+) tests \(reference: uninstrumented; excluded by the STANDING list: (\d+); NEWLY non-reproducible this run: (\d+);", text); assert over, "the verdict line does not count the standing and the new exclusions apart"
+    assert int(over.group(1)) > 0 and int(over.group(3)) == 0, over.groups()
+
+    def listed(heading):
+        m = re.search(r"^" + heading + r".*$", text, re.M); assert m, f"the transcript does not state {heading}"
+        tail = []
+        for line in text[m.end():].splitlines()[1:]:      # the indented lines under the heading, and nothing after
+            if not line.startswith("  "):
+                break
+            tail.append(line.strip())
+        return [l for l in tail if l and l != "(none)" and not l.startswith("cause:")]
+    standing = listed("EXCLUDED BY THE STANDING LIST"); newly = listed("NEWLY NON-REPRODUCIBLE THIS RUN")
+    assert len(standing) == int(over.group(2)) and all("::" in s for s in standing), standing
+    assert newly == [], newly
+    # every standing exclusion the transcript names is on the list the tree carries, with its cause printed
+    real = harness.load_standing_exclusions()
+    for s in standing:
+        node = s.split("  [")[0]
+        assert node in real, (node, "excluded but not on inv7_exclusions.STANDING")
+        assert real[node][:60] in text, node
+    excluded_tests = standing
     # the exclusions the transcript names are exactly the nested symbols the declaration derives today
     excluded = set(re.findall(r"^  (\S+\.py:\S+): nested inside a function", text, re.M))
     assert excluded == _nested_symbols(), (sorted(excluded ^ _nested_symbols()))
