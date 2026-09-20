@@ -112,15 +112,18 @@ def scoped_assertable(record_assertable: bool, decision,
     `test_gate_seam_reserved_for_0011` fails if the parameter disappears or
     if any (entitlement × decision) cell grants."""
     visible, shape = decision
-    with _SITE_SCOPED_INVISIBLE.consult(), _SITE_SCOPED_THIRD_PARTY.consult(), \
-            _SITE_SCOPED_ENTITLEMENT.consult():
+    # each site consults only when ITS condition is reached (round 6, R6-2a: one shared bracket credited
+    # the later checks with a consult the moment the first one returned)
+    with _SITE_SCOPED_INVISIBLE.consult():
         if not visible:
             return _SITE_SCOPED_INVISIBLE.fire(False, "invisible")
+    with _SITE_SCOPED_THIRD_PARTY.consult():
         if shape == "third-party-shaped":
             return _SITE_SCOPED_THIRD_PARTY.fire(False, "third-party-shaped")
+    with _SITE_SCOPED_ENTITLEMENT.consult():
         if subject_entitlement is False:        # the 0011 seam: RESTRICTS only
             return _SITE_SCOPED_ENTITLEMENT.fire(False, "entitlement")
-        return bool(record_assertable)
+    return bool(record_assertable)
 
 
 def partition(edges: list[Edge], episodes: list[Episode]) -> tuple[str, str]:

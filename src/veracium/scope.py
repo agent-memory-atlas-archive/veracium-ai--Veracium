@@ -274,7 +274,7 @@ def validate_policy(groups, cross_scope_visible=False,
     members; non-groupable members (I13); resolved-DIGEST overlap across
     groups; `cross_scope_visible` not a REAL bool. The caller's input is
     never retained — canonical frozen copies only."""
-    with _SITE_POLICY_NON_GROUPABLE.consult(), _SITE_POLICY_DIGEST_OVERLAP.consult():
+    if True:   # the two sites consult at their own conditions inside the loop (round 6, R6-2a); the block is kept for the diff
         if not isinstance(cross_scope_visible, bool):
             raise ScopeError(
                 f"cross_scope_visible must be a real bool, got "
@@ -296,11 +296,13 @@ def validate_policy(groups, cross_scope_visible=False,
                 if not isinstance(m, Identity):
                     raise ScopeError(f"group {name!r} carries a non-Identity "
                                      f"rule shape {m!r}")
+                _SITE_POLICY_NON_GROUPABLE.consult()
                 if not m.groupable:
                     raise _SITE_POLICY_NON_GROUPABLE.fire(ScopeError(
                         f"group {name!r} contains a source_id-less identity "
                         f"(0006 I13 — no groupable identity)"))
                 d = digest_of(m, local_origin)
+                _SITE_POLICY_DIGEST_OVERLAP.consult()
                 if d in seen and seen[d] != name:
                     raise _SITE_POLICY_DIGEST_OVERLAP.fire(ScopeError(
                         f"identity digest {d[:12]}… appears in groups "

@@ -1,34 +1,37 @@
-# generated 2026-09-20T13:20Z against veracium @ 8198ea798b52aa2b215f0d949e8c097377799cb6
-# RE-PINNED 2026-09-20 the 0042 round-6 pre-seal fix landed in 8198ea798b52aa2b215f0d949e8c097377799cb6: body byte-identical; the run was made on the working tree this commit then committed, so the pin moves to it
+# generated 2026-09-20T20:55Z against veracium @ 6fe91939e140e4302189f6fe94fc712d6223b733
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD 8198ea798b52aa2b215f0d949e8c097377799cb6
-twin (uninstrumented): derived from HEAD 8198ea798b52aa2b215f0d949e8c097377799cb6 by inv7_uninstrument.py
-twin derivation: 162 declare_site removed, 302 fire() unwrapped, 150 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
+HEAD 6fe91939e140e4302189f6fe94fc712d6223b733  (src DIRTY: M src/veracium/asof/resolve.py;  M src/veracium/census.py;  M src/veracium/gate.py;  M src/veracium/graph.py;  M src/veracium/mcp_server.py;  M src/veracium/portability.py;  M src/veracium/schema.py;  M src/veracium/scope.py)
+twin (uninstrumented): derived from HEAD 6fe91939e140e4302189f6fe94fc712d6223b733 by inv7_uninstrument.py
+twin derivation: 162 declare_site removed, 302 fire() unwrapped, 152 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
 
 python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
 suites: tests/test_0027_policy_lane.py tests/test_0027_policy_receipt.py tests/test_0027_semantic_recall.py tests/test_compile_gate.py tests/test_0037_procedural.py tests/test_0019_ungrounded.py tests/test_0014_schema.py tests/test_schema_model.py tests/test_0003_supersession_contested.py tests/test_0003_supersession_guard.py tests/test_0003_supersession_recall.py tests/test_0003_supersession_store.py tests/test_0028_resolution.py tests/test_maintenance_invariant.py tests/test_0020_scope_vectors.py tests/test_0015_lifecycle.py tests/test_0011_entitlement.py tests/test_0009_import_migration.py tests/test_0010_consolidation_primitives.py tests/test_0014_receipt_split.py tests/test_0022_revocation_operation.py tests/test_0037_capture.py tests/eval/edge_events/test_0029_acceptance_corpus.py tests/test_0010_visibility_reservation.py tests/test_0020_read_surfaces.py tests/test_0022_sweep_vectors.py tests/test_0039_degradation_visibility.py tests/test_audit.py tests/test_confirm_contract_0008.py
 
 ARM              RECORDS     SHA256(observer trace)                                            PYTEST
-healthy              75569  ef5301439e7f736fbf925b2d8257e3bc23106f498df5d47149ac9ca9dfd7ef5f  861 passed, 2 warnings in 111.51s (0:01:51) (exit 0, 112.4s)
-failing              75569  ef5301439e7f736fbf925b2d8257e3bc23106f498df5d47149ac9ca9dfd7ef5f  861 passed, 2 warnings in 113.55s (0:01:53) (exit 0, 114.4s)
-off                  75569  ef5301439e7f736fbf925b2d8257e3bc23106f498df5d47149ac9ca9dfd7ef5f  861 passed, 2 warnings in 111.58s (0:01:51) (exit 0, 112.5s)
-uninstrumented       75569  ef5301439e7f736fbf925b2d8257e3bc23106f498df5d47149ac9ca9dfd7ef5f  861 passed, 2 warnings in 111.97s (0:01:51) (exit 0, 113.0s)
+healthy              75569  8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f  861 passed, 2 warnings in 137.24s (0:02:17) (exit 0, 138.1s)
+failing              75569  8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f  861 passed, 2 warnings in 137.71s (0:02:17) (exit 0, 138.7s)
+off                  75569  8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f  861 passed, 2 warnings in 137.67s (0:02:17) (exit 0, 138.6s)
+uninstrumented       75569  8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f  861 passed, 2 warnings in 135.30s (0:02:15) (exit 0, 136.3s)
 
-VERDICT: observer traces IDENTICAL across 4 arms over 861 tests (reference: uninstrumented; 0 tests excluded as non-reproducible between two runs of the reference arm)
-  healthy: 861 tests compared, 0 differing, 0 not in both
-  failing: 861 tests compared, 0 differing, 0 not in both
-  off: 861 tests compared, 0 differing, 0 not in both
+VERDICT: observer traces IDENTICAL across 4 arms over 860 tests (reference: uninstrumented; 1 tests excluded as non-reproducible between two runs of the same arm — control pairs run for failing, healthy, off, uninstrumented)
+CANONICAL DIGESTS (decoded records, dictionary-independent — R6-5(i)): healthy c29e8d90d0f322ae; failing c29e8d90d0f322ae; off c29e8d90d0f322ae; uninstrumented c29e8d90d0f322ae
+  healthy: 860 tests compared, 0 differing, 0 not in both
+  failing: 860 tests compared, 0 differing, 0 not in both
+  off: 860 tests compared, 0 differing, 0 not in both
 
-EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between the two reference runs; inputs the run does not freeze):
-  (none)
-control run uninstrumented-control: records 75569, sha256 ef5301439e7f736fbf925b2d8257e3bc23106f498df5d47149ac9ca9dfd7ef5f, 861 passed, 2 warnings in 112.56s (0:01:52)
+EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between two runs of one arm; inputs the run does not freeze — the arm(s) that sampled it named):
+  tests/eval/edge_events/test_0029_acceptance_corpus.py::test_acceptance_corpus_passes_100_percent  [failing]
+control run healthy-control: records 75569, sha256 8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f, 861 passed, 2 warnings in 137.01s (0:02:17)
+control run failing-control: records 75569, sha256 8192b1ced76da88061e124dabf7ed7dd1493056191e9d45d892c91c2cd57ba3d, 861 passed, 2 warnings in 153.87s (0:02:33)
+control run off-control: records 75569, sha256 8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f, 861 passed, 2 warnings in 137.55s (0:02:17)
+control run uninstrumented-control: records 75569, sha256 8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f, 861 passed, 2 warnings in 135.11s (0:02:15)
 
 CROSS-CHECKS:
-  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_consulted": 154, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7223}
-  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_with_errors": 154, "subsequence_holds": true, "subsequence_matched": 7223}
+  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_consulted": 152, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7223}
+  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_with_errors": 152, "subsequence_holds": true, "subsequence_matched": 7223}
   off: {"census_enabled": false, "registry_size": 162}
-  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace17/twin/src/veracium/__init__.py"}
+  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace19/twin/src/veracium/__init__.py"}
 
 OBSERVED SYMBOLS: 98 wrapped of 105 declared; EXCLUDED (unreachable from outside, by name):
   asof/recall.py:recall_at.claim: nested inside a function; unreachable from outside
@@ -41,193 +44,317 @@ OBSERVED SYMBOLS: 98 wrapped of 105 declared; EXCLUDED (unreachable from outside
 from-import bindings rebound: 15
 
 HISTOGRAM (reference arm), symbol -> decision: count
-  __init__.py:Memory._build_scope_policy -> None: 257
-  __init__.py:Memory._build_scope_policy -> value: 221
-  __init__.py:Memory._find_edge -> value: 17
-  __init__.py:Memory._recall -> NotImplementedError: 1
-  __init__.py:Memory._recall -> OperationalError: 1
-  __init__.py:Memory._recall -> ScopeError: 7
-  __init__.py:Memory._recall -> TypeError: 2
-  __init__.py:Memory._recall -> ValueError: 7
-  __init__.py:Memory._recall -> value: 138
-  __init__.py:Memory.correct -> CorrectionRefused: 1
-  __init__.py:Memory.correct -> ProcedureValueError: 1
-  __init__.py:Memory.correct -> ValueError: 1
-  __init__.py:Memory.correct -> value: 1
-  __init__.py:Memory.dispute -> value: 1
-  __init__.py:Memory.recall -> NotImplementedError: 1
-  __init__.py:Memory.recall -> OperationalError: 1
-  __init__.py:Memory.recall -> ScopeError: 11
-  __init__.py:Memory.recall -> TypeError: 2
-  __init__.py:Memory.recall -> ValueError: 9
-  __init__.py:Memory.recall -> value: 153
-  __init__.py:Memory.record_outcome -> value: 2
-  asof/adapter.py:adapt -> value: 150
-  asof/adapter.py:derive_quarantined -> False: 144
-  asof/adapter.py:derive_quarantined -> True: 6
-  asof/adapter.py:derive_use_only -> False: 150
-  asof/resolve.py:_resolve_edge -> value: 57
-  asof/resolve.py:held_at -> False: 44
-  asof/resolve.py:held_at -> True: 47
-  asof/resolve.py:resolve_as_of -> FutureAsOfRefused: 2
-  asof/resolve.py:resolve_as_of -> ScopeError: 1
-  asof/resolve.py:resolve_as_of -> ValueError: 2
-  asof/resolve.py:resolve_as_of -> value: 70
-  authority.py:permitted -> False: 312
-  authority.py:permitted -> True: 556
-  authority.py:self_assertion -> False: 3
-  authority.py:self_assertion -> True: 7
-  compile.py:_grounded_inputs -> value: 36
-  diagnostics.py:Reporter.send -> True: 1
-  gate.py:exclude_procedural -> value: 256
-  gate.py:partition_parts -> value: 68
-  gate.py:scoped_assertable -> False: 182
-  gate.py:scoped_assertable -> True: 231
-  graph.py:_strictly_redundant -> True: 698
-  graph.py:apply_supersession -> ReceiptSchemaBoundaryError: 1
-  graph.py:apply_supersession -> SupersessionIntegrityError: 1
-  graph.py:apply_supersession -> value: 722
-  graph.py:collapse_for_render -> value: 233
-  graph.py:plan_correction -> ValueError: 1
-  graph.py:plan_correction -> value: 29
-  graph.py:semantic_duplicate_of -> False: 39
-  graph.py:semantic_duplicate_of -> True: 3
-  grounding.py:ungrounded -> False: 157
-  grounding.py:ungrounded -> True: 41
-  ingest.py:ingest_event -> RuntimeError: 7
-  ingest.py:ingest_event -> TypeError: 4
-  ingest.py:ingest_event -> ValueError: 3
-  ingest.py:ingest_event -> _Boom: 2
-  ingest.py:ingest_event -> value: 316
-  mcp_server.py:_closed_set -> None: 5
-  mcp_server.py:_closed_set -> ValueError: 1
-  portability.py:_preflight_and_commit -> ValueError: 6
-  portability.py:_preflight_and_commit -> value: 37
-  portability.py:_validate_incoming_chain -> ValueError: 10
-  portability.py:_validate_incoming_chain -> value: 12
-  portability.py:export_memory -> value: 19
-  portability.py:import_memory -> ValidationError: 7
-  portability.py:import_memory -> ValueError: 19
-  portability.py:import_memory -> value: 37
-  procedural_gate.py:actor_present -> False: 464
-  procedural_gate.py:actor_present -> True: 82
-  procedural_gate.py:positive_form -> False: 34
-  procedural_gate.py:positive_form -> True: 141
-  procedures.py:build_procedure_edge -> ProcedureTypeError: 12
-  procedures.py:build_procedure_edge -> ProcedureValueError: 15
-  procedures.py:build_procedure_edge -> value: 84
-  registry.py:effective_registry -> value: 328
-  schema.py:Edge.assertable -> False: 2930
-  schema.py:Edge.assertable -> True: 2226
-  schema.py:Edge.quarantined -> False: 12241
-  schema.py:Edge.quarantined -> True: 299
-  schema.py:Edge.use_only -> False: 5098
-  schema.py:Edge.use_only -> True: 1775
-  schema.py:Edge.valid_now -> False: 576
-  schema.py:Edge.valid_now -> True: 2617
-  schema.py:Episode.active -> True: 204
-  schema.py:Episode.assertable -> False: 62
-  schema.py:Episode.assertable -> True: 142
-  schema.py:Episode.quarantined -> False: 204
-  schema.py:Episode.use_only -> False: 142
-  schema.py:Episode.use_only -> True: 62
-  schema.py:Episode.valid_now -> True: 142
-  scope.py:Identity.groupable -> False: 10
-  scope.py:Identity.groupable -> True: 6158
-  scope.py:_revalidate -> None: 4660
-  scope.py:_revalidate -> ScopeError: 10
-  scope.py:apply_filters -> value: 7
-  scope.py:classify -> ScopeError: 14
-  scope.py:classify -> value: 4662
-  scope.py:membership -> ScopeError: 4
-  scope.py:membership -> value: 4851
-  scope.py:prune_absorbed_record -> ExportLinkageError: 6
-  scope.py:prune_absorbed_record -> value: 12
-  scope.py:validate_filters -> ScopeError: 7
-  scope.py:validate_filters -> value: 175
-  scope.py:validate_policy -> ScopeError: 18
-  scope.py:validate_policy -> value: 867
-  scope_linkage.py:_resolve_winner -> ImportLinkageError: 8
-  scope_linkage.py:_resolve_winner -> value: 22
-  scope_linkage.py:derive_absorbed_by -> ExportLinkageError: 2
-  scope_linkage.py:derive_absorbed_by -> None: 18
-  scope_linkage.py:derive_absorbed_by -> value: 40
-  scope_linkage.py:reconstruct_absorption_rows -> ImportLinkageError: 12
-  scope_linkage.py:reconstruct_absorption_rows -> ScopeError: 2
-  scope_linkage.py:reconstruct_absorption_rows -> value: 78
-  scope_read.py:ScopeView.__init__ -> None: 111
-  scope_read.py:ScopeView.__init__ -> ScopeError: 11
-  scope_read.py:ScopeView.scoped -> value: 45
-  scope_read.py:narrow_edges -> value: 39
-  store/migration.py:_apply_forward -> DuplicateOutcomeChainError: 1
-  store/migration.py:_apply_forward -> None: 8
-  store/migration.py:_migrate_outcome_chains -> DuplicateOutcomeChainError: 1
-  store/migration.py:_migrate_outcome_chains -> None: 3
-  store/revocation.py:_rollback_or_poison -> None: 4
-  store/revocation.py:_rollback_or_poison -> RevocationUnknownState: 1
-  store/revocation.py:revocation_operation -> OrdinalCollision: 1
-  store/revocation.py:revocation_operation -> RevocationEffectError: 1
-  store/revocation.py:revocation_operation -> RevocationIntegrityError: 1
-  store/revocation.py:revocation_operation -> RevocationUnknownState: 1
-  store/revocation.py:revocation_operation -> RuntimeError: 1
-  store/revocation.py:revocation_operation -> value: 28
-  store/revocation_sweep.py:validate_contribution_row -> RevocationLinkageError: 1
-  store/revocation_sweep.py:validate_contribution_row -> value: 399
-  store/revocation_sweep.py:validate_revocation_row -> value: 102
-  store/schema_version.py:_validated_current -> False: 36
-  store/schema_version.py:_validated_current -> StoreVersionError: 2
-  store/schema_version.py:open_versioned -> DuplicateOutcomeChainError: 1
-  store/schema_version.py:open_versioned -> StoreVersionError: 4
-  store/schema_version.py:open_versioned -> value: 1134
-  store/schema_version.py:runtime_supported -> False: 14
-  store/schema_version.py:runtime_supported -> True: 1142
-  store/sqlite.py:SqliteStore._journal_edge_write -> None: 5
-  store/sqlite.py:SqliteStore._journal_edge_write -> value: 3533
-  store/sqlite.py:SqliteStore._ordinary_read_visible -> False: 6
-  store/sqlite.py:SqliteStore._ordinary_read_visible -> True: 218
-  store/sqlite.py:SqliteStore._upsert_edge_row -> None: 3061
-  store/sqlite.py:SqliteStore._upsert_edge_row -> ValueError: 9
-  store/sqlite.py:SqliteStore._upsert_embedding_in_txn -> False: 2
-  store/sqlite.py:SqliteStore._upsert_embedding_in_txn -> True: 24
-  store/sqlite.py:SqliteStore._write_absorption_flattening -> None: 761
-  store/sqlite.py:SqliteStore._write_consolidation_contributions -> None: 8
-  store/sqlite.py:SqliteStore._write_contribution -> False: 29
-  store/sqlite.py:SqliteStore._write_contribution -> True: 24
-  store/sqlite.py:SqliteStore._write_txn -> value: 3167
-  store/sqlite.py:SqliteStore.abandon_consolidation_if_current -> False: 1
-  store/sqlite.py:SqliteStore.abandon_consolidation_if_current -> True: 2
-  store/sqlite.py:SqliteStore.add_episode -> None: 303
-  store/sqlite.py:SqliteStore.add_episode -> ValueError: 9
-  store/sqlite.py:SqliteStore.append_outcome_if_head -> value: 23
-  store/sqlite.py:SqliteStore.apply_supersession_plan -> CorrectionAuthorisationError: 8
-  store/sqlite.py:SqliteStore.apply_supersession_plan -> SupersessionIntegrityError: 39
-  store/sqlite.py:SqliteStore.apply_supersession_plan -> ValueError: 2
-  store/sqlite.py:SqliteStore.apply_supersession_plan -> value: 767
-  store/sqlite.py:SqliteStore.commit_outcome_import_plan -> value: 40
-  store/sqlite.py:SqliteStore.confirm_edge -> RuntimeError: 1
-  store/sqlite.py:SqliteStore.confirm_edge -> ValueError: 1
-  store/sqlite.py:SqliteStore.confirm_edge -> value: 15
-  store/sqlite.py:SqliteStore.create_or_takeover_consolidation -> None: 4
-  store/sqlite.py:SqliteStore.create_or_takeover_consolidation -> value: 29
-  store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current -> False: 1
-  store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current -> True: 5
-  store/sqlite.py:SqliteStore.delete_episode -> ValueError: 2
-  store/sqlite.py:SqliteStore.edge_state_at -> None: 6
-  store/sqlite.py:SqliteStore.edge_state_at -> PreEpochQuery: 1
-  store/sqlite.py:SqliteStore.edge_state_at -> value: 27
-  store/sqlite.py:SqliteStore.edges -> value: 3121
-  store/sqlite.py:SqliteStore.quiescent_episode_snapshot -> value: 21
-  store/sqlite.py:SqliteStore.renew_consolidation_lease -> False: 1
-  store/sqlite.py:SqliteStore.renew_consolidation_lease -> True: 1
-  store/sqlite.py:SqliteStore.transition_consolidation_if_current -> False: 4
-  store/sqlite.py:SqliteStore.transition_consolidation_if_current -> True: 27
-  store/sqlite.py:SqliteStore.upsert_embedding -> False: 2
-  store/sqlite.py:SqliteStore.upsert_embedding -> True: 24
-  store/sqlite.py:SqliteStore.write_consolidation_output_if_current -> False: 1
-  store/sqlite.py:SqliteStore.write_consolidation_output_if_current -> True: 13
-  telemetry.py:flush_if_due -> False: 5
-  telemetry.py:flush_if_due -> True: 10
-  telemetry.py:load_collector_if_enabled -> None: 2
-  telemetry.py:load_collector_if_enabled -> value: 10
-  telemetry.py:preview -> None: 5
-  telemetry.py:preview -> value: 4
+  __init__.py:Memory._build_scope_policy#0 -> None: 257
+  __init__.py:Memory._build_scope_policy#2 -> value: 221
+  __init__.py:Memory._find_edge#0 -> value: 17
+  __init__.py:Memory._recall#253 -> NotImplementedError: 1
+  __init__.py:Memory._recall#253 -> OperationalError: 1
+  __init__.py:Memory._recall#253 -> ScopeError: 7
+  __init__.py:Memory._recall#253 -> ValueError: 6
+  __init__.py:Memory._recall#5 -> TypeError: 2
+  __init__.py:Memory._recall#6 -> ValueError: 1
+  __init__.py:Memory._recall#7 -> value: 3
+  __init__.py:Memory._recall#8 -> value: 135
+  __init__.py:Memory.correct#0 -> ValueError: 1
+  __init__.py:Memory.correct#1 -> ProcedureValueError: 1
+  __init__.py:Memory.correct#3 -> CorrectionRefused: 1
+  __init__.py:Memory.correct#4 -> value: 1
+  __init__.py:Memory.dispute#1 -> value: 1
+  __init__.py:Memory.recall#0 -> ValueError: 1
+  __init__.py:Memory.recall#1 -> ValueError: 1
+  __init__.py:Memory.recall#2 -> ScopeError: 1
+  __init__.py:Memory.recall#2 -> value: 15
+  __init__.py:Memory.recall#253 -> ScopeError: 3
+  __init__.py:Memory.recall#3 -> NotImplementedError: 1
+  __init__.py:Memory.recall#3 -> OperationalError: 1
+  __init__.py:Memory.recall#3 -> ScopeError: 7
+  __init__.py:Memory.recall#3 -> TypeError: 2
+  __init__.py:Memory.recall#3 -> ValueError: 7
+  __init__.py:Memory.recall#3 -> value: 138
+  __init__.py:Memory.record_outcome#3 -> value: 2
+  asof/adapter.py:adapt#13 -> value: 150
+  asof/adapter.py:derive_quarantined#0 -> False: 144
+  asof/adapter.py:derive_quarantined#0 -> True: 6
+  asof/adapter.py:derive_use_only#0 -> False: 150
+  asof/resolve.py:_resolve_edge#2 -> value: 5
+  asof/resolve.py:_resolve_edge#6 -> value: 12
+  asof/resolve.py:_resolve_edge#7 -> value: 10
+  asof/resolve.py:_resolve_edge#8 -> value: 30
+  asof/resolve.py:held_at#0 -> False: 44
+  asof/resolve.py:held_at#0 -> True: 47
+  asof/resolve.py:resolve_as_of#0 -> FutureAsOfRefused: 2
+  asof/resolve.py:resolve_as_of#1 -> value: 70
+  asof/resolve.py:resolve_as_of#253 -> ScopeError: 1
+  asof/resolve.py:resolve_as_of#253 -> ValueError: 2
+  authority.py:permitted#0 -> False: 312
+  authority.py:permitted#0 -> True: 556
+  authority.py:self_assertion#0 -> False: 3
+  authority.py:self_assertion#0 -> True: 7
+  compile.py:_grounded_inputs#0 -> value: 36
+  diagnostics.py:Reporter.send#4 -> True: 1
+  gate.py:exclude_procedural#0 -> value: 256
+  gate.py:partition_parts#0 -> value: 68
+  gate.py:scoped_assertable#0 -> False: 24
+  gate.py:scoped_assertable#1 -> False: 142
+  gate.py:scoped_assertable#2 -> False: 6
+  gate.py:scoped_assertable#3 -> False: 10
+  gate.py:scoped_assertable#3 -> True: 231
+  graph.py:_strictly_redundant#0 -> True: 698
+  graph.py:apply_supersession#0 -> ReceiptSchemaBoundaryError: 1
+  graph.py:apply_supersession#1 -> value: 1
+  graph.py:apply_supersession#2 -> SupersessionIntegrityError: 1
+  graph.py:apply_supersession#4 -> value: 721
+  graph.py:collapse_for_render#0 -> value: 206
+  graph.py:collapse_for_render#1 -> value: 27
+  graph.py:plan_correction#1 -> ValueError: 1
+  graph.py:plan_correction#2 -> value: 1
+  graph.py:plan_correction#3 -> value: 28
+  graph.py:semantic_duplicate_of#0 -> False: 2
+  graph.py:semantic_duplicate_of#1 -> False: 34
+  graph.py:semantic_duplicate_of#2 -> False: 2
+  graph.py:semantic_duplicate_of#4 -> False: 1
+  graph.py:semantic_duplicate_of#6 -> True: 3
+  grounding.py:ungrounded#0 -> True: 41
+  grounding.py:ungrounded#1 -> False: 157
+  ingest.py:ingest_event#0 -> TypeError: 1
+  ingest.py:ingest_event#2 -> ValueError: 2
+  ingest.py:ingest_event#253 -> RuntimeError: 7
+  ingest.py:ingest_event#253 -> TypeError: 3
+  ingest.py:ingest_event#253 -> ValueError: 1
+  ingest.py:ingest_event#253 -> _Boom: 2
+  ingest.py:ingest_event#4 -> value: 21
+  ingest.py:ingest_event#5 -> value: 295
+  mcp_server.py:_closed_set#0 -> ValueError: 1
+  mcp_server.py:_closed_set#254 -> None: 5
+  portability.py:_preflight_and_commit#1 -> ValueError: 5
+  portability.py:_preflight_and_commit#2 -> ValueError: 1
+  portability.py:_preflight_and_commit#9 -> value: 37
+  portability.py:_validate_incoming_chain#0 -> ValueError: 5
+  portability.py:_validate_incoming_chain#1 -> ValueError: 1
+  portability.py:_validate_incoming_chain#2 -> ValueError: 1
+  portability.py:_validate_incoming_chain#3 -> ValueError: 2
+  portability.py:_validate_incoming_chain#4 -> ValueError: 1
+  portability.py:_validate_incoming_chain#8 -> value: 12
+  portability.py:export_memory#1 -> value: 19
+  portability.py:import_memory#12 -> ValueError: 1
+  portability.py:import_memory#13 -> ValueError: 1
+  portability.py:import_memory#22 -> value: 37
+  portability.py:import_memory#253 -> ValidationError: 7
+  portability.py:import_memory#253 -> ValueError: 16
+  portability.py:import_memory#4 -> ValueError: 1
+  procedural_gate.py:actor_present#0 -> False: 380
+  procedural_gate.py:actor_present#1 -> False: 9
+  procedural_gate.py:actor_present#2 -> False: 24
+  procedural_gate.py:actor_present#4 -> False: 51
+  procedural_gate.py:actor_present#6 -> True: 82
+  procedural_gate.py:positive_form#0 -> False: 7
+  procedural_gate.py:positive_form#1 -> False: 8
+  procedural_gate.py:positive_form#2 -> False: 4
+  procedural_gate.py:positive_form#3 -> False: 2
+  procedural_gate.py:positive_form#4 -> False: 13
+  procedural_gate.py:positive_form#4 -> True: 141
+  procedures.py:build_procedure_edge#1 -> ProcedureTypeError: 2
+  procedures.py:build_procedure_edge#10 -> ProcedureValueError: 1
+  procedures.py:build_procedure_edge#11 -> ProcedureTypeError: 3
+  procedures.py:build_procedure_edge#12 -> ProcedureValueError: 6
+  procedures.py:build_procedure_edge#14 -> value: 84
+  procedures.py:build_procedure_edge#2 -> ProcedureValueError: 2
+  procedures.py:build_procedure_edge#253 -> ProcedureTypeError: 3
+  procedures.py:build_procedure_edge#3 -> ProcedureValueError: 1
+  procedures.py:build_procedure_edge#4 -> ProcedureTypeError: 1
+  procedures.py:build_procedure_edge#5 -> ProcedureTypeError: 2
+  procedures.py:build_procedure_edge#6 -> ProcedureValueError: 3
+  procedures.py:build_procedure_edge#7 -> ProcedureValueError: 1
+  procedures.py:build_procedure_edge#8 -> ProcedureTypeError: 1
+  procedures.py:build_procedure_edge#9 -> ProcedureValueError: 1
+  registry.py:effective_registry#4 -> value: 328
+  schema.py:Edge.assertable#0 -> False: 2930
+  schema.py:Edge.assertable#0 -> True: 2226
+  schema.py:Edge.quarantined#0 -> False: 12241
+  schema.py:Edge.quarantined#0 -> True: 299
+  schema.py:Edge.use_only#0 -> False: 5098
+  schema.py:Edge.use_only#0 -> True: 1775
+  schema.py:Edge.valid_now#0 -> False: 576
+  schema.py:Edge.valid_now#0 -> True: 2617
+  schema.py:Episode.active#0 -> True: 204
+  schema.py:Episode.assertable#0 -> False: 62
+  schema.py:Episode.assertable#0 -> True: 142
+  schema.py:Episode.quarantined#0 -> False: 204
+  schema.py:Episode.use_only#0 -> False: 142
+  schema.py:Episode.use_only#0 -> True: 62
+  schema.py:Episode.valid_now#0 -> True: 142
+  scope.py:Identity.groupable#0 -> False: 10
+  scope.py:Identity.groupable#0 -> True: 6158
+  scope.py:_revalidate#2 -> ScopeError: 6
+  scope.py:_revalidate#254 -> None: 4660
+  scope.py:_revalidate#4 -> ScopeError: 4
+  scope.py:apply_filters#0 -> value: 7
+  scope.py:classify#0 -> value: 4
+  scope.py:classify#1 -> ScopeError: 2
+  scope.py:classify#2 -> ScopeError: 2
+  scope.py:classify#253 -> ScopeError: 10
+  scope.py:classify#3 -> value: 10
+  scope.py:classify#4 -> value: 16
+  scope.py:classify#6 -> value: 1571
+  scope.py:classify#7 -> value: 3
+  scope.py:classify#8 -> value: 3058
+  scope.py:membership#0 -> ScopeError: 2
+  scope.py:membership#1 -> ScopeError: 2
+  scope.py:membership#2 -> value: 8
+  scope.py:membership#3 -> value: 2
+  scope.py:membership#4 -> value: 18
+  scope.py:membership#5 -> value: 4804
+  scope.py:membership#6 -> value: 8
+  scope.py:membership#7 -> value: 2
+  scope.py:membership#8 -> value: 6
+  scope.py:membership#9 -> value: 3
+  scope.py:prune_absorbed_record#1 -> ExportLinkageError: 6
+  scope.py:prune_absorbed_record#2 -> value: 12
+  scope.py:validate_filters#0 -> value: 168
+  scope.py:validate_filters#2 -> ScopeError: 4
+  scope.py:validate_filters#3 -> ScopeError: 3
+  scope.py:validate_filters#4 -> value: 7
+  scope.py:validate_policy#0 -> ScopeError: 6
+  scope.py:validate_policy#3 -> ScopeError: 3
+  scope.py:validate_policy#4 -> ScopeError: 1
+  scope.py:validate_policy#5 -> ScopeError: 5
+  scope.py:validate_policy#6 -> ScopeError: 3
+  scope.py:validate_policy#7 -> value: 867
+  scope_linkage.py:_resolve_winner#0 -> ImportLinkageError: 2
+  scope_linkage.py:_resolve_winner#1 -> value: 2
+  scope_linkage.py:_resolve_winner#2 -> ImportLinkageError: 2
+  scope_linkage.py:_resolve_winner#3 -> value: 20
+  scope_linkage.py:_resolve_winner#4 -> ImportLinkageError: 2
+  scope_linkage.py:_resolve_winner#5 -> ImportLinkageError: 2
+  scope_linkage.py:derive_absorbed_by#0 -> None: 18
+  scope_linkage.py:derive_absorbed_by#1 -> ExportLinkageError: 2
+  scope_linkage.py:derive_absorbed_by#2 -> value: 40
+  scope_linkage.py:reconstruct_absorption_rows#0 -> ScopeError: 2
+  scope_linkage.py:reconstruct_absorption_rows#1 -> ImportLinkageError: 2
+  scope_linkage.py:reconstruct_absorption_rows#2 -> ImportLinkageError: 2
+  scope_linkage.py:reconstruct_absorption_rows#253 -> ImportLinkageError: 8
+  scope_linkage.py:reconstruct_absorption_rows#3 -> value: 78
+  scope_read.py:ScopeView.__init__#0 -> ScopeError: 5
+  scope_read.py:ScopeView.__init__#1 -> ScopeError: 3
+  scope_read.py:ScopeView.__init__#2 -> ScopeError: 3
+  scope_read.py:ScopeView.__init__#254 -> None: 111
+  scope_read.py:ScopeView.scoped#0 -> value: 45
+  scope_read.py:narrow_edges#0 -> value: 34
+  scope_read.py:narrow_edges#1 -> value: 5
+  store/migration.py:_apply_forward#253 -> DuplicateOutcomeChainError: 1
+  store/migration.py:_apply_forward#254 -> None: 8
+  store/migration.py:_migrate_outcome_chains#0 -> DuplicateOutcomeChainError: 1
+  store/migration.py:_migrate_outcome_chains#254 -> None: 3
+  store/revocation.py:_rollback_or_poison#0 -> RevocationUnknownState: 1
+  store/revocation.py:_rollback_or_poison#254 -> None: 4
+  store/revocation.py:revocation_operation#1 -> value: 28
+  store/revocation.py:revocation_operation#2 -> OrdinalCollision: 1
+  store/revocation.py:revocation_operation#253 -> RevocationUnknownState: 1
+  store/revocation.py:revocation_operation#3 -> RevocationIntegrityError: 1
+  store/revocation.py:revocation_operation#4 -> RevocationEffectError: 1
+  store/revocation.py:revocation_operation#4 -> RuntimeError: 1
+  store/revocation_sweep.py:validate_contribution_row#8 -> RevocationLinkageError: 1
+  store/revocation_sweep.py:validate_contribution_row#9 -> value: 399
+  store/revocation_sweep.py:validate_revocation_row#8 -> value: 102
+  store/schema_version.py:_validated_current#0 -> StoreVersionError: 2
+  store/schema_version.py:_validated_current#3 -> False: 36
+  store/schema_version.py:open_versioned#1 -> StoreVersionError: 1
+  store/schema_version.py:open_versioned#10 -> value: 1098
+  store/schema_version.py:open_versioned#13 -> value: 1
+  store/schema_version.py:open_versioned#16 -> DuplicateOutcomeChainError: 1
+  store/schema_version.py:open_versioned#16 -> StoreVersionError: 2
+  store/schema_version.py:open_versioned#4 -> StoreVersionError: 1
+  store/schema_version.py:open_versioned#5 -> value: 28
+  store/schema_version.py:open_versioned#7 -> value: 7
+  store/schema_version.py:runtime_supported#0 -> False: 8
+  store/schema_version.py:runtime_supported#2 -> False: 1
+  store/schema_version.py:runtime_supported#2 -> True: 1142
+  store/schema_version.py:runtime_supported#3 -> False: 3
+  store/schema_version.py:runtime_supported#4 -> False: 2
+  store/sqlite.py:SqliteStore._journal_edge_write#3 -> None: 5
+  store/sqlite.py:SqliteStore._journal_edge_write#6 -> value: 3533
+  store/sqlite.py:SqliteStore._ordinary_read_visible#0 -> False: 2
+  store/sqlite.py:SqliteStore._ordinary_read_visible#0 -> True: 6
+  store/sqlite.py:SqliteStore._ordinary_read_visible#1 -> False: 4
+  store/sqlite.py:SqliteStore._ordinary_read_visible#1 -> True: 10
+  store/sqlite.py:SqliteStore._ordinary_read_visible#2 -> True: 202
+  store/sqlite.py:SqliteStore._upsert_edge_row#254 -> None: 3061
+  store/sqlite.py:SqliteStore._upsert_edge_row#3 -> ValueError: 1
+  store/sqlite.py:SqliteStore._upsert_edge_row#4 -> ValueError: 1
+  store/sqlite.py:SqliteStore._upsert_edge_row#5 -> ValueError: 2
+  store/sqlite.py:SqliteStore._upsert_edge_row#6 -> ValueError: 3
+  store/sqlite.py:SqliteStore._upsert_edge_row#7 -> ValueError: 1
+  store/sqlite.py:SqliteStore._upsert_edge_row#9 -> ValueError: 1
+  store/sqlite.py:SqliteStore._upsert_embedding_in_txn#0 -> False: 1
+  store/sqlite.py:SqliteStore._upsert_embedding_in_txn#1 -> False: 1
+  store/sqlite.py:SqliteStore._upsert_embedding_in_txn#2 -> True: 24
+  store/sqlite.py:SqliteStore._write_absorption_flattening#0 -> None: 740
+  store/sqlite.py:SqliteStore._write_absorption_flattening#254 -> None: 21
+  store/sqlite.py:SqliteStore._write_consolidation_contributions#254 -> None: 8
+  store/sqlite.py:SqliteStore._write_contribution#4 -> False: 29
+  store/sqlite.py:SqliteStore._write_contribution#4 -> True: 24
+  store/sqlite.py:SqliteStore._write_txn#254 -> value: 3167
+  store/sqlite.py:SqliteStore.abandon_consolidation_if_current#0 -> False: 1
+  store/sqlite.py:SqliteStore.abandon_consolidation_if_current#1 -> True: 2
+  store/sqlite.py:SqliteStore.add_episode#254 -> None: 303
+  store/sqlite.py:SqliteStore.add_episode#4 -> ValueError: 3
+  store/sqlite.py:SqliteStore.add_episode#5 -> ValueError: 3
+  store/sqlite.py:SqliteStore.add_episode#6 -> ValueError: 1
+  store/sqlite.py:SqliteStore.add_episode#7 -> ValueError: 2
+  store/sqlite.py:SqliteStore.append_outcome_if_head#2 -> value: 23
+  store/sqlite.py:SqliteStore.apply_supersession_plan#1 -> SupersessionIntegrityError: 29
+  store/sqlite.py:SqliteStore.apply_supersession_plan#10 -> CorrectionAuthorisationError: 1
+  store/sqlite.py:SqliteStore.apply_supersession_plan#11 -> CorrectionAuthorisationError: 1
+  store/sqlite.py:SqliteStore.apply_supersession_plan#12 -> CorrectionAuthorisationError: 1
+  store/sqlite.py:SqliteStore.apply_supersession_plan#13 -> CorrectionAuthorisationError: 1
+  store/sqlite.py:SqliteStore.apply_supersession_plan#14 -> CorrectionAuthorisationError: 1
+  store/sqlite.py:SqliteStore.apply_supersession_plan#19 -> ValueError: 2
+  store/sqlite.py:SqliteStore.apply_supersession_plan#2 -> value: 2
+  store/sqlite.py:SqliteStore.apply_supersession_plan#20 -> value: 759
+  store/sqlite.py:SqliteStore.apply_supersession_plan#4 -> SupersessionIntegrityError: 10
+  store/sqlite.py:SqliteStore.apply_supersession_plan#5 -> value: 4
+  store/sqlite.py:SqliteStore.apply_supersession_plan#6 -> value: 2
+  store/sqlite.py:SqliteStore.apply_supersession_plan#7 -> CorrectionAuthorisationError: 1
+  store/sqlite.py:SqliteStore.apply_supersession_plan#9 -> CorrectionAuthorisationError: 2
+  store/sqlite.py:SqliteStore.commit_outcome_import_plan#15 -> value: 1
+  store/sqlite.py:SqliteStore.commit_outcome_import_plan#23 -> value: 39
+  store/sqlite.py:SqliteStore.confirm_edge#2 -> ValueError: 1
+  store/sqlite.py:SqliteStore.confirm_edge#3 -> value: 2
+  store/sqlite.py:SqliteStore.confirm_edge#6 -> RuntimeError: 1
+  store/sqlite.py:SqliteStore.confirm_edge#7 -> value: 13
+  store/sqlite.py:SqliteStore.create_or_takeover_consolidation#1 -> None: 4
+  store/sqlite.py:SqliteStore.create_or_takeover_consolidation#2 -> value: 29
+  store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current#0 -> False: 1
+  store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current#1 -> True: 5
+  store/sqlite.py:SqliteStore.delete_episode#0 -> ValueError: 1
+  store/sqlite.py:SqliteStore.delete_episode#1 -> ValueError: 1
+  store/sqlite.py:SqliteStore.edge_state_at#0 -> PreEpochQuery: 1
+  store/sqlite.py:SqliteStore.edge_state_at#1 -> None: 6
+  store/sqlite.py:SqliteStore.edge_state_at#2 -> value: 27
+  store/sqlite.py:SqliteStore.edges#0 -> value: 3121
+  store/sqlite.py:SqliteStore.quiescent_episode_snapshot#0 -> value: 1
+  store/sqlite.py:SqliteStore.quiescent_episode_snapshot#1 -> value: 20
+  store/sqlite.py:SqliteStore.renew_consolidation_lease#0 -> False: 1
+  store/sqlite.py:SqliteStore.renew_consolidation_lease#1 -> True: 1
+  store/sqlite.py:SqliteStore.transition_consolidation_if_current#0 -> False: 1
+  store/sqlite.py:SqliteStore.transition_consolidation_if_current#1 -> False: 1
+  store/sqlite.py:SqliteStore.transition_consolidation_if_current#3 -> False: 1
+  store/sqlite.py:SqliteStore.transition_consolidation_if_current#5 -> False: 1
+  store/sqlite.py:SqliteStore.transition_consolidation_if_current#7 -> True: 27
+  store/sqlite.py:SqliteStore.upsert_embedding#1 -> False: 2
+  store/sqlite.py:SqliteStore.upsert_embedding#1 -> True: 24
+  store/sqlite.py:SqliteStore.write_consolidation_output_if_current#0 -> False: 1
+  store/sqlite.py:SqliteStore.write_consolidation_output_if_current#1 -> True: 13
+  telemetry.py:flush_if_due#0 -> False: 1
+  telemetry.py:flush_if_due#1 -> False: 3
+  telemetry.py:flush_if_due#3 -> False: 1
+  telemetry.py:flush_if_due#5 -> True: 1
+  telemetry.py:flush_if_due#6 -> True: 1
+  telemetry.py:flush_if_due#7 -> True: 8
+  telemetry.py:load_collector_if_enabled#0 -> None: 1
+  telemetry.py:load_collector_if_enabled#1 -> None: 1
+  telemetry.py:load_collector_if_enabled#2 -> value: 10
+  telemetry.py:preview#0 -> None: 2
+  telemetry.py:preview#1 -> None: 2
+  telemetry.py:preview#2 -> None: 1
+  telemetry.py:preview#3 -> value: 4

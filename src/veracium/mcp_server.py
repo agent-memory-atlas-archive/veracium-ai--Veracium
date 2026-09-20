@@ -105,18 +105,23 @@ def _closed_set(field: str, value) -> None:
     closed-set check "still RAISES rather than defaulting"). Wrong types are
     malformed too — `123 in _AUTHOR` is False, an unhashable value would raise
     TypeError from the lookup; both are refusals, made explicit here."""
-    with _SITE_CLOSED_SET_AUTHOR.consult(), _SITE_CLOSED_SET_TRUST.consult():
-        if not isinstance(value, str) or value not in _AUTHOR:
-            if field == "author":
+    # the field names the site; only that site's condition is reached (round 6, R6-2a)
+    outside = not isinstance(value, str) or value not in _AUTHOR
+    if field == "author":
+        with _SITE_CLOSED_SET_AUTHOR.consult():
+            if outside:
                 raise _SITE_CLOSED_SET_AUTHOR.fire(ValueError(
                     f"author={value!r} is not accepted here. Use "
                     f"{sorted(_AUTHOR)}. 'system' is deliberately unavailable through "
                     f"the MCP surface: it denotes veracium's own maintenance output, "
                     f"and a trust-bearing field must not be settable by the party whose "
                     f"trust it describes."))
-            raise _SITE_CLOSED_SET_TRUST.fire(ValueError(
-                f"derived_from={value!r} is not accepted. Use "
-                f"{sorted(_AUTHOR)} or omit it."))
+    else:
+        with _SITE_CLOSED_SET_TRUST.consult():
+            if outside:
+                raise _SITE_CLOSED_SET_TRUST.fire(ValueError(
+                    f"derived_from={value!r} is not accepted. Use "
+                    f"{sorted(_AUTHOR)} or omit it."))
 
 
 def remember_report(mem: Memory, user_id: str, text: str,

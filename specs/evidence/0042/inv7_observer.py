@@ -72,26 +72,98 @@ def _label_of(kind: str, value) -> str:
     return "value"
 
 
-def _record(sym_idx: int, label: str) -> None:
+RECORD_WIDTH = 3          # (symbol, exit ordinal, label) — round 6, R6-5(ii): an exit keyed on the STATEMENT, so two
+                          # sites in one function that return the same value are two records, never one
+EXIT_IMPLICIT = 254       # the function fell off its end (no return statement executed)
+EXIT_PROPAGATED = 253     # an exception raised by a callee passed through (no raise statement of this function)
+_EXIT_MAPS: dict = {}     # code object -> {lineno: ordinal} over the function's OWN return/raise statements, in source order
+
+
+def _exit_map(fn) -> dict:
+    code = fn.__code__
+    m = _EXIT_MAPS.get(code)
+    if m is None:
+        m = {}
+        try:
+            src = inspect.getsource(fn); import textwrap, ast as _ast
+            tree = _ast.parse(textwrap.dedent(src)); first = code.co_firstlineno
+            # the first statement of the parsed snippet is the def (decorators may precede it: use the def's own line)
+            node = next(n for n in _ast.walk(tree) if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef)))
+            offset = first - node.lineno if not node.decorator_list else first - node.decorator_list[0].lineno
+            ordinal = 0
+            def walk(n_):
+                nonlocal ordinal
+                for c in _ast.iter_child_nodes(n_):
+                    if isinstance(c, (_ast.FunctionDef, _ast.AsyncFunctionDef, _ast.ClassDef, _ast.Lambda)):
+                        continue
+                    if isinstance(c, (_ast.Return, _ast.Raise)):
+                        m[c.lineno + offset] = ordinal; ordinal += 1
+                    walk(c)
+            walk(node)
+        except Exception:
+            pass                                # no source (a twin stub, a builtin): every exit reads as implicit
+        _EXIT_MAPS[code] = m
+    return m
+
+
+def _record(sym_idx: int, exit_idx: int, label: str) -> None:
     li = _LAB_INDEX.get(label)
     if li is None:
         if len(_LABELS) >= 255:
             raise RuntimeError("label table overflow")
         li = len(_LABELS); _LABELS.append(label); _LAB_INDEX[label] = li
-    _RECORDS.append(sym_idx); _RECORDS.append(li)
-    k = (sym_idx, li); _HIST[k] = _HIST.get(k, 0) + 1
+    if exit_idx > 252 and exit_idx not in (EXIT_IMPLICIT, EXIT_PROPAGATED):
+        raise RuntimeError("exit ordinal overflow")
+    _RECORDS.append(sym_idx); _RECORDS.append(exit_idx); _RECORDS.append(li)
+    k = (sym_idx, exit_idx, li); _HIST[k] = _HIST.get(k, 0) + 1
 
 
 def _wrap_callable(fn, sym_idx: int):
+    """Observe every exit of `fn`: the value or the exception, AND the exit STATEMENT (its ordinal among the
+    function's return/raise statements), read from the frame's line at the moment it returns or raises — a
+    local trace on fn's own frame only, line events off, installed for the duration of the call."""
+    code = fn.__code__
+
     @functools.wraps(fn)
     def observed(*a, **k):
+        # Three lines are read from fn's own frame: the last LINE event that landed on an exit statement,
+        # the last EXCEPTION event, and the RETURN event. The return event alone is not enough: CPython 3.12
+        # attributes the RETURN_VALUE that follows a `with` block's __exit__ call to the `with` statement's
+        # line, so a `return` inside `with SITE.consult():` (every census-enabled hot predicate) would read
+        # as an implicit exit. The line event on the return statement itself is the honest witness; a
+        # return statement reached is a return statement executed.
+        em = _exit_map(fn)
+        ret_line = [None]; exc_line = [None]; stmt_line = [None]
+        prev = sys.gettrace()
+
+        def local(frame, event, arg):
+            if event == "line":
+                if frame.f_lineno in em:
+                    stmt_line[0] = frame.f_lineno
+            elif event == "return":
+                ret_line[0] = frame.f_lineno
+            elif event == "exception":
+                exc_line[0] = frame.f_lineno
+            return local
+
+        def tracer(frame, event, arg):
+            if event == "call" and frame.f_code is code:
+                return local
+            return prev(frame, event, arg) if prev else None
+
+        sys.settrace(tracer)
         try:
-            r = fn(*a, **k)
-        except BaseException as exc:            # the decision is the raise; record and re-raise unchanged
-            _record(sym_idx, _label_of("raise", exc))
-            raise
-        _record(sym_idx, _label_of("return", r))
-        return r
+            try:
+                r = fn(*a, **k)
+            except BaseException as exc:            # the decision is the raise; record and re-raise unchanged
+                ln = exc_line[0]
+                _record(sym_idx, em.get(ln, em.get(stmt_line[0], EXIT_PROPAGATED)), _label_of("raise", exc))
+                raise
+            ln = ret_line[0]
+            _record(sym_idx, em.get(ln, em.get(stmt_line[0], EXIT_IMPLICIT)), _label_of("return", r))
+            return r
+        finally:
+            sys.settrace(prev)
     observed.__inv7_original__ = fn
     return observed
 
@@ -193,7 +265,7 @@ def records() -> bytes:
 
 
 def decoded() -> list:
-    return [(_SYMBOLS[_RECORDS[i]], _LABELS[_RECORDS[i + 1]]) for i in range(0, len(_RECORDS), 2)]
+    return [(_SYMBOLS[_RECORDS[i]], _RECORDS[i + 1], _LABELS[_RECORDS[i + 2]]) for i in range(0, len(_RECORDS), RECORD_WIDTH)]
 
 
 def _arm_setup() -> None:
@@ -229,7 +301,7 @@ _BOUNDARIES: list = []          # (record index at test start, nodeid) — a sid
 
 def pytest_runtest_logstart(nodeid, location):
     if MODE == "trace":
-        _BOUNDARIES.append((len(_RECORDS) // 2, nodeid))
+        _BOUNDARIES.append((len(_RECORDS) // RECORD_WIDTH, nodeid))     # a RECORD index, at the declared width
 
 
 def pytest_runtest_logfinish(nodeid, location):
@@ -261,10 +333,10 @@ def pytest_sessionfinish(session, exitstatus):
             for idx, nodeid in _BOUNDARIES:
                 fh.write(json.dumps([idx, nodeid]) + "\n")
         summary.update({
-            "records": len(_RECORDS) // 2,
+            "records": len(_RECORDS) // RECORD_WIDTH, "record_width": RECORD_WIDTH,
             "sha256": hashlib.sha256(bytes(_RECORDS)).hexdigest(),
             "symbols": _SYMBOLS, "labels": _LABELS,
-            "histogram": {f"{_SYMBOLS[s]} -> {_LABELS[l]}": n for (s, l), n in sorted(_HIST.items())},
+            "histogram": {f"{_SYMBOLS[s]}#{e} -> {_LABELS[l]}": n for (s, e, l), n in sorted(_HIST.items())},
             "wrapped": _WRAPPED, "excluded": _EXCLUDED, "rebound": _REBOUND,
         })
         if ARM in ("healthy", "failing"):

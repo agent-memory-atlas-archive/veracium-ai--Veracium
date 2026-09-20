@@ -122,18 +122,35 @@ def run_arm(repo, arm, suites, out, decl, twin_src=None, mode="trace", out_name=
     return summary
 
 
+RECORD_WIDTH = 3   # (symbol, exit ordinal, label); the observer's constant, restated here and asserted equal per arm
+
+
 def decode(arm_out: pathlib.Path, summary: dict):
+    """The arm's records DECODED THROUGH ITS OWN DICTIONARIES: (symbol, exit ordinal, label). Round 6, R6-5(i): the
+    comparison is over these canonical records, never over the bytes — two arms whose bytes agree but whose
+    tables differ are DIFFERENT traces."""
     raw = (arm_out / "observer_trace.bin").read_bytes()
+    w = summary.get("record_width", RECORD_WIDTH)
+    if w != RECORD_WIDTH:
+        raise ValueError(f"record width {w} != {RECORD_WIDTH}")
     syms, labs = summary["symbols"], summary["labels"]
-    return [(syms[raw[i]], labs[raw[i + 1]]) for i in range(0, len(raw), 2)]
+    return [(syms[raw[i]], raw[i + 1], labs[raw[i + 2]]) for i in range(0, len(raw), w)]
 
 
-def first_divergence(a: bytes, b: bytes):
+def canonical_digest(records: list) -> str:
+    """sha256 over the decoded records as JSON lines — what two arms are compared on, dictionary-independent."""
+    h = hashlib.sha256()
+    for r in records:
+        h.update(json.dumps(list(r), separators=(",", ":")).encode()); h.update(b"\n")
+    return h.hexdigest()
+
+
+def first_divergence(a: list, b: list):
     n = min(len(a), len(b))
-    for i in range(0, n, 2):
-        if a[i:i + 2] != b[i:i + 2]:
-            return i // 2
-    return None if len(a) == len(b) else n // 2
+    for i in range(n):
+        if a[i] != b[i]:
+            return i
+    return None if len(a) == len(b) else n         # a common prefix: the divergence is where the shorter one ends
 
 
 def owning_test(arm_out: pathlib.Path, index):
@@ -151,14 +168,14 @@ def owning_test(arm_out: pathlib.Path, index):
     return owner
 
 
-def segments(arm_out: pathlib.Path) -> dict:
-    """nodeid -> the arm's trace bytes produced while that test ran (from the boundary side file)."""
-    raw = (arm_out / "observer_trace.bin").read_bytes()
+def segments(arm_out: pathlib.Path, summary: dict) -> dict:
+    """nodeid -> the arm's DECODED records produced while that test ran (from the boundary side file)."""
+    recs = decode(arm_out, summary)
     bounds = [json.loads(l, object_pairs_hook=_strict_pairs) for l in (arm_out / "test_boundaries.jsonl").read_text().splitlines()]
     out = {}
     for k, (start, nodeid) in enumerate(bounds):
-        end = bounds[k + 1][0] if k + 1 < len(bounds) else len(raw) // 2
-        out[nodeid] = raw[start * 2:end * 2]
+        end = bounds[k + 1][0] if k + 1 < len(bounds) else len(recs)
+        out[nodeid] = tuple(recs[start:end])
     return out
 
 
@@ -181,35 +198,41 @@ def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict) 
     (census ⊆ observer in the census arms; UNMEASURED everywhere in the failing arm; no census activity
     in the off and uninstrumented arms). Pure over the arm directories, so a fabricated arm tests it."""
     ref = "uninstrumented" if "uninstrumented" in arms else arms[0]
-    ref_raw = (out / ref / "observer_trace.bin").read_bytes()
-    verdict = {"reference_arm": ref, "identical": True, "divergences": {}}
+    ref_dec = decode(out / ref, summaries[ref])
+    verdict = {"reference_arm": ref, "identical": True, "divergences": {},
+               "canonical_digest": {a: canonical_digest(decode(out / a, summaries[a])) for a in arms}}
     # THE CONTROL PAIR: the reference arm run twice. A test whose own trace differs between two runs of ONE
     # arm has inputs the run does not freeze (a directory order, a clock, state left by an earlier session);
     # it cannot witness the census either way and is EXCLUDED BY NAME. Every other test must match.
-    ref_segments = segments(out / ref)
-    control_dir = out / (ref + "-control")
-    if control_dir.exists():
-        ctl = segments(control_dir)
-        nondet = sorted(t for t in ref_segments if ctl.get(t) != ref_segments[t])
-        verdict["control"] = {"arm": ref + "-control", "tests": len(ref_segments), "non_reproducible": nondet}
-    else:
-        nondet = []
-        verdict["control"] = None
+    ref_segments = segments(out / ref, summaries[ref])
+    # Round 7: a control run may exist for ANY arm (main() runs one per arm); a test whose own trace differs
+    # between the two runs of one arm has inputs the run does not freeze and is EXCLUDED BY NAME from every
+    # cross-arm comparison — the union over arms. The reference-only pair missed noise that only the slowest
+    # arm's timing sampled (the first round-7 run).
+    per_arm_ctl = {}
+    for arm in arms:
+        control_dir = out / (arm + "-control")
+        if control_dir.exists():
+            segs_arm = ref_segments if arm == ref else segments(out / arm, summaries[arm])
+            ctl = segments(control_dir, summaries.get(arm + "-control", summaries[arm]))
+            per_arm_ctl[arm] = {"tests": len(segs_arm), "non_reproducible": sorted(t for t in segs_arm if ctl.get(t) != segs_arm[t])}
+    nondet = sorted(set().union(*(set(v["non_reproducible"]) for v in per_arm_ctl.values()))) if per_arm_ctl else []
+    verdict["control"] = ({"arms": per_arm_ctl, "tests": len(ref_segments), "non_reproducible": nondet}
+                          if per_arm_ctl else None)
     verdict["per_test"] = {}
     for arm in arms:
         if arm == ref:
             continue
-        segs = segments(out / arm)
+        segs = segments(out / arm, summaries[arm])
         differing = sorted(t for t in ref_segments if t not in nondet and segs.get(t) != ref_segments[t])
         missing = sorted(set(ref_segments) ^ set(segs))
         verdict["per_test"][arm] = {"compared": len(ref_segments) - len(nondet), "differing": differing, "tests_not_in_both": missing}
         if differing or missing:
             verdict["identical"] = False
     for arm in arms:
-        raw = (out / arm / "observer_trace.bin").read_bytes()
-        if raw != ref_raw and (verdict["per_test"].get(arm, {}).get("differing") or verdict["per_test"].get(arm, {}).get("tests_not_in_both")):
-            i = first_divergence(raw, ref_raw)
-            dec_a = decode(out / arm, summaries[arm]); dec_r = decode(out / ref, summaries[ref])
+        dec_a = decode(out / arm, summaries[arm]); dec_r = ref_dec
+        if dec_a != dec_r and (verdict["per_test"].get(arm, {}).get("differing") or verdict["per_test"].get(arm, {}).get("tests_not_in_both")):
+            i = first_divergence(dec_a, dec_r)
             verdict["divergences"][arm] = {"first_index": i, "owning_test": owning_test(out / arm, i), "this": dec_a[i] if i is not None and i < len(dec_a) else None,
                                             "reference": dec_r[i] if i is not None and i < len(dec_r) else None,
                                             "lengths": [len(dec_a), len(dec_r)]}
@@ -218,7 +241,7 @@ def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict) 
     for arm in ("healthy", "failing"):
         if arm not in arms:
             continue
-        obs = [s for s, _ in decode(out / arm, summaries[arm])]
+        obs = [s for s, _e, _l in decode(out / arm, summaries[arm])]
         census = [json.loads(l, object_pairs_hook=_strict_pairs) for l in (out / arm / "census_trace.jsonl").read_text().splitlines()]
         observable = set(summaries[arm].get("wrapped") or id_to_symbol.values())   # the census also sees the
         needle = [id_to_symbol[rec[1]] for rec in census                              # seven nested symbols the
@@ -289,10 +312,15 @@ def main():
     twin = export_twin(repo, a.twin, out) if "uninstrumented" in arms else None
     summaries = {}
     ref_arm = "uninstrumented" if "uninstrumented" in arms else arms[0]
-    if a.control:
-        summaries[ref_arm + "-control"] = run_arm(repo, ref_arm, suites, out, decl_path, twin_src=(twin["src"] if ref_arm == "uninstrumented" else None), out_name=ref_arm + "-control")
-        print(f"{ref_arm + '-control':22s} records={summaries[ref_arm + '-control'].get('records')} sha256={summaries[ref_arm + '-control'].get('sha256', '')[:16]}", flush=True)
+    # Round 7: the control pair is run for EVERY arm, not only the reference. The first round-7 run found the
+    # healthy arm alone diverging at one 0029 acceptance-corpus test — a supersession batch landing at a different
+    # scenario step — while two runs of the twin agreed: wall-clock noise that only the slowest arm's timing
+    # sampled. A test is excluded by name when two runs of ANY arm disagree on it; noise the reference arm
+    # cannot sample is still noise.
     for arm in arms:
+        if a.control:
+            summaries[arm + "-control"] = run_arm(repo, arm, suites, out, decl_path, twin_src=(twin["src"] if arm == "uninstrumented" else None), out_name=arm + "-control")
+            print(f"{arm + '-control':22s} records={summaries[arm + '-control'].get('records')} sha256={summaries[arm + '-control'].get('sha256', '')[:16]}", flush=True)
         summaries[arm] = run_arm(repo, arm, suites, out, decl_path, twin_src=(twin["src"] if arm == "uninstrumented" else None))
         print(f"{arm:15s} records={summaries[arm].get('records')} sha256={summaries[arm].get('sha256','')[:16]} "
               f"pytest={summaries[arm]['pytest_result_line']}", flush=True)
@@ -324,14 +352,16 @@ def main():
     ctl = verdict.get("control") or {}
     nd = ctl.get("non_reproducible", [])
     compared = (ctl.get("tests", 0) - len(nd)) if ctl else len(segments(out / ref))
+    ctl_arms = sorted((ctl.get("arms") or {}).keys())
     L += ["", f"VERDICT: observer traces {'IDENTICAL' if verdict['identical'] else 'DIVERGENT'} across {len(arms)} arms over {compared} tests (reference: {ref}; "
-          f"{len(nd)} tests excluded as non-reproducible between two runs of the reference arm)"]
+          f"{len(nd)} tests excluded as non-reproducible between two runs of the same arm — control pairs run for {', '.join(ctl_arms) if ctl_arms else 'no arm'})"]
+    L += [f"CANONICAL DIGESTS (decoded records, dictionary-independent — R6-5(i)): " + "; ".join(f"{a} {verdict['canonical_digest'][a][:16]}" for a in arms)]
     for arm, pt in verdict["per_test"].items():
         L.append(f"  {arm}: {pt['compared']} tests compared, {len(pt['differing'])} differing, {len(pt['tests_not_in_both'])} not in both")
         for t in pt["differing"][:20]:
             L.append(f"    DIFFERS {t}")
-    L += ["", "EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between the two reference runs; inputs the run does not freeze):"]
-    L += [f"  {t}" for t in nd] or ["  (none)"]
+    L += ["", "EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between two runs of one arm; inputs the run does not freeze — the arm(s) that sampled it named):"]
+    L += [f"  {t}  [{', '.join(a for a, v in (ctl.get('arms') or {}).items() if t in v['non_reproducible'])}]" for t in nd] or ["  (none)"]
     for k in [k for k in summaries if k.endswith("-control")]:
         s_ = summaries[k]; L.append(f"control run {k}: records {s_['records']}, sha256 {s_['sha256']}, {s_['pytest_result_line']}")
     for arm, d in verdict["divergences"].items():
@@ -347,7 +377,29 @@ def main():
     (out / "inv7_transcript.txt").write_text("\n".join(L) + "\n")
     (out / "verdict.json").write_text(json.dumps({"verdict": verdict, "checks": checks}, indent=1, sort_keys=True) + "\n")
     print("\n".join(L[:len(arms) + 12]))
-    return 0 if verdict["identical"] else 1
+    return final_status(verdict, checks, summaries, arms)
+
+
+def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> int:
+    """0 ONLY when the traces are identical AND every arm's pytest exited 0 AND every cross-check holds (round 6,
+    R6-5(iii): the exit used to be the trace verdict alone, so an arm that never ran cleanly could not be told from
+    one that ran and agreed). Pure over its inputs; the matrix test drives each gate."""
+    gates = {"identical": bool(verdict.get("identical"))}
+    for a in arms:
+        gates[f"pytest_exit:{a}"] = summaries.get(a, {}).get("pytest_exit") == 0
+    c = checks.get("healthy") or {}
+    if "healthy" in arms:
+        gates["healthy:subsequence"] = bool(c.get("subsequence_holds")); gates["healthy:no_errors"] = c.get("any_errors") is False
+        gates["healthy:no_undeclared_ids"] = c.get("census_ids_not_in_declaration") == []
+    f = checks.get("failing") or {}
+    if "failing" in arms:
+        gates["failing:all_unmeasured"] = bool(f.get("all_unmeasured")); gates["failing:subsequence"] = bool(f.get("subsequence_holds"))
+    if "off" in arms:
+        gates["off:census_disabled"] = checks.get("off", {}).get("census_enabled") is False
+    if "uninstrumented" in arms:
+        u = checks.get("uninstrumented", {}); gates["uninstrumented:empty_registry"] = u.get("registry_size") == 0 and u.get("census_enabled") is False
+    verdict["gates"] = gates
+    return 0 if all(gates.values()) else 1
 
 
 if __name__ == "__main__":

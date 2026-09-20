@@ -333,3 +333,85 @@ def _returns_true_through_fire(module, line):
     if isinstance(a, ast.Constant) and a.value is True:
         return True
     return isinstance(a, ast.Name) and a.id.isupper()          # a module-level sentinel constant
+
+
+# ---- round 6 (2026-09-20) ----------------------------------------------------------------------------------------
+
+def test_a0quater_round6_a_site_name_resolves_through_enclosing_function_scopes_and_class_bodies_do_not_shadow(tmp_path):
+    """R6-4 (cell D): the round-5 scan checked local shadowing and stopped one scope short — a nested function
+    whose SITE name is an ENCLOSING function's parameter read the module-level site as bound. Names now resolve
+    through the lexical scope: a binding in any enclosing FUNCTION shadows for everything nested; a CLASS body
+    is not a closure scope (Python's rule), so a class attribute of the same name shadows nothing for the
+    methods below it; `nonlocal`/`global` naming a site is REFUSED rather than guessed."""
+    import textwrap
+    inst = _load("installed_sites")
+    def scan_of(src):
+        d = tmp_path / f"m{abs(hash(src))}"; d.mkdir(); (d / "mod.py").write_text(textwrap.dedent(src))
+        return {r["id"]: r["bound"] for r in inst.scan(d)}
+    closure = '''
+        from veracium.census import declare_site
+        SITE = declare_site("t.enclosing-parameter")
+        def outer(SITE):
+            def inner(x):
+                with SITE.consult():
+                    if x: raise SITE.fire(ValueError("no"))
+                return x
+            return inner
+    '''
+    assert scan_of(closure) == {"t.enclosing-parameter": False}           # the reviewer's case: NOT bound
+    assigned = closure.replace("def outer(SITE):", "def outer():\n            SITE = object()")
+    assert scan_of(assigned) == {"t.enclosing-parameter": False}          # an enclosing assignment shadows too
+    class_body = '''
+        from veracium.census import declare_site
+        SITE = declare_site("t.class-body")
+        class K:
+            SITE = None
+            def m(self, x):
+                with SITE.consult():
+                    if x: raise SITE.fire(ValueError("no"))
+                return x
+    '''
+    assert scan_of(class_body) == {"t.class-body": True}                  # the control: a class body does not shadow
+    plain = closure.replace("def outer(SITE):", "def outer(other):")
+    assert scan_of(plain) == {"t.enclosing-parameter": True}              # the control: the same shape, unshadowed, IS bound
+    with pytest.raises(inst.UnresolvableScope):
+        scan_of(closure.replace("def inner(x):\n", "def inner(x):\n                nonlocal SITE\n").replace("def outer(SITE):", "def outer():\n            SITE = 1"))
+
+
+def test_a0quater_round6_the_live_registry_reconciles_against_the_scan_and_nothing_is_out_of_reach():
+    """R6-3 on the real tree (cell E, D feeding it): with every product module imported, the census's own
+    snapshot of what registered and what was loaded, validated against the scan's id -> module map, refuses
+    nothing and leaves NO declared id out of reach — the claim 'every declared site' is over the whole
+    declaration, not over the modules a run happened to import."""
+    import importlib
+    import veracium
+    # every .py under the package, by FILE — `pkgutil.walk_packages` does not descend into `store/`,
+    # a namespace package (no __init__.py), and the round-6 draft of this test imported 51 modules and
+    # reported seven store ids out of reach while calling the tree reconciled (found repairing it)
+    root = pathlib.Path(veracium.__file__).resolve().parent
+    failed = []
+    for f in sorted(root.rglob("*.py")):
+        rel = f.relative_to(root).with_suffix("")
+        parts = [p for p in rel.parts if p != "__init__"]
+        try:
+            importlib.import_module(".".join(["veracium", *parts]) if parts else "veracium")
+        except Exception as exc:      # an unimportable product module would leave its ids out of reach: say which
+            failed.append((str(rel), type(exc).__name__))
+    assert failed == []
+    from veracium import census
+    inst, decl, ct = _load("installed_sites"), _load("declaration"), _load("census_table")
+    loaded = ct.loaded_product_modules()          # the evidence layer's observation (specs/0031 keeps sys.modules out of src)
+    assert len(loaded) == sum(1 for _ in root.rglob("*.py"))
+    site_modules = {s["id"]: s["module"] for s in inst.scan(pathlib.Path(__file__).resolve().parents[1] / "src" / "veracium")}
+    declared = set(decl.DECLARED_IDS)
+    rep = census.census(declared)
+    assert ct.validate_report(rep, declared, site_modules, loaded) == []
+    assert ct.out_of_reach(declared, site_modules, loaded) == []
+    assert set(rep["snapshot"]["registered"]) >= declared
+    # the mutant: forget one registration of a loaded module → refused by name, not a valid zero
+    victim = sorted(declared)[0]; saved = census._REGISTRY.pop(victim)
+    try:
+        probs = ct.validate_report(census.census(declared), declared, site_modules, loaded)
+    finally:
+        census._REGISTRY[victim] = saved
+    assert any(victim in p and "missing registration" in p for p in probs), probs

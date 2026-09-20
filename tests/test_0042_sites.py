@@ -147,8 +147,8 @@ def _asof_recall_one_candidate():
 
 
 SURFACE_DRIVEN = {
-    "asof.recall.grounded": _asof_recall_one_candidate,   # one candidate: grounded False once
-    "asof.recall.claim": _asof_recall_one_candidate,      # … and claim True once
+    "asof.recall.grounded": _asof_recall_one_candidate,   # one candidate: grounded evaluated FOUR times (EXACT_SURFACE)
+    "asof.recall.claim": _asof_recall_one_candidate,      # … and claim once
 }
 
 
@@ -993,7 +993,11 @@ def test_the_trace_names_the_branch_not_the_content(enabled, monkeypatch):
 # sharpest case for the fourth arm: the bypassed path and the enabled path must raise the SAME
 # exception, and `Site.__exit__` must never swallow it.
 
-def test_a_raising_predicate_raises_identically_on_both_paths_and_is_invisible_to_the_census(monkeypatch):
+def test_a_raising_predicate_raises_identically_on_both_paths_and_is_consulted_before_it_is_evaluated(monkeypatch):
+    """Round 6, R6-2b: the four hot predicates evaluated their value BEFORE consulting, so a predicate that
+    raised left consulted at zero with the census on — 'never reached' for a site that was reached. Now the
+    consult happens first (through the value helper called from both branches); the raise is identical on the
+    bypassed and the enabled path and is not a measurement failure: (1, 0, 0)."""
     from veracium import schema as schema_mod
 
     def boom(_dt):
@@ -1008,7 +1012,7 @@ def test_a_raising_predicate_raises_identically_on_both_paths_and_is_invisible_t
         dc, df, de = _delta("schema.edge.valid-now", lambda: pytest.raises(RuntimeError, e.__class__.valid_now.fget, e))
     finally:
         census.enable(False)
-    assert (dc, df, de) == (0, 0, 0), "a raising predicate is not counted at a bypassed site (the trade, stated)"
+    assert (dc, df, de) == (1, 0, 0), "reached, not fired, not a measurement failure"
 
 
 def test_the_enabled_and_bypassed_paths_agree_on_every_verdict(monkeypatch):
@@ -1176,6 +1180,29 @@ SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
 DECLINE_IDS = tuple(sorted(DECLINES))
 SURFACE_IDS = tuple(sorted(SURFACE_DRIVEN))
 
+# EXACT EXPECTED DELTAS (round 6, R6-7): every entry asserts an EXACT (consulted, fired, errors); the default is
+# (1, 1, 0) and the exceptions are LITERALS frozen here, each with its derivation from the code path written beside
+# it — never a number read back from the run it scores (a doubled increment would double both sides). A site whose
+# condition sits inside a loop consults once per evaluation (census.consult's rule).
+EXACT_DECLINE = {
+    # validate(): the digest check is evaluated per MEMBER; the fixture's group has TWO members and the second
+    # overlaps the first → consulted 2, fired 1
+    "scope.policy.digest-overlap": (2, 1, 0),
+}
+EXACT_SURFACE = {
+    # recall_at with ONE candidate: grounded(e) is evaluated by claim(e) (1), by `_fit_to_budget`'s assertable
+    # filter (1), and by the two stats sums `grounded_items` / `unverified_items` (2) → 4 consults; the edge is
+    # quarantined so every evaluation declines (declines=False) → 4 fired
+    "asof.recall.grounded": (4, 4, 0),
+    # claim(e) is evaluated once, by `_fit_to_budget`'s claims filter → (1, 1, 0)
+    "asof.recall.claim": (1, 1, 0),
+    # assemble(): the variant verdict is evaluated per MEMBER of the eligible group; two transient members, one
+    # survivor → the other is the variant: consulted 2, fired 1
+    "proactive.variant": (2, 1, 0),
+    # one durable candidate, ineligible → (1, 1, 0)
+    "proactive.eligible": (1, 1, 0),
+}
+
 
 def test_the_freeze_follows_every_entry_block():
     """The static half of the guard: no entry block (a `DECLINES = {`/`.update({` or the SURFACE_DRIVEN
@@ -1228,7 +1255,7 @@ def test_the_collected_parametrisations_cover_every_declared_id(request):
             continue
         collected.setdefault(item.originalname, set()).add(item.callspec.params.get("site_id"))
     ran = collected.get("test_one_declining_decision_moves_the_counters_by_exactly_one", set()) | \
-          collected.get("test_the_surface_driven_sites_decline_once_per_candidate", set())
+          collected.get("test_the_surface_driven_sites_move_by_exactly_their_derived_counts", set())
     assert ran == set(SITES), (f"collected {len(ran)} parametrisations for {len(SITES)} declared ids: "
                                f"never collected {sorted(set(SITES) - ran)}; collected but undeclared {sorted(ran - set(SITES))}")
 
@@ -1241,10 +1268,47 @@ def test_one_declining_decision_moves_the_counters_by_exactly_one(site_id, enabl
         dc, df, de = _delta(site_id, lambda: entry.run(state))
     else:
         dc, df, de = _delta(site_id, lambda: entry(monkeypatch))
-    assert (dc, df, de) == (1, 1, 0), f"{site_id}: consulted moved {dc}, fired moved {df}, errors {de}"
+    expected = EXACT_DECLINE.get(site_id, (1, 1, 0))
+    assert (dc, df, de) == expected, f"{site_id}: consulted moved {dc}, fired moved {df}, errors {de} (expected {expected})"
 
 
 @pytest.mark.parametrize("site_id", SURFACE_IDS)
-def test_the_surface_driven_sites_decline_once_per_candidate(site_id, enabled):
+def test_the_surface_driven_sites_move_by_exactly_their_derived_counts(site_id, enabled):
+    """Round 6, R6-7: `fired >= 1 and consulted >= fired` accepted a doubled increment ((8,8,0) for a
+    (4,4,0) execution). Exact deltas against the frozen literals above."""
     dc, df, de = _delta(site_id, SURFACE_DRIVEN[site_id])
-    assert df >= 1 and dc >= df and de == 0, f"{site_id}: consulted {dc}, fired {df}, errors {de}"
+    assert (dc, df, de) == EXACT_SURFACE[site_id], f"{site_id}: consulted {dc}, fired {df}, errors {de} (expected {EXACT_SURFACE[site_id]})"
+
+
+def test_r6_7_a_doubled_increment_fails_every_exact_delta(enabled, monkeypatch):
+    """The control the round-6 reviewer ran: double every increment and require the exact assertions to REFUSE
+    for every surface-driven site and for one ordinary entry — the test that could not fail before."""
+    orig = census.Site._bump
+    def twice(self, field):
+        orig(self, field); orig(self, field)
+    monkeypatch.setattr(census.Site, "_bump", twice)
+    for sid in SURFACE_IDS:
+        d = _delta(sid, SURFACE_DRIVEN[sid])
+        assert d != EXACT_SURFACE[sid] and d == tuple(2 * x for x in EXACT_SURFACE[sid]), (sid, d)
+    d = _delta("gate.partition-parts", lambda: DECLINES["gate.partition-parts"](monkeypatch))
+    assert d == (2, 2, 0) != EXACT_DECLINE.get("gate.partition-parts", (1, 1, 0))
+    # the SUPERSEDED assertion is the surviving mutant: the round-6 surface-driven check was `fired >= 1 and
+    # consulted >= fired`, which every doubled delta above satisfies — that is exactly what the reviewer ran
+    # (memory: superseded implementation is the mutant; the old rule kept as the negative control)
+    for sid in SURFACE_IDS:
+        c, f, e = tuple(2 * x for x in EXACT_SURFACE[sid])
+        assert f >= 1 and c >= f and e == 0, (sid, "the old form would have refused this doubled delta — the control is wrong")
+
+
+def test_r6_2a_a_consult_means_the_sites_own_condition_was_reached(enabled):
+    """Cell B: `scoped_assertable(True, (False, "own"))` returns at the invisible check; the two later sites
+    are NOT consulted (they were never evaluated). On the entitlement path all three are reached, one fires."""
+    from veracium import gate
+    ids = ("gate.scoped-assertable.invisible", "gate.scoped-assertable.third-party-shaped", "gate.scoped-assertable.entitlement")
+    def deltas(fn):
+        before = {i: SITES[i].counters() for i in ids}; fn(); after = {i: SITES[i].counters() for i in ids}
+        return {i: tuple(after[i][k] - before[i][k] for k in ("consulted", "fired", "errors")) for i in ids}
+    d = deltas(lambda: gate.scoped_assertable(True, (False, "own")))
+    assert d == {ids[0]: (1, 1, 0), ids[1]: (0, 0, 0), ids[2]: (0, 0, 0)}, d
+    d = deltas(lambda: gate.scoped_assertable(True, (True, "own"), subject_entitlement=False))
+    assert d == {ids[0]: (1, 0, 0), ids[1]: (1, 0, 0), ids[2]: (1, 1, 0)}, d

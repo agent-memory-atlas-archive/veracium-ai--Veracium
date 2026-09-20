@@ -272,7 +272,7 @@ def _absorption_scope_gate(store, edge: Edge):
     state: dict = {}
 
     def same_scope(prior) -> bool:
-        with _SITE_ABSORB_UNRESOLVED.consult(), _SITE_ABSORB_CROSS_SCOPE.consult(), _SITE_ABSORB_NO_PLAN.consult():
+        with _SITE_ABSORB_UNRESOLVED.consult():       # the two later sites consult at their own checks (R6-2a)
             if "resolver" not in state:
                 r = MembershipResolver(store, edge.user_id)
                 state["resolver"] = r
@@ -284,8 +284,10 @@ def _absorption_scope_gate(store, edge: Edge):
             r, inc = state["resolver"], state["incoming"]
             if inc == UNRESOLVED:
                 return _SITE_ABSORB_UNRESOLVED.fire(False, "unresolved")
+            _SITE_ABSORB_CROSS_SCOPE.consult()
             if r.evidence(prior) != inc:
                 return _SITE_ABSORB_CROSS_SCOPE.fire(False, "cross-scope")              # cross-scope, or the prior UNRESOLVED
+            _SITE_ABSORB_NO_PLAN.consult()
             return _SITE_ABSORB_NO_PLAN.fire(r.flattening_plan("edge", prior.id) is not None, "no-flattening-plan")
 
     return same_scope

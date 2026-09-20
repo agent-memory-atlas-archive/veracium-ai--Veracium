@@ -179,14 +179,14 @@
   "line": 37,
   "statement": "return _SITE_RECALL_GROUNDED.fire(r is not None and r.outcome in GROUNDED_OUTCOMES, \"withhold\")"
  },
- "asof/resolve.py:_resolve_edge:314:RETURN_NONE": {
+ "asof/resolve.py:_resolve_edge:315:RETURN_NONE": {
   "decision": "enforcement",
   "reason": "enforces 0028 §4b (withhold) through site asof.resolve.edge-hidden-or-invalid",
   "reviewer": "dev",
   "site": "asof.resolve.edge-hidden-or-invalid",
   "class": "enforcement",
   "key": "asof/resolve.py:_resolve_edge:RETURN_NONE:2",
-  "line": 314,
+  "line": 315,
   "statement": "return _SITE_EDGE_HIDDEN.fire(None, \"hidden-or-invalid\")"
  },
  "asof/resolve.py:_resolve_edge:307:RETURN_NONE": {
@@ -269,64 +269,64 @@
   "line": 54,
   "statement": "return _SITE_EXCLUDE_PROCEDURAL.fire((kept, len(records) - len(kept)), \"withhold\")"
  },
- "gate.py:partition_parts:175:FILTER_RETURN": {
+ "gate.py:partition_parts:178:FILTER_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site gate.partition-parts",
   "reviewer": "dev",
   "site": "gate.partition-parts",
   "class": "enforcement",
   "key": "gate.py:partition_parts:FILTER_RETURN:1",
-  "line": 175,
+  "line": 178,
   "statement": "return _SITE_PARTITION_PARTS.fire((edge_lines, ep_lines, claim_lines, tp_ep_lines), \"withhold\")"
  },
- "gate.py:scoped_assertable:122:RETURN_FALSE": {
+ "gate.py:scoped_assertable:125:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4c (withhold) through site gate.scoped-assertable.entitlement",
   "reviewer": "dev",
   "site": "gate.scoped-assertable.entitlement",
   "class": "enforcement",
   "key": "gate.py:scoped_assertable:RETURN_FALSE:3",
-  "line": 122,
+  "line": 125,
   "statement": "return _SITE_SCOPED_ENTITLEMENT.fire(False, \"entitlement\")"
  },
- "gate.py:scoped_assertable:118:RETURN_FALSE": {
+ "gate.py:scoped_assertable:119:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4a (withhold) through site gate.scoped-assertable.invisible",
   "reviewer": "dev",
   "site": "gate.scoped-assertable.invisible",
   "class": "enforcement",
   "key": "gate.py:scoped_assertable:RETURN_FALSE:1",
-  "line": 118,
+  "line": 119,
   "statement": "return _SITE_SCOPED_INVISIBLE.fire(False, \"invisible\")"
  },
- "gate.py:scoped_assertable:120:RETURN_FALSE": {
+ "gate.py:scoped_assertable:122:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4a (withhold) through site gate.scoped-assertable.third-party-shaped",
   "reviewer": "dev",
   "site": "gate.scoped-assertable.third-party-shaped",
   "class": "enforcement",
   "key": "gate.py:scoped_assertable:RETURN_FALSE:2",
-  "line": 120,
+  "line": 122,
   "statement": "return _SITE_SCOPED_THIRD_PARTY.fire(False, \"third-party-shaped\")"
  },
- "graph.py:_absorption_scope_gate.same_scope:288:RETURN_FALSE": {
+ "graph.py:_absorption_scope_gate.same_scope:289:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4a-iii (withhold) through site graph.absorption.cross-scope",
   "reviewer": "dev",
   "site": "graph.absorption.cross-scope",
   "class": "enforcement",
   "key": "graph.py:_absorption_scope_gate.same_scope:RETURN_FALSE:2",
-  "line": 288,
+  "line": 289,
   "statement": "return _SITE_ABSORB_CROSS_SCOPE.fire(False, \"cross-scope\")              # cross-scope, or the prior UNRESOLVED"
  },
- "graph.py:_absorption_scope_gate.same_scope:289:BOOL_RETURN": {
+ "graph.py:_absorption_scope_gate.same_scope:291:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (withhold) through site graph.absorption.no-flattening-plan",
   "reviewer": "dev",
   "site": "graph.absorption.no-flattening-plan",
   "class": "enforcement",
   "key": "graph.py:_absorption_scope_gate.same_scope:BOOL_RETURN:1",
-  "line": 289,
+  "line": 291,
   "statement": "return _SITE_ABSORB_NO_PLAN.fire(r.flattening_plan(\"edge\", prior.id) is not None, \"no-flattening-plan\")"
  },
  "graph.py:_absorption_scope_gate.same_scope:286:RETURN_FALSE": {
@@ -339,55 +339,45 @@
   "line": 286,
   "statement": "return _SITE_ABSORB_UNRESOLVED.fire(False, \"unresolved\")"
  },
- "graph.py:collapse_for_render:1294:FILTER_RETURN": {
+ "graph.py:collapse_for_render:1296:FILTER_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0012 §4c (withhold) through site graph.collapse-for-render",
   "reviewer": "dev",
   "site": "graph.collapse-for-render",
   "class": "enforcement",
   "key": "graph.py:collapse_for_render:FILTER_RETURN:1",
-  "line": 1294,
+  "line": 1296,
   "statement": "return _SITE_COLLAPSE_FOR_RENDER.fire(([e for e in edges if e.id not in suppressed], info), \"withhold\", declined=bool(suppressed))"
  },
- "graph.py:plan_correction:355:RAISE": {
+ "graph.py:plan_correction:357:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site graph.correction.identity-mismatch",
   "reviewer": "dev",
   "site": "graph.correction.identity-mismatch",
   "class": "enforcement",
   "key": "graph.py:plan_correction:RAISE:1",
-  "line": 355,
+  "line": 357,
   "statement": "raise _SITE_CORRECTION_IDENTITY.fire(ValueError("
  },
- "graph.py:plan_correction:367:RAISE": {
+ "graph.py:plan_correction:369:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site graph.correction.prior-not-active",
   "reviewer": "dev",
   "site": "graph.correction.prior-not-active",
   "class": "enforcement",
   "key": "graph.py:plan_correction:RAISE:2",
-  "line": 367,
+  "line": 369,
   "statement": "raise _SITE_CORRECTION_PRIOR_INACTIVE.fire(ValueError("
  },
- "graph.py:semantic_duplicate_of:827:RETURN_FALSE": {
+ "graph.py:semantic_duplicate_of:829:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0012 §4c (withhold) through site graph.semantic-duplicate.keep",
   "reviewer": "dev",
   "site": "graph.semantic-duplicate.keep",
   "class": "enforcement",
   "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:1",
-  "line": 827,
+  "line": 829,
   "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"inactive\")"
- },
- "graph.py:semantic_duplicate_of:833:RETURN_FALSE": {
-  "decision": "enforcement",
-  "reason": "enforces 0012 §4c (withhold) through site graph.semantic-duplicate.keep",
-  "reviewer": "dev",
-  "site": "graph.semantic-duplicate.keep",
-  "class": "enforcement",
-  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:2",
-  "line": 833,
-  "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"envelope\")"
  },
  "graph.py:semantic_duplicate_of:835:RETURN_FALSE": {
   "decision": "enforcement",
@@ -395,9 +385,9 @@
   "reviewer": "dev",
   "site": "graph.semantic-duplicate.keep",
   "class": "enforcement",
-  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:3",
+  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:2",
   "line": 835,
-  "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"value\")"
+  "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"envelope\")"
  },
  "graph.py:semantic_duplicate_of:837:RETURN_FALSE": {
   "decision": "enforcement",
@@ -405,9 +395,9 @@
   "reviewer": "dev",
   "site": "graph.semantic-duplicate.keep",
   "class": "enforcement",
-  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:4",
+  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:3",
   "line": 837,
-  "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"not-strictly-redundant\")"
+  "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"value\")"
  },
  "graph.py:semantic_duplicate_of:839:RETURN_FALSE": {
   "decision": "enforcement",
@@ -415,9 +405,9 @@
   "reviewer": "dev",
   "site": "graph.semantic-duplicate.keep",
   "class": "enforcement",
-  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:5",
+  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:4",
   "line": 839,
-  "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"flag-carrier\")"
+  "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"not-strictly-redundant\")"
  },
  "graph.py:semantic_duplicate_of:841:RETURN_FALSE": {
   "decision": "enforcement",
@@ -425,38 +415,48 @@
   "reviewer": "dev",
   "site": "graph.semantic-duplicate.keep",
   "class": "enforcement",
-  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:6",
+  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:5",
   "line": 841,
+  "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"flag-carrier\")"
+ },
+ "graph.py:semantic_duplicate_of:843:RETURN_FALSE": {
+  "decision": "enforcement",
+  "reason": "enforces 0012 §4c (withhold) through site graph.semantic-duplicate.keep",
+  "reviewer": "dev",
+  "site": "graph.semantic-duplicate.keep",
+  "class": "enforcement",
+  "key": "graph.py:semantic_duplicate_of:RETURN_FALSE:6",
+  "line": 843,
   "statement": "return _SITE_SEMDUP_KEEP.fire(False, \"grounding-carrier\")"
  },
- "graph.py:_build_supersession_plan._src_revoked:425:RETURN_FALSE": {
+ "graph.py:_build_supersession_plan._src_revoked:427:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0022 §4a (withhold) through site graph.src-revoked",
   "reviewer": "dev",
   "site": "graph.src-revoked",
   "class": "enforcement",
   "key": "graph.py:_build_supersession_plan._src_revoked:RETURN_FALSE:1",
-  "line": 425,
+  "line": 427,
   "statement": "return _SITE_SRC_REVOKED.fire(False, \"no-standing\")"
  },
- "graph.py:_build_supersession_plan._src_revoked:429:BOOL_RETURN": {
+ "graph.py:_build_supersession_plan._src_revoked:431:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0022 §4a (withhold) through site graph.src-revoked",
   "reviewer": "dev",
   "site": "graph.src-revoked",
   "class": "enforcement",
   "key": "graph.py:_build_supersession_plan._src_revoked:BOOL_RETURN:1",
-  "line": 429,
+  "line": 431,
   "statement": "return _SITE_SRC_REVOKED.fire(d is not None and d in standing, \"revoked\")"
  },
- "graph.py:_strictly_redundant:1199:BOOL_RETURN": {
+ "graph.py:_strictly_redundant:1201:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0012 §4c (withhold) through site graph.strictly-redundant",
   "reviewer": "dev",
   "site": "graph.strictly-redundant",
   "class": "enforcement",
   "key": "graph.py:_strictly_redundant:BOOL_RETURN:1",
-  "line": 1199,
+  "line": 1201,
   "statement": "return (_SITE_STRICTLY_REDUNDANT.fire((m.note == \"\" or m.note == survivor.note)"
  },
  "graph.py:apply_supersession:184:RAISE": {
@@ -519,24 +519,24 @@
   "line": 299,
   "statement": "raise _SITE_SOURCE_ID_REQUIRED.fire(SourceIdRequired("
  },
- "mcp_server.py:_closed_set:111:RAISE": {
+ "mcp_server.py:_closed_set:113:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4d (refuse) through site mcp.closed-set.author",
   "reviewer": "dev",
   "site": "mcp.closed-set.author",
   "class": "enforcement",
   "key": "mcp_server.py:_closed_set:RAISE:1",
-  "line": 111,
+  "line": 113,
   "statement": "raise _SITE_CLOSED_SET_AUTHOR.fire(ValueError("
  },
- "mcp_server.py:_closed_set:117:RAISE": {
+ "mcp_server.py:_closed_set:122:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4d (refuse) through site mcp.closed-set.trust-field",
   "reviewer": "dev",
   "site": "mcp.closed-set.trust-field",
   "class": "enforcement",
   "key": "mcp_server.py:_closed_set:RAISE:2",
-  "line": 117,
+  "line": 122,
   "statement": "raise _SITE_CLOSED_SET_TRUST.fire(ValueError("
  },
  "__init__.py:Memory.correct:2041:RAISE": {
@@ -659,14 +659,14 @@
   "line": 136,
   "statement": "raise _SITE_EXPORT_NON_QUIESCENT.fire(ValueError("
  },
- "portability.py:import_memory:776:RAISE": {
+ "portability.py:import_memory:779:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0025 §4c (refuse) through site portability.import.agreement-invalid",
   "reviewer": "dev",
   "site": "portability.import.agreement-invalid",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:11",
-  "line": 776,
+  "line": 779,
   "statement": "raise _SITE_IMPORT_AGREEMENT_INVALID.fire(ValueError("
  },
  "portability.py:_validate_incoming_chain:258:RAISE": {
@@ -749,254 +749,244 @@
   "line": 296,
   "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} is disconnected or has a \""
  },
- "portability.py:import_memory:343:RAISE": {
+ "portability.py:import_memory:345:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:3",
-  "line": 343,
+  "line": 345,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError(f\"{path}: empty file\"), \"empty\")"
  },
- "portability.py:import_memory:346:RAISE": {
+ "portability.py:import_memory:348:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:4",
-  "line": 346,
+  "line": 348,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError(f\"{path}: not a Veracium export (missing header)\"), \"not-an-export\")"
  },
- "portability.py:import_memory:349:RAISE": {
+ "portability.py:import_memory:351:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:5",
-  "line": 349,
+  "line": 351,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError(f\"{path}: export version {src_version} is newer \""
  },
- "portability.py:import_memory:366:RAISE": {
+ "portability.py:import_memory:368:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:6",
-  "line": 366,
+  "line": 368,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError(f\"{path}: unknown record kind {marker!r}\"), \"unknown-kind\")"
  },
- "portability.py:import_memory:379:RAISE": {
+ "portability.py:import_memory:381:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:7",
-  "line": 379,
+  "line": 381,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:386:RAISE": {
+ "portability.py:import_memory:388:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:8",
-  "line": 386,
+  "line": 388,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:394:RAISE": {
+ "portability.py:import_memory:396:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:9",
-  "line": 394,
+  "line": 396,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:402:RAISE": {
+ "portability.py:import_memory:404:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:10",
-  "line": 402,
+  "line": 404,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:859:RAISE": {
+ "portability.py:import_memory:864:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §4 (refuse) through site portability.import.origin-missing",
   "reviewer": "dev",
   "site": "portability.import.origin-missing",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:12",
-  "line": 859,
+  "line": 864,
   "statement": "raise _SITE_IMPORT_ORIGIN_MISSING.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1104:RAISE": {
+ "portability.py:_preflight_and_commit:1111:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:1",
-  "line": 1104,
+  "line": 1111,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1115:RAISE": {
+ "portability.py:_preflight_and_commit:1122:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:2",
-  "line": 1115,
+  "line": 1122,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: edge {edge.id!r} already exists with \""
  },
- "portability.py:_preflight_and_commit:1126:RAISE": {
+ "portability.py:_preflight_and_commit:1133:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:3",
-  "line": 1126,
+  "line": 1133,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: outcome chain references edge {edge_id!r}, \""
  },
- "portability.py:_preflight_and_commit:1140:RAISE": {
+ "portability.py:_preflight_and_commit:1147:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:4",
-  "line": 1140,
+  "line": 1147,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1146:RAISE": {
+ "portability.py:_preflight_and_commit:1153:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:5",
-  "line": 1146,
+  "line": 1153,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: episode {ep.id!r} already exists with \""
  },
- "portability.py:_preflight_and_commit:1168:RAISE": {
+ "portability.py:_preflight_and_commit:1175:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:6",
-  "line": 1168,
+  "line": 1175,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1177:RAISE": {
+ "portability.py:_preflight_and_commit:1184:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:7",
-  "line": 1177,
+  "line": 1184,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1196:RAISE": {
+ "portability.py:_preflight_and_commit:1203:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:8",
-  "line": 1196,
+  "line": 1203,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:import_memory:1062:RAISE": {
+ "portability.py:import_memory:1069:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.race-exhausted",
   "reviewer": "dev",
   "site": "portability.import.race-exhausted",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:23",
-  "line": 1062,
+  "line": 1069,
   "statement": "raise _SITE_IMPORT_RACE_EXHAUSTED.fire(ValueError(f\"{path}: import kept losing a race against concurrent writes \""
  },
- "portability.py:import_memory:1005:RAISE": {
+ "portability.py:import_memory:1011:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:21",
-  "line": 1005,
+  "line": 1011,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:1027:RAISE": {
+ "portability.py:import_memory:1033:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:22",
-  "line": 1027,
+  "line": 1033,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:914:RAISE": {
+ "portability.py:import_memory:920:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:13",
-  "line": 914,
+  "line": 920,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:925:RAISE": {
+ "portability.py:import_memory:931:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:14",
-  "line": 925,
+  "line": 931,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:932:RAISE": {
+ "portability.py:import_memory:938:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:15",
-  "line": 932,
+  "line": 938,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:941:RAISE": {
+ "portability.py:import_memory:947:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:16",
-  "line": 941,
-  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
- },
- "portability.py:import_memory:958:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
-  "reviewer": "dev",
-  "site": "portability.import.record",
-  "class": "enforcement",
-  "key": "portability.py:import_memory:RAISE:17",
-  "line": 958,
+  "line": 947,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
  "portability.py:import_memory:964:RAISE": {
@@ -1005,28 +995,38 @@
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
-  "key": "portability.py:import_memory:RAISE:18",
+  "key": "portability.py:import_memory:RAISE:17",
   "line": 964,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:968:RAISE": {
+ "portability.py:import_memory:970:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
+  "reviewer": "dev",
+  "site": "portability.import.record",
+  "class": "enforcement",
+  "key": "portability.py:import_memory:RAISE:18",
+  "line": 970,
+  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
+ },
+ "portability.py:import_memory:974:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:19",
-  "line": 968,
+  "line": 974,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:976:RAISE": {
+ "portability.py:import_memory:982:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:20",
-  "line": 976,
+  "line": 982,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
  "portability.py:import_memory:332:RAISE": {
@@ -1039,14 +1039,14 @@
   "line": 332,
   "statement": "raise _SITE_IMPORT_RESTORE_NOT_BOOL.fire(TypeError("
  },
- "portability.py:import_memory:336:RAISE": {
+ "portability.py:import_memory:337:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 P5 (refuse) through site portability.import.restore-with-user",
   "reviewer": "dev",
   "site": "portability.import.restore-with-user",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:2",
-  "line": 336,
+  "line": 337,
   "statement": "raise _SITE_IMPORT_RESTORE_WITH_USER.fire(ValueError("
  },
  "proactive.py:assemble._eligible:149:BOOL_RETURN": {
@@ -1219,134 +1219,94 @@
   "line": 69,
   "statement": "raise _SITE_RESERVED_SHADOWED.fire(RegistryError("
  },
- "schema.py:Edge.assertable:832:BOOL_RETURN": {
+ "schema.py:Edge.assertable:843:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site schema.edge.assertable",
   "reviewer": "dev",
   "site": "schema.edge.assertable",
   "class": "enforcement",
   "key": "schema.py:Edge.assertable:BOOL_RETURN:1",
-  "line": 832,
-  "statement": "return _SITE_EDGE_ASSERTABLE.fire(ok)   # predicates cost 12.4k decisions per recall)"
+  "line": 843,
+  "statement": "return ok                                     # ONE return: the same exit statement in every arm (INV-7)"
  },
- "schema.py:Edge.assertable:833:BOOL_RETURN": {
-  "decision": "enforcement",
-  "reason": "enforces 0001 §4 (withhold) through site schema.edge.assertable",
-  "reviewer": "dev",
-  "site": "schema.edge.assertable",
-  "class": "enforcement",
-  "key": "schema.py:Edge.assertable:BOOL_RETURN:2",
-  "line": 833,
-  "statement": "return ok"
- },
- "schema.py:Edge.quarantined:785:BOOL_RETURN": {
+ "schema.py:Edge.quarantined:789:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (quarantine) through site schema.edge.quarantined",
   "reviewer": "dev",
   "site": "schema.edge.quarantined",
   "class": "enforcement",
   "key": "schema.py:Edge.quarantined:BOOL_RETURN:1",
-  "line": 785,
-  "statement": "return _SITE_EDGE_QUARANTINED.fire(q)   # predicates cost 12.4k decisions per recall)"
+  "line": 789,
+  "statement": "return q                                        # ONE return: the exit statement is the same in every arm (INV-7)"
  },
- "schema.py:Edge.quarantined:786:BOOL_RETURN": {
-  "decision": "enforcement",
-  "reason": "enforces 0001 §4 (quarantine) through site schema.edge.quarantined",
-  "reviewer": "dev",
-  "site": "schema.edge.quarantined",
-  "class": "enforcement",
-  "key": "schema.py:Edge.quarantined:BOOL_RETURN:2",
-  "line": 786,
-  "statement": "return q"
- },
- "schema.py:Edge.use_only:795:BOOL_RETURN": {
+ "schema.py:Edge.use_only:801:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site schema.edge.use-only",
   "reviewer": "dev",
   "site": "schema.edge.use-only",
   "class": "enforcement",
   "key": "schema.py:Edge.use_only:BOOL_RETURN:1",
-  "line": 795,
-  "statement": "return _SITE_EDGE_USE_ONLY.fire(u)   # predicates cost 12.4k decisions per recall)"
+  "line": 801,
+  "statement": "return u                                     # ONE return: the same exit statement in every arm (INV-7)"
  },
- "schema.py:Edge.use_only:796:BOOL_RETURN": {
-  "decision": "enforcement",
-  "reason": "enforces 0001 §4 (withhold) through site schema.edge.use-only",
-  "reviewer": "dev",
-  "site": "schema.edge.use-only",
-  "class": "enforcement",
-  "key": "schema.py:Edge.use_only:BOOL_RETURN:2",
-  "line": 796,
-  "statement": "return u"
- },
- "schema.py:Edge.valid_now:817:BOOL_RETURN": {
+ "schema.py:Edge.valid_now:825:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0028 S2 (withhold) through site schema.edge.valid-now",
   "reviewer": "dev",
   "site": "schema.edge.valid-now",
   "class": "enforcement",
   "key": "schema.py:Edge.valid_now:BOOL_RETURN:1",
-  "line": 817,
-  "statement": "return _SITE_EDGE_VALID_NOW.fire(v)   # predicates cost 12.4k decisions per recall)"
+  "line": 825,
+  "statement": "return v                                      # ONE return: the same exit statement in every arm (INV-7)"
  },
- "schema.py:Edge.valid_now:818:BOOL_RETURN": {
-  "decision": "enforcement",
-  "reason": "enforces 0028 S2 (withhold) through site schema.edge.valid-now",
-  "reviewer": "dev",
-  "site": "schema.edge.valid-now",
-  "class": "enforcement",
-  "key": "schema.py:Edge.valid_now:BOOL_RETURN:2",
-  "line": 818,
-  "statement": "return v"
- },
- "schema.py:Episode.active:914:BOOL_RETURN": {
+ "schema.py:Episode.active:924:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0022 §4b-ii (withhold) through site schema.episode.active",
   "reviewer": "dev",
   "site": "schema.episode.active",
   "class": "enforcement",
   "key": "schema.py:Episode.active:BOOL_RETURN:1",
-  "line": 914,
+  "line": 924,
   "statement": "return _SITE_EPISODE_ACTIVE.fire(self.retired_reason is None)"
  },
- "schema.py:Episode.assertable:933:BOOL_RETURN": {
+ "schema.py:Episode.assertable:943:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site schema.episode.assertable",
   "reviewer": "dev",
   "site": "schema.episode.assertable",
   "class": "enforcement",
   "key": "schema.py:Episode.assertable:BOOL_RETURN:1",
-  "line": 933,
+  "line": 943,
   "statement": "return _SITE_EPISODE_ASSERTABLE.fire((self.active and not self.quarantined and not self.use_only"
  },
- "schema.py:Episode.quarantined:896:BOOL_RETURN": {
+ "schema.py:Episode.quarantined:906:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (quarantine) through site schema.episode.quarantined",
   "reviewer": "dev",
   "site": "schema.episode.quarantined",
   "class": "enforcement",
   "key": "schema.py:Episode.quarantined:BOOL_RETURN:1",
-  "line": 896,
+  "line": 906,
   "statement": "return _SITE_EPISODE_QUARANTINED.fire(self.provenance.disclosure == Disclosure.QUARANTINED)"
  },
- "schema.py:Episode.use_only:907:BOOL_RETURN": {
+ "schema.py:Episode.use_only:917:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site schema.episode.use-only",
   "reviewer": "dev",
   "site": "schema.episode.use-only",
   "class": "enforcement",
   "key": "schema.py:Episode.use_only:BOOL_RETURN:1",
-  "line": 907,
+  "line": 917,
   "statement": "return _SITE_EPISODE_USE_ONLY.fire((self.provenance.disclosure == Disclosure.USE_ONLY"
  },
- "schema.py:Episode.valid_now:941:BOOL_RETURN": {
+ "schema.py:Episode.valid_now:951:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0028 S2 (withhold) through site schema.episode.valid-now",
   "reviewer": "dev",
   "site": "schema.episode.valid-now",
   "class": "enforcement",
   "key": "schema.py:Episode.valid_now:BOOL_RETURN:1",
-  "line": 941,
+  "line": 951,
   "statement": "return _SITE_EPISODE_VALID_NOW.fire(self.date[:10] <= utcnow().date().isoformat())"
  },
  "scope_linkage.py:derive_absorbed_by:535:RAISE": {
@@ -1469,75 +1429,65 @@
   "line": 320,
   "statement": "raise _SITE_VIEW_UNGROUPABLE.fire(ScopeError(\"a principal must carry a source_id (0006 I13)\"))"
  },
- "scope.py:classify:717:RAISE": {
+ "scope.py:classify:719:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §4 (refuse) through site scope.classify.evidence-not-digest",
   "reviewer": "dev",
   "site": "scope.classify.evidence-not-digest",
   "class": "enforcement",
   "key": "scope.py:classify:RAISE:3",
-  "line": 717,
+  "line": 719,
   "statement": "raise _SITE_CLASSIFY_EVIDENCE.fire(ScopeError(f\"record evidence {record_evidence!r} is not a \""
  },
- "scope.py:classify:703:RAISE": {
+ "scope.py:classify:705:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §4 (refuse) through site scope.classify.no-policy",
   "reviewer": "dev",
   "site": "scope.classify.no-policy",
   "class": "enforcement",
   "key": "scope.py:classify:RAISE:1",
-  "line": 703,
+  "line": 705,
   "statement": "raise _SITE_CLASSIFY_NO_POLICY.fire(ScopeError("
  },
- "scope.py:classify:709:RAISE": {
+ "scope.py:classify:711:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 I13 (refuse) through site scope.classify.principal-ungroupable",
   "reviewer": "dev",
   "site": "scope.classify.principal-ungroupable",
   "class": "enforcement",
   "key": "scope.py:classify:RAISE:2",
-  "line": 709,
+  "line": 711,
   "statement": "raise _SITE_CLASSIFY_UNGROUPABLE.fire(ScopeError(\"a principal must carry a source_id (0006 I13)\"))"
  },
- "scope.py:close_absorption_rows.walk:445:RETURN_FALSE": {
+ "scope.py:close_absorption_rows.walk:447:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
   "reviewer": "dev",
   "site": "scope.closure.walk",
   "class": "enforcement",
   "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:1",
-  "line": 445,
+  "line": 447,
   "statement": "return _SITE_CLOSURE_WALK.fire(False, \"cyclic\")                   # cyclic path — corrupt"
  },
- "scope.py:close_absorption_rows.walk:466:RETURN_FALSE": {
+ "scope.py:close_absorption_rows.walk:468:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
   "reviewer": "dev",
   "site": "scope.closure.walk",
   "class": "enforcement",
   "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:2",
-  "line": 466,
+  "line": 468,
   "statement": "return _SITE_CLOSURE_WALK.fire(False, \"marker-only-row\")           # a marker-only row would bypass"
  },
- "scope.py:close_absorption_rows.walk:478:RETURN_FALSE": {
+ "scope.py:close_absorption_rows.walk:480:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
   "reviewer": "dev",
   "site": "scope.closure.walk",
   "class": "enforcement",
   "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:3",
-  "line": 478,
+  "line": 480,
   "statement": "return _SITE_CLOSURE_WALK.fire(False, \"two-absorbers\")           # two absorbers — corrupt"
- },
- "scope.py:close_absorption_rows.walk:482:RETURN_FALSE": {
-  "decision": "enforcement",
-  "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
-  "reviewer": "dev",
-  "site": "scope.closure.walk",
-  "class": "enforcement",
-  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:4",
-  "line": 482,
-  "statement": "return _SITE_CLOSURE_WALK.fire(False, \"flattening-incomplete\")       # flattening incomplete — corrupt"
  },
  "scope.py:close_absorption_rows.walk:484:RETURN_FALSE": {
   "decision": "enforcement",
@@ -1545,19 +1495,19 @@
   "reviewer": "dev",
   "site": "scope.closure.walk",
   "class": "enforcement",
-  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:5",
+  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:4",
   "line": 484,
-  "statement": "return _SITE_CLOSURE_WALK.fire(False, \"verify-failed\")"
+  "statement": "return _SITE_CLOSURE_WALK.fire(False, \"flattening-incomplete\")       # flattening incomplete — corrupt"
  },
- "scope.py:close_absorption_rows.walk:490:RETURN_FALSE": {
+ "scope.py:close_absorption_rows.walk:486:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
   "reviewer": "dev",
   "site": "scope.closure.walk",
   "class": "enforcement",
-  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:6",
-  "line": 490,
-  "statement": "return _SITE_CLOSURE_WALK.fire(False, \"pruned-legacy\")               # the pruned-legacy cell"
+  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:5",
+  "line": 486,
+  "statement": "return _SITE_CLOSURE_WALK.fire(False, \"verify-failed\")"
  },
  "scope.py:close_absorption_rows.walk:492:RETURN_FALSE": {
   "decision": "enforcement",
@@ -1565,29 +1515,29 @@
   "reviewer": "dev",
   "site": "scope.closure.walk",
   "class": "enforcement",
-  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:7",
+  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:6",
   "line": 492,
+  "statement": "return _SITE_CLOSURE_WALK.fire(False, \"pruned-legacy\")               # the pruned-legacy cell"
+ },
+ "scope.py:close_absorption_rows.walk:494:RETURN_FALSE": {
+  "decision": "enforcement",
+  "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
+  "reviewer": "dev",
+  "site": "scope.closure.walk",
+  "class": "enforcement",
+  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:7",
+  "line": 494,
   "statement": "return _SITE_CLOSURE_WALK.fire(False, \"unknown-linked-digest\")"
  },
- "scope.py:close_absorption_rows.walk:495:RETURN_FALSE": {
+ "scope.py:close_absorption_rows.walk:497:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
   "reviewer": "dev",
   "site": "scope.closure.walk",
   "class": "enforcement",
   "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:8",
-  "line": 495,
+  "line": 497,
   "statement": "return _SITE_CLOSURE_WALK.fire(False, \"multiset-mismatch\")               # multiset mismatch — unaccounted"
- },
- "scope.py:close_absorption_rows.walk:498:RETURN_FALSE": {
-  "decision": "enforcement",
-  "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
-  "reviewer": "dev",
-  "site": "scope.closure.walk",
-  "class": "enforcement",
-  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:9",
-  "line": 498,
-  "statement": "return _SITE_CLOSURE_WALK.fire(False, \"two-absorbers-legacy\")"
  },
  "scope.py:close_absorption_rows.walk:500:RETURN_FALSE": {
   "decision": "enforcement",
@@ -1595,48 +1545,58 @@
   "reviewer": "dev",
   "site": "scope.closure.walk",
   "class": "enforcement",
-  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:10",
+  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:9",
   "line": 500,
+  "statement": "return _SITE_CLOSURE_WALK.fire(False, \"two-absorbers-legacy\")"
+ },
+ "scope.py:close_absorption_rows.walk:502:RETURN_FALSE": {
+  "decision": "enforcement",
+  "reason": "enforces 0020 §4a-iii (refuse) through site scope.closure.walk",
+  "reviewer": "dev",
+  "site": "scope.closure.walk",
+  "class": "enforcement",
+  "key": "scope.py:close_absorption_rows.walk:RETURN_FALSE:10",
+  "line": 502,
   "statement": "return _SITE_CLOSURE_WALK.fire(False, \"prior-walk-failed\")"
  },
- "scope.py:apply_filters:765:FILTER_RETURN": {
+ "scope.py:apply_filters:767:FILTER_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4e (withhold) through site scope.filters.apply",
   "reviewer": "dev",
   "site": "scope.filters.apply",
   "class": "enforcement",
   "key": "scope.py:apply_filters:FILTER_RETURN:1",
-  "line": 765,
+  "line": 767,
   "statement": "return _SITE_FILTERS_APPLY.fire(out, \"withhold\", declined=len(out) < len(records))"
  },
- "scope.py:validate_filters:752:RAISE": {
+ "scope.py:validate_filters:754:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4e (refuse) through site scope.filters.bad-value",
   "reviewer": "dev",
   "site": "scope.filters.bad-value",
   "class": "enforcement",
   "key": "scope.py:validate_filters:RAISE:3",
-  "line": 752,
+  "line": 754,
   "statement": "raise _SITE_FILTERS_BAD_VALUE.fire(ScopeError(f\"filter {k!r} value must be a non-empty \""
  },
- "scope.py:validate_filters:744:RAISE": {
+ "scope.py:validate_filters:746:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4e (refuse) through site scope.filters.not-mapping",
   "reviewer": "dev",
   "site": "scope.filters.not-mapping",
   "class": "enforcement",
   "key": "scope.py:validate_filters:RAISE:1",
-  "line": 744,
+  "line": 746,
   "statement": "raise _SITE_FILTERS_NOT_MAPPING.fire(ScopeError(\"filters must be a mapping of field -> value\"))"
  },
- "scope.py:validate_filters:748:RAISE": {
+ "scope.py:validate_filters:750:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0020 §4e (refuse) through site scope.filters.unknown-field",
   "reviewer": "dev",
   "site": "scope.filters.unknown-field",
   "class": "enforcement",
   "key": "scope.py:validate_filters:RAISE:2",
-  "line": 748,
+  "line": 750,
   "statement": "raise _SITE_FILTERS_UNKNOWN_FIELD.fire(ScopeError(f\"unknown filter field {k!r} — the field set \""
  },
  "scope.py:Identity.groupable:163:BOOL_RETURN": {
@@ -1649,104 +1609,104 @@
   "line": 163,
   "statement": "return _SITE_IDENTITY_GROUPABLE.fire(self.source_id is not None, \"withhold\")"
  },
- "scope.py:membership:642:RAISE": {
+ "scope.py:membership:644:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (refuse) through site scope.membership.abandoned",
   "reviewer": "dev",
   "site": "scope.membership.abandoned",
   "class": "enforcement",
   "key": "scope.py:membership:RAISE:2",
-  "line": 642,
+  "line": 644,
   "statement": "raise _SITE_MEMBERSHIP_ABANDONED.fire(ScopeError(\"an abandoned operation has no surviving output \""
  },
- "scope.py:membership:638:RAISE": {
+ "scope.py:membership:640:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (refuse) through site scope.membership.unknown-state",
   "reviewer": "dev",
   "site": "scope.membership.unknown-state",
   "class": "enforcement",
   "key": "scope.py:membership:RAISE:1",
-  "line": 638,
+  "line": 640,
   "statement": "raise _SITE_MEMBERSHIP_UNKNOWN_STATE.fire(ScopeError(f\"unknown operation state {op_state!r} — the set \""
  },
- "scope.py:validate_policy:305:RAISE": {
+ "scope.py:validate_policy:307:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §4 (refuse) through site scope.policy.digest-overlap",
   "reviewer": "dev",
   "site": "scope.policy.digest-overlap",
   "class": "enforcement",
   "key": "scope.py:validate_policy:RAISE:7",
-  "line": 305,
+  "line": 307,
   "statement": "raise _SITE_POLICY_DIGEST_OVERLAP.fire(ScopeError("
  },
- "scope.py:validate_policy:300:RAISE": {
+ "scope.py:validate_policy:301:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 I13 (refuse) through site scope.policy.non-groupable-member",
   "reviewer": "dev",
   "site": "scope.policy.non-groupable-member",
   "class": "enforcement",
   "key": "scope.py:validate_policy:RAISE:6",
-  "line": 300,
+  "line": 301,
   "statement": "raise _SITE_POLICY_NON_GROUPABLE.fire(ScopeError("
  },
- "scope.py:prune_absorbed_record:562:RAISE": {
+ "scope.py:prune_absorbed_record:564:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (refuse) through site scope.prune.cycle",
   "reviewer": "dev",
   "site": "scope.prune.cycle",
   "class": "enforcement",
   "key": "scope.py:prune_absorbed_record:RAISE:2",
-  "line": 562,
+  "line": 564,
   "statement": "raise _SITE_PRUNE_CYCLE.fire(ExportLinkageError("
  },
- "scope.py:_revalidate:350:RAISE": {
+ "scope.py:_revalidate:352:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §7 tamper-evidence (refuse) through site scope.revalidate",
   "reviewer": "dev",
   "site": "scope.revalidate",
   "class": "enforcement",
   "key": "scope.py:_revalidate:RAISE:1",
-  "line": 350,
+  "line": 352,
   "statement": "raise _SITE_REVALIDATE.fire(ScopeError(\"policy must be a ScopePolicy\"), \"not-a-policy\")"
  },
- "scope.py:_revalidate:353:RAISE": {
+ "scope.py:_revalidate:355:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §7 tamper-evidence (refuse) through site scope.revalidate",
   "reviewer": "dev",
   "site": "scope.revalidate",
   "class": "enforcement",
   "key": "scope.py:_revalidate:RAISE:2",
-  "line": 353,
+  "line": 355,
   "statement": "raise _SITE_REVALIDATE.fire(ScopeError(\"policy failed consumption revalidation\"), \"consumption-revalidation\")"
  },
- "scope.py:_revalidate:358:RAISE": {
+ "scope.py:_revalidate:360:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §7 tamper-evidence (refuse) through site scope.revalidate",
   "reviewer": "dev",
   "site": "scope.revalidate",
   "class": "enforcement",
   "key": "scope.py:_revalidate:RAISE:3",
-  "line": 358,
+  "line": 360,
   "statement": "raise _SITE_REVALIDATE.fire(ScopeError("
  },
- "scope.py:_revalidate:363:RAISE": {
+ "scope.py:_revalidate:365:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §7 tamper-evidence (refuse) through site scope.revalidate",
   "reviewer": "dev",
   "site": "scope.revalidate",
   "class": "enforcement",
   "key": "scope.py:_revalidate:RAISE:4",
-  "line": 363,
+  "line": 365,
   "statement": "raise _SITE_REVALIDATE.fire(ScopeError("
  },
- "scope.py:_revalidate:373:RAISE": {
+ "scope.py:_revalidate:375:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §7 tamper-evidence (refuse) through site scope.revalidate",
   "reviewer": "dev",
   "site": "scope.revalidate",
   "class": "enforcement",
   "key": "scope.py:_revalidate:RAISE:5",
-  "line": 373,
+  "line": 375,
   "statement": "raise _SITE_REVALIDATE.fire(ScopeError("
  },
  "store/sqlite.py:SqliteStore.add_episode:1639:RAISE": {
@@ -3309,13 +3269,13 @@
   "line": 78,
   "statement": "raise ValueError("
  },
- "graph.py:fused_subgraph:888:RAISE": {
+ "graph.py:fused_subgraph:890:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "graph.py:fused_subgraph:RAISE:1",
-  "line": 888,
+  "line": 890,
   "statement": "raise ValueError(f\"policy_rank[{eid!r}] must be an int >= 1, got {rank!r}\")"
  },
  "ingest.py:_event_dt:126:RAISE": {
@@ -3777,13 +3737,13 @@
   "line": 265,
   "statement": "raise ScopeError(\"group_digests must be the validator's frozen \""
  },
- "scope.py:prune_absorbed_record:550:RAISE": {
+ "scope.py:prune_absorbed_record:552:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "scope.py:prune_absorbed_record:RAISE:1",
-  "line": 550,
+  "line": 552,
   "statement": "raise ScopeError(f\"prune_op must be op-<12hex>, got {prune_op!r}\")"
  },
  "scope.py:resolve:169:RAISE": {
@@ -3957,40 +3917,40 @@
   "line": 83,
   "statement": "raise SystemExit(\"internal: this veracium verb should never invoke the LLM \""
  },
- "mcp_server.py:main:555:RAISE": {
+ "mcp_server.py:main:560:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:1",
-  "line": 555,
+  "line": 560,
   "statement": "raise SystemExit(f\"veracium-mcp: unknown argument {args[0]!r} (see --help). \""
  },
- "mcp_server.py:main:561:RAISE": {
+ "mcp_server.py:main:566:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:2",
-  "line": 561,
+  "line": 566,
   "statement": "raise SystemExit(\"The MCP server needs the SDK: pip install veracium[mcp]\") from e"
  },
- "mcp_server.py:main:565:RAISE": {
+ "mcp_server.py:main:570:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:3",
-  "line": 565,
+  "line": 570,
   "statement": "raise SystemExit(f\"veracium-mcp: failed to start: {e}\\n\""
  },
- "mcp_server.py:main:577:RAISE": {
+ "mcp_server.py:main:582:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:4",
-  "line": 577,
+  "line": 582,
   "statement": "raise SystemExit("
  },
  "__init__.py:Memory._build_scope_policy:391:RETURN_NONE": {
@@ -4290,31 +4250,31 @@
   "line": 89,
   "statement": "return edges, n_episodes"
  },
- "graph.py:_stage4_and_5:1052:FILTER_RETURN": {
+ "graph.py:_stage4_and_5:1054:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "graph.py:_stage4_and_5:FILTER_RETURN:1",
-  "line": 1052,
+  "line": 1054,
   "statement": "return _permute_contention_groups(ordered, relations), reserved_ids"
  },
- "graph.py:_tokens:640:FILTER_RETURN": {
+ "graph.py:_tokens:642:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "graph.py:_tokens:FILTER_RETURN:1",
-  "line": 640,
+  "line": 642,
   "statement": "return {_stem(w) for w in re.findall(r\"[a-z0-9]+\", text.lower())"
  },
- "graph.py:fused_subgraph._order:909:FILTER_RETURN": {
+ "graph.py:fused_subgraph._order:911:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "graph.py:fused_subgraph._order:FILTER_RETURN:1",
-  "line": 909,
+  "line": 911,
   "statement": "return sorted(score, key=lambda i: (-score[i], -by_id[i].provenance.observed_at.timestamp(), i))"
  },
  "grounding.py:resolution_set:154:FILTER_RETURN": {
@@ -4353,13 +4313,13 @@
   "line": 184,
   "statement": "return [(k, pools[k]) for k in order]"
  },
- "portability.py:import_memory._one_or_unresolved:506:RETURN_NONE": {
+ "portability.py:import_memory._one_or_unresolved:508:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "portability.py:import_memory._one_or_unresolved:RETURN_NONE:1",
-  "line": 506,
+  "line": 508,
   "statement": "return None"
  },
  "procedures.py:build_procedure_edge._opt:104:RETURN_NONE": {
@@ -4389,22 +4349,22 @@
   "line": 64,
   "statement": "return None"
  },
- "scope.py:_group_of_digest:688:RETURN_NONE": {
+ "scope.py:_group_of_digest:690:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "scope.py:_group_of_digest:RETURN_NONE:1",
-  "line": 688,
+  "line": 690,
   "statement": "return None"
  },
- "scope.py:prune_absorbed_record:594:FILTER_RETURN": {
+ "scope.py:prune_absorbed_record:596:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "scope.py:prune_absorbed_record:FILTER_RETURN:1",
-  "line": 594,
+  "line": 596,
   "statement": "return out"
  },
  "scope_linkage.py:derive_absorbed_by:532:RETURN_NONE": {
@@ -4911,67 +4871,67 @@
   "line": 122,
   "statement": "raise ImportError(\"RESOLUTION carries an outcome outside the closed vocabulary\")"
  },
- "census.py:Site.__exit__:131:RETURN_FALSE": {
+ "census.py:Site.__exit__:147:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "census.py:Site.__exit__:RETURN_FALSE:1",
-  "line": 131,
+  "line": 147,
   "statement": "return False                          # never swallows the decision's raise"
  },
- "census.py:Site._bump:110:RAISE": {
+ "census.py:Site._bump:111:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "census.py:Site._bump:RAISE:1",
-  "line": 110,
+  "line": 111,
   "statement": "raise CensusError(f\"unknown counter {field!r}\")"
  },
- "census.py:Site.declined:95:BOOL_RETURN": {
+ "census.py:Site.declined:96:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "census.py:Site.declined:BOOL_RETURN:1",
-  "line": 95,
+  "line": 96,
   "statement": "return decision is None or decision is False or isinstance(decision, BaseException)"
  },
- "census.py:Site.declined:98:BOOL_RETURN": {
+ "census.py:Site.declined:99:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "census.py:Site.declined:BOOL_RETURN:2",
-  "line": 98,
+  "line": 99,
   "statement": "return decision is d"
  },
- "census.py:counters:220:FILTER_RETURN": {
+ "census.py:counters:241:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "census.py:counters:FILTER_RETURN:1",
-  "line": 220,
+  "line": 241,
   "statement": "return {k: s.counters() for k, s in _REGISTRY.items()}"
  },
- "census.py:declare_site:178:RAISE": {
+ "census.py:declare_site:198:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "census.py:declare_site:RAISE:1",
-  "line": 178,
+  "line": 198,
   "statement": "raise CensusError(f\"site id must be a non-empty string without whitespace, got {site_id!r}\")"
  },
- "census.py:declare_site:181:RAISE": {
+ "census.py:declare_site:201:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "census.py:declare_site:RAISE:2",
-  "line": 181,
+  "line": 201,
   "statement": "raise CensusError(f\"duplicate enforcement-point id {site_id!r}\")"
  },
  "census.py:status_of:57:RAISE": {
@@ -7323,13 +7283,13 @@
   "line": 523,
   "statement": "return r is not None and getattr(r, \"relation_kind\", \"declarative\") == \"procedural\""
  },
- "scope.py:is_legacy_derivative:385:BOOL_RETURN": {
+ "scope.py:is_legacy_derivative:387:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by scope.py:membership [site scope.membership.abandoned, scope.membership.unknown-state]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "scope.py:is_legacy_derivative:BOOL_RETURN:1",
-  "line": 385,
+  "line": 387,
   "statement": "return (record.get(\"author\") == \"system\""
  },
  "scope.py:same_identity:189:BOOL_RETURN": {

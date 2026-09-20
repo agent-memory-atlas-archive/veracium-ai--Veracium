@@ -132,6 +132,25 @@ Spec-Status: accepted
 > class is the one the note above names: a claim ("the runtime leg executes one declining decision at every
 > id") carried by a test whose subject grew past it, green at every pin since 0041's tranche 3.
 
+> **Implementation note, round 7 (2026-09-20; the seven round-6 implementation findings).** Every finding was
+> reproduced at the round-6 pin before it was fixed, and every regression was run RED on that pin with only
+> `tests/` replaced, then GREEN on the fixed tree (the transcript rides in the package). The product half:
+> a measurement that fails is CONTAINED and counted by exception type, never a zero (R6-1); a consultation is
+> recorded immediately before the site's own condition — sequential sites no longer share a bracket, and the
+> four hot `Edge` predicates consult before evaluating and return through ONE statement (R6-2); the snapshot
+> says what REGISTERED (R6-3). The evidence half: the loaded-module observation the registry check needs is
+> the evidence layer's, because specs/0031 keeps `sys.modules` and `vars()` out of src; the binding scan
+> resolves names through enclosing function scopes and refuses `nonlocal`/`global` (R6-4); the observer keys
+> each record by exit STATEMENT and reads that statement from the frame's line events — CPython 3.12 attributes
+> the return after a `with` block to the `with` line, so the census-enabled path of every hot predicate had
+> read as an implicit exit while the census-off path read its ordinal: the class §4's Part A-0-quater names,
+> an instrument reading the runtime's attribution as the program's (R6-5); the twin transform rewrites only
+> names bound by `declare_site` in the same module and only recognised shapes, refuses the rest by line, keeps
+> the bypass dead, and ships a manifest its `verify()` re-derives (R6-6); the surface-driven deltas are EXACT,
+> derived from the product's control flow, with the superseded `>=` form kept as the mutant it could not kill
+> (R6-7). The cost at the shipped default was re-measured (CHANGELOG): inside run-to-run noise. The frozen
+> invariants are unchanged in text; INV-7's transcript was re-run on this tree.
+
 ## 1. Problem and motivation
 
 **We assert guarantees we have never measured being exercised.** Two independent

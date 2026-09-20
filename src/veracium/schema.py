@@ -778,22 +778,27 @@ class Edge(BaseModel):
         # as fact. Benign third-party *inferences* (employer learned from a
         # received email) are not quarantined; they're marked use_only at ingest
         # (finding B: content-type quarantine, not blanket sender distrust).
-        q = (self.relation == QUARANTINE_RELATION
-             or self.provenance.disclosure == Disclosure.QUARANTINED)
         if _census.enabled():                # the shipped default skips the machinery
             with _SITE_EDGE_QUARANTINED.consult():     # (Quentin, 2026-09-19: the four hot Edge
-                return _SITE_EDGE_QUARANTINED.fire(q)   # predicates cost 12.4k decisions per recall)
-        return q
+                q = (self.relation == QUARANTINE_RELATION            # predicates cost 12.4k decisions per recall);
+                     or self.provenance.disclosure == Disclosure.QUARANTINED)   # round 6, R6-2b: consulted BEFORE
+                q = _SITE_EDGE_QUARANTINED.fire(q)      # the value is evaluated; the expression is repeated on the
+        else:                                           # bypass path and the two are asserted to agree on every verdict
+            q = (self.relation == QUARANTINE_RELATION
+                 or self.provenance.disclosure == Disclosure.QUARANTINED)
+        return q                                        # ONE return: the exit statement is the same in every arm (INV-7)
 
     @property
     def use_only(self) -> bool:
         # A benign third-party *inference* (finding B): may shape behavior, but
         # the user never confirmed it — never volunteered or asserted as fact.
-        u = self.provenance.disclosure == Disclosure.USE_ONLY
         if _census.enabled():                # the shipped default skips the machinery
             with _SITE_EDGE_USE_ONLY.consult():     # (Quentin, 2026-09-19: the four hot Edge
-                return _SITE_EDGE_USE_ONLY.fire(u)   # predicates cost 12.4k decisions per recall)
-        return u
+                u = self.provenance.disclosure == Disclosure.USE_ONLY   # predicates cost 12.4k decisions per recall);
+                u = _SITE_EDGE_USE_ONLY.fire(u)      # round 6, R6-2b: consulted BEFORE the value is evaluated
+        else:
+            u = self.provenance.disclosure == Disclosure.USE_ONLY
+        return u                                     # ONE return: the same exit statement in every arm (INV-7)
 
     @property
     def valid_now(self) -> bool:
@@ -811,11 +816,13 @@ class Edge(BaseModel):
         0030 §4e); with 0031 Phase A that window becomes agent-reachable,
         which is why the ruling sequences this BEFORE Phase A. UTC-aware
         comparison only."""
-        v = as_utc(self.valid_from) <= utcnow()
         if _census.enabled():                # the shipped default skips the machinery
             with _SITE_EDGE_VALID_NOW.consult():     # (Quentin, 2026-09-19: the four hot Edge
-                return _SITE_EDGE_VALID_NOW.fire(v)   # predicates cost 12.4k decisions per recall)
-        return v
+                v = as_utc(self.valid_from) <= utcnow()   # predicates cost 12.4k decisions per recall);
+                v = _SITE_EDGE_VALID_NOW.fire(v)      # round 6, R6-2b: consulted BEFORE the value is evaluated
+        else:
+            v = as_utc(self.valid_from) <= utcnow()
+        return v                                      # ONE return: the same exit statement in every arm (INV-7)
 
     @property
     def assertable(self) -> bool:
@@ -825,12 +832,15 @@ class Edge(BaseModel):
         else is context, not assertion material. A not-yet-valid edge stays
         stored and becomes assertable by itself when its `valid_from`
         arrives; nothing is rewritten."""
-        ok = (self.active and not self.quarantined and not self.use_only
-             and self.valid_now)
         if _census.enabled():                # the shipped default skips the machinery
             with _SITE_EDGE_ASSERTABLE.consult():     # (Quentin, 2026-09-19: the four hot Edge
-                return _SITE_EDGE_ASSERTABLE.fire(ok)   # predicates cost 12.4k decisions per recall)
-        return ok
+                ok = (self.active and not self.quarantined and not self.use_only   # predicates cost 12.4k decisions
+                      and self.valid_now)                                          # per recall); round 6, R6-2b:
+                ok = _SITE_EDGE_ASSERTABLE.fire(ok)   # consulted BEFORE the value is evaluated
+        else:
+            ok = (self.active and not self.quarantined and not self.use_only
+                  and self.valid_now)
+        return ok                                     # ONE return: the same exit statement in every arm (INV-7)
 
 
 class Outcome(str, Enum):

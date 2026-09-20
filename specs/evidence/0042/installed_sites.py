@@ -55,43 +55,89 @@ def _call_name(node: ast.Call):
     return f.id if isinstance(f, ast.Name) else (f.attr if isinstance(f, ast.Attribute) else None)
 
 
+class UnresolvableScope(Exception):
+    """A form the scanner will not guess at: `nonlocal`/`global` naming a site inside a function."""
+
+
 def _binding_bodies(tree: ast.AST) -> dict:
     """{NAME: set of (consult|fire) methods used on NAME INSIDE ONE FUNCTION BODY, unioned over bodies
     that carry BOTH} — round 5: the scan had unioned uses across the whole module by variable name, so
     consult() in one function and fire() in another read as bound. Each function (nested ones
     included) is its own scope: a nested function's uses belong to the nested function, not to its
     parent; a name assigned or bound as a parameter inside the body SHADOWS the module-level site, so
-    uses of it count for nothing."""
+    uses of it count for nothing. ROUND 6, R6-4: names resolve through the LEXICAL scope — a name bound
+    in ANY ENCLOSING FUNCTION (a parameter, an assignment, a loop target, an import) shadows the
+    module-level site for everything nested inside it (Python's closure rule); a CLASS body is NOT an
+    enclosing scope for the functions defined in it (Python does not close over class bodies). A
+    `nonlocal`/`global` statement naming a site is REFUSED rather than resolved by guess."""
+    site_names = {n.targets[0].id for n in tree.body
+                  if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name)
+                  and isinstance(n.value, ast.Call) and _call_name(n.value) == "declare_site"}
     bound = {}
-    for fn in ast.walk(tree):
-        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        shadowed = {a.arg for a in fn.args.args + fn.args.kwonlyargs + fn.args.posonlyargs}
-        if fn.args.vararg: shadowed.add(fn.args.vararg.arg)
-        if fn.args.kwarg: shadowed.add(fn.args.kwarg.arg)
-        uses = {}
+
+    def bindings_of(fn) -> set:
+        """Names this function binds: parameters, and every assignment / loop target / import / with-as /
+        except-as in its own body (nested scopes excluded — they bind their own)."""
+        names = {a.arg for a in fn.args.args + fn.args.kwonlyargs + fn.args.posonlyargs}
+        if fn.args.vararg: names.add(fn.args.vararg.arg)
+        if fn.args.kwarg: names.add(fn.args.kwarg.arg)
         def visit(node):
             for child in ast.iter_child_nodes(node):
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
-                    continue                                  # a nested scope is NOT this body
+                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        names.add(child.name)          # a nested def/class binds its NAME in this scope
+                    continue
                 if isinstance(child, ast.Assign):
-                    for t in child.targets:
-                        for n in ast.walk(t):
-                            if isinstance(n, ast.Name): shadowed.add(n.id)
+                    for t_ in child.targets:
+                        for n in ast.walk(t_):
+                            if isinstance(n, ast.Name): names.add(n.id)
                 if isinstance(child, (ast.AnnAssign, ast.AugAssign)) and isinstance(child.target, ast.Name):
-                    shadowed.add(child.target.id)
-                if isinstance(child, (ast.For, ast.comprehension)) and isinstance(getattr(child, "target", None), ast.Name):
-                    shadowed.add(child.target.id)
-                if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute) and isinstance(child.func.value, ast.Name) \
-                        and child.func.attr in BINDING_METHODS:
-                    uses.setdefault(child.func.value.id, set()).add(child.func.attr)
+                    names.add(child.target.id)
+                if isinstance(child, (ast.For, ast.AsyncFor, ast.comprehension)):
+                    for n in ast.walk(child.target):
+                        if isinstance(n, ast.Name): names.add(n.id)
+                if isinstance(child, (ast.Import, ast.ImportFrom)):
+                    for a in child.names: names.add((a.asname or a.name).split(".")[0])
+                if isinstance(child, (ast.With, ast.AsyncWith)):
+                    for item in child.items:
+                        if item.optional_vars is not None:
+                            for n in ast.walk(item.optional_vars):
+                                if isinstance(n, ast.Name): names.add(n.id)
+                if isinstance(child, ast.ExceptHandler) and child.name:
+                    names.add(child.name)
+                if isinstance(child, (ast.Global, ast.Nonlocal)) and any(n in site_names for n in child.names):
+                    raise UnresolvableScope(f"line {child.lineno}: `{type(child).__name__.lower()}` names a site — not resolved by guess")
                 visit(child)
         visit(fn)
-        for name, methods in uses.items():
-            if name in shadowed:
-                continue
-            if set(BINDING_METHODS) <= methods:
-                bound.setdefault(name, set()).update(methods)
+        return names
+
+    def walk(node, enclosing: frozenset):
+        """`enclosing`: names bound by the FUNCTION scopes this node sits inside (class bodies contribute nothing)."""
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                own = bindings_of(child)
+                shadowed = enclosing | own
+                uses = {}
+                def visit(n_):
+                    for c in ast.iter_child_nodes(n_):
+                        if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                            continue                                  # a nested scope is NOT this body
+                        if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and isinstance(c.func.value, ast.Name) \
+                                and c.func.attr in BINDING_METHODS:
+                            uses.setdefault(c.func.value.id, set()).add(c.func.attr)
+                        visit(c)
+                visit(child)
+                for name, methods in uses.items():
+                    if name in shadowed:
+                        continue
+                    if set(BINDING_METHODS) <= methods:
+                        bound.setdefault(name, set()).update(methods)
+                walk(child, shadowed)                                  # nested functions see this scope's bindings
+            elif isinstance(child, ast.ClassDef):
+                walk(child, enclosing)                                 # a class body is not a closure scope
+            else:
+                walk(child, enclosing)
+    walk(tree, frozenset())
     return bound
 
 

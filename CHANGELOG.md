@@ -2,6 +2,54 @@
 
 ## Unreleased
 
+- **Fixed: the census's round-6 implementation findings — a measurement that fails is counted as a failure,
+  a consultation means the site's own condition ran, a declared id that never registered is refused, the
+  INV-7 comparison decodes what it compares, and the twin transform refuses what it has not established is
+  instrumentation (specs/0042, round 7; seven findings R6-1..R6-7).** *Counting (R6-1):* a trace recorder or
+  decline classifier that raises is CONTAINED — the decision is returned as made, `errors` counts it, the
+  exception's type name is recorded per id (`Site.failure_kinds`, the snapshot's `measurement_failures`), the row
+  reads UNMEASURED, and a report carrying such a row is structurally valid but evidentially INSUFFICIENT
+  (`census_table.insufficiency` names the ids and kinds). *Consultation (R6-2):* each sequential site is
+  consulted immediately before its own condition (the gate's three scoped-assertability checks, the MCP author/
+  trust split, the as-of resolver, the graph's absorption gate, the scope policy's per-member checks,
+  portability's seven refusals — a consult statement before the check where a bracket would span other sites),
+  and the four hot `Edge` predicates consult BEFORE evaluating when the census is on, through ONE `return`
+  statement for both paths. *Registration (R6-3):* the snapshot carries what REGISTERED; given the scan's
+  id → module map and the loaded product modules, a declared id whose module is loaded but never registered is
+  REFUSED as a missing registration, one whose module was never imported is NAMED as out of reach, and a
+  registered id the scan maps to an unloaded module refuses the scan. The loaded-module observation is the
+  EVIDENCE layer's (`census_table.loaded_product_modules`): specs/0031 refuses `sys.modules` and `vars()` inside
+  src, so the product does not pretend to make it. *The scan (R6-4):* a site name resolves through enclosing
+  FUNCTION scopes (a closure sees its enclosing function's binding; a class body is not a scope; `nonlocal`/
+  `global` on a site name is refused as unresolvable), and the live registry reconciles against the scan with
+  nothing out of reach after every product module is imported by file — `pkgutil.walk_packages` had skipped
+  `store/`, a namespace package. *INV-7 (R6-5):* the observer records (symbol, EXIT STATEMENT ordinal, label)
+  — three bytes, the exit statement read from the frame's line events, because CPython 3.12 attributes the
+  return after a `with` block to the `with` line and every census-enabled hot predicate had read as an implicit
+  exit; the harness decodes every arm through its own dictionaries, compares canonical records, prints a
+  canonical digest per arm, and its exit status requires every arm's pytest exit and every cross-check
+  (`final_status`, gates named); the test-boundary side file is written at the record width (it was still at the
+  two-byte width, so every per-test segment was cut at 1.5× its index); and the control pair is run for EVERY
+  arm, a test excluded by name when two runs of any one arm disagree on it — the first round-7 run found
+  wall-clock noise in one 0029 acceptance-corpus test that only the healthy arm's slower timing sampled and
+  a reference-only pair could not. *The twin (R6-6):* the transform rewrites only NAMES bound by `declare_site` in
+  the same module and only the recognised shapes (`return/raise X.fire(v)`, `name = X.fire(name)`, `with
+  X.consult():`, the statement `X.consult()`, the `if enabled:` bypass whose body is assignments/a return and
+  whose else is assignments), refuses anything else by line, keeps the bypass DEAD rather than deleting it so
+  exit ordinals survive, and writes `twin_manifest.json` (source hashes before and after, every count) that
+  `verify()` re-derives. *Exact deltas (R6-7):* the surface-driven sites assert deltas EQUAL to counts derived
+  from the product's own control flow (grounded (4, 4, 0): the claim plus `_fit_to_budget`'s two sums; variant
+  (2, 1, 0); eligible, claim, digest-overlap (1, 1, 0) / (2, 1, 0)); the reviewer's doubled-increment control
+  now fails every one, and the superseded `fired >= 1 and consulted >= fired` form is kept inside the test as
+  the mutant it could not kill. Every regression was run RED on the round-6 pin with only tests/ replaced,
+  then GREEN on this tree (twelve of fifteen red on the pin; the three that pass there are the R6-7 mutant
+  campaign and an exits-per-function guard, whose defect was in the old assertion, not the tree). **Cost at
+  the shipped default, re-measured** (census OFF; the round-6 pin against this tree on the ten-conversation
+  store migrated v14 → v15, 180 timed recalls per run, alternated twice): medians 144.2 / 144.3 ms against
+  146.0 / 144.4 ms — inside run-to-run noise; the one-return form costs nothing measurable. Regenerated: the
+  0042 inventory (787 → 783 candidates: the four bypass returns folded into one return each), the review keys
+  (300 entries over 162 ids), reviewed points and declaration; the 0031 LIVE attribute partition; the INV-7
+  four-arm transcript (IDENTICAL across four arms over 860 tests, 75,569 records per arm, one canonical digest, 1 excluded as non-reproducible between two runs of one arm). No decision's behaviour changes.
 - **Fixed: the 0043 canned-pipeline test assumed a git checkout (specs/0043; found by research's offline leg on the
   0042 round-6 review package).** The harness recorded `git rev-parse HEAD` verbatim, so a report generated in an
   extracted archive carried an EMPTY pin and the test asserting a 40-hex there was green in every checkout and red

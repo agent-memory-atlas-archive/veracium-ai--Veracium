@@ -43,6 +43,17 @@ for p in sorted(root.rglob("*.py")):
             if (module, n.lineno) in inv_key: found[sid].append((module, n.lineno))
             else: skipped.append((module, n.lineno, sid))
             if v.args and isinstance(v.args[0], ast.Name): by_fn_names[fn][v.args[0].id] = sid
+    # round 7 (INV-7 R6-5): the four hot Edge predicates carry ONE return statement for every arm, so the
+    # fire is an ASSIGNMENT — `q = SITE.fire(q)` — and the decision statement is the `return q` after it;
+    # a Name assigned through fire maps to the id exactly as a Name returned through fire does
+    for fn in ast.walk(tree):
+        if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for n in ast.walk(fn):
+                if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name):
+                    v = n.value
+                    if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "fire" \
+                            and isinstance(v.func.value, ast.Name) and v.func.value.id in var_id:
+                        by_fn_names[fn][n.targets[0].id] = var_id[v.func.value.id]
     for n, fn in fn_of.items():
         if isinstance(n, ast.Return) and isinstance(n.value, ast.Name) and n.value.id in by_fn_names.get(fn, {}) and (module, n.lineno) in inv_key:
             found[by_fn_names[fn][n.value.id]].append((module, n.lineno))

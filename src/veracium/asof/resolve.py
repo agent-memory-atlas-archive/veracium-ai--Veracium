@@ -301,7 +301,7 @@ def _resolve_edge(store, user_id, e, rows, T, now, view, principal, policy,
     """§4a steps 2–3 for one held edge. None means "not a candidate to this
     caller" (the classifier's SCOPE_HIDDEN, or a row gone between reads —
     impossible inside one window, stated for totality)."""
-    with _SITE_EDGE_UNCLASSIFIED.consult(), _SITE_EDGE_HIDDEN.consult():
+    with _SITE_EDGE_UNCLASSIFIED.consult():        # the hidden site consults only when its check is reached (R6-2a)
         res, _raw = _classify_live(store, user_id, e.id, T, now, view, principal, policy)
         if res is None:
             return _SITE_EDGE_UNCLASSIFIED.fire(None, "unclassified")
@@ -310,6 +310,7 @@ def _resolve_edge(store, user_id, e, rows, T, now, view, principal, policy,
                     invalidated_at=as_utc_optional(e.invalidated_at),
                     invalidation_reason=e.invalidation_reason,
                     status=st, flags=res.flags)
+        _SITE_EDGE_HIDDEN.consult()
         if st in (SCOPE_HIDDEN, NOT_VALID_AT_T):
             return _SITE_EDGE_HIDDEN.fire(None, "hidden-or-invalid")
         # V-MUTANT / V-NONE — the table is total over the TYPE, not over today's

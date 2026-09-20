@@ -327,11 +327,12 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
     skipped as plan-row-id-equal on an idempotent re-import)."""
     # specs/0005 §4a — the two argument gates, in order, BEFORE the file is
     # opened: the closed bool predicate (P13), then mutual exclusion (P5).
-    with _SITE_IMPORT_RESTORE_NOT_BOOL.consult(), _SITE_IMPORT_RESTORE_WITH_USER.consult(), _SITE_IMPORT_FILE.consult(), _SITE_IMPORT_AGREEMENT_INVALID.consult(), _SITE_IMPORT_ORIGIN_MISSING.consult(), _SITE_IMPORT_RECORD.consult(), _SITE_IMPORT_RACE_EXHAUSTED.consult():
+    with _SITE_IMPORT_RESTORE_NOT_BOOL.consult():   # the six other sites consult at their own first check (round 6, R6-2a)
         if type(restore) is not bool:
             raise _SITE_IMPORT_RESTORE_NOT_BOOL.fire(TypeError(
                 f"restore must be a bool, got {type(restore).__name__!s} — no "
                 f"truthiness coercion at a trust boundary (specs/0005 P13)"))
+        _SITE_IMPORT_RESTORE_WITH_USER.consult()
         if restore and user_id is not None:
             raise _SITE_IMPORT_RESTORE_WITH_USER.fire(ValueError(
                 "restore and user_id are mutually exclusive — a restore is this "
@@ -339,6 +340,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         path = Path(path)
         with path.open() as f:
             lines = [ln for ln in (l.strip() for l in f) if ln]
+        _SITE_IMPORT_FILE.consult()                 # one consult for the file's sequence of checks
         if not lines:
             raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: empty file"), "empty")
         header = json.loads(lines[0])
@@ -770,6 +772,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 agr = rec.get("agreement")
                 if agr is None:
                     continue
+                _SITE_IMPORT_AGREEMENT_INVALID.consult()
                 try:
                     _AgreementRecord.model_validate(agr)
                 except Exception as exc:
@@ -855,18 +858,20 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
             if src_version < 4:
                 prov.pop("source_id", None)          # I10 — newer field in an older envelope
                 prov.pop("origin", None)
-            elif prov.get("origin") is None:
-                raise _SITE_IMPORT_ORIGIN_MISSING.fire(ValueError(
-                    f"{path}: v{src_version} record {rec.get('id')!r} carries provenance with "
-                    f"no origin — a current-format import MUST carry origin; a missing one is "
-                    f"malformed and is NEVER resolved to this store (specs/0006 I14)"))
-            elif prov["origin"] == dest_origin:
-                # A LOCAL record coming home (its materialised origin IS this store's singleton):
-                # canonicalise back to absent so it resolves to us and stores byte-identically to
-                # the original local row — that is what makes an export→re-import idempotent and
-                # groups the two as ONE source (I9). A genuinely FOREIGN origin is left untouched
-                # (I2b) — trust of it is 0005's import boundary, applied first (I7).
-                prov["origin"] = None
+            else:
+                _SITE_IMPORT_ORIGIN_MISSING.consult()
+                if prov.get("origin") is None:
+                    raise _SITE_IMPORT_ORIGIN_MISSING.fire(ValueError(
+                        f"{path}: v{src_version} record {rec.get('id')!r} carries provenance with "
+                        f"no origin — a current-format import MUST carry origin; a missing one is "
+                        f"malformed and is NEVER resolved to this store (specs/0006 I14)"))
+                elif prov["origin"] == dest_origin:
+                    # A LOCAL record coming home (its materialised origin IS this store's singleton):
+                    # canonicalise back to absent so it resolves to us and stores byte-identically to
+                    # the original local row — that is what makes an export→re-import idempotent and
+                    # groups the two as ONE source (I9). A genuinely FOREIGN origin is left untouched
+                    # (I2b) — trust of it is 0005's import boundary, applied first (I7).
+                    prov["origin"] = None
 
         # (2d) specs/0023 N8 — THE DESTINATION-STANDING CAP, after identity has
         # SETTLED (the strip/materialise/canonicalise rules above decide what each
@@ -900,6 +905,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         # 0006 v3→v4 bump introduced source-identity fields, not outcome fields, so v3 AND v4
         # both carry explicit outcome fields and must take the H13 branch. Keying this on
         # FORMAT_VERSION would wrongly legacy-convert a v3 export after the bump.
+        _SITE_IMPORT_RECORD.consult()                   # ONE consult for the record checks below — every path through this section reaches them (R6-2a)
         outcome_recs = [r for r in ep_recs if r.get("kind") == "outcome"]
         if src_version < 3:
             # group by identity first: a pre-v3 export can hold two outcome records for
@@ -1059,6 +1065,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                         "procedural_refused": len(procedural_refusals),
                         "procedural_refusals": procedural_refusals,
                         "user_id": target_uid}
+        _SITE_IMPORT_RACE_EXHAUSTED.consult()
         raise _SITE_IMPORT_RACE_EXHAUSTED.fire(ValueError(f"{path}: import kept losing a race against concurrent writes "
                          f"after {_IMPORT_RETRIES} attempts — refused (specs/0009 §4c)"))
 

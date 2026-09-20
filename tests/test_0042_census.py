@@ -23,9 +23,18 @@ def _evidence(name):
 
 @pytest.fixture(autouse=True)
 def _census_off():
-    census.enable(False); census.trace(False); census.trace_reset(); census._clear_registry()
-    yield
-    census.enable(False); census.trace(False); census.trace_reset(); census._clear_registry()
+    """An empty registry for each test, the PRODUCTION registrations put back after it: a bare
+    `_clear_registry()` left every later test in the process with an empty registry, and the live-registry
+    reconciliation (R6-3) then read 127 production ids as 'loaded and never registered' under one shuffle
+    order and reconciled under another (round 7, found repairing it). The affordance is the harness's own
+    (the registry dict the evidence tests already read), not a new product surface."""
+    census.enable(False); census.trace(False); census.trace_reset()
+    saved = dict(census._REGISTRY); census._clear_registry()
+    try:
+        yield
+    finally:
+        census.enable(False); census.trace(False); census.trace_reset()
+        census._clear_registry(); census._REGISTRY.update(saved)
 
 
 def _row(report, cid):
@@ -155,3 +164,102 @@ def test_memory_config_census_enabled_is_the_opt_in_switch_default_off(tmp_path)
     assert not census.enabled(), "default OFF (Part A-2, the owner's ruling)"
     m = Memory(llm=lambda *a, **k: "", config=MemoryConfig(db_path=str(tmp_path / "b.db"), census_enabled=True)); m.close()
     assert census.enabled()
+
+
+# ---- round 6 (2026-09-20), cell A: every failure OF THE MEASUREMENT is contained and counted -------------------
+
+def test_r6_1_a_failed_trace_recorder_is_contained_counted_and_the_decision_is_returned_as_made(monkeypatch):
+    """R6-1(i): with tracing on, a recorder that raises turned a returned False into a RuntimeError and left
+    `errors` at 0. Now: the decision is returned exactly as made, `errors` moves, the failure KIND is in the
+    snapshot (type name only), and the row reads UNMEASURED."""
+    S = census.declare_site("t.recorder", declines=False); census.enable(True); census.trace(True)
+    def boom(site_id, label):
+        raise RuntimeError("recorder failed")
+    monkeypatch.setattr(census, "_record_trace", boom)
+    with S.consult():
+        out = S.fire(False, "withhold")
+    assert out is False                                      # the decision made, returned as made — INV-7
+    c = S.counters(); assert (c["consulted"], c["fired"], c["errors"]) == (1, 1, 1)
+    rep = census.census({"t.recorder"}); r = _row(rep, "t.recorder")
+    assert r["status"] == "UNMEASURED" and rep["snapshot"]["measurement_failures"] == {"t.recorder": {"RuntimeError": 1}}
+    census.trace(False)
+
+
+def test_r6_1_a_failed_decline_classifier_reads_unmeasured_not_unexercised(monkeypatch):
+    """R6-1(ii): a classifier that raises preserved the product result but reported UNEXERCISED (1,0,0)."""
+    def bad(decision):
+        raise RuntimeError("classifier failed")
+    S = census.declare_site("t.classifier", declines=bad); census.enable(True)
+    with S.consult():
+        out = S.fire(False, "withhold")
+    assert out is False
+    c = S.counters(); assert (c["consulted"], c["fired"], c["errors"]) == (1, 0, 1)
+    assert _row(census.census({"t.classifier"}), "t.classifier")["status"] == "UNMEASURED"
+
+
+def test_r6_1_a_failed_consult_increment_reads_unmeasured_the_report_stays_valid_and_is_insufficient(monkeypatch):
+    """R6-1(iii): (0,1,1) — the row is UNMEASURED; the validator no longer refuses the WHOLE report for the
+    arithmetic of a row whose measurement failed (INV-2's isolation), but the report is refused as EVIDENCE
+    by `insufficiency()`, naming the id and the failure kind. Detection existed (the validator's fired >
+    consulted); the deliverable is a row and a report that are not misleading."""
+    ct = _evidence("census_table")
+    S = census.declare_site("t.consult-fails"); N = census.declare_site("t.neighbour"); census.enable(True)
+    orig = census.Site._bump
+    def bump(self, field):
+        if field == "consulted" and self.site_id == "t.consult-fails":
+            raise RuntimeError("consult increment failed")
+        return orig(self, field)
+    monkeypatch.setattr(census.Site, "_bump", bump)
+    with S.consult():
+        try: raise S.fire(ValueError("refuse"))
+        except ValueError: pass
+    with N.consult():
+        try: raise N.fire(ValueError("refuse"))
+        except ValueError: pass
+    c = S.counters(); assert (c["consulted"], c["fired"], c["errors"]) == (0, 1, 1)
+    rep = census.census({"t.consult-fails", "t.neighbour"})
+    assert _row(rep, "t.consult-fails")["status"] == "UNMEASURED" and _row(rep, "t.neighbour")["status"] == "EXERCISED"
+    assert ct.validate_report(rep, {"t.consult-fails", "t.neighbour"}) == []          # valid: the neighbour is not invalidated
+    bad = ct.insufficiency(rep); assert len(bad) == 1 and "t.consult-fails" in bad[0] and "RuntimeError" in bad[0]
+    # the control: a fired > consulted row with NO error is still refused by the validator
+    rep2 = census.census({"t.neighbour"}); _row(rep2, "t.neighbour").update(fired=5, consulted=1, errors=0)
+    assert any("fired > consulted" in p for p in ct.validate_report(rep2, {"t.neighbour"}))
+
+
+# ---- round 6, cell E: a missing registration is not a valid zero ----------------------------------------------
+
+def test_r6_3_a_declared_id_whose_module_is_loaded_but_never_registered_is_refused_and_an_unloaded_one_is_named():
+    ct = _evidence("census_table")
+    A = census.declare_site("t.registered"); census.enable(True)
+    with A.consult():
+        A.fire(None)
+    decl = {"t.registered", "t.never-registered", "t.not-loaded"}
+    rep = census.census(decl)
+    assert _row(rep, "t.never-registered")["status"] == "UNREACHED"          # the row alone cannot tell (the finding)
+    assert ct.validate_report(rep, decl) == []                              # without the scan's map: as before
+    # the loaded-module observation is the EVIDENCE layer's (specs/0031 keeps sys.modules out of src) and the
+    # snapshot does not pretend to carry it; the validator refuses a scan map without it
+    assert "loaded_modules" not in rep["snapshot"] and rep["snapshot"]["registered"] == ["t.registered"]
+    loaded = ct.loaded_product_modules(); assert "census.py" in loaded
+    site_modules = {"t.registered": "census.py", "t.never-registered": "census.py", "t.not-loaded": "never/imported.py"}
+    assert any("`loaded_modules`" in p for p in ct.validate_report(rep, decl, site_modules))
+    probs = ct.validate_report(rep, decl, site_modules, loaded)
+    assert any("t.never-registered" in p and "missing registration" in p for p in probs)     # loaded, unregistered: REFUSED
+    assert not any("t.not-loaded" in p for p in probs)                                       # not loaded: not a refusal …
+    assert ct.out_of_reach(decl, site_modules, loaded) == ["t.not-loaded"]                   # … but NAMED, never a silent zero
+    # a WRONG scan (D feeds E): a registered id mapped to an unloaded module is a refusal about the scan
+    wrong = dict(site_modules, **{"t.registered": "never/imported.py"})
+    assert any("t.registered" in p and "the scan is wrong" in p for p in ct.validate_report(rep, decl, wrong, loaded))
+    # a declared id the scan does not carry at all is a refusal too
+    assert any("not in the scan" in p for p in ct.validate_report(rep, decl, {"t.registered": "census.py"}, loaded))
+
+
+def test_the_snapshot_carries_only_ids_module_paths_and_type_names():
+    """INV-8 at the snapshot: the round-6 fields are names, never content."""
+    S = census.declare_site("t.inv8"); census.enable(True)
+    with S.consult():
+        S.fire(None)
+    snap = census.census({"t.inv8"})["snapshot"]
+    assert all(isinstance(x, str) and x == x.strip() and " " not in x for x in snap["registered"])
+    assert "loaded_modules" not in snap            # not the product's observation (specs/0031); see census_table
+    assert all(isinstance(v, dict) and all(k.isidentifier() and isinstance(n, int) for k, n in v.items()) for v in snap["measurement_failures"].values())

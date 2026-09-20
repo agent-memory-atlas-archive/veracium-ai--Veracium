@@ -77,11 +77,12 @@ class Site:
     decision as taken and returns `x` unchanged so it wraps the raise or return itself. WHERE a site
     lives is not recorded here: the static scan (specs/evidence/0042/installed_sites.py) derives
     (module, line) from the source, and the 0031 surface refuses the frame machinery in src."""
-    __slots__ = ("site_id", "consulted", "fired", "errors", "_lock", "_declines")
+    __slots__ = ("site_id", "consulted", "fired", "errors", "_lock", "_declines", "failures")
 
     def __init__(self, site_id: str, declines=None):
         self.site_id = site_id
         self.consulted = self.fired = self.errors = 0
+        self.failures: dict[str, int] = {}      # exception TYPE name -> count (never a message: INV-8)
         self._lock = threading.Lock()
         # WHICH returned value is the decline (tranche 2, 2026-09-19): a site whose decision is
         # a predicate returns BOTH verdicts through fire() so the return statement keeps the
@@ -110,22 +111,37 @@ class Site:
                 raise CensusError(f"unknown counter {field!r}")
 
     def consult(self):
-        """The bracket: `with SITE.consult():`. The Site is its own context manager (no generator,
-        no allocation) so a disabled census costs one global read per decision — the tranche-2
-        sites include `Edge.assertable` and its siblings, consulted per edge per recall."""
-        return self
-
-    def __enter__(self):
+        """CONSULTED means: control reached this site's condition. `consult()` counts WHEN IT IS CALLED,
+        so both forms count at the right place — the bracket `with SITE.consult():` at its with
+        statement, immediately before the bracketed condition; and the statement `SITE.consult()`
+        placed immediately before a condition that sits deeper in a body (round 6, R6-2a: a bracket
+        shared by several sites credited every site with a consult when only the first condition was
+        reached). A site with several conditions in one straight-line sequence consults ONCE, at the
+        first; a condition inside a loop consults once per evaluation. The Site is its own context
+        manager (no generator, no allocation) so a disabled census costs one global read per decision."""
         if _ENABLED:
             try:
                 self._bump("consulted")
-            except BaseException:            # the counter broke: UNMEASURED, and the decision proceeds
-                try:
-                    with self._lock:
-                        self.errors += 1
-                except BaseException:
-                    pass
+            except BaseException as exc:     # the counter broke: UNMEASURED, and the decision proceeds
+                self._measurement_failed(exc)
         return self
+
+    def _measurement_failed(self, exc: BaseException) -> None:
+        """A failure OF THE MEASUREMENT (an increment, the classifier, the trace recorder): counted in
+        `errors` so the row reads UNMEASURED (INV-2), never surfaced to the decision (INV-7), never
+        allowed to touch a neighbour's row; the exception's TYPE name is kept per site so a failure can
+        be diagnosed (the report carries it in the snapshot, never in a row and never with a message).
+        Round 6, R6-1: three failure sites were uncounted."""
+        try:
+            with self._lock:
+                self.errors += 1
+                k = type(exc).__name__
+                self.failures[k] = self.failures.get(k, 0) + 1
+        except BaseException:
+            pass
+
+    def __enter__(self):
+        return self                           # the count happened in consult(); the bracket only scopes the body
 
     def __exit__(self, exc_type, exc, tb):
         return False                          # never swallows the decision's raise
@@ -141,24 +157,28 @@ class Site:
         if declined is None:
             try:
                 declined = self.declined(decision)
-            except BaseException:
-                declined = False
+            except BaseException as exc:     # the CLASSIFIER broke (R6-1 ii): a measurement failure, counted;
+                self._measurement_failed(exc)   # the decision is returned unchanged and `fired` does not move
+                return decision
         if declined:
             try:
                 self._bump("fired")
-            except BaseException:
-                try:
-                    with self._lock:
-                        self.errors += 1
-                except BaseException:
-                    pass
+            except BaseException as exc:
+                self._measurement_failed(exc)
             if _TRACING:
-                _record_trace(self.site_id, label if label is not None else _label_of(decision))
+                try:
+                    _record_trace(self.site_id, label if label is not None else _label_of(decision))
+                except BaseException as exc:     # the RECORDER broke (R6-1 i): counted, contained — the decision
+                    self._measurement_failed(exc)   # was made and is returned exactly as made
         return decision
 
     def counters(self) -> dict:
         with self._lock:
             return {"consulted": self.consulted, "fired": self.fired, "errors": self.errors}
+
+    def failure_kinds(self) -> dict:
+        with self._lock:
+            return dict(self.failures)
 
 
 def _label_of(decision) -> str:
@@ -200,6 +220,7 @@ def reset_counters() -> None:
         for s in _REGISTRY.values():
             with s._lock:
                 s.consulted = s.fired = s.errors = 0
+                s.failures.clear()
 
 
 def _clear_registry() -> None:
@@ -260,7 +281,15 @@ def census(declaration: set[str]) -> dict:
         st = status_of(t)
         rows.append({"id": cid, "status": st} if st == "DISABLED"
                     else {"id": cid, "status": st, "consulted": c["consulted"], "fired": c["fired"], "errors": c["errors"]})
+    with _REGISTRY_LOCK:
+        failures = {k: s.failure_kinds() for k, s in _REGISTRY.items() if s.failure_kinds()}
     return {"snapshot": {"snapshot_id": uuid.uuid4().hex, "process_started": _PROCESS_STARTED,
                          "window_start": start, "window_end": time.time(), "enabled": enabled_now,
-                         "process": os.getpid(), "unmeasured": sum(1 for r in rows if r["status"] == "UNMEASURED")},
+                         "process": os.getpid(), "unmeasured": sum(1 for r in rows if r["status"] == "UNMEASURED"),
+                         # round 6 (R6-3, R6-1): what registered here and what failed how — ids and exception
+                         # type names; never content. WHICH product modules were loaded is NOT observed here:
+                         # specs/0031 refuses sys.modules and vars() inside src (the capability-escape analysis),
+                         # so the evidence layer observes it (census_table.loaded_product_modules) and hands it
+                         # to the validator beside the scan's id -> module map.
+                         "registered": sorted(snap), "measurement_failures": failures},
             "rows": rows}

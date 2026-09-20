@@ -124,7 +124,9 @@ def _functions_by_site_id():
                 elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     visit(child, qual + [child.name])
                 else:
-                    v = child.value if isinstance(child, ast.Return) else child.exc if isinstance(child, ast.Raise) else None
+                    # the three statement forms a fire takes: `return VAR.fire(x)`, `raise VAR.fire(exc)`, and (round 7,
+                    # the four hot Edge predicates: ONE return statement for every arm) `name = VAR.fire(name)`
+                    v = child.value if isinstance(child, (ast.Return, ast.Assign)) else child.exc if isinstance(child, ast.Raise) else None
                     if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "fire" \
                             and isinstance(v.func.value, ast.Name) and v.func.value.id in var_id:
                         out.setdefault(var_id[v.func.value.id], set()).add(f"{module}:{'.'.join(qual)}")

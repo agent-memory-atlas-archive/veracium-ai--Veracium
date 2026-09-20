@@ -126,14 +126,14 @@ def test_the_three_in_process_arms_produce_one_observer_trace(arms, leg):
          "healthy/off": harness.first_divergence(h["bytes"], o["bytes"])}
     # the replay REACHES the declared functions: every id the leg declines maps to a symbol the
     # observer recorded, except the nested ones it cannot wrap (named, derived)
-    observed = {s for s, _ in h["decoded"]}
+    observed = {s for s, _, _ in h["decoded"]}
     expected = {ID_TO_SYMBOL[sid] for sid in list(leg.DECLINES) + list(leg.SURFACE_DRIVEN)} - _nested_symbols()
     assert expected <= observed, sorted(expected - observed)
 
 
 def test_the_census_sees_a_subsequence_of_what_the_observer_sees(arms):
     for arm in ("healthy", "failing"):
-        obs = [s for s, _ in arms[arm]["decoded"]]
+        obs = [s for s, _, _ in arms[arm]["decoded"]]
         nested = _nested_symbols()
         needle = [ID_TO_SYMBOL[rec[1]] for rec in arms[arm]["census_trace"]
                   if rec[1] in ID_TO_SYMBOL and ID_TO_SYMBOL[rec[1]] not in nested]
@@ -157,8 +157,8 @@ def test_the_comparison_can_fail_a_replay_that_took_a_different_path(arms, leg):
     victim = sorted(leg.DECLINES)[len(leg.DECLINES) // 2]
     other = _replay("healthy", leg, skip=(victim,))
     assert other["bytes"] != arms["healthy"]["bytes"]
-    i = harness.first_divergence(other["bytes"], arms["healthy"]["bytes"])
-    assert i is not None and 0 <= i <= len(other["decoded"])
+    i = harness.first_divergence(other["bytes"], arms["healthy"]["bytes"])     # a BYTE index; records are 3 bytes
+    assert i is not None and 0 <= i // observer.RECORD_WIDTH <= len(other["decoded"])
 
 
 # ---- leg 2: the pinned four-arm transcript ------------------------------------------------------------
@@ -238,14 +238,15 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
 
 # ---- leg 3: the harness's mutation matrix ------------------------------------------------------------
 
-def _fabricate(tmp_path, arm, records, symbols=("m.py:f", "m.py:g"), labels=("None", "ValueError"), census=None, counters=None, enabled=False, boundaries=None):
+def _fabricate(tmp_path, arm, records, symbols=("m.py:f", "m.py:g"), labels=("None", "ValueError"), census=None, counters=None, enabled=False, boundaries=None, registry_size=2):
     d = tmp_path / arm; d.mkdir()
-    raw = bytes(b for s, l in records for b in (s, l))
+    recs = [(r[0], 0, r[1]) if len(r) == 2 else tuple(r) for r in records]       # (symbol, exit ordinal, label)
+    raw = bytes(b for r in recs for b in r)
     (d / "observer_trace.bin").write_bytes(raw)
     bounds = boundaries if boundaries is not None else [[0, "t.py::a"], [2, "t.py::b"]]
     (d / "test_boundaries.jsonl").write_text("".join(json.dumps(b) + "\n" for b in bounds))
-    summary = {"symbols": list(symbols), "labels": list(labels), "records": len(records), "census_enabled": enabled,
-               "census_registry_size": 2, "veracium_file": "x"}
+    summary = {"symbols": list(symbols), "labels": list(labels), "records": len(recs), "record_width": 3, "census_enabled": enabled,
+               "census_registry_size": registry_size, "veracium_file": "x", "pytest_exit": 0}
     if census is not None:
         (d / "census_trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in census))
         summary["census_counters"] = counters or {}
@@ -269,15 +270,15 @@ def test_the_harness_comparison_fails_on_each_mutant(tmp_path):
     assert verdict["identical"] and verdict["divergences"] == {}
     assert checks["healthy"]["subsequence_holds"] and checks["failing"]["all_unmeasured"]
     # mutant 1: one record changed in one arm → divergent, decoded at the record
-    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([0, 0, 1, 0, 0, 1]))
+    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([0, 0, 0, 1, 0, 0, 0, 0, 1]))
     v, _ = harness.compare(tmp_path, arms, S, ids)
     assert not v["identical"] and v["divergences"]["off"]["first_index"] == 1
-    assert v["divergences"]["off"]["this"] == ("m.py:g", "None") and v["divergences"]["off"]["reference"] == ("m.py:g", "ValueError")
+    assert v["divergences"]["off"]["this"] == ("m.py:g", 0, "None") and v["divergences"]["off"]["reference"] == ("m.py:g", 0, "ValueError")
     # mutant 2: an arm cut short → divergent at the shorter length
-    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([0, 0, 1, 1]))
+    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([0, 0, 0, 1, 0, 1]))
     v, _ = harness.compare(tmp_path, arms, S, ids)
     assert not v["identical"] and v["divergences"]["off"]["first_index"] == 2 and v["divergences"]["off"]["lengths"] == [2, 3]
-    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes(b for s, l in good for b in (s, l)))
+    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes(b for s, l in good for b in (s, 0, l)))
     # mutant 3: the census claims a fired sequence the observer never saw → the subsequence check fails
     (tmp_path / "healthy" / "census_trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in [(1, "b.id", "x"), (2, "b.id", "x"), (3, "b.id", "x")]))
     _, c = harness.compare(tmp_path, arms, S, ids)
@@ -292,19 +293,19 @@ def test_the_harness_comparison_fails_on_each_mutant(tmp_path):
     assert not c["failing"]["all_unmeasured"]
     # mutant 6: a compared test whose segment differs → DIVERGENT, and the TEST is named
     S["failing"]["census_counters"] = failing_counters
-    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([0, 0, 1, 1, 1, 1]))     # test b's segment changed
+    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([0, 0, 0, 1, 0, 1, 1, 0, 1]))     # test b's segment changed
     v, _ = harness.compare(tmp_path, arms, S, ids)
     assert not v["identical"] and v["per_test"]["off"]["differing"] == ["t.py::b"]
     assert v["divergences"]["off"]["owning_test"] == "t.py::b" and v["divergences"]["off"]["first_index"] == 2
     # mutant 7: the control run shows test b is NOT reproducible → b is excluded by name and the verdict holds on a
-    _fabricate(tmp_path, "uninstrumented-control", [(0, 0), (1, 1), (1, 0)])
+    _fabricate(tmp_path, "uninstrumented-control", [(0, 0, 0), (1, 0, 1), (1, 0, 0)])
     v, _ = harness.compare(tmp_path, arms, S, ids)
     assert v["identical"] and v["control"]["non_reproducible"] == ["t.py::b"] and v["per_test"]["off"]["compared"] == 1
     # … but a differing segment in test a still fails, control or no control
-    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([1, 0, 1, 1, 0, 1]))
+    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([1, 0, 1, 1, 0, 1, 1, 0, 0]))
     v, _ = harness.compare(tmp_path, arms, S, ids)
     assert not v["identical"] and v["per_test"]["off"]["differing"] == ["t.py::a"]
-    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes(b for s, l in good for b in (s, l)))
+    (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes(b for s, l in good for b in (s, 0, l)))
     # a test present in one arm only is a divergence too
     _fabricate(tmp_path, "extra", good, boundaries=[[0, "t.py::a"], [2, "t.py::z"]])
     v, _ = harness.compare(tmp_path, arms + ["extra"], {**S, "extra": S["off"]}, ids)
@@ -313,3 +314,151 @@ def test_the_harness_comparison_fails_on_each_mutant(tmp_path):
     assert harness.first_divergence(b"", b"") is None and harness.first_divergence(b"\x00\x00", b"") == 0
     assert harness.subsequence_match([], ["x"]) == 0 and harness.subsequence_match(["x", "y"], ["x", "z", "y"]) == 2
     assert harness.subsequence_match(["y", "x"], ["x", "y"]) == 1
+
+
+# ---- round 6 (2026-09-20), cells C and E ---------------------------------------------------------------------------
+
+def test_r6_5_i_identical_bytes_with_different_dictionaries_are_different_traces(tmp_path):
+    """R6-5(i): the comparison compared encoded bytes without their symbol and label tables — identical bytes whose
+    label meant False in one arm and True in another read identical=True. Now the comparison is over the DECODED
+    records and the transcript carries a dictionary-independent canonical digest per arm."""
+    ids = {"a.id": "m.py:f"}
+    good = [(0, 0), (0, 1)]
+    S = {"uninstrumented": _fabricate(tmp_path, "uninstrumented", good, symbols=("m.py:f",), labels=("False", "True")),
+         "healthy": _fabricate(tmp_path, "healthy", good, symbols=("m.py:f",), labels=("True", "False"), census=[], counters={}, enabled=True)}
+    v, _ = harness.compare(tmp_path, ["uninstrumented", "healthy"], S, ids)
+    assert not v["identical"] and v["per_test"]["healthy"]["differing"] == ["t.py::a"]     # both records sit in test a
+    assert v["divergences"]["healthy"]["this"] == ("m.py:f", 0, "True") and v["divergences"]["healthy"]["reference"] == ("m.py:f", 0, "False")
+    assert v["canonical_digest"]["healthy"] != v["canonical_digest"]["uninstrumented"]
+    # the control: the same bytes with the SAME dictionaries are one trace, and their canonical digests agree
+    S["healthy"] = _fabricate(tmp_path / "again", "healthy", good, symbols=("m.py:f",), labels=("False", "True"), census=[], counters={}, enabled=True) if (tmp_path / "again").mkdir() is None else None
+    import shutil; shutil.copytree(tmp_path / "again" / "healthy", tmp_path / "healthy", dirs_exist_ok=True)
+    v, _ = harness.compare(tmp_path, ["uninstrumented", "healthy"], S, ids)
+    assert v["identical"] and v["canonical_digest"]["healthy"] == v["canonical_digest"]["uninstrumented"]
+
+
+def test_r6_5_iii_the_harness_exit_requires_every_arm_and_every_cross_check(tmp_path):
+    """R6-5(iii), EXECUTED against the real harness on the sealed package: a one-test suite that failed only in the
+    twin gave exit 0. `final_status` is now the exit: identical AND every arm's pytest exit 0 AND every cross-check."""
+    ids = {"a.id": "m.py:f", "b.id": "m.py:g"}
+    good = [(0, 0), (1, 1), (0, 1)]
+    census = [(1, "a.id", "None"), (2, "b.id", "ValueError")]
+    ok = {"a.id": {"consulted": 1, "fired": 1, "errors": 0}, "b.id": {"consulted": 1, "fired": 1, "errors": 0}}
+    fail = {"a.id": {"consulted": 0, "fired": 0, "errors": 2}, "b.id": {"consulted": 0, "fired": 0, "errors": 2}}
+    S = {"healthy": _fabricate(tmp_path, "healthy", good, census=census, counters=ok, enabled=True),
+         "failing": _fabricate(tmp_path, "failing", good, census=census, counters=fail, enabled=True),
+         "off": _fabricate(tmp_path, "off", good), "uninstrumented": _fabricate(tmp_path, "uninstrumented", good, registry_size=0)}
+    arms = ["healthy", "failing", "off", "uninstrumented"]
+    v, c = harness.compare(tmp_path, arms, S, ids)
+    assert harness.final_status(v, c, S, arms) == 0 and all(v["gates"].values()), v["gates"]
+    # gate 1: an arm whose pytest did not exit 0 — the reproduction's case
+    S["uninstrumented"]["pytest_exit"] = 1
+    assert harness.final_status(v, c, S, arms) == 1 and v["gates"]["pytest_exit:uninstrumented"] is False
+    S["uninstrumented"]["pytest_exit"] = 0
+    # gate 2: a cross-check that does not hold (the failing arm measured something)
+    c2 = json.loads(json.dumps(c)); c2["failing"]["all_unmeasured"] = False
+    assert harness.final_status(v, c2, S, arms) == 1
+    # gate 3: the census saw an id outside the declaration
+    c3 = json.loads(json.dumps(c)); c3["healthy"]["census_ids_not_in_declaration"] = ["phantom.id"]
+    assert harness.final_status(v, c3, S, arms) == 1
+    # gate 4: the twin registered a site
+    c4 = json.loads(json.dumps(c)); c4["uninstrumented"]["registry_size"] = 1
+    assert harness.final_status(v, c4, S, arms) == 1
+
+
+def test_r6_5_ii_every_declared_site_has_its_own_exit_statement_so_exit_keyed_records_separate_them():
+    """R6-5(ii): an exit-keyed record separates two sites in one function only if they do not share a return/raise
+    statement. Asserted over the declaration at HEAD: for every symbol carrying more than one site, the function's
+    own fire() statements are at least as many as its sites (research's proxy count, made exact by the scanner's
+    scope rules); a symbol failing this names the one function whose exits must be split."""
+    import ast, collections
+    by_symbol = collections.defaultdict(list)
+    for row in declaration.DECLARATION:
+        by_symbol[row[3]].append(row[0])
+    src = ROOT / "src" / "veracium"; short = []
+    for sym, sites in by_symbol.items():
+        if len(sites) < 2:
+            continue
+        module, qual = sym.split(":"); tree = ast.parse((src / module).read_text())
+        fires = None
+        def walk(node, stack):
+            nonlocal fires
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    q = ".".join(stack + [child.name])
+                    if q == qual and not isinstance(child, ast.ClassDef):
+                        n = 0
+                        def count(x):
+                            nonlocal n
+                            for c in ast.iter_child_nodes(x):
+                                if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                                    continue
+                                if isinstance(c, (ast.Return, ast.Raise)):
+                                    v = c.value if isinstance(c, ast.Return) else c.exc
+                                    if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "fire":
+                                        n += 1
+                                count(c)
+                        count(child); fires = n
+                    walk(child, stack + [child.name])
+        walk(tree, [])
+        assert fires is not None, sym
+        if fires < len(sites):
+            short.append((sym, len(sites), fires))
+    multi = sum(1 for s in by_symbol.values() if len(s) > 1); held = sum(len(s) for s in by_symbol.values() if len(s) > 1)
+    assert multi >= 1 and held >= 2                                     # the figure is real (88 of 162 at round 6)
+    assert short == [], short
+
+
+def test_r6_6_the_twin_transform_refuses_what_it_has_not_established_is_instrumentation_and_keeps_exits():
+    """R6-6: the three round-6 cases (an unrelated `other.fire`, an unbound attribute chain, a side effect inside an
+    enabled block) each REFUSE by name; an undeclared consult refuses; the recognised bypass is kept DEAD with its
+    return statement in place (exit ordinals preserved) rather than deleted; the derived twin of THIS tree verifies
+    clean and its manifest reports equal exit counts per function."""
+    un = _load("inv7_uninstrument_r6", EVIDENCE / "inv7_uninstrument.py")
+    refused = {
+        "unrelated other.fire": "from .census import declare_site\nS = declare_site('x')\ndef f(other, x):\n    return other.fire(False)\n",
+        "unbound attribute chain": "from .census import declare_site\nS = declare_site('x')\ndef g(a):\n    return a.b.c.fire(1)\n",
+        "side effect inside an enabled block": "from . import census as _census\nfrom .census import declare_site\nS = declare_site('x')\ndef h(q):\n    if _census.enabled():\n        audit_log(q)\n        return q\n    return q\n",
+        "consult on an undeclared name": "from .census import declare_site\nS = declare_site('x')\ndef k(o):\n    with o.consult():\n        return S.fire(o)\n",
+        "a with mixing consult and another item": "from .census import declare_site\nS = declare_site('x')\ndef w(lock):\n    with S.consult(), lock:\n        return S.fire(None)\n",
+    }
+    for name, code in refused.items():
+        with pytest.raises(un.Refused):
+            un.uninstrument_source(code)
+    out, st = un.uninstrument_source("from . import census as _census\nfrom .census import declare_site\nS = declare_site('x')\n"
+                                     "def p(self):\n    if _census.enabled():\n        with S.consult():\n            q = self.v()\n            return S.fire(q)\n    q = self.v()\n    return q\n")
+    assert "if False:" in out and out.count("return q") == 2 and st["exits"] == {"p": 2} and st["bypasses"] == 1
+    out2, st2 = un.uninstrument_source("from .census import declare_site\nS = declare_site('x')\ndef s(x):\n    S.consult()\n    if x:\n        raise S.fire(ValueError('no'))\n    return x\n")
+    assert "consult" not in out2 and st2["consult_statements"] == 1 and st2["exits"] == {"s": 2}
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        out_dir = pathlib.Path(d) / "src" / "veracium"
+        totals = un.derive(ROOT / "src" / "veracium", out_dir)
+        assert un.verify(out_dir, ROOT / "src" / "veracium") == []
+        manifest = json.loads((out_dir.parent / "twin_manifest.json").read_text())
+        assert manifest["totals"] == totals and totals["sites"] == len(declaration.DECLARATION)
+        assert all("sha256_before" in m and "sha256_after" in m for m in manifest["modules"].values())
+        changed = [m for m in manifest["modules"].values() if "exits" in m]
+        assert changed and all(isinstance(m["exits"], dict) for m in changed)
+
+
+def test_a_test_boundary_is_a_record_index_at_the_declared_width(tmp_path):
+    """Round 7, found re-running the harness: the boundary side file was written as `len(bytes) // 2` after the
+    records became three bytes, so every per-test segment was cut at 1.5x its true index — the per-test
+    comparison compared misaligned windows and read a real divergence's owning test wrong. The boundary is a
+    RECORD index: k records recorded, then a test starts, then its boundary is k, and the harness's owning_test
+    maps record k to it and record k-1 to the test before."""
+    observer.reset_records(); observer._BOUNDARIES.clear()
+    observer._SYMBOLS[:] = ["m.py:f"]; observer._SYM_INDEX.clear(); observer._SYM_INDEX["m.py:f"] = 0
+    observer.pytest_runtest_logstart("t.py::a", None)
+    for _ in range(5):
+        observer._record(0, 0, "None")
+    observer.pytest_runtest_logstart("t.py::b", None)
+    observer._record(0, 1, "None")
+    assert observer._BOUNDARIES == [(0, "t.py::a"), (5, "t.py::b")], observer._BOUNDARIES
+    assert len(observer.records()) == 6 * observer.RECORD_WIDTH
+    (tmp_path / "test_boundaries.jsonl").write_text("".join(json.dumps(list(b)) + "\n" for b in observer._BOUNDARIES))
+    assert harness.owning_test(tmp_path, 4) == "t.py::a" and harness.owning_test(tmp_path, 5) == "t.py::b"
+    # the mutant: the old divisor puts b's boundary at 7 — past the end of a's five and one of b's records
+    assert (5 * observer.RECORD_WIDTH) // 2 != 5
+    observer.reset_records(); observer._BOUNDARIES.clear()

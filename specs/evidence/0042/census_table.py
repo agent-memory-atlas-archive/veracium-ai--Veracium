@@ -15,11 +15,10 @@ match the parsed condition strings one to one.
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import re
 import sys
-
-import os
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 # The ADOPTED text is the authority; VERACIUM_0042_SPEC exists only so the evidence can be built
@@ -84,7 +83,7 @@ def status_of(t: dict) -> str:
 
 # ---- the report gate (Part A-1's three resolutions + INV-1/INV-8) ------------------------
 
-def validate_report(report: dict, declaration: set[str]) -> list[str]:
+def validate_report(report: dict, declaration: set[str], site_modules: dict | None = None, loaded_modules=None) -> list[str]:
     """Refusals, or [] — a refused report is still RETURNED (its rows are the evidence for the
     refusal); the caller must not compute anything from a refused report."""
     problems = []
@@ -121,7 +120,11 @@ def validate_report(report: dict, declaration: set[str]) -> list[str]:
                     problems.append(f"row {i}: {k} is not an int"); t[k] = 0
                 elif v < 0:
                     problems.append(f"row {i}: negative {k} — a broken counter, not a census outcome"); t[k] = 0
-            if t["fired"] > t["consulted"]:
+            if t["fired"] > t["consulted"] and not t["errors"]:
+                # round 6, R6-1(iii): on a row whose measurement FAILED (errors > 0, UNMEASURED by the table's
+                # precedence) the counts are not a census outcome, so their arithmetic is not refused here —
+                # INV-2's isolation: one failed measurement never invalidates the report's other rows. A report
+                # carrying such rows is still refused as EVIDENCE by `insufficiency()` below.
                 problems.append(f"row {i}: fired > consulted")
         expected = status_of(t)
         if r.get("status") != expected:
@@ -131,7 +134,69 @@ def validate_report(report: dict, declaration: set[str]) -> list[str]:
                 problems.append(f"row {i}: field {k!r} is not an id or an integer (INV-8)")
     for d in sorted(declaration - seen):
         problems.append(f"declared id {d!r} absent from the report — a census FAILURE, not a zero (INV-1)")
+    # round 6, R6-3: a declared id that never REGISTERED must not read as a valid UNREACHED zero. The report
+    # carries what registered (names only) and the caller supplies which product modules were loaded (observed
+    # by `loaded_product_modules` below — specs/0031 keeps the module registry out of src); given the scan's id
+    # -> module map, a declared id whose module is LOADED but which is not registered is a MISSING REGISTRATION (refused,
+    # named); a declared id whose module is NOT loaded is OUT OF REACH (listed by name, never silently a zero);
+    # and a REGISTERED id whose scan module is not loaded contradicts the scan itself (refused: the scan is wrong).
+    registered = snap.get("registered")
+    if site_modules is not None:
+        if not isinstance(registered, list):
+            problems.append("snapshot: `registered` is required to reconcile the registry against the scan (R6-3)")
+        elif loaded_modules is None:
+            problems.append("`loaded_modules` (this process's loaded product modules, observed by the evidence layer — "
+                            "specs/0031 keeps sys.modules out of src) is required beside the scan's map (R6-3)")
+        else:
+            reg, ld = set(registered), set(loaded_modules)
+            for d in sorted(declaration):
+                mod = site_modules.get(d)
+                if mod is None:
+                    problems.append(f"declared id {d!r} is not in the scan — INSTALLED does not cover the declaration")
+                elif d in reg and mod not in ld:
+                    problems.append(f"registered id {d!r} is scanned in {mod!r}, which is not loaded — the scan is wrong (R6-3/R6-4)")
+                elif d not in reg and mod in ld:
+                    problems.append(f"declared id {d!r}: its module {mod!r} is LOADED and it never registered — a missing registration, not an unused site (R6-3)")
     return problems
+
+
+def out_of_reach(declaration: set[str], site_modules: dict, loaded_modules) -> list[str]:
+    """The declared ids whose scan module was NOT loaded in the reporting process — identified by name (R6-3)
+    rather than counted as UNREACHED zeros. The packaged evidence run asserts this list EMPTY after importing
+    every product module; a non-empty list in any run names exactly what the run could not see."""
+    loaded = set(loaded_modules)
+    return sorted(d for d in declaration if site_modules.get(d) is not None and site_modules[d] not in loaded)
+
+
+def loaded_product_modules() -> tuple[str, ...]:
+    """The product modules loaded in THIS process, as paths relative to the package (`store/sqlite.py`): the
+    observation R6-3 needs beside the registry (a declared id whose module is loaded but never registered is a
+    missing registration; one whose module was never imported is out of reach, named). It lives in the
+    evidence layer, not in `veracium.census`: specs/0031's connection census refuses `sys.modules` in any form
+    and `vars()` with an argument inside src (the capability-escape analysis, rounds 11 and 13), and the
+    product has no other view of the interpreter's module registry. Names only."""
+    import sys as _sys, veracium as _pkg
+    root = os.path.dirname(os.path.abspath(_pkg.__file__))
+    out = []
+    for name, mod in list(_sys.modules.items()):
+        f = getattr(mod, "__file__", None)
+        if not name.startswith("veracium") or not f:
+            continue
+        f = os.path.abspath(f)
+        if f.startswith(root + os.sep):
+            out.append(os.path.relpath(f, root).replace(os.sep, "/"))
+    return tuple(sorted(set(out)))
+
+
+def insufficiency(report: dict) -> list[str]:
+    """A report can be structurally VALID and evidentially INSUFFICIENT (research, round 6): any row whose
+    measurement failed (UNMEASURED) means the census did not fully run, and the claim "every declared site
+    exercised" is REFUSED with the ids and their failure kinds named. `validate_report` tolerates such rows
+    (INV-2's isolation); this function is what an evidence run must assert empty before it claims anything."""
+    rows = report.get("rows") or []
+    bad = [r["id"] for r in rows if isinstance(r, dict) and r.get("status") == "UNMEASURED"]
+    kinds = report.get("snapshot", {}).get("measurement_failures") or {}
+    return [f"{len(bad)} UNMEASURED row(s): " + ", ".join(f"{i} ({kinds.get(i, {})})" for i in bad)] if bad else []
 
 
 def report_rows(counters: dict[str, dict], declaration: set[str], enabled: bool) -> list[dict]:
