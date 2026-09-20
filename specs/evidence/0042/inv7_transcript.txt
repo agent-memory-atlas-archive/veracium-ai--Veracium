@@ -1,8 +1,9 @@
-# generated 2026-09-20T20:55Z against veracium @ 6fe91939e140e4302189f6fe94fc712d6223b733
+# generated 2026-09-20T20:55Z against veracium @ 61e7904690e698d690269e20cead7e1cf9f50123
+# RE-PINNED 2026-09-20 the 0042 round-7 fix landed in 61e7904690e698d690269e20cead7e1cf9f50123: body byte-identical; the run was made on the working tree this commit then committed, so the pin moves to it
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD 6fe91939e140e4302189f6fe94fc712d6223b733  (src DIRTY: M src/veracium/asof/resolve.py;  M src/veracium/census.py;  M src/veracium/gate.py;  M src/veracium/graph.py;  M src/veracium/mcp_server.py;  M src/veracium/portability.py;  M src/veracium/schema.py;  M src/veracium/scope.py)
-twin (uninstrumented): derived from HEAD 6fe91939e140e4302189f6fe94fc712d6223b733 by inv7_uninstrument.py
+HEAD 61e7904690e698d690269e20cead7e1cf9f50123
+twin (uninstrumented): derived from HEAD 61e7904690e698d690269e20cead7e1cf9f50123 by inv7_uninstrument.py
 twin derivation: 162 declare_site removed, 302 fire() unwrapped, 152 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
 
 python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
