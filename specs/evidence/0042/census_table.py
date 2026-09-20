@@ -178,9 +178,9 @@ def loaded_product_modules() -> tuple[str, ...]:
     import sys as _sys, veracium as _pkg
     root = os.path.dirname(os.path.abspath(_pkg.__file__))
     out = []
-    for name, mod in list(_sys.modules.items()):
-        f = getattr(mod, "__file__", None)
-        if not name.startswith("veracium") or not f:
+    for name, mod in list(_sys.modules.items()):       # every key: the FILE decides (research's mutant 3, round 7 —
+        f = getattr(mod, "__file__", None)             # a name test could only produce a false "not loaded", which
+        if not f:                                      # downgrades an R6-3 refusal to a benign out-of-reach listing)
             continue
         f = os.path.abspath(f)
         if f.startswith(root + os.sep):

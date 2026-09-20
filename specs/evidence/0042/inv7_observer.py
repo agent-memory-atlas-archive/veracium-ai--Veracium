@@ -130,8 +130,10 @@ def _wrap_callable(fn, sym_idx: int):
         # the last EXCEPTION event, and the RETURN event. The return event alone is not enough: CPython 3.12
         # attributes the RETURN_VALUE that follows a `with` block's __exit__ call to the `with` statement's
         # line, so a `return` inside `with SITE.consult():` (every census-enabled hot predicate) would read
-        # as an implicit exit. The line event on the return statement itself is the honest witness; a
-        # return statement reached is a return statement executed.
+        # as an implicit exit. The line event on the return statement itself is the honest witness on the
+        # RETURN path only: a return statement reached and a return event means that return executed. On the
+        # exception path the witness is the exception event alone — a walked return line says nothing about
+        # a raise that came from a callee.
         em = _exit_map(fn)
         ret_line = [None]; exc_line = [None]; stmt_line = [None]
         prev = sys.gettrace()
@@ -156,8 +158,10 @@ def _wrap_callable(fn, sym_idx: int):
             try:
                 r = fn(*a, **k)
             except BaseException as exc:            # the decision is the raise; record and re-raise unchanged
-                ln = exc_line[0]
-                _record(sym_idx, em.get(ln, em.get(stmt_line[0], EXIT_PROPAGATED)), _label_of("raise", exc))
+                # NO statement-line fallback here (research's mutant 1, round 7): an exception event whose line is
+                # not a raise statement of this function IS a propagated exception — `try: return x` / `finally:
+                # boom()` walks the return line and exits by the callee's raise; the fallback named return #0.
+                _record(sym_idx, em.get(exc_line[0], EXIT_PROPAGATED), _label_of("raise", exc))
                 raise
             ln = ret_line[0]
             _record(sym_idx, em.get(ln, em.get(stmt_line[0], EXIT_IMPLICIT)), _label_of("return", r))
@@ -176,6 +180,10 @@ def _load_declaration():
 
 def _install() -> None:
     import veracium  # noqa: F401 — the package root; product modules import on demand below
+    # the symbol table starts EMPTY: a symbol's index is its rank among the declared symbols, never "one past
+    # whatever was left in the table" (round 7, the floor lane: a unit test left one entry behind and, under
+    # pytest-randomly, the first in-process arm's every index read one higher than the other two arms')
+    _SYMBOLS.clear(); _SYM_INDEX.clear()
     decl = _load_declaration()
     symbols = sorted({row[3] for row in decl.DECLARATION})
     if len(symbols) >= 255:
@@ -297,6 +305,21 @@ def pytest_configure(config):
 
 
 _BOUNDARIES: list = []          # (record index at test start, nodeid) — a side file, never in the trace
+
+# EVERY upper-case module-level name, CLASSIFIED (research, round 7 — the third leak of this class in one round: a
+# fixture that cleared the production registry, a symbol-table entry left behind that shifted every index of one
+# in-process arm, and residue that gave research's own mutant a wrong first reading). `_STATE` is what a run
+# MUTATES (containers, and the one scalar `install()` reassigns); `_CONSTANTS` is what it never does, excluded BY
+# NAME with the reason. The in-process tests snapshot and restore `_STATE` through a fixture that DERIVES the set of
+# upper-case names from the module and asserts it equals the union of the two, so a new name — a container OR a
+# scalar flag — must be classified here before the fixture passes. `install()` still starts the symbol table empty.
+_STATE = ("_SYMBOLS", "_SYM_INDEX", "_LABELS", "_LAB_INDEX", "_RECORDS", "_HIST", "_EXCLUDED", "_WRAPPED", "_REBOUND",
+          "_UNDO", "_REACH", "_LAST_COUNTERS", "_EXIT_MAPS", "_BOUNDARIES",
+          "DECL_PATH")                                   # reassigned by install(declaration_path); a scalar
+_CONSTANTS = {"ARM": "the arm, read once from the environment at import", "MODE": "trace or reach, read once at import",
+              "OUT": "the output directory, read once at import", "TWIN": "the twin's src root, read once at import",
+              "RECORD_WIDTH": "the record layout", "EXIT_IMPLICIT": "a sentinel exit ordinal", "EXIT_PROPAGATED": "a sentinel exit ordinal",
+              "_T0": "the process start time, set at import", "_STATE": "this classification", "_CONSTANTS": "this classification"}
 
 
 def pytest_runtest_logstart(nodeid, location):

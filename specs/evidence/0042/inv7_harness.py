@@ -193,7 +193,14 @@ def load_declaration(path):
     return m
 
 
-def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict) -> tuple:
+def load_standing_exclusions(path=None) -> dict:
+    """The standing exclusion list (inv7_exclusions.STANDING): nodeid -> cause."""
+    p = pathlib.Path(path) if path else HERE / "inv7_exclusions.py"
+    spec = importlib.util.spec_from_file_location("inv7_exclusions", p); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    return dict(m.STANDING)
+
+
+def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict, standing: dict | None = None) -> tuple:
     """The verdict (observer traces identical across arms, first divergence decoded) and the cross-checks
     (census ⊆ observer in the census arms; UNMEASURED everywhere in the failing arm; no census activity
     in the off and uninstrumented arms). Pure over the arm directories, so a fabricated arm tests it."""
@@ -216,9 +223,17 @@ def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict) 
             segs_arm = ref_segments if arm == ref else segments(out / arm, summaries[arm])
             ctl = segments(control_dir, summaries.get(arm + "-control", summaries[arm]))
             per_arm_ctl[arm] = {"tests": len(segs_arm), "non_reproducible": sorted(t for t in segs_arm if ctl.get(t) != segs_arm[t])}
-    nondet = sorted(set().union(*(set(v["non_reproducible"]) for v in per_arm_ctl.values()))) if per_arm_ctl else []
-    verdict["control"] = ({"arms": per_arm_ctl, "tests": len(ref_segments), "non_reproducible": nondet}
-                          if per_arm_ctl else None)
+    found = sorted(set().union(*(set(v["non_reproducible"]) for v in per_arm_ctl.values()))) if per_arm_ctl else []
+    # Round 7 (research): the exclusion list is STANDING and NAMED (inv7_exclusions.STANDING, each entry with its cause),
+    # never re-derived from this run alone; a test the control pairs found non-reproducible that is NOT on the list is
+    # NEWLY non-reproducible — reported apart, and a FINDING that fails the exit (final_status), not housekeeping.
+    standing = load_standing_exclusions() if standing is None else dict(standing)
+    standing_present = sorted(t for t in standing if t in ref_segments)
+    newly = sorted(t for t in found if t not in standing)
+    nondet = sorted(set(standing_present) | set(newly))
+    verdict["control"] = {"arms": per_arm_ctl, "tests": len(ref_segments), "non_reproducible": nondet,
+                          "standing_excluded": standing_present, "standing_causes": {t: standing[t] for t in standing_present},
+                          "newly_non_reproducible": newly}
     verdict["per_test"] = {}
     for arm in arms:
         if arm == ref:
@@ -350,18 +365,21 @@ def main():
         s = summaries[arm]
         L.append(f"{arm:15s}  {s['records']:>9d}  {s['sha256']}  {s['pytest_result_line']} (exit {s['pytest_exit']}, {s['wall_s']}s)")
     ctl = verdict.get("control") or {}
-    nd = ctl.get("non_reproducible", [])
+    nd = ctl.get("non_reproducible", []); st_ex = ctl.get("standing_excluded", []); newly = ctl.get("newly_non_reproducible", [])
     compared = (ctl.get("tests", 0) - len(nd)) if ctl else len(segments(out / ref))
     ctl_arms = sorted((ctl.get("arms") or {}).keys())
     L += ["", f"VERDICT: observer traces {'IDENTICAL' if verdict['identical'] else 'DIVERGENT'} across {len(arms)} arms over {compared} tests (reference: {ref}; "
-          f"{len(nd)} tests excluded as non-reproducible between two runs of the same arm — control pairs run for {', '.join(ctl_arms) if ctl_arms else 'no arm'})"]
+          f"excluded by the STANDING list: {len(st_ex)}; NEWLY non-reproducible this run: {len(newly)}{' — A FINDING' if newly else ''}; "
+          f"control pairs run for {', '.join(ctl_arms) if ctl_arms else 'no arm'})"]
     L += [f"CANONICAL DIGESTS (decoded records, dictionary-independent — R6-5(i)): " + "; ".join(f"{a} {verdict['canonical_digest'][a][:16]}" for a in arms)]
     for arm, pt in verdict["per_test"].items():
         L.append(f"  {arm}: {pt['compared']} tests compared, {len(pt['differing'])} differing, {len(pt['tests_not_in_both'])} not in both")
         for t in pt["differing"][:20]:
             L.append(f"    DIFFERS {t}")
-    L += ["", "EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between two runs of one arm; inputs the run does not freeze — the arm(s) that sampled it named):"]
-    L += [f"  {t}  [{', '.join(a for a, v in (ctl.get('arms') or {}).items() if t in v['non_reproducible'])}]" for t in nd] or ["  (none)"]
+    L += ["", "EXCLUDED BY THE STANDING LIST (inv7_exclusions.STANDING: by name, with the cause; the arm(s) whose control pair sampled it THIS run in brackets, if any):"]
+    L += [f"  {t}  [{', '.join(a for a, v in (ctl.get('arms') or {}).items() if t in v['non_reproducible']) or 'not sampled this run'}]\n      cause: {ctl.get('standing_causes', {}).get(t, '')}" for t in st_ex] or ["  (none)"]
+    L += ["NEWLY NON-REPRODUCIBLE THIS RUN (a control pair disagreed on a test NOT on the standing list — a finding; the exit refuses it):"]
+    L += [f"  {t}  [{', '.join(a for a, v in (ctl.get('arms') or {}).items() if t in v['non_reproducible'])}]" for t in newly] or ["  (none)"]
     for k in [k for k in summaries if k.endswith("-control")]:
         s_ = summaries[k]; L.append(f"control run {k}: records {s_['records']}, sha256 {s_['sha256']}, {s_['pytest_result_line']}")
     for arm, d in verdict["divergences"].items():
@@ -384,7 +402,8 @@ def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> in
     """0 ONLY when the traces are identical AND every arm's pytest exited 0 AND every cross-check holds (round 6,
     R6-5(iii): the exit used to be the trace verdict alone, so an arm that never ran cleanly could not be told from
     one that ran and agreed). Pure over its inputs; the matrix test drives each gate."""
-    gates = {"identical": bool(verdict.get("identical"))}
+    gates = {"identical": bool(verdict.get("identical")),
+             "no_new_non_reproducible": (verdict.get("control") or {}).get("newly_non_reproducible", []) == []}
     for a in arms:
         gates[f"pytest_exit:{a}"] = summaries.get(a, {}).get("pytest_exit") == 0
     c = checks.get("healthy") or {}

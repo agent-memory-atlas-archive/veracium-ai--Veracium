@@ -32,7 +32,16 @@
   two-byte width, so every per-test segment was cut at 1.5× its index); and the control pair is run for EVERY
   arm, a test excluded by name when two runs of any one arm disagree on it — the first round-7 run found
   wall-clock noise in one 0029 acceptance-corpus test that only the healthy arm's slower timing sampled and
-  a reference-only pair could not. *The twin (R6-6):* the transform rewrites only NAMES bound by `declare_site` in
+  a reference-only pair could not. Research's pre-dispatch pass on the fix (two mutants, both taken): the exception path records a
+  raise that came from a callee as PROPAGATED even when a return statement was walked first (`try: return` /
+  `finally: boom()` had read as an exit at return #0 — the statement-line witness is the return path's only); and
+  the loaded-module observation decides by file alone, since a key test could only turn a refusal into a benign
+  out-of-reach listing. Its second pass (a mutation campaign over the twin transform's refusals, and the control
+  pairs as a sample): four refusals no test drove are now each pinned to their own message (`global` naming a
+  site, the consult statement on an undeclared name, a bypass whose else branch does work, a fire with no
+  decision); and the INV-7 exclusion list is STANDING and NAMED (`specs/evidence/0042/inv7_exclusions.py`, each
+  entry with its cause — the 0029 acceptance corpus's wall-clock step is its one entry), the transcript reporting
+  standing exclusions and newly non-reproducible tests apart, a new one failing the harness's exit as a finding. *The twin (R6-6):* the transform rewrites only NAMES bound by `declare_site` in
   the same module and only the recognised shapes (`return/raise X.fire(v)`, `name = X.fire(name)`, `with
   X.consult():`, the statement `X.consult()`, the `if enabled:` bypass whose body is assignments/a return and
   whose else is assignments), refuses anything else by line, keeps the bypass DEAD rather than deleting it so

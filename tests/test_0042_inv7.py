@@ -66,6 +66,40 @@ def _nested_symbols():
 LEG = _load("inv7_sites_leg", ROOT / "tests" / "test_0042_sites.py")
 
 
+@pytest.fixture(autouse=True)
+def _observer_state_restored():
+    """EVERY upper-case module-level name of the observer, DERIVED from the module, must be classified by it as
+    mutable state (`observer._STATE`, snapshotted before each test and restored after it — containers in place,
+    scalars by assignment) or as a constant excluded by name with a reason (`observer._CONSTANTS`); a name in
+    neither, or in both, fails here. Research, round 7: three leaks of this class in one round — restore-what-you-
+    touch is a per-test discipline over fourteen things, and the fifteenth, or the first forgotten one, comes back
+    as a wrong symbol index that is silent, order-dependent, and reads as a real divergence; and a filter over
+    CONTAINERS alone would not see a scalar flag, so the derivation is over every upper-case name and the module
+    must classify each."""
+    import copy, re
+    derived = {n for n in vars(observer) if re.fullmatch(r"_?[A-Z][A-Z0-9_]*", n)}
+    state, consts = set(observer._STATE), set(observer._CONSTANTS)
+    assert not (state & consts), sorted(state & consts)
+    assert derived == state | consts, (sorted(derived - (state | consts)), sorted((state | consts) - derived),
+                                        "an upper-case name of the observer is not classified as state or constant (or is declared and absent)")
+    assert all(isinstance(r, str) and r for r in observer._CONSTANTS.values())
+    snapshot = {n: copy.copy(getattr(observer, n)) for n in state}
+    constants = {n: copy.copy(getattr(observer, n)) for n in consts}
+    yield
+    # a constant is ASSERTED constant, not declared so (research): a mutable thing misfiled under _CONSTANTS with a
+    # plausible reason would be excluded from restore and the pollution class would return silently
+    changed = sorted(n for n in consts if getattr(observer, n) != constants[n])
+    assert changed == [], (changed, "a name classified as a constant was changed by this test — reclassify it as state")
+    for n in state:
+        v, s = getattr(observer, n), snapshot[n]
+        if isinstance(v, (dict, set)):
+            v.clear(); v.update(s)
+        elif isinstance(v, (list, bytearray)):
+            v[:] = s
+        else:
+            setattr(observer, n, s)
+
+
 @pytest.fixture(scope="module")
 def leg():
     """The runtime leg's tables (tests/ is not a package; loaded by path at collection)."""
@@ -299,8 +333,20 @@ def test_the_harness_comparison_fails_on_each_mutant(tmp_path):
     assert v["divergences"]["off"]["owning_test"] == "t.py::b" and v["divergences"]["off"]["first_index"] == 2
     # mutant 7: the control run shows test b is NOT reproducible → b is excluded by name and the verdict holds on a
     _fabricate(tmp_path, "uninstrumented-control", [(0, 0, 0), (1, 0, 1), (1, 0, 0)])
-    v, _ = harness.compare(tmp_path, arms, S, ids)
+    v, c = harness.compare(tmp_path, arms, S, ids, standing={})
     assert v["identical"] and v["control"]["non_reproducible"] == ["t.py::b"] and v["per_test"]["off"]["compared"] == 1
+    # round 7 (research): b is NEWLY non-reproducible — excluded from the comparison, and a FINDING the exit refuses
+    assert v["control"]["newly_non_reproducible"] == ["t.py::b"] and v["control"]["standing_excluded"] == []
+    assert harness.final_status(v, c, S, arms) == 1 and v["gates"]["no_new_non_reproducible"] is False
+    # … on the STANDING list by name with its cause, the same disagreement is an expected exclusion and the exit holds
+    v, c = harness.compare(tmp_path, arms, S, ids, standing={"t.py::b": "fabricated: a known wall-clock dependence"})
+    assert v["control"]["standing_excluded"] == ["t.py::b"] and v["control"]["newly_non_reproducible"] == [] and v["control"]["standing_causes"]["t.py::b"].startswith("fabricated")
+    harness.final_status(v, c, S, arms); assert v["gates"]["no_new_non_reproducible"] is True     # (other gates carry earlier mutants' state)
+    # a standing entry that names a test NOT in this run is neither excluded nor an error (it is listed as absent)
+    v, _ = harness.compare(tmp_path, arms, S, ids, standing={"t.py::b": "x", "t.py::absent": "y"})
+    assert v["control"]["standing_excluded"] == ["t.py::b"]
+    # the real list loads and names its cause for every entry
+    real = harness.load_standing_exclusions(); assert real and all(isinstance(k, str) and "::" in k and len(v_) > 40 for k, v_ in real.items())
     # … but a differing segment in test a still fails, control or no control
     (tmp_path / "off" / "observer_trace.bin").write_bytes(bytes([1, 0, 1, 1, 0, 1, 1, 0, 0]))
     v, _ = harness.compare(tmp_path, arms, S, ids)
@@ -364,6 +410,42 @@ def test_r6_5_iii_the_harness_exit_requires_every_arm_and_every_cross_check(tmp_
     # gate 4: the twin registered a site
     c4 = json.loads(json.dumps(c)); c4["uninstrumented"]["registry_size"] = 1
     assert harness.final_status(v, c4, S, arms) == 1
+    # gate 5 (round 7, research): a control pair disagreeing on a test NOT on the standing list is a finding → exit 1;
+    # the same test on the standing list by name → excluded, exit 0
+    S["healthy-control"] = _fabricate(tmp_path, "healthy-control", [(0, 0), (1, 1), (1, 0)], census=census, counters=ok, enabled=True)
+    v5, c5 = harness.compare(tmp_path, arms, S, ids, standing={})
+    assert v5["control"]["newly_non_reproducible"] == ["t.py::b"] and harness.final_status(v5, c5, S, arms) == 1 and v5["gates"]["no_new_non_reproducible"] is False
+    v6, c6 = harness.compare(tmp_path, arms, S, ids, standing={"t.py::b": "fabricated cause"})
+    assert v6["control"]["standing_excluded"] == ["t.py::b"] and harness.final_status(v6, c6, S, arms) == 0
+
+
+def _fire_exit_statements(tree, qual: str):
+    """How many return/raise statements of the function `qual` (dotted, classes included) carry a `.fire(` call — the
+    exits-per-function count the R6-5(ii) guard compares to the function's site count. None if `qual` is absent."""
+    import ast
+    found = [None]
+
+    def walk(node, stack):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                q = ".".join(stack + [child.name])
+                if q == qual and not isinstance(child, ast.ClassDef):
+                    n = 0
+
+                    def count(x):
+                        nonlocal n
+                        for c in ast.iter_child_nodes(x):
+                            if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                                continue
+                            if isinstance(c, (ast.Return, ast.Raise)):
+                                v = c.value if isinstance(c, ast.Return) else c.exc
+                                if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "fire":
+                                    n += 1
+                            count(c)
+                    count(child); found[0] = n
+                walk(child, stack + [child.name])
+    walk(tree, [])
+    return found[0]
 
 
 def test_r6_5_ii_every_declared_site_has_its_own_exit_statement_so_exit_keyed_records_separate_them():
@@ -380,33 +462,72 @@ def test_r6_5_ii_every_declared_site_has_its_own_exit_statement_so_exit_keyed_re
         if len(sites) < 2:
             continue
         module, qual = sym.split(":"); tree = ast.parse((src / module).read_text())
-        fires = None
-        def walk(node, stack):
-            nonlocal fires
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                    q = ".".join(stack + [child.name])
-                    if q == qual and not isinstance(child, ast.ClassDef):
-                        n = 0
-                        def count(x):
-                            nonlocal n
-                            for c in ast.iter_child_nodes(x):
-                                if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
-                                    continue
-                                if isinstance(c, (ast.Return, ast.Raise)):
-                                    v = c.value if isinstance(c, ast.Return) else c.exc
-                                    if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "fire":
-                                        n += 1
-                                count(c)
-                        count(child); fires = n
-                    walk(child, stack + [child.name])
-        walk(tree, [])
+        fires = _fire_exit_statements(tree, qual)
         assert fires is not None, sym
         if fires < len(sites):
             short.append((sym, len(sites), fires))
     multi = sum(1 for s in by_symbol.values() if len(s) > 1); held = sum(len(s) for s in by_symbol.values() if len(s) > 1)
     assert multi >= 1 and held >= 2                                     # the figure is real (88 of 162 at round 6)
     assert short == [], short
+
+
+def test_r6_5_ii_control_two_sites_sharing_one_exit_statement_are_counted_short():
+    """The guard's RED (research, round 7): a function whose two sites exit through ONE statement — the shape the
+    old suite was silent on — counts one fire exit for two sites, which the guard above refuses; the same function
+    with one exit per site counts two."""
+    import ast
+    shared = ast.parse("class C:\n    def f(self, x):\n        with A.consult():\n            with B.consult():\n"
+                       "                return A.fire(B.fire(x))\n")
+    split = ast.parse("class C:\n    def f(self, x):\n        with A.consult():\n            if x:\n                return A.fire(x)\n"
+                      "        with B.consult():\n            return B.fire(x)\n")
+    assert _fire_exit_statements(shared, "C.f") == 1 < 2          # two sites, one exit statement: SHORT
+    assert _fire_exit_statements(split, "C.f") == 2                # one exit per site
+    assert _fire_exit_statements(split, "C.g") is None            # an absent function is None, never a zero
+
+
+def test_a_propagated_exception_is_never_attributed_to_a_walked_return_statement():
+    """Research's mutant 1 (round 7): `try: return "A"` / `finally: boom()` reaches the return statement and exits by
+    the callee's raise. The exception path must record EXIT_PROPAGATED (253) — the exception event's line is not a
+    raise statement of this function — never the return's ordinal (the statement-line fallback is the RETURN path's
+    witness only). Controls: a plain return (its ordinal), a raise statement (its ordinal), a propagated raise with no
+    return walked (253)."""
+    def boom():
+        raise ValueError("callee")
+
+    def plain(x):
+        return x
+
+    def raiser(x):
+        raise KeyError(x)
+
+    def control(x):
+        y = boom()                                                 # the callee raises on a NON-exit line
+        return y
+
+    def on_the_return(x):
+        return boom()                                              # the callee raises while the return statement executes
+
+    def mutant(x):
+        try:
+            return "A"
+        finally:
+            boom()
+    observer.reset_records(); observer._SYMBOLS[:] = ["t:plain", "t:raiser", "t:control", "t:on_the_return", "t:mutant"]
+    observer._SYM_INDEX.clear(); observer._SYM_INDEX.update({s: i for i, s in enumerate(observer._SYMBOLS)})
+    w = {i: observer._wrap_callable(fn, i) for i, fn in enumerate((plain, raiser, control, on_the_return, mutant))}
+    w[0](1)
+    for i in (1, 2, 3, 4):
+        with pytest.raises((KeyError, ValueError)):
+            w[i](1)
+    recs = observer.decoded()
+    assert recs[0] == ("t:plain", 0, "value")
+    assert recs[1] == ("t:raiser", 0, "KeyError")
+    assert recs[2] == ("t:control", observer.EXIT_PROPAGATED, "ValueError")
+    # a raise DURING the return statement's own evaluation is attributed to that statement (the exception event's
+    # line is the return line, which is in the exit map) — the label says it was a raise; stated, not hidden
+    assert recs[3] == ("t:on_the_return", 0, "ValueError")
+    assert recs[4] == ("t:mutant", observer.EXIT_PROPAGATED, "ValueError"), recs[4]      # the mutant: was (…, 0, …)
+    observer.reset_records(); observer._SYMBOLS.clear(); observer._SYM_INDEX.clear()     # leave the tables as found
 
 
 def test_r6_6_the_twin_transform_refuses_what_it_has_not_established_is_instrumentation_and_keeps_exits():
@@ -424,6 +545,20 @@ def test_r6_6_the_twin_transform_refuses_what_it_has_not_established_is_instrume
     }
     for name, code in refused.items():
         with pytest.raises(un.Refused):
+            un.uninstrument_source(code)
+    # research's mutation campaign over the transform's refusals (round 7): neutering each `raise Refused` in turn found
+    # three that no test drove — `global` naming a site (its `nonlocal` twin WAS driven), the consult STATEMENT on an
+    # undeclared name (the `with` form was), and a bypass whose else branch does work — plus the no-argument fire.
+    # Each is pinned to ITS OWN message, so another branch catching the input first would not pass for it.
+    pinned = {
+        "`global` names a declared site": "from .census import declare_site\nS = declare_site('x')\ndef f():\n    global S\n    return S.fire(1)\n",
+        "consult\\(\\) statement on 'o', not a declared site": "from .census import declare_site\nS = declare_site('x')\ndef f(o):\n    o.consult()\n    return S.fire(1)\n",
+        "else branch is not simple assignments": "from . import census as _census\nfrom .census import declare_site\nS = declare_site('x')\n"
+                                                 "def h(self, q):\n    if _census.enabled():\n        with S.consult():\n            q = S.fire(q)\n    else:\n        audit(self)\n    return q\n",
+        "fire\\(\\) with no decision argument": "from .census import declare_site\nS = declare_site('x')\ndef n():\n    return S.fire()\n",
+    }
+    for message, code in pinned.items():
+        with pytest.raises(un.Refused, match=message):
             un.uninstrument_source(code)
     out, st = un.uninstrument_source("from . import census as _census\nfrom .census import declare_site\nS = declare_site('x')\n"
                                      "def p(self):\n    if _census.enabled():\n        with S.consult():\n            q = self.v()\n            return S.fire(q)\n    q = self.v()\n    return q\n")
@@ -461,4 +596,24 @@ def test_a_test_boundary_is_a_record_index_at_the_declared_width(tmp_path):
     assert harness.owning_test(tmp_path, 4) == "t.py::a" and harness.owning_test(tmp_path, 5) == "t.py::b"
     # the mutant: the old divisor puts b's boundary at 7 — past the end of a's five and one of b's records
     assert (5 * observer.RECORD_WIDTH) // 2 != 5
-    observer.reset_records(); observer._BOUNDARIES.clear()
+    observer.reset_records(); observer._BOUNDARIES.clear(); observer._SYMBOLS.clear(); observer._SYM_INDEX.clear()
+
+
+def test_install_starts_from_an_empty_symbol_table_whatever_a_previous_test_left():
+    """The floor lane, round 7 (found by CI after the push): a unit test left one entry in the observer's symbol
+    table; under pytest-randomly it ran before the in-process arms, the first arm's install appended the declared
+    symbols after it, and every record of that arm read one symbol index higher than the other two arms'. A
+    symbol's index is its rank among the declared symbols — the same from a dirty table as from a clean one."""
+    observer._SYMBOLS[:] = ["left.py:behind"]; observer._SYM_INDEX.clear(); observer._SYM_INDEX["left.py:behind"] = 0
+    observer.install(str(EVIDENCE / "declaration.py"))
+    try:
+        dirty = list(observer._SYMBOLS)
+    finally:
+        observer.uninstall()
+    observer.install(str(EVIDENCE / "declaration.py"))
+    try:
+        clean = list(observer._SYMBOLS)
+    finally:
+        observer.uninstall()
+    assert dirty == clean and "left.py:behind" not in dirty and dirty[0] == sorted(dirty)[0]
+    assert observer._SYMBOLS == [] and observer._SYM_INDEX == {}          # uninstall leaves the tables empty

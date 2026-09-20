@@ -263,3 +263,20 @@ def test_the_snapshot_carries_only_ids_module_paths_and_type_names():
     assert all(isinstance(x, str) and x == x.strip() and " " not in x for x in snap["registered"])
     assert "loaded_modules" not in snap            # not the product's observation (specs/0031); see census_table
     assert all(isinstance(v, dict) and all(k.isidentifier() and isinstance(n, int) for k, n in v.items()) for v in snap["measurement_failures"].values())
+
+
+def test_a_product_module_loaded_under_a_foreign_key_alone_still_reads_loaded():
+    """Research's mutant 3 (round 7): the loaded-module observation decides by FILE, never by the sys.modules key —
+    a name test could only produce a false "not loaded", which turns an R6-3 refusal (declared id, module loaded,
+    never registered) into a benign out-of-reach listing. The module object is moved under a foreign key for the
+    call and put back."""
+    import sys
+    import veracium.telemetry as tm
+    ct = _evidence("census_table")
+    assert "telemetry.py" in ct.loaded_product_modules()
+    saved = sys.modules.pop("veracium.telemetry"); sys.modules["not_veracium_alias"] = saved
+    try:
+        assert "telemetry.py" in ct.loaded_product_modules()          # the file decides (was: absent under the name test)
+    finally:
+        del sys.modules["not_veracium_alias"]; sys.modules["veracium.telemetry"] = saved
+    assert sys.modules["veracium.telemetry"] is tm

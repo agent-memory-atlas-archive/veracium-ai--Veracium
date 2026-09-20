@@ -149,7 +149,13 @@ Spec-Status: accepted
 > the bypass dead, and ships a manifest its `verify()` re-derives (R6-6); the surface-driven deltas are EXACT,
 > derived from the product's control flow, with the superseded `>=` form kept as the mutant it could not kill
 > (R6-7). The cost at the shipped default was re-measured (CHANGELOG): inside run-to-run noise. The frozen
-> invariants are unchanged in text; INV-7's transcript was re-run on this tree.
+> invariants are unchanged in text; INV-7's transcript was re-run on this tree — with a control pair for EVERY
+> arm, not the reference alone (the first re-run read DIVERGENT on the healthy arm at one 0029 acceptance-corpus
+> test: wall-clock noise the slowest arm sampled), and with the exclusion list STANDING and NAMED
+> (`inv7_exclusions.py`, each entry with its cause; a test a control pair finds newly non-reproducible is a
+> finding that fails the harness's exit, never a housekeeping exclusion — research's pre-dispatch pass, which
+> also found and had fixed a propagated raise attributed to a walked return statement, a module-registry key
+> test that could only turn an R6-3 refusal into a benign listing, and four transform refusals no test drove).
 
 ## 1. Problem and motivation
 
