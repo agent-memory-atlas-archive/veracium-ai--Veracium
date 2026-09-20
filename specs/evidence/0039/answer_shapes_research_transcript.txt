@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 45797d5
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ c8de9be
+# RE-PINNED 2026-09-20 0041 tranche 4a (the readers) landed in c8de9be8e8b77e5395269607c904d2c444be90c2: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-19 0041 tranche 3 (redact) landed in 45797d5e2d04af15e76ba4a2e370dc1c19086ddc: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-19 0041 tranche 2 (schema 14 -> 15) landed in 8581f5542c9de47945ed37c53b10dc4504c79b1b: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-19 0041 tranche 1 (the write-path refusals) landed in c68e45b9fc8fc6bcaa41409e52a9c7a2bfb29a38: bodies byte-identical; the pin moves to the commit that changed src/
