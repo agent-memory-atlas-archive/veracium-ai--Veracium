@@ -10,6 +10,7 @@ and recompiles from the store of record.
     {"kind": "veracium-export", "version": 2, "user_id": "...", "exported_at": "..."}
     {"record": "edge", ...Edge fields...}
     {"record": "episode", ...Episode fields...}
+    {"record": "redaction", ...the attestation record + its source identity (format 13, specs/0041)...}
 
 Format v2 renamed the per-line type marker from "kind" to "record" because
 Episode gained its own `kind` field (outcome tracking); v1 files import
@@ -63,7 +64,14 @@ _SITE_IMPORT_PREFLIGHT = declare_site("portability.import.preflight")
 # field bumps the format 4→5 per accepted 0010's refuse-don't-drop rule — an
 # older importer REFUSES a v5 export rather than silently dropping the field.
 # specs/0019: v6 added the `ungrounded` flag (same refuse-don't-drop rule).
-FORMAT_VERSION = 12  # specs/0037 v23 §4e: the PRODUCER era — `Provenance.producer`
+FORMAT_VERSION = 13  # specs/0041 D2/§4g (tranche 4b, 2026-09-20): the REDACTION era — a file may carry
+# `{"record": "redaction", ...}` lines, one per redaction record of the user (the attestation record with
+# its SOURCE identity: origin, source user, source event ref; the carriers treated; the vocabulary reason;
+# the marker version; never a content digest). Stamped CONDITIONALLY at write like every era below: an
+# export from a store holding ANY redaction record is 13, which every older reader REFUSES ("newer than this
+# Veracium understands" — the refuse-don't-drop rule; a reader that dropped the notice would import the
+# record un-redacted, the exact harm §4g exists to prevent); a store without one exports 12 as before.
+_PRODUCER_VERSION = 12  # specs/0037 v23 §4e: the PRODUCER era — `Provenance.producer`
 # (which product path minted a procedural record). Stamped CONDITIONALLY at
 # write, the same rule as every era below: an export from a store holding ANY
 # producer-stamped record is 12, which every older reader REFUSES ("newer than
@@ -168,7 +176,10 @@ def export_memory(store, user_id: str, path) -> dict:
     with path.open("w") as f:
         # specs/0026 §3d / specs/0037 §4e: the conditional stamp (see
         # FORMAT_VERSION) — the highest era any record in the file needs
+        redaction_records = store.redaction_records(user_id)
         _version = (FORMAT_VERSION
+                    if redaction_records
+                    else _PRODUCER_VERSION
                     if any(e.provenance.producer is not None for e in edges)
                     else _PROCEDURAL_VERSION
                     if any(is_procedural(e) for e in edges)
@@ -193,7 +204,16 @@ def export_memory(store, user_id: str, path) -> dict:
             if rec.get("consolidation_output_index") is None:
                 rec.pop("consolidation_output_index", None)
             f.write(json.dumps({"record": "episode", **rec}) + "\n")
-    return {"edges": len(edges), "episodes": len(episodes), "path": str(path)}
+        # specs/0041 D2 (tranche 4b): the redaction records travel — the record itself travels redacted (its
+        # json holds the marker), and the notice is what lets the destination ATTEST it (§4g). Source identity
+        # materialised: this store's origin for its own redactions, the original source's for witnessed ones.
+        for r in redaction_records:
+            f.write(json.dumps({"record": "redaction", "origin": r["origin"], "source_user": r["source_user"],
+                                "source_event_ref": r["source_event_ref"], "target_kind": r["target_kind"],
+                                "target_id": r["target_id"], "fields": r["fields"], "marker_version": r["marker_version"],
+                                "reason": r["reason"] if r["reason"] != "imported_notice" else "imported_notice",
+                                "recorded_at": r["recorded_at"]}) + "\n")
+    return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records), "path": str(path)}
 
 
 # specs/0014 §2c (R11-3/R12-3/R13-2): the source-identity projection over TWO
@@ -333,15 +353,68 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         # (1) parse every record
         edge_recs: list = []
         ep_recs: list = []
+        notice_recs: list = []
         for ln in lines[1:]:
             rec = json.loads(ln)
             marker = rec.pop("record", None)
             if marker is None and rec.get("kind") in ("edge", "episode"):
                 marker = rec.pop("kind")   # format v1: the record marker was named "kind"
+            if marker == "redaction":
+                notice_recs.append(rec)    # specs/0041 §4g (format 13): a redaction NOTICE
+                continue
             if marker not in ("edge", "episode"):
                 raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: unknown record kind {marker!r}"), "unknown-kind")
             rec["user_id"] = target_uid
             (edge_recs if marker == "edge" else ep_recs).append(rec)
+        # specs/0041 §4g: the notices — VALIDATED HERE, before any record is admitted, so an invalid notice
+        # refuses the record-and-notice UNIT (the import is atomic: nothing is written); deduplicated by
+        # SOURCE IDENTITY (origin, source user, source event ref) — the same notice twice is one notice, and
+        # two notices under one identity with different bodies are a corrupted source, refused; the user
+        # remap moves the notice's subject with the record's (the target id is never remapped).
+        from .redaction import MARKER_VERSION as _MARKER_VERSION, REDACTION_REASONS as _REASONS, marker_fields as _marker_fields
+        from .store.sqlite import SqliteStore as _S
+        if notice_recs and src_version < FORMAT_VERSION:
+            # refuse-don't-drop, in the other direction: a notice in an envelope declaring a version below the
+            # redaction era is a record kind the declared version cannot carry — never silently admitted
+            raise _SITE_IMPORT_FILE.fire(ValueError(
+                f"{path}: the file declares format {src_version} but carries redaction notices (format "
+                f"{FORMAT_VERSION}) — refused (specs/0041 §4g)"), "notice-below-era")
+        notices: dict = {}
+        for n in notice_recs:
+            need = ("origin", "source_user", "source_event_ref", "target_kind", "target_id", "fields", "marker_version", "reason")
+            if any(k not in n for k in need):
+                raise _SITE_IMPORT_FILE.fire(ValueError(
+                    f"{path}: redaction notice is missing {[k for k in need if k not in n]} — the record-and-notice "
+                    f"unit is refused, nothing imported (specs/0041 §4g)"), "invalid-notice")
+            if (n["target_kind"] not in ("edge", "episode") or not isinstance(n["target_id"], str) or not n["target_id"]
+                    or not isinstance(n["fields"], list) or not all(isinstance(f, str) and f for f in n["fields"])
+                    or not isinstance(n["marker_version"], int) or isinstance(n["marker_version"], bool)
+                    or not 1 <= n["marker_version"] <= _MARKER_VERSION or n["reason"] not in _REASONS
+                    or not all(isinstance(n[k], str) and n[k] for k in ("origin", "source_user", "source_event_ref"))):
+                raise _SITE_IMPORT_FILE.fire(ValueError(
+                    f"{path}: redaction notice for {n.get('target_kind')!r} {n.get('target_id')!r} is invalid — the "
+                    f"record-and-notice unit is refused, nothing imported (specs/0041 §4g)"), "invalid-notice")
+            rid = _S.notice_id(n["origin"], n["source_user"], n["source_event_ref"])
+            body = {k: n[k] for k in ("target_kind", "target_id", "fields", "marker_version", "reason")}
+            body["fields"] = sorted(body["fields"])
+            if rid in notices:
+                if notices[rid]["_body"] != body:
+                    raise _SITE_IMPORT_FILE.fire(ValueError(
+                        f"{path}: two redaction notices share one source identity "
+                        f"({n['origin']}, {n['source_user']}, {n['source_event_ref']}) with different bodies — a "
+                        f"corrupted source, refused (specs/0041 §4g)"), "notice-integrity")
+                continue
+            notices[rid] = {"id": rid, "origin": n["origin"], "source_user": n["source_user"],
+                            "source_event_ref": n["source_event_ref"], "target_kind": n["target_kind"],
+                            "target_id": n["target_id"], "fields": list(n["fields"]), "marker_version": n["marker_version"],
+                            "reason": n["reason"], "recorded_at": n.get("recorded_at"), "_body": body}
+        notice_list = [{k: v for k, v in n.items() if k != "_body"} for n in notices.values()]
+        notice_targets = {(n["target_kind"], n["target_id"]) for n in notice_list}
+        # §4g: a tombstone arriving with NO notice is ADMITTED as an UNATTESTED marker (§4b) — carrying, not
+        # introducing — recorded as such and FLAGGED in the result
+        unattested_markers = sorted(
+            r.get("id") for kind, recs in (("edge", edge_recs), ("episode", ep_recs)) for r in recs
+            if isinstance(r, dict) and _marker_fields({k: v for k, v in r.items() if k != "record"}) and (kind, r.get("id")) not in notice_targets)
 
         # (1a) specs/0037 §4e / §2c (round-3 F2, round-4 F1): THE PROCEDURAL
         # BOUNDARY, evaluated on the RAW record BEFORE any version normalization,
@@ -539,7 +612,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 if isinstance(prov, dict):
                     prov.pop("record_kind", None)
                     prov.pop("basis", None)
-        if src_version < FORMAT_VERSION:
+        if src_version < _PRODUCER_VERSION:   # keyed on the producer's OWN era, not the reader's head (0041 4b moved the head)
             for rec in edge_recs:             # I10: a producer in a pre-12 envelope is never trusted
                 prov = rec.get("provenance")  # (the record imports as pre-stamp: `procedural_unstamped`)
                 if isinstance(prov, dict):
@@ -631,6 +704,12 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 rec["edge_id"] = _remap(rec["edge_id"])
             if rec.get("supersedes_episode") is not None:
                 rec["supersedes_episode"] = _remap(rec["supersedes_episode"])
+        # specs/0041 §4g: the notice's SUBJECT moves with the record's — its target follows the same map (a
+        # notice whose record is not in this file keeps the source's id: under a remap no record can arrive
+        # under it, so it stands as the witness that the source redacted that id)
+        for n in notice_list:
+            n["target_id"] = _remap(n["target_id"])
+        notice_targets = {(n["target_kind"], n["target_id"]) for n in notice_list}
 
         # (2a) specs/0020 §4a-iii — PRE-COMMIT absorption reconstruction over the
         # linkage snapshot: structured `absorbed_by_id` first (the FORMAT-7 rider
@@ -969,9 +1048,11 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         for _attempt in range(_IMPORT_RETRIES):
             outcome = _preflight_and_commit(store, path, target_uid, edges, eps,
                                             incoming_chains, contrib_rows,
-                                            capped_path=not restore)
+                                            capped_path=not restore, notices=notice_list)
             if outcome is not DESTINATION_CHANGED:
                 return {**outcome, "capped": capped_count,
+                        # specs/0041 §4g: what the notices did, and the tombstones that came without one
+                        "unattested_markers": unattested_markers,
                         "agreement_mismatches": agreement_mismatches,
                         # specs/0037 §4e: refused PER RECORD before the commit,
                         # the admitted set committed atomically as one transaction
@@ -983,7 +1064,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
 
 
 def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
-                          contrib_rows, *, capped_path: bool = True):
+                          contrib_rows, *, capped_path: bool = True, notices=None):
     """One preflight-then-commit pass: validate the COMBINED destination graph
     against the live store, build the plan + the full destination-state assumptions,
     and commit atomically. Returns the store's result (counts dict or
@@ -1004,6 +1085,9 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
         plan_edges: list = []
         plan_eps: list = []
         skipped = 0
+        notices = notices or []
+        notice_targets = {(n["target_kind"], n["target_id"]) for n in notices}
+        inconsistent: list = []          # specs/0041 §4g: a held DIFFERENT version under a notice — redacted anyway, flagged
         edge_ids_expected: dict = {}     # id -> expected-present
         ep_records_expected: dict = {}   # id -> current-persisted-json (None if absent)
         chain_heads_expected: dict = {}  # (edge_id, evidence_ref) -> head id or None
@@ -1013,6 +1097,21 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
             prior = existing_edges.get(edge.id)
             if prior is not None:
                 if prior.model_dump() != edge.model_dump():
+                    if store._completed_attestation(target_uid, "edge", edge.id) and ("edge", edge.id) not in notice_targets:
+                        # specs/0041 §4b-ii / INV-11 at the import boundary: the destination REDACTED this record
+                        # and the file carries its content with no notice — the refusal names the rule, not a
+                        # content conflict
+                        raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
+                            f"{path}: edge {edge.id!r} is redacted here (a redaction record attests it) and the file "
+                            f"carries no notice for it — an import may not repopulate it (specs/0041 §4b-ii, INV-11; §4g)"), "attested-redaction")
+                    if ("edge", edge.id) in notice_targets:
+                        # specs/0041 §4g: the destination holds a DIFFERENT version and the file's notice names
+                        # the id — content-derived divergence is not grounds to keep content the source says was
+                        # redacted: the held version is redacted anyway (the notice applies to it) and the
+                        # import records an inconsistent-notice flag; the incoming copy is not written
+                        inconsistent.append(edge.id); skipped += 1
+                        edge_ids_expected[edge.id] = True
+                        continue
                     raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: edge {edge.id!r} already exists with "
                                      f"different content — refuse (specs/0009 §4c){_tail}"), "edge-conflict")
                 skipped += 1
@@ -1037,6 +1136,13 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
             ep_records_expected[ep.id] = None if prior is None else prior.model_dump_json()
             if prior is not None:
                 if prior.model_dump() != ep.model_dump():
+                    if store._completed_attestation(target_uid, "episode", ep.id) and ("episode", ep.id) not in notice_targets:
+                        raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
+                            f"{path}: episode {ep.id!r} is redacted here (a redaction record attests it) and the file "
+                            f"carries no notice for it — an import may not repopulate it (specs/0041 §4b-ii, INV-11; §4g)"), "attested-redaction")
+                    if ("episode", ep.id) in notice_targets:
+                        inconsistent.append(ep.id); skipped += 1          # specs/0041 §4g, as for edges
+                        continue
                     raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: episode {ep.id!r} already exists with "
                                      f"different content — refuse (specs/0009 §4c){_tail}"), "episode-conflict")
                 skipped += 1
@@ -1096,7 +1202,7 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
             contribution_state[sid] = sorted(current)
 
         plan = {"edges": plan_edges, "episodes": plan_eps,
-                "contributions": contrib_rows}
+                "contributions": contrib_rows, "redactions": notices}
         expected = {"edge_ids": edge_ids_expected,
                     "episode_records": ep_records_expected,
                     "chain_heads": chain_heads_expected,
@@ -1107,4 +1213,8 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
         return {"edges": result["edges"],
                 "episodes": result["episodes"], "skipped": skipped,
                 "contributions": result.get("contributions", 0),
-                "contributions_existing": result.get("contributions_existing", 0)}
+                "contributions_existing": result.get("contributions_existing", 0),
+                "notices_applied": result.get("notices_applied", 0),
+                "notices_standing": result.get("notices_standing", 0),
+                "notices_existing": result.get("notices_existing", 0),
+                "inconsistent_notices": sorted(inconsistent)}

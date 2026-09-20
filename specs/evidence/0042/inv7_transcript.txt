@@ -1,19 +1,18 @@
-# generated 2026-09-19T23:35Z against veracium @ c8de9be8e8b77e5395269607c904d2c444be90c2
-# RE-PINNED 2026-09-20 0041 tranche 4a (the readers) landed in c8de9be8e8b77e5395269607c904d2c444be90c2: body byte-identical; the run was made on the working tree this commit then committed, so the pin moves to it
+# generated 2026-09-20T01:09Z against veracium @ 956be980001a78a2cf0edb1939f7c29294051762
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD c8de9be8e8b77e5395269607c904d2c444be90c2
-twin (uninstrumented): derived from HEAD c8de9be8e8b77e5395269607c904d2c444be90c2 by inv7_uninstrument.py
-twin derivation: 159 declare_site removed, 287 fire() unwrapped, 147 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
+HEAD 956be980001a78a2cf0edb1939f7c29294051762  (src DIRTY: M src/veracium/combining.py;  M src/veracium/doctor.py;  M src/veracium/portability.py;  M src/veracium/store/sqlite.py)
+twin (uninstrumented): derived from HEAD 956be980001a78a2cf0edb1939f7c29294051762 by inv7_uninstrument.py
+twin derivation: 160 declare_site removed, 301 fire() unwrapped, 149 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
 
 python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
 suites: tests/test_0027_policy_lane.py tests/test_0027_policy_receipt.py tests/test_0027_semantic_recall.py tests/test_compile_gate.py tests/test_0037_procedural.py tests/test_0019_ungrounded.py tests/test_0014_schema.py tests/test_schema_model.py tests/test_0003_supersession_contested.py tests/test_0003_supersession_guard.py tests/test_0003_supersession_recall.py tests/test_0003_supersession_store.py tests/test_0028_resolution.py tests/test_maintenance_invariant.py tests/test_0020_scope_vectors.py tests/test_0015_lifecycle.py tests/test_0011_entitlement.py tests/test_0009_import_migration.py tests/test_0010_consolidation_primitives.py tests/test_0014_receipt_split.py tests/test_0022_revocation_operation.py tests/test_0037_capture.py tests/eval/edge_events/test_0029_acceptance_corpus.py tests/test_0010_visibility_reservation.py tests/test_0020_read_surfaces.py tests/test_0022_sweep_vectors.py tests/test_0039_degradation_visibility.py tests/test_audit.py tests/test_confirm_contract_0008.py
 
 ARM              RECORDS     SHA256(observer trace)                                            PYTEST
-healthy              75543  0bc41bdb36154f626d2fce85353bbb9ce4d59128404e5bc428ea64b392b0e8f1  861 passed, 2 warnings in 111.21s (0:01:51) (exit 0, 112.1s)
-failing              75543  0bc41bdb36154f626d2fce85353bbb9ce4d59128404e5bc428ea64b392b0e8f1  861 passed, 2 warnings in 110.27s (0:01:50) (exit 0, 111.2s)
-off                  75543  0bc41bdb36154f626d2fce85353bbb9ce4d59128404e5bc428ea64b392b0e8f1  861 passed, 2 warnings in 110.83s (0:01:50) (exit 0, 111.7s)
-uninstrumented       75543  0bc41bdb36154f626d2fce85353bbb9ce4d59128404e5bc428ea64b392b0e8f1  861 passed, 2 warnings in 115.46s (0:01:55) (exit 0, 116.4s)
+healthy              75543  93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382  861 passed, 2 warnings in 112.02s (0:01:52) (exit 0, 112.9s)
+failing              75543  93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382  861 passed, 2 warnings in 111.17s (0:01:51) (exit 0, 112.0s)
+off                  75543  93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382  861 passed, 2 warnings in 110.85s (0:01:50) (exit 0, 111.7s)
+uninstrumented       75543  93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382  861 passed, 2 warnings in 110.56s (0:01:50) (exit 0, 111.6s)
 
 VERDICT: observer traces IDENTICAL across 4 arms over 861 tests (reference: uninstrumented; 0 tests excluded as non-reproducible between two runs of the reference arm)
   healthy: 861 tests compared, 0 differing, 0 not in both
@@ -22,15 +21,15 @@ VERDICT: observer traces IDENTICAL across 4 arms over 861 tests (reference: unin
 
 EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between the two reference runs; inputs the run does not freeze):
   (none)
-control run uninstrumented-control: records 75543, sha256 0bc41bdb36154f626d2fce85353bbb9ce4d59128404e5bc428ea64b392b0e8f1, 861 passed, 2 warnings in 111.44s (0:01:51)
+control run uninstrumented-control: records 75543, sha256 93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382, 861 passed, 2 warnings in 112.86s (0:01:52)
 
 CROSS-CHECKS:
-  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_consulted": 152, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7223}
-  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_with_errors": 152, "subsequence_holds": true, "subsequence_matched": 7223}
-  off: {"census_enabled": false, "registry_size": 159}
-  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace13/twin/src/veracium/__init__.py"}
+  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_consulted": 153, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7223}
+  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_with_errors": 153, "subsequence_holds": true, "subsequence_matched": 7223}
+  off: {"census_enabled": false, "registry_size": 160}
+  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace15/twin/src/veracium/__init__.py"}
 
-OBSERVED SYMBOLS: 96 wrapped of 103 declared; EXCLUDED (unreachable from outside, by name):
+OBSERVED SYMBOLS: 97 wrapped of 104 declared; EXCLUDED (unreachable from outside, by name):
   asof/recall.py:recall_at.claim: nested inside a function; unreachable from outside
   asof/recall.py:recall_at.grounded: nested inside a function; unreachable from outside
   graph.py:_absorption_scope_gate.same_scope: nested inside a function; unreachable from outside

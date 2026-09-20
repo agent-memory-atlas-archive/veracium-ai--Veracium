@@ -274,7 +274,8 @@ def test_export_materialises_and_import_roundtrips_source_id_and_origin(tmp_path
     # 0026 9->10 with a CONDITIONAL stamp, 0037 10->11 the same way: this
     # marker-free, procedural-free store exports at the pre-agreement 9
     # while the reader knows 11
-    assert FORMAT_VERSION == 12
+    # 0041 tranche 4b: 12->13 (the redaction era), conditionally stamped the same way
+    assert FORMAT_VERSION == 13
     assert _lines(exp)[0]["version"] == 9
     dst = SqliteStore(str(tmp_path / "dst.db"))
     import_memory(dst, exp)

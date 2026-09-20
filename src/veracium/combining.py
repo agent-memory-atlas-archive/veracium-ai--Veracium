@@ -180,8 +180,9 @@ COMBINING_SITES = {
                    "synthesis"),
     (_STORE, "delete_episode"): SiteSpec(
         False, why="removes one record"),
-    (_STORE, "redact"): SiteSpec(
-        False, why="specs/0041 §4a (tranche 3): rewrites ONE record's content carriers in place "
+    (_STORE, "_redact_in_txn"): SiteSpec(
+        False, why="specs/0041 §4a (tranche 3; the in-transaction body since 4b, shared with the import's "
+                   "notice application): rewrites ONE record's content carriers in place "
                    "from the treatment map — the marker, an empty shape, a registry value — and "
                    "the side rows keyed to it (its confirmations' digest, its ledger digests, its "
                    "refusal rows' copied relation, its embedding rows, its journal states, the wiki "

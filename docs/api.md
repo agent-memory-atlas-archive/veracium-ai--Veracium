@@ -131,6 +131,10 @@ the new edge id.
   older readers refuse; the default `import_memory` path refuses
   procedural records (another host's basis is its declaration) and
   `restore=True` round-trips a store's own, producer included.
+  Exports from a store holding any redaction record (specs/0041) are stamped format 13
+  and carry one `redaction` line per record; older readers refuse them, and
+  `import_memory` applies each notice in the same transaction as its record (a
+  notice without its record stands until the record arrives).
 
 ```python
 mem.record_procedure("alice", "Credentials are rotated quarterly.",

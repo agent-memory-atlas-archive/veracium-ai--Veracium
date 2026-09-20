@@ -1138,4 +1138,23 @@ DECLINES.update({
     "store.episode.attested-redaction": TwoPhase(lambda mp: _redacted_episode(), lambda st: _add_attested_episode(*st)),
     "store.journal.redaction-reason": lambda mp: _journal_bad_redaction_reason(),
 })
+
+
+# specs/0041 §4g (tranche 4b): INV-11 at the IMPORT boundary — a record this store redacted arrives in a plan with
+# no notice covering it. TwoPhase: the setup redacts (consulting the redact sites outside the window).
+def _redacted_then_plan():
+    s = _store(); e = _edge("ri1", obj="a secret"); s.add_edge(e); s.redact(U, edge_id="ri1", reason="subject_request")
+    return (s, e)
+
+
+def _import_plan_repopulates(s, e):
+    with pytest.raises(ValueError):
+        s.commit_outcome_import_plan(U, {"edges": [e], "episodes": [], "contributions": [], "redactions": []},
+                                     {"edge_ids": {e.id: True}, "episode_records": {}, "chain_heads": {}, "contribution_state": {}})
+    s.close()
+
+
+DECLINES.update({
+    "store.import.attested-redaction": TwoPhase(lambda mp: _redacted_then_plan(), lambda st: _import_plan_repopulates(*st)),
+})
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})

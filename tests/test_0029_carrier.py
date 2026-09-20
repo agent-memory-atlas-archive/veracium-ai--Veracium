@@ -144,11 +144,13 @@ def test_event_log_is_append_only_and_monotone(store):
     `seq` strictly monotone per user."""
     src = (SRC / "store" / "sqlite.py").read_text()
     writes = [m.group(0) for m in re.finditer(r"(UPDATE|DELETE\s+FROM)\s+edge_event\b", src, re.I)]
-    # specs/0041 §4c (tranche 3, 2026-09-19; 0041 §11.4 amends V-APPEND): the ONE updater is `redact`, and it
-    # may touch `state` ONLY — the tombstone — never seq/txn/kind/reason/recorded_at; the ONE deleter is forget_user
+    # specs/0041 §4c (tranche 3, 2026-09-19; 0041 §11.4 amends V-APPEND): the ONE updater is the redaction's
+    # in-transaction body `_redact_in_txn` (called by `redact` and, since tranche 4b, by the import commit for a
+    # notice), and it may touch `state` ONLY — the tombstone — never seq/txn/kind/reason/recorded_at; the ONE
+    # deleter is forget_user
     assert writes == ["UPDATE edge_event", "DELETE FROM edge_event"], writes
     fn_of_update = re.match(r"def\s+(\w+)", src[src.rfind("def ", 0, src.find("UPDATE edge_event")):]).group(1)
-    assert fn_of_update == "redact"
+    assert fn_of_update == "_redact_in_txn"
     stmt = src[src.find("UPDATE edge_event"):src.find("UPDATE edge_event") + 120]
     assert re.match(r"UPDATE edge_event SET state=\? WHERE", stmt), stmt
     fn_of_delete = re.match(r"def\s+(\w+)", src[src.rfind("def ", 0, src.find("DELETE FROM edge_event")):]).group(1)

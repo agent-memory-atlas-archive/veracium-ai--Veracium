@@ -645,6 +645,21 @@ _CALLSITE_DISPOSITIONS = {
     # export taken after a firing recall — the destination holds no receipt
     ("test_0027_policy_receipt.py",
      "test_receipts_are_not_exported_and_an_import_carries_none"): "default",
+    # specs/0041 §4g (tranche 4b, 2026-09-20): the import contract for redaction notices — restore round-trips
+    # (a store's own redactions arrive attested); the remap test drives the default path on purpose (the
+    # notice's subject moves with the record's); the invalid-notice, integrity and old-reader tests refuse
+    # BEFORE the trust cap is reached, on the restore path
+    ("test_0041_import_contract.py", "test_an_older_reader_refuses_a_file_that_carries_a_notice"): "restore",
+    ("test_0041_import_contract.py", "test_a_held_record_and_its_notice_commit_together_and_the_destination_attests_it"): "restore",
+    ("test_0041_import_contract.py", "test_repeat_imports_are_idempotent_by_source_identity"): "restore",
+    ("test_0041_import_contract.py", "test_a_notice_before_its_record_is_a_standing_notice_and_the_record_is_redacted_on_arrival"): "restore",
+    ("test_0041_import_contract.py", "test_the_two_orders_reach_the_same_destination_state"): "restore",
+    ("test_0041_import_contract.py", "test_an_invalid_notice_refuses_the_record_and_notice_unit_with_nothing_written"): "restore",
+    ("test_0041_import_contract.py", "test_two_notices_under_one_source_identity_with_different_bodies_are_an_integrity_refusal"): "restore",
+    ("test_0041_import_contract.py", "test_a_held_different_version_is_redacted_anyway_and_flagged"): "restore",
+    ("test_0041_import_contract.py", "test_a_tombstone_without_a_notice_is_admitted_as_an_unattested_marker_and_flagged"): "restore",
+    ("test_0041_import_contract.py", "test_an_import_may_not_repopulate_a_record_the_destination_already_redacted_without_a_notice"): "restore",
+    ("test_0041_import_contract.py", "test_the_user_remap_moves_the_notice_with_the_record"): "default",
     ("test_0037_procedural.py", "run"): "default",
     ("test_0037_procedural.py",
      "test_default_import_refuses_procedural_records_on_any_signal"): "default",

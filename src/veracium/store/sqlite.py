@@ -56,6 +56,7 @@ _SITE_REDACT_DISPOSITION = declare_site("store.redact.disposition-changed")
 _SITE_UPSERT_ATTESTED = declare_site("store.upsert.attested-redaction")
 _SITE_EPISODE_ATTESTED = declare_site("store.episode.attested-redaction")
 _SITE_JOURNAL_REDACTION_REASON = declare_site("store.journal.redaction-reason")
+_SITE_IMPORT_ATTESTED = declare_site("store.import.attested-redaction")     # tranche 4b: INV-11 at the import boundary
 _SITE_READ_OUTPUT_NOT_VISIBLE = declare_site("store.read.output-not-visible", declines=False)
 _SITE_READ_INPUT_CLAIMED = declare_site("store.read.input-claimed", declines=False)
 _SITE_UPSERT_IMMUTABLE = declare_site("store.upsert.immutable")
@@ -130,8 +131,9 @@ EDGE_WRITE_SITE_RULINGS = {
     "commit_outcome_import_plan": {
         "ruling": "imports edges through the choke point (created for new ids, "
                   "mutated for a changed same-id row, none when byte-identical)"},
-    "redact": {
-        "ruling": "specs/0041 §4c: rewrites the target's json and duplicated columns in place (the treatment "
+    "_redact_in_txn": {
+        "ruling": "specs/0041 §4c: the redaction's in-transaction body (`redact()` and, for an imported notice, the "
+                  "import commit call it): rewrites the target's json and duplicated columns in place (the treatment "
                   "map), TOMBSTONES `state` on every prior event for the edge (the journal's one in-place "
                   "rewrite, amending 0029 V-APPEND) and journals a `redacted` event with the redaction reason through "
                   "the choke point"},
@@ -285,7 +287,9 @@ class SqliteStore(Store):
         `reason` is non-NULL iff kind == invalidated and must be one of the
         seven DISPOSITIONED_REASONS — an unregistered reason refuses the
         WRITE (the exception unwinds the transaction). Returns the kind
-        journaled, or None."""
+        journaled, or None. specs/0041 §4c: a `redacted` write is journaled
+        even when the bytes did not move (a record that arrived already
+        carrying the marker, §4g) — the redaction is the write."""
         if self._txn_alloc is None or not self._conn.in_transaction:
             raise RuntimeError(
                 "edge write outside a journaled write transaction — every "
@@ -299,7 +303,7 @@ class SqliteStore(Store):
             if kind is not None:
                 raise ValueError(f"{kind!r} write with no prior row for {edge_id!r}")
             kind = "created"
-        elif new_json == prior_json:
+        elif new_json == prior_json and kind != "redacted":
             return None                          # unchanged serialization: no event
         elif kind is None:
             kind = "mutated"
@@ -1873,6 +1877,35 @@ class SqliteStore(Store):
                         f"never selected (0009 §4c as amended, R9-3/R13-1)"), "row-id")
                 validate_payload(row["site"], row["payload"])   # site registry
                 contrib_by_surv.setdefault(row["survivor_id"], []).append(row)
+            # specs/0041 §4g (tranche 4b): the import's redaction NOTICES — validated in full before the lock
+            # (an invalid notice refuses the whole plan: the record-and-notice UNIT is never admitted
+            # un-redacted), applied INSIDE the same transaction as the records below.
+            notices = plan.get("redactions", [])
+            notice_targets: set = set()
+            for n in notices:
+                missing = [f for f in ("id", "target_kind", "target_id", "fields", "marker_version", "reason",
+                                       "origin", "source_user", "source_event_ref") if f not in n]
+                if missing:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"redaction notice is missing {missing} — refused (specs/0041 §4g)"), "notice-missing-fields")
+                if n["target_kind"] not in ("edge", "episode") or not isinstance(n["target_id"], str) or not n["target_id"]:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"redaction notice names an invalid target {n['target_kind']!r}/{n['target_id']!r} — refused (specs/0041 §4g)"), "notice-target")
+                if not isinstance(n["fields"], list) or not all(isinstance(f, str) and f for f in n["fields"]):
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"redaction notice for {n['target_id']!r} carries malformed fields — refused (specs/0041 §4g)"), "notice-fields")
+                if not isinstance(n["marker_version"], int) or n["marker_version"] < 1 or n["marker_version"] > _redaction.MARKER_VERSION:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"redaction notice for {n['target_id']!r} declares marker version {n['marker_version']!r}, which this "
+                        f"build does not know (it knows up to {_redaction.MARKER_VERSION}) — refused (specs/0041 §4g)"), "notice-marker-version")
+                if n["reason"] not in _redaction.REDACTION_REASONS:
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"redaction notice for {n['target_id']!r} carries reason {n['reason']!r} outside the vocabulary — "
+                        f"refused (specs/0041 §11.2)"), "notice-reason")
+                if n["id"] != self.notice_id(n["origin"], n["source_user"], n["source_event_ref"]):
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"redaction notice id is not the derived source identity — refused (specs/0041 §4g)"), "notice-id")
+                notice_targets.add((n["target_kind"], n["target_id"]))
             with self._lock, self._write_txn():
                 # (1) Revalidate EVERY destination assumption the preflight reasoned
                 # about (round-6 Correction B) — atomically, before any write.
@@ -1940,6 +1973,16 @@ class SqliteStore(Store):
                 # the SAME transaction — nothing is durable after a prefix).
                 try:
                     for edge in edges:
+                        # specs/0041 §4b-ii / INV-11 at the IMPORT boundary (tranche 4b): a record whose
+                        # redaction this store already attests (a prior redaction, or a standing notice) is
+                        # not repopulated by an import — unless a notice in THIS plan covers it, in which
+                        # case the record is written and redacted again in the same transaction
+                        with _SITE_IMPORT_ATTESTED.consult():
+                            if self._completed_attestation(user_id, "edge", edge.id) and ("edge", edge.id) not in notice_targets:
+                                raise _SITE_IMPORT_ATTESTED.fire(ValueError(
+                                    f"refused: imported edge {edge.id!r} is redacted here (a redaction record attests it) "
+                                    f"and the file carries no notice for it — an import may not repopulate it "
+                                    f"(specs/0041 §4b-ii, INV-11; §4g)"))
                         prior = self._conn.execute(
                             "SELECT json FROM edges WHERE id=?", (edge.id,)).fetchone()
                         new_json = edge.model_dump_json()
@@ -1960,6 +2003,12 @@ class SqliteStore(Store):
                                     f"refused: imported episode {ep.id!r} kind {ep.kind!r} is not a "
                                     f"recognised operational kind — the closure binds the import "
                                     f"boundary (specs/0041 §2d-iv, §4h(ii))"))
+                        with _SITE_IMPORT_ATTESTED.consult():
+                            if self._completed_attestation(user_id, "episode", ep.id) and ("episode", ep.id) not in notice_targets:
+                                raise _SITE_IMPORT_ATTESTED.fire(ValueError(
+                                    f"refused: imported episode {ep.id!r} is redacted here (a redaction record attests it) "
+                                    f"and the file carries no notice for it — an import may not repopulate it "
+                                    f"(specs/0041 §4b-ii, INV-11; §4g)"))
                         self._conn.execute(
                             "INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
                             (ep.id, ep.user_id, ep.date, ep.model_dump_json()))
@@ -1977,13 +2026,52 @@ class SqliteStore(Store):
                              canonical_payload(row["payload"]), row["op_key"],
                              now, row["contributor_type"],
                              row["contributor_ref"]))
+                    # specs/0041 §4g: the notices, in the SAME transaction as the records — held → applied
+                    # (the record and its redaction state commit together or not at all); absent → a STANDING
+                    # notice row (event_ref NULL; the record is redacted on arrival); a row already held under
+                    # the same source identity → existing (repeat imports are idempotent by identity)
+                    applied = standing = existing = 0
+                    for n in notices:
+                        held = self._conn.execute(
+                            "SELECT event_ref FROM redactions WHERE id=?", (n["id"],)).fetchone()
+                        tbl = "edges" if n["target_kind"] == "edge" else "episodes"
+                        row = self._conn.execute(f"SELECT user_id, json FROM {tbl} WHERE id=?", (n["target_id"],)).fetchone()
+                        present = row is not None and row[0] == user_id
+                        if held is not None and (held[0] is not None or not present):
+                            existing += 1                       # applied before, or still standing
+                            continue
+                        if present:
+                            self._redact_in_txn(user_id, n["target_kind"], n["target_id"], "imported_notice",
+                                                row_json=row[1], row_id=n["id"], fields_hint=n["fields"])
+                            applied += 1
+                        else:
+                            ver = self.store_version(user_id)
+                            self._conn.execute(
+                                "INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
+                                "store_version_before, store_version_after, event_ref, recorded_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                                (n["id"], user_id, n["target_kind"], n["target_id"], json.dumps(n["fields"]),
+                                 n["marker_version"], "imported_notice", ver, ver, None, now))
+                            standing += 1
+                    # §4g's arrival rule: a STANDING notice whose record this plan just delivered is applied now
+                    arrived = 0
+                    for rid, kind, tid, fields in self._conn.execute(
+                            "SELECT id, target_kind, target_id, fields FROM redactions WHERE user_id=? AND event_ref IS NULL "
+                            "AND reason='imported_notice'", (user_id,)).fetchall():
+                        tbl = "edges" if kind == "edge" else "episodes"
+                        row = self._conn.execute(f"SELECT user_id, json FROM {tbl} WHERE id=?", (tid,)).fetchone()
+                        if row is not None and row[0] == user_id:
+                            self._redact_in_txn(user_id, kind, tid, "imported_notice", row_json=row[1], row_id=rid,
+                                                fields_hint=json.loads(fields))
+                            arrived += 1
                     self._bump(user_id)
                 except BaseException:
                     self._conn.rollback()                # ONE atomic commit —
                     raise                                # nothing after a prefix
             return {"edges": len(edges), "episodes": len(episodes),
                     "contributions": len(contrib_writes),
-                    "contributions_existing": contrib_existing}
+                    "contributions_existing": contrib_existing,
+                    "notices_applied": applied + arrived, "notices_standing": standing - arrived if standing >= arrived else 0,
+                    "notices_existing": existing, "notices_arrived": arrived}
 
     # -- crash-safe consolidation (specs/0010) --------------------------------
     _OP_COLS = ("operation_id", "user_id", "fence", "state", "owner",
@@ -2332,6 +2420,49 @@ class SqliteStore(Store):
         return frozenset(r[0] for r in self._conn.execute(
             "SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=?", (user_id, kind)))
 
+    # specs/0041 §4g (tranche 4b): a WITNESSED redaction (an imported notice) keeps the SOURCE identity in its
+    # row id — "notice", origin, source user, source event ref, joined by the unit separator — so a re-export
+    # names the original source and a repeat import is idempotent on (origin, target, event). The row's
+    # `reason` column is `imported_notice` (the witness distinction: this store was TOLD the source redacted
+    # it); the source's own reason travels in the export line, never as this store's claim.
+    NOTICE_SEP = "\x1f"
+
+    @classmethod
+    def notice_id(cls, origin: str, source_user: str, source_event_ref: str) -> str:
+        return cls.NOTICE_SEP.join(("notice", origin, source_user, source_event_ref))
+
+    @classmethod
+    def parse_notice_id(cls, rid: str):
+        parts = rid.split(cls.NOTICE_SEP)
+        return tuple(parts[1:4]) if len(parts) == 4 and parts[0] == "notice" else None
+
+    def redaction_records(self, user_id: str) -> list:
+        """specs/0041 D2 (tranche 4b): the user's redaction records as dicts, for export — every column, plus the
+        SOURCE identity (`origin`, `source_user`, `source_event_ref`): this store's own for a local redaction,
+        the original source's for a witnessed one. Never a content digest (the table holds none)."""
+        local = self.local_origin()
+        out = []
+        for row in self._conn.execute(
+                "SELECT id, target_kind, target_id, fields, marker_version, reason, store_version_before, "
+                "store_version_after, event_ref, recorded_at FROM redactions WHERE user_id=? ORDER BY recorded_at, id",
+                (user_id,)):
+            rid, kind, tid, fields, mv, reason, vb, va, event_ref, recorded_at = row
+            src = self.parse_notice_id(rid)
+            out.append({"id": rid, "target_kind": kind, "target_id": tid, "fields": json.loads(fields),
+                        "marker_version": mv, "reason": reason, "store_version_before": vb,
+                        "store_version_after": va, "event_ref": event_ref, "recorded_at": recorded_at,
+                        "origin": src[0] if src else local, "source_user": src[1] if src else user_id,
+                        "source_event_ref": src[2] if src else (event_ref or "")})
+        return out
+
+    def _completed_attestation(self, user_id: str, kind: str, target_id: str) -> bool:
+        """A redaction record with its event written — this store redacted the record (or applied a notice to
+        it). A STANDING notice (event_ref NULL) attests too, but is exactly the case an arriving record must
+        be admitted for, to be redacted on arrival (§4g)."""
+        return self._conn.execute(
+            "SELECT 1 FROM redactions WHERE user_id=? AND target_kind=? AND target_id=? AND event_ref IS NOT NULL LIMIT 1",
+            (user_id, kind, target_id)).fetchone() is not None
+
     def _redaction_record(self, user_id: str, kind: str, target_id: str):
         return self._conn.execute(
             "SELECT id, fields, marker_version, reason, store_version_before, store_version_after, event_ref, "
@@ -2408,99 +2539,119 @@ class SqliteStore(Store):
                         raise _SITE_REDACT_CLAIMED.fire(ValueError(
                             f"redact refuses episode {target_id!r}: it is claimed by an in-flight consolidation "
                             f"(specs/0010 X21; specs/0041 tranche 3)"))
-            before_json = row[1]
-            before = json.loads(before_json)
-            version_before = self.store_version(user_id)
-            if kind == "edge":
-                new, treated = _redaction.treat_edge(before, reason_registry=DISPOSITIONED_REASONS)
-                # §4h(i): the relation-only quarantine — the disclosure the treatment does not redact carries
-                # what the replaced relation held
-                if before.get("relation") == QUARANTINE_RELATION and "relation" in treated:
-                    new["provenance"]["disclosure"] = Disclosure.QUARANTINED.value
-                    if "provenance.disclosure" not in treated:
-                        treated.append("provenance.disclosure")
-                model_before, model_after = Edge.model_validate(before), Edge.model_validate(new)
-                # the derived dispositions, read EXPLICITLY (0031's census admits no dynamic attribute form)
-                dispositions = {
-                    "active": (model_before.active, model_after.active),
-                    "quarantined": (model_before.quarantined, model_after.quarantined),
-                    "needs_confirmation": (model_before.needs_confirmation, model_after.needs_confirmation),
-                    "ungrounded": (model_before.ungrounded, model_after.ungrounded)}
-            else:
-                new, treated = _redaction.treat_episode(before, reason_registry=DISPOSITIONED_REASONS,
-                                                        recognised_kinds=_redaction.RECOGNISED_EPISODE_KINDS)
-                model_before, model_after = Episode.model_validate(before), Episode.model_validate(new)
-                dispositions = {
-                    "active": (model_before.active, model_after.active),
-                    "quarantined": (model_before.quarantined, model_after.quarantined),
-                    "use_only": (model_before.use_only, model_after.use_only)}
-            with _SITE_REDACT_DISPOSITION.consult():
-                moved = [name for name, (b, a) in dispositions.items() if b != a]
-                if moved:
-                    raise _SITE_REDACT_DISPOSITION.fire(ValueError(
-                        f"redact refuses {kind} {target_id!r}: the treatment would change a derived disposition "
-                        f"{moved} (specs/0041 §4h(i)) — nothing written"))
-            new_json = model_after.model_dump_json()
-            fields = list(treated)
-            event_ref = None
-            if kind == "edge":
-                self._conn.execute(
-                    "UPDATE edges SET json=?, subject=?, relation=?, object=?, quarantined=? WHERE id=?",
-                    (new_json, model_after.subject, model_after.relation, model_after.object,
-                     int(model_after.quarantined), target_id))
-                # the side tables (rows 7, 21/23, 59/64) and the oracle (INV-7)
-                n = self._conn.execute("UPDATE confirmations SET request_digest=? WHERE user_id=? AND edge_id=?",
-                                       (_redaction.MARKER, user_id, target_id)).rowcount
-                if n:
-                    fields.append("confirmations.request_digest")
-                n = self._conn.execute(
-                    "UPDATE contribution_ledger SET identity_digest=NULL, evidence_ref_digest=NULL "
-                    "WHERE user_id=? AND (survivor_id=? OR contributor_ref=?) "
-                    "AND (identity_digest IS NOT NULL OR evidence_ref_digest IS NOT NULL)",
-                    (user_id, target_id, target_id)).rowcount
-                if n:
-                    fields.extend(["contribution_ledger.identity_digest", "contribution_ledger.evidence_ref_digest"])
-                n = self._conn.execute(
-                    "UPDATE supersession_refusals SET relation=? WHERE user_id=? AND (prior_edge_id=? OR incoming_edge_id=?) "
-                    "AND relation<>?", (_redaction.MARKER, user_id, target_id, target_id, _redaction.MARKER)).rowcount
-                if n:
-                    fields.append("supersession_refusals.relation")
-                n = self._conn.execute("DELETE FROM edge_embedding WHERE user_id=? AND edge_id=?",
-                                       (user_id, target_id)).rowcount
-                if n:
-                    fields.append("edge_embedding")
-                # §4c: tombstone every prior event, then the `redacted` event with the reason (INV-4)
-                self._conn.execute("UPDATE edge_event SET state=? WHERE user_id=? AND edge_id=?",
-                                   (_redaction.MARKER, user_id, target_id))
-                self._journal_edge_write(user_id, target_id, new_json, before_json, kind="redacted", reason=reason)
-                seq = self._conn.execute("SELECT MAX(seq) FROM edge_event WHERE user_id=? AND edge_id=?",
-                                         (user_id, target_id)).fetchone()[0]
-                event_ref = f"{user_id}:{seq}"
-            else:
-                self._conn.execute("UPDATE episodes SET json=? WHERE id=?", (new_json, target_id))
-                # §4b-ii: the episode journal row — its own per-user seq/txn space, the store's clock
-                seq = 1 + (self._conn.execute("SELECT COALESCE(MAX(seq), 0) FROM episode_event WHERE user_id=?",
-                                              (user_id,)).fetchone()[0])
-                txn = 1 + (self._conn.execute("SELECT COALESCE(MAX(txn), 0) FROM episode_event WHERE user_id=?",
-                                              (user_id,)).fetchone()[0])
-                self._conn.execute(
-                    "INSERT INTO episode_event(user_id, seq, txn, episode_id, kind, reason, state, recorded_at) "
-                    "VALUES(?,?,?,?,?,?,?,?)",
-                    (user_id, seq, txn, target_id, "redacted", reason, new_json, self._now().isoformat()))
-                event_ref = f"{user_id}:episode:{seq}"
-            self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))     # a derivation of the content
-            self._bump(user_id)
-            version_after = self.store_version(user_id)
-            recorded_at = self._now().isoformat()
-            rid = "rd-" + uuid.uuid4().hex
+            record = self._redact_in_txn(user_id, kind, target_id, reason, row_json=row[1])
+            return self._receipt_from_record(user_id, kind, target_id, record, repeated=False)
+
+    def _redact_in_txn(self, user_id: str, kind: str, target_id: str, reason: str, *, row_json: str,
+                       row_id: Optional[str] = None, fields_hint: Optional[list] = None):
+        """The treatment, inside an OPEN journaled transaction (the caller holds the lock and `_write_txn`):
+        the record's carriers, the side tables, the journal, the attestation row. `row_id` names the
+        attestation row to write (the import's deterministic notice id; a fresh id otherwise) — and when a
+        STANDING notice row already exists under that id (specs/0041 §4g, the record arrived after its
+        notice), that row is completed in place rather than duplicated. Returns the record tuple."""
+        table = "edges" if kind == "edge" else "episodes"
+        before_json = row_json
+        before = json.loads(before_json)
+        version_before = self.store_version(user_id)
+        if kind == "edge":
+            new, treated = _redaction.treat_edge(before, reason_registry=DISPOSITIONED_REASONS)
+            # §4h(i): the relation-only quarantine — the disclosure the treatment does not redact carries
+            # what the replaced relation held
+            if before.get("relation") == QUARANTINE_RELATION and "relation" in treated:
+                new["provenance"]["disclosure"] = Disclosure.QUARANTINED.value
+                if "provenance.disclosure" not in treated:
+                    treated.append("provenance.disclosure")
+            model_before, model_after = Edge.model_validate(before), Edge.model_validate(new)
+            # the derived dispositions, read EXPLICITLY (0031's census admits no dynamic attribute form)
+            dispositions = {
+                "active": (model_before.active, model_after.active),
+                "quarantined": (model_before.quarantined, model_after.quarantined),
+                "needs_confirmation": (model_before.needs_confirmation, model_after.needs_confirmation),
+                "ungrounded": (model_before.ungrounded, model_after.ungrounded)}
+        else:
+            new, treated = _redaction.treat_episode(before, reason_registry=DISPOSITIONED_REASONS,
+                                                    recognised_kinds=_redaction.RECOGNISED_EPISODE_KINDS)
+            model_before, model_after = Episode.model_validate(before), Episode.model_validate(new)
+            dispositions = {
+                "active": (model_before.active, model_after.active),
+                "quarantined": (model_before.quarantined, model_after.quarantined),
+                "use_only": (model_before.use_only, model_after.use_only)}
+        with _SITE_REDACT_DISPOSITION.consult():
+            moved = [name for name, (b, a) in dispositions.items() if b != a]
+            if moved:
+                raise _SITE_REDACT_DISPOSITION.fire(ValueError(
+                    f"redact refuses {kind} {target_id!r}: the treatment would change a derived disposition "
+                    f"{moved} (specs/0041 §4h(i)) — nothing written"))
+        new_json = model_after.model_dump_json()
+        # an applied notice (§4g): the record arrives already carrying the marker, so this store's treatment
+        # finds little to do — the attestation names the SOURCE's carriers too (the notice's fields), never fewer
+        fields = sorted(set(treated) | set(fields_hint or []))
+        event_ref = None
+        if kind == "edge":
+            self._conn.execute(
+                "UPDATE edges SET json=?, subject=?, relation=?, object=?, quarantined=? WHERE id=?",
+                (new_json, model_after.subject, model_after.relation, model_after.object,
+                 int(model_after.quarantined), target_id))
+            # the side tables (rows 7, 21/23, 59/64) and the oracle (INV-7)
+            n = self._conn.execute("UPDATE confirmations SET request_digest=? WHERE user_id=? AND edge_id=?",
+                                   (_redaction.MARKER, user_id, target_id)).rowcount
+            if n:
+                fields.append("confirmations.request_digest")
+            n = self._conn.execute(
+                "UPDATE contribution_ledger SET identity_digest=NULL, evidence_ref_digest=NULL "
+                "WHERE user_id=? AND (survivor_id=? OR contributor_ref=?) "
+                "AND (identity_digest IS NOT NULL OR evidence_ref_digest IS NOT NULL)",
+                (user_id, target_id, target_id)).rowcount
+            if n:
+                fields.extend(["contribution_ledger.identity_digest", "contribution_ledger.evidence_ref_digest"])
+            n = self._conn.execute(
+                "UPDATE supersession_refusals SET relation=? WHERE user_id=? AND (prior_edge_id=? OR incoming_edge_id=?) "
+                "AND relation<>?", (_redaction.MARKER, user_id, target_id, target_id, _redaction.MARKER)).rowcount
+            if n:
+                fields.append("supersession_refusals.relation")
+            n = self._conn.execute("DELETE FROM edge_embedding WHERE user_id=? AND edge_id=?",
+                                   (user_id, target_id)).rowcount
+            if n:
+                fields.append("edge_embedding")
+            # §4c: tombstone every prior event, then the `redacted` event with the reason (INV-4)
+            self._conn.execute("UPDATE edge_event SET state=? WHERE user_id=? AND edge_id=?",
+                               (_redaction.MARKER, user_id, target_id))
+            self._journal_edge_write(user_id, target_id, new_json, before_json, kind="redacted", reason=reason)
+            seq = self._conn.execute("SELECT MAX(seq) FROM edge_event WHERE user_id=? AND edge_id=?",
+                                     (user_id, target_id)).fetchone()[0]
+            event_ref = f"{user_id}:{seq}"
+        else:
+            self._conn.execute("UPDATE episodes SET json=? WHERE id=?", (new_json, target_id))
+            # §4b-ii: the episode journal row — its own per-user seq/txn space, the store's clock
+            seq = 1 + (self._conn.execute("SELECT COALESCE(MAX(seq), 0) FROM episode_event WHERE user_id=?",
+                                          (user_id,)).fetchone()[0])
+            txn = 1 + (self._conn.execute("SELECT COALESCE(MAX(txn), 0) FROM episode_event WHERE user_id=?",
+                                          (user_id,)).fetchone()[0])
+            self._conn.execute(
+                "INSERT INTO episode_event(user_id, seq, txn, episode_id, kind, reason, state, recorded_at) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                (user_id, seq, txn, target_id, "redacted", reason, new_json, self._now().isoformat()))
+            event_ref = f"{user_id}:episode:{seq}"
+        self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))     # a derivation of the content
+        self._bump(user_id)
+        version_after = self.store_version(user_id)
+        recorded_at = self._now().isoformat()
+        rid = row_id or ("rd-" + uuid.uuid4().hex)
+        standing = self._conn.execute("SELECT 1 FROM redactions WHERE id=? AND event_ref IS NULL", (rid,)).fetchone()
+        if standing is not None:
+            # §4g: the record arrived after its notice — the standing row is COMPLETED, never duplicated
+            self._conn.execute(
+                "UPDATE redactions SET fields=?, marker_version=?, store_version_before=?, store_version_after=?, "
+                "event_ref=?, recorded_at=? WHERE id=?",
+                (json.dumps(fields), _redaction.MARKER_VERSION, version_before, version_after, event_ref, recorded_at, rid))
+        else:
             self._conn.execute(
                 "INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
                 "store_version_before, store_version_after, event_ref, recorded_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                 (rid, user_id, kind, target_id, json.dumps(fields), _redaction.MARKER_VERSION, reason,
                  version_before, version_after, event_ref, recorded_at))
-            record = (rid, json.dumps(fields), _redaction.MARKER_VERSION, reason, version_before, version_after,
-                      event_ref, recorded_at)
-            return self._receipt_from_record(user_id, kind, target_id, record, repeated=False)
+        return (rid, json.dumps(fields), _redaction.MARKER_VERSION, reason, version_before, version_after,
+                event_ref, recorded_at)
 
     def _receipt_from_record(self, user_id, kind, target_id, record, *, repeated: bool):
         """The receipt IS the attestation record read back (§4b-ii): a repeat returns the ORIGINAL's fields,
@@ -2510,7 +2661,10 @@ class SqliteStore(Store):
         return _redaction.RedactionReceipt(
             redacted_kind=kind, target_id=target_id, user_id=user_id, reason=reason,
             fields_cleared=json.loads(fields), marker_version=mv, store_version_before=vb, store_version_after=va,
-            recorded_at=recorded_at, event_ref=event_ref, repeated=repeated, reconstructed=False,
+            recorded_at=recorded_at, event_ref=event_ref, repeated=repeated,
+            # §4b-ii / §4g: a WITNESSED redaction (an imported notice) has no original receipt in this store —
+            # the receipt is reconstructed from the notice's row, and says so
+            reconstructed=(reason == "imported_notice"),
             receipts_complete=False, receipt_domains=list(self._RECEIPT_DOMAINS),
             surviving_derived=self._surviving_derived(user_id, kind, target_id))
 

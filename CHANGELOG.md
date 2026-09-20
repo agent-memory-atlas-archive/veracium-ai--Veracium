@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- **Changed: export format 12 → 13 — the redaction record travels, and import applies it under the
+  §4g contract (specs/0041, tranche 4b).** An export from a store holding any redaction record carries one
+  `{"record": "redaction", ...}` line per record (the attestation: target, the carriers treated, the marker
+  version, the vocabulary reason, the SOURCE identity — origin, source user, source event — never a content
+  digest) and is stamped 13; a store without one still exports 12, byte-identical to before. **Who must act:**
+  operators whose exports may reach an older Veracium — a 0.26.x reader REFUSES a 13 file outright (the
+  refuse-don't-drop rule: a reader that dropped the notice would import the record un-redacted, the exact
+  harm the contract exists to prevent); upgrade the reader, or redact after import. On import: a notice
+  whose record is in the file or already held is applied IN THE SAME TRANSACTION as the record (the
+  destination attests it; its own journal closes the record with a `redacted` event; an ordinary write may
+  not repopulate it); a notice whose record the destination does not hold is a STANDING notice (a
+  redaction record with no event), and the record is redacted on arrival — so the two import orders
+  reach the same state; a held DIFFERENT version is redacted anyway and the result flags it
+  (`inconsistent_notices`); an invalid notice refuses the whole import with nothing written; two notices
+  under one source identity with different bodies are an integrity refusal; repeat imports are idempotent
+  by source identity; a `user_id=` remap moves the notice's target with the record's minted id; a marker-
+  carrying record arriving with NO notice is admitted as an UNATTESTED marker and listed in
+  `unattested_markers` (no reader treats it as redacted, and it stays writable). A file declaring a
+  version below 13 that carries notices is refused. The doctor reports a standing notice as information,
+  never as a missing-target error. The receipt of a witnessed redaction is `reconstructed=True` with
+  reason `imported_notice` (this store was told the source redacted it). The result dict gains
+  `notices_applied`, `notices_standing`, `notices_existing`, `inconsistent_notices`, `unattested_markers`.
 - **Changed: redacted records leave every read surface (specs/0041, tranche 4a).** By the attestation
   record, never by marker bytes: an attested-redacted edge or episode is absent from `recall`'s subgraph,
   episode list and contested groups, from the compiled wiki's input, and `describe_procedures` reports a

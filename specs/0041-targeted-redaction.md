@@ -315,6 +315,29 @@ first.*
 > hidden; the as-of classifier returns `REDACTED` for any T (above). `why` landed with tranche 3. What remains:
 > tranche 4b (export carries the redaction record, D2; the §4g import contract), tranche 5.
 
+> **Implementation note, tranche 4b (2026-09-20) — D2 and the §4g import contract.** The export carries one
+> `redaction` line per attestation record (format 13, stamped only when one exists — the refuse-don't-drop
+> era rule; the record itself travels redacted); the line carries the SOURCE identity (origin, source user,
+> source event ref), which a witnessed row keeps in its own id so a re-export names the original source. On
+> import the notices are validated before any record is admitted (an invalid one refuses the whole import —
+> the unit — with nothing written; two under one identity with different bodies refuse as a corrupted
+> source; a file declaring a version below 13 that carries notices refuses), deduplicated by identity, and
+> applied INSIDE the atomic import commit through the same in-transaction body `redact` uses: held → applied
+> (the destination's journal closes the record with its own `redacted` event; a record arriving already
+> marked is journaled all the same — V-APPEND's updater and V-KIND's kind, with the attestation naming the
+> source's carriers too); absent → a STANDING notice (a `redactions` row with no event; INV-11 refuses an
+> ordinary write of that id; the doctor reports it as information — §11.4's refs exemption, met at the
+> redactions table rather than the journal, since a standing notice writes no event) and the record is
+> redacted on arrival in the same commit that delivers it (the standing row completed in place — one row
+> per identity, the two orders reaching one state); a held DIFFERENT version is redacted anyway and flagged
+> `inconsistent_notices`; a marker-carrying record with no notice is admitted as an UNATTESTED marker and
+> listed. INV-11 binds the import boundary: a record this store has redacted (a COMPLETED attestation) is
+> not repopulated by a file carrying no notice for it — a standing notice is exactly the arrival case and
+> admits. A `user_id=` remap moves the notice's target with the record's minted id; a notice whose record
+> is not in the file keeps the source's id under a remap (no record can arrive under it — it stands as the
+> witness). The witnessed receipt is `reconstructed=True`, reason `imported_notice`. What remains: tranche 5
+> (§4e's delayed writers, the transition evidence rows, the closure ledger).
+
 ---
 
 ## 1. Problem and motivation
@@ -1744,7 +1767,7 @@ REVOCATION** (`revoked_source`) — which v5 did not name at all.
 > is derived from the mutator surface, and `redact()` is a mutator, so `EVENT_KINDS` gains `redacted`, the one
 > kind beside `invalidated` whose `reason` is non-NULL (redaction's own vocabulary, §11.2/D1; prose refused at
 > the choke point). (2) **V-APPEND** — *no code path updates or deletes an event except erasure* admits exactly
-> one updater: `redact` tombstones `state` on the redacted edge's prior events (§4c's ruled approach) and touches
+> one updater: `_redact_in_txn` (the body `redact` and, since tranche 4b, the import's notice application share) tombstones `state` on the redacted edge's prior events (§4c's ruled approach) and touches
 > no other column; `tests/test_0029_carrier.py` binds both — the updater's name, its statement's shape, and the
 > six kinds.
 
@@ -1755,6 +1778,12 @@ REVOCATION** (`revoked_source`) — which v5 did not name at all.
 > resolver maps it to `NOT_RETURNABLE` / `redacted-excluded` (the tag tranche 1 registered). 0030's pseudocode
 > carries the same leg; `tests/test_0041_readers.py` binds the status, the hidden-stays-hidden order and the
 > unattested-marker control.
+
+> **Tranche 4b (2026-09-20), §11.4's refs exemption as landed:** a standing redaction notice writes no journal
+> event (it is a `redactions` row with no event), so 0029's `refs` check over the journal never sees it; the
+> exemption lands where the notice lives — the doctor's redaction-target check reports a standing notice
+> as information, never as a missing-target error. The export format moves 12 → 13 (0014's format rules:
+> conditional stamp, older readers refuse).
 
 
 ### 11.4-bis. The two prerequisites, in executable form

@@ -261,7 +261,8 @@ def test_the_export_stamps_12_only_for_a_producer_bearing_store_and_old_readers_
     mem = Memory(llm=_quiet, config=_cfg(tmp_path, "new.db"))
     pid = _declare(mem)
     h, recs = _export(mem, tmp_path / "new.jsonl")
-    assert h["version"] == 12 and portability.FORMAT_VERSION == 12
+    # 0041 tranche 4b (2026-09-20): the reader's head moved to 13 (the redaction era); the producer era stays 12
+    assert h["version"] == 12 and portability._PRODUCER_VERSION == 12 and portability.FORMAT_VERSION == 13
     assert next(r for r in recs if r["id"] == pid)["provenance"]["producer"] == "host"
     mem.close()
     monkeypatch.setattr(portability, "FORMAT_VERSION", 11)

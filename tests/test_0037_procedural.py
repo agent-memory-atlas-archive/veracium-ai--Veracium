@@ -296,7 +296,7 @@ def test_the_two_producers_are_exactly_the_host_surface_and_the_quote_gated_extr
         # specs/0041 tranche 3 (2026-09-19): the redaction rewrites ONE record's content carriers in place;
         # `provenance.basis`, `record_kind` and `producer` are PRESERVE rows of the treatment map, so the stamp
         # passes through untouched — the operation stamps nothing and can mint no producer
-        "redact": "rewrites content carriers in place; the stored stamp/basis/producer are preserved by the treatment map",
+        "_redact_in_txn": "rewrites content carriers in place (redact() and the import's notice application share it); the stored stamp/basis/producer are preserved by the treatment map",
     }
     assert set(EDGE_WRITE_SITE_RULINGS) == set(classified)
     import importlib.util

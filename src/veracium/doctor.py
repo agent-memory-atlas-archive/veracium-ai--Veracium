@@ -345,8 +345,16 @@ def _check_refs(rep: Report, conn, user: Optional[str], edges: dict, episodes: d
                 "exist", bad_contrib)
     # specs/0041 v15: redaction records name a target; episode events name an episode
     if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='redactions'").fetchone():
-        ids = [r["id"] for r in conn.execute(f"SELECT id, user_id, target_kind, target_id FROM redactions {where}", args)
-               if (r["user_id"], r["target_id"]) not in (edges if r["target_kind"] == "edge" else episodes)]
+        # specs/0041 §4g / §11.4 (tranche 4b): a STANDING NOTICE — an imported redaction notice whose record has
+        # not arrived (reason `imported_notice`, no event yet) — names a target that does not exist BY DESIGN and
+        # is reported as such, never as damage; any other absent target is an error
+        absent = [r for r in conn.execute(f"SELECT id, user_id, target_kind, target_id, reason, event_ref FROM redactions {where}", args)
+                  if (r["user_id"], r["target_id"]) not in (edges if r["target_kind"] == "edge" else episodes)]
+        standing = [r["id"] for r in absent if r["reason"] == "imported_notice" and r["event_ref"] is None]
+        ids = [r["id"] for r in absent if not (r["reason"] == "imported_notice" and r["event_ref"] is None)]
+        if standing:
+            rep.add("refs", "info", f"{len(standing)} standing redaction notice(s) awaiting their record — the record is "
+                    f"redacted on arrival (specs/0041 §4g); not damage", standing)
         if ids:
             rep.add("refs", "error", f"{len(ids)} redaction record(s) naming a target that does not exist", ids)
         ids = [r["episode_id"] for r in conn.execute(f"SELECT DISTINCT episode_id, user_id FROM episode_event {where}", args)

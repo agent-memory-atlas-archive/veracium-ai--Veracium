@@ -231,8 +231,10 @@ def test_export_omits_the_deleted_key(tmp_path):
     # de-pinned; >=7 since 0016. 0026's stamp is CONDITIONAL: this
     # marker-free store exports at the pre-agreement version
     # three conditional eras since 0037 (11 procedural / 10 agreement / 9 before)
-    from veracium.portability import _PRE_AGREEMENT_VERSION, _PRE_PROCEDURAL_VERSION
-    assert lines[0]["version"] in (FORMAT_VERSION, _PRE_PROCEDURAL_VERSION, _PRE_AGREEMENT_VERSION)
+    from veracium.portability import _PRE_AGREEMENT_VERSION, _PRE_PROCEDURAL_VERSION, _PRODUCER_VERSION
+    # 0041 tranche 4b (2026-09-20): 13 is stamped only for a store holding a redaction record; the producer
+    # era 12 is the ordinary top for this store
+    assert lines[0]["version"] in (FORMAT_VERSION, _PRODUCER_VERSION, _PRE_PROCEDURAL_VERSION, _PRE_AGREEMENT_VERSION)
     assert lines[0]["version"] >= 7
     assert "source_type" not in p.read_text()     # no residual key anywhere
     store.close()
