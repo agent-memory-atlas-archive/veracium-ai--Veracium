@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — DEV's instrument (specs/evidence/0039/answer_shapes.py)
-# generated 2026-09-12 against veracium @ 5d813ea15ad42f6322f21f055b47b87112245c64
+# generated 2026-09-12 against veracium @ 8198ea798b52aa2b215f0d949e8c097377799cb6
+# RE-PINNED 2026-09-20 the 0042 round-6 pre-seal fix landed in 8198ea798b52aa2b215f0d949e8c097377799cb6: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-20 0041 tranche 5 (the delayed writers) landed in 5d813ea15ad42f6322f21f055b47b87112245c64: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-20 0041 tranche 4b (export + the import contract) landed in 8ea59e79e6e6833521aefd0b828a5a24223f5aa2: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-09-20 0041 tranche 4a (the readers) landed in c8de9be8e8b77e5395269607c904d2c444be90c2: bodies byte-identical; the pin moves to the commit that changed src/

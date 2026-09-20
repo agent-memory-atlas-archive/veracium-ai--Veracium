@@ -1,8 +1,9 @@
-# generated 2026-09-20T13:20Z against veracium @ 2d5e91c1289b005c4d94bfd2e8541633fd1be83a
+# generated 2026-09-20T13:20Z against veracium @ 8198ea798b52aa2b215f0d949e8c097377799cb6
+# RE-PINNED 2026-09-20 the 0042 round-6 pre-seal fix landed in 8198ea798b52aa2b215f0d949e8c097377799cb6: body byte-identical; the run was made on the working tree this commit then committed, so the pin moves to it
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD 2d5e91c1289b005c4d94bfd2e8541633fd1be83a  (src DIRTY: M src/veracium/store/sqlite.py)
-twin (uninstrumented): derived from HEAD 2d5e91c1289b005c4d94bfd2e8541633fd1be83a by inv7_uninstrument.py
+HEAD 8198ea798b52aa2b215f0d949e8c097377799cb6
+twin (uninstrumented): derived from HEAD 8198ea798b52aa2b215f0d949e8c097377799cb6 by inv7_uninstrument.py
 twin derivation: 162 declare_site removed, 302 fire() unwrapped, 150 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
 
 python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
