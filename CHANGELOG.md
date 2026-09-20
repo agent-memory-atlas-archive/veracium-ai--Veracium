@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Fixed: the 0042 runtime leg ran 143 of its 157 declining executions, and one census id consulted twice per
+  decline (specs/0042, round-6 pre-seal).** The leg's parametrised id list was evaluated above its last three
+  entry blocks, so the fourteen entries below it (0041's tranches 3–5) never ran under the exactly-one delta
+  assertion while the completeness test, which compared dict keys rather than the parametrised set, stayed
+  green at every pin since 0041's tranche 3. The ids are now frozen after the last block, asserted equal to
+  the dicts, and a static guard refuses an entry block below the freeze. One of the fourteen,
+  `store.redact.target`, bracketed two decision points under one id — 0041 §4a's exactly-one-target and INV-5's
+  unknown-or-cross-user — and consulted twice per decline; they are two ids now (`store.redact.both-or-neither`
+  beside `store.redact.target`; 162 declared, reviewed, reconciled, exercised). Found by generating the per-site
+  decision trace the round-5 verdict asked for at implementation review. No behaviour changes.
 - **Changed: the two delayed writers make their read and their publish one transaction (specs/0041
   §4e, tranche 5).** The embedding upsert takes the database write lock (`BEGIN IMMEDIATE`) before it
   reads the edge it checks its digest against, so a second connection's redaction cannot land between

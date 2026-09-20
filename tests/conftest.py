@@ -47,3 +47,21 @@ def pytest_collection_modifyitems(items):
     for g in gate:
         items.remove(g)
         items.append(g)
+
+
+def pytest_deselected(items):
+    """0042 round 6 (2026-09-20): the runtime leg's collection guard (tests/test_0042_sites.py) must know whether
+    ITS module was collected whole. It observes the EFFECT — which nodes were deselected — rather than enumerating
+    the causes: -k, -m, --deselect, --lf and --sw all deselect through this hook, and so will a plugin nobody has
+    named yet. (A hand list of five flags missed --sw, which deselects a random prefix under pytest-randomly and
+    made the guard accuse a correct tree; found by research running the skip branch under every mechanism.)"""
+    if items:
+        cfg = items[0].config
+        cfg.veracium_deselected = cfg.veracium_deselected | frozenset(i.nodeid for i in items)
+
+
+def pytest_configure(config):
+    """The recorder's PRESENCE is a fact the guard can read: an empty set means 'the recorder ran and nothing
+    was deselected'; an ABSENT attribute means the recorder is not installed (this conftest not loaded, the
+    hook renamed), and the guard refuses by name rather than enforcing over a domain it cannot see."""
+    config.veracium_deselected = frozenset()

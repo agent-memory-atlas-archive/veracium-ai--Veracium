@@ -39,6 +39,19 @@ INVENTORY = [
                               "nothing to compare — the full suite, both "
                               "drivers, and CI always record and always "
                               "enforce"),
+    ("tests/test_0042_sites.py", "skip",
+     "selection narrowed (a deselection in this module, or a node id on the command line)",
+     "selection-conditional", "the runtime leg's EXECUTION-SIDE completeness guard "
+                              "(0042 round 6, 2026-09-20): compares the declared ids "
+                              "against the site_id of every parametrised node pytest "
+                              "COLLECTED for this module — the side the 143-for-157 "
+                              "collection shortfall was visible from; it skips only "
+                              "under a narrowed selection detected by its EFFECT (a "
+                              "node of the module deselected — conftest's "
+                              "pytest_deselected hook — or a node id on the command "
+                              "line), where the collection is "
+                              "narrow by request — the full suite and CI always "
+                              "collect the whole module and always enforce"),
     ("tests/test_seam_model_0029_0030.py", "skip",
      "0030 spec not reachable from this tree",
      "host-conditional", "the seam model's propagation check reads the 0030 "

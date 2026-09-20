@@ -657,6 +657,7 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 0041 tranche 4a (the readers: classify, resolve, carrier, current_state, compile, procedures, recall): moved dotted/dataflow 6,642 -> 6,664, the rest unchanged.
 #: 0041 tranche 4b (export format 13, the §4g import contract: portability, sqlite, doctor): moved dotted/dataflow 6,664 -> 6,761, dotted/module-plain 336 -> 341, the rest unchanged.
 #: 0041 tranche 5 (the delayed writers: sqlite, base, compile): moved dotted/dataflow 6,761 -> 6,774, dotted/module-plain 341 -> 342, dotted/module-protected 48 -> 50, the rest unchanged.
+#: 0042 round-6 pre-seal: the redact both-or-neither site: moved nothing, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
     "dotted/dataflow": 6774,
     "dotted/module-machinery": 19,

@@ -144,6 +144,7 @@ DECLARATION = (
     ("store.outcome.context-ref", "0009", "§4c", "store/sqlite.py:SqliteStore.append_outcome_if_head", "refuse"),
     ("store.read.input-claimed", "0010", "§4b", "store/sqlite.py:SqliteStore._ordinary_read_visible", "withhold"),
     ("store.read.output-not-visible", "0010", "§4b", "store/sqlite.py:SqliteStore._ordinary_read_visible", "withhold"),
+    ("store.redact.both-or-neither", "0041", "§4a/INV-5", "store/sqlite.py:SqliteStore.redact", "refuse"),
     ("store.redact.disposition-changed", "0041", "§4h(i)", "store/sqlite.py:SqliteStore._redact_in_txn", "refuse"),
     ("store.redact.input-claimed", "0041/0010", "X21", "store/sqlite.py:SqliteStore.redact", "refuse"),
     ("store.redact.reason-not-registered", "0041", "§11.2", "store/sqlite.py:SqliteStore.redact", "refuse"),

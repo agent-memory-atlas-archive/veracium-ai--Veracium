@@ -120,6 +120,18 @@ Spec-Status: accepted
 > encoded a date and went on asserting it; the reconciliation test's hand-read set refuses a new member
 > until someone reads it; the derived twin re-derives and has no moment to decay.
 
+> **Implementation note, round 6 pre-seal (2026-09-20).** Building the per-site decision trace the round-5
+> verdict asked for at implementation review found two defects in the runtime leg, both fixed before the seal
+> (the commit is named in the package's README): the leg's parametrised ids were evaluated ABOVE its last three
+> entry blocks, so fourteen declining executions (0041's tranches 3–5) had never run under the delta assertion
+> while the completeness test — which compared dict keys, not the parametrised set — stayed green; and one of the
+> fourteen, `store.redact.target`, bracketed TWO decision points (§4a's exactly-one-target and INV-5's
+> unknown-or-cross-user) under one id and consulted twice per decline. The ids are now frozen after the last
+> block and asserted equal to the dicts, a static guard refuses an entry block below the freeze, and the two
+> decision points are two ids (`store.redact.both-or-neither` beside `store.redact.target`; 162 declared). The
+> class is the one the note above names: a claim ("the runtime leg executes one declining decision at every
+> id") carried by a test whose subject grew past it, green at every pin since 0041's tranche 3.
+
 ## 1. Problem and motivation
 
 **We assert guarantees we have never measured being exercised.** Two independent

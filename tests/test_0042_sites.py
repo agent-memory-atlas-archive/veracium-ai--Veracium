@@ -12,11 +12,21 @@ the MCP closed set, the Memory surface, diagnostics, telemetry — 40 more ids.
 Tranche 4 (2026-09-19): scope, scope_linkage, scope_read, portability — 33 more ids.
 Tranche 5 (2026-09-19): the store — migration, revocation, the sweep's validators, schema
 version, sqlite — 46 more ids; 147 in all, every id the semantic review named.
+Round 6, pre-seal (2026-09-20): THE PARAMETRISED IDS ARE FROZEN AFTER THE LAST ENTRY BLOCK and asserted
+equal to the dicts. The parametrisation had been evaluated above the last three entry blocks, so the
+fourteen entries below it (0041 tranches 3–5) had never run under the delta assertion while the
+completeness test — which compared dict keys, not the parametrised set — stayed green; building the
+per-site decision trace for the implementation-review package found it, and found that one of the
+fourteen (`store.redact.target`) bracketed two decision points under one id and consulted twice per
+decline — now two ids. A static guard refuses an entry block below the freeze.
 """
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace as NS
+
+import pathlib
+import re
 
 import pytest
 
@@ -950,29 +960,6 @@ def _delta(site_id, run):
             after["errors"] - before["errors"])
 
 
-def test_every_declared_site_has_one_declining_execution_here_and_vice_versa():
-    declared = set(SITES)
-    covered = set(DECLINES) | set(SURFACE_DRIVEN)
-    assert declared == covered, (sorted(declared - covered), sorted(covered - declared))
-
-
-@pytest.mark.parametrize("site_id", sorted(DECLINES))
-def test_one_declining_decision_moves_the_counters_by_exactly_one(site_id, enabled, monkeypatch):
-    entry = DECLINES[site_id]
-    if isinstance(entry, TwoPhase):
-        state = entry.setup(monkeypatch)
-        dc, df, de = _delta(site_id, lambda: entry.run(state))
-    else:
-        dc, df, de = _delta(site_id, lambda: entry(monkeypatch))
-    assert (dc, df, de) == (1, 1, 0), f"{site_id}: consulted moved {dc}, fired moved {df}, errors {de}"
-
-
-@pytest.mark.parametrize("site_id", sorted(SURFACE_DRIVEN))
-def test_the_surface_driven_sites_decline_once_per_candidate(site_id, enabled):
-    dc, df, de = _delta(site_id, SURFACE_DRIVEN[site_id])
-    assert df >= 1 and dc >= df and de == 0, f"{site_id}: consulted {dc}, fired {df}, errors {de}"
-
-
 def test_the_disabled_census_moves_nothing(monkeypatch):
     assert not census.enabled()
     for site_id, entry in DECLINES.items():
@@ -1131,6 +1118,7 @@ def _journal_bad_redaction_reason():
 
 DECLINES.update({
     "store.redact.target": lambda mp: _raises(ValueError, _store().redact, U, edge_id="no-such-edge", reason="subject_request"),
+    "store.redact.both-or-neither": lambda mp: _raises(ValueError, _store().redact, U, edge_id="e", episode_id="ep", reason="subject_request"),
     "store.redact.reason-not-registered": lambda mp: _redact_bad_reason(),
     "store.redact.input-claimed": _redact_claimed,
     "store.redact.disposition-changed": _redact_disposition,
@@ -1180,3 +1168,83 @@ DECLINES.update({
     "store.embedding.txn-locked": lambda mp: _embedding_lock_refused(),
 })
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
+
+
+# THE PARAMETRISED SET IS FROZEN HERE, AFTER THE LAST ENTRY BLOCK (2026-09-20). A parametrize decorator
+# evaluates its list when the function is DEFINED; every entry block must sit above this line, and the
+# completeness test below asserts the frozen tuples equal the dicts so a block added beneath refuses loudly.
+DECLINE_IDS = tuple(sorted(DECLINES))
+SURFACE_IDS = tuple(sorted(SURFACE_DRIVEN))
+
+
+def test_the_freeze_follows_every_entry_block():
+    """The static half of the guard: no entry block (a `DECLINES = {`/`.update({` or the SURFACE_DRIVEN
+    forms) may appear below the freeze line in this file — the class that hid fourteen executions."""
+    src = pathlib.Path(__file__).read_text().splitlines()
+    freeze = next(i for i, l in enumerate(src) if l.startswith("DECLINE_IDS = tuple(sorted(DECLINES))"))
+    below = [i + 1 for i, l in enumerate(src) if i > freeze and re.match(r"^(DECLINES|SURFACE_DRIVEN)(\.update\(| = )", l)]
+    assert below == [], f"entry block(s) below the freeze at line {freeze + 1}: {below}"
+    # the control: the pattern finds the blocks that ARE above it (a regex that matched nothing would pass vacuously)
+    above = [i for i, l in enumerate(src) if i < freeze and re.match(r"^(DECLINES|SURFACE_DRIVEN)(\.update\(| = )", l)]
+    assert len(above) >= 2, above
+
+
+def test_every_declared_site_has_one_declining_execution_here_and_vice_versa():
+    declared = set(SITES)
+    covered = set(DECLINES) | set(SURFACE_DRIVEN)
+    assert declared == covered, (sorted(declared - covered), sorted(covered - declared))
+    # and the PARAMETRISED sets are the dicts: an entry added below the freeze is a test that never runs
+    assert set(DECLINE_IDS) == set(DECLINES) and set(SURFACE_IDS) == set(SURFACE_DRIVEN), \
+        "an entry was added after the parametrised ids were frozen — it would never run; move its block above the freeze"
+
+
+def test_the_collected_parametrisations_cover_every_declared_id(request):
+    """The EXECUTION side (research, 2026-09-20): the two guards above compare artifacts that share a parent —
+    the frozen tuple and the dict it was frozen from. This one takes the other side from pytest's own
+    collection: the `site_id` of every collected node of the two parametrised tests in this module, which
+    is what will actually RUN, and asserts it equals the declared set. A collection that fell short (the
+    143-for-157 shape) is visible only from this side. Under a narrowed selection the collection is narrow
+    by request, so this SKIPS BY NAME rather than reading a deselection as a defect — and it detects the
+    narrowing by its EFFECT (a node of THIS module deselected, recorded by conftest's pytest_deselected
+    hook; -k, -m, --deselect, --lf, --sw and any future narrower all reach it) or by a node id / file
+    argument (which restricts collection without deselecting). A hand list of flags missed --sw, which
+    deselects a random prefix under pytest-randomly, and the guard accused a correct tree (research,
+    2026-09-20). A -k that keeps this whole module, or --lf on a cold cache, deselects nothing here and
+    the guard ENFORCES. The recorder's PRESENCE is asserted (conftest initialises the attribute in
+    pytest_configure): an absent recorder is a named failure, never a silent enforce — the third outcome."""
+    cfg = request.config
+    assert hasattr(cfg, "veracium_deselected"), \
+        "the pytest_deselected recorder (tests/conftest.py) did not run — this guard cannot tell a whole collection from a narrowed one"
+    this_module = request.node.nodeid.split("::")[0]
+    deselected_here = sorted(n for n in cfg.veracium_deselected if n.split("::")[0] == this_module)
+    narrowed = bool(deselected_here) or any("::" in a for a in cfg.args)
+    if narrowed:
+        pytest.skip(f"selection narrowed (a deselection in this module, or a node id on the command line): "
+                    f"the collected-vs-declared comparison needs the whole module; {len(deselected_here)} of its nodes deselected")
+    here = pathlib.Path(__file__).resolve()
+    collected = {}
+    for item in request.session.items:
+        if pathlib.Path(str(item.fspath)).resolve() != here or not hasattr(item, "callspec"):
+            continue
+        collected.setdefault(item.originalname, set()).add(item.callspec.params.get("site_id"))
+    ran = collected.get("test_one_declining_decision_moves_the_counters_by_exactly_one", set()) | \
+          collected.get("test_the_surface_driven_sites_decline_once_per_candidate", set())
+    assert ran == set(SITES), (f"collected {len(ran)} parametrisations for {len(SITES)} declared ids: "
+                               f"never collected {sorted(set(SITES) - ran)}; collected but undeclared {sorted(ran - set(SITES))}")
+
+
+@pytest.mark.parametrize("site_id", DECLINE_IDS)
+def test_one_declining_decision_moves_the_counters_by_exactly_one(site_id, enabled, monkeypatch):
+    entry = DECLINES[site_id]
+    if isinstance(entry, TwoPhase):
+        state = entry.setup(monkeypatch)
+        dc, df, de = _delta(site_id, lambda: entry.run(state))
+    else:
+        dc, df, de = _delta(site_id, lambda: entry(monkeypatch))
+    assert (dc, df, de) == (1, 1, 0), f"{site_id}: consulted moved {dc}, fired moved {df}, errors {de}"
+
+
+@pytest.mark.parametrize("site_id", SURFACE_IDS)
+def test_the_surface_driven_sites_decline_once_per_candidate(site_id, enabled):
+    dc, df, de = _delta(site_id, SURFACE_DRIVEN[site_id])
+    assert df >= 1 and dc >= df and de == 0, f"{site_id}: consulted {dc}, fired {df}, errors {de}"

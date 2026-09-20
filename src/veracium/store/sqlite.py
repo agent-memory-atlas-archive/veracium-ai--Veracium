@@ -50,6 +50,7 @@ _SITE_IMPORT_EPISODE_KIND = declare_site("store.import.episode-kind-not-recognis
 # specs/0041 tranche 3: the operation's refusals (INV-5 scope; the reason vocabulary; 0010 X21 on a claimed input;
 # §4h(i)'s derived-disposition rule) and INV-11 keyed on the ATTESTATION record at the two whole-record writers
 _SITE_REDACT_TARGET = declare_site("store.redact.target")
+_SITE_REDACT_BOTH_OR_NEITHER = declare_site("store.redact.both-or-neither")   # §4a: exactly one target (its own id, 2026-09-20)
 _SITE_REDACT_REASON = declare_site("store.redact.reason-not-registered")
 _SITE_REDACT_CLAIMED = declare_site("store.redact.input-claimed")
 _SITE_REDACT_DISPOSITION = declare_site("store.redact.disposition-changed")
@@ -2512,9 +2513,9 @@ class SqliteStore(Store):
         Idempotent BY CONTENT (§4b-ii): a second call writes nothing and returns the original receipt
         with `repeated=True`. INV-5: an unknown target, a cross-user target, both or neither target, and an
         unregistered reason refuse loudly — never a silent no-op."""
-        with _SITE_REDACT_TARGET.consult():
+        with _SITE_REDACT_BOTH_OR_NEITHER.consult():
             if (edge_id is None) == (episode_id is None):
-                raise _SITE_REDACT_TARGET.fire(ValueError(
+                raise _SITE_REDACT_BOTH_OR_NEITHER.fire(ValueError(
                     "redact takes exactly one of edge_id / episode_id (specs/0041 §4a)"), "both-or-neither")
         with _SITE_REDACT_REASON.consult():
             if reason not in _redaction.REDACTION_REASONS:
