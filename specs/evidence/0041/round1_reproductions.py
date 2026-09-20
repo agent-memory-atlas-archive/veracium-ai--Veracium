@@ -44,9 +44,15 @@ def compiler(prompt, *, system=None, role="compile", json_schema=None):
     st.add_edge(edge("e-secret", "[REDACTED]"))          # simulate: content cleared in the store...
     st.set_wiki(U, "", st.store_version(U))              # ...and the wiki cleared, in the same "transaction"
     return prompt                                          # ...then compilation finishes with what it READ (a real compiler summarises it; echoing keeps the content visible)
+# The reviewer's claim held at the pin: the compile stamped the version it read AT PUBLISH, so the content it
+# had read before the redaction went back into the wiki as current. 0041 tranche 5 (2026-09-20): the compile
+# reads the version BEFORE its inputs and the publish is one conditional statement on it — the redaction's
+# bump refuses the publish; what the wiki holds is what the redaction's own clear wrote. Both printed.
 C.compile_wiki(st, compiler, U, DEFAULT_RELATIONS)
 wiki_text, ver = st.get_wiki(U)
-print("F2 original content back in wiki after redaction:", PROSE in wiki_text, "| stamped at current store version:", ver == st.store_version(U),
+print("F2 original content back in wiki after redaction: True | stamped at current store version: True (the reviewer's claim, at the pin)",
+      "| FLIPPED at 0041 tranche 5: content back in wiki:", PROSE in wiki_text,
+      "| the wiki is the redaction's own clear, stamped at its version:", wiki_text == "" and ver == st.store_version(U),
       "| needs_recompile():", C.needs_recompile(st, U, 1, DEFAULT_RELATIONS))
 st.close()
 # ---- F4: a supported operation updates an EXISTING edge under an arbitrary operation id with no linking row

@@ -338,6 +338,22 @@ first.*
 > witness). The witnessed receipt is `reconstructed=True`, reason `imported_notice`. What remains: tranche 5
 > (§4e's delayed writers, the transition evidence rows, the closure ledger).
 
+> **Implementation note, tranche 5 (2026-09-20) — §4e's delayed writers, and the last strict xfail.** Both
+> paths §4e names, in the two shapes it admits: the embedding upsert takes `BEGIN IMMEDIATE` BEFORE its read
+> (the read and the insert one transaction under the DATABASE lock; a writer that cannot take the lock within
+> the busy timeout refuses in the 0007 §4c form — `store.embedding.txn-locked`, a declared site — never a
+> silent skip; an already-open transaction is joined), and the wiki publish is ONE conditional statement —
+> `INSERT … SELECT … WHERE the write counter still equals the version the compile read BEFORE its inputs`
+> — so the check and the write are indivisible and a compile that read content before a redaction can never
+> publish it (`set_wiki` returns whether it wrote; a stale compile publishes nothing and the next read
+> recompiles). Round-2 F1a's two-connection reproduction now REFUSES inside A's window (B's write cannot take
+> the lock, the refusal propagates through A's hook, A rolls back, nothing is stored, A's connection is
+> reusable) and round-1 F2's wiki race is refused by the statement; both reproductions print the flipped
+> outcome beside the reviewer's claim. The eleventh strict xfail flips green; the campaign's derived
+> coverage reads no strict xfail awaiting a control. INV-9's wording, deferred to dev's reproduction, is the
+> §4e rule as landed. What remains of 0041 on the dev side: nothing but the implementation-review package,
+> on the owner's word.
+
 ---
 
 ## 1. Problem and motivation
@@ -1750,7 +1766,7 @@ REVOCATION** (`revoked_source`) — which v5 did not name at all.
 | inv | statement | why |
 |---|---|---|
 | **INV-8** | `""` is **REJECTED** by the tombstone CHECK | F3 round 1. `TEXT NOT NULL` permits `""`; **the test must be seen to FAIL before the CHECK exists.** 🔴 **v7 — the "legitimately empty vs redacted-to-empty" ambiguity this invariant was carrying is RESOLVED in §4b: redaction NEVER writes `""`** (REPLACE writes the marker, CLEAR writes `NULL`), so INV-8 rejects a value redaction cannot produce, and a legitimately empty field is never mistaken for a redacted one |
-| **INV-9** | no read-compute-publish path republishes content across a redaction | F2 round 1 — **and round 2's F1 says the check must be ATOMIC, not instance-local. Wording deferred to dev's two-connection reproduction** |
+| **INV-9** | no read-compute-publish path republishes content across a redaction — **as landed (tranche 5, 2026-09-20): the read and the publish are one transaction under the database lock (the embedding upsert) or one conditional statement on the version read before the inputs (the wiki publish)** | F2 round 1 — and round 2's F1 says the check must be ATOMIC, not instance-local; `tests/test_0041_delayed_writers.py` and the flipped two-connection test bind it |
 | **INV-10** | an imported redaction notice never presents as locally witnessed | F5 round 1 |
 | **INV-11** | 🔴 **v9:** an ordinary write to a field whose redaction is **ATTESTED** is **refused** — *not* keyed on the marker bytes; an unattested marker stays writable (§4b) | F3 round 1; re-keyed by v7's attestation rule |
 | **INV-12** | `embedded_text`'s field set ⊆ `content_digest`'s | 🔴 **round-2 F1: the test PASSES when `embedded_text` is widened with `original_relation`, because the fixture leaves optional fields unset. A check that cannot fail. Fixture correction owed with dev's reproduction** |

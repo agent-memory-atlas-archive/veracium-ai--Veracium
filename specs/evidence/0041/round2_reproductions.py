@@ -67,17 +67,30 @@ def interleave(live):
     legacy_insert_edge(B, tomb)                   # the redaction, committed on B (a planted row: the mirror refuses the write path)
     B._conn.execute("DELETE FROM edge_embedding WHERE edge_id='e-1'"); B._conn.commit()
     return real(live)                             # A checks the digest of the row it ALREADY read
+# The reviewer's claim held at the pin: A's SELECT and INSERT were not one transaction, B's tombstone landed
+# between them, and the stale vector was STORED under the original digest. 0041 tranche 5 (2026-09-20) put
+# `BEGIN IMMEDIATE` before A's read: B's write inside A's window cannot take the lock and refuses, the refusal
+# propagates through A's hook, A rolls back — nothing is stored. Printed as found, and the flip beside it.
+B._conn.execute("PRAGMA busy_timeout=200")        # the reproduction should not wait the store's full timeout
 semantic.content_digest = interleave
-ok = A.upsert_embedding(edge_id="e-1", user_id=U, embedder_id="emb@1", content_digest=d_orig, dim=2,
-                        vec=semantic.pack_vec([1.0, 0.0]) if hasattr(semantic, "pack_vec") else b"\x00" * 8,
-                        built_at="2026-09-15T00:00:00Z")
+ok, refused = None, None
+try:
+    ok = A.upsert_embedding(edge_id="e-1", user_id=U, embedder_id="emb@1", content_digest=d_orig, dim=2,
+                            vec=semantic.pack_vec([1.0, 0.0]) if hasattr(semantic, "pack_vec") else b"\x00" * 8,
+                            built_at="2026-09-15T00:00:00Z")
+except Exception as exc:                          # B's lock refusal, raised through A's hook
+    refused = exc
 semantic.content_digest = real
 rows = B._conn.execute("SELECT content_digest FROM edge_embedding WHERE edge_id='e-1'").fetchall()
 live_now = B.edges(U, active_only=False)[0]
-print("F1a upsert reported success after B's redaction committed:", ok)
-print("F1a stale vector STORED under the original digest:", [r[0] for r in rows] == [d_orig])
+print("F1a upsert reported success after B's redaction committed: True (the reviewer's claim, at the pin)",
+      "| FLIPPED at 0041 tranche 5: B's write inside A's window refused:", refused is not None and "locked" in str(refused).lower(),
+      "| A's upsert reported success:", ok is True, "| A's window closed:", not A._conn.in_transaction)
+print("F1a stale vector STORED under the original digest: True (at the pin) | FLIPPED at 0041 tranche 5:",
+      [r[0] for r in rows] == [d_orig])
 print("F1a live edge is the tombstone (search would exclude the row by digest):",
-      live_now.object == MARKER and semantic.content_digest(live_now) != d_orig)
+      live_now.object == MARKER and semantic.content_digest(live_now) != d_orig,
+      "| FLIPPED at 0041 tranche 5: the live edge is UNCHANGED (B's redaction never landed):", live_now.object != MARKER)
 ma.close(); mb.close()
 
 # ---- F1b: the packaged INV-12 test passes when embedded_text is widened with original_relation

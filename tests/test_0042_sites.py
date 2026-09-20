@@ -1157,4 +1157,26 @@ def _import_plan_repopulates(s, e):
 DECLINES.update({
     "store.import.attested-redaction": TwoPhase(lambda mp: _redacted_then_plan(), lambda st: _import_plan_repopulates(*st)),
 })
+
+
+# specs/0041 §4e (tranche 5): the embedding upsert's read-and-publish lock — a second connection holds the write
+# lock; the upsert cannot take BEGIN IMMEDIATE within its busy timeout and refuses loudly (0007 §4c form)
+def _embedding_lock_refused():
+    import sqlite3 as _sq, tempfile as _tf, os as _os
+    from veracium.store.sqlite import SqliteStore as _SS
+    d = _tf.mkdtemp(); path = _os.path.join(d, "lock.db")
+    s = _SS(path); e = _edge("el1"); s.add_edge(e)
+    s._conn.execute("PRAGMA busy_timeout=50")
+    other = _sq.connect(path); other.execute("BEGIN IMMEDIATE")
+    try:
+        with pytest.raises(_sq.OperationalError):
+            s.upsert_embedding(edge_id="el1", user_id=U, embedder_id="emb@1", content_digest="d", dim=2, vec=b"\x00\x00",
+                               built_at="2026-09-20T00:00:00Z")
+    finally:
+        other.rollback(); other.close(); s.close()
+
+
+DECLINES.update({
+    "store.embedding.txn-locked": lambda mp: _embedding_lock_refused(),
+})
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})

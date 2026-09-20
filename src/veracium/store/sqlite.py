@@ -87,6 +87,7 @@ _SITE_RENEW_REFUSED = declare_site("store.consolidation.renew-refused")
 _SITE_TRANSITION = declare_site("store.consolidation.transition")
 _SITE_EMBEDDING_DELAYED_WRITER = declare_site("store.embedding.delayed-writer")
 _SITE_EMBEDDING_STALE_CONTENT = declare_site("store.embedding.stale-content")
+_SITE_EMBEDDING_TXN_LOCKED = declare_site("store.embedding.txn-locked")   # specs/0041 §4e (tranche 5): the read-and-publish lock
 _SITE_WRITE_NOT_CURRENT = declare_site("store.consolidation.write-not-current")
 
 # The schema is DERIVED from the versioning registry — one declaration, which
@@ -2738,8 +2739,34 @@ class SqliteStore(Store):
     # -- semantic lane (specs/0027 §4f) -------------------------------------
     def upsert_embedding(self, *, edge_id, user_id, embedder_id,
                          content_digest, dim, vec, built_at) -> bool:
+        """specs/0027 §4f's delayed writer, made ONE transaction under the DATABASE lock (specs/0041 §4e,
+        tranche 5): `BEGIN IMMEDIATE` BEFORE the read, so the row this worker checks its digest against is
+        the row its vector is stored beside — a second connection's redaction cannot land between the SELECT
+        and the INSERT (round-2 F1's two-connection race). An instance lock never serialised across
+        connections. The lock refusal is the 0007 §4c form: busy_timeout, then refuse loudly naming the
+        site — never a silent skip. Joins an already-open transaction rather than nesting."""
         from .. import semantic as _semantic
         with self._lock:
+            opened = False
+            if not self._conn.in_transaction:
+                with _SITE_EMBEDDING_TXN_LOCKED.consult():
+                    try:
+                        self._conn.execute("BEGIN IMMEDIATE")
+                    except sqlite3.OperationalError as e:
+                        raise _SITE_EMBEDDING_TXN_LOCKED.fire(sqlite3.OperationalError(
+                            f"could not take the write lock for the embedding upsert ({e}) — the read and the "
+                            f"publish are one transaction, and a read outside it is the race (specs/0041 §4e; "
+                            f"0007 §4c)")) from e
+                opened = True
+            try:
+                return self._upsert_embedding_in_txn(edge_id, user_id, embedder_id, content_digest, dim, vec, built_at, _semantic)
+            except BaseException:
+                if opened and self._conn.in_transaction:
+                    self._conn.rollback()
+                raise
+
+    def _upsert_embedding_in_txn(self, edge_id, user_id, embedder_id, content_digest, dim, vec, built_at, _semantic) -> bool:
+        if True:
             row = self._conn.execute(
                 "SELECT json FROM edges WHERE id=? AND user_id=?",
                 (edge_id, user_id)).fetchone()
@@ -2804,12 +2831,19 @@ class SqliteStore(Store):
                                  (user_id,)).fetchone()
         return (row[0], row[1]) if row else None
 
-    def set_wiki(self, user_id, text, store_version) -> None:
+    def set_wiki(self, user_id, text, store_version) -> bool:
+        """specs/0041 §4e (tranche 5): the wiki PUBLISH is ONE conditional statement — written only if the
+        user's write counter still equals `store_version`, the value the compile read BEFORE its inputs. The
+        check and the write are the same statement, so no second connection can move the store between them
+        (a redaction bumps the counter, so a compile that read the content before it can never publish it).
+        Returns whether the row was written; a stale compile publishes nothing and the next read recompiles."""
         with self._lock:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO wiki(user_id,text,store_version) VALUES(?,?,?)",
-                (user_id, text, store_version))
+            n = self._conn.execute(
+                "INSERT OR REPLACE INTO wiki(user_id,text,store_version) "
+                "SELECT ?,?,? WHERE COALESCE((SELECT n FROM write_counter WHERE user_id=?), 0) = ?",
+                (user_id, text, store_version, user_id, store_version)).rowcount
             self._conn.commit()
+            return n == 1
 
     def store_version(self, user_id) -> int:
         row = self._conn.execute("SELECT n FROM write_counter WHERE user_id=?", (user_id,)).fetchone()

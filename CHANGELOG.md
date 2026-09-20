@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Changed: the two delayed writers make their read and their publish one transaction (specs/0041
+  §4e, tranche 5).** The embedding upsert takes the database write lock (`BEGIN IMMEDIATE`) before it
+  reads the edge it checks its digest against, so a second connection's redaction cannot land between
+  the read and the insert; a writer that cannot take the lock within the busy timeout is refused loudly
+  (the 0007 lock-refusal form, a declared site), never skipped. The wiki compile reads the store version
+  BEFORE its inputs and publishes through one conditional statement, written only if the counter is
+  unchanged — a store that moved during the slow compile (a redaction, any write) is never published
+  over; the compile returns its text for that call and the next read recompiles. `Store.set_wiki` now
+  returns whether the row was written. **Who must act:** hosts that IMPLEMENT `Store` and cache a wiki
+  must return False rather than publish over a moved store; everyone else changes nothing. The
+  round-2 two-connection regression (a stale vector stored under the original digest while the live
+  edge was the tombstone) now refuses inside the window and stores nothing; the round-1 wiki race
+  (cleared content republished as current) is refused by the statement.
 - **Changed: export format 12 → 13 — the redaction record travels, and import applies it under the
   §4g contract (specs/0041, tranche 4b).** An export from a store holding any redaction record carries one
   `{"record": "redaction", ...}` line per record (the attestation: target, the carriers treated, the marker

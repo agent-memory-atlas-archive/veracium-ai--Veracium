@@ -62,7 +62,10 @@ DISPOSITIONS = {
    (W, "**all**", "act", "clean — same verb through the CLI", "`test_forget_cli_requires_confirmation`"),
 
  # -- derived views ----------------------------------------------------------
- ("src/veracium/compile.py", "compile_wiki", "set_wiki", "888fd4a4d703"):
+ # 0041 §4e (tranche 5, 2026-09-20): the call's text moved — the publish now passes the version read
+ # BEFORE the inputs and is one conditional statement in the store (written only if the counter is
+ # unchanged); the disposition below is unchanged in substance, re-keyed to the new digest
+ ("src/veracium/compile.py", "compile_wiki", "set_wiki", "4365735ba43d"):
    (M, "none directly — **caches a trust decision** (carries the compiler-policy digest envelope, `0003` §4c-ii; the trust-reducing-invalidation drop shipped with the 0004 W-series, 0.13.0)", "none",
     "✅ the cached wiki no longer outlives a revoked trust decision: a trust-reducing invalidation drops it (WIKI_RETAINING_REASONS names the benign keepers) — [M8-wiki] resolved", "`test_dispute_drops_the_wiki` + `test_third_party_supersession_drops_the_wiki` + `test_decay_does_not_drop_the_wiki` (the W1–W4 family)"),
 
@@ -186,7 +189,7 @@ STATES = {
   ("src/veracium/__init__.py", "Memory.correct", "add_episode", "38943ba03330"): "clean",
   ("src/veracium/__init__.py", "Memory.forget", "forget_user", "c5d9e9e2da39"): "clean",
   ("src/veracium/cli.py", "_forget", "forget_user", "269b73112fab"): "clean",
-  ("src/veracium/compile.py", "compile_wiki", "set_wiki", "888fd4a4d703"): "clean",
+  ("src/veracium/compile.py", "compile_wiki", "set_wiki", "4365735ba43d"): "clean",
   ("src/veracium/graph.py", "apply_supersession", "apply_supersession_plan", "e1ecd66351bd"): "clean",
   ("src/veracium/ingest.py", "ingest_event", "add_episode", "79166908890e"): "clean",
   ("src/veracium/ingest.py", "ingest_event", "add_episode", "836c8cca9da2"): "clean",

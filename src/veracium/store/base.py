@@ -668,7 +668,13 @@ class Store(ABC):
 
     @store_mutator
     @abstractmethod
-    def set_wiki(self, user_id: str, text: str, store_version: int) -> None: ...
+    def set_wiki(self, user_id: str, text: str, store_version: int) -> bool:
+        """Publish the compiled wiki ONLY IF the user's write counter still equals `store_version` — the
+        value the compiler read before its inputs (specs/0041 §4e: the read and the publish are one
+        transaction, or one statement; a captured value compared later is not a guard). Returns whether the
+        row was written. A store that cannot make the check and the write indivisible must return False
+        rather than publish over a moved store."""
+        ...
 
     @abstractmethod
     def store_version(self, user_id: str) -> int:

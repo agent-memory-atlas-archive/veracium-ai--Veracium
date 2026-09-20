@@ -11,7 +11,11 @@ the episode itself is withheld from the grounded compile.
 """
 
 from __future__ import annotations
+
+import logging
 from .census import declare_site
+
+_log = logging.getLogger(__name__)
 
 import hashlib
 import json
@@ -189,6 +193,9 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
     is always present, including the +0/+0 case."""
     _budgets.validate_surface_params("wiki", wiki_input_budget,
                                      item_cap=item_cap, variant_cap=variant_cap)
+    # specs/0041 §4e (tranche 5): the version is read BEFORE the inputs and the publish is conditional on
+    # it — a store that moves during the slow compile (a redaction, any write) is never published over
+    version_at_begin = store.store_version(user_id)
     edges, episodes = _grounded_inputs(store, user_id, relations)
     # I10g: the bound governs the COMPLETE serialized prompt — reserve the fixed
     # scaffolding (COMPILE_SYSTEM + the prompt skeleton) BEFORE item selection, so a
@@ -266,8 +273,12 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
                                           facts_dropped, eps_dropped)
     digest = _policy_digest(relations, wiki_input_budget=wiki_input_budget,
                             variant_cap=variant_cap, item_cap=item_cap)
-    store.set_wiki(user_id, f"{_ENVELOPE}{digest}\n{wiki}",
-                   store.store_version(user_id))
+    published = store.set_wiki(user_id, f"{_ENVELOPE}{digest}\n{wiki}", version_at_begin)
+    if not published:
+        # the store moved under the compile: nothing is published (the next read recompiles from the store
+        # of record); the wiki text is still returned for THIS call's own use — it was compiled from a
+        # consistent read, and it is never cached
+        _log.info("wiki compile for %r not published: the store moved during the compile (specs/0041 §4e)", user_id)
     return wiki
 
 

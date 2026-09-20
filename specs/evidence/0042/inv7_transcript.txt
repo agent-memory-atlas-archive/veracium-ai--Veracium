@@ -1,36 +1,35 @@
-# generated 2026-09-20T01:09Z against veracium @ 8ea59e79e6e6833521aefd0b828a5a24223f5aa2
-# RE-PINNED 2026-09-20 0041 tranche 4b (export + the import contract) landed in 8ea59e79e6e6833521aefd0b828a5a24223f5aa2: body byte-identical; the run was made on the working tree this commit then committed, so the pin moves to it
+# generated 2026-09-20T02:06Z against veracium @ c2b96f59c1cf6db44845f586505752ddb07c2c31
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD 8ea59e79e6e6833521aefd0b828a5a24223f5aa2
-twin (uninstrumented): derived from HEAD 8ea59e79e6e6833521aefd0b828a5a24223f5aa2 by inv7_uninstrument.py
-twin derivation: 160 declare_site removed, 301 fire() unwrapped, 149 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
+HEAD c2b96f59c1cf6db44845f586505752ddb07c2c31  (src DIRTY: M src/veracium/combining.py;  M src/veracium/compile.py;  M src/veracium/store/base.py;  M src/veracium/store/sqlite.py)
+twin (uninstrumented): derived from HEAD c2b96f59c1cf6db44845f586505752ddb07c2c31 by inv7_uninstrument.py
+twin derivation: 161 declare_site removed, 302 fire() unwrapped, 150 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
 
 python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
 suites: tests/test_0027_policy_lane.py tests/test_0027_policy_receipt.py tests/test_0027_semantic_recall.py tests/test_compile_gate.py tests/test_0037_procedural.py tests/test_0019_ungrounded.py tests/test_0014_schema.py tests/test_schema_model.py tests/test_0003_supersession_contested.py tests/test_0003_supersession_guard.py tests/test_0003_supersession_recall.py tests/test_0003_supersession_store.py tests/test_0028_resolution.py tests/test_maintenance_invariant.py tests/test_0020_scope_vectors.py tests/test_0015_lifecycle.py tests/test_0011_entitlement.py tests/test_0009_import_migration.py tests/test_0010_consolidation_primitives.py tests/test_0014_receipt_split.py tests/test_0022_revocation_operation.py tests/test_0037_capture.py tests/eval/edge_events/test_0029_acceptance_corpus.py tests/test_0010_visibility_reservation.py tests/test_0020_read_surfaces.py tests/test_0022_sweep_vectors.py tests/test_0039_degradation_visibility.py tests/test_audit.py tests/test_confirm_contract_0008.py
 
 ARM              RECORDS     SHA256(observer trace)                                            PYTEST
-healthy              75543  93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382  861 passed, 2 warnings in 112.02s (0:01:52) (exit 0, 112.9s)
-failing              75543  93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382  861 passed, 2 warnings in 111.17s (0:01:51) (exit 0, 112.0s)
-off                  75543  93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382  861 passed, 2 warnings in 110.85s (0:01:50) (exit 0, 111.7s)
-uninstrumented       75543  93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382  861 passed, 2 warnings in 110.56s (0:01:50) (exit 0, 111.6s)
+healthy              75569  ef5301439e7f736fbf925b2d8257e3bc23106f498df5d47149ac9ca9dfd7ef5f  861 passed, 2 warnings in 108.87s (0:01:48) (exit 0, 109.7s)
+failing              75569  ef5301439e7f736fbf925b2d8257e3bc23106f498df5d47149ac9ca9dfd7ef5f  861 passed, 2 warnings in 109.54s (0:01:49) (exit 0, 110.3s)
+off                  75569  ef5301439e7f736fbf925b2d8257e3bc23106f498df5d47149ac9ca9dfd7ef5f  861 passed, 2 warnings in 109.01s (0:01:49) (exit 0, 109.8s)
+uninstrumented       75569  039293e1f6920c67a2445645d4e476dd72a5a2e718ffe2b09b87fd175f806261  861 passed, 2 warnings in 109.61s (0:01:49) (exit 0, 110.5s)
 
-VERDICT: observer traces IDENTICAL across 4 arms over 861 tests (reference: uninstrumented; 0 tests excluded as non-reproducible between two runs of the reference arm)
-  healthy: 861 tests compared, 0 differing, 0 not in both
-  failing: 861 tests compared, 0 differing, 0 not in both
-  off: 861 tests compared, 0 differing, 0 not in both
+VERDICT: observer traces IDENTICAL across 4 arms over 860 tests (reference: uninstrumented; 1 tests excluded as non-reproducible between two runs of the reference arm)
+  healthy: 860 tests compared, 0 differing, 0 not in both
+  failing: 860 tests compared, 0 differing, 0 not in both
+  off: 860 tests compared, 0 differing, 0 not in both
 
 EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between the two reference runs; inputs the run does not freeze):
-  (none)
-control run uninstrumented-control: records 75543, sha256 93938a3289a0a4dbc311ad8280c5ec301756bebdc8c41eeab6f8ced36e131382, 861 passed, 2 warnings in 112.86s (0:01:52)
+  tests/eval/edge_events/test_0029_acceptance_corpus.py::test_acceptance_corpus_passes_100_percent
+control run uninstrumented-control: records 75569, sha256 3e9293312aaff89cb3179d0606b18775c1c4e45a25946781247f47aacd4e54a1, 861 passed, 2 warnings in 108.58s (0:01:48)
 
 CROSS-CHECKS:
-  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_consulted": 153, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7223}
-  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_with_errors": 153, "subsequence_holds": true, "subsequence_matched": 7223}
-  off: {"census_enabled": false, "registry_size": 160}
-  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace15/twin/src/veracium/__init__.py"}
+  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_consulted": 154, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7223}
+  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_with_errors": 154, "subsequence_holds": true, "subsequence_matched": 7223}
+  off: {"census_enabled": false, "registry_size": 161}
+  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace16/twin/src/veracium/__init__.py"}
 
-OBSERVED SYMBOLS: 97 wrapped of 104 declared; EXCLUDED (unreachable from outside, by name):
+OBSERVED SYMBOLS: 98 wrapped of 105 declared; EXCLUDED (unreachable from outside, by name):
   asof/recall.py:recall_at.claim: nested inside a function; unreachable from outside
   asof/recall.py:recall_at.grounded: nested inside a function; unreachable from outside
   graph.py:_absorption_scope_gate.same_scope: nested inside a function; unreachable from outside
@@ -187,6 +186,8 @@ HISTOGRAM (reference arm), symbol -> decision: count
   store/sqlite.py:SqliteStore._ordinary_read_visible -> True: 218
   store/sqlite.py:SqliteStore._upsert_edge_row -> None: 3061
   store/sqlite.py:SqliteStore._upsert_edge_row -> ValueError: 9
+  store/sqlite.py:SqliteStore._upsert_embedding_in_txn -> False: 2
+  store/sqlite.py:SqliteStore._upsert_embedding_in_txn -> True: 24
   store/sqlite.py:SqliteStore._write_absorption_flattening -> None: 761
   store/sqlite.py:SqliteStore._write_consolidation_contributions -> None: 8
   store/sqlite.py:SqliteStore._write_contribution -> False: 29

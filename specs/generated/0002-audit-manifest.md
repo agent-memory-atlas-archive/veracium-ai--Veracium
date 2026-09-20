@@ -27,7 +27,7 @@
 | `src/veracium/__init__.py:2098` | `Memory.correct()` | `add_episode` | `38943ba03330` | `clean` | write-time | episode provenance | act | clean — post-commit narration of an ALREADY-authorised correction (specs/0011 §4e); writes no trust decision | `test_correct_requires_bound_authorisation` |
 | `src/veracium/__init__.py:2118` | `Memory.forget()` | `forget_user` | `c5d9e9e2da39` | `clean` | write-time | **all** — irreversible erasure | act | clean — erasure is the contract | `test_forget_erases_everything_and_only_that_user` |
 | `src/veracium/cli.py:319` | `_forget()` | `forget_user` | `269b73112fab` | `clean` | write-time | **all** | act | clean — same verb through the CLI | `test_forget_cli_requires_confirmation` |
-| `src/veracium/compile.py:269` | `compile_wiki()` | `set_wiki` | `888fd4a4d703` | `clean` | maintain-time | none directly — **caches a trust decision** (carries the compiler-policy digest envelope, `0003` §4c-ii; the trust-reducing-invalidation drop shipped with the 0004 W-series, 0.13.0) | none | ✅ the cached wiki no longer outlives a revoked trust decision: a trust-reducing invalidation drops it (WIKI_RETAINING_REASONS names the benign keepers) — [M8-wiki] resolved | `test_dispute_drops_the_wiki` + `test_third_party_supersession_drops_the_wiki` + `test_decay_does_not_drop_the_wiki` (the W1–W4 family) |
+| `src/veracium/compile.py:276` | `compile_wiki()` | `set_wiki` | `4365735ba43d` | `clean` | maintain-time | none directly — **caches a trust decision** (carries the compiler-policy digest envelope, `0003` §4c-ii; the trust-reducing-invalidation drop shipped with the 0004 W-series, 0.13.0) | none | ✅ the cached wiki no longer outlives a revoked trust decision: a trust-reducing invalidation drops it (WIKI_RETAINING_REASONS names the benign keepers) — [M8-wiki] resolved | `test_dispute_drops_the_wiki` + `test_third_party_supersession_drops_the_wiki` + `test_decay_does_not_drop_the_wiki` (the W1–W4 family) |
 | `src/veracium/graph.py:219` | `apply_supersession()` | `apply_supersession_plan` | `e1ecd66351bd` | `clean` | write-time | the WHOLE supersession outcome — `active` (guarded retire / absorb), reinforcement persist-only (accepted `0012` Design 1: the incoming persists untouched, the prior is not written), `valid_from=min` on the incoming edge, the incoming insert, and the content-free refusal inventory; `needs_confirmation` never cleared here | observation | ✅ **`0003` (accepted 2026-08-08, implemented) — the authority guard.** A differing value retires the prior ONLY when incoming effective authority >= the prior's; otherwise the retirement is REFUSED (both edges kept, a durable content-free refusal recorded). One atomic CAS-linearized plan on a complete `expected_state`; `valid_from=min` operates on the unpersisted incoming edge (construction, not mutation of a stored row). Closes the unfiltered functional-supersession loop (0003 I1–I5). `correct()` is a separate `supersedes=` writer, out of 0003 scope (0011 E5). | `test_supersession_authority_matrix` · `test_refused_supersession_keeps_both` · `test_user_authored_ingest_can_supersede_third_party` · `test_a_refused_supersession_is_counted_and_logged` |
 | `src/veracium/ingest.py:387` | `ingest_event()` | `add_episode` | `836c8cca9da2` | `clean` | write-time | episode provenance (disclosure set at birth) | observation | clean — the origin of trust | `test_third_party_text_never_moves_into_the_grounded_block` |
 | `src/veracium/ingest.py:691` | `ingest_event()` | `add_episode` | `79166908890e` | `clean` | write-time | episode provenance (unparseable placeholder; disclosure set at birth) | observation | clean — never retains raw event text | `test_unparseable_extraction_degrades_gracefully` |
@@ -122,11 +122,11 @@ c5d9e9e2da39
   call:    store.forget_user(args.user)
   context: try
 
-888fd4a4d703
-  file:    src/veracium/compile.py:269
+4365735ba43d
+  file:    src/veracium/compile.py:276
   scope:   compile_wiki()
   mutator: set_wiki
-  call:    store.set_wiki(user_id, f'{_ENVELOPE}{digest}\n{wiki}', store.store_version(user_id))
+  call:    store.set_wiki(user_id, f'{_ENVELOPE}{digest}\n{wiki}', version_at_begin)
   context: -
 
 e1ecd66351bd

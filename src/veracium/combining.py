@@ -73,8 +73,8 @@ _STORE = "src/veracium/store/sqlite.py"
 COMBINING_SITES = {
 
     # -- specs/0027: the semantic derived index -----------------------------
-    (_STORE, "upsert_embedding"): SiteSpec(
-        False, why="0027 §4f: writes ONE derived-index row (a vector bound to "
+    (_STORE, "_upsert_embedding_in_txn"): SiteSpec(
+        False, why="specs/0041 §4e (tranche 5): the write now sits in the in-transaction body the lock-taking `upsert_embedding` calls — 0027 §4f: writes ONE derived-index row (a vector bound to "
         "one edge's content digest) — regenerable, trust-inert, never "
         "evidence; digest-conditional against the SINGLE live edge it "
         "derives from, so nothing is combined and no scope rule applies "

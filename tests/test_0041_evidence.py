@@ -67,8 +67,8 @@ def test_the_round1_reproduction_script_reports_every_claim_as_the_reviewer_foun
     out = r.stdout
     assert "F1b stored retired_reason == prose: True" in out and "F1b exported verbatim: True" in out
     assert "F1c markers persisted verbatim: True | exported: True" in out
-    assert ("F2 original content back in wiki after redaction: True | stamped at current store version: True "
-            "| needs_recompile(): False") in out
+    assert ("F2 original content back in wiki after redaction: True | stamped at current store version: True (the reviewer's claim, at the pin) "
+            "| FLIPPED at 0041 tranche 5: content back in wiki: False | the wiki is the redaction's own clear, stamped at its version: True") in out
     assert "| edge updated: True | contributions naming e-x: 0 | refusals: 0" in out and "'applied'" in out
 
 
@@ -311,8 +311,10 @@ def test_the_round2_reproduction_script_reports_every_claim_as_the_reviewer_foun
                        capture_output=True, text=True, timeout=600)
     assert r.returncode == 0, r.stderr[-2000:]
     out = r.stdout
-    assert "F1a upsert reported success after B's redaction committed: True" in out
-    assert "F1a stale vector STORED under the original digest: True" in out
+    assert ("F1a upsert reported success after B's redaction committed: True (the reviewer's claim, at the pin) "
+            "| FLIPPED at 0041 tranche 5: B's write inside A's window refused: True | A's upsert reported success: False | A's window closed: True") in out
+    assert "F1a stale vector STORED under the original digest: True (at the pin) | FLIPPED at 0041 tranche 5: False" in out
+    assert "FLIPPED at 0041 tranche 5: the live edge is UNCHANGED (B's redaction never landed): True" in out
     assert "F1b widened embedder still passes on the PACKAGED fixture (subset holds): True" in out
     assert "F1b the same widening is caught once original_relation is POPULATED: True" in out
     assert "F2 sanitize_llm_body leaves the marker intact: True" in out
@@ -325,8 +327,8 @@ def test_the_round2_reproduction_script_reports_every_claim_as_the_reviewer_foun
     assert "F6 prose key persisted in outcome_counts: True | exported verbatim: True" in out
 
 
-@pytest.mark.xfail(strict=True, reason="0041 §4e (round-2 F1): the embedding upsert's read and insert "
-                                       "are not one database transaction; implementation follows acceptance")
+# (strict xfail until 0041 tranche 5, 2026-09-20: the upsert now takes BEGIN IMMEDIATE before its read — B's
+# redaction inside A's window cannot take the lock, refuses through A's hook, A rolls back; nothing stored)
 def test_two_connection_publication_the_embedding_upsert_refuses_a_vector_for_content_another_connection_replaced(tmp_path):
     """The reviewer's two-connection regression, red first: connection A reads the
     edge inside upsert_embedding; connection B commits a redaction (the tombstone)
@@ -355,13 +357,18 @@ def test_two_connection_publication_the_embedding_upsert_refuses_a_vector_for_co
         B._conn.commit()
         return real(live)
     semantic.content_digest = interleave
+    outcome = None
     try:
         A.upsert_embedding(edge_id="e-1", user_id="u", embedder_id="emb@1", content_digest=d_orig, dim=2,
                            vec=b"\x00" * 8, built_at="2026-09-15T00:00:00Z")
+    except Exception as exc:           # tranche 5: B cannot take the write lock inside A's window and refuses loudly
+        outcome = exc
     finally:
         semantic.content_digest = real
     stored = B._conn.execute("SELECT content_digest FROM edge_embedding WHERE edge_id='e-1'").fetchall()
     assert stored == [], "a vector for content another connection already replaced was stored"
+    assert outcome is not None and "write lock" in str(outcome), outcome     # the refusal is loud and names the lock
+    assert not A._conn.in_transaction                                        # A's window is closed, the connection reusable
 
 
 def test_the_before_after_fixtures_validate_as_the_treatment_map_rules_them():

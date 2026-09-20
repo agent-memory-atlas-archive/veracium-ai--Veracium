@@ -83,6 +83,15 @@ def sub_ov(m):
     nl = N[g]
     if len(nl) == len(O[g]):
         return f'("{mod}", {nl[O[g].index(ln)]})'
+    # 0041 tranche 5 (2026-09-20): a STRUCTURAL attribute the inventory records (`bare` — a bare `raise`
+    # re-raising after a rollback) identifies a statement across generations without any text: when exactly
+    # one current candidate in the group shares the plan-time entry's attributes, that is the hop. The text
+    # path below fails on this function since tranche 4b — every refusal in it opens with the same line, and
+    # the previous generation's ordinal no longer names the plan-time statement.
+    attrs = {k: v for k, v in o.items() if k not in ("line",)}
+    same = [x["line"] for x in inv if all(x.get(k) == v for k, v in attrs.items()) and x.get("bare") is True]
+    if attrs.get("bare") is True and len(same) == 1:
+        return f'("{mod}", {same[0]})'
     assert prev_rp is not None, (g, O[g], nl, "the group's candidate count changed; pass the previous reviewed_points.json to re-key by text")
     key = f"{g[0]}:{g[1]}:{g[2]}:{O[g].index(ln) + 1}"
     prev = [r for r in prev_rp.values() if r["key"] == key]
