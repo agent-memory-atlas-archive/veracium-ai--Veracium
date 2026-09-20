@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Fixed: the 0043 canned-pipeline test assumed a git checkout (specs/0043; found by research's offline leg on the
+  0042 round-6 review package).** The harness recorded `git rev-parse HEAD` verbatim, so a report generated in an
+  extracted archive carried an EMPTY pin and the test asserting a 40-hex there was green in every checkout and red
+  for the reviewer. The harness now declares `unpinned (not a git checkout)` when git cannot answer, the test
+  accepts exactly the two honest values (a commit in a checkout, the declared marker elsewhere) and refuses an empty
+  pin, and the committed run's own pin test still requires the commit. Evidence and tests only; no product change.
 - **Fixed: the 0042 runtime leg ran 143 of its 157 declining executions, and one census id consulted twice per
   decline (specs/0042, round-6 pre-seal).** The leg's parametrised id list was evaluated above its last three
   entry blocks, so the fourteen entries below it (0041's tranches 3–5) never ran under the exactly-one delta

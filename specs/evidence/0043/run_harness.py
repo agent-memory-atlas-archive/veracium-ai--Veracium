@@ -45,6 +45,17 @@ import time
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
+UNPINNED = "unpinned (not a git checkout)"
+
+
+def tree_head() -> str:
+    """The commit this tree is at — or the DECLARED marker when the tree is not a git checkout (an extracted review
+    package): a report generated there says so instead of carrying an empty pin. 2026-09-20, research's leg on the
+    0042 round-6 package: the canned-pipeline test asserted a 40-hex here and was green in every checkout and red
+    in the archive — evidence that needs an environment must declare it, not assume it."""
+    r = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT)
+    h = r.stdout.strip()
+    return h if r.returncode == 0 and re.fullmatch(r"[0-9a-f]{40}", h) else UNPINNED
 
 
 def _strict_pairs(pairs):
@@ -255,7 +266,7 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
     ev, mc, ip, lg = _load("examiner_view"), _load("model_input_capture"), _load("interpreter"), _load("ledger")
     ep = _load("examiner_projection")
     out.mkdir(parents=True, exist_ok=True)
-    head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
+    head = tree_head()
     # the fixture, frozen: built once, digested as built
     db = out / "fixture.db"
     if db.exists(): db.unlink()
@@ -398,7 +409,7 @@ def reverify(res: dict, inner=None) -> dict:
     inner = inner or FakeModel()
     by = {(x["question_id"], x["arm"]): x for x in res["detail"]}
     qs = {q["id"]: q["text"] for q in res["questions"]}
-    out = {"head": subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip(),
+    out = {"head": tree_head(),
            "run_head": res["head"], "kept": len(res["kept"]), "view_digest_equal": None, "system_equal": 0, "prompt_outside_compiled_equal": 0,
            "compiled_block_present": 0, "baseline_transform_equal": 0, "mismatches": []}
     with tempfile.TemporaryDirectory() as d:

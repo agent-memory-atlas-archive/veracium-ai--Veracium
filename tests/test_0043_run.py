@@ -73,8 +73,35 @@ def test_the_pipeline_runs_end_to_end_on_the_canned_model_and_the_ledger_passes_
     assert res["rates"]["veracium"]["per_class"]["absent"] == "NOT PRESENTED"
     # the report exists and quotes the frozen inputs
     text = (out / "run_report.txt").read_text()
-    assert re.search(r"^# generated \S+ against veracium @ [0-9a-f]{40}$", text, re.M)
+    head_line = re.search(r"^# generated \S+ against veracium @ (.+)$", text, re.M); assert head_line, text[:120]
+    if (ROOT / ".git").exists():                       # a checkout pins the commit
+        assert re.fullmatch(r"[0-9a-f]{40}", head_line.group(1)), head_line.group(0)
+    else:                                              # an extracted archive DECLARES it is unpinned, never an empty pin
+        assert head_line.group(1) == rh.UNPINNED, head_line.group(0)
     assert "fixture store digest (as built): " in text and "temperature" in text and "EXCLUDED (INV-6, counted)" in text
+
+
+def test_a_tree_that_is_not_a_git_checkout_declares_itself_unpinned_and_a_checkout_pins_the_commit(monkeypatch):
+    """The header's pin has two honest values and no third: the 40-hex of a checkout, or the declared marker of a
+    git-less tree (an extracted review package). An EMPTY pin — what `git rev-parse` yields outside a checkout — is
+    the outcome this test exists to refuse (2026-09-20, found by research's offline leg on the sealed package).
+    DEPENDENCY, named: the git-less branch of the pipeline test above runs in NO checkout and NO CI lane — only in
+    a git-less tree, which today means the review package's stage smoke and research's offline leg; narrow either
+    and that branch goes dark. This test drives both answers in every environment so the mechanism is asserted
+    wherever the suite runs."""
+    rh = _load("run_harness")
+    import subprocess as sp
+    real = sp.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT)   # the control, read BEFORE any patch
+    class R:
+        def __init__(self, rc, out): self.returncode, self.stdout = rc, out
+    monkeypatch.setattr(rh.subprocess, "run", lambda *a, **k: R(128, ""))            # not a git checkout
+    assert rh.tree_head() == rh.UNPINNED
+    monkeypatch.setattr(rh.subprocess, "run", lambda *a, **k: R(0, "a" * 40 + "\n"))  # a checkout
+    assert rh.tree_head() == "a" * 40
+    monkeypatch.setattr(rh.subprocess, "run", lambda *a, **k: R(0, "\n"))             # git ran and answered nothing: still declared, never empty
+    assert rh.tree_head() == rh.UNPINNED
+    monkeypatch.undo()                                                                  # the control: this tree, un-patched
+    assert (rh.tree_head() == real.stdout.strip()) if real.returncode == 0 else (rh.tree_head() == rh.UNPINNED)
 
 
 def test_the_disciplined_arm_refuses_the_quarantined_fact_and_the_undisciplined_arm_asserts_it(fake_run):
