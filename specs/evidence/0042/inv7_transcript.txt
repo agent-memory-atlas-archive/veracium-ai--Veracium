@@ -1,38 +1,40 @@
-# generated 2026-09-20T20:55Z against veracium @ 61e7904690e698d690269e20cead7e1cf9f50123
-# RE-PINNED 2026-09-20 the 0042 round-7 fix landed in 61e7904690e698d690269e20cead7e1cf9f50123: body byte-identical; the run was made on the working tree this commit then committed, so the pin moves to it
+# generated 2026-09-20T23:13Z against veracium @ 4cbc9b6d8ce5c1305286f9f9e8ffc7a33f7d9707
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD 61e7904690e698d690269e20cead7e1cf9f50123
-twin (uninstrumented): derived from HEAD 61e7904690e698d690269e20cead7e1cf9f50123 by inv7_uninstrument.py
+HEAD 4cbc9b6d8ce5c1305286f9f9e8ffc7a33f7d9707
+twin (uninstrumented): derived from HEAD 4cbc9b6d8ce5c1305286f9f9e8ffc7a33f7d9707 by inv7_uninstrument.py
 twin derivation: 162 declare_site removed, 302 fire() unwrapped, 152 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
 
 python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
 suites: tests/test_0027_policy_lane.py tests/test_0027_policy_receipt.py tests/test_0027_semantic_recall.py tests/test_compile_gate.py tests/test_0037_procedural.py tests/test_0019_ungrounded.py tests/test_0014_schema.py tests/test_schema_model.py tests/test_0003_supersession_contested.py tests/test_0003_supersession_guard.py tests/test_0003_supersession_recall.py tests/test_0003_supersession_store.py tests/test_0028_resolution.py tests/test_maintenance_invariant.py tests/test_0020_scope_vectors.py tests/test_0015_lifecycle.py tests/test_0011_entitlement.py tests/test_0009_import_migration.py tests/test_0010_consolidation_primitives.py tests/test_0014_receipt_split.py tests/test_0022_revocation_operation.py tests/test_0037_capture.py tests/eval/edge_events/test_0029_acceptance_corpus.py tests/test_0010_visibility_reservation.py tests/test_0020_read_surfaces.py tests/test_0022_sweep_vectors.py tests/test_0039_degradation_visibility.py tests/test_audit.py tests/test_confirm_contract_0008.py
 
 ARM              RECORDS     SHA256(observer trace)                                            PYTEST
-healthy              75569  8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f  861 passed, 2 warnings in 137.24s (0:02:17) (exit 0, 138.1s)
-failing              75569  8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f  861 passed, 2 warnings in 137.71s (0:02:17) (exit 0, 138.7s)
-off                  75569  8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f  861 passed, 2 warnings in 137.67s (0:02:17) (exit 0, 138.6s)
-uninstrumented       75569  8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f  861 passed, 2 warnings in 135.30s (0:02:15) (exit 0, 136.3s)
+healthy              75569  90da7e25799a43dabce5eaeab9cb7fadd2d65c47da72fe4781bb74ee33179782  861 passed, 2 warnings in 139.76s (0:02:19) (exit 0, 140.7s)
+failing              75569  90da7e25799a43dabce5eaeab9cb7fadd2d65c47da72fe4781bb74ee33179782  861 passed, 2 warnings in 139.08s (0:02:19) (exit 0, 140.0s)
+off                  75569  90da7e25799a43dabce5eaeab9cb7fadd2d65c47da72fe4781bb74ee33179782  861 passed, 2 warnings in 139.01s (0:02:19) (exit 0, 139.9s)
+uninstrumented       75569  90da7e25799a43dabce5eaeab9cb7fadd2d65c47da72fe4781bb74ee33179782  861 passed, 2 warnings in 135.49s (0:02:15) (exit 0, 136.5s)
 
-VERDICT: observer traces IDENTICAL across 4 arms over 860 tests (reference: uninstrumented; 1 tests excluded as non-reproducible between two runs of the same arm — control pairs run for failing, healthy, off, uninstrumented)
-CANONICAL DIGESTS (decoded records, dictionary-independent — R6-5(i)): healthy c29e8d90d0f322ae; failing c29e8d90d0f322ae; off c29e8d90d0f322ae; uninstrumented c29e8d90d0f322ae
+VERDICT: observer traces IDENTICAL across 4 arms over 860 tests (reference: uninstrumented; excluded by the STANDING list: 1; NEWLY non-reproducible this run: 0; control pairs run for failing, healthy, off, uninstrumented)
+CANONICAL DIGESTS (decoded records, dictionary-independent — R6-5(i)): healthy 918b774bd6a222a4; failing 918b774bd6a222a4; off 918b774bd6a222a4; uninstrumented 918b774bd6a222a4
   healthy: 860 tests compared, 0 differing, 0 not in both
   failing: 860 tests compared, 0 differing, 0 not in both
   off: 860 tests compared, 0 differing, 0 not in both
 
-EXCLUDED AS NON-REPRODUCIBLE (their own trace differs between two runs of one arm; inputs the run does not freeze — the arm(s) that sampled it named):
-  tests/eval/edge_events/test_0029_acceptance_corpus.py::test_acceptance_corpus_passes_100_percent  [failing]
-control run healthy-control: records 75569, sha256 8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f, 861 passed, 2 warnings in 137.01s (0:02:17)
-control run failing-control: records 75569, sha256 8192b1ced76da88061e124dabf7ed7dd1493056191e9d45d892c91c2cd57ba3d, 861 passed, 2 warnings in 153.87s (0:02:33)
-control run off-control: records 75569, sha256 8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f, 861 passed, 2 warnings in 137.55s (0:02:17)
-control run uninstrumented-control: records 75569, sha256 8268fa01ca1f605f79148c4dd3156c29a83bc5eacdd440b0910da7086722fb9f, 861 passed, 2 warnings in 135.11s (0:02:15)
+EXCLUDED BY THE STANDING LIST (inv7_exclusions.STANDING: by name, with the cause; the arm(s) whose control pair sampled it THIS run in brackets, if any):
+  tests/eval/edge_events/test_0029_acceptance_corpus.py::test_acceptance_corpus_passes_100_percent  [healthy]
+      cause: the acceptance corpus's supersession step is sensitive to the wall clock: a supersession batch (two upserts under one transaction) lands at a different scenario step between two runs of one arm — first sampled 2026-09-20 by the healthy arm's slower timing, then by the failing arm's control pair; the test agrees with itself in isolation and with the harness's suite prefix. The corpus runner accepts an injected clock and the acceptance test injects none (specs/0029's owner; the Dev queue carries the follow-up). Excluded until it does.
+NEWLY NON-REPRODUCIBLE THIS RUN (a control pair disagreed on a test NOT on the standing list — a finding; the exit refuses it):
+  (none)
+control run healthy-control: records 75569, sha256 9f96ac19c5c1bbc326dc4684bd3896750b953f354858bef68d946ad7f9b4f982, 861 passed, 2 warnings in 138.52s (0:02:18)
+control run failing-control: records 75569, sha256 90da7e25799a43dabce5eaeab9cb7fadd2d65c47da72fe4781bb74ee33179782, 861 passed, 2 warnings in 138.98s (0:02:18)
+control run off-control: records 75569, sha256 90da7e25799a43dabce5eaeab9cb7fadd2d65c47da72fe4781bb74ee33179782, 861 passed, 2 warnings in 137.03s (0:02:17)
+control run uninstrumented-control: records 75569, sha256 90da7e25799a43dabce5eaeab9cb7fadd2d65c47da72fe4781bb74ee33179782, 861 passed, 2 warnings in 134.70s (0:02:14)
 
 CROSS-CHECKS:
   healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_consulted": 152, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7223}
   failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7279, "ids_with_errors": 152, "subsequence_holds": true, "subsequence_matched": 7223}
   off: {"census_enabled": false, "registry_size": 162}
-  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace19/twin/src/veracium/__init__.py"}
+  uninstrumented: {"census_enabled": false, "registry_size": 0, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/5eb87875-1be0-4a35-a5df-812ce4c2dee5/scratchpad/inv7/trace20/twin/src/veracium/__init__.py"}
 
 OBSERVED SYMBOLS: 98 wrapped of 105 declared; EXCLUDED (unreachable from outside, by name):
   asof/recall.py:recall_at.claim: nested inside a function; unreachable from outside
@@ -250,10 +252,10 @@ HISTOGRAM (reference arm), symbol -> decision: count
   store/revocation.py:_rollback_or_poison#254 -> None: 4
   store/revocation.py:revocation_operation#1 -> value: 28
   store/revocation.py:revocation_operation#2 -> OrdinalCollision: 1
+  store/revocation.py:revocation_operation#253 -> RevocationEffectError: 1
   store/revocation.py:revocation_operation#253 -> RevocationUnknownState: 1
+  store/revocation.py:revocation_operation#253 -> RuntimeError: 1
   store/revocation.py:revocation_operation#3 -> RevocationIntegrityError: 1
-  store/revocation.py:revocation_operation#4 -> RevocationEffectError: 1
-  store/revocation.py:revocation_operation#4 -> RuntimeError: 1
   store/revocation_sweep.py:validate_contribution_row#8 -> RevocationLinkageError: 1
   store/revocation_sweep.py:validate_contribution_row#9 -> value: 399
   store/revocation_sweep.py:validate_revocation_row#8 -> value: 102
@@ -262,8 +264,8 @@ HISTOGRAM (reference arm), symbol -> decision: count
   store/schema_version.py:open_versioned#1 -> StoreVersionError: 1
   store/schema_version.py:open_versioned#10 -> value: 1098
   store/schema_version.py:open_versioned#13 -> value: 1
-  store/schema_version.py:open_versioned#16 -> DuplicateOutcomeChainError: 1
-  store/schema_version.py:open_versioned#16 -> StoreVersionError: 2
+  store/schema_version.py:open_versioned#253 -> DuplicateOutcomeChainError: 1
+  store/schema_version.py:open_versioned#253 -> StoreVersionError: 2
   store/schema_version.py:open_versioned#4 -> StoreVersionError: 1
   store/schema_version.py:open_versioned#5 -> value: 28
   store/schema_version.py:open_versioned#7 -> value: 7
@@ -320,8 +322,8 @@ HISTOGRAM (reference arm), symbol -> decision: count
   store/sqlite.py:SqliteStore.commit_outcome_import_plan#15 -> value: 1
   store/sqlite.py:SqliteStore.commit_outcome_import_plan#23 -> value: 39
   store/sqlite.py:SqliteStore.confirm_edge#2 -> ValueError: 1
+  store/sqlite.py:SqliteStore.confirm_edge#253 -> RuntimeError: 1
   store/sqlite.py:SqliteStore.confirm_edge#3 -> value: 2
-  store/sqlite.py:SqliteStore.confirm_edge#6 -> RuntimeError: 1
   store/sqlite.py:SqliteStore.confirm_edge#7 -> value: 13
   store/sqlite.py:SqliteStore.create_or_takeover_consolidation#1 -> None: 4
   store/sqlite.py:SqliteStore.create_or_takeover_consolidation#2 -> value: 29
