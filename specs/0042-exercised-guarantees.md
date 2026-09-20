@@ -107,6 +107,19 @@ Spec-Status: accepted
 > cross-checks, the in-process miniature over the runtime leg and the harness's mutation matrix. 0042's
 > implementation is complete on the dev side; the implementation-review package follows on the owner's word.
 
+> **Implementation note, tranches 3–6b and the INV-7 twin (2026-09-19/20).** The remaining ids landed by
+> tranche (40, 33, the store's 46; 147 ids bound, then 161 with 0041's fourteen refusals), INSTALLED == DECLARED,
+> the four sets reconciled on the real tree, the runtime leg exercising every id once. INV-7's four-arm
+> transcript: the first twin was EXPORTED from the commit the instrumentation began at and became a
+> different product the moment another spec touched src; the twin is now DERIVED from HEAD by an AST
+> inverse of the instrumenter (`inv7_uninstrument.py`), the reference arm run twice and per-test units
+> that differ between the two runs excluded by name. The sentence this line exists to carry, from the
+> second seat, after three census-of-the-moment instances in one day: **a census is safe only when it
+> refuses on change or derives on demand — every other census is a claim with a date hidden in it.**
+> The pin test that asserted 'every src commit since the twin was 0042's' and the exported twin both
+> encoded a date and went on asserting it; the reconciliation test's hand-read set refuses a new member
+> until someone reads it; the derived twin re-derives and has no moment to decay.
+
 ## 1. Problem and motivation
 
 **We assert guarantees we have never measured being exercised.** Two independent
