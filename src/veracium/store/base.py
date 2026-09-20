@@ -295,6 +295,12 @@ class Store(ABC):
             "this Store does not implement redact (specs/0041 §4a) — a store without the "
             "operation refuses rather than pretending the content was removed")
 
+    def redacted_targets(self, user_id: str, kind: str) -> frozenset:
+        """specs/0041 §4b-iii: the ids of the user's attested-redacted records of `kind` ("edge" | "episode").
+        A store without the operation holds none — the honest default is the empty set, not a refusal: the
+        readers exclude what IS redacted, and nothing is."""
+        return frozenset()
+
     def write_policy_receipt(self, user_id: str, row: dict) -> None:
         """Persist ONE receipt row — `{recall_id, policy_id, policy_version,
         recorded_at, receipt}` with `receipt` the JSON text `Memory` serialised

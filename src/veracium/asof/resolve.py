@@ -41,7 +41,7 @@ from ..schema import (ASSERTS_SUPERSESSION, DISPOSITIONED_REASONS, Edge,
 from ..scope_linkage import _is_canonical
 from ..store.base import RawEdgeState
 from .carrier import Envelope
-from .classify import (EXCLUDED, GROUNDED_AS_OF, IDENTITY_UNBOUND, MALFORMED,
+from .classify import (EXCLUDED, GROUNDED_AS_OF, IDENTITY_UNBOUND, MALFORMED, REDACTED,
                        NOT_VALID_AT_T, SCOPE_HIDDEN, STALE_AT_RECALL,
                        classify_as_of)
 
@@ -318,6 +318,8 @@ def _resolve_edge(store, user_id, e, rows, T, now, view, principal, policy,
         # reads a None reason on a retired row as MALFORMED, which this outranks).
         if e.invalidated_at is not None and e.invalidation_reason not in RESOLUTION:
             return Resolution(outcome=NOT_RETURNABLE, tag=TAG_UNKNOWN_REASON_EXCLUDED, **base)
+        if st == REDACTED:                                  # specs/0041 §4b-iii: never served as a historical answer
+            return Resolution(outcome=NOT_RETURNABLE, tag=TAG_REDACTED_EXCLUDED, **base)
         if st in (MALFORMED, IDENTITY_UNBOUND):             # §3 (unclassifiable)
             return Resolution(outcome=INDETERMINATE, tag=TAG_UNCLASSIFIABLE,
                               cause=CAUSE_UNCLASSIFIABLE, **base)

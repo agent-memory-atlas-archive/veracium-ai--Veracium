@@ -146,8 +146,12 @@ def _grounded_inputs(store, user_id: str, relations: dict[str, Relation]):
         from .gate import exclude_procedural
         _in_scope, _n_procedural = exclude_procedural(
             store.edges(user_id, active_only=True, include_quarantined=False))
+        # specs/0041 §4b-iii (tranche 4a): an attested-redacted record never feeds the wiki — the cache is
+        # dropped at redaction and would otherwise be recompiled over the marker; by the record, not the bytes
+        redacted_edges = store.redacted_targets(user_id, "edge")
+        redacted_episodes = store.redacted_targets(user_id, "episode")
         edges = [e for e in _in_scope
-                 if not e.use_only and e.id not in contested and not e.ungrounded]
+                 if not e.use_only and e.id not in contested and not e.ungrounded and e.id not in redacted_edges]
         # specs/0012 I8: the compiler INPUT collapses strictly-redundant duplicates —
         # N restatements feed the wiki once; the store keeps every edge.
         edges, _since = collapse_for_render(edges)
@@ -156,7 +160,7 @@ def _grounded_inputs(store, user_id: str, relations: dict[str, Relation]):
         # ingest now writes AND 0022's retirement axis — the wiki input is the
         # assertable set, by the same rule every other consumer reads.
         all_episodes = list(store.episodes(user_id))
-        episodes = [e for e in all_episodes if e.assertable]
+        episodes = [e for e in all_episodes if e.assertable and e.id not in redacted_episodes]   # specs/0041 §4b-iii
         withheld = _n_procedural + (len(_in_scope) - len(edges)) + (len(all_episodes) - len(episodes))
         return _SITE_GROUNDED_INPUTS.fire((edges, episodes), "withhold", declined=withheld > 0)
 

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Changed: redacted records leave every read surface (specs/0041, tranche 4a).** By the attestation
+  record, never by marker bytes: an attested-redacted edge or episode is absent from `recall`'s subgraph,
+  episode list and contested groups, from the compiled wiki's input, and `describe_procedures` reports a
+  redacted procedure as withheld with outcome `redacted` (a hidden one stays hidden — the existing
+  visibility restrictions are unchanged). An as-of read of an attested-redacted record reports the new
+  status `REDACTED` for any T — never `MALFORMED`, which would claim damage — and
+  resolves `NOT_RETURNABLE` with the tag `redacted-excluded`. Accepted 0030's status set gains the eighth
+  status (0041 §11.4). `Store.redacted_targets(user_id, kind)` is the read the surfaces share; a host store
+  without redaction returns the empty set. A row that merely holds the marker bytes (an unattested
+  marker) is treated by every reader exactly as before. **Who must act:** nobody has to; hosts that
+  consume the as-of status set or the describe outcome set see one new member in each.
 - **Added: targeted redaction — `Memory.redact(user_id, *, edge_id | episode_id, reason) -> RedactionReceipt`
   (specs/0041, tranche 3).** Removes one record's CONTENT and keeps its structure, in ONE store transaction
   over the accepted treatment map: the content carriers become the marker byte string, `outcome_counts` is

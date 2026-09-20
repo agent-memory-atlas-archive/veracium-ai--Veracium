@@ -31,8 +31,13 @@ NOT_VALID_AT_T = "NOT_VALID_AT_T"
 EXCLUDED = "EXCLUDED"
 FENCED_AS_OF = "FENCED_AS_OF"
 GROUNDED_AS_OF = "GROUNDED_AS_OF"
+# specs/0041 §4b-iii (tranche 4a, 2026-09-19; amends accepted 0030 — 0041 §11.4): the EIGHTH status. A redacted
+# record is neither damage nor an answer: the status keys on the ATTESTATION RECORD (`CurrentState.redacted`,
+# read in the window) — never on marker BYTES inside a payload (an unattested marker row confers nothing, §4b)
+# and never on the event's kind/reason column (0030 V-COLUMN-NOT-INPUT).
+REDACTED = "REDACTED"
 STATUSES = frozenset({IDENTITY_UNBOUND, SCOPE_HIDDEN, MALFORMED, NOT_VALID_AT_T,
-                      EXCLUDED, FENCED_AS_OF, GROUNDED_AS_OF})
+                      EXCLUDED, FENCED_AS_OF, GROUNDED_AS_OF, REDACTED})
 
 STALE_AT_RECALL = "stale-at-recall"       # the only flag named (V-STALE)
 
@@ -81,6 +86,15 @@ def classify_as_of(envelope, snapshot_raw, current_state, T, now, view=None) -> 
     #    unreadable payload: hidden, never a raise (round-5 F2).
     if cell is not None and not cell.visible:
         return Result(SCOPE_HIDDEN, held_at_K=None)
+
+    # 2b. REDACTED (specs/0041 §4b-iii) — AFTER visibility (a hidden record stays hidden: the new state
+    #     must not be visible where the record was not, or redaction becomes a disclosure channel) and
+    #     BEFORE parse (a tombstone is not JSON, and reporting it as MALFORMED would claim damage). Keyed
+    #     on the ATTESTATION RECORD carried in the current state from the read window — never on the
+    #     event's kind/reason column (V-COLUMN-NOT-INPUT) and never on marker bytes in a payload (§4b).
+    #     Any T: an as-of read never serves a tombstone as a historical answer (§4d, INV-4).
+    if current_state.redacted:
+        return Result(REDACTED, held_at_K=None)
 
     # 3. PARSE + ADAPT BOTH PAYLOADS through the adapter, which owns schema
     #    validation, enum validation and the DERIVATION of the trust flags.
@@ -168,6 +182,6 @@ def assertable_as_of(envelope, snapshot_raw, current_state, T, now, view=None) -
                                                           T, now, view).status == GROUNDED_AS_OF, "withhold")
 
 
-__all__ = ["Result", "classify_as_of", "assertable_as_of", "STATUSES",
+__all__ = ["Result", "classify_as_of", "assertable_as_of", "STATUSES", "REDACTED",
            "IDENTITY_UNBOUND", "SCOPE_HIDDEN", "MALFORMED", "NOT_VALID_AT_T",
            "EXCLUDED", "FENCED_AS_OF", "GROUNDED_AS_OF", "STALE_AT_RECALL"]

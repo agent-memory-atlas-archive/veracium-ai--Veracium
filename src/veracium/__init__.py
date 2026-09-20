@@ -1084,11 +1084,21 @@ class Memory:
                     policy_rank=(policy.ranks if policy is not None else None),
                     max_displaced=(policy.max_displaced if policy is not None else None))
                 sem_meta = {k: RecalledEdge(**v) for k, v in raw_meta.items()}
+        # specs/0041 §4b-iii (tranche 4a): a REDACTED record is not returned — structurally present in the
+        # store, content absent from every surface recall renders. By the attestation record (the store's
+        # `redacted_targets`), never by marker bytes; §4d's existence fact stays in the journal, where it
+        # was already disclosed. Applied AFTER retrieval, inside the visible set: a slot a redacted record
+        # won is a recall-quality cost, not a disclosure one.
+        redacted_edges = self.store.redacted_targets(user_id, "edge")
+        redacted_episodes = self.store.redacted_targets(user_id, "episode")
+        if redacted_edges:
+            edges = [e for e in edges if e.id not in redacted_edges]
+            sem_meta = {k: v for k, v in sem_meta.items() if k not in redacted_edges}
         # outcome events are structured records, not narrative — they'd crowd
         # out interaction history for high-volume consumers; their signal
         # reaches recall as counters rendered on the edges themselves
         episodes = [e for e in self.store.episodes(user_id)
-                    if e.kind != "outcome"]
+                    if e.kind != "outcome" and e.id not in redacted_episodes]
         # THE RELATION, on the structured record sets themselves (§2's carrier
         # row): scope FIRST, then the §4e filters within the visible set (M-2,
         # narrow-only — a filter can never be an oracle for withheld material).
@@ -1368,8 +1378,9 @@ class Memory:
         if not refusals:
             return [], []
         relations = self.config.relations
+        redacted = self.store.redacted_targets(user_id, "edge")         # specs/0041 §4b-iii: not returned
         active = {e.id: e for e in self.store.edges(user_id, active_only=True,
-                                                    include_quarantined=True)}
+                                                    include_quarantined=True) if e.id not in redacted}
         # §4c N-2: the GROUPS are formed over the whole active set — a contention is
         # global lifecycle truth and its existence is not scope's to rewrite — while
         # WHAT EACH MEMBER DISCLOSES is decided by the relation, below.

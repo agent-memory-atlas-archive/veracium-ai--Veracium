@@ -278,7 +278,7 @@ def matches_executable_detail(summary: str) -> bool:
 
 
 # ------------------------------------------------------- the read surface
-WITHHELD_OUTCOMES = ("kind_conflict", "relation_unregistered", "inactive", "not_yet_valid",
+WITHHELD_OUTCOMES = ("kind_conflict", "redacted", "relation_unregistered", "inactive", "not_yet_valid",
                      "quarantined", "use_only", "basis_unknown", "executable_detail")
 
 
@@ -340,13 +340,18 @@ def _attribution(basis: str, summary: str) -> str:
             else f"a pattern you reported observing: {summary}")
 
 
-def describe_outcome(edge, relations) -> Optional[str]:
+def describe_outcome(edge, relations, redacted=frozenset()) -> Optional[str]:
     """§4a-ii's ORDERED predicate over one candidate: the first failing
     conjunct's named outcome, or None when every conjunct holds (described).
-    Total: no default allow, no untyped outcome."""
+    Total: no default allow, no untyped outcome. `redacted` is the store's
+    attested set (specs/0041 §4b-iii): a redacted procedure is REPORTED as
+    such rather than omitted — after the stamp (the stamp is a PRESERVE row,
+    so it still classifies) and before the relation (which is the marker)."""
     p = edge.provenance
     if p.record_kind != "procedural":            # 1. stamp consistent (None ∧ basis)
         return "kind_conflict"
+    if edge.id in redacted:                      # 1b. redacted (0041): named, never silently dropped
+        return "redacted"
     if edge.relation not in relations:           # 2. relation registered
         return "relation_unregistered"
     if not edge.active:                          # 3. active
@@ -382,8 +387,9 @@ def describe_procedures(store, relations, user_id: str, *, query=None, view=None
             e = view.shape(e)                    # cross-scope-visible → use_only (0020)
         candidates.append(e)
     described, withheld, conflicts = [], [], 0
+    redacted = store.redacted_targets(user_id, "edge")     # specs/0041 §4b-iii, by the attestation record
     for e in candidates:
-        outcome = describe_outcome(e, relations)
+        outcome = describe_outcome(e, relations, redacted)
         if outcome is None:
             described.append(e)
         else:

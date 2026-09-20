@@ -91,6 +91,7 @@ class CurrentState:
                                             # lie over an unprojectable store.
     read_token: int
     scope_cell: Optional[ScopeCell] = None  # None = NO PRINCIPAL was supplied.
+    redacted: bool = False                  # accepted 0041 §4b-iii (2026-09-19): a redaction record attests this edge — read in the same window
                                             # THE COLLAPSE HAPPENS AT THE
                                             # CLASSIFIER, NEVER HERE: the carrier
                                             # keeps all three verdicts and the

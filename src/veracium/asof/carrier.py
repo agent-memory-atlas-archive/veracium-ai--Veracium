@@ -52,6 +52,10 @@ class CurrentState:
     source_restricted: RestrictionVerdict
     read_token: int
     scope_cell: Optional[ScopeCell] = None
+    # accepted 0041 §4b-iii (tranche 4a, 2026-09-19; 0041 §11.4 amends this carrier): whether a redaction
+    # record ATTESTS this edge — read in the SAME window as the row (the attestation is standing state, the
+    # way `source_restricted` is), never inferred from marker bytes and never from the event's kind/reason column
+    redacted: bool = False
 
 
 @dataclass(frozen=True)

@@ -113,6 +113,11 @@ def derive_current_state(store, user_id: str, edge_id: str, *, principal=None,
     row = conn.execute(
         "SELECT json FROM edges WHERE user_id=? AND id=?", (user_id, edge_id)).fetchone()
     restricted = source_restricted(store, user_id, edge_id)
+    # accepted 0041 §4b-iii: the attestation record, read in THIS window (standing state, like the
+    # source-restriction verdict); by the record, never by marker bytes
+    redacted = store._conn.execute(
+        "SELECT 1 FROM redactions WHERE user_id=? AND target_kind='edge' AND target_id=? LIMIT 1",
+        (user_id, edge_id)).fetchone() is not None
     scope_cell = None
     if principal is not None and row is not None:
         from ..scope_read import ScopeView
@@ -130,4 +135,5 @@ def derive_current_state(store, user_id: str, edge_id: str, *, principal=None,
         source_restricted=restricted,
         read_token=0 if tok is None else int(tok[0]),
         scope_cell=scope_cell,
+        redacted=redacted,
     )

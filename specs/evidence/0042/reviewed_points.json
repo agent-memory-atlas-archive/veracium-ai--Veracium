@@ -149,14 +149,14 @@
   "line": 108,
   "statement": "return _SITE_DERIVE_USE_ONLY.fire(disclosure == Disclosure.USE_ONLY.value, \"withhold\")"
  },
- "asof/classify.py:assertable_as_of:167:BOOL_RETURN": {
+ "asof/classify.py:assertable_as_of:181:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0028 §4b (withhold) through site asof.classify.assertable-as-of",
   "reviewer": "dev",
   "site": "asof.classify.assertable-as-of",
   "class": "enforcement",
   "key": "asof/classify.py:assertable_as_of:BOOL_RETURN:1",
-  "line": 167,
+  "line": 181,
   "statement": "return _SITE_ASSERTABLE_AS_OF.fire(classify_as_of(envelope, snapshot_raw, current_state,"
  },
  "asof/recall.py:recall_at.claim:41:BOOL_RETURN": {
@@ -239,14 +239,14 @@
   "line": 84,
   "statement": "return _SITE_SELF_ASSERTION.fire("
  },
- "compile.py:_grounded_inputs:161:FILTER_RETURN": {
+ "compile.py:_grounded_inputs:165:FILTER_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0004 §4 (withhold) through site compile.grounded-inputs",
   "reviewer": "dev",
   "site": "compile.grounded-inputs",
   "class": "enforcement",
   "key": "compile.py:_grounded_inputs:FILTER_RETURN:1",
-  "line": 161,
+  "line": 165,
   "statement": "return _SITE_GROUNDED_INPUTS.fire((edges, episodes), \"withhold\", declined=withheld > 0)"
  },
  "diagnostics.py:Reporter.send:276:RETURN_FALSE": {
@@ -539,54 +539,54 @@
   "line": 117,
   "statement": "raise _SITE_CLOSED_SET_TRUST.fire(ValueError("
  },
- "__init__.py:Memory.correct:2030:RAISE": {
+ "__init__.py:Memory.correct:2041:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site memory.correct.inactive-edge",
   "reviewer": "dev",
   "site": "memory.correct.inactive-edge",
   "class": "enforcement",
   "key": "__init__.py:Memory.correct:RAISE:1",
-  "line": 2030,
+  "line": 2041,
   "statement": "raise _SITE_CORRECT_INACTIVE.fire(ValueError(f\"edge {edge_id!r} is not active (already \""
  },
- "__init__.py:Memory.correct:2050:RAISE": {
+ "__init__.py:Memory.correct:2061:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0037 §4a-iii (refuse) through site memory.correct.procedural",
   "reviewer": "dev",
   "site": "memory.correct.procedural",
   "class": "enforcement",
   "key": "__init__.py:Memory.correct:RAISE:2",
-  "line": 2050,
+  "line": 2061,
   "statement": "raise _SITE_CORRECT_PROCEDURAL.fire(ProcedureValueError("
  },
- "__init__.py:Memory.correct:2086:RAISE": {
+ "__init__.py:Memory.correct:2097:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site memory.correct.refused",
   "reviewer": "dev",
   "site": "memory.correct.refused",
   "class": "enforcement",
   "key": "__init__.py:Memory.correct:RAISE:4",
-  "line": 2086,
+  "line": 2097,
   "statement": "raise _SITE_CORRECT_REFUSED.fire(graph.CorrectionRefused(edge_id, authority.RULE_VERSION))"
  },
- "__init__.py:Memory.dispute:1819:RAISE": {
+ "__init__.py:Memory.dispute:1830:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0003 §4b (refuse) through site memory.dispute.inactive-edge",
   "reviewer": "dev",
   "site": "memory.dispute.inactive-edge",
   "class": "enforcement",
   "key": "__init__.py:Memory.dispute:RAISE:1",
-  "line": 1819,
+  "line": 1830,
   "statement": "raise _SITE_DISPUTE_INACTIVE.fire(ValueError(f\"edge {edge_id!r} is not active (already \""
  },
- "__init__.py:Memory._find_edge:1805:RAISE": {
+ "__init__.py:Memory._find_edge:1816:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 INV-5 (refuse) through site memory.edge.unknown-target",
   "reviewer": "dev",
   "site": "memory.edge.unknown-target",
   "class": "enforcement",
   "key": "__init__.py:Memory._find_edge:RAISE:1",
-  "line": 1805,
+  "line": 1816,
   "statement": "raise _SITE_EDGE_UNKNOWN_TARGET.fire(ValueError(f\"no edge {edge_id!r} for user {user_id!r}\"))"
  },
  "__init__.py:Memory.recall:901:RAISE": {
@@ -609,34 +609,34 @@
   "line": 1019,
   "statement": "raise _SITE_POLICY_WITH_ASOF.fire(ValueError(\"recall(policy=...) is not combinable with as_of= (specs/0027 v13 §4c: the as-of path carries no receipt)\"))"
  },
- "__init__.py:Memory.record_outcome:1916:RAISE": {
+ "__init__.py:Memory.record_outcome:1927:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0008 §4 (refuse) through site memory.record-outcome.actor-vocabulary",
   "reviewer": "dev",
   "site": "memory.record-outcome.actor-vocabulary",
   "class": "enforcement",
   "key": "__init__.py:Memory.record_outcome:RAISE:1",
-  "line": 1916,
+  "line": 1927,
   "statement": "raise _SITE_OUTCOME_ACTOR.fire(ValueError(f\"actor must be 'user' or 'system', not {actor!r}\"))"
  },
- "__init__.py:Memory.record_outcome:1919:RAISE": {
+ "__init__.py:Memory.record_outcome:1930:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0008 §4 (refuse) through site memory.record-outcome.human-judgment",
   "reviewer": "dev",
   "site": "memory.record-outcome.human-judgment",
   "class": "enforcement",
   "key": "__init__.py:Memory.record_outcome:RAISE:2",
-  "line": 1919,
+  "line": 1930,
   "statement": "raise _SITE_OUTCOME_HUMAN.fire(ValueError(f\"{outcome.value} is a human judgment (actor='user')\"))"
  },
- "__init__.py:Memory.record_outcome:1922:RAISE": {
+ "__init__.py:Memory.record_outcome:1933:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0008 §4 (refuse) through site memory.record-outcome.system-judgment",
   "reviewer": "dev",
   "site": "memory.record-outcome.system-judgment",
   "class": "enforcement",
   "key": "__init__.py:Memory.record_outcome:RAISE:3",
-  "line": 1922,
+  "line": 1933,
   "statement": "raise _SITE_OUTCOME_SYSTEM.fire(ValueError(f\"{outcome.value} is a system judgment (actor='system')\"))"
  },
  "__init__.py:Memory._build_scope_policy:396:RAISE": {
@@ -2079,24 +2079,24 @@
   "line": 890,
   "statement": "return _SITE_EDGES_READ_FENCE.fire([Edge.model_validate_json(r[0]) for r in rows], \"fence-applied\", declined=not include_quarantined)"
  },
- "store/sqlite.py:SqliteStore.upsert_embedding:2590:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.upsert_embedding:2597:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0027 §4f (refuse) through site store.embedding.delayed-writer",
   "reviewer": "dev",
   "site": "store.embedding.delayed-writer",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.upsert_embedding:RETURN_FALSE:1",
-  "line": 2590,
+  "line": 2597,
   "statement": "return _SITE_EMBEDDING_DELAYED_WRITER.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore.upsert_embedding:2597:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.upsert_embedding:2604:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0027 §4f (refuse) through site store.embedding.stale-content",
   "reviewer": "dev",
   "site": "store.embedding.stale-content",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.upsert_embedding:RETURN_FALSE:2",
-  "line": 2597,
+  "line": 2604,
   "statement": "return _SITE_EMBEDDING_STALE_CONTENT.fire(False, \"refuse\")"
  },
  "store/sqlite.py:SqliteStore.add_episode:1625:RAISE": {
@@ -2479,54 +2479,54 @@
   "line": 1712,
   "statement": "return _SITE_READ_OUTPUT_NOT_VISIBLE.fire(op_state.get(ep.operation_id) not in (S.CLAIMED, S.GENERATING), \"withhold\")"
  },
- "store/sqlite.py:SqliteStore.redact:2433:RAISE": {
+ "store/sqlite.py:SqliteStore.redact:2440:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4h(i) (refuse) through site store.redact.disposition-changed",
   "reviewer": "dev",
   "site": "store.redact.disposition-changed",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.redact:RAISE:5",
-  "line": 2433,
+  "line": 2440,
   "statement": "raise _SITE_REDACT_DISPOSITION.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.redact:2401:RAISE": {
+ "store/sqlite.py:SqliteStore.redact:2408:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041/0010 X21 (refuse) through site store.redact.input-claimed",
   "reviewer": "dev",
   "site": "store.redact.input-claimed",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.redact:RAISE:4",
-  "line": 2401,
+  "line": 2408,
   "statement": "raise _SITE_REDACT_CLAIMED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.redact:2382:RAISE": {
+ "store/sqlite.py:SqliteStore.redact:2389:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.2 (refuse) through site store.redact.reason-not-registered",
   "reviewer": "dev",
   "site": "store.redact.reason-not-registered",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.redact:RAISE:2",
-  "line": 2382,
+  "line": 2389,
   "statement": "raise _SITE_REDACT_REASON.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.redact:2378:RAISE": {
+ "store/sqlite.py:SqliteStore.redact:2385:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4a/INV-5 (refuse) through site store.redact.target",
   "reviewer": "dev",
   "site": "store.redact.target",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.redact:RAISE:1",
-  "line": 2378,
+  "line": 2385,
   "statement": "raise _SITE_REDACT_TARGET.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.redact:2393:RAISE": {
+ "store/sqlite.py:SqliteStore.redact:2400:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4a/INV-5 (refuse) through site store.redact.target",
   "reviewer": "dev",
   "site": "store.redact.target",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.redact:RAISE:3",
-  "line": 2393,
+  "line": 2400,
   "statement": "raise _SITE_REDACT_TARGET.fire(ValueError("
  },
  "store/revocation.py:revocation_operation:140:RAISE": {
@@ -3744,22 +3744,22 @@
   "line": 2079,
   "statement": "raise ValueError(f\"lease_duration must be in (0, {LEASE_MAX}], \""
  },
- "store/sqlite.py:SqliteStore.policy_receipts:2565:RAISE": {
+ "store/sqlite.py:SqliteStore.policy_receipts:2572:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/sqlite.py:SqliteStore.policy_receipts:RAISE:1",
-  "line": 2565,
+  "line": 2572,
   "statement": "raise ValueError(f\"policy_receipts: limit must be a positive int, got {limit!r}\")"
  },
- "store/sqlite.py:SqliteStore.write_policy_receipt:2550:RAISE": {
+ "store/sqlite.py:SqliteStore.write_policy_receipt:2557:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/sqlite.py:SqliteStore.write_policy_receipt:RAISE:1",
-  "line": 2550,
+  "line": 2557,
   "statement": "raise ValueError(f\"write_policy_receipt: row lacks {missing}\")"
  },
  "cli.py:<module>:564:RAISE": {
@@ -3852,13 +3852,13 @@
   "line": 391,
   "statement": "return None"
  },
- "__init__.py:Memory._fit_to_budget._claim_lines:1503:FILTER_RETURN": {
+ "__init__.py:Memory._fit_to_budget._claim_lines:1514:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory._fit_to_budget._claim_lines:FILTER_RETURN:1",
-  "line": 1503,
+  "line": 1514,
   "statement": "return [ln for ln in"
  },
  "__init__.py:Memory._usage_operation:472:RETURN_NONE": {
@@ -3870,67 +3870,67 @@
   "line": 472,
   "statement": "return"
  },
- "__init__.py:Memory.answer:1644:RAISE": {
+ "__init__.py:Memory.answer:1655:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.answer:RAISE:1",
-  "line": 1644,
+  "line": 1655,
   "statement": "raise"
  },
- "__init__.py:Memory.diagnostics_preview:1740:RETURN_NONE": {
+ "__init__.py:Memory.diagnostics_preview:1751:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.diagnostics_preview:RETURN_NONE:1",
-  "line": 1740,
+  "line": 1751,
   "statement": "return None"
  },
- "__init__.py:Memory.edges_since:1795:FILTER_RETURN": {
+ "__init__.py:Memory.edges_since:1806:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.edges_since:FILTER_RETURN:1",
-  "line": 1795,
+  "line": 1806,
   "statement": "return [e for e in self.store.edges(user_id, active_only=False,"
  },
- "__init__.py:Memory.flush_telemetry:1715:RETURN_FALSE": {
+ "__init__.py:Memory.flush_telemetry:1726:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.flush_telemetry:RETURN_FALSE:1",
-  "line": 1715,
+  "line": 1726,
   "statement": "return False"
  },
- "__init__.py:Memory.introspect:1769:RAISE": {
+ "__init__.py:Memory.introspect:1780:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.introspect:RAISE:1",
-  "line": 1769,
+  "line": 1780,
   "statement": "raise"
  },
- "__init__.py:Memory.maintain:1666:RAISE": {
+ "__init__.py:Memory.maintain:1677:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.maintain:RAISE:1",
-  "line": 1666,
+  "line": 1677,
   "statement": "raise"
  },
- "__init__.py:Memory.policy_receipts:2144:FILTER_RETURN": {
+ "__init__.py:Memory.policy_receipts:2155:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.policy_receipts:FILTER_RETURN:1",
-  "line": 2144,
+  "line": 2155,
   "statement": "return [receipt_from_row(r) for r in self.store.policy_receipts(user_id, limit=limit)]"
  },
  "__init__.py:Memory.recall:917:RAISE": {
@@ -3951,22 +3951,22 @@
   "line": 600,
   "statement": "raise"
  },
- "__init__.py:Memory.report_error:1733:RETURN_FALSE": {
+ "__init__.py:Memory.report_error:1744:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.report_error:RETURN_FALSE:1",
-  "line": 1733,
+  "line": 1744,
   "statement": "return False"
  },
- "__init__.py:Memory.telemetry_preview:1722:RETURN_NONE": {
+ "__init__.py:Memory.telemetry_preview:1733:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.telemetry_preview:RETURN_NONE:1",
-  "line": 1722,
+  "line": 1733,
   "statement": "return None"
  },
  "_json.py:extract_json:43:RAISE": {
@@ -4005,13 +4005,13 @@
   "line": 179,
   "statement": "return None"
  },
- "compile.py:ensure_wiki:285:RETURN_NONE": {
+ "compile.py:ensure_wiki:289:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "compile.py:ensure_wiki:RETURN_NONE:1",
-  "line": 285,
+  "line": 289,
   "statement": "return None"
  },
  "diagnostics.py:Reporter._confirm:255:RETURN_FALSE": {
@@ -4221,13 +4221,13 @@
   "line": 104,
   "statement": "return None"
  },
- "procedures.py:describe_outcome:364:RETURN_NONE": {
+ "procedures.py:describe_outcome:369:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "procedures.py:describe_outcome:RETURN_NONE:1",
-  "line": 364,
+  "line": 369,
   "statement": "return None"
  },
  "schema.py:as_utc_optional:64:RETURN_NONE": {
@@ -4509,13 +4509,13 @@
   "line": 2291,
   "statement": "return [op for op in self._ops_for_user(user_id)"
  },
- "store/sqlite.py:SqliteStore.policy_receipts:2568:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.policy_receipts:2575:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.policy_receipts:FILTER_RETURN:1",
-  "line": 2568,
+  "line": 2575,
   "statement": "return [dict(zip(self._RECEIPT_COLUMNS, r))"
  },
  "store/sqlite.py:SqliteStore.read_window:454:RAISE": {
@@ -4671,13 +4671,13 @@
   "line": 998,
   "statement": "raise ValueError(\"wiki_render_share must be in (0, 1]\")"
  },
- "__init__.py:Memory.correct:2079:RAISE": {
+ "__init__.py:Memory.correct:2090:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "__init__.py:Memory.correct:RAISE:3",
-  "line": 2079,
+  "line": 2090,
   "statement": "raise RuntimeError("
  },
  "__init__.py:receipt_from_row:293:RAISE": {
@@ -5427,22 +5427,22 @@
   "line": 64,
   "statement": "return None"
  },
- "store/base.py:Store.abandon_consolidation_if_current:613:RAISE": {
+ "store/base.py:Store.abandon_consolidation_if_current:619:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.abandon_consolidation_if_current:RAISE:1",
-  "line": 613,
+  "line": 619,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.append_outcome_if_head:490:RAISE": {
+ "store/base.py:Store.append_outcome_if_head:496:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.append_outcome_if_head:RAISE:1",
-  "line": 490,
+  "line": 496,
   "statement": "raise NotImplementedError("
  },
  "store/base.py:Store.apply_supersession_plan:252:RAISE": {
@@ -5454,31 +5454,31 @@
   "line": 252,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.commit_outcome_import_plan:542:RAISE": {
+ "store/base.py:Store.commit_outcome_import_plan:548:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.commit_outcome_import_plan:RAISE:1",
-  "line": 542,
+  "line": 548,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.confirm_edge:401:RAISE": {
+ "store/base.py:Store.confirm_edge:407:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.confirm_edge:RAISE:1",
-  "line": 401,
+  "line": 407,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.confirmations_for:407:RAISE": {
+ "store/base.py:Store.confirmations_for:413:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.confirmations_for:RAISE:1",
-  "line": 407,
+  "line": 413,
   "statement": "raise NotImplementedError("
  },
  "store/base.py:Store.contributions:266:RAISE": {
@@ -5490,103 +5490,103 @@
   "line": 266,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.contributions_naming:370:RAISE": {
+ "store/base.py:Store.contributions_naming:376:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.contributions_naming:RAISE:1",
-  "line": 370,
+  "line": 376,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.contributors_of_source:377:RAISE": {
+ "store/base.py:Store.contributors_of_source:383:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.contributors_of_source:RAISE:1",
-  "line": 377,
+  "line": 383,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.create_or_takeover_consolidation:558:RAISE": {
+ "store/base.py:Store.create_or_takeover_consolidation:564:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.create_or_takeover_consolidation:RAISE:1",
-  "line": 558,
+  "line": 564,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.delete_claimed_inputs_if_current:602:RAISE": {
+ "store/base.py:Store.delete_claimed_inputs_if_current:608:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.delete_claimed_inputs_if_current:RAISE:1",
-  "line": 602,
+  "line": 608,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.embedding_keys:456:RAISE": {
+ "store/base.py:Store.embedding_keys:462:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.embedding_keys:RAISE:1",
-  "line": 456,
+  "line": 462,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.forget_user:655:RAISE": {
+ "store/base.py:Store.forget_user:661:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.forget_user:RAISE:1",
-  "line": 655,
+  "line": 661,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.list_users:643:RAISE": {
+ "store/base.py:Store.list_users:649:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.list_users:RAISE:1",
-  "line": 643,
+  "line": 649,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.pending_consolidations:621:RAISE": {
+ "store/base.py:Store.pending_consolidations:627:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.pending_consolidations:RAISE:1",
-  "line": 621,
+  "line": 627,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.policy_receipt:321:RAISE": {
+ "store/base.py:Store.policy_receipt:327:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.policy_receipt:RAISE:1",
-  "line": 321,
+  "line": 327,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.policy_receipts:316:RAISE": {
+ "store/base.py:Store.policy_receipts:322:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.policy_receipts:RAISE:1",
-  "line": 316,
+  "line": 322,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.quiescent_episode_snapshot:632:RAISE": {
+ "store/base.py:Store.quiescent_episode_snapshot:638:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.quiescent_episode_snapshot:RAISE:1",
-  "line": 632,
+  "line": 638,
   "statement": "raise NotImplementedError("
  },
  "store/base.py:Store.redact:294:RAISE": {
@@ -5607,58 +5607,58 @@
   "line": 258,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.renew_consolidation_lease:568:RAISE": {
+ "store/base.py:Store.renew_consolidation_lease:574:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.renew_consolidation_lease:RAISE:1",
-  "line": 568,
+  "line": 574,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.semantic_candidates:450:RAISE": {
+ "store/base.py:Store.semantic_candidates:456:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.semantic_candidates:RAISE:1",
-  "line": 450,
+  "line": 456,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.transition_consolidation_if_current:593:RAISE": {
+ "store/base.py:Store.transition_consolidation_if_current:599:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.transition_consolidation_if_current:RAISE:1",
-  "line": 593,
+  "line": 599,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.upsert_embedding:435:RAISE": {
+ "store/base.py:Store.upsert_embedding:441:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.upsert_embedding:RAISE:1",
-  "line": 435,
+  "line": 441,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.write_consolidation_output_if_current:581:RAISE": {
+ "store/base.py:Store.write_consolidation_output_if_current:587:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.write_consolidation_output_if_current:RAISE:1",
-  "line": 581,
+  "line": 587,
   "statement": "raise NotImplementedError("
  },
- "store/base.py:Store.write_policy_receipt:307:RAISE": {
+ "store/base.py:Store.write_policy_receipt:313:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/base.py:Store.write_policy_receipt:RAISE:1",
-  "line": 307,
+  "line": 313,
   "statement": "raise NotImplementedError("
  },
  "store/current_state.py:_build_projection:41:RAISE": {
@@ -6840,22 +6840,22 @@
   "line": 150,
   "statement": "return v is None or (isinstance(v, str) and 1 <= len(v) <= IDENTITY_MAX)"
  },
- "asof/classify.py:classify_as_of._coherent:113:BOOL_RETURN": {
+ "asof/classify.py:classify_as_of._coherent:127:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by asof/classify.py:classify_as_of",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/classify.py:classify_as_of._coherent:BOOL_RETURN:1",
-  "line": 113,
+  "line": 127,
   "statement": "return r is None"
  },
- "asof/classify.py:classify_as_of._coherent:114:BOOL_RETURN": {
+ "asof/classify.py:classify_as_of._coherent:128:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by asof/classify.py:classify_as_of",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "asof/classify.py:classify_as_of._coherent:BOOL_RETURN:2",
-  "line": 114,
+  "line": 128,
   "statement": "return r is not None and vf <= ia"
  },
  "asof/resolve.py:is_head:204:BOOL_RETURN": {
@@ -6867,13 +6867,13 @@
   "line": 204,
   "statement": "return lookup.disposition is SuccessorDisposition.HEAD"
  },
- "compile.py:needs_recompile:175:BOOL_RETURN": {
+ "compile.py:needs_recompile:179:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by compile.py:ensure_wiki",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "compile.py:needs_recompile:BOOL_RETURN:1",
-  "line": 175,
+  "line": 179,
   "statement": "return store.store_version(user_id) - version_at_compile >= recompile_after"
  },
  "diagnostics.py:Reporter._auto_send_due:216:BOOL_RETURN": {

@@ -654,14 +654,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 0041 tranche 3 (redact: sqlite, schema, base, why, redaction, combining): moved nothing, the rest unchanged.
 #: 0041 tranche 3 (redact; the disposition reads made explicit, the combining registry row): moved nothing, the rest unchanged.
 #: 0041 tranche 3 (the base refusal without a dunder): moved dotted/dataflow 6,643 -> 6,642, the rest unchanged.
+#: 0041 tranche 4a (the readers: classify, resolve, carrier, current_state, compile, procedures, recall): moved dotted/dataflow 6,642 -> 6,664, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 6642,
+    "dotted/dataflow": 6664,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 336,
     "dotted/module-protected": 48,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 7078
+SRC_ATTRIBUTE_TOTAL = 7100
 SRC_DATA_DUNDERS_IN_DATAFLOW = 132   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 

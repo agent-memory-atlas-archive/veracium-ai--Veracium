@@ -2325,6 +2325,13 @@ class SqliteStore(Store):
             out.update(json.loads(fields))
         return out
 
+    def redacted_targets(self, user_id: str, kind: str) -> frozenset:
+        """specs/0041 §4b-iii (tranche 4a): the ids of this user's ATTESTED-redacted records of one kind — the
+        set the readers exclude (recall, the wiki compile, describe_procedures). By the attestation record,
+        never by marker bytes: an unattested marker row is not in it."""
+        return frozenset(r[0] for r in self._conn.execute(
+            "SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=?", (user_id, kind)))
+
     def _redaction_record(self, user_id: str, kind: str, target_id: str):
         return self._conn.execute(
             "SELECT id, fields, marker_version, reason, store_version_before, store_version_after, event_ref, "

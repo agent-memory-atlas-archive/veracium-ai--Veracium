@@ -11,7 +11,7 @@ as-of branch never consults it (0028 V-ONE-CLOCK).
 from .adapter import Adapted, AdaptedProvenance, adapt
 from .carrier import CurrentState, Envelope, RestrictionVerdict, ScopeCell
 from .classify import (EXCLUDED, FENCED_AS_OF, GROUNDED_AS_OF, IDENTITY_UNBOUND,
-                       MALFORMED, NOT_VALID_AT_T, SCOPE_HIDDEN, STALE_AT_RECALL,
+                       MALFORMED, NOT_VALID_AT_T, REDACTED, SCOPE_HIDDEN, STALE_AT_RECALL,
                        STATUSES, Result, assertable_as_of, classify_as_of)
 from .resolve import (FENCED_SELF, GROUNDED_OUTCOMES, HOP_BOUND, INDETERMINATE,
                       NOT_RETURNABLE, OUTCOMES, POINTER_TO, RESOLUTION,
@@ -22,7 +22,7 @@ __all__ = [
     "Adapted", "AdaptedProvenance", "adapt",
     "CurrentState", "Envelope", "RestrictionVerdict", "ScopeCell",
     "Result", "classify_as_of", "assertable_as_of", "STATUSES", "STALE_AT_RECALL",
-    "IDENTITY_UNBOUND", "SCOPE_HIDDEN", "MALFORMED", "NOT_VALID_AT_T",
+    "IDENTITY_UNBOUND", "SCOPE_HIDDEN", "MALFORMED", "NOT_VALID_AT_T", "REDACTED",
     "EXCLUDED", "FENCED_AS_OF", "GROUNDED_AS_OF",
     "FutureAsOfRefused", "resolve_as_of", "AsOfAnswer", "AsOfFact", "Resolution",
     "Pointer", "RESOLUTION", "OUTCOMES", "GROUNDED_OUTCOMES", "HOP_BOUND",

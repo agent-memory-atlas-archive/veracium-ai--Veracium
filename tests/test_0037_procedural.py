@@ -610,6 +610,11 @@ def test_describe_outcomes_are_named_and_total(tmp_path):
                                         else "executable_detail" if text.startswith("Run") else None)
                             assert out == expected, (rk, rel, state, disc, basis, text, out)
                             seen.add(out)
+                            # specs/0041 §4b-iii (tranche 4a): the same candidate ATTESTED-redacted — reported
+                            # as `redacted` after the stamp check and before every other conjunct
+                            out_r = describe_outcome(e, DEFAULT_RELATIONS, frozenset({e.id}))
+                            assert out_r == ("kind_conflict" if rk is None else "redacted"), (rk, out_r)
+                            seen.add(out_r)
     assert seen == set(WITHHELD_OUTCOMES) | {None}
 
 

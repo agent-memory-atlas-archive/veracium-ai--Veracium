@@ -304,6 +304,17 @@ first.*
 > What remains: tranche 4 (readers — `edge_state_at`'s REDACTED state, `recall`, `describe_procedures`; export
 > and the import contract), tranche 5 (delayed writers, the transition evidence rows, the closure ledger).
 
+> **Implementation note, tranche 4a (2026-09-19) — the readers.** By the ATTESTATION RECORD everywhere (the
+> store's `redacted_targets(user_id, kind)`; an unattested marker row is in no reader's excluded set): `recall`
+> drops attested-redacted edges from the retrieved subgraph (and its semantic metadata), attested-redacted
+> episodes from the episode list, and both from the contested groups — after retrieval, inside the visible
+> set (a slot a redacted record won is a recall-quality cost, not a disclosure); the wiki compile's input
+> excludes them (the cache dropped at redaction would otherwise be recompiled over the marker);
+> `describe_procedures` reports a redacted procedure as `withheld: redacted` — after the stamp conjunct
+> (a PRESERVE row, so it still classifies) and before the relation (the marker) — and a hidden one stays
+> hidden; the as-of classifier returns `REDACTED` for any T (above). `why` landed with tranche 3. What remains:
+> tranche 4b (export carries the redaction record, D2; the §4g import contract), tranche 5.
+
 ---
 
 ## 1. Problem and motivation
@@ -1736,6 +1747,14 @@ REVOCATION** (`revoked_source`) — which v5 did not name at all.
 > one updater: `redact` tombstones `state` on the redacted edge's prior events (§4c's ruled approach) and touches
 > no other column; `tests/test_0029_carrier.py` binds both — the updater's name, its statement's shape, and the
 > six kinds.
+
+> **Tranche 4a (2026-09-19), the amendment §4b-iii makes to accepted 0030:** the as-of classifier's closed
+> status set gains **`REDACTED`**, the eighth status — a leg after visibility and before parse, keyed on the
+> ATTESTATION RECORD carried in `CurrentState.redacted` from the read window (0030's carrier gains the field;
+> never the event's kind/reason column, which V-COLUMN-NOT-INPUT forbids, never marker bytes); the
+> resolver maps it to `NOT_RETURNABLE` / `redacted-excluded` (the tag tranche 1 registered). 0030's pseudocode
+> carries the same leg; `tests/test_0041_readers.py` binds the status, the hidden-stays-hidden order and the
+> unattested-marker control.
 
 
 ### 11.4-bis. The two prerequisites, in executable form

@@ -339,6 +339,15 @@ def classify_as_of(envelope, snapshot_raw, current_state, T, now, view=None) -> 
     if cell is not None and not cell.visible:
         return Result(SCOPE_HIDDEN, held_at_K=None)
 
+    # 2b. REDACTED — accepted 0041 §4b-iii (tranche 4a, 2026-09-19; 0041 §11.4 amends this
+    #     spec): the EIGHTH status. AFTER visibility (a hidden record stays hidden — the new
+    #     state must not be visible where the record was not) and BEFORE parse (a tombstone
+    #     is not JSON; MALFORMED would claim damage). Keyed on the ATTESTATION RECORD carried
+    #     in `current_state.redacted` from the read window — never on the event's kind/reason
+    #     column (V-COLUMN-NOT-INPUT), never on marker bytes in a payload.
+    if current_state.redacted:
+        return Result(REDACTED, held_at_K=None)
+
     # 3. PARSE + ADAPT BOTH PAYLOADS through §4a-iii's adapter, which owns
     #    schema validation, enum validation and the DERIVATION of the trust
     #    flags. Round-3 F3: `quarantined`/`use_only` are @property and are NOT
@@ -437,6 +446,7 @@ the 0029 seat and verified in-source here before adoption:
 Store.current_state(user_id, edge_id, principal=None) -> CurrentState(
     user_id, edge_id,                  # identity — rule 0 binds it like every leg
     current_raw: str | None,           # the edge row's serialization VERBATIM
+    redacted: bool,                    # accepted 0041 §4b-iii (2026-09-19): a redaction record attests this edge, read in the same window
     source_restricted: RestrictionVerdict,   # THREE-VALUED (round-5 F2):
                                        #   clear | restricted | undeterminable
                                        # `project_store` validates EVERY row
