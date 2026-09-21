@@ -1,8 +1,9 @@
-# generated 2026-09-21T04:02Z against veracium @ 12d06a5ba58deb6b58f16d133c3d26aaf75cf958
+# generated 2026-09-21T04:02Z against veracium @ 0b666c761cc17a3d583883d97fb2d97ed50ccf17
+# RE-PINNED 2026-09-21 the 0042 round-8 fix landed in 0b666c761cc17a3d583883d97fb2d97ed50ccf17: body byte-identical; the run was made on the working tree this commit then committed, so the pin moves to it
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD 12d06a5ba58deb6b58f16d133c3d26aaf75cf958
-twin (uninstrumented): derived from HEAD 12d06a5ba58deb6b58f16d133c3d26aaf75cf958 by inv7_uninstrument.py
+HEAD 0b666c761cc17a3d583883d97fb2d97ed50ccf17
+twin (uninstrumented): derived from HEAD 0b666c761cc17a3d583883d97fb2d97ed50ccf17 by inv7_uninstrument.py
 twin derivation: 162 declare_site removed, 302 fire() unwrapped, 152 consult blocks spliced, 4 census-enabled bypass blocks removed, across 31 modules; the twin's census registry is empty (asserted below)
 
 python 3.12.3; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
