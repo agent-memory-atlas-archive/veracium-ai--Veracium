@@ -1049,6 +1049,52 @@ def test_r9_a_module_with_no_census_import_keeps_its_own_behaviour():
         "the twin's ordinary() diverges: an object that is not the census had its condition rewritten"
 
 
+def test_r10_bypasses_zero_distinguishes_none_present_from_not_recognisable():
+    """RESEARCH'S STAGE-2 FINDING: `bypasses: 0` MEANT TWO THINGS AND THEY PRINTED IDENTICALLY.
+
+    A module with genuinely no census bypass and a module WITH one whose alias could not be established both
+    reported `bypasses: 0`. In the second the twin RETAINS a live `<name>.enabled()` call — in that region it
+    is not an uninstrumented reference at all — and its own manifest called it clean. "None present" and
+    "present but not recognisable" are different facts and only the first is a result; this is the
+    zero-versus-N/A shape this project has paid for before.
+
+    The module is NOT refused. Preserving ordinary behaviour cannot over-refuse, and refusing would reject an
+    idiom no module in the tree uses. What changed is that the manifest stops reporting it clean.
+
+    All four shapes that reach it are exercised, because the gap sits BEFORE both mechanisms: `declared_names`
+    reads `tree.body`, so a block-level import establishes no alias, and the bound-exactly-once refusal only
+    fires on an ESTABLISHED alias — so neither fires and the transform proceeds."""
+    un = _load("inv7_uninstrument_r10", EVIDENCE / "inv7_uninstrument.py")
+    body = ("S = declare_site('s')\n\ndef hot(q):\n    if _census.enabled():\n        q = q + 1\n"
+            "        return S.fire(q)\n    return q\n")
+    head = "from veracium.census import declare_site\n"
+    unestablished = {
+        "conditional import": head + "try:\n    from . import census as _census\nexcept ImportError:\n    _census = None\n" + body,
+        "if TYPE_CHECKING":   head + "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from . import census as _census\n" + body,
+        "runtime block":      head + "import sys\nif sys.version_info >= (3, 9):\n    from . import census as _census\n" + body,
+        "no census import":   head + body,
+    }
+    for label, src in unestablished.items():
+        twin, stats = un.uninstrument_source(src, f"<{label}>")
+        assert stats["bypasses"] == 0, label
+        assert stats["unresolved_bypass_candidates"] == 1, (
+            f"{label}: the twin keeps a live census call and the manifest still reports it clean")
+        assert stats["unresolved_bypass_detail"], f"{label}: the count is reported without naming the call"
+        assert "_census.enabled()" in twin, f"{label}: fixture no longer reproduces the condition it tests"
+
+    # THE OTHER MEANING OF ZERO, which must stay distinguishable: a module with genuinely no bypass.
+    none_present = head + "S = declare_site('s')\n\ndef hot(q):\n    return S.fire(q)\n"
+    twin, stats = un.uninstrument_source(none_present, "<none-present>")
+    assert stats["bypasses"] == 0 and stats["unresolved_bypass_candidates"] == 0, \
+        "a module with no bypass at all is no longer distinguishable from one the transform could not read"
+    # AND THE POSITIVE CONTROL: an establishable alias is still rewritten and reported as a bypass.
+    ok = ("from . import census as _census\nS = _census.declare_site('s')\n\ndef hot(q):\n"
+          "    if _census.enabled():\n        q = q + 1\n        return S.fire(q)\n    return q\n")
+    twin, stats = un.uninstrument_source(ok, "<establishable>")
+    assert stats["bypasses"] == 1 and stats["unresolved_bypass_candidates"] == 0 and "if False:" in twin, \
+        "the genuine bypass stopped being rewritten, so the assertions above prove nothing"
+
+
 def test_r9_the_alias_identity_is_established_at_runtime_because_it_cannot_be_established_statically():
     """THE FOURTH RUNG, CLOSED WHERE IT IS CLOSEABLE.
 
