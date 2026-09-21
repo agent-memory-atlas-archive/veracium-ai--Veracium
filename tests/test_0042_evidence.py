@@ -207,6 +207,69 @@ def test_a0quater_round5_the_binding_is_function_local_and_scope_aware():
         assert "gate.answer.unverified-only" not in inst.installed(inst.scan(copy))
 
 
+def test_r7_f2_the_reviewers_two_rebinding_forms_no_longer_read_as_bound():
+    """F2, THE REVIEWER'S OWN CASE, driven through `installed_sites.scan()` — the regression the round-7
+    verdict asked for, and the only one for F2 that can RUN at the round-7 pin.
+
+    The reviewer reproduced two forms rebinding a declared site's name to another object inside the function
+    that uses it: an assignment expression and a `match` capture. Both read `bound=True`, with no
+    reconciliation refusal, while the declared site's counters never moved. An ordinary assignment correctly
+    read `bound=False` — so the enumeration of binding forms had reached `ast.Assign` and not these two.
+
+    Measured at pin 12d06a5ba58d, both forms: `bound=True`. Here: `bound=False`, because the name resolves
+    through `symtable` and both forms make it a function LOCAL, which is a shadow and not the site. Note this
+    is resolution and not refusal: the reviewer offered either ("resolve these forms using Python's scope
+    information, or explicitly refuse unsupported binding syntax") and a form the language can answer is
+    answered. Refusal is reserved for what cannot be resolved — a MODULE-level rebinding, which is
+    `test_0042_scope_resolution.py`'s 44-row matrix.
+
+    The scope resolver's own tests cannot serve as this regression: the module under test does not exist at
+    the round-7 pin, so they collection-error there rather than demonstrating the defect."""
+    import shutil, tempfile
+    inst = _load("installed_sites")
+    forms = {
+        "an assignment expression": (
+            'from . import declare_site\n\nSITE_ANSWER = declare_site("gate.answer.unverified-only")\n\n\n'
+            'def a(x):\n'
+            '    if (SITE_ANSWER := x):\n'
+            '        with SITE_ANSWER.consult():\n'
+            '            return SITE_ANSWER.fire(x)\n'
+            '    return None\n'),
+        "a match capture": (
+            'from . import declare_site\n\nSITE_ANSWER = declare_site("gate.answer.unverified-only")\n\n\n'
+            'def a(x):\n'
+            '    match x:\n'
+            '        case SITE_ANSWER:\n'
+            '            with SITE_ANSWER.consult():\n'
+            '                return SITE_ANSWER.fire(x)\n'
+            '    return None\n'),
+    }
+    # the CONTROL the reviewer also ran: an ordinary assignment was already correct, and must stay correct
+    forms["an ordinary assignment (the reviewer's control)"] = (
+        'from . import declare_site\n\nSITE_ANSWER = declare_site("gate.answer.unverified-only")\n\n\n'
+        'def a(x):\n'
+        '    SITE_ANSWER = x\n'
+        '    with SITE_ANSWER.consult():\n'
+        '        return SITE_ANSWER.fire(x)\n')
+    # and the POSITIVE control: an unshadowed use must still read bound, or "False everywhere" would pass this
+    forms["no rebinding at all (must read BOUND)"] = (
+        'from . import declare_site\n\nSITE_ANSWER = declare_site("gate.answer.unverified-only")\n\n\n'
+        'def a(x):\n'
+        '    with SITE_ANSWER.consult():\n'
+        '        return SITE_ANSWER.fire(x)\n')
+    for label, body in forms.items():
+        with tempfile.TemporaryDirectory() as d:
+            copy = pathlib.Path(d) / "fixture_sites"
+            shutil.copytree(inst.FIXTURE, copy, ignore=shutil.ignore_patterns("__pycache__"))
+            (copy / "gate_like.py").write_text(body)
+            rows = [r for r in inst.scan(copy) if r["id"] == "gate.answer.unverified-only"]
+            assert len(rows) == 1, (label, rows)
+            expected = label.startswith("no rebinding")
+            assert rows[0]["bound"] is expected, (
+                f"{label}: scan reports bound={rows[0]['bound']}, expected {expected} — a name rebound in the "
+                f"function that uses it is a SHADOW, and an unshadowed one must still read bound")
+
+
 def test_a0quater_registered_but_unbound_is_refused_by_the_registry_check_as_registered_not_installed(tmp_path):
     """The exact round-4 state: declared, registered at import, and no counter bound — the registry check
     names it 'registered, not installed' rather than passing."""
