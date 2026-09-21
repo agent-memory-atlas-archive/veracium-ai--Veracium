@@ -79,7 +79,7 @@ def _binding_bodies(src: str, filename: str = "<scan>") -> dict:
     to the MODULE binding, which is false for a local, a parameter, or a name bound by an enclosing function."""
     r = Resolver(src, filename)
     sites = r.site_names()
-    r.refuse_rebound_globals(sites)
+    r.refuse_site_rebindings(sites)
     per_body: dict = {}
     for fn in ast.walk(r.tree):
         if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):

@@ -104,9 +104,9 @@ def test_a_global_rebinding_of_a_site_is_refused_not_resolved():
     reader, which no static reading can account for — refused by name, the reviewer's sanctioned alternative."""
     r = sr.Resolver("from .census import declare_site\nS = declare_site('s')\ndef f(o):\n    global S\n    S = o\n")
     with pytest.raises(sr.UnresolvableScope, match="replaces the declared site"):
-        r.refuse_rebound_globals(r.site_names())
+        r.refuse_site_rebindings(r.site_names())
     clean = sr.Resolver("from .census import declare_site\nS = declare_site('s')\ndef f():\n    global S\n    return S.fire(1)\n")
-    clean.refuse_rebound_globals(clean.site_names())          # a read-only global is not refused
+    clean.refuse_site_rebindings(clean.site_names())          # a read-only global is not refused
 
 
 def test_two_scopes_on_one_line_are_joined_in_source_order():
@@ -125,7 +125,7 @@ def test_every_product_and_evidence_module_resolves():
     refused = []
     for f in sorted((ROOT / "src" / "veracium").rglob("*.py")) + sorted(EVIDENCE.glob("*.py")):
         try:
-            r = sr.Resolver(f.read_text(), str(f)); r.refuse_rebound_globals(r.site_names())
+            r = sr.Resolver(f.read_text(), str(f)); r.refuse_site_rebindings(r.site_names())
         except sr.UnresolvableScope as e:
             refused.append(f"{f}: {e}")
     assert refused == [], refused
@@ -155,3 +155,92 @@ def test_same_line_blocks_of_DIFFERENT_kinds_resolve_to_their_own_owners():
     r2 = sr.Resolver("S = 1\ndef f(xs):\n    return (lambda S: S.fire(1)), 2\n")
     inner2 = [n for n in ast.walk(r2.tree) if isinstance(n, ast.Call) and getattr(n.func, "attr", None) == "fire"][0]
     assert r2.refers_to_module_binding(inner2, "S") is False
+
+
+# (label, source, does `S` at the single `S.fire(...)` resolve to the MODULE binding?)
+COMPREHENSIONS = [
+    ("module-level listcomp rebinding S",      "S = 1\nxs = [S.fire(1) for S in (1,2)]\n", False),
+    ("module-level genexpr rebinding S",       "S = 1\nxs = list(S.fire(1) for S in (1,2))\n", False),
+    ("listcomp in a function rebinding S",     "S = 1\ndef f(xs):\n    return [S.fire(1) for S in xs]\n", False),
+    ("dictcomp rebinding S (its value)",       "S = 1\nxs = {1: S.fire(1) for S in (1,)}\n", False),
+    ("setcomp rebinding S",                    "S = 1\ndef f(xs):\n    return {S.fire(1) for S in xs}\n", False),
+    ("a nested comprehension's INNER target",  "S = 1\nxs = [[S.fire(1) for S in row] for row in (1,)]\n", False),
+    ("a nested comprehension's OUTER target",  "S = 1\nxs = [[S.fire(1) for q in row] for S in (1,)]\n", False),
+    ("a genexpr nested in a listcomp",         "S = 1\nxs = [list(S.fire(1) for S in row) for row in (1,)]\n", False),
+    ("a SECOND generator's iterable",          "S = 1\nxs = [q for S in (1,) for q in S.fire((2,))]\n", False),
+    ("an `if` clause of the comprehension",    "S = 1\nxs = [q for S in (1,) if S.fire(q)]\n", False),
+    # the must-NOT-shadow half: the first iterable is the enclosing scope's, and an unrebound name is the module's
+    ("the FIRST iterable (enclosing scope)",   "S = 1\nxs = [q for S in S.fire((1,2))]\n", True),
+    ("a listcomp that does NOT rebind S",      "S = 1\nxs = [S.fire(q) for q in (1,2)]\n", True),
+    ("a function listcomp not rebinding S",    "S = 1\ndef f(xs):\n    return [S.fire(q) for q in xs]\n", True),
+    ("nested, neither rebinding S",            "S = 1\nxs = [[S.fire(1) for q in row] for row in (1,)]\n", True),
+]
+
+
+@pytest.mark.parametrize("label,src,outward", COMPREHENSIONS, ids=[c[0].replace(" ", "-") for c in COMPREHENSIONS])
+def test_a_comprehension_target_shadows_on_every_interpreter(label, src, outward):
+    """Research's stage-2 BLOCKING, and the reason it is worth a matrix of its own: the answer used to DEPEND ON
+    THE INTERPRETER. PEP 709 inlines list/set/dict comprehensions from 3.12, so they have a symtable block on
+    3.10 and 3.11 and none on 3.12+. With the block, symtable answers; without it the nodes are owned by the
+    enclosing block, and at module level `refers_to_module_binding` short-circuits to True — so a `.fire()` on a
+    name the comprehension REBINDS read as the module's site on 3.12 and not on 3.10. Both consumers take that at
+    face value: the scan computes `bound` from it and the transform decides WHAT TO REWRITE from it.
+
+    PEP 709 removed the BLOCK, not the SCOPING, and the interpreter says so itself — the control below runs it.
+    CI runs 3.10, 3.11, 3.12 and 3.13, so this matrix asserting the SAME answers on all four is the cross-version
+    control: on two of them it exercises the symtable path and on two the inlined path."""
+    r = sr.Resolver(src, f"<{label}>")
+    assert r.refers_to_module_binding(_marked_call(r), "S") is outward, label
+
+
+def test_the_interpreter_itself_agrees_that_a_comprehension_target_does_not_leak():
+    """The premise the matrix above rests on, EXECUTED rather than cited — on whichever interpreter is running."""
+    S = "the module binding"
+    seen = [S for S in ("a", "b")]                                  # noqa: F841 — the point is the rebinding
+    assert seen == ["a", "b"] and S == "the module binding"
+    import symtable as _st
+    inlined = [c.get_name() for c in _st.symtable("[x for x in y]", "<p>", "exec").get_children()] == []
+    assert inlined is (sys.version_info >= (3, 12)), (sys.version_info[:2], inlined)
+
+
+def test_the_comprehension_matrix_exercises_both_answers_and_both_regimes():
+    """A matrix of all-False rows would pass a resolver that answers False inside any comprehension — which would
+    break the first iterable and every unrebound read. Both halves are present and counted."""
+    answers = {c[2] for c in COMPREHENSIONS}
+    assert answers == {True, False}
+    assert sum(1 for c in COMPREHENSIONS if not c[2]) >= 8 and sum(1 for c in COMPREHENSIONS if c[2]) >= 4
+    kinds = " ".join(c[0] for c in COMPREHENSIONS)
+    for kind in ("listcomp", "genexpr", "dictcomp", "setcomp", "nested", "FIRST iterable"):
+        assert kind in kinds, kind
+
+
+def test_a_module_level_rebinding_of_a_site_is_refused_including_a_walrus_in_a_comprehension():
+    """Research's stage-2 held probe, answered before the pin rather than after it. PEP 572 binds a walrus in the
+    ENCLOSING scope ON PURPOSE, so at module level `[(S := q) for q in ...]` genuinely reassigns the site's name —
+    and every static reading still says "S is the module binding", which is TRUE OF THE NAME and false of the
+    object. The refusal used to cover only `global S` with an assignment inside a function; it now covers any
+    module-level rebinding, which is the property that was actually meant."""
+    decl = "from .census import declare_site\nS = declare_site('t')\n"
+    for label, src in {
+        "a walrus inside a comprehension": decl + "xs = [(S := q) for q in (1, 2)]\n",
+        "a plain second assignment":       decl + "S = object()\n",
+        "a module-level for target":       decl + "for S in (1, 2):\n    pass\n",
+        "a module-level with-as":          decl + "import contextlib\nwith contextlib.nullcontext() as S:\n    pass\n",
+    }.items():
+        r = sr.Resolver(src, f"<{label}>")
+        with pytest.raises(sr.UnresolvableScope, match="bound .* times at module level"):
+            r.refuse_site_rebindings(r.site_names())
+    # the controls: a comprehension's own TARGET is comprehension-local and binds nothing at module level, and a
+    # function-local name of the same spelling is a shadow, not a rebinding — neither may be refused
+    for label, src in {
+        "a comprehension's for target":    decl + "xs = [S for S in (1, 2)]\n",
+        "a function-local shadow":         decl + "def f():\n    S = object()\n    return S\n",
+        "a nested function's parameter":   decl + "def f(S):\n    return S\n",
+        "the declaration alone":           decl,
+    }.items():
+        r = sr.Resolver(src, f"<{label}>")
+        r.refuse_site_rebindings(r.site_names())
+    # and the runtime confirms the premise the refusal rests on
+    ns = {"declare_site": lambda i: f"<site {i}>"}
+    exec("S = declare_site('t')\nxs = [(S := q) for q in (1, 2)]\n", ns)
+    assert ns["S"] == 2, "PEP 572 binds the walrus in the enclosing scope; the site object is replaced"

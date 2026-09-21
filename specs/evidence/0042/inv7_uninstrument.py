@@ -292,7 +292,7 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     resolver = _scope.Resolver(text, filename)          # ROUND 7, F4a: the transform's scope question, resolved
     tree = resolver.tree
     declared, aliases = declared_names(tree)
-    resolver.refuse_rebound_globals(declared)
+    resolver.refuse_site_rebindings(declared)
     exits_before = exits_per_function(tree)
     t = Uninstrument(declared, aliases or {"_census", "census"}, resolver); tree = t.visit(tree); ast.fix_missing_locations(tree)
     # a module that still USES the census surface after the instrumentation is gone (the opt-in switch,
