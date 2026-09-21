@@ -132,7 +132,7 @@ class Uninstrument(ast.NodeTransformer):
         if self.resolver is None:
             raise Refused(f"line {getattr(node, 'lineno', '?')}: no scope resolver was supplied, so {name!r} cannot "
                           f"be established as the declared site rather than a local of the same name")
-        return self.resolver.refers_to_module_binding(node, name)
+        return self.resolver.refers_to_declared_site(node, name)
 
     # module-level: drop declare_site assignments and census imports
     def visit_Module(self, node):

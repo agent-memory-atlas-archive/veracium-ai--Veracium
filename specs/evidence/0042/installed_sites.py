@@ -92,7 +92,7 @@ def _binding_bodies(src: str, filename: str = "<scan>") -> dict:
                     continue                                   # a nested scope is NOT this body
                 if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and isinstance(c.func.value, ast.Name) \
                         and c.func.attr in BINDING_METHODS and c.func.value.id in sites \
-                        and r.refers_to_module_binding(c, c.func.value.id):
+                        and r.refers_to_declared_site(c, c.func.value.id):
                     uses.setdefault(c.func.value.id, set()).add(c.func.attr)
                 visit(c)
         visit(fn)

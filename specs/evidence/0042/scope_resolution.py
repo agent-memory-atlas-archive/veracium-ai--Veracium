@@ -38,7 +38,8 @@ import symtable
 # block); a def, class or lambda with no block is unjoinable and REFUSED.
 _BLOCK_NAME = {ast.Lambda: "lambda", ast.ListComp: "listcomp", ast.SetComp: "setcomp",
                ast.DictComp: "dictcomp", ast.GeneratorExp: "genexpr"}
-_INLINABLE = (ast.ListComp, ast.SetComp, ast.DictComp)
+_INLINABLE = (ast.ListComp, ast.SetComp, ast.DictComp)      # no block from 3.12 (PEP 709)
+_COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
 SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
                ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
 
@@ -60,6 +61,7 @@ class Resolver:
         self.table = symtable.symtable(src, filename, "exec")
         self._blocks: dict[tuple, list] = {}
         self._cursor: dict[tuple, int] = {}
+        self._rebindings_checked: set[str] = set()
         self._index(self.table)
         self._owner: dict[int, symtable.SymbolTable] = {}
         self._comp_local: dict[int, frozenset] = {}
@@ -94,47 +96,69 @@ class Resolver:
             self._assign_child(child, block, shadowed)
 
     def _assign_child(self, child, block, shadowed: frozenset) -> None:
-        """One child, one place — the inlined-comprehension branch recurses THROUGH here rather than walking its
-        own children, so a comprehension nested inside an inlined one still gets the scope-node treatment (it did
-        not, first time: the inner listcomp of `[[S.fire(1) for S in row] for row in xs]` was walked past)."""
+        """One child, one place — the comprehension branch recurses THROUGH here rather than walking its own
+        children, so a comprehension nested inside another still gets the scope-node treatment (it did not, first
+        time: the inner listcomp of `[[S.fire(1) for S in row] for row in xs]` was walked past)."""
         self._comp_local[id(child)] = shadowed
+        if isinstance(child, _COMPREHENSIONS):
+            self._comprehension(child, block, shadowed)
+            return
         if isinstance(child, SCOPE_NODES):
             key = (child.lineno, _expected_name(child))
             queue = self._blocks.get(key) or []
             cursor = self._cursor.get(key, 0)
             if cursor >= len(queue):
-                if isinstance(child, _INLINABLE):
-                    # PEP 709 (3.12+): no block, so the nodes inside are owned by the ENCLOSING block — but the
-                    # comprehension's own targets STILL shadow, and with the block gone nothing in symtable says
-                    # so. Round 8, research's stage-2 BLOCKING: without this the answer was interpreter-DEPENDENT
-                    # — False on 3.10/3.11, where the block exists and symtable answers, and True at module level
-                    # on 3.12, where `refers_to_module_binding` short-circuits on the module block. PEP 709
-                    # removed the block, not the scoping, and the interpreter shows it:
-                    # `S = 1; [S for S in ("a","b")]` leaves S == 1.
-                    self._owner[id(child)] = block
-                    inner_shadow = shadowed | self._comprehension_targets(child)
-                    for field in ("elt", "key", "value"):
-                        sub = getattr(child, field, None)
-                        if sub is not None:
-                            self._assign_child(sub, block, inner_shadow)
-                    for i, gen in enumerate(child.generators):
-                        self._comp_local[id(gen)] = inner_shadow
-                        self._owner[id(gen)] = block
-                        # THE LANGUAGE'S RULE: the FIRST iterable is evaluated in the ENCLOSING scope, so a site
-                        # read there is the enclosing binding; every later iterable sees the earlier targets.
-                        self._assign_child(gen.iter, block, shadowed if i == 0 else inner_shadow)
-                        self._assign_child(gen.target, block, inner_shadow)
-                        for cond in gen.ifs:
-                            self._assign_child(cond, block, inner_shadow)
-                    return
                 raise UnresolvableScope(f"line {child.lineno}: no symbol-table block joins this "
                                         f"{type(child).__name__} — the resolver will not guess its scope")
             inner = queue[cursor]; self._cursor[key] = cursor + 1
             self._owner[id(child)] = inner
-            self._assign(child, inner)                     # a real block resets the inlined shadowing
+            self._assign(child, inner)                     # a real block resets any inlined shadowing
             return
         self._owner[id(child)] = block
         self._assign(child, block, shadowed)
+
+    def _comprehension(self, child, block, shadowed: frozenset) -> None:
+        """A comprehension, in BOTH regimes and with the language's own rule applied once for both.
+
+        THE REGIMES: PEP 709 inlines list/set/dict comprehensions from 3.12, so on 3.12+ they carry no symtable
+        block and their nodes are owned by the ENCLOSING block — where the comprehension's own targets must still
+        shadow, because PEP 709 removed the block and NOT the scoping (the tests run `S = 1; [S for S in
+        ("a","b")]` and assert S survives). On 3.10 and 3.11 the block exists and symtable answers. Generator
+        expressions carry a block on every version. Round 8, research's stage-2 BLOCKING: without the inlined
+        shadowing the answer DIFFERED between 3.10 and 3.12, and both consumers take it at face value.
+
+        THE RULE THAT IS THE SAME IN BOTH: the FIRST iterable is evaluated in the ENCLOSING scope — CPython
+        compiles it there and passes it in as `.0` — so a site read in it is the enclosing binding, whether or
+        not the rest of the comprehension has a block of its own. Handling that only on the inlined path is what
+        CI's 3.10 and 3.11 jobs caught, on the one case of the matrix that asserts it (the matrix was written for
+        exactly this and found it on the versions this machine cannot run)."""
+        key = (child.lineno, _expected_name(child))
+        queue = self._blocks.get(key) or []
+        cursor = self._cursor.get(key, 0)
+        inner = None
+        if cursor < len(queue):
+            inner = queue[cursor]; self._cursor[key] = cursor + 1
+        elif not isinstance(child, _INLINABLE):
+            raise UnresolvableScope(f"line {child.lineno}: no symbol-table block joins this "
+                                    f"{type(child).__name__} — the resolver will not guess its scope")
+        self._owner[id(child)] = block
+        body_block = inner if inner is not None else block
+        body_shadow = frozenset() if inner is not None else shadowed | self._comprehension_targets(child)
+        first_iter = child.generators[0].iter if child.generators else None
+        if first_iter is not None:
+            self._assign_child(first_iter, block, shadowed)         # the enclosing scope, both regimes
+        for field in ("elt", "key", "value"):
+            sub = getattr(child, field, None)
+            if sub is not None:
+                self._assign_child(sub, body_block, body_shadow)
+        for i, gen in enumerate(child.generators):
+            self._comp_local[id(gen)] = body_shadow
+            self._owner[id(gen)] = body_block
+            if i:
+                self._assign_child(gen.iter, body_block, body_shadow)
+            self._assign_child(gen.target, body_block, body_shadow)
+            for cond in gen.ifs:
+                self._assign_child(cond, body_block, body_shadow)
 
     def block_of(self, node) -> symtable.SymbolTable:
         b = self._owner.get(id(node))
@@ -154,8 +178,17 @@ class Resolver:
         return out
 
     def refers_to_module_binding(self, node, name: str) -> bool:
-        """Does `name`, used at `node`, resolve to the module-level binding? The module block IS that binding;
-        inside any other block the answer is symtable's GLOBAL (never LOCAL, PARAMETER or FREE)."""
+        """THE NAME QUESTION: does `name`, used at `node`, resolve to the module-level BINDING? The module block
+        IS that binding; inside any other block the answer is symtable's GLOBAL (never LOCAL, PARAMETER or FREE).
+
+        THIS IS NOT THE SITE QUESTION, and the difference is not academic (round 8, research's stage-1 note on
+        the stage-2 fix). Both consumers need to know whether the receiver IS THE DECLARED SITE OBJECT, and this
+        answers whether it is the module NAME. The two coincide only while that name is bound exactly once at
+        module scope — `S = declare_site('t'); [(S := q) for q in (1, 2)]` is the shape where they part, leaving
+        the name bound and the site object gone, with this function still answering True and being right about
+        the name. `refuse_site_rebindings` is what establishes the coincidence, and it lives in another function,
+        so ASK `refers_to_declared_site` INSTEAD when the question is about the site: it refuses unless the
+        guarantee has actually been established, rather than relying on the caller remembering the order."""
         if name in self._comp_local.get(id(node), frozenset()):
             return False            # bound by an INLINED comprehension's own target: comp-local, never the module's
         block = self.block_of(node)
@@ -166,6 +199,18 @@ class Resolver:
         except KeyError:
             return False                       # the name is not used in this block at all
         return bool(sym.is_global()) and not sym.is_local() and not sym.is_parameter()
+
+    def refers_to_declared_site(self, node, name: str) -> bool:
+        """THE SITE QUESTION: is the receiver `name`, used at `node`, THE DECLARED SITE OBJECT? That is the
+        question both consumers actually have, and it is answerable only where `refuse_site_rebindings` has
+        established that the module name is bound once — so this REFUSES rather than answering without it. The
+        guarantee used to live in the call ORDER, which is a thing a later caller or a refactor can drop with no
+        test failing, because every existing test happens to run both."""
+        if name not in self._rebindings_checked:
+            raise UnresolvableScope(
+                f"the site question was asked about {name!r} before `refuse_site_rebindings` established that its "
+                f"module-level name is bound once — without that, a resolved NAME is not evidence about the OBJECT")
+        return self.refers_to_module_binding(node, name)
 
     def _module_level_bindings(self, name: str) -> list[int]:
         """The lines at which `name` is BOUND in the module's own scope. Nested function and class bodies bind
@@ -222,3 +267,4 @@ class Resolver:
             for c in block.get_children():
                 walk(c)
         walk(self.table)
+        self._rebindings_checked |= set(names)      # only now is the NAME question evidence about the OBJECT

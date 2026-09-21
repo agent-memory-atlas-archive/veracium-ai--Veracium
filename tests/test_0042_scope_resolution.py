@@ -244,3 +244,69 @@ def test_a_module_level_rebinding_of_a_site_is_refused_including_a_walrus_in_a_c
     ns = {"declare_site": lambda i: f"<site {i}>"}
     exec("S = declare_site('t')\nxs = [(S := q) for q in (1, 2)]\n", ns)
     assert ns["S"] == 2, "PEP 572 binds the walrus in the enclosing scope; the site object is replaced"
+
+
+# (label, the listcomp form, the genexpr form, the expected answer) — the SAME question in both spellings
+REGIME_PAIRS = [
+    ("the first iterable",        "S = 1\nxs = [q for S in S.fire((1,2))]\n",          "S = 1\nxs = list(q for S in S.fire((1,2)))\n", True),
+    ("the element, rebound",      "S = 1\nxs = [S.fire(1) for S in (1,2)]\n",          "S = 1\nxs = list(S.fire(1) for S in (1,2))\n", False),
+    ("a second iterable",         "S = 1\nxs = [q for S in (1,) for q in S.fire((2,))]\n", "S = 1\nxs = list(q for S in (1,) for q in S.fire((2,)))\n", False),
+    ("an `if` clause",            "S = 1\nxs = [q for S in (1,) if S.fire(q)]\n",      "S = 1\nxs = list(q for S in (1,) if S.fire(q))\n", False),
+    ("the element, NOT rebound",  "S = 1\nxs = [S.fire(q) for q in (1,)]\n",           "S = 1\nxs = list(S.fire(q) for q in (1,))\n", True),
+    ("inside a function",         "S = 1\ndef f():\n    return [q for S in S.fire((1,))]\n", "S = 1\ndef f():\n    return list(q for S in S.fire((1,)))\n", True),
+]
+
+
+@pytest.mark.parametrize("label,listcomp,genexpr,outward", REGIME_PAIRS, ids=[p[0].replace(" ", "-") for p in REGIME_PAIRS])
+def test_both_scope_regimes_agree_and_a_genexpr_proves_the_other_one_locally(label, listcomp, genexpr, outward):
+    """THE TECHNIQUE, and it is the reusable part: a GENERATOR EXPRESSION keeps its own symtable block on EVERY
+    version, so on 3.12 it exercises exactly the branch a LIST COMPREHENSION takes on 3.10 and 3.11. Pairing the
+    two spellings of one question therefore tests BOTH regimes on ONE interpreter — a local cross-version control,
+    where the version matrix alone can only be checked by CI.
+
+    It is not hypothetical: the first version of this fix handled the first-iterable rule on the inlined path
+    only, every local test passed, and CI's 3.10 and 3.11 jobs went red on precisely the row below that asserts
+    it. The pair would have caught it here."""
+    got = [sr.Resolver(src, f"<{label}>") for src in (listcomp, genexpr)]
+    answers = [r.refers_to_module_binding(_marked_call(r), "S") for r in got]
+    assert answers == [outward, outward], (label, answers)
+
+
+def test_the_regime_pairs_really_do_take_different_paths():
+    """The control for the technique itself: if a genexpr and a listcomp were handled identically on this
+    interpreter, the pairs above would prove nothing. On 3.12 the listcomp has NO block and the genexpr has one;
+    before 3.12 both have one, and the pairs still assert the shared rules."""
+    import symtable as _st
+    lc = [c.get_name() for c in _st.symtable("[x for x in y]", "<p>", "exec").get_children()]
+    ge = [c.get_name() for c in _st.symtable("(x for x in y)", "<p>", "exec").get_children()]
+    assert ge == ["genexpr"], ge
+    if sys.version_info >= (3, 12):
+        assert lc == [], lc                      # inlined: the pairs exercise two DIFFERENT paths here
+    else:
+        assert lc == ["listcomp"], lc            # both blocked: the pairs still assert the same answers
+
+
+def test_the_site_question_refuses_until_the_rebinding_guarantee_is_established():
+    """Research's stage-1 note on the stage-2 fix, made a MECHANISM rather than a docstring sentence. There are
+    two questions here and they are not the same one: `refers_to_module_binding` answers whether the NAME
+    resolves to the module binding, and both consumers need whether the receiver IS THE DECLARED SITE OBJECT.
+    They coincide only while the module name is bound exactly once, which `refuse_site_rebindings` establishes —
+    in a different function. A guarantee held in the CALL ORDER is one a later caller or a refactor can drop
+    with nothing failing, because every existing test happens to run both. So the site question refuses until
+    the guarantee exists, and the name question stays available under its honest name."""
+    src = "from .census import declare_site\nS = declare_site('t')\nr = S.fire(1)\n"
+    r = sr.Resolver(src)
+    call = _marked_call(r)
+    assert r.refers_to_module_binding(call, "S") is True          # the NAME question: answerable immediately
+    with pytest.raises(sr.UnresolvableScope, match="before `refuse_site_rebindings`"):
+        r.refers_to_declared_site(call, "S")                      # the SITE question: refused until established
+    r.refuse_site_rebindings(r.site_names())
+    assert r.refers_to_declared_site(call, "S") is True           # and answerable after
+    # a name the guarantee was never asked about stays refused, even once OTHERS are cleared
+    with pytest.raises(sr.UnresolvableScope, match="before `refuse_site_rebindings`"):
+        r.refers_to_declared_site(call, "some_other_name")
+    # and both consumers ask the SITE question, not the name one
+    for mod in ("installed_sites.py", "inv7_uninstrument.py"):
+        text = (EVIDENCE / mod).read_text()
+        assert "refers_to_declared_site(" in text, mod
+        assert "refers_to_module_binding(" not in text, f"{mod} asks the NAME question where it needs the SITE one"
