@@ -38,7 +38,15 @@
   over-strict refusal refuses correct code and three drafts of this fix did — on both comprehension regimes. A
   site bound in two mutually exclusive branches is refused rather than analysed, including the
   `if TYPE_CHECKING` import idiom, because a static reading cannot tell a dead branch from a live one unless
-  the compiler folds it. *F3, comparison:* a control run's pytest exit is gated like
+  the compiler folds it. **Also in this round, and it is about the specification rather than
+  the code: 0042 is bumped v9.2 → v9.3 because THREE DIFFERENT DOCUMENTS had shipped or would ship under one
+  version name.** The round-6 and round-7 packages each carry a file called
+  `0042-exercised-guarantees-SPEC-v9.2.md` and they differ from each other and from this tree — each round
+  added an implementation note under the accepted version and nothing moved the identity, so a reviewer
+  holding two copies had two files with one name. No frozen invariant's text changed and the bump does not
+  re-open the design: what carries acceptance is `Spec-Status: accepted` and round 5's verdict, and the
+  accepted text remains v7. The precedent was already in the cell — v9, v9.1 and v9.2 were all
+  post-acceptance corrections. *F3, comparison:* a control run's pytest exit is gated like
   any other run's (a failed control still gave exit 0); the exits-per-function guard is replaced by the
   site-to-exit ASSOCIATION, since two sites sharing one return satisfy a count of two exits for two sites; and
   the gates are computed BEFORE `verdict.json` is written, which is why every shipped verdict lacked the gates
