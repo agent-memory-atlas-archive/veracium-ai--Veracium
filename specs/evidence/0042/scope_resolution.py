@@ -84,9 +84,22 @@ if _MISSING_OPS:                                                                
 # `_MODULE_BINDING_OPS` and expects the RuntimeError above. Asserted first, this raised AssertionError instead
 # and shadowed the louder, more specific diagnosis — a guard whose remedy is wrong is obeyed, so the precise
 # branch has to be reachable before the general one.
+# MY OWN MUTANT CAMPAIGN FOUND THIS ASSERTION CLAIMING MORE THAN IT CHECKED. It read `set(_NESTED_BINDING_OPS)
+# < set(_MODULE_BINDING_OPS)` under a comment saying it stops rule C reading a tuple that refuses
+# `class K: S = 1` — and the B1-dangerous value PASSES it: ("STORE_GLOBAL", "DELETE_GLOBAL", "STORE_NAME") is
+# still a strict subset of rule A's four, because DELETE_NAME is absent. The label read true and the property
+# was the wrong one. So the property that actually matters is asserted directly: NO `_NAME` SPELLING, because
+# a `_NAME` opcode in a nested code object is that scope's OWN binding and never a write to this module's.
+# The subset relation is kept beside it — it is true, and it says rule C may not invent an opcode rule A does
+# not know — but it is no longer the thing standing in for the real claim.
+_NESTED_NAME_OPS = [op for op in _NESTED_BINDING_OPS if op.endswith("_NAME")]
+assert not _NESTED_NAME_OPS, (
+    f"rule C must not read {_NESTED_NAME_OPS}: a `_NAME` opcode in a NESTED code object is that scope's own "
+    f"binding, not a write to this module's, so reading it there refuses `class K: S = 1` — correct code, and "
+    f"every class in the tree whose attribute collides with a site name")
 assert set(_NESTED_BINDING_OPS) < set(_MODULE_BINDING_OPS), (
-    "rule C must read a STRICT subset of rule A's opcodes: the _NAME spellings can only be a nested scope's "
-    "OWN binding, and reading them there refuses `class K: S = 1`")
+    "rule C must read a STRICT subset of rule A's opcodes: it may not invent a binding opcode the module-level "
+    "reading does not know about")
 
 
 def _instruction_line(instruction, carried: int) -> int:

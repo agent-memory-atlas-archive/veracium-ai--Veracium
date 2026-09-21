@@ -326,21 +326,118 @@ def test_the_site_question_refuses_until_the_rebinding_guarantee_is_established(
     # THE REAL RULE: a function that decides something about A DECLARED SITE (it consults `self.declared`) must
     # reach the resolver through `refers_to_declared_site`. A function that asks the name question must not be
     # deciding about a site — so it must not consult `self.declared`.
+    # ROUND 9, SECOND FORM. The first form of this property check was defeated three ways by research's
+    # stage-2 mutants, and the worst one let the ROUND-7 DEFECT ITSELF walk back in:
+    #
+    #   1. `def _m6(self, node, name): return name in self.declared` — decides site-hood by MEMBERSHIP and
+    #      calls no resolver at all. The first form's second assertion was GUARDED by "…and it calls one of
+    #      the two resolver methods", so a function that asks NO question and decides anyway never entered
+    #      the `if`. That is precisely what round 7's F4a was. The guard is gone: consulting `declared` now
+    #      obliges a function to ask the site question OR to use the membership only to REFUSE.
+    #   2. `f = self.resolver.refers_to_module_binding` then `f(node, name)` — bound to a local, the call's
+    #      func is an `ast.Name`, so collecting `ast.Call` attrs missed it. Attribute READS are collected now.
+    #   3. a module- or class-level `lambda` — the walk took FunctionDef/AsyncFunctionDef only.
+    #
+    # WHAT THIS GATE CANNOT SEE, STATED SO THE ATTACK LIST IS NOT MISTAKEN FOR THE SPECIFICATION. It is a
+    # STATIC reading, so it cannot distinguish a pure attribute read from a side-effecting @property:
+    #
+    #     if any(n in self.declared and self.bump for n in node.names):   # `bump` is a property that mutates
+    #         raise Refused(...)                                          # and returns falsy
+    #     return node                                                     # -> affirms by fall-through
+    #
+    # MEASURED, not assumed: the getter executes once per element (three, for three names) while the guard
+    # never fires, and this gate reads no method call and exempts it. It is NOT closed, deliberately. Banning
+    # attribute reads in the guard's test would ban `self.declared`, which is what the guard is FOR, and no
+    # static check of any shape can tell a pure read from a side-effecting one without executing the code. The
+    # instrument has reached the boundary of its own class; the honest move is to name the boundary rather than
+    # to keep appending shapes until the list reads as a definition. The threat model is a future developer
+    # reintroducing round 7's F4a by accident, and nobody writes a side-effecting property into a refusal guard
+    # by accident. (Research found this one and recommended leaving it; the reasoning above is theirs.)
+    #
+    # THE EXEMPTION IS A PROPERTY, NOT A NAME LIST. `visit_Global` and `visit_Nonlocal` legitimately consult
+    # `declared` and call no resolver: they REFUSE on a hit, which is the fail-closed direction, and a wrong
+    # answer there over-refuses loudly. That is checkable — every `if` whose test reads `self.declared` has a
+    # body that is exactly a `raise` — so it is checked, rather than the functions being named.
+    def _declared_reads(node):
+        """`self.declared` READ, in a Load context. `__init__`'s `self.declared = declared` is a WRITE and
+        is not a consultation — counting it made the gate accuse the constructor of deciding site-hood."""
+        return [n for n in ast.walk(node)
+                if isinstance(n, ast.Attribute) and n.attr == "declared" and isinstance(n.ctx, ast.Load)]
+
     for mod in ("installed_sites.py", "inv7_uninstrument.py"):
         text = (EVIDENCE / mod).read_text()
         assert "refers_to_declared_site(" in text, mod
         tree = ast.parse(text)
-        for fn in [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]:
-            calls = {n.func.attr for n in ast.walk(fn) if isinstance(n, ast.Call)
-                     and isinstance(n.func, ast.Attribute)}
-            reads_declared = any(isinstance(n, ast.Attribute) and n.attr == "declared" for n in ast.walk(fn))
-            if "refers_to_module_binding" in calls:
-                assert not reads_declared, (
-                    f"{mod}:{fn.name} consults `declared` AND asks the NAME question — that is the site "
-                    f"question answered by the wrong one, which is what this gate exists to refuse")
-            if reads_declared and ("refers_to_module_binding" in calls or "refers_to_declared_site" in calls):
-                assert "refers_to_declared_site" in calls, (
-                    f"{mod}:{fn.name} decides about a declared site without asking the site question")
+        units = [n for n in ast.walk(tree)
+                 if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))]
+        checked = 0
+        for fn in units:
+            where = f"{mod}:{getattr(fn, 'name', '<lambda>')}:{fn.lineno}"
+            # every attribute this unit READS or CALLS — a method bound to a local is still named here
+            names = {n.attr for n in ast.walk(fn) if isinstance(n, ast.Attribute)}
+            reads = _declared_reads(fn)
+            if not reads:
+                continue
+            checked += 1
+            # THE FAIL-CLOSED EXEMPTION, AND ITS FIRST FORM WAS DEFEATED. That form was "every read of
+            # `declared` sits in the test of an `if` whose body is exactly a raise", and research inverted the
+            # guard clause straight through it:
+            #
+            #     def visit_Evil(self, node):
+            #         if not any(n in self.declared for n in node.names):
+            #             raise Refused(...)          # membership FALSE -> refuse
+            #         self.sites += 1                 # membership TRUE  -> act on it
+            #         return None
+            #
+            # Every read is inside a raise-guard, so it was exempt — and it decides the site question BY
+            # FALL-THROUGH. F4a with a `not` in front of it, and a guard clause is ordinary Python.
+            #
+            # The invariant is NOT about the shape of one `if`. It is that CONSULTING `declared` CAN ONLY EVER
+            # REFUSE, NEVER AFFIRM — this function refuses, or it leaves the tree alone. So the whole body is
+            # checked: every statement that is not a raise-guard must be a bare `return <parameter>`.
+            # `visit_Global` and `visit_Nonlocal` are refuse-or-passthrough and satisfy it; `visit_Evil` does
+            # not. Disqualifying `ast.Not` inside the test was considered and REJECTED — that is a narrow
+            # matcher, and `if all(n not in self.declared ...)` walks past it, which is the same defect as the
+            # packaging gate that matched one spelling.
+            params = {a.arg for a in list(getattr(fn.args, "posonlyargs", [])) + fn.args.args
+                      + fn.args.kwonlyargs} if hasattr(fn, "args") else set()
+            guards, other = [], []
+            for stmt in (fn.body if isinstance(fn.body, list) else [fn.body]):
+                # A REFUSAL GUARD'S TEST MAY NOT CALL A METHOD. My own attack battery left one survivor:
+                #     if any(n in self.declared and self._bump() for n in node.names): raise Refused(...)
+                # which refuses only when `_bump()` is truthy, so on the falsy path it has ACTED on membership
+                # and returned the node — affirming through a side effect in the test. Banning method calls in
+                # the guard's test closes the construct rather than the one spelling: `any(...)`/`all(...)`
+                # are `ast.Name` calls and stay legal, `self.anything()` does not.
+                calls_a_method = any(isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute)
+                                     for c in ast.walk(stmt.test)) if isinstance(stmt, ast.If) else False
+                if isinstance(stmt, ast.If) and len(stmt.body) == 1 and isinstance(stmt.body[0], ast.Raise) \
+                        and not stmt.orelse and not calls_a_method:
+                    guards.append(stmt)
+                else:
+                    other.append(stmt)
+            refusing = [r for g in guards for r in _declared_reads(g.test)]
+            passthrough = all(isinstance(s, ast.Return) and isinstance(s.value, ast.Name)
+                              and s.value.id in params for s in other)
+            only_refuses = ({id(n) for n in reads} == {id(n) for n in refusing}) and bool(guards) and passthrough
+            assert "refers_to_declared_site" in names or only_refuses, (
+                f"{where} consults `declared` without asking the SITE question, and does not use the "
+                f"membership solely to refuse. That is round 7's F4a exactly: membership is not a scope "
+                f"answer, and deciding on it silently rewrites or accepts what it should have resolved")
+            assert "refers_to_module_binding" not in names or "refers_to_declared_site" in names, (
+                f"{where} consults `declared` AND reaches the NAME question — the site question answered by "
+                f"the wrong one, which is what this gate exists to refuse")
+        # THE VACANCY CHECK, WITH ITS EXPECTATION DERIVED RATHER THAN ASSUMED. A first form asserted every
+        # module has a unit consulting `declared`, and `installed_sites.py` REFUSED it correctly: that module
+        # is not class-based — it holds a LOCAL `declared` list and asks `r.refers_to_declared_site(...)`
+        # directly, so there is no `self.declared` to consult. The expectation therefore comes from the
+        # source: a module that mentions `self.declared` must have at least one unit examined here, and one
+        # that does not is covered by the `refers_to_declared_site(` assertion above. Deriving it means
+        # a module that GAINS the attribute is covered without anyone remembering to add it.
+        if "self.declared" in text:
+            assert checked, (
+                f"{mod} mentions `self.declared` but this gate examined no unit that reads it — the gate has "
+                f"gone blind to the module it is for")
 
 
 # ---------------------------------------------------------------------------------------------------------------

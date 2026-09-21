@@ -434,14 +434,21 @@ def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> in
     # and a failed control is exactly the run whose "these tests agree with themselves" claim is void.
     for a in arms:
         gates[f"pytest_exit:{a}"] = summaries.get(a, {}).get("pytest_exit") == 0
-    # ROUND 9, F2: the controls gated here are the UNION of the ones `compare` actually USED (from the
-    # verdict it just built — the same derivation, not a second one) and the ones that have a summary at all.
-    # The union is deliberate and can only ADD gates: a control with a directory and no summary is caught by
-    # `controls_used_have_their_own_summary` below, and a control with a summary and no directory still RAN,
-    # so its exit still counts even though nothing compared it.
+    # ROUND 9, F2. Every control run that HAS a summary is gated on its exit: having a summary means the run
+    # happened, and its result counts whether or not the comparison used its directory.
+    #
+    # THIS WAS A UNION with the controls `compare` actually used, and MY OWN MUTANT CAMPAIGN KILLED IT — the
+    # mutant that replaced the union with this line SURVIVED, which is the dead-check taxonomy's UNFAILABLE
+    # entry. It survived because the union is provably equal to one of its operands: `compare` adds a control
+    # to `per_arm_ctl` ONLY on the branch where its key is in `summaries`, so the used set is a subset of the
+    # summary keys by construction and the union could never differ. A second operand that cannot change the
+    # answer reads as defence in depth and is really a branch no test can redden, so it is gone rather than
+    # commented.
+    #
+    # What makes the DIRECTORY-without-summary case fail is the gate below, and that one is load-bearing:
+    # deleting it is a mutant the round-9 regression KILLS.
     ctl = verdict.get("control") or {}
-    used_controls = {a + "-control" for a in (ctl.get("arms") or {})}
-    for a in sorted(used_controls | {k for k in summaries if k.endswith("-control")}):
+    for a in sorted(k for k in summaries if k.endswith("-control")):
         gates[f"pytest_exit:{a}"] = summaries.get(a, {}).get("pytest_exit") == 0
     gates["controls_used_have_their_own_summary"] = (ctl.get("without_summary") or []) == []
     c = checks.get("healthy") or {}

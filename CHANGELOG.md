@@ -43,6 +43,18 @@
   only the prefixed spelling, so it saw NOTHING on the README line that names eleven such files — three of them
   stale. **The round's own class:** every one of the five is a literal sitting next to the derivation that
   should have produced it, or a property established at one of a question's two sites.
+  **The gate that enforces the scope rule was itself rewritten three times in this round, each time because a
+  mutant walked through it.** It began as a blanket text ban on the name question's spelling anywhere in the
+  transform, which refused the legitimate census-alias lookup. Replaced by an AST property, it enforced "if you
+  ask a resolver question, ask the right one" — a property satisfied by NEVER ASKING, so a function reading
+  `self.declared` and calling no resolver at all passed, which is round 7's original defect verbatim. Inverted
+  to "consulting `declared` obliges the site question", it then had to exempt the two visitors that consult it
+  only to REFUSE; the first exemption ("every read sits in an `if` whose body is a raise") was defeated by
+  inverting the guard clause, which refuses on absence and then acts on presence by fall-through. The exemption
+  is now the invariant it was always standing for — consulting `declared` may REFUSE but never AFFIRM, so every
+  statement outside the refusal guard must be a bare passthrough return — and a refusal guard's test may not
+  call a method, which closed a survivor that acted through a side effect in the test. Eight attack shapes are
+  driven against it, with the legitimate visitors as the acceptance control.
 
 - **Fixed: the census's round-7 implementation findings — a validation reports its own incompleteness, names
   resolve through the language's scope analysis, the comparison gates every run it rests on, and the twin
