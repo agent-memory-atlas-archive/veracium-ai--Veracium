@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- **Fixed: the census's round-9 implementation finding — the twin transform establishes that a census alias
+  is bound once by a sibling census import, and stops claiming the one thing a static reading cannot reach
+  (specs/0042, round 10; one finding, in the ACCEPTANCE CHECKS).** Round 8's F1 and F2 are closed; no product
+  code changed and `src/` is byte-identical to the round-9 pin. *The finding:* round 8 made the census-alias
+  question a SCOPE question, and scope is not identity. A genuine `from . import census as _census` followed
+  by `_census = On()` still resolves to module scope while no longer denoting the census, and the
+  `aliases or {"_census", "census"}` fallback treated those two spellings as the census in a module importing
+  no census at all. In both cases an ordinary function returned 101 in the source and 1 in the twin while
+  `verify()` reported no problems. *Three things changed.* `declared_names` now examines the import's `module`
+  and `level` and not only the imported NAME — it tested `any(a.name == "census")` alone, so six of seven
+  spellings were collected, including `from totally_unrelated import census`, `from conftest import census`
+  and `from .. import census`; only the sibling form `from . import census` is the census now. The guessed-alias
+  fallback is REMOVED, which preserves ordinary behaviour in a module that imports no census (the verdict
+  allows "preserve or refuse", and preserving is the half that cannot over-refuse). And an established alias
+  must be bound EXACTLY ONCE at module level, read from the compiled code object by rule A's own mechanism,
+  now public as `module_binding_count` — a name bound twice had its import replaced, and the transform refuses
+  rather than rewriting a condition whose subject it cannot establish. **THE RUNG THE FIX DOES NOT CLAIM.**
+  Three rounds climbed membership → spelling → scope, one rung per round, and the fourth — does the alias
+  DENOTE this project's census module? — is not statically reachable: two BYTE-IDENTICAL files under different
+  packages bind different objects, because `.census` resolves against whichever package the file sits in, and
+  a static reading cannot separate them since they ARE the same file. So the refusal now states exactly what
+  it establishes and no more, and identity is asserted at RUNTIME instead, in a regression that already
+  executes both modules and can compare `veracium.schema._census is veracium.census` with a negative control.
+  Measured before shipping: the twin derives byte-identically (162 sites, 302 fires, 152 consults, 4 bypasses,
+  digest unchanged), and zero modules use the import spelling the removed fallback would newly refuse.
+
 - **Fixed: the census's round-8 implementation findings — the nested-scope rule reads the interpreter instead
   of a hand-picked predicate pair, the comparison derives its control set once, and the twin transform asks a
   scope question where it had been matching a spelling (specs/0042, round 9; three findings, plus two found by

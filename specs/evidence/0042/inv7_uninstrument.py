@@ -147,7 +147,28 @@ class Uninstrument(ast.NodeTransformer):
         reported no problems. A fix applied at one of a question's two sites is the round's recurring shape.
 
         Fail direction matters here and it is why this one was the dangerous one: `visit_Global`/`visit_Nonlocal`
-        also test membership, but they REFUSE on a hit, so a wrong answer over-refuses and is loud."""
+        also test membership, but they REFUSE on a hit, so a wrong answer over-refuses and is loud.
+
+        WHAT THIS ESTABLISHES, IN THE MECHANISM'S OWN WORDS, AND WHAT IT DOES NOT. It establishes that the
+        name resolves to a MODULE-LEVEL binding, that the binding is made by an import spelled
+        `from . import census` (level 1, no module), and — via `module_binding_count` at the call in
+        `uninstrument_source` — that the name is bound EXACTLY ONCE, so the import was not later replaced.
+        IT DOES NOT ESTABLISH THAT THE BINDING DENOTES THIS PROJECT'S CENSUS MODULE, and no static reading
+        can, which is the round-9 verdict's distinction between module scope and the identity of the object
+        bound there. Research demonstrated the limit executably: two BYTE-IDENTICAL files,
+
+            from . import census as _census
+            def ordinary(): return _census.enabled()
+
+        one under `real/sub/` and one under `fake/sub/`, bind different objects and return True and False.
+        A static check cannot separate them BECAUSE THEY ARE THE SAME FILE — `.census` resolves against
+        whichever package the module sits in. Three rounds of increasingly specific syntax (membership ->
+        spelling -> scope) have a fourth rung that syntax cannot reach.
+
+        SO IDENTITY IS CHECKED WHERE IT IS CHECKABLE: AT RUNTIME, in the behaviour regressions, which
+        already execute both modules and can therefore assert that the object bound to the alias IS the
+        census module the instrumentation uses. That assertion is
+        `test_r9_the_alias_identity_is_established_at_runtime_because_it_cannot_be_established_statically`."""
         if name not in self.census_aliases:
             return False
         if self.resolver is None:
@@ -288,7 +309,20 @@ def declared_names(tree: ast.Module) -> tuple[set[str], set[str]]:
         if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name) \
                 and isinstance(stmt.value, ast.Call) and getattr(stmt.value.func, "id", getattr(stmt.value.func, "attr", "")) == "declare_site":
             declared.add(stmt.targets[0].id)
-        if isinstance(stmt, ast.ImportFrom) and any(a.name == "census" for a in stmt.names):
+        # ROUND 10, research's stage-1 B1. This tested `any(a.name == "census")` and NEVER LOOKED AT
+        # `stmt.module` OR `stmt.level`, so six of seven spellings were collected — including
+        # `from totally_unrelated import census`, `from conftest import census`, `from .vendor.fakes import
+        # census` and `from .. import census`. A fix that said "the one binding must be the census import"
+        # while asking THIS would have moved from spelling-of-the-alias to SPELLING-OF-THE-IMPORTED-NAME:
+        # the same rung, one level up, which is the stop-one-rung-short this round was returned for.
+        #
+        # Only the SIBLING form is collected: `from . import census` — level 1, no module. That is the form
+        # the tree uses (schema.py, where all four bypasses are; __init__.py's is function-local and
+        # correctly not module-level). `from .. import census` is a DIFFERENT package's census and is no
+        # longer collected. Measured before narrowing: zero modules in src/veracium use any other spelling,
+        # so this over-refuses nothing that exists.
+        if isinstance(stmt, ast.ImportFrom) and stmt.level == 1 and stmt.module is None \
+                and any(a.name == "census" for a in stmt.names):
             for a in stmt.names:
                 if a.name == "census":
                     aliases.add(a.asname or "census")
@@ -315,7 +349,25 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     declared, aliases = declared_names(tree)
     resolver.refuse_site_rebindings(declared)
     exits_before = exits_per_function(tree)
-    census_aliases = aliases or {"_census", "census"}
+    # ROUND 10: THE GUESSED-ALIAS FALLBACK IS GONE. `aliases or {"_census", "census"}` treated those two
+    # spellings as the census in a module that imports no census at all, so an ordinary object bound to
+    # `_census` had its condition rewritten and the twin computed a different answer. Removing it PRESERVES
+    # ordinary behaviour in that module (the verdict's "preserve ordinary behavior OR explicitly refuse" —
+    # preserving is the half that cannot over-refuse). Measured before removal: the twin derives
+    # BYTE-IDENTICALLY, 162/302/152/4, digest a0f42316…, because every bypass is in schema.py, which
+    # derives its alias properly.
+    census_aliases = aliases
+    # AND THE BINDING MUST NOT HAVE MOVED. `from . import census as _census` followed by `_census = On()`
+    # imports the census and then replaces it; the name still resolves to module scope, so the scope
+    # question answers YES about a binding that no longer denotes the census. Rule A's reading answers the
+    # one part of this a static check can: was the name bound more than once?
+    for a in sorted(census_aliases):
+        n = resolver.module_binding_count(a)
+        if n != 1:
+            raise Refused(f"the census alias {a!r} is bound {n} times at module level, so the import does "
+                          f"not establish what the name denotes where the bypass reads it — a census import "
+                          f"followed by a reassignment binds twice, and the transform will not rewrite a "
+                          f"condition whose subject it cannot establish")
     t = Uninstrument(declared, census_aliases, resolver); tree = t.visit(tree); ast.fix_missing_locations(tree)
     # a module that still USES the census surface after the instrumentation is gone (the opt-in switch,
     # `_census.enable(True)` in the package module) keeps its import: the twin's stub census answers it

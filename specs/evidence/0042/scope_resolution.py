@@ -359,6 +359,15 @@ class Resolver:
                 found.append((instruction.opname, line))
         return found
 
+    def module_binding_count(self, name: str) -> int:
+        """How many times the MODULE's own code object binds `name` — rule A's reading, made public.
+
+        ROUND 10: the twin transform needs it for the CENSUS ALIAS, not just for sites. A name imported once
+        and then reassigned (`from . import census as _census` … `_census = On()`) is bound TWICE here, which
+        is the only part of "does this name still denote the census module?" a static reading can answer.
+        It answers WHETHER THE BINDING MOVED, never WHAT IT DENOTES — see `_is_census_alias`."""
+        return len(self._module_binding_ops(name))
+
     def refuse_site_rebindings(self, names: set[str]) -> None:
         """A declared site's NAME must denote the site everywhere the module reads it. Every way it stops doing so
         is REFUSED rather than resolved — the reviewer's sanctioned alternative to covering a form.

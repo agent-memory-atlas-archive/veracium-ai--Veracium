@@ -991,6 +991,84 @@ def test_r8_f3_an_ordinary_shadowed_census_alias_keeps_its_behaviour():
         "the twin's ordinary() diverges from the source's — an ordinary shadowed `_census` was rewritten"
 
 
+def test_r9_a_census_alias_whose_binding_was_replaced_is_refused_not_rewritten():
+    """ROUND 9's FINDING, case (a): module SCOPE established, object IDENTITY not.
+
+    Round 8 made the census-alias question a SCOPE question. A genuine `from . import census as _census`
+    FOLLOWED BY `_census = On()` still resolves to module scope — and no longer denotes the census. The
+    transform rewrote the condition anyway, so an ordinary function returned 101 in the source and 1 in the
+    twin while `verify()` reported no problems.
+
+    The static reading answers the one part of identity it can: rule A's own count, made public as
+    `module_binding_count`. A name bound TWICE at module level had its import replaced, and the transform
+    refuses rather than rewriting a condition whose subject it cannot establish."""
+    un = _load("inv7_uninstrument_r9a", EVIDENCE / "inv7_uninstrument.py")
+    src = ("from . import census as _census\n"
+           "S = _census.declare_site('s')\n\n"
+           "class On:\n    def enabled(self):\n        return True\n\n"
+           "_census = On()\n\n"
+           "def hot(q):\n    if _census.enabled():\n        q = q + 1\n        return S.fire(q)\n    return q\n")
+    with pytest.raises(un.Refused, match="bound 2 times at module level"):
+        un.uninstrument_source(src, "<replaced-alias>")
+    # THE POSITIVE CONTROL: the same module WITHOUT the reassignment still transforms, or this test would
+    # pass against a transform that refused everything.
+    ok = ("from . import census as _census\n"
+          "S = _census.declare_site('s')\n\n"
+          "def hot(q):\n    if _census.enabled():\n        q = q + 1\n        return S.fire(q)\n    return q\n")
+    twin, stats = un.uninstrument_source(ok, "<intact-alias>")
+    assert stats["bypasses"] == 1 and "if False:" in twin, "the genuine bypass stopped being rewritten"
+
+
+def test_r9_a_module_with_no_census_import_keeps_its_own_behaviour():
+    """ROUND 9's FINDING, case (b): the GUESSED-ALIAS FALLBACK.
+
+    `aliases or {"_census", "census"}` treated those two spellings as the census in a module that imports no
+    census at all, so an ordinary object bound to `_census` had its condition rewritten. The verdict allows
+    "preserve ordinary behavior OR explicitly refuse"; preserving is the half that cannot over-refuse, and
+    removing the fallback preserves. Measured before removal: the real tree's twin derives byte-identically,
+    because every bypass is in a module that derives its alias properly.
+
+    This EXECUTES both modules rather than comparing trees, because `verify()` re-derives with the same
+    transform and so reproduces a transform defect identically."""
+    un = _load("inv7_uninstrument_r9b", EVIDENCE / "inv7_uninstrument.py")
+    src = ("from veracium.census import declare_site\n"
+           "S = declare_site('s')\n\n"
+           "class On:\n    def enabled(self):\n        return True\n\n"
+           "_census = On()\n\n"
+           "def hot(q):\n    if _census.enabled():\n        q = q + 1\n        return S.fire(q)\n    return q\n\n"
+           "def ordinary(q):\n    if _census.enabled():\n        return q + 100\n    return q\n")
+    twin, stats = un.uninstrument_source(src, "<no-census-import>")
+    assert stats["bypasses"] == 0, "a module with no census import had a condition rewritten"
+    import types
+    def run(text, tag):
+        m = types.ModuleType(tag)
+        m.__dict__["declare_site"] = lambda i: types.SimpleNamespace(fire=lambda q: q, consult=lambda: None)
+        exec(compile(text.replace("from veracium.census import declare_site\n", ""), tag, "exec"), m.__dict__)
+        return m
+    assert run(src, "src_b").ordinary(1) == run(twin, "twin_b").ordinary(1) == 101, \
+        "the twin's ordinary() diverges: an object that is not the census had its condition rewritten"
+
+
+def test_r9_the_alias_identity_is_established_at_runtime_because_it_cannot_be_established_statically():
+    """THE FOURTH RUNG, CLOSED WHERE IT IS CLOSEABLE.
+
+    Three rounds climbed membership -> spelling -> scope, one rung per round. The fourth — does the alias
+    DENOTE this project's census module? — is not statically reachable, and research demonstrated it
+    executably: two BYTE-IDENTICAL files under different packages bind different objects and return True
+    and False. A static reading cannot separate them because they ARE the same file.
+
+    So the claim is not made statically. It is made here, at runtime, where `sys.modules` exists and
+    identity is an `is` comparison — and the behaviour regressions already pay for the execution. This test
+    asserts the instrumented tree's own alias resolves to the census module the instrumentation uses, which
+    is the assertion the AST cannot make."""
+    import veracium, veracium.census, veracium.schema
+    assert veracium.schema._census is veracium.census, \
+        "schema.py's `_census` is not the census module the instrumentation uses — the alias the transform " \
+        "rewrites conditions on does not denote what the static check assumes"
+    # and the NEGATIVE control: identity is a real discriminator here, not a tautology
+    assert veracium.schema._census is not veracium, "the identity assertion would pass against any module"
+
+
 def test_r8_f3_the_census_import_is_restored_for_a_derived_alias():
     """The SECOND member of F3's class, found by sweeping the module's other spelling-based tests rather than
     by the reviewer. `still_used` read a hand-written `("_census", "census")` sitting two lines below the
