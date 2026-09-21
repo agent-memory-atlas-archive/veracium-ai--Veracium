@@ -134,6 +134,27 @@ class Uninstrument(ast.NodeTransformer):
                           f"be established as the declared site rather than a local of the same name")
         return self.resolver.refers_to_declared_site(node, name)
 
+    def _is_census_alias(self, name, node) -> bool:
+        """`name`, used at `node`, is the MODULE-level census import — not a parameter, a local, or an
+        enclosing function's binding that happens to be spelled the same.
+
+        ROUND 9, F3: THE TWIN OF `_is_site`, AND IT DID NOT EXIST. Round 7's F4a established that "is this NAME
+        the declared site?" is a SCOPE question and routed it to the resolver — at the site call sites. The
+        CENSUS-ALIAS question sat four methods away still answered by `name in self.census_aliases`, pure
+        spelling, and that one REWRITES rather than refusing: an ordinary function taking a parameter named
+        `_census` and branching on `_census.enabled()` had its branch turned into `if False:`, so the twin
+        computed a different answer from the source (measured: original True, derived False) while `verify()`
+        reported no problems. A fix applied at one of a question's two sites is the round's recurring shape.
+
+        Fail direction matters here and it is why this one was the dangerous one: `visit_Global`/`visit_Nonlocal`
+        also test membership, but they REFUSE on a hit, so a wrong answer over-refuses and is loud."""
+        if name not in self.census_aliases:
+            return False
+        if self.resolver is None:
+            raise Refused(f"line {getattr(node, 'lineno', '?')}: no scope resolver was supplied, so {name!r} "
+                          f"cannot be established as the census module rather than a local of the same name")
+        return self.resolver.refers_to_module_binding(node, name)
+
     # module-level: drop declare_site assignments and census imports
     def visit_Module(self, node):
         kept = []
@@ -195,7 +216,7 @@ class Uninstrument(ast.NodeTransformer):
         self.generic_visit(node)
         t = node.test
         if isinstance(t, ast.Call) and isinstance(t.func, ast.Attribute) and t.func.attr == "enabled" \
-                and isinstance(t.func.value, ast.Name) and t.func.value.id in self.census_aliases:
+                and isinstance(t.func.value, ast.Name) and self._is_census_alias(t.func.value.id, t.func.value):
             # the ONLY recognised shapes for the body (after the with was spliced by generic_visit above):
             # one or two statements, each a simple assignment to ONE Name, the last of them allowed to be a
             # `return <expr>` — the four hot Edge predicates, in their round-6 form (`q = …; return fire(q)`,
@@ -294,10 +315,18 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     declared, aliases = declared_names(tree)
     resolver.refuse_site_rebindings(declared)
     exits_before = exits_per_function(tree)
-    t = Uninstrument(declared, aliases or {"_census", "census"}, resolver); tree = t.visit(tree); ast.fix_missing_locations(tree)
+    census_aliases = aliases or {"_census", "census"}
+    t = Uninstrument(declared, census_aliases, resolver); tree = t.visit(tree); ast.fix_missing_locations(tree)
     # a module that still USES the census surface after the instrumentation is gone (the opt-in switch,
     # `_census.enable(True)` in the package module) keeps its import: the twin's stub census answers it
-    still_used = any(isinstance(n, ast.Name) and n.id in ("_census", "census") for n in ast.walk(tree))
+    # ROUND 9, F3 (found by sweeping F3's class rather than fixing the cell the reviewer named): this read
+    # `n.id in ("_census", "census")` — a hand-written literal sitting two lines below `census_aliases`, which
+    # is DERIVED from this module's own imports. A module importing the census as anything else kept its
+    # surface use and lost its import, so the twin died with `NameError`. Latent, not live: the tree's only
+    # alias today is `_census`. Same shape as `_NESTED_BINDING_OPS` nearly reusing the wider tuple and as the
+    # packaging README hand-listing filenames the stage derives — a literal next to the derivation that
+    # should have produced it.
+    still_used = any(isinstance(n, ast.Name) and n.id in census_aliases for n in ast.walk(tree))
     if still_used and t.removed_imports:
         tree.body[0:0] = t.removed_imports; t.imports -= len(t.removed_imports)
     out = ast.unparse(tree) + "\n"

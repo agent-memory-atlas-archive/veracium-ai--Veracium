@@ -208,6 +208,18 @@ INVENTORY = [
      "git-checkout", "specs/0042 INV-7: a SHALLOW checkout cannot answer whether the "
      "transcript's pin is an ancestor of HEAD (git exit 128 is a fact about the "
      "checkout); CI checks out with fetch-depth 0, so this is a last resort"),
+    ("tests/test_0042_inv7.py", "skip",
+     "the pin's harness cannot be loaded to compare against",
+     "git-checkout", "specs/0042 INV-7 (round 9, F2): the equivalence proof loads the "
+     "harness AS IT STOOD at the transcript's pin and runs it beside the current one, to "
+     "show the control-summary fix changes nothing for a COMPLETE capture; an extracted "
+     "archive has no history to load the old harness from, and comparing against a "
+     "rebuilt-from-memory copy would assert a property of the reconstruction"),
+    ("tests/test_0042_inv7.py", "skip",
+     "is not retrievable here",
+     "git-checkout", "specs/0042 INV-7 (round 9, F2): the pin is a commit here but the "
+     "harness blob at it is not fetchable (a shallow or partial clone), which is a fact "
+     "about the checkout and not about the harness"),
     ("tests/test_0043_run.py", "skip",
      "the run's pin cannot be checked against history",
      "git-checkout", "specs/0043 tranche 2: the committed run report pins the commit it "

@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+- **Fixed: the census's round-8 implementation findings — the nested-scope rule reads the interpreter instead
+  of a hand-picked predicate pair, the comparison derives its control set once, and the twin transform asks a
+  scope question where it had been matching a spelling (specs/0042, round 9; three findings, plus two found by
+  exhausting their classes).** All five are in the ACCEPTANCE CHECKS; no product code changed, and `src/` is
+  byte-identical to the round-8 pin. *F1, the nested-scope rule:* a nested `import os as S` or
+  `from os import path as S` under `global S` replaced a declared site while the scan reported it bound and the
+  site's counters stayed at zero — `symtable` reports such a symbol `is_imported` and NOT `is_assigned`, so the
+  rule's `is_global() and is_assigned()` never fired. The fix is not a third predicate: the rule now reads what
+  the compiler emits in a NESTED code object, `STORE_GLOBAL` or `DELETE_GLOBAL`, which is the same kind of
+  reading the module-level rule already was and is total over syntax for the same reason. The superseded pair
+  is kept as the negative control its replacement must beat, and the two are measured to differ on exactly the
+  two nested imports and agree on every other row of a 46-case matrix, on 3.10, 3.11, 3.12 and 3.13. The nested
+  opcode set is asserted to be a STRICT SUBSET of the module-level one, because a class body's ordinary
+  attribute assignment emits `STORE_NAME` in its own code object and reading the wider tuple there refuses
+  `class K: S = 1` — correct code, and every class whose attribute collides with a site name. One row changes
+  hands between the two rules at 3.12, where PEP 709 inlines a list comprehension's walrus into the module,
+  while the generator-expression spelling stays with the nested rule on every version; the matrix therefore
+  pins WHICH rule caught each refused row, since a matrix asserting only "refused" is green for a different
+  reason on each side of that boundary. *F2, the comparison:* the set of control runs had TWO derivations —
+  the comparison chose controls by DIRECTORY and substituted the main arm's summary for an absent one, while
+  the exit gate iterated the SUMMARY KEYS — so deleting one key made them disagree: the control was still
+  compared, decoded through the wrong arm's dictionaries, and its exit check vanished, which meant a control
+  run that FAILED gave exit 0. That is the defect round 8 closed, restored by another route, because that fix
+  moved the gate's source from one set of what happens to be available to another. There is now one derivation:
+  a control whose directory exists without its own summary is named and fails the exit, never substituted. The
+  fix is measured to change nothing for a COMPLETE capture — the harness at the round-8 pin and the current one
+  agree on verdict, per-test comparison, exit and every pre-existing gate — so the shipped four-arm transcript
+  needs no re-run. *F3, the twin transform:* round 8 made "is this name the declared SITE?" a scope question and
+  routed it to the resolver; the CENSUS-ALIAS question four methods away was still answered by spelling, and
+  unlike the membership tests that REFUSE, that one REWRITES. An ordinary function whose parameter is named
+  `_census` and which branches on that object's `enabled()` had its branch turned into `if False:`, so the twin
+  returned 1 where the source returned 101 while `verify()` reported no problems. It now asks the same resolver.
+  Because `verify()`'s structure check re-derives the twin with the SAME transform — so a transform defect
+  reproduces identically and reads clean — the regression EXECUTES both modules rather than comparing trees.
+  **Two further defects were found by exhausting those classes rather than fixing the cells the reviewer named:**
+  the import-restoration test read a hand-written `("_census", "census")` sitting two lines below the DERIVED
+  alias set, so a module importing the census under any other name lost its import and produced a twin that
+  died with `NameError`; and a packaging gate written in round 8 to catch dead `collected/` citations matched
+  only the prefixed spelling, so it saw NOTHING on the README line that names eleven such files — three of them
+  stale. **The round's own class:** every one of the five is a literal sitting next to the derivation that
+  should have produced it, or a property established at one of a question's two sites.
+
 - **Fixed: the census's round-7 implementation findings — a validation reports its own incompleteness, names
   resolve through the language's scope analysis, the comparison gates every run it rests on, and the twin
   verifier establishes preservation (specs/0042, round 8; four findings, all in the ACCEPTANCE CHECKS).** The
@@ -27,15 +69,13 @@
   spellings defeated it because none is an `ast.Name` in a `Store` context: `import os as S`,
   `from os import path as S`, `except Exception as S`, `del S`, `def S()`, `class S`. It now reads the module's
   COMPILED code object, which binds a name by exactly four opcodes and is therefore total over syntax, plus
-  `symtable` for the bindings a nested code object performs against module scope (`global`, and a
-  comprehension's walrus). The wider of the two `symtable` predicates is kept as the fail-closed direction and
-  not because the evidence separates them: the narrower `is_declared_global()` gives the same verdict on all 44
-  rows, since `symtable` synthesises that flag for a comprehension's walrus even though the source contains no
-  `global` statement — a surviving mutant, declared and pinned by a test rather than left to be rediscovered. There is now no hand-enumerated walk anywhere in
+  the NESTED code objects for the bindings they perform against module scope. *(Round 8 read that second half
+  through a `symtable` predicate pair; round 9 replaced it — see the entry above. This text describes what
+  ships.)* There is now no hand-enumerated walk anywhere in
   that refusal: a third reading written in the same fix, comparing the two, was deleted once it was shown to
   refuse correct code (a dead `if False` branch the compiler folds away, and a bare annotation), and the AST
-  walk it cross-checked went with it. Checked against a 44-case matrix — 27 refusals, 17 acceptances, since an
-  over-strict refusal refuses correct code and three drafts of this fix did — on both comprehension regimes. A
+  walk it cross-checked went with it. Checked against a 46-case matrix — 29 refusals, 17 acceptances, since an
+  over-strict refusal refuses correct code and three drafts of this fix did — on all four interpreters. A
   site bound in two mutually exclusive branches is refused rather than analysed, including the
   `if TYPE_CHECKING` import idiom, because a static reading cannot tell a dead branch from a live one unless
   the compiler folds it. **Also in this round, and it is about the specification rather than

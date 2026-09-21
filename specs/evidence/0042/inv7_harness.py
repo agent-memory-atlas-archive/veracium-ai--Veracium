@@ -219,12 +219,26 @@ def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict, 
     # between the two runs of one arm has inputs the run does not freeze and is EXCLUDED BY NAME from every
     # cross-arm comparison — the union over arms. The reference-only pair missed noise that only the slowest
     # arm's timing sampled (the first round-7 run).
-    per_arm_ctl = {}
+    # ROUND 9, F2: THE CONTROL SET HAS ONE DERIVATION, AND IT IS THIS ONE. It used to have two — `compare`
+    # chose controls by DIRECTORY and substituted the main arm's summary for an absent one
+    # (`summaries.get(arm + "-control", summaries[arm])`), while `final_status` gated the controls it found
+    # among the summary KEYS. Two sets derived from different sources, free to disagree, and deleting one key
+    # made them: the control was still compared (decoded through the WRONG arm's dictionaries) and its exit
+    # check vanished, so a control run that FAILED gave exit 0. That is precisely the defect round 7's F3a
+    # fix closed, restored by another route, because that fix changed the gate's source from `arms` to the
+    # summary keys — both sets of what happens to be AVAILABLE, neither the set actually USED.
+    # A control we cannot decode through its OWN dictionaries is not evidence: it is named here and it fails
+    # the exit. It is never silently substituted.
+    per_arm_ctl, ctl_without_summary = {}, []
     for arm in arms:
         control_dir = out / (arm + "-control")
         if control_dir.exists():
+            key = arm + "-control"
+            if key not in summaries:
+                ctl_without_summary.append(key)
+                continue
             segs_arm = ref_segments if arm == ref else segments(out / arm, summaries[arm])
-            ctl = segments(control_dir, summaries.get(arm + "-control", summaries[arm]))
+            ctl = segments(control_dir, summaries[key])
             per_arm_ctl[arm] = {"tests": len(segs_arm), "non_reproducible": sorted(t for t in segs_arm if ctl.get(t) != segs_arm[t])}
     found = sorted(set().union(*(set(v["non_reproducible"]) for v in per_arm_ctl.values()))) if per_arm_ctl else []
     # Round 7 (research): the exclusion list is STANDING and NAMED (inv7_exclusions.STANDING, each entry with its cause),
@@ -234,7 +248,8 @@ def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict, 
     standing_present = sorted(t for t in standing if t in ref_segments)
     newly = sorted(t for t in found if t not in standing)
     nondet = sorted(set(standing_present) | set(newly))
-    verdict["control"] = {"arms": per_arm_ctl, "tests": len(ref_segments), "non_reproducible": nondet,
+    verdict["control"] = {"arms": per_arm_ctl, "without_summary": sorted(ctl_without_summary),
+                          "tests": len(ref_segments), "non_reproducible": nondet,
                           "standing_excluded": standing_present, "standing_causes": {t: standing[t] for t in standing_present},
                           "newly_non_reproducible": newly}
     verdict["per_test"] = {}
@@ -419,8 +434,16 @@ def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> in
     # and a failed control is exactly the run whose "these tests agree with themselves" claim is void.
     for a in arms:
         gates[f"pytest_exit:{a}"] = summaries.get(a, {}).get("pytest_exit") == 0
-    for a in sorted(k for k in summaries if k.endswith("-control")):
+    # ROUND 9, F2: the controls gated here are the UNION of the ones `compare` actually USED (from the
+    # verdict it just built — the same derivation, not a second one) and the ones that have a summary at all.
+    # The union is deliberate and can only ADD gates: a control with a directory and no summary is caught by
+    # `controls_used_have_their_own_summary` below, and a control with a summary and no directory still RAN,
+    # so its exit still counts even though nothing compared it.
+    ctl = verdict.get("control") or {}
+    used_controls = {a + "-control" for a in (ctl.get("arms") or {})}
+    for a in sorted(used_controls | {k for k in summaries if k.endswith("-control")}):
         gates[f"pytest_exit:{a}"] = summaries.get(a, {}).get("pytest_exit") == 0
+    gates["controls_used_have_their_own_summary"] = (ctl.get("without_summary") or []) == []
     c = checks.get("healthy") or {}
     if "healthy" in arms:
         gates["healthy:subsequence"] = bool(c.get("subsequence_holds")); gates["healthy:no_errors"] = c.get("any_errors") is False

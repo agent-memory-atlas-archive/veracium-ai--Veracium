@@ -363,7 +363,13 @@ def test_the_harness_comparison_fails_on_each_mutant(tmp_path):
     assert not v["identical"] and v["per_test"]["off"]["differing"] == ["t.py::b"]
     assert v["divergences"]["off"]["owning_test"] == "t.py::b" and v["divergences"]["off"]["first_index"] == 2
     # mutant 7: the control run shows test b is NOT reproducible → b is excluded by name and the verdict holds on a
-    _fabricate(tmp_path, "uninstrumented-control", [(0, 0, 0), (1, 0, 1), (1, 0, 0)])
+    # ROUND 9, F2: this line used to DISCARD the fabricated control's summary, and the test passed anyway —
+    # because `compare()` substituted the main arm's summary for an absent control's. So this fixture was
+    # depending on the very defect round 9 removes, and it is the ONLY one of the three controls in this file
+    # that did: the other two (`S["healthy-control"] = _fabricate(...)`, lines below) already kept theirs.
+    # A real capture always has the control's own summary — the round-8 reviewer confirmed all eight were
+    # present in the supplied one — so keeping it here is what the fixture always should have done.
+    S["uninstrumented-control"] = _fabricate(tmp_path, "uninstrumented-control", [(0, 0, 0), (1, 0, 1), (1, 0, 0)])
     v, c = harness.compare(tmp_path, arms, S, ids, standing={})
     assert v["identical"] and v["control"]["non_reproducible"] == ["t.py::b"] and v["per_test"]["off"]["compared"] == 1
     # round 7 (research): b is NEWLY non-reproducible — excluded from the comparison, and a FINDING the exit refuses
@@ -826,3 +832,190 @@ def test_r7_f4a_a_parameter_shadowing_a_site_name_keeps_its_own_call(tmp_path):
     plain = "from .census import declare_site\nS = declare_site('t')\n\ndef f(x):\n    with S.consult():\n        return S.fire(False)\n"
     out, stats = un.uninstrument_source(plain)
     assert "consult" not in out and stats["fires"] == 1 and out.strip().endswith("return False")
+
+
+def test_r8_f2_a_control_without_its_own_summary_is_refused_not_substituted(tmp_path):
+    """ROUND 8, F2 — THE WHOLE MATRIX, BECAUSE THE REVIEWER NAMED ONE OF THE TWO CELLS THAT WERE WRONG.
+
+    The control set had TWO derivations. `compare()` chose controls by DIRECTORY and substituted the main
+    arm's summary for an absent one (`summaries.get(arm + "-control", summaries[arm])`); `final_status()`
+    gated whichever controls it found among the SUMMARY KEYS. Deleting `summaries["healthy-control"]` while
+    leaving its directory made the two disagree: the control was still compared — decoded through the WRONG
+    arm's dictionaries — and its exit gate disappeared, so a control run that FAILED produced exit 0.
+
+    That is precisely the defect round 7's F3a fix closed, restored by another route, because that fix moved
+    the gate's source from `arms` to the summary keys: both are sets of what happens to be AVAILABLE, and
+    neither is the set actually USED.
+
+    All eight cells of {directory} x {summary} x {control exit} are asserted. The reviewer's cell is
+    (present, absent, exit 1); the other wrong one is (present, absent, exit 0), which is wrong for a second
+    reason he did not need — there the control is not merely ungated but decoded with the wrong tables."""
+    import itertools
+    h = _load("inv7_harness_r8f2", EVIDENCE / "inv7_harness.py")
+    good = [(0, 0, 0), (1, 0, 1)]
+    seen = {}
+    for has_dir, has_sum, cexit in itertools.product([True, False], [True, False], [0, 1]):
+        out = tmp_path / f"cell{int(has_dir)}{int(has_sum)}{cexit}"
+        out.mkdir()
+        S = {"healthy": _fabricate(out, "healthy", good, census=[], counters={}, enabled=True)}
+        if has_dir:
+            ctl = _fabricate(out, "healthy-control", good, census=[], counters={}, enabled=True)
+        else:
+            ctl = dict(S["healthy"])            # a control that RAN but whose directory is not here
+        ctl["pytest_exit"] = cexit
+        if has_sum:
+            S["healthy-control"] = ctl
+        verdict, checks = h.compare(out, ["healthy"], S, {}, standing={})
+        status = h.final_status(verdict, checks, S, ["healthy"])
+        seen[(has_dir, has_sum, cexit)] = ("healthy" in verdict["control"]["arms"], status)
+
+    # THE TWO CELLS THAT WERE WRONG: a control directory with no summary of its own is never compared, and
+    # never passes the exit — whatever its exit code was.
+    for cexit in (0, 1):
+        used, status = seen[(True, False, cexit)]
+        assert not used, f"(dir, no summary, exit {cexit}): the control was compared with another arm's dictionaries"
+        assert status == 1, f"(dir, no summary, exit {cexit}): a control we cannot decode passed the exit"
+
+    # THE POSITIVE CONTROLS, so a harness that simply refused everything could not satisfy the assertions
+    # above: a complete, passing control still passes, and a complete, FAILING one still fails.
+    assert seen[(True, True, 0)] == (True, 0), "a complete, passing control no longer passes"
+    assert seen[(True, True, 1)] == (True, 1), "a complete, FAILING control no longer fails the exit"
+    # and a summary with no directory is not 'used', but its run still happened, so its exit still counts
+    assert seen[(False, True, 0)][1] == 0 and seen[(False, True, 1)][1] == 1
+
+
+def test_r8_f2_the_fix_changes_nothing_for_a_COMPLETE_capture(tmp_path):
+    """THE QUESTION A REVIEWER ASKS NEXT: did tightening the control rule change what the SHIPPED transcript
+    means? The pinned four-arm transcript was produced by the harness as it stood at the round-8 pin, and
+    `test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms` binds it to `src/`, which
+    round 9 does not touch. That is an argument about provenance; this is the measurement.
+
+    The old harness is loaded FROM GIT at the round-8 pin and run beside the current one over complete
+    captures — every arm present, every control present, which is what a real capture is (the round-8
+    reviewer confirmed all eight summaries were in the supplied one). The verdict and the exit must agree
+    exactly. If they do, the fix is confined to INCOMPLETE evidence, which is what it was said to be, and the
+    shipped transcript needs no re-run.
+
+    Skipped rather than faked where git is absent: the packaged copy has no history to load the old harness
+    from, and a comparison against a rebuild-from-memory would be a claim about my own reconstruction."""
+    if subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--is-inside-work-tree"],
+                      capture_output=True).returncode != 0:
+        pytest.skip("no repository here: the pin's harness cannot be loaded to compare against")
+    pin = _pin(TRANSCRIPT.read_text())
+    old_src = subprocess.run(["git", "-C", str(ROOT), "show", f"{pin}:specs/evidence/0042/inv7_harness.py"],
+                             capture_output=True, text=True)
+    if old_src.returncode != 0:
+        pytest.skip(f"the harness at pin {pin[:7]} is not retrievable here")
+    old_path = tmp_path / "old_harness.py"
+    old_path.write_text(old_src.stdout)
+    old = _load("inv7_harness_at_pin", old_path)
+    new = _load("inv7_harness_now", EVIDENCE / "inv7_harness.py")
+
+    good = [(0, 0, 0), (1, 0, 1)]
+    scenarios = [("both controls pass", 0, 0), ("the control FAILED", 0, 1), ("the arm itself failed", 1, 0)]
+    for label, arm_exit, ctl_exit in scenarios:
+        out = tmp_path / label.replace(" ", "_")
+        out.mkdir()
+        S = {"healthy": _fabricate(out, "healthy", good, census=[], counters={}, enabled=True)}
+        S["healthy"]["pytest_exit"] = arm_exit
+        S["healthy-control"] = _fabricate(out, "healthy-control", good, census=[], counters={}, enabled=True)
+        S["healthy-control"]["pytest_exit"] = ctl_exit
+        v_old, c_old = old.compare(out, ["healthy"], dict(S), {}, standing={})
+        v_new, c_new = new.compare(out, ["healthy"], dict(S), {}, standing={})
+        s_old = old.final_status(v_old, c_old, dict(S), ["healthy"])
+        s_new = new.final_status(v_new, c_new, dict(S), ["healthy"])
+        assert s_old == s_new, f"{label}: exit moved {s_old} -> {s_new} on a COMPLETE capture"
+        assert v_old["identical"] == v_new["identical"] and v_old["per_test"] == v_new["per_test"], label
+        assert v_old["control"]["arms"] == v_new["control"]["arms"], label
+        assert v_old["control"]["non_reproducible"] == v_new["control"]["non_reproducible"], label
+        # the gate SET may grow (round 9 adds one); no gate that existed may change its answer
+        for name, value in v_old["gates"].items():
+            assert v_new["gates"][name] == value, f"{label}: gate {name} moved {value} -> {v_new['gates'][name]}"
+
+
+def _execute_twin_and_source(source: str, twin: str):
+    """Execute BOTH modules against the same stub census and return them. The relative census import is
+    stripped and the stub injected, so the two run under identical conditions and any difference is the
+    transform's."""
+    import types
+    stub = types.SimpleNamespace(
+        declare_site=lambda i: types.SimpleNamespace(fire=lambda q: q, consult=lambda: None),
+        enabled=lambda: True, enable=lambda v: None)
+    mods = []
+    for i, text in enumerate((source, twin)):
+        m = types.ModuleType(f"inv7_behaviour_{i}")
+        m.__dict__["_census"] = stub
+        exec(compile(text.replace("from . import census as _census\n", ""), f"<b{i}>", "exec"), m.__dict__)
+        mods.append(m)
+    return mods
+
+
+def test_r8_f3_an_ordinary_shadowed_census_alias_keeps_its_behaviour():
+    """ROUND 8, F3 — AND IT IS A BEHAVIOUR CHECK ON PURPOSE, WHICH IS THE POINT.
+
+    Round 7's F4a made "is this name the declared SITE?" a scope question and routed it to the resolver. The
+    CENSUS-ALIAS question sat four methods away still answered by spelling (`t.func.value.id in
+    self.census_aliases`), and unlike the membership tests in `visit_Global`/`visit_Nonlocal` — which REFUSE,
+    and so fail loudly — this one REWRITES. An ordinary function whose PARAMETER is named `_census` and which
+    branches on that object's `enabled()` had its branch turned into `if False:`. Measured at the pin: the
+    source returned 101 and the twin returned 1, while `verify(copy, source)` reported NO PROBLEMS.
+
+    WHY THIS EXECUTES BOTH MODULES INSTEAD OF COMPARING TREES, in the reviewer's words: `verify()`'s structure
+    check re-derives the twin with the SAME transform, so a transform defect reproduces identically and the
+    comparison is clean. A cross-check built from the primary's own logic cannot catch the primary's bugs. The
+    only check that can is one of a DIFFERENT KIND, so this one runs the code."""
+    un = _load("inv7_uninstrument_r8f3", EVIDENCE / "inv7_uninstrument.py")
+    src = ("from . import census as _census\n"
+           "S = _census.declare_site('s')\n"
+           "\n"
+           "def hot(q):\n"
+           "    if _census.enabled():\n"
+           "        q = q + 1\n"
+           "        return S.fire(q)\n"
+           "    return q\n"
+           "\n"
+           "def ordinary(_census, q):\n"
+           "    if _census.enabled():\n"
+           "        r = q + 100\n"
+           "        return r\n"
+           "    return q\n")
+    twin, stats = un.uninstrument_source(src, "<shadow-alias>")
+    # THE POSITIVE CONTROL, FIRST: the genuine bypass must still be rewritten, or this test passes by doing
+    # nothing at all — a transform that stopped transforming would satisfy the behaviour assertion trivially.
+    assert stats["bypasses"] == 1 and stats["fires"] == 1 and "if False:" in twin, \
+        "the genuine census bypass was not rewritten, so the shadowed-alias assertion below proves nothing"
+    source_mod, twin_mod = _execute_twin_and_source(src, twin)
+    flag = type("Flag", (), {"enabled": lambda self: True})()
+    assert source_mod.ordinary(flag, 1) == 101, "the fixture's own control: the source returns 101"
+    assert twin_mod.ordinary(flag, 1) == 101, \
+        "the twin's ordinary() diverges from the source's — an ordinary shadowed `_census` was rewritten"
+
+
+def test_r8_f3_the_census_import_is_restored_for_a_derived_alias():
+    """The SECOND member of F3's class, found by sweeping the module's other spelling-based tests rather than
+    by the reviewer. `still_used` read a hand-written `("_census", "census")` sitting two lines below the
+    DERIVED `census_aliases`, so a module importing the census under any other name kept its surface use,
+    lost its import, and produced a twin that died at import with `NameError`. Latent rather than live: the
+    tree's only alias today is `_census`, which is why nothing caught it.
+
+    A KNOWN AND BENIGN IMPRECISION, STATED SO IT IS NOT MISTAKEN FOR AN OVERSIGHT: `still_used` walks the
+    TRANSFORMED tree, whose nodes the resolver cannot answer about, so it remains a spelling test. A parameter
+    named like the alias therefore makes it restore an import the module does not need. That direction is
+    safe — the twin's census is the stub, which answers the surface — whereas the direction fixed here,
+    failing to restore a NEEDED import, breaks the twin outright."""
+    un = _load("inv7_uninstrument_r8f3b", EVIDENCE / "inv7_uninstrument.py")
+    src = ("from . import census as c\n"
+           "S = c.declare_site('s')\n"
+           "\n"
+           "def on():\n"
+           "    c.enable(True)\n"
+           "\n"
+           "def hot(q):\n"
+           "    if c.enabled():\n"
+           "        q = q + 1\n"
+           "        return S.fire(q)\n"
+           "    return q\n")
+    twin, stats = un.uninstrument_source(src, "<third-alias>")
+    assert stats["bypasses"] == 1, "the bypass was not rewritten, so this fixture is not exercising the transform"
+    assert "import census as c" in twin, \
+        "the census import was not restored for a module whose alias is neither `_census` nor `census`"

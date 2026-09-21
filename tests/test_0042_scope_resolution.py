@@ -314,11 +314,33 @@ def test_the_site_question_refuses_until_the_rebinding_guarantee_is_established(
     # a name the guarantee was never asked about stays refused, even once OTHERS are cleared
     with pytest.raises(sr.UnresolvableScope, match="before `refuse_site_rebindings`"):
         r.refers_to_declared_site(call, "some_other_name")
-    # and both consumers ask the SITE question, not the name one
+    # AND BOTH CONSUMERS ASK THE SITE QUESTION, NOT THE NAME ONE — checked BY PROPERTY, not by banning the
+    # name question's spelling. This was `assert "refers_to_module_binding(" not in text`, a blanket ban on the
+    # API anywhere in either module, and round 9 made it refuse CORRECT work: `_is_census_alias` asks whether a
+    # name is the MODULE-LEVEL CENSUS IMPORT, which is genuinely the name question — the census alias is not a
+    # site, so `refers_to_declared_site` (which requires membership in `declared` and the rebinding guarantee)
+    # is the wrong question for it. A gate narrower than its subject either refuses correct work loudly or
+    # accepts wrong work silently; this one refused loudly, which is the cheap direction, and the fix is to
+    # state the real rule rather than to add an exemption for a string.
+    #
+    # THE REAL RULE: a function that decides something about A DECLARED SITE (it consults `self.declared`) must
+    # reach the resolver through `refers_to_declared_site`. A function that asks the name question must not be
+    # deciding about a site — so it must not consult `self.declared`.
     for mod in ("installed_sites.py", "inv7_uninstrument.py"):
         text = (EVIDENCE / mod).read_text()
         assert "refers_to_declared_site(" in text, mod
-        assert "refers_to_module_binding(" not in text, f"{mod} asks the NAME question where it needs the SITE one"
+        tree = ast.parse(text)
+        for fn in [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]:
+            calls = {n.func.attr for n in ast.walk(fn) if isinstance(n, ast.Call)
+                     and isinstance(n.func, ast.Attribute)}
+            reads_declared = any(isinstance(n, ast.Attribute) and n.attr == "declared" for n in ast.walk(fn))
+            if "refers_to_module_binding" in calls:
+                assert not reads_declared, (
+                    f"{mod}:{fn.name} consults `declared` AND asks the NAME question — that is the site "
+                    f"question answered by the wrong one, which is what this gate exists to refuse")
+            if reads_declared and ("refers_to_module_binding" in calls or "refers_to_declared_site" in calls):
+                assert "refers_to_declared_site" in calls, (
+                    f"{mod}:{fn.name} decides about a declared site without asking the site question")
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -361,6 +383,14 @@ REBINDING_MATRIX = [
     ("`global S` in a class body",        "class K:\n    global S\n    S = 1\n", True),
     ("`global S` two scopes down",        "def outer():\n    def inner():\n        global S\n        S = 1\n"
                                           "    return inner\n", True),
+    # --- ROUND 8'S FINDING. symtable reports these two `is_imported` and NOT `is_assigned`, so rule C's old
+    # --- predicate pair never fired and the site was replaced in silence. They are the ONLY two rows on which
+    # --- the superseded pair and the shipped reading disagree, which
+    # --- `test_the_superseded_predicate_pair_misses_exactly_the_nested_imports` asserts in both directions.
+    ("a nested `import x as S` under `global`",
+                                         "def f():\n    global S\n    import os as S\n", True),
+    ("a nested `from x import y as S` under `global`",
+                                         "def f():\n    global S\n    from os import path as S\n", True),
     # --- the other half: an over-strict refusal is a refusal of CORRECT code, and it is the half a matrix of
     # --- all-True rows would never catch. None of these replaces the site object.
     ("the declaration alone",            "", False),
@@ -423,10 +453,10 @@ def test_every_module_level_binding_form_is_refused_and_no_shadow_is():
 
 def test_the_rebinding_matrix_covers_both_answers_and_the_six_forms_by_name():
     """The table's own shape, so a row silently deleted from either half is visible."""
-    assert len(REBINDING_MATRIX) == 44
-    assert len({row[0] for row in REBINDING_MATRIX}) == 44, "labels are the ids; they must be distinct"
+    assert len(REBINDING_MATRIX) == 46
+    assert len({row[0] for row in REBINDING_MATRIX}) == 46, "labels are the ids; they must be distinct"
     refused = [row for row in REBINDING_MATRIX if row[2]]
-    assert len(refused) == 27 and len(REBINDING_MATRIX) - len(refused) == 17
+    assert len(refused) == 29 and len(REBINDING_MATRIX) - len(refused) == 17
     labels = " ".join(row[0] for row in REBINDING_MATRIX)
     for form in ("import os as S", "from os import path as S", "except Exception as S", "del S", "def S()",
                  "class S", "a walrus in a genexpr", "`global S` READ in a function", "a listcomp target",
@@ -469,7 +499,7 @@ def _mutant(old, new):
 
 
 RULE_A = ("            if len(executed) > 1:", "            if False:")
-RULE_C = ("                if sym.is_global() and sym.is_assigned():", "                if False:")
+RULE_C = ("            if nested:", "            if False:")
 
 
 def test_both_readings_are_load_bearing_and_neither_over_refuses():
@@ -478,11 +508,14 @@ def test_both_readings_are_load_bearing_and_neither_over_refuses():
 
       A  the module's own COMPILED CODE OBJECT binds the name more than once. Total over syntax by
          construction. Sole catcher of every rebinding performed by this scope, whatever its spelling.
-      C  a NESTED block assigns the name as a global (`is_global()` AND `is_assigned()`). Sole catcher of
-         `global` from a function, a class body or two scopes down, and of a comprehension's walrus, which
-         binds the enclosing scope with no `global` statement in the source (though
-         `symtable` synthesises the declared-global flag for it on 3.10/3.11, which is why the two predicates
-         turn out to agree — see `test_the_two_global_predicates_agree_over_the_whole_matrix`).
+      C  a NESTED CODE OBJECT binds the name with STORE_GLOBAL or DELETE_GLOBAL. The interpreter's reading
+         again, so it is total over syntax for the same reason A is. Sole catcher of `global` from a
+         function, a class body or two scopes down, of a nested import targeting the module name, and — on
+         3.10/3.11 only — of a comprehension's walrus, which binds the enclosing scope with no `global`
+         statement in the source. From 3.12 PEP 709 inlines a LIST comprehension into the module, so that row
+         changes hands to rule A while the GENERATOR-expression spelling stays with C on every version; the
+         two spellings sit adjacent in the matrix and `test_every_refused_row_names_the_rule_that_caught_it`
+         is what would notice a row moving.
 
     A third reading — refuse when the two disagree — was written here and deleted; the paragraph in
     `scope_resolution.py` says why, and `test_no_reading_of_this_module_is_a_hand_enumeration` keeps the walk
@@ -623,7 +656,7 @@ def test_the_refusal_decides_what_binds_without_walking_the_ast(tmp_path):
     DELETE EITHER AS REDUNDANT TO THE OTHER — they look independent and only together do they bound the
     surface (research's reading). This one catches AST USE; that one catches AST use THAT MATTERS. A
     hand-rolled `_fields` recursion escapes this counter, but the moment it makes the reading sensitive to HOW
-    a name is rebound, the 44-row invariance test fails. What is left over is a walk that touches the AST and
+    a name is rebound, the 46-row invariance test fails. What is left over is a walk that touches the AST and
     changes no answer, which is inert by definition — a far smaller residue than "the counter has a limit".
 
     Round 8e first gated this by refusing the strings `ast.Store`, `ast.walk` and `ast.iter_child_nodes` inside
@@ -803,16 +836,109 @@ def test_a_refusal_never_claims_a_global_statement_the_module_does_not_contain()
             "the premise of this test has moved, and rule C's docstring says the two predicates agree")
 
 
-def test_the_two_global_predicates_agree_over_the_whole_matrix():
-    """A SURVIVING MUTANT, DECLARED. Rule C asks `is_global()`; the narrower `is_declared_global()` gives the
-    same verdict on all 44 rows, on 3.10 and on 3.12, so the choice is NOT pinned by this matrix. The wider one
-    is kept because wider is the fail-closed direction for an unenumerated case — a reason about risk, not
-    about evidence — and this test exists so that a future interpreter which separates the two predicates
-    reports it as a change rather than letting the docstring quietly go stale."""
-    narrowed = _mutant("                if sym.is_global() and sym.is_assigned():",
-                       "                if sym.is_declared_global() and sym.is_assigned():")
-    disagreements = [row[0] for row in REBINDING_MATRIX
-                     if (_refusal(narrowed, row[1]) is not None) != (_refusal(sr, row[1]) is not None)]
-    assert not disagreements, (
-        "the two predicates now disagree on these rows, which makes rule C's choice evidence-backed rather "
-        f"than risk-backed — say so in its docstring: {disagreements}")
+def _old_predicate_pair_fires(src: str, names) -> bool:
+    """RULE C AS IT READ BEFORE ROUND 9, kept here as the negative control its replacement must beat.
+
+    `sym.is_global() and sym.is_assigned()` — the hand-picked predicate pair round 8's reviewer defeated with
+    a nested `import os as S` under `global S`, which symtable reports `is_imported` and NOT `is_assigned`.
+    Keeping the superseded implementation is the only way the REASON for the change stays a result: a
+    docstring saying "the old reading missed the imports" is a claim, and this makes it an assertion."""
+    import symtable as _st
+    table = _st.symtable(src, "<old-pair>", "exec")
+    fired = []
+
+    def walk(block):
+        if block.get_type() != "module":
+            for n in names:
+                try:
+                    sym = block.lookup(n)
+                except KeyError:
+                    continue
+                if sym.is_global() and sym.is_assigned():
+                    fired.append(block.get_name())
+        for child in block.get_children():
+            walk(child)
+
+    walk(table)
+    return bool(fired)
+
+
+def test_the_superseded_predicate_pair_misses_exactly_the_nested_imports():
+    """THE CHANGE IS EXACTLY AS WIDE AS IT WAS SAID TO BE — asserted in BOTH directions, because "the new rule
+    catches more" is half a claim and the dangerous half is the other one.
+
+      - the old pair ACCEPTS the two nested-import rows that the shipped rule REFUSES (the round-8 finding); and
+      - on every OTHER row of the matrix the two readings agree, so replacing the predicate with the
+        interpreter's reading did not quietly start refusing something else.
+
+    This replaced `test_the_two_global_predicates_agree_over_the_whole_matrix`, which compared `is_global()`
+    against `is_declared_global()`. That test became MOOT rather than failing: rule C asks neither predicate
+    now, so the mutant it built had no anchor. A test whose subject has been deleted must be replaced by one
+    about the successor, never merely repaired until it passes."""
+    expected_misses = {"a nested `import x as S` under `global`", "a nested `from x import y as S` under `global`"}
+    assert expected_misses <= {row[0] for row in REBINDING_MATRIX}, "the reviewer's two rows left the matrix"
+    disagreements = set()
+    for label, body, _expect in REBINDING_MATRIX:
+        src = DECL + body
+        r = sr.Resolver(src, f"<{label}>")
+        names = r.site_names()
+        new_fires = any(r._nested_global_bindings(n) for n in names)
+        if new_fires != _old_predicate_pair_fires(src, names):
+            disagreements.add(label)
+    assert disagreements == expected_misses, (
+        f"the two readings of rule C now differ on {sorted(disagreements)}, not on exactly the two nested "
+        f"imports. If that is intended, this is the test that has to say so.")
+
+
+# Which rule is expected to catch each REFUSED row. Derived once by disabling each rule in turn and recorded
+# here so that a row CHANGING HANDS is a test failure rather than a silent re-attribution.
+RULE_OWNER = {
+    # rule A — the module's own code object binds the name more than once
+    "import os as S": "A", "from os import path as S": "A", "except Exception as S": "A", "del S": "A",
+    "def S()": "A", "class S": "A", "async def S()": "A", "import os as S inside a try": "A",
+    "a match capture": "A", "a match as-pattern": "A", "a plain second assignment": "A",
+    "an augmented assignment": "A", "an annotated assignment": "A", "a module-level for target": "A",
+    "a module-level with-as": "A", "tuple unpacking": "A", "starred unpacking": "A",
+    "a module-level walrus": "A", "a try/except import fallback": "A",
+    "a site declared in both branches": "A", "an `if TYPE_CHECKING` import": "A",
+    # rule C — a NESTED code object binds the module name with STORE_GLOBAL/DELETE_GLOBAL
+    "a walrus in a genexpr": "C", "`global S` assigned in a function": "C",
+    "`global S` deleted in a function": "C", "`global S` in a class body": "C",
+    "`global S` two scopes down": "C", "a nested `import x as S` under `global`": "C",
+    "a nested `from x import y as S` under `global`": "C",
+    # THE ONE ROW THAT CHANGES HANDS, and the reason this table exists. PEP 709 inlines a LIST comprehension
+    # from 3.12, so its walrus becomes an ordinary module-level binding and rule A counts it; before 3.12 the
+    # comprehension has its own code object and rule C reads the store. The GENERATOR-expression spelling
+    # above keeps its own code object on every version and stays with C — the two sit adjacent on purpose, so
+    # one interpreter exercises both regimes.
+    "a walrus in a listcomp": "A" if sys.version_info >= (3, 12) else "C",
+}
+
+
+def test_every_refused_row_names_the_rule_that_caught_it():
+    """A ROW THAT CHANGES HANDS BETWEEN THE RULES IS INVISIBLE TO A MATRIX THAT ONLY ASSERTS "REFUSED".
+
+    Research's stage-1 recommendation for round 9, and it is the gate that would have caught its own example:
+    the listcomp walrus is refused on all four interpreters, so the matrix is green on all four — GREEN FOR A
+    DIFFERENT REASON on each side of 3.12. Asserting only the refusal cannot see that, so it also cannot see a
+    future version moving a row the other way, or a change to rule A quietly taking over a row that was rule
+    C's evidence.
+
+    The owner is DERIVED by disabling each rule in turn, never read off the source, and the declared table's
+    keys must equal the refused rows exactly — so adding a refused row without deciding which rule owns it
+    fails here rather than passing unnoticed."""
+    refused = {row[0] for row in REBINDING_MATRIX if row[2]}
+    assert set(RULE_OWNER) == refused, (
+        f"declared owners and refused rows differ — only in RULE_OWNER: {sorted(set(RULE_OWNER) - refused)}; "
+        f"only in the matrix: {sorted(refused - set(RULE_OWNER))}")
+    without_a, without_c = _mutant(*RULE_A), _mutant(*RULE_C)
+    wrong = []
+    for label, body, must_refuse in REBINDING_MATRIX:
+        if not must_refuse:
+            continue
+        a_off = _refusal(without_a, body) is not None      # still refused with A disabled -> C reaches it
+        c_off = _refusal(without_c, body) is not None      # still refused with C disabled -> A reaches it
+        got = "A+C" if (a_off and c_off) else ("C" if a_off else ("A" if c_off else "NEITHER"))
+        if got != RULE_OWNER[label]:
+            wrong.append(f"{label}: declared {RULE_OWNER[label]}, derived {got}")
+    assert not wrong, "rows changed hands between the rules:\n  " + "\n  ".join(wrong)

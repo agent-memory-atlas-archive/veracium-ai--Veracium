@@ -52,16 +52,41 @@ SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
 # ordinary module-level bindings here and the nested write is a separate reading (rule C below).
 _MODULE_BINDING_OPS = ("STORE_NAME", "DELETE_NAME", "STORE_GLOBAL", "DELETE_GLOBAL")
 
+# The opcodes by which a NESTED code object binds a name belonging to THIS module's scope — rule C's reading,
+# and a STRICT SUBSET of the four above. The subset is the whole point and it is the reason this constant
+# exists at all rather than rule C reusing `_MODULE_BINDING_OPS` four lines up: a CLASS BODY assigning an
+# ordinary attribute emits STORE_NAME in its own code object, so a nested walk over the wider tuple REFUSES
+#
+#     class K:
+#         S = 1
+#
+# which is correct, ordinary code, for every class in the tree whose attribute collides with a site name.
+# Measured on 3.10, 3.11, 3.12 and 3.13: nested hits over these two are 0 and over the four are 1. Found by
+# research's differential harness BEFORE this rule was written, which is the only reason it is not shipped —
+# the wider tuple was the nearer one to hand. The `_NAME` spellings can only ever be a nested scope's OWN
+# binding; only the `_GLOBAL` pair reaches out to the module.
+_NESTED_BINDING_OPS = ("STORE_GLOBAL", "DELETE_GLOBAL")
+
 # A check that reads opcodes BY NAME weakens silently if a name ever moves: every count would fall to zero and
 # every module would be accepted, which is the shape where deleting the subject reads as fixing the problem. So
 # the names are confirmed against this interpreter's own table at import, loudly, before anything asks a
 # question of them.
-_MISSING_OPS = [op for op in _MODULE_BINDING_OPS if op not in dis.opmap]
+_MISSING_OPS = [op for op in (*_MODULE_BINDING_OPS, *_NESTED_BINDING_OPS) if op not in dis.opmap]
 if _MISSING_OPS:                                                                        # pragma: no cover
     raise RuntimeError(f"specs/0042 scope_resolution: this interpreter ({sys.version.split()[0]}) has no "
                        f"{', '.join(_MISSING_OPS)} in dis.opmap, so counting module-level bindings by opcode "
-                       f"name would silently return zero for every module and accept every rebinding. The "
+                       f"name would silently return zero for every module and every nested scope, and accept "
+                       f"every rebinding. The "
                        f"opcode set must be re-derived for this version before the census can be trusted.")
+
+# ORDER MATTERS AND AN EXISTING TEST PROVED IT. This claim sits AFTER the opmap guard, not beside the tuple it
+# is about: `test_the_opcode_names_are_confirmed_against_this_interpreters_table` renames an opcode in
+# `_MODULE_BINDING_OPS` and expects the RuntimeError above. Asserted first, this raised AssertionError instead
+# and shadowed the louder, more specific diagnosis — a guard whose remedy is wrong is obeyed, so the precise
+# branch has to be reachable before the general one.
+assert set(_NESTED_BINDING_OPS) < set(_MODULE_BINDING_OPS), (
+    "rule C must read a STRICT subset of rule A's opcodes: the _NAME spellings can only be a nested scope's "
+    "OWN binding, and reading them there refuses `class K: S = 1`")
 
 
 def _instruction_line(instruction, carried: int) -> int:
@@ -247,6 +272,61 @@ class Resolver:
                 f"module-level name is bound once — without that, a resolved NAME is not evidence about the OBJECT")
         return self.refers_to_module_binding(node, name)
 
+    def _compiled(self):
+        """This module's own code object, compiled once. BOTH readings go through here: rule A reads the module
+        object's own instructions, rule C walks the nested objects hanging off it, and neither can be looking at
+        a different compilation of the source than the other."""
+        if self._code is None:
+            try:
+                self._code = compile(self.src, self.filename, "exec", dont_inherit=True)
+            except SyntaxError as exc:      # `ast.parse` accepts text the compiler rejects (`return` at module
+                raise UnresolvableScope(    # level, `await` outside `async`), so this is reachable past __init__
+                    f"{self.filename}: the source parses but does not compile ({exc.msg} at line "
+                    f"{exc.lineno}), so the interpreter has no reading of what this module binds") from exc
+        return self._code
+
+    def _nested_global_bindings(self, name: str) -> list[tuple[str, int]]:
+        """Every NESTED code object that binds THIS module's `name`, as (code object name, line). Rule C's
+        reading, and the same KIND of reading as rule A: what the interpreter will actually execute.
+
+        IT REPLACED A HAND-PICKED PREDICATE PAIR, `sym.is_global() and sym.is_assigned()`, which round 8's
+        reviewer defeated with a nested `import os as S` under `global S` — symtable reports that symbol
+        `is_imported` and NOT `is_assigned`, so the pair never fired and the site was silently replaced. The
+        fix is not a third predicate. `is_namespace` would have been the next rung of exactly the ladder
+        CLAUDE.md item 9 exists to stop, and the module's whole argument is that a hand list standing in for
+        what the language already knows is the defect. Rule A earned "total over syntax by construction" by
+        asking the compiler; rule C sat beside it inheriting the sentence and never had the property.
+
+        MEASURED EQUIVALENCE, on 3.10, 3.11, 3.12 and 3.13: against the deleted predicate pair over 24
+        constructed nested forms, the two readings differ on exactly two — `import x as S` and
+        `from x import y as S` under `global S`, which this one catches and the pair missed. They agree on the
+        other 22, the read-only `global S` positive control included.
+
+        WHY A STRICT SUBSET OF RULE A'S OPCODES (`_NESTED_BINDING_OPS`): see that constant. A class body's
+        ordinary attribute assignment emits STORE_NAME in its own code object, so the wider tuple refuses
+        `class K: S = 1`.
+
+        NO COUNT IS REPORTED, and that is a decision rather than an omission. One source construct can emit
+        several of these: `except Exception as S` under `global S` emits FIVE on all four versions (the store
+        plus the implicit cleanup deletes) where symtable reported one. Rule A needs a count, because its
+        question is "more than the one expected binding?". Rule C's question is "does any nested scope reach
+        this name?", which one hit settles, so lines are DEDUPLICATED and no arithmetic reaches the message."""
+        found = []
+
+        def nested(code):
+            for const in code.co_consts:
+                if hasattr(const, "co_code"):
+                    yield const
+                    yield from nested(const)
+
+        for obj in nested(self._compiled()):
+            line = obj.co_firstlineno
+            for instruction in dis.get_instructions(obj):
+                line = _instruction_line(instruction, line)
+                if instruction.opname in _NESTED_BINDING_OPS and instruction.argval == name:
+                    found.append((obj.co_name, line))
+        return found
+
     def _module_binding_ops(self, name: str) -> list[tuple[str, int]]:
         """Every binding operation the MODULE's OWN code object performs on `name`, as (opcode, line).
 
@@ -259,15 +339,8 @@ class Resolver:
         Nested code objects (a function, a class body, a comprehension that still gets one) live in `co_consts`
         and are NOT walked: a binding they perform is theirs, except when it targets this scope, which is rule C.
         Compiled with `dont_inherit=True` so the SCANNER's own `__future__` flags cannot change the reading."""
-        if self._code is None:
-            try:
-                self._code = compile(self.src, self.filename, "exec", dont_inherit=True)
-            except SyntaxError as exc:      # `ast.parse` accepts text the compiler rejects (`return` at module
-                raise UnresolvableScope(    # level, `await` outside `async`), so this is reachable past __init__
-                    f"{self.filename}: the source parses but does not compile ({exc.msg} at line "
-                    f"{exc.lineno}), so the interpreter has no reading of what this module binds") from exc
         found, line = [], 0
-        for instruction in dis.get_instructions(self._code):
+        for instruction in dis.get_instructions(self._compiled()):
             line = _instruction_line(instruction, line)
             if instruction.opname in _MODULE_BINDING_OPS and instruction.argval == name:
                 found.append((instruction.opname, line))
@@ -320,23 +393,39 @@ class Resolver:
         to collide with a type-checking alias, and no module in the tree does that. `if False:` is ACCEPTED
         because the compiler folds it away, and the two rows sit together in the matrix so the asymmetry is
         recorded where a reader meets it.
-          C. A NESTED BLOCK ASSIGNS THE NAME AS A GLOBAL (`is_global() and is_assigned()`). Reaches the module
-             binding from inside a function, a class body or a comprehension.
-             THE REASON FIRST GIVEN FOR `is_global()` OVER `is_declared_global()` WAS FALSE AND IS CORRECTED
-             HERE. It said a comprehension's walrus binds the enclosing scope with no `global` statement, so
-             the narrower predicate would miss it. The first half is true of the LANGUAGE and the conclusion
-             does not follow: on 3.10/3.11 `symtable` SYNTHESISES the flag, and `is_declared_global()` is TRUE
-             for that walrus in a module containing no `global` anywhere. Swapping the predicate is a mutant
-             that SURVIVES — 44 of 44 either way, on 3.10 and on 3.12 — and it is declared here rather than
-             left for someone to rediscover (`test_the_two_global_predicates_agree_over_the_whole_matrix`
-             asserts the equivalence, so a future interpreter that separates them says so). The wider
-             predicate is kept because wider is the FAIL-CLOSED direction for a case nobody has enumerated,
-             which is a reason about risk and not about evidence.
+          C. A NESTED CODE OBJECT BINDS THE NAME WITH `STORE_GLOBAL` OR `DELETE_GLOBAL`
+             (`_nested_global_bindings`). The interpreter's reading again, so it is total over syntax for the
+             same reason A is. Reaches the module binding from inside a function, a class body, two scopes
+             down, and from a comprehension that still gets its own code object — a generator expression on
+             EVERY version, and a list comprehension before 3.12, after which PEP 709 inlines it into the
+             module and rule A counts it instead. Which rule owns that row therefore depends on the
+             interpreter, while the refusal does not; `test_every_refused_row_names_the_rule_that_caught_it`
+             pins the ownership so a row changing hands is a failure and not a silent re-attribution.
+             IT REPLACED A HAND-PICKED PREDICATE PAIR IN ROUND 9. The pair was `is_global() and
+             is_assigned()`, and the round-8 reviewer defeated it with a nested `import os as S` under
+             `global S`: symtable reports that symbol `is_imported` and NOT `is_assigned`, so the pair never
+             fired and the site was replaced in silence. The fix was NOT a third predicate — `is_namespace`
+             is the next rung of exactly the ladder this module exists to get off, and a hand list standing
+             in for what the language already knows is the defect the whole file is about. Rule A had earned
+             "total over syntax by construction" by asking the compiler; rule C sat beside it inheriting the
+             sentence and never had the property, which is the miss worth carrying.
+             MEASURED AGAINST THE SUPERSEDED PAIR, on 3.10, 3.11, 3.12 AND 3.13: the two readings differ on
+             the two nested imports and agree on every other row of the matrix. The pair is kept as the
+             negative control its replacement must beat, in
+             `test_the_superseded_predicate_pair_misses_exactly_the_nested_imports`, which asserts both
+             directions — so "the new reading catches more" cannot hide "and also started refusing something
+             else".
+             THE OPCODE SET IS A STRICT SUBSET OF RULE A'S, and that is load-bearing rather than tidy: a
+             class body's ordinary attribute assignment emits STORE_NAME in ITS OWN code object, so reading
+             the wider tuple here refuses `class K: S = 1` — correct code, and every class in the tree whose
+             attribute collides with a site name. Research's differential harness measured that on all four
+             interpreters BEFORE this rule was written, which is the only reason it is not shipped.
 
-        Verified against a 44-case matrix — 27 that must be refused, 17 that must be ACCEPTED — on 3.10 (a block
-        per comprehension) and 3.12 (inlined), in `tests/test_0042_scope_resolution.py`. Both rules are sole
-        catchers of part of it, so deleting either reddens it. The 17 are as load-bearing as the 27: three
-        drafts of this fix refused correct code, and that is what the acceptance half is for.
+        Verified against a 46-case matrix — 29 that must be refused, 17 that must be ACCEPTED — on 3.10 and
+        3.11 (a block per comprehension) and 3.12 and 3.13 (inlined), in
+        `tests/test_0042_scope_resolution.py`. Both rules are sole catchers of part of it, so deleting either
+        reddens it. The 17 are as load-bearing as the 29: three drafts of this fix refused correct code, and
+        that is what the acceptance half is for.
 
         (Named `refuse_rebound_globals` until round 8, when it stopped being only about `global`.)"""
         declared_here = self.site_names()
@@ -355,26 +444,17 @@ class Resolver:
                     f"{', '.join(map(str, executed_lines))}){whose} — a rebinding replaces the declared site "
                     f"object while every static reading still resolves the NAME to it")
 
-        def walk(block):
-            for n in names:
-                if block.get_type() == "module":
-                    continue          # the module block's own `S = declare_site(...)` IS the declaration; rule A
-                try:
-                    sym = block.lookup(n)
-                except KeyError:
-                    continue
-                if sym.is_global() and sym.is_assigned():
-                    # NOT "`global S` with an assignment": on 3.10/3.11 `symtable` reports
-                    # `is_declared_global()` TRUE for a WALRUS inside a comprehension, in a module whose source
-                    # contains no `global` statement at all — so naming the spelling would be a claim this
-                    # check has not made, and CI found it making exactly that claim.
-                    raise UnresolvableScope(
-                        f"block {block.get_name()!r} (line {block.get_lineno()}) assigns the MODULE-level name "
-                        f"{n!r} from inside a nested scope, which replaces the declared site object. Two "
-                        f"spellings reach here and this refusal does not distinguish them: a `global {n}` "
-                        f"statement with an assignment, and an assignment expression, which PEP 572 binds in "
-                        f"the ENCLOSING scope")
-            for c in block.get_children():
-                walk(c)
-        walk(self.table)
+        for n in sorted(names):
+            nested = self._nested_global_bindings(n)
+            if nested:
+                where = sorted({obj for obj, _line in nested})
+                lines = sorted({line for _obj, line in nested})
+                raise UnresolvableScope(
+                    f"nested scope(s) {', '.join(map(repr, where))} (line(s) "
+                    f"{', '.join(map(str, lines))}) assigns the MODULE-level name {n!r} from inside a nested "
+                    f"scope, which replaces the declared site object while every static reading still resolves "
+                    f"the NAME to it. The refusal names no spelling and counts nothing: several spellings reach "
+                    f"here (a `global {n}` statement with a write, an assignment expression, which PEP 572 binds "
+                    f"in the ENCLOSING scope, and an import targeting the module name), and one construct can "
+                    f"emit several operations")
         self._rebindings_checked |= set(names)      # only now is the NAME question evidence about the OBJECT
