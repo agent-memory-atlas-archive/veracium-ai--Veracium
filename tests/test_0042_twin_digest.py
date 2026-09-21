@@ -102,3 +102,40 @@ def test_a_missing_root_is_refused_not_silently_empty(tmp_path):
     """The failure that would read as 'no difference': digesting a path that is not there."""
     with pytest.raises(NotADirectoryError):
         td.digest(tmp_path / "does-not-exist")
+
+
+def test_a_root_containing_the_manifest_is_refused_as_mis_scoped(tmp_path):
+    """Research's first cross-seat run, made into a refusal. `inv7_uninstrument.derive(src, out)` writes the
+    manifest to `out.parent`, BY CONSTRUCTION, so a root containing one is one level too high — and digesting
+    it answers a different question with a number that looks exactly as valid. They caught it from the printed
+    file count (61 against 60) and nearly sent a digest mismatch produced entirely by the invocation.
+
+    Note what this does NOT do: it does not exclude the manifest from the hash. Excluding it by filename would
+    be an exemption by name, and would make two differently-scoped roots agree — a worse failure than the one
+    being fixed, because it would be silent. It refuses the whole reading."""
+    twin = _tree(tmp_path / "out" / "twin", dict(BASE))
+    good = td.digest(twin)                                         # the recipe's scoping: the manifest is above
+    (tmp_path / "out" / td.MANIFEST_NAME).write_text("{}")
+    assert td.digest(twin) == good, "a manifest BESIDE the twin must not affect the twin's digest"
+
+    with pytest.raises(td.MisScopedTwinRoot, match="BESIDE the twin"):
+        td.digest(tmp_path / "out")                                # one level too high: the manifest is inside
+    nested = _tree(tmp_path / "deep" / "twin", dict(BASE))
+    (nested / "sub" / td.MANIFEST_NAME).parent.mkdir(parents=True, exist_ok=True)
+    (nested / "sub" / td.MANIFEST_NAME).write_text("{}")
+    with pytest.raises(td.MisScopedTwinRoot):
+        td.digest(nested)                                          # at ANY depth: a twin never contains one
+
+    run = subprocess.run([sys.executable, str(EVIDENCE / "twin_digest.py"), str(tmp_path / "out")],
+                         capture_output=True, text=True)
+    assert run.returncode == 1 and "REFUSED" in run.stderr and "BESIDE the twin" in run.stderr, run
+
+
+def test_the_real_derivation_puts_its_manifest_beside_the_twin_not_inside(tmp_path):
+    """The PROBE behind the refusal's property. The rule above is only enforceable because the derivation
+    really does write the manifest to `out.parent` — a convention nobody executes is the thing this round keeps
+    finding, so it is read off the shipped module rather than off its docstring."""
+    src = (EVIDENCE / "inv7_uninstrument.py").read_text()
+    assert 'out.parent / "twin_manifest.json"' in src, (
+        "the derivation no longer writes its manifest beside the twin, so the mis-scoped-root refusal has lost "
+        "the property it rests on — re-derive the rule before trusting it")

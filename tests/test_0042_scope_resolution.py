@@ -599,8 +599,32 @@ for tag, text in (("SHIPPED", SRC), ("ALIASED", ALIASED), ("MODULE_ALIAS", TOPLE
 """
 
 
-def test_the_refusal_never_consults_the_ast(tmp_path):
+def test_the_refusal_decides_what_binds_without_walking_the_ast(tmp_path):
     """THE PROPERTY, MEASURED — replacing a text check that a rename defeated.
+
+    THE NAME IS A CLAIM, SO IT SAYS WHAT IS MEASURED. This test was first called
+    `test_the_refusal_never_consults_the_ast`, which is FALSE of the shipped code and was caught by reading the
+    name against the function rather than by any failure. The refusal DOES reach the AST, through
+    `site_names()`, which walks `self.tree.body` and asks `isinstance(n, ast.Assign)` — and the counter reports
+    zero for it, correctly, because that is not a walk over binding forms. What is measured, and all that is
+    measured, is that the refusal decides WHAT BINDS without walking the AST. `site_names()` answers a
+    different question — which module-level names are `NAME = declare_site(...)` targets — and structurally
+    cannot answer a binding one: it looks only at top-level `Assign` statements and would miss every form the
+    six spellings are made of, which is exactly why it is safe here and was not safe as a binding reading.
+
+    THE EXCLUDED SURFACE, NAMED. The counter wraps `ast`'s walking callables and `ast.Store`, so it catches any
+    ALIAS of them, at module level or inside the function, which is what defeated the text check. It would NOT
+    catch a hand-rolled recursion over `node._fields` that calls no `ast` function at all. That is the
+    irreducible limit of this instrument and it is stated rather than left to be discovered — though it is
+    worth noting the enumeration this round removed was not of that shape: it used `ast.iter_child_nodes` and
+    `ast.Name`/`ast.Store`, and so does every reinstatement a reader would naturally write.
+
+    THIS TEST AND `test_the_refusals_only_reach_into_the_ast_is_the_declaration_lookup` ARE A PAIR. DO NOT
+    DELETE EITHER AS REDUNDANT TO THE OTHER — they look independent and only together do they bound the
+    surface (research's reading). This one catches AST USE; that one catches AST use THAT MATTERS. A
+    hand-rolled `_fields` recursion escapes this counter, but the moment it makes the reading sensitive to HOW
+    a name is rebound, the 44-row invariance test fails. What is left over is a walk that touches the AST and
+    changes no answer, which is inert by definition — a far smaller residue than "the counter has a limit".
 
     Round 8e first gated this by refusing the strings `ast.Store`, `ast.walk` and `ast.iter_child_nodes` inside
     the refusal's source. Research defeated it in one line: `from ast import walk as _w, Store as _St` contains
@@ -638,6 +662,31 @@ def test_the_refusal_never_consults_the_ast(tmp_path):
         f"code object and symtable alone, and an AST walk here is the enumeration round 8 removed")
     for tag in ("ALIASED", "MODULE_ALIAS"):
         assert rows[tag][0] > 0, f"the {tag} mutant reinstates an AST walk and this control did not see it"
+
+
+def test_the_refusals_only_reach_into_the_ast_is_the_declaration_lookup():
+    """The other half of the name above: not "it never touches the AST" but "the one place it does cannot
+    answer a binding question". `site_names` reads only TOP-LEVEL `Assign` statements whose value is a call to
+    `declare_site` — so it sees declarations and is blind to every rebinding form, which is what makes it the
+    wrong instrument for the question and the right one for its own.
+
+    Asserted by RUNNING it against the matrix's own rows rather than by reading it: for every row, the set of
+    site names it reports is the same whether the module rebinds the name six ways or not at all. A reading
+    that changed with the rebinding would be a reading of bindings.
+
+    PAIRED WITH `test_the_refusal_decides_what_binds_without_walking_the_ast`, AND NEITHER IS REDUNDANT. That
+    one wraps `ast`'s callables and so catches any ALIAS of them, but not a hand-rolled recursion over
+    `node._fields` that calls no `ast` function. This one does not care HOW the AST is reached: it asserts the
+    ANSWER does not move with the rebinding, so a hand-rolled walk that changes the reading fails here even
+    though the counter stays at zero. Between them the only surviving case is a walk that touches the AST and
+    changes nothing, which is inert. Deleting either one reopens a real gap."""
+    baseline = sr.Resolver(DECL, "<decl>").site_names()
+    assert baseline == {"S"}, baseline
+    for label, body, _ in REBINDING_MATRIX:
+        got = sr.Resolver(DECL + body, f"<{label}>").site_names()
+        assert got == baseline, (
+            f"{label}: site_names reports {got}, not {baseline} — it has started responding to how the name is "
+            f"REBOUND, which would make it a binding reading and put an enumeration back in the refusal's path")
 
 
 def test_the_binding_count_matches_a_hand_count_on_modules_small_enough_to_count():
