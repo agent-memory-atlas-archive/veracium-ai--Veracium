@@ -66,28 +66,30 @@ def _nested_symbols():
 LEG = _load("inv7_sites_leg", ROOT / "tests" / "test_0042_sites.py")
 
 
+def _observer_names():
+    """Every upper-case module-level name of the observer, DERIVED from the module (with or without the underscore)."""
+    import re
+    return {n for n in vars(observer) if re.fullmatch(r"_?[A-Z][A-Z0-9_]*", n)}
+
+
 @pytest.fixture(autouse=True)
 def _observer_state_restored():
-    """EVERY upper-case module-level name of the observer, DERIVED from the module, must be classified by it as
-    mutable state (`observer._STATE`, snapshotted before each test and restored after it — containers in place,
-    scalars by assignment) or as a constant excluded by name with a reason (`observer._CONSTANTS`); a name in
-    neither, or in both, fails here. Research, round 7: three leaks of this class in one round — restore-what-you-
-    touch is a per-test discipline over fourteen things, and the fifteenth, or the first forgotten one, comes back
-    as a wrong symbol index that is silent, order-dependent, and reads as a real divergence; and a filter over
-    CONTAINERS alone would not see a scalar flag, so the derivation is over every upper-case name and the module
-    must classify each."""
-    import copy, re
-    derived = {n for n in vars(observer) if re.fullmatch(r"_?[A-Z][A-Z0-9_]*", n)}
-    state, consts = set(observer._STATE), set(observer._CONSTANTS)
-    assert not (state & consts), sorted(state & consts)
-    assert derived == state | consts, (sorted(derived - (state | consts)), sorted((state | consts) - derived),
-                                        "an upper-case name of the observer is not classified as state or constant (or is declared and absent)")
-    assert all(isinstance(r, str) and r for r in observer._CONSTANTS.values())
+    """Snapshot before each test and restore after it EVERYTHING the observer classifies as mutable state
+    (`observer._STATE` — containers in place, scalars by assignment), and assert everything it classifies as a
+    constant (`observer._CONSTANTS`) UNCHANGED at teardown — a mutable thing misfiled as a constant fails by name on
+    the first test that mutates it. Research, round 7: three leaks of this class in one round — restore-what-you-touch
+    is a per-test discipline over fourteen things, and the fifteenth, or the first forgotten one, comes back as a
+    wrong symbol index that is silent, order-dependent, and reads as a real divergence. The classification's
+    COMPLETENESS is asserted by `test_every_upper_case_name_of_the_observer_is_classified`, a test rather than this
+    fixture, so that on a tree whose observer predates the classification (the RED/GREEN transcript runs these tests
+    against the round-6 pin) the other tests fail at THEIR assertion, not at this fixture's setup; there the fixture
+    restores every derived container and nothing else."""
+    import copy
+    state = set(getattr(observer, "_STATE", ())) or {n for n in _observer_names() if isinstance(getattr(observer, n), (list, dict, set, bytearray))}
+    consts = set(getattr(observer, "_CONSTANTS", {}))
     snapshot = {n: copy.copy(getattr(observer, n)) for n in state}
     constants = {n: copy.copy(getattr(observer, n)) for n in consts}
     yield
-    # a constant is ASSERTED constant, not declared so (research): a mutable thing misfiled under _CONSTANTS with a
-    # plausible reason would be excluded from restore and the pollution class would return silently
     changed = sorted(n for n in consts if getattr(observer, n) != constants[n])
     assert changed == [], (changed, "a name classified as a constant was changed by this test — reclassify it as state")
     for n in state:
@@ -98,6 +100,19 @@ def _observer_state_restored():
             v[:] = s
         else:
             setattr(observer, n, s)
+
+
+def test_every_upper_case_name_of_the_observer_is_classified():
+    """The classification is COMPLETE and DISJOINT: every upper-case module-level name of the observer, derived from
+    the module, is in `_STATE` (restored around every test) or in `_CONSTANTS` (asserted unchanged), never neither,
+    never both; a new container OR scalar flag must be classified before this passes (research, round 7: a filter
+    over containers alone would not see a scalar flag, and a name in neither list is invisible to both)."""
+    derived = _observer_names()
+    state, consts = set(observer._STATE), set(observer._CONSTANTS)
+    assert not (state & consts), sorted(state & consts)
+    assert derived == state | consts, (sorted(derived - (state | consts)), sorted((state | consts) - derived))
+    assert all(isinstance(r, str) and r for r in observer._CONSTANTS.values())
+    assert "DECL_PATH" in state                     # the one scalar install() reassigns is state, not a constant
 
 
 @pytest.fixture(scope="module")
