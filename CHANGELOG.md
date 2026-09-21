@@ -22,7 +22,20 @@
   resolver built on `symtable`, CPython's own scope analysis, which covers the binding grammar by construction;
   the set of nodes that even get a scope is derived from the interpreter, since PEP 709 inlines comprehensions
   from 3.12 and CI runs 3.10 through 3.13. `nonlocal` on a site now RESOLVES as a shadow instead of being
-  refused, and only a `global` REBINDING is refused. *F3, comparison:* a control run's pytest exit is gated like
+  refused. The refusal that a site is not REBOUND at module level — the guarantee that makes "this name is the
+  module binding" evidence about the site OBJECT — kept an enumeration of its own one layer down, and six
+  spellings defeated it because none is an `ast.Name` in a `Store` context: `import os as S`,
+  `from os import path as S`, `except Exception as S`, `del S`, `def S()`, `class S`. It now reads the module's
+  COMPILED code object, which binds a name by exactly four opcodes and is therefore total over syntax, plus
+  `symtable` for the bindings a nested code object performs against module scope (`global`, and a
+  comprehension's walrus, which needs no `global` statement). There is now no hand-enumerated walk anywhere in
+  that refusal: a third reading written in the same fix, comparing the two, was deleted once it was shown to
+  refuse correct code (a dead `if False` branch the compiler folds away, and a bare annotation), and the AST
+  walk it cross-checked went with it. Checked against a 44-case matrix — 27 refusals, 17 acceptances, since an
+  over-strict refusal refuses correct code and three drafts of this fix did — on both comprehension regimes. A
+  site bound in two mutually exclusive branches is refused rather than analysed, including the
+  `if TYPE_CHECKING` import idiom, because a static reading cannot tell a dead branch from a live one unless
+  the compiler folds it. *F3, comparison:* a control run's pytest exit is gated like
   any other run's (a failed control still gave exit 0); the exits-per-function guard is replaced by the
   site-to-exit ASSOCIATION, since two sites sharing one return satisfy a count of two exits for two sites; and
   the gates are computed BEFORE `verdict.json` is written, which is why every shipped verdict lacked the gates

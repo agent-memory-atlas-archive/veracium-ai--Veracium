@@ -29,7 +29,9 @@ executes; a generated or stubbed module is where that breaks, and the caller sup
 from __future__ import annotations
 
 import ast
+import dis
 import symtable
+import sys
 
 # A block is joined to its AST node by (line, symtable's own name for that kind of block). The set of nodes that
 # GET a block is an INTERPRETER FACT, not a constant: PEP 709 inlines list/set/dict comprehensions from 3.12, so on
@@ -42,6 +44,37 @@ _INLINABLE = (ast.ListComp, ast.SetComp, ast.DictComp)      # no block from 3.12
 _COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
 SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
                ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+
+# The four opcodes by which a MODULE's own code object binds a name. This is the interpreter's reading of "what
+# binds here", and it is TOTAL over syntax by construction: every module-level binding form the language has —
+# including the ones no list contains — compiles to one of these four. The two `_GLOBAL` spellings appear at
+# module level whenever some nested block also treats the name as a global, which is why they are counted as
+# ordinary module-level bindings here and the nested write is a separate reading (rule C below).
+_MODULE_BINDING_OPS = ("STORE_NAME", "DELETE_NAME", "STORE_GLOBAL", "DELETE_GLOBAL")
+
+# A check that reads opcodes BY NAME weakens silently if a name ever moves: every count would fall to zero and
+# every module would be accepted, which is the shape where deleting the subject reads as fixing the problem. So
+# the names are confirmed against this interpreter's own table at import, loudly, before anything asks a
+# question of them.
+_MISSING_OPS = [op for op in _MODULE_BINDING_OPS if op not in dis.opmap]
+if _MISSING_OPS:                                                                        # pragma: no cover
+    raise RuntimeError(f"specs/0042 scope_resolution: this interpreter ({sys.version.split()[0]}) has no "
+                       f"{', '.join(_MISSING_OPS)} in dis.opmap, so counting module-level bindings by opcode "
+                       f"name would silently return zero for every module and accept every rebinding. The "
+                       f"opcode set must be re-derived for this version before the census can be trusted.")
+
+
+def _instruction_line(instruction, carried: int) -> int:
+    """The source line of one instruction, across the three spellings CPython has used (3.10 `starts_line` int;
+    3.11+ `positions.lineno`; 3.13 `line_number`). An instruction that starts no new line carries the last one."""
+    positions = getattr(instruction, "positions", None)
+    if positions is not None and getattr(positions, "lineno", None):
+        return positions.lineno
+    for attribute in ("line_number", "starts_line"):
+        value = getattr(instruction, attribute, None)
+        if isinstance(value, int) and value:
+            return value
+    return carried
 
 
 def _expected_name(node) -> str:
@@ -57,8 +90,10 @@ class Resolver:
 
     def __init__(self, src: str, filename: str = "<scan>"):
         self.src = src
+        self.filename = filename
         self.tree = ast.parse(src)
         self.table = symtable.symtable(src, filename, "exec")
+        self._code = None
         self._blocks: dict[tuple, list] = {}
         self._cursor: dict[tuple, int] = {}
         self._rebindings_checked: set[str] = set()
@@ -212,58 +247,114 @@ class Resolver:
                 f"module-level name is bound once — without that, a resolved NAME is not evidence about the OBJECT")
         return self.refers_to_module_binding(node, name)
 
-    def _module_level_bindings(self, name: str) -> list[int]:
-        """The lines at which `name` is BOUND in the module's own scope. Nested function and class bodies bind
-        their own; an inlined comprehension's `for` target is comprehension-local and does NOT bind here — but a
-        WALRUS inside one does, because PEP 572 deliberately binds it in the ENCLOSING scope."""
-        lines, skip = [], set()
-        for comp in (n for n in ast.walk(self.tree) if isinstance(n, SCOPE_NODES[4:])):
-            for gen in comp.generators:
-                skip.update(id(x) for x in ast.walk(gen.target))
+    def _module_binding_ops(self, name: str) -> list[tuple[str, int]]:
+        """Every binding operation the MODULE's OWN code object performs on `name`, as (opcode, line).
 
-        def walk(node):
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
-                    continue                     # its own scope
-                if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store) \
-                        and child.id == name and id(child) not in skip:
-                    lines.append(child.lineno)
-                walk(child)
-        walk(self.tree)
-        return sorted(lines)
+        THE INTERPRETER'S READING, and the only one this scope gets. A walk over AST node kinds knows only the
+        forms somebody listed; this compiles the same source and counts what the module will actually execute,
+        so a binding form nobody enumerated is counted like any other. It is the answer to round 8's stage-2 finding,
+        where six spellings — `import os as S`, `from os import path as S`, `except Exception as S`, `del S`,
+        `def S()`, `class S` — were all accepted because none of them is an `ast.Name` in a `Store` context.
+
+        Nested code objects (a function, a class body, a comprehension that still gets one) live in `co_consts`
+        and are NOT walked: a binding they perform is theirs, except when it targets this scope, which is rule C.
+        Compiled with `dont_inherit=True` so the SCANNER's own `__future__` flags cannot change the reading."""
+        if self._code is None:
+            try:
+                self._code = compile(self.src, self.filename, "exec", dont_inherit=True)
+            except SyntaxError as exc:      # `ast.parse` accepts text the compiler rejects (`return` at module
+                raise UnresolvableScope(    # level, `await` outside `async`), so this is reachable past __init__
+                    f"{self.filename}: the source parses but does not compile ({exc.msg} at line "
+                    f"{exc.lineno}), so the interpreter has no reading of what this module binds") from exc
+        found, line = [], 0
+        for instruction in dis.get_instructions(self._code):
+            line = _instruction_line(instruction, line)
+            if instruction.opname in _MODULE_BINDING_OPS and instruction.argval == name:
+                found.append((instruction.opname, line))
+        return found
 
     def refuse_site_rebindings(self, names: set[str]) -> None:
-        """A declared site's NAME must denote the site everywhere the module reads it. Two ways it stops doing so,
-        and both are REFUSED rather than resolved — the reviewer's sanctioned alternative to covering a form:
+        """A declared site's NAME must denote the site everywhere the module reads it. Every way it stops doing so
+        is REFUSED rather than resolved — the reviewer's sanctioned alternative to covering a form.
 
-          1. THE MODULE-LEVEL NAME IS BOUND MORE THAN ONCE. `S = declare_site(...)` and then anything that rebinds
-             S at module scope — a second assignment, a `for` target, or (round 8, research's stage-2 held probe)
-             a WALRUS inside a comprehension, which PEP 572 binds in the ENCLOSING scope on purpose. The runtime
-             confirms it: `S = declare_site('t'); [(S := q) for q in (1, 2)]` leaves S == 2 and the site object
-             gone, while every static reading still says "S is the module binding" — TRUE of the name and false
-             of the object, which is the distinction this refusal exists to keep.
-          2. A NESTED BLOCK DECLARES `global <name>` AND ASSIGNS. Same effect, reached from inside a function.
+        THREE READINGS, AND THE DISAGREEMENT BETWEEN TWO OF THEM IS ITSELF A REFUSAL. Round 8's first attempt had
+        one reading, an AST walk over `ast.Name` in a `Store` context, and research's stage-2 mutants found six
+        module-level binding spellings it could not see. A hand list standing in for what the language already
+        knows is the defect this whole module exists to remove, and it had grown back one layer down.
 
-        (Named `refuse_rebound_globals` until round 8, when case 1 was added and the old name described half of
-        what it does.)"""
+          A. THE MODULE'S OWN CODE OBJECT BINDS THE NAME MORE THAN ONCE (`_module_binding_ops`). Total over syntax
+             by construction. Catches the six spellings above and every ordinary rebinding — a second assignment,
+             an augmented assignment, a `for` target, `with … as`, tuple and starred unpacking, a `match` capture,
+             a module-level walrus. The declaration itself is the one binding that is expected.
+
+        A THIRD READING WAS WRITTEN HERE AND DELETED, AND THE REASON BELONGS IN THE FILE. It compared the two
+        readings and refused when they disagreed — research's "put an assertion between the two readings". Its
+        own mutant showed it caught nothing A and C do not; then running two rows research proposed as
+        must-accept showed what it DOES catch: `if False: S = 1`, where CPython folds the dead branch the walk
+        can still see, and `S: int`, where a bare annotation's target carries a `Store` context and binds
+        nothing. Both were REFUSED — correct code, a common idiom. A tripwire whose only reachable firings are
+        false is worse than no tripwire, so it went, and the hand-written AST walk it existed to cross-check
+        went with it. That walk was the enumeration this whole finding is about; the refusal now contains none.
+
+        THE GENERAL FORM, because the instinct that produced it will produce another (research's formulation):
+        a cross-check between two readings is right when they are two IMPLEMENTATIONS OF ONE RULE, where a
+        difference is by definition a defect; it is harmful when they are two readings of DIFFERENT RULES, where
+        a difference is an ordinary state of correct code. A asks what THIS scope binds and C asks what a NESTED
+        block binds against it. Those are different questions, so "they disagree" was never evidence of
+        anything — which is exactly why every firing it had was on a legitimate module.
+
+        THE BRANCH DECISION, RECORDED RATHER THAN INHERITED. Counting binding operations cannot distinguish
+        "bound twice in sequence" from "bound once in two mutually exclusive branches", and three real idioms
+        count more than one: a `try`/`except ImportError` import fallback, a site declared in both arms of an
+        `if`, and `if TYPE_CHECKING: import x as S`. All three are REFUSED. A static reading cannot tell a dead
+        branch from a live one unless the condition is a literal the compiler folds, and a site declared ONCE
+        and UNCONDITIONALLY is the premise of the scan this refusal protects. The refusal is loud, names its
+        lines and reaches a person; accepting would risk the name question answering about the wrong object in
+        silence, which is the failure being prevented. The `TYPE_CHECKING` row is the sharpest — at runtime that
+        branch never executes, so the refusal is false in fact — and it is taken knowingly: it needs a site name
+        to collide with a type-checking alias, and no module in the tree does that. `if False:` is ACCEPTED
+        because the compiler folds it away, and the two rows sit together in the matrix so the asymmetry is
+        recorded where a reader meets it.
+          C. A NESTED BLOCK ASSIGNS THE NAME AS A GLOBAL (`is_global() and is_assigned()`). Reaches the module
+             binding from inside a function, a class body or a comprehension. Asked of `is_global()` and not of
+             `is_declared_global()`, because a comprehension's walrus binds the enclosing scope with no `global`
+             statement anywhere.
+
+        Verified against a 44-case matrix — 27 that must be refused, 17 that must be ACCEPTED — on 3.10 (a block
+        per comprehension) and 3.12 (inlined), in `tests/test_0042_scope_resolution.py`. Both rules are sole
+        catchers of part of it, so deleting either reddens it. The 17 are as load-bearing as the 27: three
+        drafts of this fix refused correct code, and that is what the acceptance half is for.
+
+        (Named `refuse_rebound_globals` until round 8, when it stopped being only about `global`.)"""
+        declared_here = self.site_names()
         for n in sorted(names):
-            at = self._module_level_bindings(n)
-            if len(at) > 1:
-                raise UnresolvableScope(f"site {n!r} is bound {len(at)} times at module level (lines "
-                                        f"{', '.join(map(str, at))}) — a rebinding replaces the declared site "
-                                        f"object while every static reading still resolves the NAME to it")
+            executed = self._module_binding_ops(n)
+            executed_lines = sorted({line for _, line in executed})
+            if not executed and n in declared_here:
+                raise UnresolvableScope(
+                    f"site {n!r} is declared at module level by this module and the interpreter's reading of "
+                    f"the compiled module finds no binding for it at all — the reading is broken, not the "
+                    f"module, and a broken reading accepts every rebinding in silence")
+            if len(executed) > 1:
+                whose = (" and exactly one of those is the declaration" if n in declared_here else "")
+                raise UnresolvableScope(
+                    f"site {n!r} is bound {len(executed)} times in the module's own code (lines "
+                    f"{', '.join(map(str, executed_lines))}){whose} — a rebinding replaces the declared site "
+                    f"object while every static reading still resolves the NAME to it")
 
         def walk(block):
             for n in names:
                 if block.get_type() == "module":
-                    continue          # the module block's own `S = declare_site(...)` IS the declaration; case 1 above
+                    continue          # the module block's own `S = declare_site(...)` IS the declaration; rule A
                 try:
                     sym = block.lookup(n)
                 except KeyError:
                     continue
-                if sym.is_declared_global() and sym.is_assigned():
+                if sym.is_global() and sym.is_assigned():
+                    how = "`global %s` with an assignment" % n if sym.is_declared_global() else \
+                          "an assignment expression binding the enclosing scope"
                     raise UnresolvableScope(f"block {block.get_name()!r} (line {block.get_lineno()}): "
-                                            f"`global {n}` with an assignment replaces the declared site itself")
+                                            f"{how} replaces the declared site itself")
             for c in block.get_children():
                 walk(c)
         walk(self.table)

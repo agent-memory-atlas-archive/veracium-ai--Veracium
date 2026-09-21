@@ -221,14 +221,22 @@ def test_a_module_level_rebinding_of_a_site_is_refused_including_a_walrus_in_a_c
     object. The refusal used to cover only `global S` with an assignment inside a function; it now covers any
     module-level rebinding, which is the property that was actually meant."""
     decl = "from .census import declare_site\nS = declare_site('t')\n"
-    for label, src in {
-        "a walrus inside a comprehension": decl + "xs = [(S := q) for q in (1, 2)]\n",
-        "a plain second assignment":       decl + "S = object()\n",
-        "a module-level for target":       decl + "for S in (1, 2):\n    pass\n",
-        "a module-level with-as":          decl + "import contextlib\nwith contextlib.nullcontext() as S:\n    pass\n",
-    }.items():
+    # The expected message is named per row, because the WALRUS row is answered by a different reading on each
+    # side of PEP 709: on 3.12+ the comprehension is inlined and its store is in the module's own code object
+    # (rule A counts two); on 3.10/3.11 it is a separate code object that binds the ENCLOSING scope, which the
+    # interpreter's module-level reading cannot see at all, and symtable answers it instead (rule C).
+    inlined = sys.version_info >= (3, 12)
+    for label, src, expected in [
+        ("a walrus inside a comprehension", decl + "xs = [(S := q) for q in (1, 2)]\n",
+         "bound 2 times in the module's own code" if inlined
+         else "assignment expression binding the enclosing scope"),
+        ("a plain second assignment",       decl + "S = object()\n", "bound 2 times"),
+        ("a module-level for target",       decl + "for S in (1, 2):\n    pass\n", "bound 2 times"),
+        ("a module-level with-as",          decl + "import contextlib\nwith contextlib.nullcontext() as S:\n    pass\n",
+         "bound 2 times"),
+    ]:
         r = sr.Resolver(src, f"<{label}>")
-        with pytest.raises(sr.UnresolvableScope, match="bound .* times at module level"):
+        with pytest.raises(sr.UnresolvableScope, match=expected):
             r.refuse_site_rebindings(r.site_names())
     # the controls: a comprehension's own TARGET is comprehension-local and binds nothing at module level, and a
     # function-local name of the same spelling is a shadow, not a rebinding — neither may be refused
@@ -310,3 +318,290 @@ def test_the_site_question_refuses_until_the_rebinding_guarantee_is_established(
         text = (EVIDENCE / mod).read_text()
         assert "refers_to_declared_site(" in text, mod
         assert "refers_to_module_binding(" not in text, f"{mod} asks the NAME question where it needs the SITE one"
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Round 8e — research's stage-2 finding: SIX module-level binding spellings were accepted, because the refusal's
+# only reading was an AST walk over `ast.Name` in a `Store` context and none of the six is one. The matrix below
+# is the binding grammar of a MODULE SCOPE, both halves, and it is the negative space of the `GRAMMAR` table
+# above: there the question was "which binding does this name see", here it is "is the declared site still the
+# object this name denotes". Every row is a module whose first two lines declare a site called `S`.
+# ---------------------------------------------------------------------------------------------------------------
+DECL = "from .census import declare_site\nS = declare_site('t')\n"
+
+# (label, the source after the declaration, must the refusal fire?)
+REBINDING_MATRIX = [
+    # --- the six research found. None is an `ast.Name` in a `Store` context; all six replace or remove the site.
+    ("import os as S",                   "import os as S\n", True),
+    ("from os import path as S",         "from os import path as S\n", True),
+    ("except Exception as S",            "try:\n    pass\nexcept Exception as S:\n    pass\n", True),
+    ("del S",                            "del S\n", True),
+    ("def S()",                          "def S():\n    pass\n", True),
+    ("class S",                          "class S:\n    pass\n", True),
+    # --- their neighbours in the same grammar, none of them named by anyone
+    ("async def S()",                    "async def S():\n    pass\n", True),
+    ("import os as S inside a try",      "try:\n    import os as S\nexcept ImportError:\n    pass\n", True),
+    ("a match capture",                  "match 1:\n    case S:\n        pass\n", True),
+    ("a match as-pattern",               "match 1:\n    case int() as S:\n        pass\n", True),
+    # --- the forms the AST walk already saw, which must keep being refused
+    ("a plain second assignment",        "S = object()\n", True),
+    ("an augmented assignment",          "S += 1\n", True),
+    ("an annotated assignment",          "S: int = 1\n", True),
+    ("a module-level for target",        "for S in (1, 2):\n    pass\n", True),
+    ("a module-level with-as",           "import contextlib\nwith contextlib.nullcontext() as S:\n    pass\n", True),
+    ("tuple unpacking",                  "(S, y) = (1, 2)\n", True),
+    ("starred unpacking",                "[*S, y] = (1, 2, 3)\n", True),
+    ("a module-level walrus",            "if (S := 1):\n    pass\n", True),
+    # --- bound from INSIDE a nested code object, at the module scope: the half rule A cannot see
+    ("a walrus in a listcomp",           "xs = [q for q in (1, 2) if (S := q)]\n", True),
+    ("a walrus in a genexpr",            "xs = list(q for q in (1, 2) if (S := q))\n", True),
+    ("`global S` assigned in a function", "def f():\n    global S\n    S = 1\n", True),
+    ("`global S` deleted in a function",  "def f():\n    global S\n    del S\n", True),
+    ("`global S` in a class body",        "class K:\n    global S\n    S = 1\n", True),
+    ("`global S` two scopes down",        "def outer():\n    def inner():\n        global S\n        S = 1\n"
+                                          "    return inner\n", True),
+    # --- the other half: an over-strict refusal is a refusal of CORRECT code, and it is the half a matrix of
+    # --- all-True rows would never catch. None of these replaces the site object.
+    ("the declaration alone",            "", False),
+    ("a listcomp target",                "xs = [S for S in (1, 2)]\n", False),
+    ("a genexpr target",                 "xs = list(S for S in (1, 2))\n", False),
+    ("a setcomp target",                 "a = {S for S in (1, 2)}\n", False),
+    ("a dictcomp target",                "b = {S: S for S in (1, 2)}\n", False),
+    ("a nested comprehension target",    "b = [[S for S in r] for r in ((1,),)]\n", False),
+    ("a function-local shadow",          "def f():\n    S = 1\n    return S\n", False),
+    ("a function parameter",             "def f(S=None):\n    return S\n", False),
+    ("a lambda parameter",               "f = lambda S: S\n", False),
+    ("a class-body attribute",           "class K:\n    S = 1\n", False),
+    ("except-as inside a function",      "def f():\n    try:\n        pass\n    except Exception as S:\n"
+                                         "        pass\n", False),
+    ("a for target inside a function",   "def f():\n    for S in (1, 2):\n        pass\n", False),
+    ("`global S` READ in a function",    "def f():\n    global S\n    return S\n", False),
+    ("an ordinary module-level use",     "with S.consult():\n    pass\n", False),
+    ("an ordinary use in a function",    "def f():\n    with S.consult():\n        return 1\n", False),
+    # --- research's Q2: counting binding OPERATIONS cannot tell "bound twice in sequence" from "bound once in
+    # --- two mutually exclusive branches". All three below count more than one and are REFUSED, and the
+    # --- decision is recorded here rather than inherited from the counting: a static reading cannot tell a
+    # --- dead branch from a live one unless the condition is a literal the compiler folds, and a site declared
+    # --- ONCE and UNCONDITIONALLY is the premise of the scan this refusal protects. The `TYPE_CHECKING` row is
+    # --- the sharpest — that branch never executes, so the refusal is false IN FACT — and the trade is taken
+    # --- knowingly: it needs a site name to collide with a type-checking alias, and no module in the tree
+    # --- does that. `if False:` sits two rows below it, ACCEPTED, because the compiler folds it away; the two
+    # --- are adjacent so the asymmetry explains itself where a reader meets it.
+    ("a try/except import fallback",     "try:\n    import os as S\nexcept ImportError:\n    import sys as S\n",
+     True),
+    ("a site declared in both branches", "flag = True\nif flag:\n    S = declare_site('a')\nelse:\n"
+                                         "    S = declare_site('b')\n", True),
+    ("an `if TYPE_CHECKING` import",     "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n"
+                                         "    import os as S\n", True),
+    ("a dead `if False` branch",         "if False:\n    S = 1\n", False),
+    ("a bare annotation",                "S: int\n", False),
+]
+
+
+def _refusal(module, src):
+    """The refusal message for one matrix row, or None if the row was accepted."""
+    r = module.Resolver(DECL + src, "<matrix>")
+    try:
+        r.refuse_site_rebindings(r.site_names())
+        return None
+    except module.UnresolvableScope as e:
+        return str(e)
+
+
+def test_every_module_level_binding_form_is_refused_and_no_shadow_is():
+    """The whole matrix at once, reporting EVERY disagreement rather than the first — a row-per-run matrix hides
+    how much of the grammar a regression takes with it. Both halves are asserted because an always-refusing
+    resolver would pass the first half and refuse the entire product tree."""
+    wrong = []
+    for label, src, must_refuse in REBINDING_MATRIX:
+        got = _refusal(sr, src)
+        if (got is not None) != must_refuse:
+            wrong.append(f"{label}: expected {'a refusal' if must_refuse else 'acceptance'}, got {got!r}")
+    assert not wrong, "\n".join(wrong)
+
+
+def test_the_rebinding_matrix_covers_both_answers_and_the_six_forms_by_name():
+    """The table's own shape, so a row silently deleted from either half is visible."""
+    assert len(REBINDING_MATRIX) == 44
+    assert len({row[0] for row in REBINDING_MATRIX}) == 44, "labels are the ids; they must be distinct"
+    refused = [row for row in REBINDING_MATRIX if row[2]]
+    assert len(refused) == 27 and len(REBINDING_MATRIX) - len(refused) == 17
+    labels = " ".join(row[0] for row in REBINDING_MATRIX)
+    for form in ("import os as S", "from os import path as S", "except Exception as S", "del S", "def S()",
+                 "class S", "a walrus in a genexpr", "`global S` READ in a function", "a listcomp target",
+                 "an `if TYPE_CHECKING` import", "a dead `if False` branch", "a bare annotation"):
+        assert form in labels, form
+
+
+def test_the_interpreter_confirms_each_spelling_really_does_replace_the_site():
+    """The premise under the first half, EXECUTED. A refusal of a form that does not actually replace the object
+    would be a refusal of correct code, so the six are run and the name is read afterwards: in every case `S` is
+    no longer the site the declaration returned. This is the 'true of the name, false of the object' distinction
+    the whole refusal exists to keep, and nothing here is derived from reading the grammar."""
+    site = object()
+    for label, src, expect_gone in [
+        ("import os as S",           "import os as S\n", True),
+        ("from os import path as S", "from os import path as S\n", True),
+        ("except Exception as S",    "try:\n    raise ValueError()\nexcept Exception as S:\n    pass\n", True),
+        ("del S",                    "del S\n", True),
+        ("def S()",                  "def S():\n    pass\n", True),
+        ("class S",                  "class S:\n    pass\n", True),
+        ("a walrus in a genexpr",    "xs = list(q for q in (1, 2) if (S := q))\n", True),
+        ("`global S` in a function", "def f():\n    global S\n    S = 1\nf()\n", True),
+        ("a listcomp target",        "xs = [S for S in (1, 2)]\n", False),
+        ("a function-local shadow",  "def f():\n    S = 1\n    return S\nf()\n", False),
+    ]:
+        ns = {"declare_site": lambda i: site}
+        exec("S = declare_site('t')\n" + src, ns)
+        still = ns.get("S", None) is site
+        assert still is (not expect_gone), f"{label}: after execution S is {'still' if still else 'no longer'} the site"
+
+
+def _mutant(old, new):
+    """The resolver with one rule disabled, loaded as its own module. A rule that no row depends on is a rule
+    that can be deleted without anyone noticing, which is the dead-check taxonomy's UNFAILABLE entry."""
+    src = (EVIDENCE / "scope_resolution.py").read_text()
+    assert src.count(old) == 1, f"the mutant's anchor {old!r} matched {src.count(old)} times"
+    path = pathlib.Path(__import__("tempfile").mkdtemp()) / "scope_resolution_mutant.py"
+    path.write_text(src.replace(old, new))
+    return _load(f"scope_resolution_mutant_{abs(hash(old))}", path)
+
+
+RULE_A = ("            if len(executed) > 1:", "            if False:")
+RULE_C = ("                if sym.is_global() and sym.is_assigned():", "                if False:")
+
+
+def test_both_readings_are_load_bearing_and_neither_over_refuses():
+    """Disable one rule in the SOURCE and the matrix must redden — the reviewer's next move, made first. Two
+    readings remain, both of them the language's own, and each owns part of the grammar:
+
+      A  the module's own COMPILED CODE OBJECT binds the name more than once. Total over syntax by
+         construction. Sole catcher of every rebinding performed by this scope, whatever its spelling.
+      C  a NESTED block assigns the name as a global (`is_global()` AND `is_assigned()`). Sole catcher of
+         `global` from a function, a class body or two scopes down, and of a comprehension's walrus, which
+         binds the enclosing scope with no `global` statement anywhere.
+
+    A third reading — refuse when the two disagree — was written here and deleted; the paragraph in
+    `scope_resolution.py` says why, and `test_no_reading_of_this_module_is_a_hand_enumeration` keeps the walk
+    it cross-checked from coming back. Each mutant is also asked whether it refuses CORRECT code, because a
+    mutant that reddens the acceptance half proves nothing about the rule it disabled."""
+    for rule, (old, new_), sole in [("A", RULE_A, "a plain second assignment"),
+                                    ("C", RULE_C, "`global S` assigned in a function")]:
+        mutant = _mutant(old, new_)
+        survivors = [row[0] for row in REBINDING_MATRIX if row[2] and _refusal(mutant, row[1]) is None]
+        assert sole in survivors, (rule, sole, survivors)
+        wrongly = [row[0] for row in REBINDING_MATRIX if not row[2] and _refusal(mutant, row[1]) is not None]
+        assert not wrongly, f"rule {rule}'s mutant refuses correct code, so the redness is not the rule's: {wrongly}"
+
+
+def test_the_deleted_third_reading_would_refuse_correct_code():
+    """The deletion, kept honest. Round 8e first ADDED a rule that refused when the interpreter's reading and an
+    AST walk disagreed about where a name is bound, and demoted it to a tripwire when its own mutant showed it
+    caught nothing the other two did. Running two rows research proposed as must-accept showed what it actually
+    fires on: a dead branch the compiler folds away, and a bare annotation whose target carries a `Store`
+    context and binds nothing. Both are correct code. This test rebuilds that rule and asserts it refuses them,
+    so the reason for the deletion is a RESULT and not a remark in a docstring."""
+    src = (EVIDENCE / "scope_resolution.py").read_text()
+    anchor = "            if len(executed) > 1:"
+    assert src.count(anchor) == 1
+    restored = src.replace(anchor, """            walked = []
+
+            def _walk(node, out):
+                for child in ast.iter_child_nodes(node):
+                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                        continue
+                    if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store) and child.id == n:
+                        out.append(child.lineno)
+                    _walk(child, out)
+            _walk(self.tree, walked)
+            if sorted(set(walked)) != executed_lines:
+                raise UnresolvableScope(f"site {n!r}: the two readings disagree")
+            if len(executed) > 1:""")
+    tmp = pathlib.Path(__import__("tempfile").mkdtemp()) / "with_d.py"
+    tmp.write_text(restored)
+    with_d = _load("scope_resolution_with_deleted_rule", tmp)
+    for label in ("a dead `if False` branch", "a bare annotation"):
+        body = next(row[1] for row in REBINDING_MATRIX if row[0] == label)
+        assert _refusal(sr, body) is None, f"{label} must be accepted by the shipped resolver"
+        message = _refusal(with_d, body)
+        assert message is not None and "readings disagree" in message, \
+            f"the deleted rule no longer refuses {label}, so the stated reason for deleting it has gone stale"
+
+
+def test_no_reading_of_this_module_is_a_hand_enumeration():
+    """The finding's own class, gated. Four of the five defects in this instrument were a hand list standing in
+    for what the language already knows, and the last one was such a list inside the fix that removed the
+    previous one. The refusal now has exactly two readings — the compiled code object and `symtable` — and this
+    test refuses a third that walks AST node kinds to decide what binds."""
+    src = (EVIDENCE / "scope_resolution.py").read_text()
+    body = src[src.index("    def refuse_site_rebindings("):]
+    for banned in ("ast.Store", "_module_level_bindings", "ast.iter_child_nodes", "ast.walk"):
+        assert banned not in body, (
+            f"{banned!r} is back in the refusal: a walk over node kinds is the enumeration round 8 removed. "
+            f"Ask the compiled module (`_module_binding_ops`) or `symtable`.")
+    assert "_module_level_bindings" not in src, "the deleted AST walk has come back to the resolver"
+
+
+def test_the_interpreters_reading_is_read_at_the_right_lines():
+    """`_module_binding_ops` reports LINES, and CPython has spelled an instruction's line three ways across the
+    versions CI runs (3.10 `starts_line`, 3.11+ `positions.lineno`, 3.13 `line_number`). A version that adds a
+    fourth would silently report line 0 for everything and every refusal message would lose its location, while
+    the verdicts above stayed green — so the lines are asserted, not just the counts."""
+    r = sr.Resolver(DECL + "import os as S\n", "<lines>")
+    ops = r._module_binding_ops("S")
+    assert [line for _, line in ops] == [2, 3], ops
+    assert all(op in sr._MODULE_BINDING_OPS for op, _ in ops), ops
+    assert "lines 2, 3" in (_refusal(sr, "import os as S\n") or ""), "the message must carry the lines"
+
+
+def test_rule_A_is_the_interpreters_reading_and_not_a_second_node_list():
+    """What makes rule A total is that it reads the compiled module, so a form nobody enumerated is counted like
+    any other. The proof is that it is right about a form this test file never lists: the `__all__`-style
+    conditional import below binds `S` twice with no `ast.Name` store in sight on either line."""
+    src = "import sys\nif sys.platform:\n    import os as S\nelse:\n    from os import path as S\n"
+    r = sr.Resolver(DECL + src, "<unlisted>")
+    assert [line for _, line in r._module_binding_ops("S")] == [2, 5, 7], "the interpreter sees both branches"
+    assert "bound 3 times" in (_refusal(sr, src) or "")
+    # the condition is deliberately not a constant: `if 1:` is folded away and the `else` branch is never
+    # compiled, so a folded example would have understated the interpreter's reading and passed for a wrong reason
+    folded = sr.Resolver(DECL + "if 1:\n    import os as S\nelse:\n    from os import path as S\n", "<folded>")
+    assert len(folded._module_binding_ops("S")) == 2, "the dead branch really is absent from the code object"
+
+
+def test_the_opcode_names_are_confirmed_against_this_interpreters_table():
+    """A check that reads opcodes BY NAME weakens silently if a name moves: every count falls to zero, every
+    module is accepted, and nothing is red. The names are therefore confirmed against `dis.opmap` at import.
+    The control is a copy of the module with one name misspelled, which must refuse to import at all."""
+    import dis as _dis
+    assert all(op in _dis.opmap for op in sr._MODULE_BINDING_OPS), sr._MODULE_BINDING_OPS
+    broken = (EVIDENCE / "scope_resolution.py").read_text().replace('"DELETE_GLOBAL")', '"DELETE_GLOBAL_")', 1)
+    path = pathlib.Path(__import__("tempfile").mkdtemp()) / "renamed_opcode.py"
+    path.write_text(broken)
+    with pytest.raises(RuntimeError, match="dis.opmap"):
+        _load("scope_resolution_renamed_opcode", path)
+
+
+def test_source_that_parses_but_does_not_compile_is_refused_not_raised_through():
+    """`ast.parse` accepts text the compiler rejects, so `__init__` can succeed where the interpreter's reading
+    cannot be taken at all. That is a refusal in this module's own vocabulary, not a bare SyntaxError escaping
+    from the middle of a scan."""
+    import ast as _ast
+    assert _ast.parse("return 1"), "the premise: this parses"
+    with pytest.raises(SyntaxError):
+        compile("return 1", "<p>", "exec")
+    r = sr.Resolver(DECL + "return 1\n", "<uncompilable>")
+    with pytest.raises(sr.UnresolvableScope, match="parses but does not compile"):
+        r.refuse_site_rebindings(r.site_names())
+
+
+def test_a_reading_that_finds_nothing_is_a_broken_reading_not_a_clean_module():
+    """The failure mode of the guard above, one level in: if the interpreter's reading ever returns EMPTY for a
+    name this module declares at module level, the reading is broken and every rebinding would be accepted in
+    silence. An empty reading is a refusal, and the control is the same module read normally."""
+    r = sr.Resolver(DECL + "S = object()\n", "<blinded>")
+    assert r.site_names() == {"S"}
+    with pytest.raises(sr.UnresolvableScope, match="bound 2 times"):
+        r.refuse_site_rebindings(r.site_names())
+    r._module_binding_ops = lambda name: []                      # the reading goes blind
+    with pytest.raises(sr.UnresolvableScope, match="the reading is broken"):
+        r.refuse_site_rebindings(r.site_names())

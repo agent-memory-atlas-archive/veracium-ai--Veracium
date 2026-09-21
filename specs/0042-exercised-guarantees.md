@@ -184,6 +184,43 @@ Spec-Status: accepted
 > the check looked at; and a default that SUPPLIES AN INPUT is a substitution, whose safety condition is that the
 > input is BOUND TO THE RUN rather than merely located.** Seven functions read, five safe, two reporting their own
 > incompleteness, one test pinning both.
+>
+> **And the second class, which is the first one's mirror: a hand list standing in for what the language already
+> knows, growing back ONE LAYER DOWN inside its own removal.** The F2/F4a fix deleted the enumeration from the
+> NAME question and left one in the guarantee that makes the name question answerable at all — the refusal that a
+> declared site is not rebound at module level, which asked an AST walk for `ast.Name` nodes in a `Store` context.
+> Research's stage-2 mutants found six module-level binding spellings that are not such a node and were therefore
+> all ACCEPTED: `import os as S`, `from os import path as S`, `except Exception as S`, `del S`, `def S()`,
+> `class S`. Each is the walrus case in another spelling — true of the name, false of the object — and the
+> refusal that exists to make those two coincide did not fire. The reading that closes it is the interpreter's
+> own: the module's compiled code object binds a name by exactly four opcodes, so counting them is TOTAL over
+> syntax by construction and a form nobody listed is counted like any other. A second reading covers what that
+> one cannot see — a binding performed from inside a nested code object that targets module scope, which is
+> `global` and a comprehension's walrus — and is asked of `is_global()` rather than `is_declared_global()`,
+> because PEP 572 needs no `global` statement. Verified against a 44-case matrix, 27 refusals and 17
+> acceptances, on 3.10 (a block per comprehension) and 3.12 (inlined); an over-strict refusal is a refusal of
+> correct code, so the 17 are as load-bearing as the 27, and three drafts of this fix over-refused.
+>
+> **A third reading was written in the same fix and DELETED, which is the part worth carrying.** It refused
+> when the two readings disagreed — the reviewer's own "put an assertion between the two readings". Its mutant
+> showed it caught nothing the other two did; then running two rows the reviewer had offered as must-accept
+> showed what it does catch: `if False: S = 1`, where CPython folds a dead branch the AST walk can still see,
+> and `S: int`, where a bare annotation's target carries a `Store` context and binds nothing. Both are correct
+> code, and both were refused. A tripwire whose only reachable firings are false is worse than none, so it went
+> — and the hand-written AST walk it existed to cross-check went with it, which leaves **no enumeration
+> anywhere in the refusal**. The general form, because the instinct will recur: a cross-check between two
+> readings is right when they are two IMPLEMENTATIONS OF ONE RULE, where a difference is by definition a
+> defect, and harmful when they are two readings of DIFFERENT RULES, where a difference is an ordinary state.
+>
+> **One decision is recorded rather than inherited.** Counting binding operations cannot distinguish "bound
+> twice in sequence" from "bound once in two mutually exclusive branches", and three real idioms count more
+> than one: a `try`/`except ImportError` import fallback, a site declared in both arms of an `if`, and
+> `if TYPE_CHECKING: import x as S`. All three are REFUSED, because a static reading cannot tell a dead branch
+> from a live one unless the condition is a literal the compiler folds, and a site declared once and
+> unconditionally is the premise of the scan. The `TYPE_CHECKING` row is the sharpest — that branch never
+> executes, so the refusal is false in fact — and the trade is taken knowingly: it needs a site name to collide
+> with a type-checking alias, and no module in the tree does that. `if False:` is accepted, for the compiler's
+> reason, and the two rows are adjacent in the matrix so the asymmetry explains itself.
 
 ## 1. Problem and motivation
 
