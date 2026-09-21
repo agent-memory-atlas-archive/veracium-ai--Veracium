@@ -368,6 +368,26 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
                           f"not establish what the name denotes where the bypass reads it — a census import "
                           f"followed by a reassignment binds twice, and the transform will not rewrite a "
                           f"condition whose subject it cannot establish")
+    # ROUND 10, research's stage-2 F-S2-2: `bypasses: 0` HAD TWO MEANINGS AND THEY PRINTED IDENTICALLY —
+    # a module with genuinely no census bypass, and a module WITH one whose alias could not be established,
+    # whose twin therefore RETAINS a live `<name>.enabled()` call. In that region the twin is not an
+    # uninstrumented reference at all, and its own manifest called it clean. That is the zero-versus-N/A
+    # shape: "none present" and "present but not recognisable" are different facts and only the first is a
+    # result. Four shapes reach it, all measured — a try/except import, an `if TYPE_CHECKING:` import, an
+    # import under a runtime block, and no census import at all — because `declared_names` reads `tree.body`
+    # and the bound-exactly-once refusal only fires on an ESTABLISHED alias, so the gap sits BEFORE both.
+    #
+    # The module is NOT refused: preserving ordinary behaviour cannot over-refuse, and refusing here would
+    # reject an idiom no module in the tree uses. What changes is that the manifest stops reporting it clean.
+    # Counted on the ORIGINAL tree, where the resolver can still answer about these nodes.
+    unresolved = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.If) and isinstance(node.test, ast.Call) \
+                and isinstance(node.test.func, ast.Attribute) and node.test.func.attr == "enabled" \
+                and isinstance(node.test.func.value, ast.Name):
+            nm = node.test.func.value.id
+            if nm not in census_aliases and resolver.refers_to_module_binding(node.test.func.value, nm):
+                unresolved.append(f"{nm}.enabled() at line {node.lineno}")
     t = Uninstrument(declared, census_aliases, resolver); tree = t.visit(tree); ast.fix_missing_locations(tree)
     # a module that still USES the census surface after the instrumentation is gone (the opt-in switch,
     # `_census.enable(True)` in the package module) keeps its import: the twin's stub census answers it
@@ -387,7 +407,10 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
         diff = {k: (exits_before.get(k), exits_after.get(k)) for k in set(exits_before) | set(exits_after) if exits_before.get(k) != exits_after.get(k)}
         raise Refused(f"the transform changed a function's exit count — the observer keys exits by ordinal: {diff}")
     stats = {"sites": t.sites, "fires": t.fires, "consults": t.consults, "consult_statements": t.consult_stmts,
-             "bypasses": t.bypasses, "imports": t.imports, "exits": exits_after}
+             "bypasses": t.bypasses, "imports": t.imports, "exits": exits_after,
+             # the COUNT sums into the manifest totals; the DETAIL stays per module, under a key the
+             # totals loop does not know, so a reviewer sees both the headline and which call it was.
+             "unresolved_bypass_candidates": len(unresolved), "unresolved_bypass_detail": unresolved}
     # no INSTRUMENTATION may survive in the emitted module (a stub-answered surface read may)
     for token in ("declare_site", ".consult()", ".fire("):
         if token in out:
@@ -409,7 +432,7 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
     if out.exists():
         shutil.rmtree(out)
     shutil.copytree(src, out, ignore=shutil.ignore_patterns("__pycache__"))
-    totals = {"sites": 0, "fires": 0, "consults": 0, "consult_statements": 0, "bypasses": 0, "imports": 0, "modules_changed": 0}
+    totals = {"sites": 0, "fires": 0, "consults": 0, "consult_statements": 0, "bypasses": 0, "unresolved_bypass_candidates": 0, "imports": 0, "modules_changed": 0}
     manifest = {"permitted_transformations": [
                     "NAME = declare_site(...) removed (module level)", "census imports removed (restored if the surface is still read)",
                     "with NAME.consult(): body -> body (NAME declared)", "NAME.consult() statement removed (NAME declared)",
@@ -435,9 +458,13 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
         except Refused as e:
             raise Refused(f"{rel}: {e}") from None
         p.write_text(new)
+        # ROUND 10: summed BY PROPERTY, not by an exclusion list. This read `if k != "exits"`, so every
+        # new stat had to be remembered in two places — and adding one that is not a number KeyErrors here,
+        # which is how the unresolved-bypass detail first landed. A numeric stat now sums automatically and
+        # a non-numeric one is carried per module without anyone maintaining a name list.
         for k, v in stats.items():
-            if k != "exits":
-                totals[k] += v
+            if isinstance(v, int):
+                totals[k] = totals.get(k, 0) + v
         totals["modules_changed"] += 1
         manifest["modules"][rel] = {"sha256_before": hashlib.sha256(before).hexdigest(), "sha256_after": hashlib.sha256(new.encode()).hexdigest(), **stats}
     manifest["totals"] = totals
