@@ -3,6 +3,24 @@
 # the recorded pin (this round changed specs/evidence and tests only), and the twin this tree derives was
 # diffed against the twin the run used — byte-identical, so the arms below describe this tree.
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
+# TWIN DIGEST, added by dev AFTER the run (the harness does not emit one yet; that is a Dev-queue row).
+# Research's finding, 2026-09-21: this transcript recorded the derivation COUNTS and eight per-arm RECORD
+# digests and no digest of the twin, so "byte-identical to the twin the run used" was a claim only its
+# author could test — the twin lived in one seat's scratch directory. Bind by CONTENT, not by location.
+#   twin digest: a0f4231669597c0b4659ccfd51bc371367ce083221566b1b12a8b6796293b431   (60 files)
+#   definition:  specs/evidence/0042/twin_digest.py — sha256 over every file under the twin root in
+#                sorted RELATIVE path order, hashing the path, a NUL, then the bytes. ONE definition, so
+#                two seats cannot compute two numbers for one word; TRACKED and inside specs/evidence so
+#                it SHIPS — the first draft lived under .claude/skills/, which the package excludes by
+#                construction, which would have put the definition out of the reviewer's reach.
+#   reproducible from GIT ALONE, with no seat's scratch directory in the chain:
+#     git archive <the pin above> | tar -x -C <dir>
+#     python <dir>/specs/evidence/0042/inv7_uninstrument.py <dir>/src/veracium <dir>/twin
+#     python <dir>/specs/evidence/0042/twin_digest.py <dir>/twin
+#   equal across three derivations: the clean export of the pin, the twin THIS RUN used, and the twin the
+#   round-8f/8g working tree derives. The first is the one a second seat can check without trusting dev;
+#   that it equals the run's twin rests on the derivation being deterministic, which research measured by
+#   deriving twice from two independent clean exports and diffing the trees: IDENTICAL, counts matching.
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
 HEAD 2be6525e65b30df7eb8b9c23276732b62d182cbb
 twin (uninstrumented): derived from HEAD 2be6525e65b30df7eb8b9c23276732b62d182cbb by inv7_uninstrument.py

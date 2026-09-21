@@ -196,8 +196,15 @@ Spec-Status: accepted
 > own: the module's compiled code object binds a name by exactly four opcodes, so counting them is TOTAL over
 > syntax by construction and a form nobody listed is counted like any other. A second reading covers what that
 > one cannot see — a binding performed from inside a nested code object that targets module scope, which is
-> `global` and a comprehension's walrus — and is asked of `is_global()` rather than `is_declared_global()`,
-> because PEP 572 needs no `global` statement. Verified against a 44-case matrix, 27 refusals and 17
+> `global` and a comprehension's walrus — and is asked of `is_global()` rather than `is_declared_global()`.
+> **The reason first given for that choice was false and CI found it.** It said PEP 572 needs no `global`
+> statement, so the narrower predicate would miss the walrus; the first half is true of the language and the
+> conclusion does not follow, because `symtable` SYNTHESISES the flag — on 3.10/3.11 `is_declared_global()` is
+> TRUE for a walrus in a module containing no `global` anywhere. The narrower predicate is a mutant that
+> SURVIVES, 44 of 44 on both regimes, and it is declared rather than hidden; the wider one is kept because
+> wider is the fail-closed direction for an unenumerated case, which is a reason about risk and not about
+> evidence. The same false belief had reached a REFUSAL MESSAGE, which told a reader to look for a `global`
+> statement that does not exist — the message now names both spellings and claims neither. Verified against a 44-case matrix, 27 refusals and 17
 > acceptances, on 3.10 (a block per comprehension) and 3.12 (inlined); an over-strict refusal is a refusal of
 > correct code, so the 17 are as load-bearing as the 27, and three drafts of this fix over-refused.
 >
@@ -208,7 +215,23 @@ Spec-Status: accepted
 > and `S: int`, where a bare annotation's target carries a `Store` context and binds nothing. Both are correct
 > code, and both were refused. A tripwire whose only reachable firings are false is worse than none, so it went
 > — and the hand-written AST walk it existed to cross-check went with it, which leaves **no enumeration
-> anywhere in the refusal**. The general form, because the instinct will recur: a cross-check between two
+> anywhere in the refusal**. That last claim is MEASURED, not grepped: the first attempt gated it by refusing
+> the strings `ast.walk` and `ast.Store` in the refusal's source, and the reviewer defeated it in one line with
+> `from ast import walk as _w, Store as _St` — a narrow matcher inside the test written to prevent narrow
+> matchers, the same class one level up again. It is now established by counting: every AST-walking callable is
+> wrapped and `ast.Store` replaced by a counting class BEFORE the resolver is imported, so an alias bound at
+> module level is counted too; the refusal must consult the AST zero times, and two mutants that reinstate a
+> walk must both be caught while still returning the right verdicts.
+>
+> **That gate took three forms in one evening and the progression is this round in miniature** (research's
+> reading, and the reason it is written down rather than just fixed): a TEXT CHECK for the names, defeated by an
+> alias; SABOTAGE AFTER CONSTRUCTION, defeated by an alias bound at import time, which captures the real callable
+> before any patch can reach it; then WRAPPING BEFORE IMPORT, where no spelling reaches the real callable without
+> passing through the counter. The first two are both about a SPELLING — one asks whether a name appears, the
+> other whether a name resolves — and only the third is about the behaviour. It is the same move as AST node
+> kinds → `symtable` → the compiled code object, made one level up, in the test rather than in the instrument:
+> **go to the layer at which the spelling cannot vary.** The mistake was made at four layers in one evening and
+> corrected the same way each time, which is the argument for naming the move rather than the instances. The general form, because the instinct will recur: a cross-check between two
 > readings is right when they are two IMPLEMENTATIONS OF ONE RULE, where a difference is by definition a
 > defect, and harmful when they are two readings of DIFFERENT RULES, where a difference is an ordinary state.
 >

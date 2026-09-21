@@ -277,10 +277,15 @@ class Resolver:
         """A declared site's NAME must denote the site everywhere the module reads it. Every way it stops doing so
         is REFUSED rather than resolved — the reviewer's sanctioned alternative to covering a form.
 
-        THREE READINGS, AND THE DISAGREEMENT BETWEEN TWO OF THEM IS ITSELF A REFUSAL. Round 8's first attempt had
-        one reading, an AST walk over `ast.Name` in a `Store` context, and research's stage-2 mutants found six
+        TWO READINGS, BOTH THE LANGUAGE'S OWN, AND NEITHER OF THEM AN AST WALK. Round 8's first attempt had one
+        reading, an AST walk over `ast.Name` in a `Store` context, and research's stage-2 mutants found six
         module-level binding spellings it could not see. A hand list standing in for what the language already
         knows is the defect this whole module exists to remove, and it had grown back one layer down.
+
+        (The two are lettered A and C because a third, lettered D, was written in the same fix and DELETED —
+        the paragraph after them says why. The surviving letters are NOT renumbered: the tests, the mutants,
+        the CHANGELOG and the ledger all cite them by name, and renaming a rule to tidy a gap is how a citation
+        starts pointing at the wrong thing. There is no B.)
 
           A. THE MODULE'S OWN CODE OBJECT BINDS THE NAME MORE THAN ONCE (`_module_binding_ops`). Total over syntax
              by construction. Catches the six spellings above and every ordinary rebinding — a second assignment,
@@ -316,9 +321,17 @@ class Resolver:
         because the compiler folds it away, and the two rows sit together in the matrix so the asymmetry is
         recorded where a reader meets it.
           C. A NESTED BLOCK ASSIGNS THE NAME AS A GLOBAL (`is_global() and is_assigned()`). Reaches the module
-             binding from inside a function, a class body or a comprehension. Asked of `is_global()` and not of
-             `is_declared_global()`, because a comprehension's walrus binds the enclosing scope with no `global`
-             statement anywhere.
+             binding from inside a function, a class body or a comprehension.
+             THE REASON FIRST GIVEN FOR `is_global()` OVER `is_declared_global()` WAS FALSE AND IS CORRECTED
+             HERE. It said a comprehension's walrus binds the enclosing scope with no `global` statement, so
+             the narrower predicate would miss it. The first half is true of the LANGUAGE and the conclusion
+             does not follow: on 3.10/3.11 `symtable` SYNTHESISES the flag, and `is_declared_global()` is TRUE
+             for that walrus in a module containing no `global` anywhere. Swapping the predicate is a mutant
+             that SURVIVES — 44 of 44 either way, on 3.10 and on 3.12 — and it is declared here rather than
+             left for someone to rediscover (`test_the_two_global_predicates_agree_over_the_whole_matrix`
+             asserts the equivalence, so a future interpreter that separates them says so). The wider
+             predicate is kept because wider is the FAIL-CLOSED direction for a case nobody has enumerated,
+             which is a reason about risk and not about evidence.
 
         Verified against a 44-case matrix — 27 that must be refused, 17 that must be ACCEPTED — on 3.10 (a block
         per comprehension) and 3.12 (inlined), in `tests/test_0042_scope_resolution.py`. Both rules are sole
@@ -351,10 +364,16 @@ class Resolver:
                 except KeyError:
                     continue
                 if sym.is_global() and sym.is_assigned():
-                    how = "`global %s` with an assignment" % n if sym.is_declared_global() else \
-                          "an assignment expression binding the enclosing scope"
-                    raise UnresolvableScope(f"block {block.get_name()!r} (line {block.get_lineno()}): "
-                                            f"{how} replaces the declared site itself")
+                    # NOT "`global S` with an assignment": on 3.10/3.11 `symtable` reports
+                    # `is_declared_global()` TRUE for a WALRUS inside a comprehension, in a module whose source
+                    # contains no `global` statement at all — so naming the spelling would be a claim this
+                    # check has not made, and CI found it making exactly that claim.
+                    raise UnresolvableScope(
+                        f"block {block.get_name()!r} (line {block.get_lineno()}) assigns the MODULE-level name "
+                        f"{n!r} from inside a nested scope, which replaces the declared site object. Two "
+                        f"spellings reach here and this refusal does not distinguish them: a `global {n}` "
+                        f"statement with an assignment, and an assignment expression, which PEP 572 binds in "
+                        f"the ENCLOSING scope")
             for c in block.get_children():
                 walk(c)
         walk(self.table)

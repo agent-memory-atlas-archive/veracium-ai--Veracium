@@ -28,7 +28,10 @@
   `from os import path as S`, `except Exception as S`, `del S`, `def S()`, `class S`. It now reads the module's
   COMPILED code object, which binds a name by exactly four opcodes and is therefore total over syntax, plus
   `symtable` for the bindings a nested code object performs against module scope (`global`, and a
-  comprehension's walrus, which needs no `global` statement). There is now no hand-enumerated walk anywhere in
+  comprehension's walrus). The wider of the two `symtable` predicates is kept as the fail-closed direction and
+  not because the evidence separates them: the narrower `is_declared_global()` gives the same verdict on all 44
+  rows, since `symtable` synthesises that flag for a comprehension's walrus even though the source contains no
+  `global` statement — a surviving mutant, declared and pinned by a test rather than left to be rediscovered. There is now no hand-enumerated walk anywhere in
   that refusal: a third reading written in the same fix, comparing the two, was deleted once it was shown to
   refuse correct code (a dead `if False` branch the compiler folds away, and a bare annotation), and the AST
   walk it cross-checked went with it. Checked against a 44-case matrix — 27 refusals, 17 acceptances, since an

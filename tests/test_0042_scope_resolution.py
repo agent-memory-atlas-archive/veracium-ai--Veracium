@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import pathlib
+import subprocess
 import sys
 
 import pytest
@@ -229,7 +230,7 @@ def test_a_module_level_rebinding_of_a_site_is_refused_including_a_walrus_in_a_c
     for label, src, expected in [
         ("a walrus inside a comprehension", decl + "xs = [(S := q) for q in (1, 2)]\n",
          "bound 2 times in the module's own code" if inlined
-         else "assignment expression binding the enclosing scope"),
+         else "assigns the MODULE-level name"),
         ("a plain second assignment",       decl + "S = object()\n", "bound 2 times"),
         ("a module-level for target",       decl + "for S in (1, 2):\n    pass\n", "bound 2 times"),
         ("a module-level with-as",          decl + "import contextlib\nwith contextlib.nullcontext() as S:\n    pass\n",
@@ -479,7 +480,9 @@ def test_both_readings_are_load_bearing_and_neither_over_refuses():
          construction. Sole catcher of every rebinding performed by this scope, whatever its spelling.
       C  a NESTED block assigns the name as a global (`is_global()` AND `is_assigned()`). Sole catcher of
          `global` from a function, a class body or two scopes down, and of a comprehension's walrus, which
-         binds the enclosing scope with no `global` statement anywhere.
+         binds the enclosing scope with no `global` statement in the source (though
+         `symtable` synthesises the declared-global flag for it on 3.10/3.11, which is why the two predicates
+         turn out to agree — see `test_the_two_global_predicates_agree_over_the_whole_matrix`).
 
     A third reading — refuse when the two disagree — was written here and deleted; the paragraph in
     `scope_resolution.py` says why, and `test_no_reading_of_this_module_is_a_hand_enumeration` keeps the walk
@@ -500,7 +503,13 @@ def test_the_deleted_third_reading_would_refuse_correct_code():
     caught nothing the other two did. Running two rows research proposed as must-accept showed what it actually
     fires on: a dead branch the compiler folds away, and a bare annotation whose target carries a `Store`
     context and binds nothing. Both are correct code. This test rebuilds that rule and asserts it refuses them,
-    so the reason for the deletion is a RESULT and not a remark in a docstring."""
+    so the reason for the deletion is a RESULT and not a remark in a docstring.
+
+    THE LIMIT, STATED SO A LATER READER DOES NOT OVERREAD IT (research's note): the rule is DELETED, so this
+    asserts a property of a REBUILD written here, not of any code that ever shipped. It cannot be bound to what
+    D was, because what D was is only in the history. What it can do — and does, below — is show that the two
+    rows are refused by the rebuilt reading ALONE: disabling either surviving rule leaves them accepted, so the
+    refusal being demonstrated is the rebuilt one's and not a side effect of A or C."""
     src = (EVIDENCE / "scope_resolution.py").read_text()
     anchor = "            if len(executed) > 1:"
     assert src.count(anchor) == 1
@@ -526,20 +535,130 @@ def test_the_deleted_third_reading_would_refuse_correct_code():
         message = _refusal(with_d, body)
         assert message is not None and "readings disagree" in message, \
             f"the deleted rule no longer refuses {label}, so the stated reason for deleting it has gone stale"
+        # and the refusal is the rebuilt reading's alone: neither surviving rule refuses these rows either way
+        for rule, pair in (("A", RULE_A), ("C", RULE_C)):
+            assert _refusal(_mutant(*pair), body) is None, (
+                f"{label} is refused with rule {rule} disabled, so the rebuilt rule is not what refuses it and "
+                f"this test is measuring something else")
 
 
-def test_no_reading_of_this_module_is_a_hand_enumeration():
-    """The finding's own class, gated. Four of the five defects in this instrument were a hand list standing in
-    for what the language already knows, and the last one was such a list inside the fix that removed the
-    previous one. The refusal now has exactly two readings — the compiled code object and `symtable` — and this
-    test refuses a third that walks AST node kinds to decide what binds."""
-    src = (EVIDENCE / "scope_resolution.py").read_text()
-    body = src[src.index("    def refuse_site_rebindings("):]
-    for banned in ("ast.Store", "_module_level_bindings", "ast.iter_child_nodes", "ast.walk"):
-        assert banned not in body, (
-            f"{banned!r} is back in the refusal: a walk over node kinds is the enumeration round 8 removed. "
-            f"Ask the compiled module (`_module_binding_ops`) or `symtable`.")
-    assert "_module_level_bindings" not in src, "the deleted AST walk has come back to the resolver"
+_AST_CONSULTATION_PROBE = r"""
+# Counts every consultation of the AST during `refuse_site_rebindings`, for the shipped resolver and for two
+# mutants that reinstate an enumeration. The counters are installed BEFORE any of the three modules is imported,
+# so a module-level `from ast import walk as _w` binds to a counter too — which a sabotage-after-import control
+# would miss. Runs as a SUBPROCESS: it monkeypatches the stdlib `ast` module, and doing that in the session would
+# be fixture state living outside the thing under test, which is this round's other recurring defect.
+import ast, importlib.util, pathlib, sys, tempfile
+
+CALLS = {"n": 0}
+REAL_STORE = ast.Store
+
+class _StoreMeta(type):
+    def __instancecheck__(cls, obj):
+        CALLS["n"] += 1
+        return isinstance(obj, REAL_STORE)
+
+for _name in ("walk", "iter_child_nodes", "iter_fields", "dump"):
+    def _wrapper(*a, _real=getattr(ast, _name), **k):
+        CALLS["n"] += 1
+        return _real(*a, **k)
+    setattr(ast, _name, _wrapper)
+ast.Store = _StoreMeta("Store", (), {})
+
+def load(name, text):
+    d = pathlib.Path(tempfile.mkdtemp()); f = d / (name + ".py"); f.write_text(text)
+    sp = importlib.util.spec_from_file_location(name, f); m = importlib.util.module_from_spec(sp)
+    sys.modules[name] = m; sp.loader.exec_module(m); return m
+
+SRC = pathlib.Path(sys.argv[1]).read_text()
+ANCHOR = "        declared_here = self.site_names()"
+assert SRC.count(ANCHOR) == 1, "the probe's anchor moved; the mutants are not being injected"
+ALIASED = SRC.replace(ANCHOR, "        from ast import walk as _w, Store as _St\n"
+                              "        _back = [n.lineno for n in _w(self.tree)\n"
+                              "                 if n.__class__.__name__ == 'Name' and isinstance(n.ctx, _St)]\n" + ANCHOR)
+TOPLEVEL = SRC.replace("import symtable\n", "import symtable\nfrom ast import walk as _topwalk\n", 1) \
+              .replace(ANCHOR, "        _back = [n for n in _topwalk(self.tree)]\n" + ANCHOR)
+
+DECL = "from .census import declare_site\nS = declare_site('t')\n"
+ROWS = [("import os as S\n", True), ("del S\n", True), ("S = object()\n", True),
+        ("def f():\n    global S\n    S = 1\n", True), ("xs = [S for S in (1, 2)]\n", False),
+        ("if False:\n    S = 1\n", False), ("S: int\n", False), ("", False)]
+
+for tag, text in (("SHIPPED", SRC), ("ALIASED", ALIASED), ("MODULE_ALIAS", TOPLEVEL)):
+    m = load(tag.lower() + "_probe", text)
+    built = [(m.Resolver(DECL + b, "<c>"), must) for b, must in ROWS]   # __init__ legitimately walks the AST
+    CALLS["n"] = 0
+    got = []
+    for r, must in built:
+        try:
+            r.refuse_site_rebindings(r.site_names()); got.append(False)
+        except m.UnresolvableScope:
+            got.append(True)
+    ok = got == [must for _, must in built]
+    print(tag + "\t" + str(CALLS["n"]) + "\t" + str(ok))
+"""
+
+
+def test_the_refusal_never_consults_the_ast(tmp_path):
+    """THE PROPERTY, MEASURED — replacing a text check that a rename defeated.
+
+    Round 8e first gated this by refusing the strings `ast.Store`, `ast.walk` and `ast.iter_child_nodes` inside
+    the refusal's source. Research defeated it in one line: `from ast import walk as _w, Store as _St` contains
+    none of them, reinstates the whole enumeration, and the test passes. A text check for names is a narrow
+    matcher, inside the test written to prevent narrow matchers — the finding's own class, one level up again.
+
+    So the claim is measured instead. Every AST-walking callable is wrapped in a counter and `ast.Store` is
+    replaced by a class whose instance checks count, BEFORE the resolver is imported; then a Resolver is built
+    (its `__init__` legitimately walks the AST to index scopes, so the count is taken after), and the refusal is
+    called. The shipped code must consult the AST ZERO times. Two mutants that reinstate a walk — one aliasing
+    inside the function, one aliasing at module level, which a patch-after-import control could not see — must
+    both be caught, and both must still return the right verdicts, so the redness is the property and not a
+    broken mutant.
+
+    TWO PROPERTIES OF THIS TEST THAT MUST SURVIVE ANY SIMPLIFICATION (research's note). Both mutants return
+    CORRECT verdicts, so what goes red is the property and not a broken mutant. And the probe runs in a
+    SUBPROCESS, because it monkeypatches the stdlib `ast` module and doing that in the session would be fixture
+    state living outside the thing under test — this round's other recurring class, which would have leaked into
+    every test that parses anything, under a shuffle, with no way to tell where it came from.
+    """
+    probe = tmp_path / "ast_consultation_probe.py"
+    probe.write_text(_AST_CONSULTATION_PROBE)
+    run = subprocess.run([sys.executable, str(probe), str(EVIDENCE / "scope_resolution.py")],
+                         capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr[-2000:]
+    rows = {}
+    for line in run.stdout.strip().splitlines():
+        tag, count, verdicts_ok = line.split("\t")
+        rows[tag] = (int(count), verdicts_ok == "True")
+    assert set(rows) == {"SHIPPED", "ALIASED", "MODULE_ALIAS"}, rows
+    for tag, (_, verdicts_ok) in rows.items():
+        assert verdicts_ok, f"{tag} returns wrong verdicts, so its count says nothing about the refusal"
+    assert rows["SHIPPED"][0] == 0, (
+        f"the refusal consulted the AST {rows['SHIPPED'][0]} times — it is supposed to decide from the compiled "
+        f"code object and symtable alone, and an AST walk here is the enumeration round 8 removed")
+    for tag in ("ALIASED", "MODULE_ALIAS"):
+        assert rows[tag][0] > 0, f"the {tag} mutant reinstates an AST walk and this control did not see it"
+
+
+def test_the_binding_count_matches_a_hand_count_on_modules_small_enough_to_count():
+    """Research's third target: confirming the four opcode names against `dis.opmap` catches a RENAME and not an
+    ADDITION. A new binding opcode in a future CPython would leave all four valid and the count SHORT, silently —
+    the enumeration moved down a layer rather than vanishing, to a layer that changes rarely and fails loudly on
+    rename, but a hand list all the same. So the reading is also checked against modules whose module-level
+    bindings of one name can be counted by eye. A new opcode shows up here as a count that stopped matching.
+
+    The last three rows are the other half: a binding that is NOT this scope's must not be counted."""
+    for label, body, expected in [
+        ("one plain assignment",             "S = 1\n", 1),
+        ("two plain assignments",            "S = 1\nS = 2\n", 2),
+        ("an assignment and a del",          "S = 1\ndel S\n", 2),
+        ("assignment, import-as, del",       "S = 1\nimport os as S\ndel S\n", 3),
+        ("three, one shadowed in a function", "S = 1\nS = 2\nS = 3\ndef f():\n    S = 4\n    return S\n", 3),
+        ("one, plus a comprehension target", "S = 1\nxs = [S for S in (1, 2)]\n", 1),
+        ("one, plus a class-body attribute", "S = 1\nclass K:\n    S = 2\n", 1),
+    ]:
+        got = sr.Resolver(body, f"<{label}>")._module_binding_ops("S")
+        assert len(got) == expected, f"{label}: hand-counted {expected}, the reading found {len(got)} ({got})"
 
 
 def test_the_interpreters_reading_is_read_at_the_right_lines():
@@ -605,3 +724,46 @@ def test_a_reading_that_finds_nothing_is_a_broken_reading_not_a_clean_module():
     r._module_binding_ops = lambda name: []                      # the reading goes blind
     with pytest.raises(sr.UnresolvableScope, match="the reading is broken"):
         r.refuse_site_rebindings(r.site_names())
+
+
+def test_a_refusal_never_claims_a_global_statement_the_module_does_not_contain():
+    """CI found this on 3.10 and 3.11, and it was a FALSE SENTENCE IN A REFUSAL, not a stale expectation.
+
+    Rule C chose its wording with `is_declared_global()`, on the assumption that the flag means the source said
+    `global`. It does not: for a WALRUS inside a comprehension, `symtable` synthesises the flag, and the refusal
+    told the reader `` `global S` with an assignment `` about a module containing no `global` anywhere. A
+    refusal is read by someone deciding what to change; sending them to look for a statement that is not there
+    is worse than saying less. The message now names both spellings and claims neither.
+
+    The assertion is version-independent by construction — on 3.12 the row is answered by rule A, whose message
+    also contains no such claim — so this test does not encode which rule answers it."""
+    body = "xs = [(S := q) for q in (1, 2)]\n"
+    source = DECL + body
+    assert "global" not in source, "the premise: this module contains no `global` statement"
+    message = _refusal(sr, body)
+    assert message is not None, "a walrus in a comprehension rebinds the site and must be refused"
+    assert "`global S` with an assignment" not in message, (
+        f"the refusal claims a `global` statement this module does not contain: {message}")
+    # and the fact that caused it, recorded where it will be re-measured rather than remembered
+    import symtable as _st
+    blocks = [c for c in _st.symtable(source, "<w>", "exec").get_children() if c.get_name() == "listcomp"]
+    if blocks:                                    # 3.10/3.11 only; from 3.12 PEP 709 inlines it away
+        sym = blocks[0].lookup("S")
+        assert sym.is_declared_global(), (
+            "symtable no longer synthesises declared-global for a comprehension walrus on this interpreter — "
+            "the premise of this test has moved, and rule C's docstring says the two predicates agree")
+
+
+def test_the_two_global_predicates_agree_over_the_whole_matrix():
+    """A SURVIVING MUTANT, DECLARED. Rule C asks `is_global()`; the narrower `is_declared_global()` gives the
+    same verdict on all 44 rows, on 3.10 and on 3.12, so the choice is NOT pinned by this matrix. The wider one
+    is kept because wider is the fail-closed direction for an unenumerated case — a reason about risk, not
+    about evidence — and this test exists so that a future interpreter which separates the two predicates
+    reports it as a change rather than letting the docstring quietly go stale."""
+    narrowed = _mutant("                if sym.is_global() and sym.is_assigned():",
+                       "                if sym.is_declared_global() and sym.is_assigned():")
+    disagreements = [row[0] for row in REBINDING_MATRIX
+                     if (_refusal(narrowed, row[1]) is not None) != (_refusal(sr, row[1]) is not None)]
+    assert not disagreements, (
+        "the two predicates now disagree on these rows, which makes rule C's choice evidence-backed rather "
+        f"than risk-backed — say so in its docstring: {disagreements}")
