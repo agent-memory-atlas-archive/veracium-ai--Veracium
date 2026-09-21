@@ -84,8 +84,16 @@ def status_of(t: dict) -> str:
 # ---- the report gate (Part A-1's three resolutions + INV-1/INV-8) ------------------------
 
 def validate_report(report: dict, declaration: set[str], site_modules: dict | None = None, loaded_modules=None) -> list[str]:
-    """Refusals, or [] — a refused report is still RETURNED (its rows are the evidence for the
-    refusal); the caller must not compute anything from a refused report."""
+    """Refusals, or [] — a refused report is still RETURNED (its rows are the evidence for the refusal); the caller
+    must not compute anything from a refused report.
+
+    THIS FUNCTION ANSWERS ONE QUESTION: is anything WRONG with this report? Its companion `insufficiency` answers
+    the other: is there anything this report CANNOT SPEAK FOR (a row whose measurement failed, a declared site
+    whose module the reporting process never loaded)? The two are separate because the answers call for different
+    actions — a refusal means the report is not evidence, an insufficiency means it is evidence about less than the
+    whole declaration. AN EVIDENCE RUN ASSERTS BOTH EMPTY; that pair, and only that pair, is the complete claim.
+    The one exception routed here is VALIDATION INCOMPLETE, which is a refusal about THIS CALL rather than about
+    the report: without the scan's map this function cannot look for a missing registration at all."""
     problems = []
     snap = report.get("snapshot") or {}
     for k in ("snapshot_id", "process_started", "window_start", "window_end", "enabled"):
@@ -140,13 +148,27 @@ def validate_report(report: dict, declaration: set[str], site_modules: dict | No
     # -> module map, a declared id whose module is LOADED but which is not registered is a MISSING REGISTRATION (refused,
     # named); a declared id whose module is NOT loaded is OUT OF REACH (listed by name, never silently a zero);
     # and a REGISTERED id whose scan module is not loaded contradicts the scan itself (refused: the scan is wrong).
+    # ROUND 7, F1: a check whose SCOPE depends on an argument must report that scope IN ITS RESULT, and the
+    # narrowed case must surface in THE CHANNEL THE CALLER ALREADY READS (research's sentence; the class's third
+    # appearance in this spec). The reconciliation stays OPTIONAL — the module map is an observation of a RUNNING
+    # interpreter, and a reviewer validating the shipped report in a throwaway, without importing the product,
+    # CANNOT supply one; mandatory would make the shipped artifact unvalidatable by the person the package exists
+    # for, which is how the reviewer found F1 in the first place. So the omission is a REFUSAL rather than a
+    # silence: `[]` continues to mean "validated, completely", `if problems:` is already correct at every call
+    # site, and no caller has to be updated to stop reading an incomplete validation as a clean one.
     registered = snap.get("registered")
+    if site_modules is None or loaded_modules is None:
+        missing = " and ".join(n for n, v in (("site_modules", site_modules), ("loaded_modules", loaded_modules)) if v is None)
+        problems.append(
+            f"VALIDATION INCOMPLETE: registry reconciliation not performed (no {missing} supplied) — a declared, "
+            f"loaded, unregistered site cannot be refused from this call, and no site can be reported out of reach. "
+            f"Supply the scan's id -> module map and this process's loaded product modules "
+            f"(`installed_sites.scan` and `census_table.loaded_product_modules`) for a COMPLETE validation.")
     if site_modules is not None:
         if not isinstance(registered, list):
             problems.append("snapshot: `registered` is required to reconcile the registry against the scan (R6-3)")
         elif loaded_modules is None:
-            problems.append("`loaded_modules` (this process's loaded product modules, observed by the evidence layer — "
-                            "specs/0031 keeps sys.modules out of src) is required beside the scan's map (R6-3)")
+            pass                      # already reported as INCOMPLETE above, in the caller's own channel
         else:
             reg, ld = set(registered), set(loaded_modules)
             for d in sorted(declaration):
@@ -157,6 +179,12 @@ def validate_report(report: dict, declaration: set[str], site_modules: dict | No
                     problems.append(f"registered id {d!r} is scanned in {mod!r}, which is not loaded — the scan is wrong (R6-3/R6-4)")
                 elif d not in reg and mod in ld:
                     problems.append(f"declared id {d!r}: its module {mod!r} is LOADED and it never registered — a missing registration, not an unused site (R6-3)")
+            # ROUND 7, F1's second half, placed by research's STAGE 1 read: the out-of-reach sites are named — but
+            # in `insufficiency`, NOT here. "The report cannot speak for this id" is exactly what an UNMEASURED row
+            # means, this file already routes that to `insufficiency`, and routing the identical category to the
+            # REFUSAL channel would have made one channel carry two kinds (the tell: every consumer had to filter
+            # the prefix out before asserting, and one of them computed from a report this docstring says must not
+            # be computed from). A reviewer with a partial import keeps the rows that WERE reached, which are sound.
     return problems
 
 
@@ -188,15 +216,47 @@ def loaded_product_modules() -> tuple[str, ...]:
     return tuple(sorted(set(out)))
 
 
-def insufficiency(report: dict) -> list[str]:
-    """A report can be structurally VALID and evidentially INSUFFICIENT (research, round 6): any row whose
-    measurement failed (UNMEASURED) means the census did not fully run, and the claim "every declared site
-    exercised" is REFUSED with the ids and their failure kinds named. `validate_report` tolerates such rows
-    (INV-2's isolation); this function is what an evidence run must assert empty before it claims anything."""
+def insufficiency(report: dict, declaration: set[str] | None = None,
+                  site_modules: dict | None = None, loaded_modules=None) -> list[str]:
+    """Everything this report CANNOT SPEAK FOR, one entry per id. A report can be structurally VALID and
+    evidentially INSUFFICIENT (research, round 6), and there are two ways:
+
+      UNMEASURED  — the row's own measurement failed, so the census did not fully run for it (round 6).
+      OUT OF REACH — the declared site's module was never loaded in the reporting process, so nothing could have
+                     been observed for it (round 7, F1's second half; needs the scan's map and the loaded modules,
+                     which the EVIDENCE layer observes — specs/0031 keeps the module registry out of src).
+
+    Both mean the same thing about the claim "every declared site was exercised": it is not established for these
+    ids. `validate_report` tolerates both (INV-2's isolation) and answers the other question — is anything WRONG.
+    An evidence run asserts BOTH functions empty before it claims anything; that pair is the complete claim.
+
+    ONE ENTRY PER ID, never a joined sentence with a count in it: a caller that must parse prose to learn which
+    ids are affected cannot act on them, and a changed set with an unchanged count is invisible (the shape that
+    let 143-for-157 decay for four rounds)."""
+    out = []
     rows = report.get("rows") or []
-    bad = [r["id"] for r in rows if isinstance(r, dict) and r.get("status") == "UNMEASURED"]
     kinds = report.get("snapshot", {}).get("measurement_failures") or {}
-    return [f"{len(bad)} UNMEASURED row(s): " + ", ".join(f"{i} ({kinds.get(i, {})})" for i in bad)] if bad else []
+    for r in rows:
+        if isinstance(r, dict) and r.get("status") == "UNMEASURED":
+            out.append(f"UNMEASURED: {r['id']} — its own measurement failed ({kinds.get(r['id'], {})}); the census "
+                       f"did not fully run for it")
+    absent = [n for n, v in (("declaration", declaration), ("site_modules", site_modules),
+                             ("loaded_modules", loaded_modules)) if v is None]
+    if absent:
+        # ROUND 7, research's stage-1 BLOCKING 3, and it is F1's own shape TWO FUNCTIONS OVER, in the code written
+        # to fix F1: a check whose scope depends on an argument, returning a CLEAN result when the argument is
+        # absent, in the channel the caller already reads. Moving reach into this function made `[]` mean "this
+        # report can speak for everything" — a stronger claim than it carried before — so the one-argument form
+        # would have made that claim without assessing reach at all. The arguments stay optional for F1's reason
+        # (a reviewer holding a shipped report has no live interpreter), so the absence is REPORTED, as there.
+        out.append(f"INSUFFICIENCY INCOMPLETE: reach not assessed (no {' and '.join(absent)} supplied) — a declared "
+                   f"site whose module was never loaded in the reporting process cannot be reported from this call. "
+                   f"Supply the declaration, the scan's id -> module map and `loaded_product_modules()`.")
+    else:
+        for d in out_of_reach(declaration, site_modules, loaded_modules):
+            out.append(f"OUT OF REACH: {d} — scanned in {site_modules[d]!r}, which was NOT loaded in the reporting "
+                       f"process, so nothing could have been observed for it (not a defect in the site)")
+    return out
 
 
 def report_rows(counters: dict[str, dict], declaration: set[str], enabled: bool) -> list[dict]:

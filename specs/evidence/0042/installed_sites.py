@@ -55,90 +55,51 @@ def _call_name(node: ast.Call):
     return f.id if isinstance(f, ast.Name) else (f.attr if isinstance(f, ast.Attribute) else None)
 
 
-class UnresolvableScope(Exception):
-    """A form the scanner will not guess at: `nonlocal`/`global` naming a site inside a function."""
+# ONE resolver, two instruments — loaded BY PATH, never `from scope_resolution import …`: a sibling import by
+# package path is green wherever the directory happens to be on sys.path and red where it is not (the tests/ class,
+# 2026-09-08). `HERE` is this file's own directory, so the load works from any cwd and inside a git-less archive.
+def _sibling(name):
+    import importlib.util as _u
+    s = _u.spec_from_file_location(f"_0042_{name}", pathlib.Path(__file__).resolve().parent / f"{name}.py")
+    m = _u.module_from_spec(s); s.loader.exec_module(m); return m
 
 
-def _binding_bodies(tree: ast.AST) -> dict:
-    """{NAME: set of (consult|fire) methods used on NAME INSIDE ONE FUNCTION BODY, unioned over bodies
-    that carry BOTH} — round 5: the scan had unioned uses across the whole module by variable name, so
-    consult() in one function and fire() in another read as bound. Each function (nested ones
-    included) is its own scope: a nested function's uses belong to the nested function, not to its
-    parent; a name assigned or bound as a parameter inside the body SHADOWS the module-level site, so
-    uses of it count for nothing. ROUND 6, R6-4: names resolve through the LEXICAL scope — a name bound
-    in ANY ENCLOSING FUNCTION (a parameter, an assignment, a loop target, an import) shadows the
-    module-level site for everything nested inside it (Python's closure rule); a CLASS body is NOT an
-    enclosing scope for the functions defined in it (Python does not close over class bodies). A
-    `nonlocal`/`global` statement naming a site is REFUSED rather than resolved by guess."""
-    site_names = {n.targets[0].id for n in tree.body
-                  if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name)
-                  and isinstance(n.value, ast.Call) and _call_name(n.value) == "declare_site"}
-    bound = {}
+_scope = _sibling("scope_resolution")
+Resolver, UnresolvableScope = _scope.Resolver, _scope.UnresolvableScope
 
-    def bindings_of(fn) -> set:
-        """Names this function binds: parameters, and every assignment / loop target / import / with-as /
-        except-as in its own body (nested scopes excluded — they bind their own)."""
-        names = {a.arg for a in fn.args.args + fn.args.kwonlyargs + fn.args.posonlyargs}
-        if fn.args.vararg: names.add(fn.args.vararg.arg)
-        if fn.args.kwarg: names.add(fn.args.kwarg.arg)
-        def visit(node):
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
-                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                        names.add(child.name)          # a nested def/class binds its NAME in this scope
-                    continue
-                if isinstance(child, ast.Assign):
-                    for t_ in child.targets:
-                        for n in ast.walk(t_):
-                            if isinstance(n, ast.Name): names.add(n.id)
-                if isinstance(child, (ast.AnnAssign, ast.AugAssign)) and isinstance(child.target, ast.Name):
-                    names.add(child.target.id)
-                if isinstance(child, (ast.For, ast.AsyncFor, ast.comprehension)):
-                    for n in ast.walk(child.target):
-                        if isinstance(n, ast.Name): names.add(n.id)
-                if isinstance(child, (ast.Import, ast.ImportFrom)):
-                    for a in child.names: names.add((a.asname or a.name).split(".")[0])
-                if isinstance(child, (ast.With, ast.AsyncWith)):
-                    for item in child.items:
-                        if item.optional_vars is not None:
-                            for n in ast.walk(item.optional_vars):
-                                if isinstance(n, ast.Name): names.add(n.id)
-                if isinstance(child, ast.ExceptHandler) and child.name:
-                    names.add(child.name)
-                if isinstance(child, (ast.Global, ast.Nonlocal)) and any(n in site_names for n in child.names):
-                    raise UnresolvableScope(f"line {child.lineno}: `{type(child).__name__.lower()}` names a site — not resolved by guess")
-                visit(child)
+
+def _binding_bodies(src: str, filename: str = "<scan>") -> dict:
+    """{NAME: the (consult|fire) methods used on the MODULE-LEVEL site NAME inside ONE function body, unioned over
+    bodies carrying BOTH}. Round 5 made the scan per-body; round 6 made it resolve through enclosing scopes; ROUND 7
+    (F2) stops enumerating the forms that bind a name at all. The previous version hand-listed assignments, loop
+    targets, imports, with-as, except-as and parameters, and the reviewer found the two rungs it had not reached —
+    an assignment expression (`S := …`) and a `match` capture — each reading `bound=True` while the declared site's
+    counters never moved. The set of forms that bind a name is defined by the LANGUAGE, so the question now goes to
+    CPython's own scope analysis (`scope_resolution.Resolver`, symtable): a use counts only where the name resolves
+    to the MODULE binding, which is false for a local, a parameter, or a name bound by an enclosing function."""
+    r = Resolver(src, filename)
+    sites = r.site_names()
+    r.refuse_rebound_globals(sites)
+    per_body: dict = {}
+    for fn in ast.walk(r.tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        uses: dict = {}
+
+        def visit(n_):
+            for c in ast.iter_child_nodes(n_):
+                if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                    continue                                   # a nested scope is NOT this body
+                if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and isinstance(c.func.value, ast.Name) \
+                        and c.func.attr in BINDING_METHODS and c.func.value.id in sites \
+                        and r.refers_to_module_binding(c, c.func.value.id):
+                    uses.setdefault(c.func.value.id, set()).add(c.func.attr)
+                visit(c)
         visit(fn)
-        return names
-
-    def walk(node, enclosing: frozenset):
-        """`enclosing`: names bound by the FUNCTION scopes this node sits inside (class bodies contribute nothing)."""
-        for child in ast.iter_child_nodes(node):
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                own = bindings_of(child)
-                shadowed = enclosing | own
-                uses = {}
-                def visit(n_):
-                    for c in ast.iter_child_nodes(n_):
-                        if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
-                            continue                                  # a nested scope is NOT this body
-                        if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and isinstance(c.func.value, ast.Name) \
-                                and c.func.attr in BINDING_METHODS:
-                            uses.setdefault(c.func.value.id, set()).add(c.func.attr)
-                        visit(c)
-                visit(child)
-                for name, methods in uses.items():
-                    if name in shadowed:
-                        continue
-                    if set(BINDING_METHODS) <= methods:
-                        bound.setdefault(name, set()).update(methods)
-                walk(child, shadowed)                                  # nested functions see this scope's bindings
-            elif isinstance(child, ast.ClassDef):
-                walk(child, enclosing)                                 # a class body is not a closure scope
-            else:
-                walk(child, enclosing)
-    walk(tree, frozenset())
-    return bound
+        for name, methods in uses.items():
+            if set(BINDING_METHODS) <= methods:
+                per_body.setdefault(name, set()).update(methods)
+    return per_body
 
 
 def scan(root: pathlib.Path) -> list[dict]:
@@ -148,7 +109,7 @@ def scan(root: pathlib.Path) -> list[dict]:
     ONE body carries both on the unshadowed module-level name."""
     out = []
     for p in sorted(root.rglob("*.py")):
-        tree = ast.parse(p.read_text()); declared = []
+        src = p.read_text(); tree = ast.parse(src); declared = []
         stack = []
         def walk(node):
             for child in ast.iter_child_nodes(node):
@@ -174,7 +135,7 @@ def scan(root: pathlib.Path) -> list[dict]:
                     if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) \
                             and node.func.attr in BINDING_METHODS:
                         anywhere.setdefault(node.func.value.id, set()).add(node.func.attr)
-        bound_names = _binding_bodies(tree)
+        bound_names = _binding_bodies(src, str(p))      # symtable reads SOURCE: the same text the runtime executes
         for d in declared:
             u = anywhere.get(d["name"], set()) if d["name"] else set()
             d["consult"], d["fire"] = "consult" in u, "fire" in u

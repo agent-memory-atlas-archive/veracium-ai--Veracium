@@ -34,7 +34,15 @@ def _census_off():
         yield
     finally:
         census.enable(False); census.trace(False); census.trace_reset()
-        census._clear_registry(); census._REGISTRY.update(saved)
+        # ROUND 7, found by a false red two files over: restoring the SNAPSHOT alone also deletes registrations a
+        # test legitimately CREATED by importing a product module — and the module stays in sys.modules, so the
+        # next reader sees "loaded and never registered", which is precisely what the R6-3 validator refuses. So
+        # the test's throwaway ids are dropped BY NAME (they are not in the declaration) and any production site
+        # that registered during the test SURVIVES. The fourth instance this round of fixture state reaching
+        # outside the thing under test — this one inside the fix for the second.
+        declared = set(_evidence("declaration").DECLARED_IDS)
+        added = {k: v for k, v in census._REGISTRY.items() if k not in saved and k in declared}
+        census._clear_registry(); census._REGISTRY.update(saved); census._REGISTRY.update(added)
 
 
 def _row(report, cid):
@@ -219,8 +227,13 @@ def test_r6_1_a_failed_consult_increment_reads_unmeasured_the_report_stays_valid
     c = S.counters(); assert (c["consulted"], c["fired"], c["errors"]) == (0, 1, 1)
     rep = census.census({"t.consult-fails", "t.neighbour"})
     assert _row(rep, "t.consult-fails")["status"] == "UNMEASURED" and _row(rep, "t.neighbour")["status"] == "EXERCISED"
-    assert ct.validate_report(rep, {"t.consult-fails", "t.neighbour"}) == []          # valid: the neighbour is not invalidated
-    bad = ct.insufficiency(rep); assert len(bad) == 1 and "t.consult-fails" in bad[0] and "RuntimeError" in bad[0]
+    # valid: the neighbour is not invalidated (round 7, F1: structurally clean, and the two-argument call
+    # names its own incompleteness rather than returning [])
+    assert [x for x in ct.validate_report(rep, {"t.consult-fails", "t.neighbour"}) if not x.startswith("VALIDATION INCOMPLETE")] == []
+    # the UNMEASURED half, read by kind: the one-argument call also reports that it did not assess REACH
+    bad = [x for x in ct.insufficiency(rep) if x.startswith("UNMEASURED")]
+    assert len(bad) == 1 and "t.consult-fails" in bad[0] and "RuntimeError" in bad[0]
+    assert any(x.startswith("INSUFFICIENCY INCOMPLETE") for x in ct.insufficiency(rep))
     # the control: a fired > consulted row with NO error is still refused by the validator
     rep2 = census.census({"t.neighbour"}); _row(rep2, "t.neighbour").update(fired=5, consulted=1, errors=0)
     assert any("fired > consulted" in p for p in ct.validate_report(rep2, {"t.neighbour"}))
@@ -236,17 +249,36 @@ def test_r6_3_a_declared_id_whose_module_is_loaded_but_never_registered_is_refus
     decl = {"t.registered", "t.never-registered", "t.not-loaded"}
     rep = census.census(decl)
     assert _row(rep, "t.never-registered")["status"] == "UNREACHED"          # the row alone cannot tell (the finding)
-    assert ct.validate_report(rep, decl) == []                              # without the scan's map: as before
+    # round 7, F1: WITHOUT the scan's map the call no longer reads clean — it refuses ITSELF as incomplete, which
+    # is how the reviewer's caller (validating a shipped report in a throwaway, unable to observe any interpreter)
+    # stops receiving an apparently-validated report. The structural refusals are unchanged beside it.
+    two_arg = ct.validate_report(rep, decl)
+    assert sum(x.startswith("VALIDATION INCOMPLETE") for x in two_arg) == 1 and [x for x in two_arg if not x.startswith("VALIDATION INCOMPLETE")] == []
     # the loaded-module observation is the EVIDENCE layer's (specs/0031 keeps sys.modules out of src) and the
     # snapshot does not pretend to carry it; the validator refuses a scan map without it
     assert "loaded_modules" not in rep["snapshot"] and rep["snapshot"]["registered"] == ["t.registered"]
     loaded = ct.loaded_product_modules(); assert "census.py" in loaded
     site_modules = {"t.registered": "census.py", "t.never-registered": "census.py", "t.not-loaded": "never/imported.py"}
-    assert any("`loaded_modules`" in p for p in ct.validate_report(rep, decl, site_modules))
+    # a scan map supplied WITHOUT the loaded modules is still refused, and since round 7 (F1) through the one
+    # incompleteness marker rather than a second message — the marker names which argument was missing
+    three_arg = ct.validate_report(rep, decl, site_modules)
+    assert any(x.startswith("VALIDATION INCOMPLETE") and "no loaded_modules supplied" in x for x in three_arg), three_arg
     probs = ct.validate_report(rep, decl, site_modules, loaded)
     assert any("t.never-registered" in p and "missing registration" in p for p in probs)     # loaded, unregistered: REFUSED
-    assert not any("t.not-loaded" in p for p in probs)                                       # not loaded: not a refusal …
-    assert ct.out_of_reach(decl, site_modules, loaded) == ["t.not-loaded"]                   # … but NAMED, never a silent zero
+    # round 7, F1's second half, as research's stage-1 read placed it: an unloaded site is NAMED — by `insufficiency`,
+    # the channel this file already uses for "the report cannot speak for this id" (an UNMEASURED row means exactly
+    # that and goes there too). Not in the REFUSAL channel: an out-of-reach site is not a defect, the rows that WERE
+    # reached are sound, and a caller must not have to filter a prefix out before it can read the answer.
+    assert not any("t.not-loaded" in p for p in probs)                                       # never a refusal
+    ins = ct.insufficiency(rep, decl, site_modules, loaded)
+    oor = [p for p in ins if p.startswith("OUT OF REACH")]
+    assert len(oor) == 1 and "t.not-loaded" in oor[0] and "never/imported.py" in oor[0], ins
+    # without the map the reach half is NOT assessed, and the call says so rather than returning the rows only
+    one_arg = ct.insufficiency(rep)
+    assert [x for x in one_arg if not x.startswith("INSUFFICIENCY INCOMPLETE")] == [x for x in ins if not x.startswith("OUT OF REACH")]
+    assert sum(x.startswith("INSUFFICIENCY INCOMPLETE") for x in one_arg) == 1
+    assert not any(x.startswith("INSUFFICIENCY INCOMPLETE") for x in ins)      # the complete call does not say it
+    assert ct.out_of_reach(decl, site_modules, loaded) == ["t.not-loaded"]                   # the separate call still answers
     # a WRONG scan (D feeds E): a registered id mapped to an unloaded module is a refusal about the scan
     wrong = dict(site_modules, **{"t.registered": "never/imported.py"})
     assert any("t.registered" in p and "the scan is wrong" in p for p in ct.validate_report(rep, decl, wrong, loaded))
@@ -280,3 +312,41 @@ def test_a_product_module_loaded_under_a_foreign_key_alone_still_reads_loaded():
     finally:
         del sys.modules["not_veracium_alias"]; sys.modules["veracium.telemetry"] = saved
     assert sys.modules["veracium.telemetry"] is tm
+
+
+def test_r7_no_check_returns_clean_when_an_optional_argument_narrowed_its_scope():
+    """ROUND 7's class, swept rather than patched at the named cell. F1 was `validate_report`'s reconciliation
+    running only when the caller supplied a map; research's stage-1 BLOCKING 3 found the identical shape had
+    MIGRATED into `insufficiency`, the function written to fix it. So the rule, and the sweep behind it:
+
+        AN OPTIONAL ARGUMENT IS SAFE WHEN ITS DEFAULT IS THE COMPLETE BEHAVIOUR, AND DANGEROUS WHEN ITS ABSENCE
+        SILENTLY NARROWS WHAT THE CHECK LOOKED AT. In the second case the absence is REPORTED in the channel the
+        caller already reads, so no caller has to change to stop reading incomplete as clean.
+
+    A SECOND KIND, which the rule above does not cover (research's clause): a default that SUPPLIES AN INPUT is a
+    SUBSTITUTION rather than a narrowing, and its safety condition is different — the substituted input must be
+    BOUND TO THE RUN, not merely located. `verify`'s manifest is the instance: it defaults to the file beside the
+    twin, which is a location, and it is safe because reading 4 requires every `sha256_before` to match the source
+    file, so a manifest from another derivation fails on CONTENT. Classify a location-defaulted input by that
+    binding, never by the narrowing rule, or it reads as safe by default and is not.
+
+    Every public function in `specs/evidence/0042` taking an optional argument was read against both rules. Five
+    are safe (`parse_state_table` reads the spec, `load_standing_exclusions` loads the real list, `compare` loads
+    it too, `verify`'s manifest is bound by content as above, `run_arm`'s two are not a check's scope). Two
+    narrowed, and both now report: this test pins them, so the class returning to either is a red, not a silence."""
+    ct = _evidence("census_table")
+    snap = {"snapshot_id": "s", "process_started": "t0", "window_start": "t1", "window_end": "t2",
+            "enabled": True, "registered": ["a"], "measurement_failures": {}}
+    rep = {"snapshot": snap, "rows": [{"id": "a", "status": "EXERCISED", "consulted": 1, "fired": 1, "errors": 0}]}
+    decl, site_modules, loaded = {"a", "b"}, {"a": "m.py", "b": "never_imported.py"}, ["m.py"]
+    # b is declared and its module was never loaded: the COMPLETE calls say so, each in its own channel
+    assert any("declared id 'b' absent" in x for x in ct.validate_report(rep, decl, site_modules, loaded))
+    assert any(x.startswith("OUT OF REACH") and "b" in x for x in ct.insufficiency(rep, decl, site_modules, loaded))
+    # and NEITHER narrowed call is allowed to read clean
+    for label, got in (("validate_report(report, declaration)", ct.validate_report(rep, decl)),
+                       ("insufficiency(report)", ct.insufficiency(rep))):
+        assert got != [], f"{label} returned [] with its scope narrowed — the F1 class has returned"
+        assert any("INCOMPLETE" in x for x in got), (label, got)
+    # the control: when everything IS supplied, neither says INCOMPLETE — the marker is about the CALL, not noise
+    assert not any("INCOMPLETE" in x for x in ct.validate_report(rep, decl, site_modules, loaded))
+    assert not any("INCOMPLETE" in x for x in ct.insufficiency(rep, decl, site_modules, loaded))

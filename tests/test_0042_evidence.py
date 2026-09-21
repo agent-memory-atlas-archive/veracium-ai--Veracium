@@ -57,7 +57,10 @@ def test_a1_report_gate_refuses_every_named_defect_and_emits_the_undeclared_row(
     decl = {"a", "b"}
     snap = {"snapshot_id": "s", "process_started": "t0", "window_start": "t1", "window_end": "t2", "enabled": True}
     good = {"snapshot": snap, "rows": ct.report_rows({"a": dict(consulted=10, fired=0, errors=0), "b": dict(consulted=0, fired=0, errors=0)}, decl, True)}
-    assert ct.validate_report(good, decl) == []
+    # round 7, F1: a two-argument call is STRUCTURALLY clean and INCOMPLETELY validated, and says so in the
+    # channel the caller already reads — the only refusal is the incompleteness marker, never []
+    assert [x for x in ct.validate_report(good, decl) if not x.startswith("VALIDATION INCOMPLETE")] == []
+    assert sum(x.startswith("VALIDATION INCOMPLETE") for x in ct.validate_report(good, decl)) == 1
     assert [r["status"] for r in good["rows"]] == ["UNEXERCISED", "UNREACHED"]
     rows = ct.report_rows({"a": dict(consulted=1, fired=1, errors=0), "b": dict(consulted=0, fired=0, errors=0), "zzz": dict(consulted=1, fired=0, errors=0)}, decl, True)
     p = ct.validate_report({"snapshot": snap, "rows": rows}, decl)
@@ -342,7 +345,8 @@ def test_a0quater_round6_a_site_name_resolves_through_enclosing_function_scopes_
     whose SITE name is an ENCLOSING function's parameter read the module-level site as bound. Names now resolve
     through the lexical scope: a binding in any enclosing FUNCTION shadows for everything nested; a CLASS body
     is not a closure scope (Python's rule), so a class attribute of the same name shadows nothing for the
-    methods below it; `nonlocal`/`global` naming a site is REFUSED rather than guessed."""
+    methods below it. ROUND 7 (F2): the forms are no longer enumerated by hand — the scan asks CPython's own
+    scope analysis, so `nonlocal` RESOLVES as a shadow and only a `global` REBINDING is refused."""
     import textwrap
     inst = _load("installed_sites")
     def scan_of(src):
@@ -374,8 +378,63 @@ def test_a0quater_round6_a_site_name_resolves_through_enclosing_function_scopes_
     assert scan_of(class_body) == {"t.class-body": True}                  # the control: a class body does not shadow
     plain = closure.replace("def outer(SITE):", "def outer(other):")
     assert scan_of(plain) == {"t.enclosing-parameter": True}              # the control: the same shape, unshadowed, IS bound
-    with pytest.raises(inst.UnresolvableScope):
-        scan_of(closure.replace("def inner(x):\n", "def inner(x):\n                nonlocal SITE\n").replace("def outer(SITE):", "def outer():\n            SITE = 1"))
+    # ROUND 7 (F2) narrows what is refused, because CPython's own scope analysis now answers what the scan used to
+    # guess at. `nonlocal SITE` is no longer a refusal: it RESOLVES — the name is the enclosing function's binding,
+    # so it is a shadow and the site is simply not bound there. What stays refused is the one form no static
+    # reading can account for: `global SITE` WITH an assignment, which replaces the module binding for every reader.
+    nonlocal_shadow = closure.replace("def inner(x):\n", "def inner(x):\n                nonlocal SITE\n").replace("def outer(SITE):", "def outer():\n            SITE = 1")
+    assert scan_of(nonlocal_shadow) == {"t.enclosing-parameter": False}
+    with pytest.raises(inst.UnresolvableScope, match="replaces the declared site"):
+        scan_of(closure.replace("def outer(SITE):", "def outer():\n            global SITE\n            SITE = 1"))
+
+
+def test_r7_f1_the_reviewers_case_a_two_argument_validation_no_longer_reads_clean(monkeypatch):
+    """Round 7, F1, the reviewer's own reproduction: delete the registration of an ALREADY-LOADED declared site and
+    the row reads UNREACHED with zero counts — a report that looks fine. Before this round the ordinary two-argument
+    `validate_report(report, declaration)` returned NO refusals, so a caller who could not observe an interpreter
+    (the reviewer, validating the shipped report in a throwaway) received an apparently validated report. The
+    reconciliation stays OPTIONAL — that caller cannot supply a module map — but its ABSENCE is now a refusal in the
+    list every caller already reads, so `[]` means "validated, completely" and nothing else."""
+    from veracium import census
+    import veracium.gate  # noqa: F401 — the victim's module must be loaded for the case to be the reviewer's
+    inst, decl_m, ct = _load("installed_sites"), _load("declaration"), _load("census_table")
+    victim = "gate.scoped-assertable.invisible"
+    declared = set(decl_m.DECLARED_IDS); assert victim in declared
+    monkeypatch.setattr(census, "_ENABLED", True)
+    saved = census._REGISTRY.pop(victim)
+    try:
+        rep = census.census(declared)
+        row = next(r for r in rep["rows"] if r["id"] == victim)
+        assert row["status"] == "UNREACHED" and row["consulted"] == row["fired"] == row["errors"] == 0
+        two_arg = ct.validate_report(rep, declared)
+        assert any(x.startswith("VALIDATION INCOMPLETE") for x in two_arg), two_arg
+        site_modules = {s["id"]: s["module"] for s in inst.scan(pathlib.Path(__file__).resolve().parents[1] / "src" / "veracium")}
+        four_arg = ct.validate_report(rep, declared, site_modules, ct.loaded_product_modules())
+        assert any(victim in x and "missing registration" in x for x in four_arg), four_arg
+        assert not any(x.startswith("VALIDATION INCOMPLETE") for x in four_arg)
+    finally:
+        census._REGISTRY[victim] = saved
+    # The control, and it is the contract working rather than a nuisance: with the registration restored there is
+    # no REFUSAL left, but this process imported one product module, so the complete validation names the sites it
+    # cannot speak for instead of returning []. (Written as `== []` first and red at 35 entries — the second control
+    # with a wrong expected outcome in this round; both were mine, and both were corrected rather than concluded
+    # from. `test_a0quater_round6_the_live_registry_reconciles…` is the case where [] IS the right expectation,
+    # because it imports every product module first.)
+    rep = census.census(declared)
+    site_modules = {s["id"]: s["module"] for s in inst.scan(pathlib.Path(__file__).resolve().parents[1] / "src" / "veracium")}
+    # with the registration restored there is no REFUSAL left, and nothing has to be filtered out of the refusal
+    # channel to see that (research's stage-1 BLOCKING 1: a channel whose consumers must filter it before use is
+    # carrying two kinds). What this partial process cannot speak for is `insufficiency`'s answer, separately.
+    loaded_now = ct.loaded_product_modules()
+    complete = ct.validate_report(rep, declared, site_modules, loaded_now)
+    assert complete == [], complete
+    # the claim is about REACH, so the assertion is about reach: the victim's module is loaded, so it is never
+    # named OUT OF REACH. (The broader form — the victim absent from insufficiency entirely — was wrong: an
+    # earlier file's in-process replay can leave a site with errors, which is an UNMEASURED row and a true
+    # statement about this process. Asserting more than the claim is how a test becomes order-dependent.)
+    assert not any(victim in x for x in ct.insufficiency(rep, declared, site_modules, loaded_now)
+                   if x.startswith("OUT OF REACH"))
+    assert [x for x in ct.validate_report(rep, declared) if not x.startswith("VALIDATION INCOMPLETE")] == []
 
 
 def test_a0quater_round6_the_live_registry_reconciles_against_the_scan_and_nothing_is_out_of_reach():
@@ -405,7 +464,11 @@ def test_a0quater_round6_the_live_registry_reconciles_against_the_scan_and_nothi
     site_modules = {s["id"]: s["module"] for s in inst.scan(pathlib.Path(__file__).resolve().parents[1] / "src" / "veracium")}
     declared = set(decl.DECLARED_IDS)
     rep = census.census(declared)
+    # THE PAIR IS THE COMPLETE CLAIM (round 7, research's stage-1 read): `validate_report` answers "is anything
+    # WRONG" and `insufficiency` answers "is there anything this report cannot SPEAK FOR". An evidence run asserts
+    # both empty; either alone leaves the other question unasked, which is how an out-of-reach set went unnoticed.
     assert ct.validate_report(rep, declared, site_modules, loaded) == []
+    assert ct.insufficiency(rep, declared, site_modules, loaded) == []
     assert ct.out_of_reach(declared, site_modules, loaded) == []
     assert set(rep["snapshot"]["registered"]) >= declared
     # the mutant: forget one registration of a loaded module → refused by name, not a valid zero

@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+- **Fixed: the census's round-7 implementation findings — a validation reports its own incompleteness, names
+  resolve through the language's scope analysis, the comparison gates every run it rests on, and the twin
+  verifier establishes preservation (specs/0042, round 8; four findings, all in the ACCEPTANCE CHECKS).** The
+  round-7 reviewer stated it explicitly: the reproductions demonstrate weaknesses in the checks and do NOT show
+  that any shipped trace or the regenerated copy is wrong. No product code changed. *F1, validation:*
+  `census_table.validate_report`'s registry reconciliation ran only when the caller supplied the scan's map, so
+  the ordinary two-argument call returned NO refusals for a declared, already-loaded site whose registration had
+  been deleted. The reconciliation stays optional — the map is an observation of a running interpreter, and a
+  reviewer validating the shipped report in a throwaway cannot supply one — but its absence is now a refusal in
+  the list every caller already reads, naming which argument was missing, so `[]` keeps meaning "validated,
+  completely" and no caller had to change. What a report CANNOT SPEAK FOR moved to its companion
+  `insufficiency`, one entry per id: an unmeasured row and an out-of-reach site say the same thing about the
+  claim "every declared site was exercised", and an evidence run asserts both functions empty. *F2 and F4a,
+  name resolution:* the binding scan and the twin transform each decided "is this NAME the declared site?" by
+  enumerating the forms that bind a name, and the reviewer found the rungs the enumeration had not reached — an
+  assignment expression and a `match` capture both read as bound while the site's counters never moved, and a
+  function PARAMETER shadowing a site name had its own ordinary method call rewritten. Both now ask one shared
+  resolver built on `symtable`, CPython's own scope analysis, which covers the binding grammar by construction;
+  the set of nodes that even get a scope is derived from the interpreter, since PEP 709 inlines comprehensions
+  from 3.12 and CI runs 3.10 through 3.13. `nonlocal` on a site now RESOLVES as a shadow instead of being
+  refused, and only a `global` REBINDING is refused. *F3, comparison:* a control run's pytest exit is gated like
+  any other run's (a failed control still gave exit 0); the exits-per-function guard is replaced by the
+  site-to-exit ASSOCIATION, since two sites sharing one return satisfy a count of two exits for two sites; and
+  the gates are computed BEFORE `verdict.json` is written, which is why every shipped verdict lacked the gates
+  both READMEs said it carried. *F4, the twin:* `verify` requires its source (the harness had been calling it
+  without one, so the preservation half was dead code in every run), compares the file set both ways, compares
+  program structure by re-deriving the transform and diffing the AST, and checks the manifest's before and after
+  hashes — it had verified clean after a `return False` became `return True` and after a module was deleted
+  outright. The derivation itself is unchanged: 162 sites, 302 fires, 152 consults, 4 bypasses across 31
+  modules, byte-identical to the round-7 seal. **The round's own class, swept rather than patched:** three of
+  the four findings are a check whose scope depends on an argument and reads clean when the argument is absent,
+  and the same shape had migrated into the function written to fix the first one. Every public function in the
+  0042 evidence layer with an optional argument was read against two rules — an optional argument is safe when
+  its default is the COMPLETE behaviour, and a default that supplies an INPUT is safe when that input is BOUND
+  to the run rather than merely located — leaving five safe, two reporting their own incompleteness, and a test
+  pinning both.
 - **Fixed: the census's round-6 implementation findings — a measurement that fails is counted as a failure,
   a consultation means the site's own condition ran, a declared id that never registered is refused, the
   INV-7 comparison decodes what it compares, and the twin transform refuses what it has not established is

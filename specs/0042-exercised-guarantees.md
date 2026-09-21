@@ -157,6 +157,34 @@ Spec-Status: accepted
 > also found and had fixed a propagated raise attributed to a walked return statement, a module-registry key
 > test that could only turn an R6-3 refusal into a benign listing, and four transform refusals no test drove).
 
+> **Implementation note, round 8 (2026-09-21; the four round-7 findings).** Every finding was reproduced at the
+> round-7 pin before it was touched (twelve cases, two of them controls that must hold on both sides), and the
+> same script run against the fix leaves only the controls. **src/ is unchanged by this round: all four findings
+> were in the ACCEPTANCE CHECKS, and the reviewer said so — the shipped traces and the regenerated copy were not
+> shown to be wrong.** F1: the registry reconciliation stays OPTIONAL, because the module map is an observation of
+> a RUNNING interpreter and a reviewer validating the shipped report in a throwaway cannot supply one; making it
+> mandatory would lock out exactly the caller who found the defect. Its ABSENCE is reported instead, in the list
+> every caller already reads, so `[]` keeps meaning "validated, completely" and no caller had to change. F2 and
+> F4's first case shared a root — both resolved names without the language's own scope information — and share a
+> fix: one resolver over `symtable`, asked by the binding scan and the twin transform alike, which answers the
+> whole binding grammar by construction rather than by an enumeration someone maintains (the reviewer found the
+> two rungs the enumeration had not reached: an assignment expression and a `match` capture). F3: a control run's
+> exit is gated like any other run's, the exits-per-function COUNT is replaced by the site-to-exit ASSOCIATION
+> (a count of two exits for two sites is satisfied by two sites sharing one), and the gates are computed before
+> the verdict is serialised — they had been absent from every shipped `verdict.json` while two READMEs said it
+> carried them. F4: `verify` requires its source, compares the file set both ways, compares program structure by
+> RE-DERIVING the transform and diffing the AST, and checks the manifest's before and after hashes; the harness
+> passes the source, so the preservation half stops being dead code in the run.
+>
+> **The round's own class, and it is the one worth carrying forward.** Three of the four findings are one shape:
+> a check whose scope depends on an argument, returning a clean result when the argument is absent. Research's
+> stage-1 read then found the SAME shape had migrated into `insufficiency` — the function written to fix it — so
+> the response was to sweep the layer rather than patch the cell. The rule, with both halves: **an optional
+> argument is safe when its default is the COMPLETE behaviour and dangerous when its absence silently narrows what
+> the check looked at; and a default that SUPPLIES AN INPUT is a substitution, whose safety condition is that the
+> input is BOUND TO THE RUN rather than merely located.** Seven functions read, five safe, two reporting their own
+> incompleteness, one test pinning both.
+
 ## 1. Problem and motivation
 
 **We assert guarantees we have never measured being exercised.** Two independent

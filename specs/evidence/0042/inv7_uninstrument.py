@@ -44,6 +44,28 @@ import shutil
 import sys
 
 
+def _sibling(name):
+    """Load a sibling evidence module BY PATH (never `from x import y`: green where the directory happens to be on
+    sys.path and red where it is not — the tests/ class)."""
+    import importlib.util as _u
+    s = _u.spec_from_file_location(f"_0042_{name}", pathlib.Path(__file__).resolve().parent / f"{name}.py")
+    m = _u.module_from_spec(s); s.loader.exec_module(m); return m
+
+
+_scope = _sibling("scope_resolution")
+
+
+def _strict_pairs(pairs):
+    """0026's evidence-boundary rule: a duplicate key is a REFUSAL, never last-wins. Every JSON read in this layer
+    goes through it — the round-8 suite caught the manifest read added for F4 arriving as a plain `json.loads`."""
+    out = {}
+    for k, v in pairs:
+        if k in out:
+            raise ValueError(f"duplicate key {k!r}")
+        out[k] = v
+    return out
+
+
 class Refused(Exception):
     pass
 
@@ -91,10 +113,26 @@ def exits_per_function(tree: ast.AST) -> dict:
 
 
 class Uninstrument(ast.NodeTransformer):
-    def __init__(self, declared: set[str], census_aliases: set[str]):
+    def __init__(self, declared: set[str], census_aliases: set[str], resolver=None):
         self.declared = declared; self.census_aliases = census_aliases
+        # ROUND 7, F4a (F2's shared root): "is this NAME the declared site?" is a SCOPE question, and the transform
+        # answered it by membership in `declared` alone. A function PARAMETER shadowing a module-level site name
+        # therefore had its own ordinary method call rewritten, changing what the twin computes. The question now
+        # goes to the same resolver the binding scan uses — CPython's own scope analysis.
+        self.resolver = resolver
         self.sites = 0; self.fires = 0; self.consults = 0; self.consult_stmts = 0; self.bypasses = 0; self.imports = 0
         self.removed_imports: list = []
+
+    def _is_site(self, name, node) -> bool:
+        """`name`, used at `node`, is the module-level declared site — not a local, a parameter, or an enclosing
+        function's binding. With no resolver the transform REFUSES rather than falling back to membership, because
+        the fallback IS the defect."""
+        if name not in self.declared:
+            return False
+        if self.resolver is None:
+            raise Refused(f"line {getattr(node, 'lineno', '?')}: no scope resolver was supplied, so {name!r} cannot "
+                          f"be established as the declared site rather than a local of the same name")
+        return self.resolver.refers_to_module_binding(node, name)
 
     # module-level: drop declare_site assignments and census imports
     def visit_Module(self, node):
@@ -132,8 +170,9 @@ class Uninstrument(ast.NodeTransformer):
         if all(consults):
             for i in node.items:
                 r = _receiver(i.context_expr)
-                if r not in self.declared:
-                    raise Refused(f"line {node.lineno}: consult() on {r!r}, not a declared site of this module")
+                if not self._is_site(r, node):
+                    raise Refused(f"line {node.lineno}: consult() on {r!r}, which is not this module's declared site "
+                                  f"at this point (a local, a parameter, or an enclosing binding of the same name)")
             self.consults += 1
             return node.body                       # spliced into the parent's statement list
         if any(consults):
@@ -145,8 +184,9 @@ class Uninstrument(ast.NodeTransformer):
         v = node.value
         if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "consult" and not v.args:
             r = _receiver(v)
-            if r not in self.declared:
-                raise Refused(f"line {node.lineno}: consult() statement on {r!r}, not a declared site of this module")
+            if not self._is_site(r, node):
+                raise Refused(f"line {node.lineno}: consult() statement on {r!r}, which is not this module's declared "
+                              f"site at this point (a local, a parameter, or an enclosing binding of the same name)")
             self.consult_stmts += 1
             return None                            # the statement form: removed
         return node
@@ -185,8 +225,9 @@ class Uninstrument(ast.NodeTransformer):
             r = _receiver(node)
             if r is None:
                 raise Refused(f"line {node.lineno}: fire() reached through an attribute chain the transform cannot bind")
-            if r not in self.declared:
-                raise Refused(f"line {node.lineno}: fire() on {r!r}, not a declared site of this module")
+            if not self._is_site(r, node):
+                raise Refused(f"line {node.lineno}: fire() on {r!r}, which is not this module's declared site at this "
+                              f"point (a local, a parameter, or an enclosing binding of the same name)")
             if not node.args:
                 raise Refused(f"line {node.lineno}: fire() with no decision argument")
             self.fires += 1
@@ -247,11 +288,13 @@ def _statement_keys(tree: ast.AST) -> list:
     return keys
 
 
-def uninstrument_source(text: str) -> tuple[str, dict]:
-    tree = ast.parse(text)
+def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]:
+    resolver = _scope.Resolver(text, filename)          # ROUND 7, F4a: the transform's scope question, resolved
+    tree = resolver.tree
     declared, aliases = declared_names(tree)
+    resolver.refuse_rebound_globals(declared)
     exits_before = exits_per_function(tree)
-    t = Uninstrument(declared, aliases or {"_census", "census"}); tree = t.visit(tree); ast.fix_missing_locations(tree)
+    t = Uninstrument(declared, aliases or {"_census", "census"}, resolver); tree = t.visit(tree); ast.fix_missing_locations(tree)
     # a module that still USES the census surface after the instrumentation is gone (the opt-in switch,
     # `_census.enable(True)` in the package module) keeps its import: the twin's stub census answers it
     still_used = any(isinstance(n, ast.Name) and n.id in ("_census", "census") for n in ast.walk(tree))
@@ -321,33 +364,70 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
     return totals
 
 
-def verify(out: pathlib.Path, src: pathlib.Path | None = None) -> list[str]:
-    """Every module in the twin, census.py aside, is free of the INSTRUMENTATION (a surface read of the stub may
-    remain); and, given the source tree, every non-instrumentation statement of the source is still present in
-    the twin in order (what REMAINS is verified, not only what was removed — R6-6)."""
+def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib.Path | None = None) -> list[str]:
+    """Does the twin at `out` differ from `src` BY THE INSTRUMENTATION AND NOTHING ELSE? Round 7, F4: the previous
+    version answered only half the question and answered that half loosely. It checked that no instrumentation
+    TOKEN survived, and — only when a source was passed, which the harness never did — compared a MULTISET of
+    (qualname, node kind) for a few kinds. So it verified clean after `return False` became `return True` (same
+    kind, same qualname), clean after a module was DELETED from the copy (it iterates the copy, so a missing file
+    is simply not visited), and it never looked at the manifest it ships beside. Four readings now, and the source
+    is REQUIRED — a verification that silently checks less when an argument is omitted is the round's other finding:
+
+      1. FILE SET — the twin's modules equal the source's, both directions. A deletion or an addition is named.
+      2. TOKENS — no `declare_site`, `.consult()`, `.fire(` or census import survives an emitted module.
+      3. STRUCTURE — the twin's AST equals the AST of RE-DERIVING the transform from the source, compared with
+         `ast.dump` including every expression and its ORDER. This is data against data: the permitted changes are
+         whatever the transform does, so nothing has to enumerate them a second time and drift from the first.
+      4. MANIFEST — every module's `sha256_before` matches the source file and `sha256_after` the emitted one, and
+         the manifest's module set equals the file set. A manifest is looked for beside the twin unless one is given.
+    """
     problems = []
-    for p in sorted(out.rglob("*.py")):
-        if p.name == "census.py":
+    if src is None:
+        return ["verify(out) was called WITHOUT a source: preservation cannot be established from the twin alone "
+                "(round 7, F4 — the harness used to call it this way and got a token check silently standing in "
+                "for a preservation check). Pass the source tree."]
+    twin_files = {p.relative_to(out) for p in out.rglob("*.py")}
+    src_files = {p.relative_to(src) for p in src.rglob("*.py") if "__pycache__" not in p.parts}
+    for missing in sorted(src_files - twin_files):
+        problems.append(f"{missing}: present in the source and MISSING from the twin")
+    for extra in sorted(twin_files - src_files):
+        problems.append(f"{extra}: present in the twin and absent from the source")
+    for rel in sorted(twin_files & src_files):
+        p_out = out / rel; text = p_out.read_text()
+        if rel.name == "census.py":
+            if text != STUB:
+                problems.append(f"{rel}: the census module is not the twin STUB")
             continue
-        t = p.read_text()
         for token in ("declare_site", ".consult()", ".fire(", "from .census import"):
-            if token in t:
-                problems.append(f"{p.relative_to(out)}: {token!r} survives")
-        if src is not None:
-            s = src / p.relative_to(out)
-            if s.exists():
-                head = ast.parse(s.read_text()); twin = ast.parse(t)
-                declared, _ = declared_names(head)
-                # statements of HEAD that the transform is allowed to drop/rewrite: the declare_site assigns, the
-                # census imports, the consult statements/withs (their bodies survive); everything else must remain
-                def keep(k):
-                    return True
-                hk = [k for k in _statement_keys(head)]; tk = _statement_keys(twin)
-                # compare multiset of (qual, kind) for kinds the transform never touches
-                untouched_kinds = {"Return", "Raise", "FunctionDef", "AsyncFunctionDef", "ClassDef", "For", "While", "Try", "AugAssign", "AnnAssign"}
-                hc = sorted(k for k in hk if k[1] in untouched_kinds); tc = sorted(k for k in tk if k[1] in untouched_kinds)
-                if hc != tc:
-                    problems.append(f"{p.relative_to(out)}: the twin's untouched statements differ from HEAD's ({len(hc)} vs {len(tc)})")
+            if token in text:
+                problems.append(f"{rel}: {token!r} survives")
+        try:
+            redone, _ = uninstrument_source((src / rel).read_text(), str(src / rel))
+        except Refused as e:
+            problems.append(f"{rel}: re-deriving the transform from the source REFUSES ({e})")
+            continue
+        try:
+            if ast.dump(ast.parse(text)) != ast.dump(ast.parse(redone)):
+                problems.append(f"{rel}: the twin's program structure differs from re-deriving the transform from "
+                                f"the source — the difference is NOT one of the permitted instrumentation changes")
+        except SyntaxError as e:
+            problems.append(f"{rel}: the twin does not parse ({e})")
+    man_path = manifest if manifest is not None else out.parent / "twin_manifest.json"
+    if not man_path.exists():
+        problems.append(f"no twin manifest at {man_path} — the derivation's own record of what it rewrote is missing")
+    else:
+        man = json.loads(man_path.read_text(), object_pairs_hook=_strict_pairs)
+        mods = man.get("modules") or {}
+        if set(mods) != {str(r) for r in twin_files}:
+            only_man = sorted(set(mods) - {str(r) for r in twin_files}); only_twin = sorted({str(r) for r in twin_files} - set(mods))
+            problems.append(f"the manifest's module set differs from the twin's files (manifest only: {only_man[:4]}; twin only: {only_twin[:4]})")
+        for rel, rec in sorted(mods.items()):
+            p_out = out / rel; p_src = src / rel
+            if p_out.exists() and hashlib.sha256(p_out.read_bytes()).hexdigest() != rec.get("sha256_after"):
+                problems.append(f"{rel}: the emitted file's sha256 does not match the manifest's `sha256_after`")
+            if p_src.exists() and hashlib.sha256(p_src.read_bytes()).hexdigest() != rec.get("sha256_before"):
+                problems.append(f"{rel}: the SOURCE file's sha256 does not match the manifest's `sha256_before` — "
+                                f"the manifest describes a different source than the one verified against")
     return problems
 
 

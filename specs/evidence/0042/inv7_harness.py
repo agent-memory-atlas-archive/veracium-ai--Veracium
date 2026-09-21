@@ -84,7 +84,10 @@ def export_twin(repo: pathlib.Path, commit: str, out: pathlib.Path) -> dict:
         spec = importlib.util.spec_from_file_location("inv7_uninstrument", HERE / "inv7_uninstrument.py")
         un = importlib.util.module_from_spec(spec); spec.loader.exec_module(un)
         totals = un.derive(repo / "src" / "veracium", twin / "src" / "veracium")
-        problems = un.verify(twin / "src" / "veracium")
+        # ROUND 7, F4d: WITH the source. Called without it, verify() checked only that no instrumentation token
+        # survived — the preservation half was dead code in every run this harness ever made, so a twin that
+        # differed from HEAD by more than the instrumentation would have passed here silently.
+        problems = un.verify(twin / "src" / "veracium", repo / "src" / "veracium")
         assert not problems, problems
         head = sh(["git", "rev-parse", "HEAD"], cwd=repo).stdout.strip()
         return {"commit": f"derived from HEAD {head} by inv7_uninstrument.py", "src": str(twin / "src"), "src_commits_since_twin": [],
@@ -392,10 +395,17 @@ def main():
     L += [f"  {sym}: {why}" for sym, why in s0["excluded"]]
     L += [f"from-import bindings rebound: {len(s0['rebound'])}", "", "HISTOGRAM (reference arm), symbol -> decision: count"]
     L += [f"  {k}: {n}" for k, n in sorted(summaries[ref]["histogram"].items())]
+    # ROUND 7, F3c: final_status is what ADDS `verdict["gates"]`, and the verdict used to be serialised BEFORE it
+    # ran — so every shipped verdict.json lacked the gates both READMEs promised it carried. Compute first, write
+    # second, and assert the serialised object carries them rather than trusting the order to stay this way.
+    status = final_status(verdict, checks, summaries, arms)
+    assert "gates" in verdict, "final_status did not record its gates on the verdict"
     (out / "inv7_transcript.txt").write_text("\n".join(L) + "\n")
     (out / "verdict.json").write_text(json.dumps({"verdict": verdict, "checks": checks}, indent=1, sort_keys=True) + "\n")
+    written = json.loads((out / "verdict.json").read_text(), object_pairs_hook=_strict_pairs)
+    assert set(written["verdict"].get("gates") or {}) == set(verdict["gates"]), "the serialised verdict lost its gates"
     print("\n".join(L[:len(arms) + 12]))
-    return final_status(verdict, checks, summaries, arms)
+    return status
 
 
 def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> int:
@@ -404,7 +414,12 @@ def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> in
     one that ran and agreed). Pure over its inputs; the matrix test drives each gate."""
     gates = {"identical": bool(verdict.get("identical")),
              "no_new_non_reproducible": (verdict.get("control") or {}).get("newly_non_reproducible", []) == []}
+    # ROUND 7, F3a: EVERY run whose result the verdict rests on, including the CONTROL runs that establish
+    # reproducibility. The gate used to iterate `arms` alone, so a control run that FAILED still gave exit 0 —
+    # and a failed control is exactly the run whose "these tests agree with themselves" claim is void.
     for a in arms:
+        gates[f"pytest_exit:{a}"] = summaries.get(a, {}).get("pytest_exit") == 0
+    for a in sorted(k for k in summaries if k.endswith("-control")):
         gates[f"pytest_exit:{a}"] = summaries.get(a, {}).get("pytest_exit") == 0
     c = checks.get("healthy") or {}
     if "healthy" in arms:

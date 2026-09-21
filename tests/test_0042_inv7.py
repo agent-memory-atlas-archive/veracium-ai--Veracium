@@ -22,6 +22,8 @@ Three legs here:
 """
 from __future__ import annotations
 
+import ast
+import collections
 import importlib.util
 import json
 import pathlib
@@ -448,70 +450,136 @@ def test_r6_5_iii_the_harness_exit_requires_every_arm_and_every_cross_check(tmp_
     assert v6["control"]["standing_excluded"] == ["t.py::b"] and harness.final_status(v6, c6, S, arms) == 0
 
 
-def _fire_exit_statements(tree, qual: str):
-    """How many return/raise statements of the function `qual` (dotted, classes included) carry a `.fire(` call — the
-    exits-per-function count the R6-5(ii) guard compares to the function's site count. None if `qual` is absent."""
-    import ast
-    found = [None]
+_SCAN_CACHE: dict = {}
 
-    def walk(node, stack):
+
+def _scan_rows(src, module):
+    """The binding scan's rows for one module, scanned ONCE per session (it reads the whole tree)."""
+    if not _SCAN_CACHE:
+        inst = _load("installed_sites_for_inv7", EVIDENCE / "installed_sites.py")
+        for r in inst.scan(src):
+            _SCAN_CACHE.setdefault(r["module"], []).append(r)
+    return _SCAN_CACHE.get(module, [])
+
+
+def _sites_per_exit(tree, qual: str, sites: set[str]):
+    """{exit-statement ordinal: the declared sites whose decision leaves the function THROUGH that statement} for
+    the function `qual`, or None if it is absent.
+
+    ROUND 7, F3b. The previous guard COUNTED a function's fire-carrying exits and compared the count to its number
+    of sites — a necessary condition standing in for a sufficient one, and the reviewer built the fixture that
+    separates them: two sites sharing ONE return, plus a second return repeating only one of them, gives two exits
+    for two sites and passes while the two sites still collide on one ordinal. What the observer actually needs is
+    the ASSOCIATION: its record is (symbol, exit ordinal, label), so two sites reaching the SAME exit statement of
+    the SAME function produce records that cannot be told apart.
+
+    Two forms are followed: a fire INSIDE the exit statement (`return S.fire(x)`, `raise S.fire(e)`), and the
+    round-7 one-return form, where the fire is an assignment (`q = S.fire(q)`) and the value leaves through a later
+    `return q` — one hop, by name, within the same body. A fire whose value reaches an exit by any other route is
+    NOT followed and is reported under the ordinal `None`, so it is visible rather than silently attributed."""
+    import ast, collections
+    target = [None]
+
+    def find(node, stack):
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 q = ".".join(stack + [child.name])
                 if q == qual and not isinstance(child, ast.ClassDef):
-                    n = 0
+                    target[0] = child
+                find(child, stack + [child.name])
+            else:
+                find(child, stack)
+    find(tree, [])
+    fn = target[0]
+    if fn is None:
+        return None
 
-                    def count(x):
-                        nonlocal n
-                        for c in ast.iter_child_nodes(x):
-                            if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
-                                continue
-                            if isinstance(c, (ast.Return, ast.Raise)):
-                                v = c.value if isinstance(c, ast.Return) else c.exc
-                                if isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "fire":
-                                    n += 1
-                            count(c)
-                    count(child); found[0] = n
-                walk(child, stack + [child.name])
-    walk(tree, [])
-    return found[0]
+    def own(node):
+        """This body's nodes: nested scopes bind their own exits."""
+        for c in ast.iter_child_nodes(node):
+            if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                continue
+            yield c
+            yield from own(c)
+
+    def fired_in(node):
+        return {c.func.value.id for c in ast.walk(node)
+                if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and c.func.attr == "fire"
+                and isinstance(c.func.value, ast.Name) and c.func.value.id in sites}
+
+    exits = [c for c in own(fn) if isinstance(c, (ast.Return, ast.Raise))]
+    by_name = {}                                     # NAME assigned a fire's value -> the sites in that assignment
+    for c in own(fn):
+        if isinstance(c, ast.Assign) and len(c.targets) == 1 and isinstance(c.targets[0], ast.Name):
+            s = fired_in(c.value)
+            if s:
+                by_name.setdefault(c.targets[0].id, set()).update(s)
+    out = collections.defaultdict(set)
+    attributed = set()
+    for ordinal, c in enumerate(exits):
+        value = c.value if isinstance(c, ast.Return) else c.exc
+        direct = fired_in(c)
+        out[ordinal] |= direct; attributed |= direct
+        if isinstance(value, ast.Name) and value.id in by_name:
+            out[ordinal] |= by_name[value.id]; attributed |= by_name[value.id]
+    unrouted = set().union(*by_name.values()) if by_name else set()
+    unrouted |= {s for c in own(fn) for s in fired_in(c)}
+    unrouted -= attributed
+    if unrouted:
+        out[None] = unrouted
+    return dict(out)
 
 
 def test_r6_5_ii_every_declared_site_has_its_own_exit_statement_so_exit_keyed_records_separate_them():
-    """R6-5(ii): an exit-keyed record separates two sites in one function only if they do not share a return/raise
-    statement. Asserted over the declaration at HEAD: for every symbol carrying more than one site, the function's
-    own fire() statements are at least as many as its sites (research's proxy count, made exact by the scanner's
-    scope rules); a symbol failing this names the one function whose exits must be split."""
-    import ast, collections
-    by_symbol = collections.defaultdict(list)
+    """R6-5(ii), as ROUND 7 makes it exact: an exit-keyed record separates two sites of one function only if no
+    EXIT STATEMENT carries more than one of them. Asserted over the declaration at HEAD by the site-to-exit
+    ASSOCIATION, not by a count of exits (F3b): a function whose two sites share a return collides on one ordinal
+    however many other exits it has."""
+    import collections
+    by_symbol = collections.defaultdict(set)
+    name_of = {}
     for row in declaration.DECLARATION:
-        by_symbol[row[3]].append(row[0])
-    src = ROOT / "src" / "veracium"; short = []
-    for sym, sites in by_symbol.items():
-        if len(sites) < 2:
+        by_symbol[row[3]].add(row[0])
+    src = ROOT / "src" / "veracium"
+    collisions, unrouted, missing = [], [], []
+    for sym, ids in by_symbol.items():
+        if len(ids) < 2:
             continue
-        module, qual = sym.split(":"); tree = ast.parse((src / module).read_text())
-        fires = _fire_exit_statements(tree, qual)
-        assert fires is not None, sym
-        if fires < len(sites):
-            short.append((sym, len(sites), fires))
-    multi = sum(1 for s in by_symbol.values() if len(s) > 1); held = sum(len(s) for s in by_symbol.values() if len(s) > 1)
-    assert multi >= 1 and held >= 2                                     # the figure is real (88 of 162 at round 6)
-    assert short == [], short
+        module, qual = sym.split(":")
+        text = (src / module).read_text()
+        names = {r["name"] for r in _scan_rows(src, module) if r["id"] in ids and r["name"]}
+        assoc = _sites_per_exit(ast.parse(text), qual, names)
+        assert assoc is not None, sym
+        for ordinal, at in sorted(assoc.items(), key=lambda kv: (kv[0] is None, kv[0])):
+            if ordinal is None:
+                unrouted.append((sym, sorted(at)))
+            elif len(at) > 1:
+                collisions.append((sym, ordinal, sorted(at)))
+        seen = set().union(*assoc.values()) if assoc else set()
+        if names - seen:
+            missing.append((sym, sorted(names - seen)))
+    multi = sum(1 for v in by_symbol.values() if len(v) > 1)
+    assert multi >= 1                                        # the figure is real (31 multi-site symbols at round 7)
+    assert collisions == [], collisions                      # no exit statement carries two sites
+    assert unrouted == [], unrouted                          # every fire's value reaches an exit by a followed route
+    assert missing == [], missing                            # and every site of a multi-site function has an exit
 
 
-def test_r6_5_ii_control_two_sites_sharing_one_exit_statement_are_counted_short():
-    """The guard's RED (research, round 7): a function whose two sites exit through ONE statement — the shape the
-    old suite was silent on — counts one fire exit for two sites, which the guard above refuses; the same function
-    with one exit per site counts two."""
-    import ast
-    shared = ast.parse("class C:\n    def f(self, x):\n        with A.consult():\n            with B.consult():\n"
-                       "                return A.fire(B.fire(x))\n")
-    split = ast.parse("class C:\n    def f(self, x):\n        with A.consult():\n            if x:\n                return A.fire(x)\n"
-                      "        with B.consult():\n            return B.fire(x)\n")
-    assert _fire_exit_statements(shared, "C.f") == 1 < 2          # two sites, one exit statement: SHORT
-    assert _fire_exit_statements(split, "C.f") == 2                # one exit per site
-    assert _fire_exit_statements(split, "C.g") is None            # an absent function is None, never a zero
+def test_r6_5_ii_control_the_reviewers_fixture_collides_and_a_count_cannot_see_it():
+    """The RED for the guard above, and it is the reviewer's own fixture (F3b): two sites sharing ONE return, plus
+    a second return repeating just one of them. The old COUNT is satisfied — two fire-carrying exits for two sites
+    — and the ASSOCIATION shows the collision. The one-return form, where the fire is an assignment feeding a
+    later `return`, is attributed to that return and must NOT read as a collision."""
+    collide = ast.parse("class C:\n    def f(self, x):\n        if x:\n            return A.fire(B.fire(x))\n        return A.fire(x)\n")
+    assoc = _sites_per_exit(collide, "C.f", {"A", "B"})
+    assert assoc == {0: {"A", "B"}, 1: {"A"}}, assoc
+    assert sum(1 for v in assoc.values() if v) == 2                      # the OLD count: two exits, two sites, satisfied
+    assert [o for o, at in assoc.items() if len(at) > 1] == [0]          # the association: they collide at exit 0
+    split = ast.parse("class C:\n    def f(self, x):\n        if x:\n            return A.fire(x)\n        return B.fire(x)\n")
+    assert _sites_per_exit(split, "C.f", {"A", "B"}) == {0: {"A"}, 1: {"B"}}
+    one_return = ast.parse("class C:\n    def f(self, x):\n        if E:\n            q = A.fire(x)\n        else:\n            q = x\n        return q\n")
+    assert _sites_per_exit(one_return, "C.f", {"A"}) == {0: {"A"}}       # the round-7 hot-predicate shape
+    assert _sites_per_exit(collide, "C.absent", {"A"}) is None
 
 
 def test_a_propagated_exception_is_never_attributed_to_a_walked_return_statement():
@@ -581,7 +649,7 @@ def test_r6_6_the_twin_transform_refuses_what_it_has_not_established_is_instrume
     # Each is pinned to ITS OWN message, so another branch catching the input first would not pass for it.
     pinned = {
         "`global` names a declared site": "from .census import declare_site\nS = declare_site('x')\ndef f():\n    global S\n    return S.fire(1)\n",
-        "consult\\(\\) statement on 'o', not a declared site": "from .census import declare_site\nS = declare_site('x')\ndef f(o):\n    o.consult()\n    return S.fire(1)\n",
+        "consult\\(\\) statement on 'o', which is not this module's declared site": "from .census import declare_site\nS = declare_site('x')\ndef f(o):\n    o.consult()\n    return S.fire(1)\n",
         "else branch is not simple assignments": "from . import census as _census\nfrom .census import declare_site\nS = declare_site('x')\n"
                                                  "def h(self, q):\n    if _census.enabled():\n        with S.consult():\n            q = S.fire(q)\n    else:\n        audit(self)\n    return q\n",
         "fire\\(\\) with no decision argument": "from .census import declare_site\nS = declare_site('x')\ndef n():\n    return S.fire()\n",
@@ -646,3 +714,115 @@ def test_install_starts_from_an_empty_symbol_table_whatever_a_previous_test_left
         observer.uninstall()
     assert dirty == clean and "left.py:behind" not in dirty and dirty[0] == sorted(dirty)[0]
     assert observer._SYMBOLS == [] and observer._SYM_INDEX == {}          # uninstall leaves the tables empty
+
+
+# ---- round 7: the verdict's cases, each as its own regression ---------------------------------------------------
+
+def test_r7_f3a_a_control_run_that_failed_fails_the_exit(tmp_path):
+    """F3a: `final_status` gated each ARM's pytest exit and not the CONTROL runs, so the reviewer set the supplied
+    `healthy-control` to exit 1 and still got status 0. A failed control is exactly the run whose "these tests
+    agree with themselves" claim is void, and the exclusions it feeds are then derived from a broken run."""
+    ids = {"a.id": "m.py:f"}; good = [(0, 0, 0)]
+    ok = {"a.id": {"consulted": 1, "fired": 1, "errors": 0}}; bad = {"a.id": {"consulted": 0, "fired": 0, "errors": 2}}
+    cen = [(1, "a.id", "None")]
+    S = {"healthy": _fabricate(tmp_path, "healthy", good, census=cen, counters=ok, enabled=True),
+         "failing": _fabricate(tmp_path, "failing", good, census=cen, counters=bad, enabled=True),
+         "off": _fabricate(tmp_path, "off", good),
+         "uninstrumented": _fabricate(tmp_path, "uninstrumented", good, registry_size=0)}
+    arms = ["healthy", "failing", "off", "uninstrumented"]
+    S["healthy-control"] = _fabricate(tmp_path, "healthy-control", good, census=cen, counters=ok, enabled=True)
+    v, c = harness.compare(tmp_path, arms, S, ids, standing={})
+    assert harness.final_status(v, c, S, arms) == 0 and v["gates"]["pytest_exit:healthy-control"] is True
+    S["healthy-control"]["pytest_exit"] = 1                       # the reviewer's mutation
+    assert harness.final_status(v, c, S, arms) == 1 and v["gates"]["pytest_exit:healthy-control"] is False
+    assert {g for g in v["gates"] if g.startswith("pytest_exit:")} == {"pytest_exit:" + a for a in arms} | {"pytest_exit:healthy-control"}
+
+
+def test_r7_f3c_the_serialised_verdict_carries_the_gates_both_readmes_promise(tmp_path, monkeypatch):
+    """F3c: `verdict.json` was written BEFORE `final_status` added `gates`, so every shipped verdict lacked what
+    the bundle README and `inv7-run/README.txt` both say it carries — a false claim in two carriers, passed by
+    both seats' checks because each asserted the file's PRESENCE and DIGEST, never its keys. The order is fixed and
+    `main()` now asserts the serialised object carries them; this reads the file, which is what the reviewer did."""
+    import json as _json
+    src = (EVIDENCE / "inv7_harness.py").read_text()
+    assert src.index("status = final_status(") < src.index('(out / "verdict.json").write_text'), "gates must be computed first"
+    assert 'assert set(written["verdict"].get("gates")' in src, "main() must assert the serialised verdict kept them"
+    # and the property itself, on a fabricated run: whatever final_status decided is what round-trips through JSON
+    ids = {"a.id": "m.py:f"}; good = [(0, 0, 0)]
+    ok = {"a.id": {"consulted": 1, "fired": 1, "errors": 0}}; bad = {"a.id": {"consulted": 0, "fired": 0, "errors": 2}}
+    cen = [(1, "a.id", "None")]
+    S = {"healthy": _fabricate(tmp_path, "healthy", good, census=cen, counters=ok, enabled=True),
+         "failing": _fabricate(tmp_path, "failing", good, census=cen, counters=bad, enabled=True),
+         "off": _fabricate(tmp_path, "off", good),
+         "uninstrumented": _fabricate(tmp_path, "uninstrumented", good, registry_size=0)}
+    arms = ["healthy", "failing", "off", "uninstrumented"]
+    v, c = harness.compare(tmp_path, arms, S, ids, standing={})
+    harness.final_status(v, c, S, arms)
+    round_tripped = _json.loads(_json.dumps({"verdict": v, "checks": c}))
+    assert set(round_tripped["verdict"]["gates"]) == set(v["gates"]) and v["gates"], v.get("gates")
+
+
+def _twin_fixture(tmp_path, body="from .census import declare_site\nS = declare_site('t')\n\ndef f(x):\n    with S.consult():\n        return S.fire(False)\n"):
+    src = tmp_path / "src_tree" / "veracium"; src.mkdir(parents=True)
+    (src / "__init__.py").write_text(""); (src / "census.py").write_text("def declare_site(i, **k):\n    return None\n")
+    (src / "m.py").write_text(body)
+    out = tmp_path / "twin" / "src" / "veracium"
+    un = _load("inv7_uninstrument_r7", EVIDENCE / "inv7_uninstrument.py")
+    un.derive(src, out)
+    return un, src, out
+
+
+def test_r7_f4_the_verifier_establishes_preservation(tmp_path):
+    """F4: three reviewer reproductions and four more. The old verifier compared a MULTISET of (qualname, node
+    kind) for a few kinds, and only when a source was passed — which the harness never did. So a flipped return
+    verified clean (same kind, same qualname), a DELETED module verified clean (it iterates the copy, so a missing
+    file is never visited), and the manifest it ships beside was never read. Every case is driven here, with the
+    clean twin as the control that would catch an over-strict verifier."""
+    import json as _json
+    un, src, out = _twin_fixture(tmp_path)
+    assert un.verify(out, src) == []                                             # the control: a clean twin
+    only = un.verify(out)
+    assert len(only) == 1 and "WITHOUT a source" in only[0]                      # F4d: the harness's old call
+    flipped = tmp_path / "f"; flipped.mkdir()
+    un2, src2, out2 = _twin_fixture(flipped)
+    (out2 / "m.py").write_text((out2 / "m.py").read_text().replace("return False", "return True"))
+    assert any("program structure differs" in p for p in un2.verify(out2, src2)), un2.verify(out2, src2)   # F4b
+    deleted = tmp_path / "d"; deleted.mkdir()
+    un3, src3, out3 = _twin_fixture(deleted)
+    (out3 / "m.py").unlink()
+    assert any("MISSING from the twin" in p for p in un3.verify(out3, src3))                                # F4c
+    added = tmp_path / "a"; added.mkdir()
+    un4, src4, out4 = _twin_fixture(added)
+    (out4 / "extra.py").write_text("x = 1\n")
+    assert any("absent from the source" in p for p in un4.verify(out4, src4))
+    tampered = tmp_path / "t"; tampered.mkdir()
+    un5, src5, out5 = _twin_fixture(tampered)
+    man_path = out5.parent / "twin_manifest.json"; man = _json.loads(man_path.read_text())
+    man["modules"]["m.py"]["sha256_after"] = "0" * 64; man_path.write_text(_json.dumps(man))
+    assert any("does not match the manifest's `sha256_after`" in p for p in un5.verify(out5, src5))
+    missing_man = tmp_path / "mm"; missing_man.mkdir()
+    un6, src6, out6 = _twin_fixture(missing_man)
+    (out6.parent / "twin_manifest.json").unlink()
+    assert any("no twin manifest" in p for p in un6.verify(out6, src6))
+    untransformed = tmp_path / "u"; untransformed.mkdir()
+    un7, src7, out7 = _twin_fixture(untransformed)
+    (out7 / "m.py").write_text((src7 / "m.py").read_text())
+    assert any("survives" in p for p in un7.verify(out7, src7))
+
+
+def test_r7_f4a_a_parameter_shadowing_a_site_name_keeps_its_own_call(tmp_path):
+    """F4a, the shared root with F2: the transform asked "is this name declared?" by MEMBERSHIP, so a function
+    PARAMETER of the same name had its ordinary method call rewritten and the twin computed something else. The
+    question is a SCOPE question and goes to the same resolver the binding scan uses; an unestablished receiver is
+    REFUSED by name rather than rewritten."""
+    un = _load("inv7_uninstrument_r7a", EVIDENCE / "inv7_uninstrument.py")
+    shadow = "from .census import declare_site\nS = declare_site('t.shadow')\n\ndef f(S):\n    S.consult()\n    return len(S)\n"
+    with pytest.raises(un.Refused, match="not this module's declared site"):
+        un.uninstrument_source(shadow)
+    fire_shadow = "from .census import declare_site\nS = declare_site('t.shadow')\n\ndef f(S, x):\n    return S.fire(x)\n"
+    with pytest.raises(un.Refused, match="not this module's declared site"):
+        un.uninstrument_source(fire_shadow)
+    # the control: the same shapes on the real module-level site still transform
+    plain = "from .census import declare_site\nS = declare_site('t')\n\ndef f(x):\n    with S.consult():\n        return S.fire(False)\n"
+    out, stats = un.uninstrument_source(plain)
+    assert "consult" not in out and stats["fires"] == 1 and out.strip().endswith("return False")
