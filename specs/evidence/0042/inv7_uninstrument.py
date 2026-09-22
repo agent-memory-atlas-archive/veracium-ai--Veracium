@@ -183,14 +183,16 @@ class Uninstrument(ast.NodeTransformer):
             if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.value, ast.Call) \
                     and getattr(stmt.value.func, "id", getattr(stmt.value.func, "attr", "")) == "declare_site":
                 self.sites += 1; continue
-            if isinstance(stmt, ast.ImportFrom) and stmt.module and stmt.module.endswith("census"):
+            # ROUND 11: all three branches now ask the SAME two predicates. The third branch used to strip a
+            # name spelled `census` out of ANY import — `from totally_unrelated import census` and
+            # `from conftest import census as c` were deleted, and the module raised NameError in the twin
+            # (the round-10 verdict's finding 2). The second used to check `module` and never `level`, so
+            # `from .. import census` was removed while `declared_names` did not recognise it: the two halves
+            # of one decision answering differently about one statement.
+            if is_census_surface_import(stmt):
                 self.imports += 1; continue                      # `from .census import declare_site`: instrumentation only
-            if isinstance(stmt, ast.ImportFrom) and stmt.module in (None, "") and all(a.name == "census" for a in stmt.names):
+            if is_census_module_import(stmt):
                 self.imports += 1; self.removed_imports.append(stmt); continue   # restored if the module still uses the surface
-            if isinstance(stmt, ast.ImportFrom) and any(a.name == "census" for a in stmt.names):
-                stmt.names = [a for a in stmt.names if a.name != "census"]; self.imports += 1
-                if not stmt.names:
-                    continue
             kept.append(stmt)
         node.body = kept
         self.generic_visit(node)
@@ -302,6 +304,87 @@ class Uninstrument(ast.NodeTransformer):
         return node
 
 
+# THE CENSUS PREDICATES — ONE DEFINITION EACH, AND EVERY CONSUMER ROUTES THROUGH THEM.
+#
+# ROUND 11, research's stage-1 enumeration: SIX units in this module decided "is this the census?" on THREE
+# different readings, kept in step by hand, and every round found two of them disagreeing. Round 10's verdict
+# was two instances at once — alias RECOGNITION narrowed while import REMOVAL was not, and rule A applied to
+# the alias while rule C was not. Research then found a third and a fourth: a removal branch that checks
+# `module` and never `level`, so `from .. import census` is UNRECOGNISED and REMOVED ANYWAY (the same
+# NameError as the reviewer's finding 2, reached through the disagreement rather than through either answer);
+# and a recogniser and a detector that both require `ast.If`, so a census consult in any other statement shape
+# is invisible to BOTH.
+#
+# The remedy is not a fifth patch. It is that these two functions are the only definitions, every consumer
+# calls one of them, and `test_every_census_decision_routes_through_one_predicate` enumerates the consumers
+# and fails the day a seventh appears on a reading of its own.
+
+def is_census_module_file(rel) -> bool:
+    """The census module's OWN file, which the twin replaces with the stub.
+
+    ROUND 11: a THIRD reading, found by the enumeration gate on its first run and NOT by the hand enumeration
+    that preceded it — research's walk classified `derive` as "mention only, decides nothing", and it decides
+    twice. Neither decision was wrong, which is exactly why a manual reading passed over them: the gate looks
+    for units deciding on a reading of their own, not for units getting it wrong."""
+    return str(rel) == "census.py"
+
+
+def may_skip_uninstrumenting(text: str) -> bool:
+    """A module that cannot be instrumented, skipped without parsing it.
+
+    THE SAFETY ARGUMENT, STATED BECAUSE THE FALSE NEGATIVE IS THE DANGEROUS ONE: skipping a module that DOES
+    use the census would leave instrumentation in the twin. Every route into the census carries one of these
+    three tokens in the source text — the census import contains `census`, a declaration contains
+    `declare_site`, a measured decision contains `.fire(`. A module containing none of them has no route in.
+    This is a performance guard, not an identity decision, and it is named here so it cannot drift into one."""
+    return "census" not in text and ".fire(" not in text and "declare_site" not in text
+
+
+def _in_recognised_bypass(tree, call) -> bool:
+    """Is this `<alias>.enabled()` call the TEST of an `if`, the one shape `visit_If` rewrites?
+
+    Anything else — an assignment, a `while`, a ternary, a boolean operand — is a census consult the
+    transform leaves in place, which the twin then carries live. The detector reports those rather than
+    refusing them: preserving ordinary behaviour cannot over-refuse, and the manifest naming them is what
+    makes the silence into a signal."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.If) and node.test is call:
+            return True
+    return False
+
+
+def is_census_module_import(stmt) -> bool:
+    """`from . import census [as X]` — the census MODULE, bound under a name this module then uses.
+
+    LEVEL AND MODULE BOTH CHECKED. `from .. import census` is a DIFFERENT package's census and is not this
+    one; `from totally_unrelated import census` is not a census at all. Round 10 narrowed this in
+    `declared_names` and left `visit_Module` on the broad test, which is how recognition and removal came to
+    give opposite answers about one statement."""
+    return (isinstance(stmt, ast.ImportFrom) and stmt.level == 1 and stmt.module is None
+            and any(a.name == "census" for a in stmt.names))
+
+
+def is_census_surface_import(stmt) -> bool:
+    """`from .census import declare_site, ...` — the instrumentation SURFACE, not the module object.
+
+    `stmt.module` is checked EXACTLY, not by `endswith`: `from .not_really_census import x` is not this, and
+    neither is `from totally_unrelated.census import x`. (Research's next-round item, taken now because it
+    costs one comparison and this is the round that is supposed to stop hand-kept predicates.)
+
+    BOTH SPELLINGS THE TREE ACTUALLY USES ARE ACCEPTED, and the first form of this predicate accepted only
+    one. It required a RELATIVE import, and the suite caught it immediately: the tree carries
+    `from .census import declare_site` (19) and `from ..census import declare_site` (9, in the store/ and
+    asof/ subpackages), while the fixtures carry the ABSOLUTE `from veracium.census import declare_site`.
+    Narrowing to the relative form left the emitted module still carrying `declare_site`, which the token
+    check then refused. `endswith` was too wide; level>=1 alone was too narrow; the exact module name in
+    either spelling is the property that is actually meant."""
+    if not isinstance(stmt, ast.ImportFrom):
+        return False
+    if stmt.level >= 1:
+        return stmt.module == "census"            # from .census / from ..census import <surface>
+    return stmt.module == "veracium.census"        # from veracium.census import <surface>
+
+
 def declared_names(tree: ast.Module) -> tuple[set[str], set[str]]:
     """(the module-level names bound by `NAME = declare_site(...)`, the aliases the census module is imported as)."""
     declared, aliases = set(), set()
@@ -321,8 +404,7 @@ def declared_names(tree: ast.Module) -> tuple[set[str], set[str]]:
         # correctly not module-level). `from .. import census` is a DIFFERENT package's census and is no
         # longer collected. Measured before narrowing: zero modules in src/veracium use any other spelling,
         # so this over-refuses nothing that exists.
-        if isinstance(stmt, ast.ImportFrom) and stmt.level == 1 and stmt.module is None \
-                and any(a.name == "census" for a in stmt.names):
+        if is_census_module_import(stmt):
             for a in stmt.names:
                 if a.name == "census":
                     aliases.add(a.asname or "census")
@@ -361,13 +443,23 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # imports the census and then replaces it; the name still resolves to module scope, so the scope
     # question answers YES about a binding that no longer denotes the census. Rule A's reading answers the
     # one part of this a static check can: was the name bound more than once?
+    # ROUND 10'S VERDICT, FINDING 1: THIS ASKED RULE A ONLY. The SITE question has always been answered by
+    # TWO readings — the module's own code object (rule A) and the NESTED code objects (rule C) — and round 10
+    # gave the census alias the first and not the second. `_nested_global_bindings` was in the same file, made
+    # public in the same round, unused. So a nested `global _census; _census = On()`, a nested import, and a
+    # generator-expression walrus all replaced the alias invisibly: ordinary() returned 101 in the source and
+    # 1 in the twin, with verify() clean. Not a missing case — an existing mechanism applied to one half of
+    # the question it was built for.
     for a in sorted(census_aliases):
-        n = resolver.module_binding_count(a)
-        if n != 1:
-            raise Refused(f"the census alias {a!r} is bound {n} times at module level, so the import does "
-                          f"not establish what the name denotes where the bypass reads it — a census import "
-                          f"followed by a reassignment binds twice, and the transform will not rewrite a "
-                          f"condition whose subject it cannot establish")
+        here = resolver.module_binding_count(a)                 # rule A: this scope's own bindings
+        nested = resolver.nested_global_bindings(a)             # rule C: what nested scopes bind here
+        if here != 1 or nested:
+            where = f"{here} time(s) at module level" + (f" and from nested scope(s) {', '.join(sorted({n for n, _ in nested}))}" if nested else "")
+            raise Refused(f"the census alias {a!r} is bound {where}, so the import does not establish what the "
+                          f"name denotes where the bypass reads it. BOTH readings are asked, the module's own "
+                          f"code object and the nested code objects, because a nested `global {a}` assignment, "
+                          f"a nested import and a comprehension walrus all replace the binding without the "
+                          f"module-level count moving")
     # ROUND 10, research's stage-2 F-S2-2: `bypasses: 0` HAD TWO MEANINGS AND THEY PRINTED IDENTICALLY —
     # a module with genuinely no census bypass, and a module WITH one whose alias could not be established,
     # whose twin therefore RETAINS a live `<name>.enabled()` call. In that region the twin is not an
@@ -380,14 +472,28 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # The module is NOT refused: preserving ordinary behaviour cannot over-refuse, and refusing here would
     # reject an idiom no module in the tree uses. What changes is that the manifest stops reporting it clean.
     # Counted on the ORIGINAL tree, where the resolver can still answer about these nodes.
+    # ROUND 11, research's stage-1 B2 — THEIR OWN ROUND-10 FINDING, FIXED AT ONE OF ITS TWO SITES, AND THE
+    # SITE THEY DID NOT SPECIFY IS THE ONE I IMPLEMENTED. They asked for "does any surviving `<name>.enabled()`
+    # call sit on a module-level name I could not establish" — SHAPE-AGNOSTIC. I wrote it on `ast.If` tests,
+    # and the recogniser is on `ast.If` too, so a census consult in ANY other statement form was invisible to
+    # BOTH. Measured with a perfectly ESTABLISHED alias: `on = _census.enabled()`, `while _census.enabled():`
+    # and a ternary all gave bypasses=0, unresolved=0, and a twin that KEEPS the live call.
+    #
+    # So `bypasses: 0, unresolved: 0` had THREE meanings, not the two round 10 fixed: no bypass; a bypass on
+    # an unestablished alias (reported); and a bypass in an unrecognised STATEMENT SHAPE (silent). This walks
+    # every `<Name>.enabled()` call wherever it stands, and reports the ones the transform did not rewrite.
     unresolved = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.If) and isinstance(node.test, ast.Call) \
-                and isinstance(node.test.func, ast.Attribute) and node.test.func.attr == "enabled" \
-                and isinstance(node.test.func.value, ast.Name):
-            nm = node.test.func.value.id
-            if nm not in census_aliases and resolver.refers_to_module_binding(node.test.func.value, nm):
-                unresolved.append(f"{nm}.enabled() at line {node.lineno}")
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "enabled" \
+                and isinstance(node.func.value, ast.Name):
+            nm = node.func.value.id
+            if not resolver.refers_to_module_binding(node.func.value, nm):
+                continue                                   # a local or a parameter of the same name: not ours
+            if nm not in census_aliases:
+                unresolved.append(f"{nm}.enabled() at line {node.lineno} (name not an established census alias)")
+            elif not _in_recognised_bypass(tree, node):
+                unresolved.append(f"{nm}.enabled() at line {node.lineno} (established alias, statement shape "
+                                  f"the transform does not rewrite)")
     t = Uninstrument(declared, census_aliases, resolver); tree = t.visit(tree); ast.fix_missing_locations(tree)
     # a module that still USES the census surface after the instrumentation is gone (the opt-in switch,
     # `_census.enable(True)` in the package module) keeps its import: the twin's stub census answers it
@@ -446,11 +552,11 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
                 "modules": {}}
     for p in sorted(out.rglob("*.py")):
         rel = str(p.relative_to(out)); before = p.read_bytes()
-        if rel == "census.py":
+        if is_census_module_file(rel):
             p.write_text(STUB); manifest["modules"][rel] = {"sha256_before": hashlib.sha256(before).hexdigest(), "sha256_after": hashlib.sha256(STUB.encode()).hexdigest(), "stub": True}
             continue
         text = before.decode()
-        if "census" not in text and ".fire(" not in text and "declare_site" not in text:
+        if may_skip_uninstrumenting(text):
             manifest["modules"][rel] = {"sha256_before": hashlib.sha256(before).hexdigest(), "sha256_after": hashlib.sha256(before).hexdigest(), "unchanged": True}
             continue
         try:

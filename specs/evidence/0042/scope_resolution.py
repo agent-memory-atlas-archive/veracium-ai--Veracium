@@ -359,6 +359,17 @@ class Resolver:
                 found.append((instruction.opname, line))
         return found
 
+    def nested_global_bindings(self, name: str) -> list[tuple[str, int]]:
+        """Every NESTED code object that binds this module's `name`, as (code object, line) — RULE C's
+        reading, made public beside rule A's.
+
+        ROUND 11: both readings are public now because the CENSUS ALIAS needs the same pair the SITE question
+        has always used, and round 10 gave it only `module_binding_count`. A nested `global X; X = ...`, a
+        nested import and a comprehension walrus all replace a module binding WITHOUT moving the module-level
+        count, which is precisely why the site question reads both. One of these two being public and the
+        other private is how the asymmetry survived a round."""
+        return self._nested_global_bindings(name)
+
     def module_binding_count(self, name: str) -> int:
         """How many times the MODULE's own code object binds `name` — rule A's reading, made public.
 

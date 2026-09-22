@@ -1008,7 +1008,10 @@ def test_r9_a_census_alias_whose_binding_was_replaced_is_refused_not_rewritten()
            "class On:\n    def enabled(self):\n        return True\n\n"
            "_census = On()\n\n"
            "def hot(q):\n    if _census.enabled():\n        q = q + 1\n        return S.fire(q)\n    return q\n")
-    with pytest.raises(un.Refused, match="bound 2 times at module level"):
+    # the message now reports BOTH readings, so it says "time(s)"; matched on the stable clause rather
+    # than the count, because a test pinning an exact refusal string is a carrier that breaks whenever
+    # the message legitimately gains information — which is what happened here.
+    with pytest.raises(un.Refused, match="does not establish what the"):
         un.uninstrument_source(src, "<replaced-alias>")
     # THE POSITIVE CONTROL: the same module WITHOUT the reassignment still transforms, or this test would
     # pass against a transform that refused everything.
@@ -1047,6 +1050,125 @@ def test_r9_a_module_with_no_census_import_keeps_its_own_behaviour():
         return m
     assert run(src, "src_b").ordinary(1) == run(twin, "twin_b").ordinary(1) == 101, \
         "the twin's ordinary() diverges: an object that is not the census had its condition rewritten"
+
+
+def test_every_census_decision_routes_through_one_predicate():
+    """THE ROUND-11 GATE, AND IT IS THE ONLY VERSION OF THIS THAT STOPS.
+
+    Research's stage-1 enumeration found SIX units in `inv7_uninstrument.py` deciding "is this the census?"
+    on THREE different readings, kept in step by hand — and EVERY round of this arc has found two of them
+    disagreeing. Round 10's verdict was two instances at once (alias RECOGNITION narrowed while import
+    REMOVAL was not; rule A applied to the alias while rule C was not), and research then found a third and a
+    fourth. A fifth patch would have bought one more round.
+
+    So the rule is structural: **any unit that tests the literal `"census"` must route through one of the two
+    predicates.** The predicates are the only definitions; everything else asks them. This FAILS the day a
+    seventh consumer appears on a reading of its own, which is the failure mode four rounds of hand-keeping
+    could not produce on demand.
+
+    Derived from the module's AST, never from a list maintained here — the same shape as
+    `test_every_refused_row_names_the_rule_that_caught_it`: derive the set, assert the declared set equals it."""
+    src = (EVIDENCE / "inv7_uninstrument.py").read_text()
+    tree = ast.parse(src)
+    # FOUR predicates, not the two this gate was written with: it found `derive` deciding on a reading of
+    # its own — which file IS the census, and which modules can be skipped unparsed — on its first run,
+    # after a hand enumeration had classified that function as "mention only, decides nothing".
+    PREDICATES = {"is_census_module_import", "is_census_surface_import",
+                  "is_census_module_file", "may_skip_uninstrumenting"}
+    defined = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+    assert PREDICATES <= defined, f"a predicate this gate names does not exist: {sorted(PREDICATES - defined)}"
+
+    def tests_the_literal(fn):
+        for n in ast.walk(fn):
+            if isinstance(n, ast.Compare) and any(isinstance(c, ast.Constant) and c.value == "census"
+                                                  for c in [n.left] + n.comparators):
+                return True
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) \
+                    and n.func.attr in ("endswith", "startswith") \
+                    and any(isinstance(a, ast.Constant) and "census" in str(a.value) for a in n.args):
+                return True
+        return False
+
+    def calls_a_predicate(fn):
+        return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in PREDICATES
+                   for n in ast.walk(fn))
+
+    offenders = []
+    for fn in [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]:
+        if fn.name in PREDICATES:
+            continue
+        if tests_the_literal(fn) and not calls_a_predicate(fn):
+            offenders.append(f"{fn.name}:{fn.lineno}")
+    assert not offenders, (
+        "these units decide about the census on a reading of their own instead of routing through a "
+        f"predicate — the shape that returned this line four rounds running: {offenders}")
+
+    # NEITHER PREDICATE MAY BE DEAD: a definition nothing calls cannot keep anything in step, and a gate
+    # that passes because both are unused would be the unfailable class.
+    for pred in sorted(PREDICATES):
+        callers = [fn.name for fn in ast.walk(tree)
+                   if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef))
+                   and any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == pred
+                           for n in ast.walk(fn))]
+        assert callers, f"{pred} is defined and never called: it keeps nothing in step"
+
+
+def test_r11_the_four_census_identity_findings(tmp_path):
+    """ROUND 10'S TWO VERDICT FINDINGS AND THE TWO RESEARCH FOUND, one test because they are one defect:
+    a decision about the census answered at one of its sites.
+
+    1. NESTED CODE REPLACES THE ALIAS (verdict). `module_binding_count` is RULE A — the module's own code
+       object. A nested `global _census; _census = On()`, a nested import, and a generator-expression walrus
+       all replace the binding without moving that count. The SITE question has always asked BOTH readings;
+       the alias was given one. Measured at the pin: ordinary() 101 in the source, 1 in the twin, verify clean.
+    2. UNRELATED `census` IMPORTS DELETED (verdict). Recognition was narrowed to `from . import census`;
+       removal still stripped any name spelled `census` from any import, so an ordinary module lost its import
+       and the twin raised NameError.
+    3. `from .. import census` — UNRECOGNISED AND REMOVED ANYWAY (research). The removal branch checked
+       `module` and never `level`. The two halves of one decision gave opposite answers about one statement.
+    4. AN ESTABLISHED ALIAS IN AN UNRECOGNISED STATEMENT SHAPE (research). Recogniser and detector both
+       required `ast.If`, so `on = _census.enabled()`, `while ...` and a ternary were invisible to both."""
+    un = _load("inv7_uninstrument_r11", EVIDENCE / "inv7_uninstrument.py")
+    HEAD = ("from . import census as _census\nS = _census.declare_site('s')\n\n"
+            "class On:\n    def enabled(self):\n        return True\n\n")
+    TAIL = ("\ndef ordinary(q):\n    if _census.enabled():\n        return q + 100\n    return q\n")
+
+    # (1) all three nested shapes must now be REFUSED, not silently rewritten
+    for label, mid in [("global assignment", "def swap():\n    global _census\n    _census = On()\n"),
+                       ("nested import",     "def swap():\n    global _census\n    import os as _census\n"),
+                       ("genexp walrus",     "xs = list((_census := On()) for _ in (1,))\n")]:
+        with pytest.raises(un.Refused, match="does not establish what the"):
+            un.uninstrument_source(HEAD + mid + TAIL, f"<{label}>")
+
+    # (2) and (3): an import that is NOT this project's census survives untouched
+    for label, spell, use in [("unrelated module", "from totally_unrelated import census", "census.value()"),
+                              ("test fixture",     "from conftest import census as c",     "c.value()"),
+                              ("wrong level",      "from .. import census as up",          "up.value()")]:
+        src = ("from . import census as _census\n" + spell + "\nS = _census.declare_site('s')\n\n"
+               f"def ordinary():\n    return {use}\n")
+        twin, _ = un.uninstrument_source(src, f"<{label}>")
+        assert spell in twin, f"{label}: an import that is not the census module was deleted"
+
+    # (4) an ESTABLISHED alias in a shape the transform does not rewrite is REPORTED, not silent
+    est = "from . import census as _census\nS = _census.declare_site('s')\n\n"
+    for label, body in [("assignment", "def f(q):\n    on = _census.enabled()\n    return S.fire(q)\n"),
+                        ("while",      "def f(q):\n    while _census.enabled():\n        return S.fire(q)\n    return q\n"),
+                        ("ternary",    "def f(q):\n    return S.fire(q) if _census.enabled() else q\n")]:
+        twin, stats = un.uninstrument_source(est + body, f"<{label}>")
+        assert stats["bypasses"] == 0 and stats["unresolved_bypass_candidates"] == 1, \
+            f"{label}: a live census consult the transform did not rewrite is reported as clean"
+        assert "statement shape" in stats["unresolved_bypass_detail"][0], \
+            f"{label}: the report does not say WHY it went unrewritten"
+
+    # THE POSITIVE CONTROLS, so none of the above can pass by the transform doing nothing:
+    ok = est + "def f(q):\n    if _census.enabled():\n        q = q + 1\n        return S.fire(q)\n    return q\n"
+    twin, stats = un.uninstrument_source(ok, "<control>")
+    assert stats["bypasses"] == 1 and stats["unresolved_bypass_candidates"] == 0 and "if False:" in twin, \
+        "the genuine bypass stopped being rewritten"
+    plain = est + "def f(q):\n    return S.fire(q)\n"
+    _, stats = un.uninstrument_source(plain, "<no-bypass>")
+    assert stats["bypasses"] == 0 and stats["unresolved_bypass_candidates"] == 0, \
+        "a module with no census consult at all is no longer distinguishable from one that has an unread it"
 
 
 def test_r10_bypasses_zero_distinguishes_none_present_from_not_recognisable():
