@@ -1078,40 +1078,62 @@ def test_every_census_decision_routes_through_one_predicate():
     # which calls it. That is the gate doing the job it was written for, one round early: a new consumer of
     # the census literal cannot appear without either becoming a predicate or routing through one.
     PREDICATES = {"is_census_module_import", "is_census_surface_import", "census_names_in_import",
-                  "is_census_module_file", "may_skip_uninstrumenting"}
+                  "is_census_module_file", "may_skip_uninstrumenting",
+                  # ROUND 12 (research's R4a): every word the transform RECOGNISES instrumentation by now has one home
+                  "is_instrumentation_name", "instrumentation_tokens_in",
+                  "_is_fire_call", "_is_consult_call", "_is_enabled_call"}
     defined = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
     assert PREDICATES <= defined, f"a predicate this gate names does not exist: {sorted(PREDICATES - defined)}"
 
-    # ROUND 11 STAGE 2 — THE FIRST FORM OF THIS GATE COULD NOT SEE ROUND 8'S OWN SPELLING. It detected
-    # "tests the literal" by SHAPE: a Constant inside an `ast.Compare`, or `.endswith`/`.startswith`. A
-    # Compare with `In` holds the literal inside a Tuple/Set/List, so `n.id in ("_census", "census")` — the
-    # exact form of the defect this gate exists to stop recurring — walked straight past it. Research ran
-    # nine spellings against it and TWO were seen: a shape list hunting consumers kept in step by a hand list.
+    # ROUND 11 STAGE 2 asked "which units hold the CONSTANT", not "which units test it by a SHAPE" — a shape list
+    # could not see round 8's own `n.id in ("_census", "census")`. That half stands.
     #
-    # So the question changed rather than widened. Do not ask which units TEST the literal. Assert that THE
-    # STRING CONSTANT "census" MAY APPEAR ONLY INSIDE THE PREDICATES: any unit holding it must BE one or CALL
-    # one. One walk, no shape list, and every spelling that writes the literal is covered however compared.
+    # ROUND 12 — THE ROUND-11 VERDICT'S F2: THE GATE WAS NAMED PER DECISION AND CHECKED PER UNIT. Its rule was "a unit
+    # holding the constant must BE a predicate or CALL one", so ANY unit calling a predicate was waived wholesale,
+    # whatever else it decided. Measured at the pin: round 10's too-wide `endswith("census")` re-introduced inside
+    # visit_Module PASSED, because visit_Module calls a predicate — and visit_Module ALREADY held a live second
+    # reading, `a.name != "census"`, the partial-import strip at the heart of the same verdict's F1. The waiver is
+    # DELETED: the vocabulary may appear ONLY inside the predicates.
     #
-    # NAMED BOUNDARY, not chased: a unit deciding about the census WITHOUT ever writing the constant — a name
-    # built by concatenation, a regex held in a variable — is out of reach of this or any static check. Stated
-    # here rather than pursued, as the transform's identity limit is stated in `_is_census_alias`.
-    def holds_the_constant(fn):
-        return any(isinstance(n, ast.Constant) and isinstance(n.value, str) and n.value == "census"
-                   for n in ast.walk(fn))
+    # AND THE VOCABULARY IS DERIVED, NOT WRITTEN (research's R4a). Banning the one word "census" closed one spelling
+    # of the class. Research measured three more pairs of units making one decision with other words — the
+    # instrumentation tokens and the census FILE had ALREADY drifted, site-declaration recognition was identical
+    # today. So the banned set is every string constant held inside a predicate: add a word to a predicate and it
+    # is banned everywhere else, with no edit here. What pins that the derivation has not SHRUNK is behavioural, not
+    # a floor written here: `test_r12_f2_the_gate_refuses_a_second_reading_wherever_it_stands` appends a unit
+    # holding each vocabulary class and asserts it is refused.
+    #
+    # NAMED BOUNDARY, not chased: this file only. Two readings OUTSIDE it are known and queued rather than claimed:
+    # `inv7_harness.export_twin` (research's R4, next round) and `scope_resolution.Resolver.site_names`, a third copy
+    # of site-declaration recognition found while this was written. And a unit deciding without ever writing the
+    # constant (a name built by concatenation) is out of reach of this or any static check.
+    def string_constants(fn):
+        """The string constants a unit HOLDS — its own docstring excluded, because prose ABOUT the vocabulary is not
+        a decision made WITH it (the must-not-fire half of the round-12 battery)."""
+        first = fn.body[0] if fn.body else None
+        doc = first.value if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) \
+            and isinstance(first.value.value, str) else None
+        return {n.value for n in ast.walk(fn)
+                if isinstance(n, ast.Constant) and isinstance(n.value, str) and n is not doc}
 
-    def calls_a_predicate(fn):
-        return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in PREDICATES
-                   for n in ast.walk(fn))
+    units = [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    banned = set()
+    for fn in units:
+        if fn.name in PREDICATES:
+            banned |= string_constants(fn)
+    assert banned, "the predicates hold no string constant at all, so the derived vocabulary is EMPTY and this gate " \
+                   "would pass anything — the unfailable class"
 
     offenders = []
-    for fn in [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]:
+    for fn in units:
         if fn.name in PREDICATES:
             continue
-        if holds_the_constant(fn) and not calls_a_predicate(fn):
-            offenders.append(f"{fn.name}:{fn.lineno}")
+        held = string_constants(fn) & banned
+        if held:
+            offenders.append(f"{fn.name}:{fn.lineno} holds {sorted(held)}")
     assert not offenders, (
-        "these units decide about the census on a reading of their own instead of routing through a "
-        f"predicate — the shape that returned this line four rounds running: {offenders}")
+        "these units make a census or instrumentation decision with a word of the predicates' vocabulary instead of "
+        f"asking the predicate that owns it — a second reading, kept in step by hand: {offenders}")
 
     # NEITHER PREDICATE MAY BE DEAD: a definition nothing calls cannot keep anything in step, and a gate
     # that passes because both are unused would be the unfailable class.
@@ -1275,3 +1297,196 @@ def test_r8_f3_the_census_import_is_restored_for_a_derived_alias():
     assert stats["bypasses"] == 1, "the bypass was not rewritten, so this fixture is not exercising the transform"
     assert "import census as c" in twin, \
         "the census import was not restored for a module whose alias is neither `_census` nor `census`"
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ROUND 12 — the round-11 verdict's two findings, and research's stage-1 read of the fix (R1-R4 blocking; R4a and
+# R7 pulled into this batch on Quentin's word). Every cell below was written BEFORE the fix and run against the
+# pin: each defect cell FAILED there and each control PASSED, which is what makes the controls controls.
+# ------------------------------------------------------------------------------------------------------------------
+
+_R12_CENSUS_SRC = ROOT / "src" / "veracium" / "census.py"
+
+# (cell, module text, expected). expected is ("works", the value f() returns in the SOURCE) or ("refuses", a
+# substring of the refusal). THREE AXES, not one cell (research's R7): the import's SHAPE, whether the census is
+# still LIVE after the instrumentation is gone, and the MODULE CONTEXT a restored import has to be placed into.
+_R12_CELLS = [
+    ("control-module-full-census-used-after",
+     "from . import census\nS = census.declare_site('s')\n\ndef f():\n    census.enable(True)\n    return census.enabled()\n",
+     ("works", True)),
+    ("F1-module-mixed-census-used-after",
+     "from . import census, other\nS = census.declare_site('s')\n\ndef f():\n    census.enable(True)\n    return other.X\n",
+     ("works", 7)),
+    ("control-module-mixed-census-not-used-after",
+     "from . import census, other\nS = census.declare_site('s')\n\ndef f():\n    return other.X\n",
+     ("works", 7)),
+    ("control-surface-pure-declare-site-the-real-tree-shape",
+     "from .census import declare_site\nS = declare_site('s')\n\ndef f():\n    return 1\n",
+     ("works", 1)),
+    ("F1-surface-mixed-extra-name-live",
+     "from .census import declare_site, enabled\nS = declare_site('s')\n\ndef f():\n    return enabled()\n",
+     ("works", False)),
+    ("F1-surface-no-declare-site-name-live",
+     "from .census import enabled\n\ndef f():\n    return enabled()\n",
+     ("works", False)),
+    ("boundary-surface-name-the-stub-does-not-define",
+     "from .census import declare_site, Site\nS = declare_site('s')\n\ndef f():\n    return 1\n",
+     ("refuses", "STUB")),
+    ("boundary-declare-site-imported-under-another-name",
+     "from .census import declare_site as ds\nS = ds('s')\n\ndef f():\n    return 1\n",
+     ("refuses", "under another name")),
+    ("R2-site-passed-as-a-value",
+     "from . import census as _census\nS = _census.declare_site('s')\n\ndef f():\n    return register(S)\n\n"
+     "def register(s):\n    return s\n",
+     ("refuses", "outside fire()/consult()")),
+    ("R2-site-in-a-module-level-registry",
+     "from . import census as _census\nS = _census.declare_site('s')\nREGISTRY = [S]\n\ndef f():\n    return 1\n",
+     ("refuses", "outside fire()/consult()")),
+    ("R3-restored-import-with-a-docstring",
+     '"""Doc."""\nfrom . import census\nS = census.declare_site(\'s\')\n\ndef f():\n    census.enable(True)\n'
+     '    return census.enabled()\n',
+     ("works", True)),
+    ("R3-restored-import-with-a-docstring-and-future",
+     '"""Doc."""\nfrom __future__ import annotations\nfrom . import census\nS = census.declare_site(\'s\')\n\n'
+     'def f():\n    census.enable(True)\n    return census.enabled()\n',
+     ("works", True)),
+]
+
+
+@pytest.mark.parametrize("cell,text,expected", _R12_CELLS, ids=[c[0] for c in _R12_CELLS])
+def test_r12_f1_every_census_import_shape_keeps_its_bindings_or_refuses(cell, text, expected, tmp_path, monkeypatch):
+    """ROUND 11'S F1 — "Mixed and surface imports can lose live bindings, causing NameError while verify() reports
+    clean" — AS A MATRIX, because round 11 fixed the ONE cell the previous verdict named (the partial module
+    import) and never enumerated the rest. Reproduced at the pin: THREE broken cells where the finding names two
+    (the third is a surface import with no `declare_site` at all), each NameError with verify() CLEAN.
+
+    Research's stage-1 read added the other axes, each measured before it was written down: a declared site LOADED
+    as a value (R2 — the name is assignment-bound, not import-bound, so an import-scoped check misses it), and a
+    restored import placed ahead of the docstring and `from __future__` (R3 — __doc__ silently lost, or a
+    SyntaxError that `ast.parse` accepts and `compile()` refuses; ONE appended line from live on schema.py).
+
+    A `works` cell must derive, verify CLEAN, import, compute what the source computes, and keep its docstring.
+    A `refuses` cell must be refused with the boundary named — never a twin that dies at import."""
+    un = _load("inv7_uninstrument_r12_matrix", EVIDENCE / "inv7_uninstrument.py")
+    kind, want = expected
+    if kind == "refuses":
+        with pytest.raises(un.Refused, match=re.escape(want)):
+            un.uninstrument_source(text, f"<{cell}>")
+        return
+    slug = re.sub(r"\W", "_", cell)
+    src = tmp_path / f"r12src_{slug}"; src.mkdir()
+    (src / "__init__.py").write_text(""); (src / "other.py").write_text("X = 7\n")
+    (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
+    (src / "mod.py").write_text(text)
+    twin = f"r12twin_{slug}"; out = tmp_path / twin
+    un.derive(src, out)
+    problems = un.verify(out, src)
+    assert problems == [], f"{cell}: verify() is not clean on this derivation: {problems}"
+    monkeypatch.syspath_prepend(str(tmp_path))
+    try:
+        mod = importlib.import_module(f"{twin}.mod")
+        got, doc = mod.f(), mod.__doc__
+    finally:
+        for k in [k for k in sys.modules if k == twin or k.startswith(twin + ".")]:
+            del sys.modules[k]
+    assert got == want, f"{cell}: the twin computes {got!r} where the source computes {want!r}"
+    assert doc == ast.get_docstring(ast.parse(text)), f"{cell}: the twin's docstring is {doc!r}"
+
+
+def test_r12_r4_one_reading_of_which_file_is_the_census(tmp_path):
+    """RESEARCH'S STAGE-1 R4: "is this file the census module?" was decided THREE ways — `is_census_module_file`
+    (top level only), verify() (`rel.name`, ANY depth) and the harness (legacy branch, outside the gate's file). So
+    a subpackage `census.py` was uninstrumented normally by derive() and then flagged by verify() as "not the twin
+    STUB": loud, latent, and two readings of one question. verify() now asks the predicate."""
+    un = _load("inv7_uninstrument_r12_r4", EVIDENCE / "inv7_uninstrument.py")
+    src = tmp_path / "r12src_subcensus"; (src / "sub").mkdir(parents=True)
+    (src / "__init__.py").write_text(""); (src / "sub" / "__init__.py").write_text("")
+    (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
+    (src / "sub" / "census.py").write_text("X = 1\n")          # an ordinary module that is merely NAMED census.py
+    (src / "mod.py").write_text("from .census import declare_site\nS = declare_site('s')\n\ndef f():\n    return 1\n")
+    out = tmp_path / "r12twin_subcensus"; un.derive(src, out)
+    assert (out / "sub" / "census.py").read_text() == "X = 1\n", "derive() treated the subpackage file as the census"
+    assert un.verify(out, src) == [], "verify() and derive() still disagree about which file is the census"
+
+
+@pytest.mark.parametrize("mutant,helper,cell", [
+    ("D1 reverted: the surface branch drops the WHOLE statement again", "is_instrumentation_name",
+     "from .census import declare_site, enabled\nS = declare_site('s')\n\ndef f():\n    return enabled()\n"),
+    ("R3 reverted: a restored import is inserted at body[0] again", "_restoration_index",
+     '"""Doc."""\nfrom __future__ import annotations\nfrom . import census\nS = census.declare_site(\'s\')\n\n'
+     'def f():\n    census.enable(True)\n    return census.enabled()\n'),
+], ids=["lost-binding", "does-not-compile"])
+def test_r12_verify_catches_a_transform_defect_it_did_not_write(mutant, helper, cell, tmp_path, monkeypatch):
+    """THE E HALF OF F1, AND THE ONE THAT MATTERS: verify() re-derives the twin with the SAME transform and compares,
+    so a transform defect reproduces identically and reads clean. We learned exactly this in round 9 (F3) and
+    answered it with one case-specific behaviour test. This asserts the general remedy: verify() now carries two
+    checks of a DIFFERENT KIND — every emitted module must COMPILE, and no name the source binds at module level may
+    be read by the twin and bound nowhere in it — and they must catch the transform's OWN defects.
+
+    THE SUPERSEDED IMPLEMENTATION IS THE MUTANT. Each case patches ONE helper back to the round-11 behaviour, so the
+    transform AND verify()'s re-derivation both run the defective code — exactly the situation in which the
+    structure comparison cannot see anything. At the pin the helper does not exist and the pin's transform IS the
+    defective one, so the same case runs there and verify() reports clean: that is the RED."""
+    un = _load("inv7_uninstrument_r12_verify", EVIDENCE / "inv7_uninstrument.py")
+    if helper == "is_instrumentation_name":
+        monkeypatch.setattr(un, helper, lambda name: True, raising=False)       # every surface name stripped
+    else:
+        monkeypatch.setattr(un, helper, lambda body: 0, raising=False)          # restored import goes first
+    src = tmp_path / "r12src_mut"; src.mkdir()
+    (src / "__init__.py").write_text(""); (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
+    (src / "mod.py").write_text(cell)
+    out = tmp_path / "r12twin_mut"
+    un.derive(src, out)
+    problems = un.verify(out, src)
+    assert problems, f"{mutant}: the twin is broken and verify() reports it CLEAN — it can only see what it re-derives"
+
+
+def test_r12_f2_the_gate_refuses_a_second_reading_wherever_it_stands(tmp_path, monkeypatch):
+    """ROUND 11'S F2 — "The enumeration gate permits independent decisions inside functions that call a predicate."
+    The gate is NAMED per decision and CHECKED per unit: any unit calling a predicate was waived wholesale. Measured
+    at the pin: a mutant re-introducing round 10's too-wide `endswith("census")` inside visit_Module PASSED, because
+    visit_Module calls a predicate; the same decision in a unit that calls none was caught.
+
+    AND RESEARCH'S R4a: banning the one literal "census" closes one spelling of the class, not the class. Their
+    measurement found the same decision made twice with OTHER vocabulary — the instrumentation tokens (R1, already
+    drifted), the census file (R4, already drifted), site-declaration recognition (identical today). So the banned
+    set is DERIVED from the constants inside the predicates, and every mutant below uses a different word of it.
+
+    Runs the REAL gate, against mutated copies of the evidence directory. Both halves are asserted: the mutants
+    must be refused, AND a docstring that merely MENTIONS the vocabulary must not be — a gate that refuses prose
+    would be the narrow-gate defect in the other direction."""
+    real = (EVIDENCE / "inv7_uninstrument.py").read_text()
+    anchor = "            if is_census_surface_import(stmt):\n"
+    assert real.count(anchor) == 1, "the visit_Module anchor this mutant rewrites has moved"
+    CASES = [
+        ("unmutated", real, True),
+        ("F2: round 10's endswith() re-introduced INSIDE visit_Module, which calls predicates",
+         real.replace(anchor, "            if is_census_surface_import(stmt) or (isinstance(stmt, ast.ImportFrom) "
+                              "and (stmt.module or '').endswith(\"census\")):\n"), False),
+        ("R4a: a census-FILE reading of its own", real + "\n\ndef _m_file(rel):\n    return rel.name == \"census.py\"\n", False),
+        ("R4a: a site-DECLARATION reading of its own",
+         real + "\n\ndef _m_decl(call):\n    return getattr(call.func, \"id\", \"\") == \"declare_site\"\n", False),
+        ("R4a: an instrumentation-TOKEN reading of its own (R1's class)",
+         real + "\n\ndef _m_tokens(text):\n    return \".fire(\" in text\n", False),
+        ("control: the literal in a unit that calls no predicate",
+         real + "\n\ndef _m_plain(stmt):\n    return stmt.module == \"census\"\n", False),
+        ("must NOT fire: a docstring that only MENTIONS the vocabulary",
+         real + "\n\ndef _m_prose(x):\n    \"\"\"census, census.py, declare_site and .fire( are named here in prose.\"\"\"\n"
+                "    return x\n", True),
+    ]
+    gate = globals()["test_every_census_decision_routes_through_one_predicate"]
+    wrong = []
+    for label, text, should_pass in CASES:
+        d = tmp_path / re.sub(r"\W", "_", label)[:60]; d.mkdir()
+        for q in EVIDENCE.glob("*.py"):
+            (d / q.name).write_text(q.read_text())
+        (d / "inv7_uninstrument.py").write_text(text)
+        monkeypatch.setitem(globals(), "EVIDENCE", d)
+        try:
+            gate(); passed = True
+        except AssertionError:
+            passed = False
+        if passed != should_pass:
+            wrong.append(f"{label}: gate {'PASSED' if passed else 'REFUSED'}, should have "
+                         f"{'passed' if should_pass else 'refused'}")
+    assert not wrong, "the enumeration gate misjudged:\n  " + "\n  ".join(wrong)
