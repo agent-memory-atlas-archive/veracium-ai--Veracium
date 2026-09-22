@@ -193,6 +193,13 @@ class Uninstrument(ast.NodeTransformer):
                 self.imports += 1; continue                      # `from .census import declare_site`: instrumentation only
             if is_census_module_import(stmt):
                 self.imports += 1; self.removed_imports.append(stmt); continue   # restored if the module still uses the surface
+            # PARTIAL: the statement binds the census AND other names. Strip the census names and KEEP the
+            # statement, so its neighbours survive. Round 11's first form had no such branch and deleted the
+            # lot (research's stage-2 B-S2-2).
+            partial = census_names_in_import(stmt)
+            if partial:
+                stmt.names = [a for a in stmt.names if a.name != "census"]
+                self.imports += 1
             kept.append(stmt)
         node.body = kept
         self.generic_visit(node)
@@ -359,9 +366,27 @@ def is_census_module_import(stmt) -> bool:
     LEVEL AND MODULE BOTH CHECKED. `from .. import census` is a DIFFERENT package's census and is not this
     one; `from totally_unrelated import census` is not a census at all. Round 10 narrowed this in
     `declared_names` and left `visit_Module` on the broad test, which is how recognition and removal came to
-    give opposite answers about one statement."""
-    return (isinstance(stmt, ast.ImportFrom) and stmt.level == 1 and stmt.module is None
-            and any(a.name == "census" for a in stmt.names))
+    give opposite answers about one statement.
+
+    ROUND 11 STAGE 2: TRUE ONLY WHEN **EVERY** NAME IS THE CENSUS, because the caller DELETES the whole
+    statement. `from . import census as _census, helpers` used to satisfy this, so the statement went and
+    `helpers` went with it while the twin still called `helpers.tweak` — a NameError, which is the round-10
+    verdict's finding 2 through a route the reviewer did not name. A statement binding the census AND
+    something else has its census names stripped and is KEPT; `census_names_in_import` is what both callers
+    ask, so the whole-statement case and the partial case cannot drift apart."""
+    names = census_names_in_import(stmt)
+    return bool(names) and len(names) == len(stmt.names)
+
+
+def census_names_in_import(stmt) -> list:
+    """The `census` aliases a sibling `from . import ...` binds — [] if it is not one.
+
+    ONE DERIVATION for both the whole-statement removal and the partial strip. Round 11's first form asked
+    `any(...)` in the predicate and had no partial branch at all, so a multi-name import was all-or-nothing
+    and the answer was ALL."""
+    if not (isinstance(stmt, ast.ImportFrom) and stmt.level == 1 and stmt.module is None):
+        return []
+    return [a for a in stmt.names if a.name == "census"]
 
 
 def is_census_surface_import(stmt) -> bool:
@@ -404,10 +429,8 @@ def declared_names(tree: ast.Module) -> tuple[set[str], set[str]]:
         # correctly not module-level). `from .. import census` is a DIFFERENT package's census and is no
         # longer collected. Measured before narrowing: zero modules in src/veracium use any other spelling,
         # so this over-refuses nothing that exists.
-        if is_census_module_import(stmt):
-            for a in stmt.names:
-                if a.name == "census":
-                    aliases.add(a.asname or "census")
+        for a in census_names_in_import(stmt):
+            aliases.add(a.asname or "census")
     return declared, aliases
 
 

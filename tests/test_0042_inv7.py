@@ -1073,21 +1073,31 @@ def test_every_census_decision_routes_through_one_predicate():
     # FOUR predicates, not the two this gate was written with: it found `derive` deciding on a reading of
     # its own — which file IS the census, and which modules can be skipped unparsed — on its first run,
     # after a hand enumeration had classified that function as "mention only, decides nothing".
-    PREDICATES = {"is_census_module_import", "is_census_surface_import",
+    # FIVE predicates. The fifth, `census_names_in_import`, was added while fixing research's stage-2
+    # multi-name-import finding — and THIS GATE CAUGHT IT THE MOMENT IT EXISTED, along with `declared_names`
+    # which calls it. That is the gate doing the job it was written for, one round early: a new consumer of
+    # the census literal cannot appear without either becoming a predicate or routing through one.
+    PREDICATES = {"is_census_module_import", "is_census_surface_import", "census_names_in_import",
                   "is_census_module_file", "may_skip_uninstrumenting"}
     defined = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
     assert PREDICATES <= defined, f"a predicate this gate names does not exist: {sorted(PREDICATES - defined)}"
 
-    def tests_the_literal(fn):
-        for n in ast.walk(fn):
-            if isinstance(n, ast.Compare) and any(isinstance(c, ast.Constant) and c.value == "census"
-                                                  for c in [n.left] + n.comparators):
-                return True
-            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) \
-                    and n.func.attr in ("endswith", "startswith") \
-                    and any(isinstance(a, ast.Constant) and "census" in str(a.value) for a in n.args):
-                return True
-        return False
+    # ROUND 11 STAGE 2 — THE FIRST FORM OF THIS GATE COULD NOT SEE ROUND 8'S OWN SPELLING. It detected
+    # "tests the literal" by SHAPE: a Constant inside an `ast.Compare`, or `.endswith`/`.startswith`. A
+    # Compare with `In` holds the literal inside a Tuple/Set/List, so `n.id in ("_census", "census")` — the
+    # exact form of the defect this gate exists to stop recurring — walked straight past it. Research ran
+    # nine spellings against it and TWO were seen: a shape list hunting consumers kept in step by a hand list.
+    #
+    # So the question changed rather than widened. Do not ask which units TEST the literal. Assert that THE
+    # STRING CONSTANT "census" MAY APPEAR ONLY INSIDE THE PREDICATES: any unit holding it must BE one or CALL
+    # one. One walk, no shape list, and every spelling that writes the literal is covered however compared.
+    #
+    # NAMED BOUNDARY, not chased: a unit deciding about the census WITHOUT ever writing the constant — a name
+    # built by concatenation, a regex held in a variable — is out of reach of this or any static check. Stated
+    # here rather than pursued, as the transform's identity limit is stated in `_is_census_alias`.
+    def holds_the_constant(fn):
+        return any(isinstance(n, ast.Constant) and isinstance(n.value, str) and n.value == "census"
+                   for n in ast.walk(fn))
 
     def calls_a_predicate(fn):
         return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in PREDICATES
@@ -1097,7 +1107,7 @@ def test_every_census_decision_routes_through_one_predicate():
     for fn in [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]:
         if fn.name in PREDICATES:
             continue
-        if tests_the_literal(fn) and not calls_a_predicate(fn):
+        if holds_the_constant(fn) and not calls_a_predicate(fn):
             offenders.append(f"{fn.name}:{fn.lineno}")
     assert not offenders, (
         "these units decide about the census on a reading of their own instead of routing through a "
