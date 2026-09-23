@@ -707,8 +707,11 @@ def cross_module_references(root: pathlib.Path, pkg: str | None = None) -> list:
             return None
 
         def add(dotted, name, line, form):
+            # NO SELF-EXEMPTION (round 13, research's pre-seal D1): a module referring to its OWN module object — `import
+            # pkg.b as me`, `from . import b as me`, `import_module('pkg.b')` inside b — reaches its own site the same way
+            # a sibling would, and the twin removes it the same way. Exempting `tfile == path` made those silent.
             tfile = _module_file(root, dotted)
-            if tfile is not None and tfile != path:
+            if tfile is not None:
                 refs.append((path, line, tfile, name, form))
 
         parent = {}
@@ -739,7 +742,7 @@ def cross_module_references(root: pathlib.Path, pkg: str | None = None) -> list:
                     pass                                   # `m = import_module("pkg.a")`: the binding itself
                 else:
                     tfile = _module_file(root, dotted)
-                    if tfile is not None and tfile != path:
+                    if tfile is not None:
                         refs.append((path, getattr(node, "lineno", 0), tfile, None,
                                      "escape: a package module object used other than as a static attribute read"))
             # DYNAMIC ACQUISITION, anywhere in the package (research's (b)): no static reading can say which module
@@ -862,8 +865,9 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # disclosed silent limits as blocking. No static reading can say which name such a form reaches, so a site module
     # holding one is REFUSED. Keyed on the forms that reach THE MODULE's namespace — research's census at round 13
     # found 0 of them in the 28 site-declaring modules, and 27 `getattr` calls, all on ordinary objects: a refusal
-    # keyed on getattr would have refused 8 real modules. NAMED LIMIT: `getattr(<this module>, "S")` via an imported
-    # self-reference is not recognised; 0 in the tree.
+    # keyed on getattr would have refused 8 real modules. A module reaching its OWN namespace through an imported
+    # self-reference (`import pkg.b as me; getattr(me, "S")`) is not this rule's: `cross_module_references` lists it like
+    # a sibling's reference (round 13, research's pre-seal D1 — this comment first named it as a limit, and it was silent).
     # ROUND 13, research's stage-2 B2 — KEYED ON BINDING, NOT SPELLING. The first form refused a CALL spelled
     # `globals()` and an attribute spelled `sys.modules`, and let three aliases through silently: `_g = globals;
     # _g()['S']`, `import sys as _s; _s.modules[...]`, `from sys import modules`. Now ANY load of the four builtins

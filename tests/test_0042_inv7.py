@@ -1917,3 +1917,32 @@ def test_r13_p1_an_escaping_module_whose_closure_holds_no_site_is_accepted(tmp_p
     un.derive(src, out)
     assert un.verify(out, src) == []
     assert _r13_run_b(out.parent).stdout.strip() == "True"
+
+
+_R13_D1_SELF = [
+    ("import pkg.b as me; getattr",  "import vpkg.b as me\n", "def f():\n    return getattr(me, 'S') is not None\n"),
+    ("from . import b as me; me.S",  "from . import b as me\n", "def f():\n    return me.S is not None\n"),
+    ("import_module of itself",      "import importlib\n", "def f():\n    return importlib.import_module('vpkg.b').S is not None\n"),
+]
+
+
+@pytest.mark.parametrize("cell,head,body", _R13_D1_SELF, ids=[c for c, _, _ in _R13_D1_SELF])
+def test_r13_d1_a_module_reaching_its_own_site_through_itself_is_refused_and_verify_sees_it(cell, head, body, tmp_path,
+                                                                                           monkeypatch):
+    """RESEARCH'S PRE-SEAL D1: the scanner exempted a module's references to its OWN file, and the transform's source
+    named that as a limit — "`getattr(<this module>, "S")` via an imported self-reference is not recognised" — while
+    the README said nothing open was silent. It was silent in all three spellings. derive() refuses; with that refusal
+    disabled, verify() ALONE reports the reference, and the twin fails where the source runs."""
+    un = _load("inv7_uninstrument_r13_d1", EVIDENCE / "inv7_uninstrument.py")
+    slug = re.sub(r"\W", "_", cell)
+    src = tmp_path / slug / "vpkg"; src.mkdir(parents=True)
+    (src / "__init__.py").write_text(""); (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
+    (src / "b.py").write_text(head + "from . import census as _census\nS = _census.declare_site('b.s')\n\n\n"
+                              "def g(v):\n    return S.fire(v)\n\n\n" + body)
+    with pytest.raises(un.Refused, match=r"declared site 'S' from b\.py"):
+        un.derive(src, tmp_path / slug / "twin" / "vpkg")
+    monkeypatch.setattr(un, "_refuse_cross_module_sites", lambda s: None)
+    out = tmp_path / slug / "twin" / "vpkg"
+    un.derive(src, out)
+    assert any("bound there in the source and not in the twin" in p for p in un.verify(out, src)), cell
+    assert _r13_run_b(src.parent).returncode == 0 and _r13_run_b(out.parent).returncode != 0
