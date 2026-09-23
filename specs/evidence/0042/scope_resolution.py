@@ -316,6 +316,23 @@ class Resolver:
         not the rest of the comprehension has a block of its own. Handling that only on the inlined path is what
         CI's 3.10 and 3.11 jobs caught, on the one case of the matrix that asserts it (the matrix was written for
         exactly this and found it on the versions this machine cannot run)."""
+        # ROUND 12, research's stage-2c S2c-2 — WHERE SYMTABLE IS NOT THE INTERPRETER, REFUSE. An INLINABLE comprehension
+        # in this comprehension's FIRST iterable, inside a function or class block: 3.13's symtable calls a variable
+        # of it LOCAL where the compiler resolves it to the module — measured by EXECUTING it, which returned the
+        # module's value on 3.10, 3.11 and 3.13 while 3.13's table said local; through the transform a census read
+        # there stayed live with unresolved=0. On 3.12.3 the source itself raises UnboundLocalError. This resolver's
+        # premise is that symtable IS the interpreter's analysis; here, on 3.12+, it is not, so there is no answer
+        # to give. 3.10/3.11 agree with their compiler and resolve correctly: the refusal is loud where it fires and
+        # the answer right where it does not, which is not round 8's SILENT version divergence. Module level is
+        # exempt because `refers_to_module_binding` answers module there without consulting the table. Refused on
+        # Quentin's word; research measured it over-refuses nothing in the tree.
+        if sys.version_info >= (3, 12) and block.get_type() != "module" and child.generators \
+                and any(isinstance(n, _INLINABLE) for n in ast.walk(child.generators[0].iter)):
+            raise UnresolvableScope(
+                f"line {child.lineno}: an inlinable comprehension sits in this comprehension's first iterable, inside a "
+                f"{block.get_type()} block — on Python 3.12+ the symtable's reading of that shape disagrees with the "
+                f"compiler's (3.13 calls a comprehension variable local where the compiled code reads the module), so "
+                f"no scope answer here can be trusted; refused rather than guessed (round 12, S2c-2)")
         # ROUND 12, S2b-1 — ORDER: the FIRST ITERABLE is assigned BEFORE this comprehension's block is taken from the
         # queue. The interpreter evaluates it in the enclosing scope and creates any block nested in it FIRST; this
         # handler took its own block first, so `list(ooo for ooo in (iii for iii in xs))` handed each genexp the

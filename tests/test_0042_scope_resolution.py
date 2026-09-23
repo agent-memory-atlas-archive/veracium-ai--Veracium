@@ -1201,3 +1201,40 @@ def test_r12_s2b_1_a_header_part_beside_its_own_block_gets_its_own_table(cell, b
         if block.get_type() != "module":
             others = set().union(*(_own_names(m) for m in scopes if m is not n))
             assert not (held & others), f"{cell}: the scope binding {sorted(own)} got a table holding {sorted(held & others)}"
+
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ROUND 12 STAGE 2c, research's S2c-2 — CPython 3.13's SYMTABLE DISAGREES WITH ITS OWN COMPILER.
+# ------------------------------------------------------------------------------------------------------------------
+
+def test_r12_s2c_2_an_inlinable_comprehension_in_a_first_iterable_is_refused_on_3_12_plus():
+    """RESEARCH'S S2c-2, measured by executing it. `lambda p0: [u5 for t4 in {0 for t5 in [0] for u5 in [1]}]` RETURNS
+    ['MODULE'] on 3.10, 3.11 and 3.13 — the name is the module's — while 3.13's symtable says `u5` is LOCAL to the
+    lambda. This resolver's premise is that symtable IS the interpreter's analysis, and on this shape, on this version,
+    it is not; through the transform a census read there stayed live in the twin with unresolved=0. On 3.12.3 the
+    source ITSELF raises UnboundLocalError (a CPython inlining bug on that version).
+
+    REFUSED ON 3.12+, on Quentin's word — the resolver cannot answer where its source of truth is wrong, and refusing
+    is its principle. NOT refused on 3.10/3.11, where symtable and the compiler agree and the answer is right: the
+    refusal is loud where it fires and the answer correct where it does not, so this is not round 8's SILENT
+    version divergence. Only inside a function or class block: at module level `block_of` answers module outright."""
+    shape = "def f(q):\n    return [q for t in {0 for u in range(1)}]\n"
+    if sys.version_info >= (3, 12):
+        with pytest.raises(sr.UnresolvableScope, match="symtable"):
+            sr.Resolver(shape, "<s2c2>")
+    else:
+        sr.Resolver(shape, "<s2c2>")                                   # 3.10/3.11: symtable is right, and resolves
+
+
+@pytest.mark.parametrize("cell,body", [
+    ("the-same-shape-at-module-level", "x = [0 for t in {0 for u in range(1)}]\n"),
+    ("a-genexp-not-inlinable-in-a-first-iterable-the-resolve-py-445-shape",
+     "def f(r):\n    return list(o for o in (i for i in r))\n"),
+    ("an-inlinable-comprehension-in-a-LATER-iterable", "def f(r):\n    return [0 for t in r for u in [v for v in r]]\n"),
+], ids=lambda v: v if "\n" not in v else "")
+def test_r12_s2c_2_the_refusal_does_not_reach_shapes_symtable_answers_rightly(cell, body):
+    """THE ACCEPTANCE HALF: the refusal is the one shape research measured wrong — an INLINABLE comprehension in a
+    comprehension's FIRST iterable, inside a function — and none of its neighbours. asof/resolve.py:445 is a genexp in a
+    genexp's first iterable; a refusal reaching it would refuse real product code on 3.12+."""
+    sr.Resolver(body, f"<{cell}>")

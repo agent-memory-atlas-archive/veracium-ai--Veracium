@@ -1615,3 +1615,22 @@ def test_r12_s2b_2_a_default_naming_a_comprehension_target_is_not_the_site():
     un = _load("inv7_uninstrument_r12_s2b2", EVIDENCE / "inv7_uninstrument.py")
     un.uninstrument_source("from . import census as _census\nS = _census.declare_site('s')\n\n"
                            "x = [(lambda y=S: y) for S in range(3)]\n", "<s2b2>")
+
+
+
+def test_r12_s2c_2_the_silent_route_is_refused_on_3_12_plus_and_reported_below():
+    """RESEARCH'S S2c-2, END TO END. On 3.13 a census read in an inlinable comprehension placed in another
+    comprehension's first iterable stayed LIVE in the twin with unresolved=0, because 3.13's symtable calls the
+    comprehension variable local where the compiler resolves it to the module. On 3.12+ the resolver now refuses the
+    shape, so the refusal reaches the caller instead of a clean-looking twin; on 3.10/3.11 symtable is right, the read
+    resolves to the module's alias, and the live call is REPORTED."""
+    un = _load("inv7_uninstrument_r12_s2c2", EVIDENCE / "inv7_uninstrument.py")
+    src = ("from . import census as _census\nS = _census.declare_site('s')\n\n"
+           "def f(q):\n    return [_census.enabled() for t in {0 for _census in range(1)}] and S.fire(q)\n")
+    if sys.version_info >= (3, 12):
+        with pytest.raises(un._scope.UnresolvableScope, match="symtable"):
+            un.uninstrument_source(src, "<s2c2>")
+    else:
+        out, stats = un.uninstrument_source(src, "<s2c2>")
+        assert "_census.enabled()" in out and stats["unresolved_bypass_candidates"] >= 1, \
+            "on 3.10/3.11 the read resolves to the module's alias, and the live call must be reported"
