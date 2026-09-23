@@ -1921,6 +1921,249 @@ def test_r14_the_stand_in_is_faithful_to_identity_and_names_where_it_is_not(tmp_
     assert r.stdout.split() == ["0", "0", "0", "reloaded"], r.stdout + r.stderr   # the named non-faithfulness
 
 
+# ---- round 14, research's stage 2: K1 (the stand-in's surface) and K2 (every use counts) --------------------------
+# The superseded stand-in (633697a) is kept, verbatim, as the NEGATIVE CONTROL each check below must refuse.
+_R14_V1_STUB = (
+    '_ENABLED = False\n'
+    '_INERT_CALLS = 0\n'
+    '\n'
+    'class _InertSite:\n'
+    '    consulted = 0\n'
+    '    fired = 0\n'
+    '    errors = 0\n'
+    '\n'
+    '    def __init__(self, site_id, declines=None):\n'
+    '        self.site_id = site_id\n'
+    '        self._declines = declines\n'
+    '\n'
+    '    def _use(self):\n'
+    '        global _INERT_CALLS\n'
+    '        _INERT_CALLS += 1\n'
+    '\n'
+    '    def consult(self):\n'
+    '        self._use()\n'
+    '        return self\n'
+    '\n'
+    '    def __enter__(self):\n'
+    '        return self\n'
+    '\n'
+    '    def __exit__(self, *exc):\n'
+    '        return False\n'
+    '\n'
+    '    def fire(self, decision=None, *args, **kwargs):\n'
+    '        self._use()\n'
+    '        return decision\n'
+    '\n'
+    'def declare_site(site_id, declines=None):\n'
+    '    return _InertSite(site_id, declines)\n'
+    '\n'
+    'def inert_calls():\n'
+    '    return _INERT_CALLS\n'
+    '\n'
+    'def enable(on=True):\n'
+    '    global _ENABLED; _ENABLED = bool(on)\n'
+    '\n'
+    'def enabled():\n'
+    '    return _ENABLED\n'
+    '\n'
+    'def registry():\n'
+    '    return ()\n'
+    '\n'
+    'def counters():\n'
+    '    return {}\n'
+    '\n'
+    'def trace(on=True):\n'
+    '    pass\n'
+    '\n'
+    'def trace_snapshot():\n'
+    '    return []\n'
+    '\n'
+    'def trace_reset():\n'
+    '    pass\n'
+    '\n'
+    'def reset_counters():\n'
+    '    pass\n'
+)
+
+
+def _r14_stub_module(text):
+    import types
+    mod = types.ModuleType("r14_stub")
+    exec(compile(text, "<r14 stub>", "exec"), mod.__dict__)
+    return mod
+
+
+def _r14_params(fn):
+    import inspect
+    return [(p.name, p.kind, p.default) for p in inspect.signature(fn).parameters.values()]
+
+
+def _r14_surface_problems(stub):
+    """K1, derived from the REAL class: every name `dir(Site)` lists is answered, the slots are Site's own, every
+    method Site defines has Site's parameters (so a wrong-arity call raises in both), and on a census that is OFF each
+    method returns what Site's returns."""
+    import inspect
+    import veracium.census as C
+    assert C.enabled() is False                            # the premise the value comparisons stand on
+    I = stub._InertSite
+    problems = [f"missing {n}" for n in sorted(set(dir(C.Site)) - set(dir(I)))]
+    if getattr(I, "__slots__", None) != C.Site.__slots__:
+        problems.append(f"slots {getattr(I, '__slots__', None)!r} != {C.Site.__slots__!r}")
+    for name, fn in vars(C.Site).items():
+        if inspect.isfunction(fn) and inspect.isfunction(vars(I).get(name)) and _r14_params(fn) != _r14_params(vars(I)[name]):
+            problems.append(f"{name}{inspect.signature(vars(I)[name])} != {name}{inspect.signature(fn)}")
+    for declines in (None, 0, (lambda v: v == 3)):
+        real, inert = C.Site("r14.k1", declines), stub.declare_site("r14.k1", declines)
+        for name in C.Site.__slots__:
+            try:
+                r, i = getattr(real, name), getattr(inert, name)
+            except AttributeError:
+                continue                                   # already reported as missing
+            if (type(r).__name__, r if name != "_lock" else None) != (type(i).__name__, i if name != "_lock" else None):
+                problems.append(f"{name}: {r!r} != {i!r}")
+        calls = [("counters", ()), ("failure_kinds", ()), ("fire", (7,)), ("fire", (None, "lbl")), ("fire", (3,), {"declined": True})]
+        calls += [("declined", (v,)) for v in (None, False, 0, 3, "x")] + [("declined", (ValueError("x"),))]
+        for name, args, *kw in calls:
+            kw = kw[0] if kw else {}
+            try:
+                r, i = getattr(real, name)(*args, **kw), getattr(inert, name)(*args, **kw)
+            except (AttributeError, TypeError) as e:
+                problems.append(f"{name}{args}: {type(e).__name__}"); continue
+            if r != i:
+                problems.append(f"{name}{args} with declines={declines!r}: Site {r!r}, stand-in {i!r}")
+        try:
+            if inert.consult() is not inert:
+                problems.append("consult() does not return the stand-in")
+        except AttributeError:
+            pass
+    return sorted(set(problems))
+
+
+# Every protocol Python dispatches on the TYPE (bypassing __getattribute__), with the dunder whose count it REACHES.
+# The stand-in must define each so the use counts; a dunder the stand-in defines without a row here is a problem, so a
+# new override cannot arrive without its positive control. A protocol that reaches another dunder is attributed to
+# THAT one: an override whose count another already makes was a mutant this campaign could not kill (__format__,
+# __str__ and __ne__ were dropped for it).
+_R14_PROTOCOL_OPS = [
+    ("__hash__", "hash()", lambda s: hash(s)), ("__hash__", "a dict key", lambda s: {s: 1}),
+    ("__eq__", "==", lambda s: s == 1), ("__eq__", "!= (object's __ne__ reaches __eq__)", lambda s: s != 1),
+    ("__lt__", "<", lambda s: s < 1), ("__le__", "<=", lambda s: s <= 1),
+    ("__gt__", ">", lambda s: s > 1), ("__ge__", ">=", lambda s: s >= 1),
+    ("__repr__", "repr()", repr), ("__repr__", "str() (object's __str__ reaches __repr__)", str),
+    ("__repr__", "an f-string (object's __format__ reaches str())", lambda s: f"{s}"),
+    ("__bool__", "bool()", bool), ("__bool__", "an if", lambda s: 1 if s else 0),
+    ("__enter__", "a with", lambda s: s.__class__.__enter__(s)), ("__exit__", "leaving a with", lambda s: type(s).__exit__(s, None, None, None)),
+    ("__sizeof__", "sys.getsizeof", lambda s: sys.getsizeof(s)),
+    ("__setattr__", "an assignment", lambda s: setattr(s, "fired", 1)), ("__delattr__", "a del", lambda s: delattr(s, "fired")),
+]
+
+
+def _r14_counting_problems(stub):
+    """K2: EVERY use of a stand-in moves `inert_calls()` — reading any name `dir(Site)` lists, and every type-level
+    protocol in the table — while binding, holding and comparing identity do not (the acceptance half: a twin that
+    merely keeps its declarations bound must read 0, or the gate could not pass on correct code)."""
+    import copy, pickle
+    import veracium.census as C
+    problems = []
+
+    def moved(op):
+        s = stub.declare_site("r14.k2")
+        before = stub.inert_calls()
+        try:
+            op(s)
+        except Exception:
+            pass
+        return stub.inert_calls() - before
+
+    def with_block(s):
+        with s:
+            pass
+
+    for name in sorted(dir(C.Site)):
+        if not moved(lambda s: getattr(s, name)):
+            problems.append(f"reading .{name} did not count")
+    for dunder, label, op in _R14_PROTOCOL_OPS + [("__enter__", "a with statement", with_block),
+                                                  ("__reduce_ex__", "copy.copy", copy.copy), ("__reduce_ex__", "pickle", pickle.dumps),
+                                                  ("__dict__", "dir()", dir)]:
+        if not moved(op):
+            problems.append(f"{label} did not count")
+    if moved(with_block) < 2:
+        problems.append("a with statement counted fewer than both bracket dunders")
+    # the OVERRIDES: dunder FUNCTIONS the class defines (copyreg caches `__slotnames__` on it once copy has run)
+    defined = {n for n, v in vars(stub._InertSite).items() if n.startswith("__") and n.endswith("__") and callable(v)}
+    exempt = {"__init__", "__getattribute__"}              # construction, and the counter itself (every name read above)
+    problems += [f"{n} is overridden with no row in _R14_PROTOCOL_OPS" for n in sorted(defined - exempt - {d for d, _, _ in _R14_PROTOCOL_OPS})]
+    for label, op in [("binding", lambda s: [s, (s,), {"k": s}]), ("identity", lambda s: (s is s, id(s), type(s)))]:
+        if moved(op):
+            problems.append(f"{label} COUNTED — a twin that only keeps its declarations bound would fail the gate")
+    return problems
+
+
+def test_r14_k1_the_stand_in_answers_every_member_the_real_site_defines(tmp_path):
+    """RESEARCH'S STAGE 2, K1: the round-14 stand-in lacked `failures`, `declined`, `counters`, `failure_kinds` (and
+    the private members), and dropping R2 made a product read of one legal: derive and verify were CLEAN, the source
+    gave 0 and the twin AttributeError. The surface is now checked against the REAL class, never a list; the superseded
+    stand-in is the negative control, and the end-to-end reproduction runs source and twin."""
+    un = _load("inv7_uninstrument_r14_k1", EVIDENCE / "inv7_uninstrument.py")
+    assert _r14_surface_problems(_r14_stub_module(un.STUB)) == []
+    v1 = _r14_surface_problems(_r14_stub_module(_R14_V1_STUB))
+    assert {"missing failures", "missing declined", "missing counters", "missing failure_kinds"} <= set(v1), v1
+    b = _R14_SELF + ("def f():\n    return (S.failures, S.counters(), S.failure_kinds(), S.declined(None), S.declined(1),\n"
+                     "            S.site_id, S.consulted, S.fired, S.errors, S.fire(4))\n")
+    src = _r13_pkg(tmp_path, "k1", b, "")
+    out = tmp_path / "k1" / "twin" / "vpkg"
+    un.derive(src, out)
+    assert un.verify(out, src) == []
+    ran_src, ran_twin = _r13_run_b(src.parent), _r13_run_b(out.parent)
+    assert ran_src.stdout == "({}, {'consulted': 0, 'fired': 0, 'errors': 0}, {}, True, False, 'b.s', 0, 0, 0, 4)\n", ran_src.stdout + ran_src.stderr
+    assert (ran_twin.returncode, ran_twin.stdout) == (0, ran_src.stdout), ran_twin.stderr[-400:]
+
+
+def test_r14_k2_every_use_of_a_stand_in_counts():
+    """RESEARCH'S STAGE 2, K2 (unit half): "0 uses" must mean no use. The round-14 stand-in counted fire() and consult()
+    only; reading site_id, hashing it into a dict and repr() left the count at 0. The superseded stand-in is the
+    negative control; binding and identity are the acceptance half and must NOT count."""
+    un = _load("inv7_uninstrument_r14_k2", EVIDENCE / "inv7_uninstrument.py")
+    assert _r14_counting_problems(_r14_stub_module(un.STUB)) == []
+    v1 = _r14_counting_problems(_r14_stub_module(_R14_V1_STUB))
+    assert {"reading .site_id did not count", "hash() did not count", "a dict key did not count", "repr() did not count"} <= set(v1), v1
+
+
+def test_r14_k2_a_twin_arm_that_touches_a_stand_in_fails_the_harness_gate(tmp_path):
+    """RESEARCH'S STAGE 2, K2 (harness half): the gate was driven only by FABRICATED counts, so a STUB that counted
+    nothing, or an observer that read the wrong thing, would read 0 forever with the gate true. This runs the REAL
+    chain — the real tree's twin, the observer inside a pytest run, run_arm's summary, compare's checks, final_status —
+    on a one-test suite that reads a declared site's attribute (gate FALSE) and on its control, which reaches the same
+    site by identity only (gate TRUE)."""
+    un = _load("inv7_uninstrument_r14_k2h", EVIDENCE / "inv7_uninstrument.py")
+    harness = _load("inv7_harness_r14_k2h", EVIDENCE / "inv7_harness.py")
+    twin = tmp_path / "twin"
+    un.derive(ROOT / "src" / "veracium", twin / "veracium")
+    site = None
+    for p in sorted((twin / "veracium").rglob("*.py")):
+        m = re.search(r"^(\w+) = (?:\w+\.)?declare_site\(", p.read_text(), re.M)
+        if m and not un.is_census_module_file(str(p.relative_to(twin / "veracium"))):
+            site = (".".join(("veracium",) + p.relative_to(twin / "veracium").with_suffix("").parts), m.group(1)); break
+    assert site is not None
+    # run_arm runs `<repo>/.venv/bin/python`: a throwaway repo whose interpreter is THIS one, so the cell runs where
+    # no .venv exists (CI, a packaged copy)
+    repo = tmp_path / "repo"; (repo / ".venv" / "bin").mkdir(parents=True)
+    shim = repo / ".venv" / "bin" / "python"; shim.write_text(f"#!/bin/sh\nexec {sys.executable} \"$@\"\n"); shim.chmod(0o755)
+    results = {}
+    for cell, use in (("touches", "getattr(m, NAME).site_id"), ("control", "getattr(m, NAME) is not None")):
+        t = tmp_path / cell / f"test_r14_{cell}.py"; t.parent.mkdir()
+        t.write_text(f"import importlib\n\nNAME = {site[1]!r}\n\n\ndef test_it():\n    m = importlib.import_module({site[0]!r})\n    assert {use}\n")
+        out = tmp_path / cell / "out"
+        s = harness.run_arm(repo, "uninstrumented", [str(t)], out, EVIDENCE / "declaration.py", twin_src=str(twin))
+        assert s["pytest_exit"] == 0, (cell, s.get("pytest_result_line"), (out / "uninstrumented" / "pytest_stdout.txt").read_text()[-600:])
+        assert pathlib.Path(s["veracium_file"]).is_relative_to(twin), s["veracium_file"]     # the arm ran the twin
+        v, c = harness.compare(out, ["uninstrumented"], {"uninstrumented": s}, ID_TO_SYMBOL)
+        results[cell] = (s["census_inert_calls"], harness.final_status(v, c, {"uninstrumented": s}, ["uninstrumented"]),
+                         v["gates"]["uninstrumented:inert_stand_ins_unused"])
+    assert results["control"] == (0, 0, True), results
+    assert results["touches"][0] >= 1 and results["touches"][1:] == (1, False), results
+
+
 def test_r13_p1_import_module_of_the_standard_library_is_not_refused(tmp_path):
     """The acceptance half, measured on the real tree: its one `import_module` call names the standard library."""
     un = _load("inv7_uninstrument_r13_p1_ok", EVIDENCE / "inv7_uninstrument.py")

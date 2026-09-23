@@ -843,23 +843,169 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     return out, stats
 
 
-STUB = ('"""INV-7 twin stub: the census module with NOTHING MEASURED — the harness surface, and `declare_site`\n'
-        'answering each declaration with its own INERT stand-in (round 14). A stand-in carries its site_id and declines,\n'
-        'compares by identity like the real Site, records nothing, and COUNTS any use, so the capture can assert the\n'
-        'twin measured nothing: inert_calls() must read 0 and registry() stays empty."""\n'
-        '_ENABLED = False\n_INERT_CALLS = 0\n\n'
-        'class _InertSite:\n'
-        '    consulted = 0\n    fired = 0\n    errors = 0\n\n'
-        '    def __init__(self, site_id, declines=None):\n        self.site_id = site_id\n        self._declines = declines\n\n'
-        '    def _use(self):\n        global _INERT_CALLS\n        _INERT_CALLS += 1\n\n'
-        '    def consult(self):\n        self._use()\n        return self\n\n'
-        '    def __enter__(self):\n        return self\n\n    def __exit__(self, *exc):\n        return False\n\n'
-        '    def fire(self, decision=None, *args, **kwargs):\n        self._use()\n        return decision\n\n'
-        'def declare_site(site_id, declines=None):\n    return _InertSite(site_id, declines)\n\n'
-        'def inert_calls():\n    return _INERT_CALLS\n\n'
-        'def enable(on=True):\n    global _ENABLED; _ENABLED = bool(on)\n\n'
-        'def enabled():\n    return _ENABLED\n\ndef registry():\n    return ()\n\ndef counters():\n    return {}\n\n'
-        'def trace(on=True):\n    pass\n\ndef trace_snapshot():\n    return []\n\ndef trace_reset():\n    pass\n\ndef reset_counters():\n    pass\n')
+# ROUND 14, research's stage 2 (K1, K2). The stand-in answers the WHOLE surface the real `Site` defines — its
+# `__slots__` exactly, every method, inert and value-faithful to a census that is off (counters read the slots,
+# `declined` is the real rule) — so a product read of any `Site` member derives, verifies and RUNS in the twin
+# (K1: `S.failures` gave AttributeError with verify clean, once round 14 dropped the R2 refusal that had kept such
+# reads out). And EVERY use counts (K2): `__getattribute__` counts each attribute access on an instance, and each
+# protocol Python dispatches on the TYPE, bypassing `__getattribute__` (hash, repr, ==, the four orderings, bool,
+# with, sizeof, setattr, delattr), is defined here to count. Protocols that REACH one of those count through it
+# and have no override of their own, since an override whose count another already makes is a counter no test can
+# redden: str() and format() reach __repr__ (object's), != reaches __eq__, and dir(), copy and pickle reach the
+# instance through `__getattribute__` (`__dict__`, `__reduce_ex__`). The
+# surface is pinned against the real class and each use has a positive control
+# (test_r14_k1_the_stand_in_answers_every_member_the_real_site_defines, test_r14_k2_every_use_of_a_stand_in_counts).
+# NOT counted, and not countable by any hook a Python object can define: identity operations (`is`, `id()`,
+# `type()`), and operators neither `Site` nor the stand-in defines, which raise TypeError identically in both.
+STUB = '''"""INV-7 twin stub: the census module with NOTHING MEASURED — the harness surface, and `declare_site`
+answering each declaration with its own INERT stand-in (round 14). A stand-in answers every member the real Site
+defines, compares by identity like it, records nothing, and COUNTS every use — any attribute access and every
+type-level protocol — so the capture can assert the twin measured nothing: inert_calls() must read 0 and
+registry() stays empty."""
+import threading as _threading
+
+_ENABLED = False
+_INERT_CALLS = 0
+
+
+def _count():
+    global _INERT_CALLS
+    _INERT_CALLS += 1
+
+
+_get = object.__getattribute__
+
+
+class _InertSite:
+    __slots__ = ("site_id", "consulted", "fired", "errors", "_lock", "_declines", "failures")
+
+    def __init__(self, site_id, declines=None):
+        for k, v in (("site_id", site_id), ("consulted", 0), ("fired", 0), ("errors", 0),
+                     ("_lock", _threading.Lock()), ("_declines", declines), ("failures", {})):
+            object.__setattr__(self, k, v)
+
+    def __getattribute__(self, name):
+        _count()
+        return _get(self, name)
+
+    def __setattr__(self, name, value):
+        _count()
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        _count()
+        object.__delattr__(self, name)
+
+    def declined(self, decision):
+        d = _get(self, "_declines")
+        if d is None:
+            return decision is None or decision is False or isinstance(decision, BaseException)
+        if callable(d):
+            return bool(d(decision))
+        return decision is d
+
+    def _bump(self, field):
+        pass
+
+    def consult(self):
+        return self
+
+    def _measurement_failed(self, exc):
+        pass
+
+    def fire(self, decision, label=None, *, declined=None):
+        return decision
+
+    def counters(self):
+        return {"consulted": _get(self, "consulted"), "fired": _get(self, "fired"), "errors": _get(self, "errors")}
+
+    def failure_kinds(self):
+        return dict(_get(self, "failures"))
+
+    def __enter__(self):
+        _count()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        _count()
+        return False
+
+    def __hash__(self):
+        _count()
+        return object.__hash__(self)
+
+    def __eq__(self, other):
+        _count()
+        return object.__eq__(self, other)
+
+    def __lt__(self, other):
+        _count()
+        return NotImplemented
+
+    def __le__(self, other):
+        _count()
+        return NotImplemented
+
+    def __gt__(self, other):
+        _count()
+        return NotImplemented
+
+    def __ge__(self, other):
+        _count()
+        return NotImplemented
+
+    def __repr__(self):
+        _count()
+        return object.__repr__(self)
+
+    def __bool__(self):
+        _count()
+        return True
+
+    def __sizeof__(self):
+        _count()
+        return object.__sizeof__(self)
+
+
+def declare_site(site_id, declines=None):
+    return _InertSite(site_id, declines)
+
+
+def inert_calls():
+    return _INERT_CALLS
+
+
+def enable(on=True):
+    global _ENABLED; _ENABLED = bool(on)
+
+
+def enabled():
+    return _ENABLED
+
+
+def registry():
+    return ()
+
+
+def counters():
+    return {}
+
+
+def trace(on=True):
+    pass
+
+
+def trace_snapshot():
+    return []
+
+
+def trace_reset():
+    pass
+
+
+def reset_counters():
+    pass
+'''
 
 
 def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
