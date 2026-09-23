@@ -48,6 +48,30 @@ _DEFINITION_TIME_FIELDS = frozenset({"decorator_list", "bases", "keywords", "ret
 SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
                ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
 
+def _enclosing_parts(node) -> list:
+    """(role, part) for every part of a def, lambda or class statement Python evaluates in the ENCLOSING scope, before
+    the statement's own block exists — the ONE definition of that set: the resolver assigns exactly these first and
+    skips exactly these, by identity, inside. (A comprehension's single header part, its first iterable, is handled in
+    `_comprehension`; it has one role, so it needs ordering and never a refusal.) ROLES, not fields: the interpreter groups a header by role, and two scopes in one role are created
+    in sequence. Annotations are split by parameter kind because research measured their order — `**kwargs`'
+    annotation comes BEFORE kw-only annotations, the opposite of `iter_fields` (round 12, S2b-1)."""
+    parts = []
+    for field, role in (("decorator_list", "decorator"), ("bases", "base"), ("keywords", "keyword")):
+        parts += [(role, x) for x in (getattr(node, field, None) or [])]
+    if getattr(node, "returns", None) is not None:
+        parts.append(("return annotation", node.returns))
+    a = getattr(node, "args", None)
+    if isinstance(a, ast.arguments):
+        parts += [("default", d) for d in a.defaults]
+        parts += [("kw-only default", d) for d in a.kw_defaults if d is not None]
+        for role, args in (("posonly annotation", a.posonlyargs), ("annotation", a.args),
+                           ("*args annotation", [a.vararg] if a.vararg else []),
+                           ("kw-only annotation", a.kwonlyargs),
+                           ("**kwargs annotation", [a.kwarg] if a.kwarg else [])):
+            parts += [(role, x.annotation) for x in args if x.annotation is not None]
+    return parts
+
+
 # The four opcodes by which a MODULE's own code object binds a name. This is the interpreter's reading of "what
 # binds here", and it is TOTAL over syntax by construction: every module-level binding form the language has —
 # including the ones no list contains — compiles to one of these four. The two `_GLOBAL` spellings appear at
@@ -180,6 +204,14 @@ class Resolver:
             self._comprehension(child, block, shadowed)
             return
         if isinstance(child, SCOPE_NODES):
+            self._refuse_role_collisions(child)          # ROUND 12, S2b-1: two or more HEADER roles on one key
+            # ROUND 12, S2b-1 — ORDER. The parts evaluated in the ENCLOSING scope are assigned FIRST: the interpreter
+            # creates their nested blocks BEFORE this statement's own block exists, and this resolver used to take
+            # its own block from the queue first — so a lambda in a lambda's default, or a return annotation beside
+            # a same-line body lambda, was handed the other one's table. Single-role, documented order: not guessed.
+            outer = [part for _, part in _enclosing_parts(child)]
+            for part in outer:
+                self._assign_child(part, block, shadowed)
             key = (child.lineno, _expected_name(child))
             queue = self._blocks.get(key) or []
             cursor = self._cursor.get(key, 0)
@@ -188,12 +220,46 @@ class Resolver:
                                         f"{type(child).__name__} — the resolver will not guess its scope")
             inner = queue[cursor]; self._cursor[key] = cursor + 1
             self._owner[id(child)] = inner
-            self._assign_definition(child, block, inner, shadowed)
+            self._assign_definition(child, inner, {id(p) for p in outer})
             return
         self._owner[id(child)] = block
         self._assign(child, block, shadowed)
 
-    def _assign_definition(self, node, block, inner, shadowed: frozenset) -> None:
+    def _refuse_role_collisions(self, node) -> None:
+        """REFUSE, rather than guess, when same-line nested scopes of one kind sit in TWO OR MORE HEADER ROLES of one
+        statement. Round 12, research's stage-2b S2b-1 — and it was SILENT.
+
+        One key, `(line, kind)`, names every lambda (or comprehension of a kind) on a line, and this resolver drains
+        that key's queue of symbol-table blocks in its own visiting order. The interpreter fills it in a different one:
+        it evaluates a statement's header in the ENCLOSING scope and groups it by ROLE — research MEASURED the order:
+        positional defaults, kw-only defaults, annotations (posonly, args, *args, **kwargs, kw-only), return. A walk by
+        field disagrees, and with one scope binding `_census` as its own parameter and another reading the module's
+        alias, the read resolved to the parameter: a live census call in the twin, nothing reported.
+
+        TWO DIFFERENT PROBLEMS, TWO DIFFERENT REMEDIES, on Quentin's word:
+          * the order AMONG header roles is subtle — research had to measure `**kwargs` before kw-only to get it
+            right — and a wrong guess is silent again. So two or more header roles on one key are REFUSED (remedy
+            (b)); research measured this refuses nothing in the tree.
+          * the order of the header against the statement's OWN block and its BODY is not subtle: the header runs in
+            the enclosing scope before the block exists, the body inside it after. That is FIXED BY ORDERING in
+            `_assign_child` and `_comprehension`, never refused — refusing it would have refused real product code
+            (asof/resolve.py:445, a genexp in a genexp's first iterable, live and swapped), and the language defines
+            the order.
+        One header role holding several scopes is not refused either: its scopes are walked and created in sequence."""
+        roles: dict = {}
+        for role, part in _enclosing_parts(node):
+            for n in ast.walk(part):
+                if isinstance(n, SCOPE_NODES):
+                    roles.setdefault((n.lineno, _expected_name(n)), set()).add(role)
+        for (line, kind), rs in sorted(roles.items()):
+            if len(rs) >= 2:
+                raise UnresolvableScope(
+                    f"line {line}: {kind!r} scopes on this line sit in different roles of one statement's header "
+                    f"({', '.join(sorted(rs))}). The interpreter orders a header by ROLE and this resolver walks it by "
+                    f"FIELD, so which table belongs to which scope is not established — refused rather than guessed "
+                    f"(round 12, S2b-1)")
+
+    def _assign_definition(self, node, inner, enclosing_ids: set) -> None:
         """A `def`, `lambda` or `class` statement: its BODY and its parameter BINDINGS belong to the inner block, and
         everything evaluated WHEN THE STATEMENT RUNS belongs to the enclosing one.
 
@@ -207,6 +273,11 @@ class Resolver:
         comprehension handler below already made exactly this distinction for its first iterable; definitions
         never got it.
 
+        THE ENCLOSING PARTS ARE ASSIGNED BY THE CALLER, FIRST, and skipped here BY IDENTITY (round 12, S2b-1): one
+        definition of which parts are enclosing — `_enclosing_parts` — and this pass excludes exactly the node objects
+        it returned. Two definitions of one set (one by role, one by field) would visit a node twice, a double pop and
+        an UnresolvableScope on correct code, or never, a node the resolver cannot place.
+
         EACH NODE IS VISITED EXACTLY ONCE. The tempting fix — assign everything to the inner block as before, then
         RE-assign the definition-time parts to the enclosing one — visits a lambda or comprehension nested inside a
         default TWICE, and each visit consumes a symbol-table block from the cursor queue: a wrong answer, or an
@@ -217,23 +288,16 @@ class Resolver:
         the inner block and annotations are treated as 3.10-3.13 evaluate them."""
         for field, value in ast.iter_fields(node):
             for item in (value if isinstance(value, list) else [value]):
-                if not isinstance(item, ast.AST):
-                    continue
-                if field in _DEFINITION_TIME_FIELDS:
-                    self._assign_child(item, block, shadowed)         # evaluated where the statement runs
-                elif isinstance(item, ast.arguments):
+                if not isinstance(item, ast.AST) or id(item) in enclosing_ids:
+                    continue                                   # an enclosing part: assigned to the outer block, first
+                if isinstance(item, ast.arguments):
                     self._owner[id(item)] = inner; self._comp_local[id(item)] = frozenset()
-                    for afield, avalue in ast.iter_fields(item):
+                    for avalue in (v for _, v in ast.iter_fields(item)):
                         for a in (avalue if isinstance(avalue, list) else [avalue]):
-                            if not isinstance(a, ast.AST):
-                                continue                               # kw_defaults holds None for "no default"
-                            if afield in ("defaults", "kw_defaults"):
-                                self._assign_child(a, block, shadowed)
-                            else:                                      # an ast.arg: the PARAMETER binds inside,
-                                self._owner[id(a)] = inner             # its ANNOTATION is evaluated outside
-                                self._comp_local[id(a)] = frozenset()
-                                if a.annotation is not None:
-                                    self._assign_child(a.annotation, block, shadowed)
+                            if not isinstance(a, ast.AST) or id(a) in enclosing_ids:
+                                continue                       # None for "no default", or a default: enclosing
+                            self._owner[id(a)] = inner         # an ast.arg: the PARAMETER binds inside; its
+                            self._comp_local[id(a)] = frozenset()  # annotation was an enclosing part, done first
                 else:
                     self._assign_child(item, inner, frozenset())       # a real block resets any inlined shadowing
 
@@ -252,6 +316,14 @@ class Resolver:
         not the rest of the comprehension has a block of its own. Handling that only on the inlined path is what
         CI's 3.10 and 3.11 jobs caught, on the one case of the matrix that asserts it (the matrix was written for
         exactly this and found it on the versions this machine cannot run)."""
+        # ROUND 12, S2b-1 — ORDER: the FIRST ITERABLE is assigned BEFORE this comprehension's block is taken from the
+        # queue. The interpreter evaluates it in the enclosing scope and creates any block nested in it FIRST; this
+        # handler took its own block first, so `list(ooo for ooo in (iii for iii in xs))` handed each genexp the
+        # other's table — on every version, and live at asof/resolve.py:445, while a test compared the two owners as
+        # a SET and could not see it. One role, documented order: fixed by ordering, never refused.
+        first_iter = child.generators[0].iter if child.generators else None
+        if first_iter is not None:
+            self._assign_child(first_iter, block, shadowed)         # the enclosing scope, both regimes
         key = (child.lineno, _expected_name(child))
         queue = self._blocks.get(key) or []
         cursor = self._cursor.get(key, 0)
@@ -264,9 +336,6 @@ class Resolver:
         self._owner[id(child)] = block
         body_block = inner if inner is not None else block
         body_shadow = frozenset() if inner is not None else shadowed | self._comprehension_targets(child)
-        first_iter = child.generators[0].iter if child.generators else None
-        if first_iter is not None:
-            self._assign_child(first_iter, block, shadowed)         # the enclosing scope, both regimes
         for field in ("elt", "key", "value"):
             sub = getattr(child, field, None)
             if sub is not None:

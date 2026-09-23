@@ -1565,3 +1565,53 @@ def test_r12_s2_4_a_module_carrying_only_a_consult_is_parsed_not_skipped():
     assert un.may_skip_uninstrumenting("x = 1\n"), "control: a module with no route into the census may be skipped"
     assert not un.may_skip_uninstrumenting("def f(site):\n    with site.consult():\n        return 1\n"), \
         "a module whose only census token is `.consult()` was skipped unparsed"
+
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ROUND 12 STAGE 2b — the SILENT end of research's S2b-1, and S2b-2.
+# ------------------------------------------------------------------------------------------------------------------
+
+_S2B1_REFUSED = [   # two or more HEADER roles on one key — the order is subtle, so refused (remedy (b))
+    ("positional-default-reads-kw-only-binds", "def f(q, a=lambda: _census.enabled(), *, k=lambda _census: _census):\n    return q\n"),
+    ("annotation-binds-default-reads",         "def f(q: (lambda _census: _census) = lambda: _census.enabled()):\n    return q\n"),
+]
+_S2B1_ORDERED = [   # a header part against the statement's own block or body — the order is defined, so fixed
+    ("return-annotation-binds-body-reads",     "def f() -> (lambda _census: _census): return (lambda: _census.enabled())()\n"),
+    ("lambda-default-binds-outer-reads",       "g = lambda a=(lambda _census: _census): _census.enabled()\n"),
+    ("genexp-target-binds-first-iterable-reads",
+     "def f(r):\n    return list(_census for _census in (_census.enabled() for q in r))\n"),
+]
+_S2B1_HEAD = "from . import census as _census\nS = _census.declare_site('s')\n\n"
+
+
+@pytest.mark.parametrize("cell,body", _S2B1_REFUSED, ids=[c for c, _ in _S2B1_REFUSED])
+def test_r12_s2b_1_a_swapped_table_is_refused_not_silently_derived(cell, body):
+    """THE PROPERTY THE FINDING IS ABOUT, for the collisions refused. Each fixture puts a census read and a scope
+    binding `_census` as its own parameter in two different HEADER roles on one line. At 40f5839 the read resolved to
+    the parameter and the twin kept a live `_census.enabled()` with unresolved=0 and verify() clean. Now the resolver
+    refuses to guess which table is which, and the refusal reaches the caller instead of a clean-looking twin."""
+    un = _load("inv7_uninstrument_r12_s2b1", EVIDENCE / "inv7_uninstrument.py")
+    with pytest.raises(un._scope.UnresolvableScope, match="different roles"):
+        un.uninstrument_source(_S2B1_HEAD + body, f"<{cell}>")
+
+
+@pytest.mark.parametrize("cell,body", _S2B1_ORDERED, ids=[c for c, _ in _S2B1_ORDERED])
+def test_r12_s2b_1_a_swapped_table_is_now_resolved_and_reported(cell, body):
+    """THE SAME PROPERTY, for the collisions fixed by ORDER. At 40f5839 the census read resolved to the other scope's
+    parameter and went unreported. Now each scope gets its own table, the read is the module's alias, and the live
+    call the twin keeps is REPORTED — the detector's whole job, which round 11 made shape-agnostic."""
+    un = _load("inv7_uninstrument_r12_s2b1o", EVIDENCE / "inv7_uninstrument.py")
+    out, stats = un.uninstrument_source(_S2B1_HEAD + body, f"<{cell}>")
+    assert "_census.enabled()" in out, f"{cell}: the fixture no longer leaves a live consult, so it tests nothing"
+    assert stats["unresolved_bypass_candidates"] >= 1, f"{cell}: a live census call in the twin, reported CLEAN"
+
+
+def test_r12_s2b_2_a_default_naming_a_comprehension_target_is_not_the_site():
+    """RESEARCH'S S2b-2 (mutant DM8): a definition-time part inside an INLINED comprehension must keep the
+    comprehension's shadowing. `[(lambda y=S: y) for S in range(3)]` reads the comprehension's TARGET, not the declared
+    site, so it must not be refused as a site loaded outside fire()/consult(). DM8 dropped the shadow set and was
+    equivalent on 3.10/3.11 and wrong on 3.12/3.13 — this is the cell CI's 3.12/3.13 jobs kill it on."""
+    un = _load("inv7_uninstrument_r12_s2b2", EVIDENCE / "inv7_uninstrument.py")
+    un.uninstrument_source("from . import census as _census\nS = _census.declare_site('s')\n\n"
+                           "x = [(lambda y=S: y) for S in range(3)]\n", "<s2b2>")

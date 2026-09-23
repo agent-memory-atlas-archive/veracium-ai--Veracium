@@ -146,8 +146,14 @@ def test_same_line_blocks_of_DIFFERENT_kinds_resolve_to_their_own_owners():
     assert sorted(x for x in mixed.block_of(gen.elt).get_identifiers() if not x.startswith(".")) == ["bbb"]
     nested = sr.Resolver("def f(xs):\n    return list(ooo for ooo in (iii for iii in xs))\n")
     gens = [n for n in ast.walk(nested.tree) if isinstance(n, ast.GeneratorExp)]
-    owners = {sorted(x for x in nested.block_of(g.elt).get_identifiers() if not x.startswith("."))[0] for g in gens}
-    assert owners == {"ooo", "iii"}, owners          # each element resolves inside its OWN comprehension
+    # ROUND 12, S2b-1: this compared the two owners as a SET — `{ooo, iii}` — and a SWAP produces the identical set,
+    # so it passed while the resolver handed each genexp the other's table, on every version, from the day it was
+    # written. The property is a MAPPING, and the assertion is now per element.
+    for g in gens:
+        own = g.generators[0].target.id
+        held = {x for x in nested.block_of(g.elt).get_identifiers() if not x.startswith(".")}
+        assert own in held and not (held & ({"ooo", "iii"} - {own})), \
+            f"the genexp binding {own!r} resolves inside a block holding {sorted(held)}"
     # and the property the join exists for, across kinds: a site read in the lambda is the module's, a site
     # REBOUND as the lambda's parameter is not
     r = sr.Resolver("S = 1\ndef f(xs):\n    return (lambda q: S.fire(q)), list(S for S in xs)\n")
@@ -1079,6 +1085,10 @@ _S21_HEAD = "from . import census as _census\nS = _census.declare_site('s')\n\nd
     # THE ACCEPTANCE HALF, and the one a careless fix breaks: the default is the ENCLOSING scope's even when the
     # body binds the same name, and the body's own `S` stays local.
     ("default-is-enclosing-while-the-body-binds-S", "def f(x=S):\n    S = 2\n    return S + x\n", [True, False]),
+    # ROUND 12 STAGE 2b, research's S2b-2 (mutant DM8 survived): a definition-time part inside an INLINED comprehension
+    # must keep the comprehension's own shadowing. The default names the comprehension TARGET, never the site — and
+    # dropping the shadow set is equivalent on 3.10/3.11 (a real block) and wrong on 3.12/3.13 (inlined).
+    ("lambda-default-naming-its-comprehension-target", "x = [(lambda y=S: y) for S in range(3)]\n", [False]),
 ] + [(pos, body.replace("__X__", "S"), None) for pos, body in DEFINITION_TIME_POSITIONS],
     ids=lambda v: v if isinstance(v, str) and "\n" not in v else "")
 def test_r12_s2_1_definition_time_positions_resolve_in_the_enclosing_scope(cell, body, want):
@@ -1098,3 +1108,96 @@ def test_r12_s2_1_definition_time_positions_resolve_in_the_enclosing_scope(cell,
     got = [r.refers_to_declared_site(n, "S") for n in loads]
     expected = want if want is not None else [True] * len(loads)
     assert got == expected, f"{cell}: the resolver says {got}, Python evaluates these as {expected}"
+
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ROUND 12 STAGE 2b, research's S2b-1 — SAME-LINE NESTED SCOPES IN DIFFERENT ROLES GOT EACH OTHER'S TABLES.
+# ------------------------------------------------------------------------------------------------------------------
+
+# One key, `(line, kind)`, names every lambda (or comprehension) on a line, and the resolver drains its queue of
+# symbol-table blocks in its OWN visiting order. symtable FILLS it in the interpreter's order: it evaluates a
+# statement's header — decorators, defaults, annotations, return, bases, keywords, a comprehension's first iterable —
+# in the ENCLOSING scope before the statement's own block exists, and groups the header by ROLE. Research measured
+# the in-header order: positional defaults, kw-only defaults, annotations (posonly, args, *args, **kwargs, kw-only),
+# return. `iter_fields` groups by FIELD. Where the two disagree, each scope is handed the other's table.
+#
+# Remedy (b), on Quentin's word: REFUSE rather than guess the order, which is the resolver's own principle. A
+# collision is refused when one key spans two or more ROLES and at least one is a header role. "Self + body" and
+# "one role twice" are left alone: their orders provably agree and ordinary code uses them.
+SAME_LINE_ROLE_COLLISIONS = [
+    ("positional-default-vs-kw-only-default",  "def f(q, a=lambda: 1, *, k=lambda: 2):\n    return q\n"),
+    ("annotation-vs-default",                  "def f(q: (lambda: 1) = lambda: 2):\n    return q\n"),
+    ("kwargs-annotation-vs-kw-only-annotation", "def f(*, k: (lambda: 1), **kw: (lambda: 2)):\n    return k\n"),
+    # BASE vs KEYWORD. (A first draft put both lambdas in `keywords` — `**{...}` is a keyword too, arg=None — which
+    # is "one role twice", the case the rule ACCEPTS; the cell would have asserted the wrong expectation.)
+    ("class-base-vs-class-keyword",            "class K((lambda: dict)(), m=(lambda: 2)):\n    pass\n"),
+]
+SAME_LINE_ROLE_ACCEPTED = [
+    ("two-lambdas-in-one-role-positional-defaults", "def f(a=lambda: 1, b=lambda: 2):\n    return a\n"),
+    ("two-lambdas-both-in-a-body",                  "def f():\n    return (lambda: 1), (lambda: 2)\n"),
+    ("self-and-body-same-kind",                     "g = lambda: (lambda: 1)\n"),
+    ("comprehension-with-a-same-kind-scope-in-its-element", "x = [[p for p in range(2)] for q in range(3)]\n"),
+]
+
+
+@pytest.mark.parametrize("cell,body", SAME_LINE_ROLE_COLLISIONS, ids=[c for c, _ in SAME_LINE_ROLE_COLLISIONS])
+def test_r12_s2b_1_same_line_scopes_across_roles_are_refused_not_guessed(cell, body):
+    """RESEARCH'S S2b-1, and it was SILENT. With one of the two scopes binding the census alias as its own parameter
+    and the other reading it, the read resolved to the parameter: a live census call stayed in the twin with nothing
+    reported. Research measured three in-header pairs; the same mechanism gave dev three more, all confirmed silent —
+    return annotation vs body, a lambda inside a lambda's own default, and a genexp nested in a genexp's FIRST
+    ITERABLE. The last is in round 8's comprehension handler, not in round 12's code: the class, not the cell."""
+    with pytest.raises(sr.UnresolvableScope, match="different roles"):
+        sr.Resolver("from . import census as _census\n" + body, f"<{cell}>")
+
+
+@pytest.mark.parametrize("cell,body", SAME_LINE_ROLE_ACCEPTED, ids=[c for c, _ in SAME_LINE_ROLE_ACCEPTED])
+def test_r12_s2b_1_same_line_scopes_whose_orders_agree_are_not_refused(cell, body):
+    """THE ACCEPTANCE HALF. A refusal that fires on ordinary code is the narrow-gate defect in the other direction:
+    two lambdas in ONE role, two in a BODY, a scope and a same-kind scope in its own body — in each, symtable's order
+    and the resolver's agree, and research's control (two same-line genexps in a body) already stood on that."""
+    sr.Resolver("from . import census as _census\n" + body, f"<{cell}>")
+
+
+
+# THE SHAPES FIXED BY ORDER, NOT REFUSAL. A header part against the statement's OWN block or its BODY: the language
+# defines the order (the header runs in the enclosing scope before the block exists, the body inside it after), so the
+# resolver now takes them in that order. Each scope binds a DISTINCT name, and the assertion is per element — a swap
+# is exactly what a set comparison cannot see (see the corrected nested-genexp assertion above).
+SAME_LINE_ORDERED = [
+    ("return-annotation-vs-body",              "def f() -> (lambda rrr: rrr): return (lambda bbb: bbb)(1)\n"),
+    ("lambda-inside-a-lambda-default",         "g = lambda ooo=(lambda iii: iii): ooo\n"),
+    ("genexp-in-a-genexp-first-iterable",      "x = list(ooo for ooo in (iii for iii in range(3)))\n"),
+    ("listcomp-in-a-listcomp-first-iterable",  "x = [ooo for ooo in [iii for iii in range(3)]]\n"),
+]
+
+
+def _own_names(n):
+    if isinstance(n, ast.Lambda):
+        return {a.arg for a in n.args.posonlyargs + n.args.args + n.args.kwonlyargs}
+    return {x.id for g in n.generators for x in ast.walk(g.target) if isinstance(x, ast.Name)}
+
+
+@pytest.mark.parametrize("cell,body", SAME_LINE_ORDERED, ids=[c for c, _ in SAME_LINE_ORDERED])
+def test_r12_s2b_1_a_header_part_beside_its_own_block_gets_its_own_table(cell, body):
+    """RESEARCH'S S2b-1, the part fixed by ORDER on Quentin's word. The resolver took a statement's own block from the
+    queue BEFORE the blocks nested in its header, which the interpreter creates first — so a lambda in a lambda's
+    default, a return annotation beside a same-line body lambda, and a genexp in a genexp's first iterable each got
+    the other's table. Dev confirmed all three silent; the genexp shape is live in asof/resolve.py:445. Refusing them
+    would have refused real product code, and the language defines this order, so it is not a guess.
+
+    On 3.12+ an inlined listcomp has no block of its own and resolves in the enclosing one, where no swap is possible;
+    the stronger half of the assertion (no OTHER scope's names) applies wherever a scope has a block to swap."""
+    r = sr.Resolver(body, f"<{cell}>")
+    scopes = [n for n in ast.walk(r.tree) if isinstance(n, (ast.Lambda, ast.ListComp, ast.GeneratorExp))]
+    assert len(scopes) == 2, f"{cell}: the fixture should hold exactly two same-line scopes"
+    for n in scopes:
+        inside = n.body if isinstance(n, ast.Lambda) else n.elt
+        block = r.block_of(inside)
+        held = {x for x in block.get_identifiers() if not x.startswith(".")}
+        own = _own_names(n)
+        assert own <= held, f"{cell}: the scope binding {sorted(own)} resolves inside a block holding {sorted(held)}"
+        if block.get_type() != "module":
+            others = set().union(*(_own_names(m) for m in scopes if m is not n))
+            assert not (held & others), f"{cell}: the scope binding {sorted(own)} got a table holding {sorted(held & others)}"
