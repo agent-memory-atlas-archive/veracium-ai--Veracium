@@ -1238,3 +1238,174 @@ def test_r12_s2c_2_the_refusal_does_not_reach_shapes_symtable_answers_rightly(ce
     comprehension's FIRST iterable, inside a function — and none of its neighbours. asof/resolve.py:445 is a genexp in a
     genexp's first iterable; a refusal reaching it would refuse real product code on 3.12+."""
     sr.Resolver(body, f"<{cell}>")
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ROUND 13 — THE ROUND-12 VERDICT'S F1 (research's S2c-1): THE ORDER INSIDE A COMPREHENSION.
+# ------------------------------------------------------------------------------------------------------------------
+
+# Two same-line lambdas in the positions CPython's symtable orders differently from a field walk: it visits the
+# outermost ifs, then each later generator as TARGET, ITER, IFS, then a dict comprehension's VALUE, then the ELEMENT or
+# KEY last. Each lambda binds a parameter no other scope names, so a swap is visible per element. Every cell is given
+# in a listcomp (inlined on 3.12+, its own block below) AND a genexp (a block on every version).
+_R13_ORDER_BODIES = [
+    ("element-vs-if",               "[(lambda eee: eee)(0) for x in [1] if (lambda fff: fff)(1)]"),
+    ("element-vs-later-iterable",   "[(lambda eee: eee)(0) for x in [1] for y in (lambda fff: [fff])(1)]"),
+    ("element-vs-later-if",         "[(lambda eee: eee)(0) for x in [1] for y in [2] if (lambda fff: fff)(1)]"),
+    ("later-target-vs-element",     "[(lambda eee: eee)(0) for x in [[0]] for x[(lambda fff: fff)(0)] in [1]]"),
+    ("later-target-vs-later-iter",  "[0 for x in [[0]] for x[(lambda eee: eee)(0)] in (lambda fff: [fff])(1)]"),
+    ("dict-key-vs-value",           "{(lambda eee: eee)(0): (lambda fff: fff)(1) for x in [1]}"),
+    ("dict-key-vs-if",              "{(lambda eee: eee)(0): 0 for x in [1] if (lambda fff: fff)(1)}"),
+]
+R13_COMPREHENSION_ORDER = [(c, f"def f():\n    return {b}\n") for c, b in _R13_ORDER_BODIES] + [
+    (c + "/genexp", f"def f():\n    return list({b[1:-1]} )\n") for c, b in _R13_ORDER_BODIES if b.startswith("[")]
+
+
+@pytest.mark.parametrize("cell,body", R13_COMPREHENSION_ORDER, ids=[c for c, _ in R13_COMPREHENSION_ORDER])
+def test_r13_f1_every_scope_inside_a_comprehension_gets_its_own_table(cell, body):
+    """THE ROUND-12 VERDICT'S F1: "the disclosed scope-order gap changes a measured decision from [True] to [False]
+    while verify() reports clean". The comprehension handler walked elt/key/value BEFORE the generators, while CPython
+    creates their nested blocks in the opposite order, so two same-line lambdas split across those positions were
+    handed each other's tables. Asserted PER ELEMENT — a set comparison is blind to exactly this swap (round 12's
+    lesson) — on every version CI runs."""
+    r = sr.Resolver(body, f"<{cell}>")
+    lambdas = [n for n in ast.walk(r.tree) if isinstance(n, ast.Lambda)]
+    assert len(lambdas) == 2, f"{cell}: the fixture should hold exactly two lambdas"
+    names = [_own_names(n) for n in lambdas]
+    for n, own, other in ((lambdas[0], names[0], names[1]), (lambdas[1], names[1], names[0])):
+        held = {x for x in r.block_of(n.body).get_identifiers() if not x.startswith(".")}
+        assert own <= held and not (held & other), \
+            f"{cell}: the lambda binding {sorted(own)} resolves inside a block holding {sorted(held)}"
+
+
+# ROUND 13 — THE JOIN CHECK (research's P2', stage-1 read of round 13). The order fix above closes the cells; this
+# closes the CLASS: a same-line group of blocks is safe only if every block's fingerprint is identical or every node
+# is fitted by exactly one block — its own. Anything else would rest on an order alone, and is REFUSED.
+_R13_NEW_ORDER = '''        for i, gen in enumerate(child.generators):
+            self._comp_local[id(gen)] = body_shadow
+            self._owner[id(gen)] = body_block
+            self._assign_child(gen.target, body_block, body_shadow)
+            if i:
+                self._assign_child(gen.iter, body_block, body_shadow)
+            for cond in gen.ifs:
+                self._assign_child(cond, body_block, body_shadow)
+        for field in ("value", "elt", "key"):
+            sub = getattr(child, field, None)
+            if sub is not None:
+                self._assign_child(sub, body_block, body_shadow)'''
+_R13_OLD_ORDER = '''        for field in ("elt", "key", "value"):
+            sub = getattr(child, field, None)
+            if sub is not None:
+                self._assign_child(sub, body_block, body_shadow)
+        for i, gen in enumerate(child.generators):
+            self._comp_local[id(gen)] = body_shadow
+            self._owner[id(gen)] = body_block
+            if i:
+                self._assign_child(gen.iter, body_block, body_shadow)
+            self._assign_child(gen.target, body_block, body_shadow)
+            for cond in gen.ifs:
+                self._assign_child(cond, body_block, body_shadow)'''
+
+
+def _r13_verdict(mod, cell, body):
+    try:
+        r = mod.Resolver(body, f"<{cell}>")
+    except mod.UnresolvableScope as e:
+        assert "join check" in str(e), f"{cell}: refused, but not by the join check: {e}"
+        return "refused"
+    lambdas = [n for n in ast.walk(r.tree) if isinstance(n, ast.Lambda)]
+    right = all(_own_names(n) <= set(r.block_of(n.body).get_identifiers()) for n in lambdas)
+    return "right" if right else "SILENT-WRONG"
+
+
+def test_r13_the_join_check_turns_the_old_orders_silent_answers_into_refusals():
+    """THE SUPERSEDED ORDER IS THE MUTANT. With round 12's comprehension order restored and the join check REMOVED,
+    every order cell resolves silently wrong — which proves the cells can see the defect. With the old order and the
+    check KEPT, every one is refused. So a future construct ordered wrongly fails loudly rather than resolving."""
+    no_check = _mutant(_R13_NEW_ORDER + "\n", _R13_OLD_ORDER + "\n")
+    src = (EVIDENCE / "scope_resolution.py").read_text().replace(_R13_NEW_ORDER, _R13_OLD_ORDER)
+    assert src.count("        self._check_join()\n") == 1
+    path = pathlib.Path(__import__("tempfile").mkdtemp()) / "scope_resolution_old_order_unchecked.py"
+    path.write_text(src.replace("        self._check_join()\n", ""))
+    unchecked = _load("scope_resolution_r13_old_order_unchecked", path)
+    silent = {c: _r13_verdict(unchecked, c, b) for c, b in R13_COMPREHENSION_ORDER}
+    assert set(silent.values()) == {"SILENT-WRONG"}, f"the cells cannot all see the old order: {silent}"
+    loud = {c: _r13_verdict(no_check, c, b) for c, b in R13_COMPREHENSION_ORDER}
+    assert set(loud.values()) == {"refused"}, f"the join check let an old-order answer through: {loud}"
+
+
+def test_r13_the_join_check_refuses_research_s_blind_case_and_accepts_interchangeable_scopes():
+    """RESEARCH'S R1: two PARAMETER-LESS lambdas on one line, one binding `_census` by walrus, the other reading it —
+    a parameter-equality check passes ([] == []) and the twin kept a live census call with unresolved=0. Refused.
+    The control: two lambdas whose tables are IDENTICAL cannot be mis-paired to any effect, and are resolved."""
+    blind = "from . import census as _census\nG = ((lambda: (_census := 1)) for x in range(3) if (lambda: _census.enabled())())\n"
+    with pytest.raises(sr.UnresolvableScope, match="join check"):
+        sr.Resolver(blind, "<r1>")
+    sr.Resolver("G = ((lambda: 0) for x in range(3) if (lambda: 0)())\n", "<control>")
+
+
+def test_r13_the_join_check_refuses_nothing_in_the_product_or_the_evidence():
+    """The check's cost, measured rather than assumed: dev's first form (a SUBSET test for comprehensions) refused
+    inv7_uninstrument.py:499, where two same-line genexps are told apart only by one target. Equality — research's
+    rule — refuses none of the product and evidence modules, on every version CI runs."""
+    mods = sorted(list((ROOT / "src" / "veracium").rglob("*.py")) + list(EVIDENCE.glob("*.py")))
+    refused = []
+    for p in mods:
+        try:
+            sr.Resolver(p.read_text(), str(p))
+        except sr.UnresolvableScope as e:
+            refused.append(f"{p.relative_to(ROOT)}: {e}")
+    assert len(mods) > 60 and not refused, "\n".join(refused)
+
+
+# ROUND 13 — THE PAIRING ORACLE AS A STANDING GATE (research's (h) and stage-1 R3). Random one-line programs dense with
+# same-line nested scopes, judged against CPython's BYTECODE. It tests the class every silent defect of rounds 12 and 13
+# belonged to, rather than one more hand-built cell of it.
+_ORACLE_N, _ORACLE_SEED = 400, 13
+
+
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="the pairing oracle reads instruction POSITIONS, which 3.10 does "
+                    "not record — on 3.10 this gate SKIPS, visibly, and never passes (research's R3(iii))")
+def test_r13_the_pairing_oracle_finds_no_silent_answer_and_its_control_does():
+    """Five assertions, and the last four are what make the first mean anything:
+      * the resolver gives NO silent wrong answer (a wrong answer with nothing refused);
+      * the POSITIVE CONTROL — this tree's resolver with round 12's comprehension order restored and the join check
+        removed, built from the source text in-process — DOES give silent answers on the same programs, so the gate
+        can fail (research's R3(ii));
+      * the tied-signature programs are REACHED: the join check refuses some of them (research's R3 — a generator
+        giving every scope a unique signature made the check look complete by construction);
+      * most programs are judged rather than refused, and many reads are checked — an oracle refusing everything, or
+        judging nothing, would pass the first assertion vacuously;
+      * the reads with no instruction position stay a small share (3.13's return annotations)."""
+    po = _load("pairing_oracle_under_test", EVIDENCE / "pairing_oracle.py")
+    got = po.run(_ORACLE_N, _ORACLE_SEED, sr)
+    control = po.run(_ORACLE_N, _ORACLE_SEED, po.positive_control_resolver())
+    assert got["SILENT"] == 0, f"the resolver gave {got['SILENT']} silent wrong answers: {dict(got)}"
+    assert control["SILENT"] >= 10, f"the positive control is no longer a mutant the programs reach: {dict(control)}"
+    assert got["REFUSED by the join check"] >= 10, f"the tied-signature programs are not reached: {dict(got)}"
+    assert got["OK"] >= 0.6 * _ORACLE_N and got["reads checked"] >= 5000, f"the oracle judges too little: {dict(got)}"
+    assert got["reads unmapped"] <= 0.05 * got["reads checked"], f"too many reads unjudged: {dict(got)}"
+
+
+def test_r13_s2d_1_the_s2c_2_refusal_walks_deep_into_the_first_iterable():
+    """RESEARCH'S S2d-1: the S2c-2 refusal's DEEP walk is necessary and nothing pinned it (mutant FM4, a shallow walk,
+    survived the suite). THE KILLING CELL IS NOT THE ONE FIRST PROPOSED, and the reason is measured: in
+    `[u for t in list(v for v in {0 for u in [1]})]` the inner GENEXP's own first iterable is the inlinable setcomp, so
+    the refusal fires one level down even under the shallow mutant — at this code both refuse it (3.12 and 3.13). The
+    shape the deep walk alone reaches is an inlinable comprehension inside a CALL or a TUPLE in the first iterable,
+    where no inner comprehension's own check fires. In a CLASS body `u = 'M'; class C: x = [u for t in
+    list({0 for u in [1]})]` runs to ['M'] on 3.12 AND 3.13 while the unrefused resolver answers local: the deep walk
+    refuses it, the shallow mutant resolves it wrong. (In a 3.12 FUNCTION body the interpreter itself raises
+    UnboundLocalError — it also reads local there — which is research's W1b cell.)"""
+    killing = "u = 'M'\nclass C:\n    x = [u for t in list({0 for u in [1]})]\n"
+    research = "u = 'M'\ndef f():\n    return [u for t in list(v for v in {0 for u in [1]})]\n"
+    shallow = _mutant("any(isinstance(n, _INLINABLE) for n in ast.walk(child.generators[0].iter))",
+                      "isinstance(child.generators[0].iter, _INLINABLE)")
+    if sys.version_info >= (3, 12):
+        for body in (killing, research):
+            with pytest.raises(sr.UnresolvableScope, match="S2c-2"):
+                sr.Resolver(body, "<s2d1>")
+        shallow.Resolver(killing, "<s2d1-shallow>")          # the mutant does NOT refuse the killing cell
+    else:
+        for body in (killing, research):
+            sr.Resolver(body, "<s2d1>")

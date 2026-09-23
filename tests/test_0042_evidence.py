@@ -6,6 +6,7 @@ it; every refusal is demonstrated on the input it refuses; the four-set reconcil
 tree is tests/test_0042_reconciliation.py's (tranche 6, 2026-09-19), and the refusals stay LIVE here
 against emptied inputs.
 """
+import importlib
 import importlib.util
 import json
 import pathlib
@@ -141,7 +142,7 @@ def test_a0quater_scan_finds_the_binding_and_the_registry_checks_it_and_the_unlo
     inst = _load("installed_sites")
     fx = inst.scan(inst.FIXTURE); reg, loaded = inst.load_fixture()
     assert {s["id"] for s in fx} == inst.FIX_DISCOVERED
-    assert all(set(s) == {"id", "module", "qualname", "line", "name", "consult", "fire", "bound"} for s in fx)
+    assert all(set(s) == {"id", "module", "qualname", "line", "name", "consult", "fire", "bound", "sha256"} for s in fx)
     assert all(s["bound"] and s["consult"] and s["fire"] for s in fx), "the fixture's three sites must all be BOUND (consult AND fire)"
     ref, oor = inst.check_registry_against_scan(fx, reg, loaded)
     assert ref == [] and len(oor) == 1 and "lifecycle.forget.scope" in oor[0] and "NAMED" in oor[0]
@@ -524,12 +525,17 @@ def test_a0quater_round6_the_live_registry_reconciles_against_the_scan_and_nothi
     inst, decl, ct = _load("installed_sites"), _load("declaration"), _load("census_table")
     loaded = ct.loaded_product_modules()          # the evidence layer's observation (specs/0031 keeps sys.modules out of src)
     assert len(loaded) == sum(1 for _ in root.rglob("*.py"))
-    site_modules = {s["id"]: s["module"] for s in inst.scan(pathlib.Path(__file__).resolve().parents[1] / "src" / "veracium")}
+    scanned = inst.scan(pathlib.Path(__file__).resolve().parents[1] / "src" / "veracium")
+    site_modules = {s["id"]: s["module"] for s in scanned}
     declared = set(decl.DECLARED_IDS)
     rep = census.census(declared)
     # THE PAIR IS THE COMPLETE CLAIM (round 7, research's stage-1 read): `validate_report` answers "is anything
     # WRONG" and `insufficiency` answers "is there anything this report cannot SPEAK FOR". An evidence run asserts
     # both empty; either alone leaves the other question unasked, which is how an out-of-reach set went unnoticed.
+    # ROUND 13 (row 321): and BOTH rest on the scan's site map, so the scan must describe the program this process
+    # RAN — otherwise the pair is complete about a different program. Asserted before either is read.
+    from veracium import census
+    assert inst.scan_is_the_program_that_ran(root, scanned, census._REGISTRY) == []
     assert ct.validate_report(rep, declared, site_modules, loaded) == []
     assert ct.insufficiency(rep, declared, site_modules, loaded) == []
     assert ct.out_of_reach(declared, site_modules, loaded) == []
@@ -541,3 +547,86 @@ def test_a0quater_round6_the_live_registry_reconciles_against_the_scan_and_nothi
     finally:
         census._REGISTRY[victim] = saved
     assert any(victim in p and "missing registration" in p for p in probs), probs
+
+
+# ROUND 13 — THE SCAN IS BOUND TO THE PROGRAM THAT RAN (the ledger's row 321; taken into round 13 on the owner's word
+# as a SILENT limit the round-12 package never disclosed). `scan()` read each module from disk and nothing bound those
+# bytes to what the process executed, so an edit the process never saw could flip `bound` with nothing to refuse.
+_R13_STUB = ("REGISTRY = {}\n\n\nclass _S:\n    def consult(self):\n        return self\n    def __enter__(self):\n"
+             "        return self\n    def __exit__(self, *a):\n        return False\n    def fire(self, v):\n        return v\n\n\n"
+             "def declare_site(i):\n    REGISTRY[i] = _S()\n    return REGISTRY[i]\n")
+_R13_BIND_SRC = ("from .census_stub import declare_site\nS = declare_site('r13.bind')\nT = object()\n\n\n"
+                 "def decide(x):\n    with S.consult():\n        return S.fire(x)\n\n\ndef extra():\n    return 1\n")
+
+
+def _r13_bind_pkg(tmp_path, tag, text=_R13_BIND_SRC):
+    import sys, uuid
+    name = f"r13bind_{tag}_{uuid.uuid4().hex[:8]}"
+    pkg = tmp_path / name; pkg.mkdir()
+    (pkg / "__init__.py").write_text("")
+    (pkg / "census_stub.py").write_text(_R13_STUB)
+    (pkg / "m.py").write_text(text)
+    sys.path.insert(0, str(tmp_path))
+    try:
+        mod = importlib.import_module(f"{name}.m")
+        stub = importlib.import_module(f"{name}.census_stub")
+    finally:
+        sys.path.remove(str(tmp_path))
+    return pkg, mod, stub.REGISTRY
+
+
+def test_r13_the_scan_describes_the_program_that_ran_and_refuses_otherwise(tmp_path):
+    """Each way the scan can describe a program other than the one that ran, and the clean control.
+      EDITED BODY after import, then scanned — refused by comparing code objects (NOT `__loader__.get_source`, which
+        re-reads the file and shows the edit);
+      the TABLE swapped — research's case: `S = declare_site(..); T = object()` ran, `S = object(); T = declare_site(..)`
+        was scanned, every function body identical, the scan saying bound where it was not — refused by IDENTITY;
+      SCANNED, THEN EDITED — refused, the file is no longer the bytes the scan read;
+      a function REMOVED from the running module — refused by the count, so filtering cannot leave nothing compared;
+      RAN FROM ANOTHER FILE — refused, found by module name rather than skipped as not loaded."""
+    inst = _load("installed_sites")
+    clean, _, reg = _r13_bind_pkg(tmp_path, "clean")
+    assert inst.scan_is_the_program_that_ran(clean, inst.scan(clean), reg) == []
+
+    body, _, reg = _r13_bind_pkg(tmp_path, "body")
+    (body / "m.py").write_text(_R13_BIND_SRC.replace("return S.fire(x)", "return S.fire(not x)"))
+    got = inst.scan_is_the_program_that_ran(body, inst.scan(body), reg)
+    assert any("decide" in p and "as it RAN differs" in p for p in got), got
+
+    table, _, reg = _r13_bind_pkg(tmp_path, "table")
+    (table / "m.py").write_text(_R13_BIND_SRC.replace("S = declare_site('r13.bind')\nT = object()",
+                                                      "S = object()\nT = declare_site('r13.bind')")
+                                                .replace("S.consult()", "T.consult()").replace("S.fire(x)", "T.fire(x)"))
+    got = inst.scan_is_the_program_that_ran(table, inst.scan(table), reg)
+    assert any("is NOT the site the registry holds" in p for p in got), got
+
+    late, _, reg = _r13_bind_pkg(tmp_path, "late")
+    scanned = inst.scan(late)
+    (late / "m.py").write_text(_R13_BIND_SRC + "\n\ndef more():\n    return 2\n")
+    assert any("changed after the scan" in p for p in inst.scan_is_the_program_that_ran(late, scanned, reg))
+
+    gone, mod, reg = _r13_bind_pkg(tmp_path, "gone")
+    del mod.extra
+    got = inst.scan_is_the_program_that_ran(gone, inst.scan(gone), reg)
+    assert any("does not cover the module" in p for p in got), got
+
+    moved, mod, reg = _r13_bind_pkg(tmp_path, "moved")
+    other = tmp_path / "elsewhere_m.py"; other.write_text(_R13_BIND_SRC)
+    mod.__file__ = str(other)
+    got = inst.scan_is_the_program_that_ran(moved, inst.scan(moved), reg)
+    assert any("was loaded from" in p for p in got), got
+
+
+def test_r13_the_real_tree_s_scan_is_the_program_this_process_ran():
+    """The acceptance half on the product: every site-declaring module imported, scanned, and every function it
+    defines compared with the code compiled from the scanned bytes. Measured at round 13: 509 functions in 28
+    modules, 0 refusals, on 3.10–3.13 (dataclass-generated methods excluded — `exec`'d text is not the source)."""
+    inst = _load("installed_sites")
+    root = ROOT / "src" / "veracium"
+    scanned = inst.scan(root)
+    import veracium  # noqa: F401
+    for rel in sorted({r["module"] for r in scanned}):
+        parts = rel[:-3].split("/")
+        importlib.import_module(".".join(["veracium", *(parts[:-1] if parts[-1] == "__init__" else parts)]))
+    from veracium import census
+    assert inst.scan_is_the_program_that_ran(root, scanned, census._REGISTRY) == []

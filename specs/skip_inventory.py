@@ -67,6 +67,13 @@ INVENTORY = [
                          "(the 0029/0030 round-13 lesson). 1 test; the 3.12 "
                          "CI lane executes it, 3.10/3.11 skip with this "
                          "reason"),
+    ("tests/test_0042_scope_resolution.py", "skipif", "sys.version_info < (3, 11)",
+     "host-conditional", "specs/0042 round 13: the scope resolver's PAIRING ORACLE judges "
+                         "each read against the instruction POSITIONS CPython "
+                         "records from 3.11; 3.10 records none, so the gate "
+                         "cannot locate a read and must not pass there. 1 test; "
+                         "the 3.11/3.12/3.13 CI lanes execute it, 3.10 skips "
+                         "with this reason"),
     ("tests/test_0015_lifecycle.py", "skip", "POSIX adapter test (specs/0015 I17)",
      "host-conditional", "the two 0015 lock-adapter tests run the POSIX kernel "
                          "contract via independent processes; they skip on "

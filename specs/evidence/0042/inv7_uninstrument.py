@@ -25,7 +25,10 @@ else — and, since round 6 (R6-6), REFUSES everything it has not established is
 REFUSED (never guessed): `other.fire(...)` on a name that is not a declared site of the module; `a.b.fire(...)`
 (an attribute chain the transform cannot bind); a consult on an undeclared name; a `with` mixing consult and
 non-consult items; an enabled-block of any other shape (a side effect inside it would be product behaviour);
-`nonlocal`/`global` naming a declared site. Every statement that is not one of the listed forms is PRESERVED.
+`nonlocal`/`global` naming a declared site; and since round 13, a declared site another module reaches (imported
+by name, star-imported, listed in `__all__`, or read as a module attribute), and `globals()`, `vars()`, `exec`,
+`eval`, a `__dict__` or `sys.modules` in a module that declares a site. Every statement that is not one of the
+listed forms is PRESERVED.
 
 `derive()` writes the twin AND a MANIFEST (`twin_manifest.json`): per module the source sha256 before and after,
 the count of every transformation, and per function the number of return/raise statements before and after —
@@ -535,12 +538,13 @@ def lost_bindings(src_text: str, twin_text: str) -> set:
     function where the source passed the site, with verify() CLEAN. The subtraction was never what kept ordinary
     builtin reads out; the differential is, because it only reports names the SOURCE bound.
 
-    NAMED LIMITS: a name bound dynamically (`globals()[...]`, `exec`) is invisible to a static reading — research
-    measured `globals()["S"]` giving a twin KeyError with verify() clean, exactly where this says. This reads ONE
-    module at a time, so a binding lost ACROSS modules is outside it too, and those fail at IMPORT, not at call time
-    (research's stage-2 S2-3): `from .a import S` in a module whose sibling `a` declared S (ImportError), and a site
-    named in `__all__` with a star importer (AttributeError). Beyond that, what this cannot see is call-time-only
-    behaviour and a changed VALUE; those stay with the behaviour regressions."""
+    WHAT THIS DOES NOT READ, AND WHAT DOES (round 13 — round 12 listed these as limits, and the round-12 verdict
+    returned a disclosed silent limit as blocking, so each now has an owner): a name bound DYNAMICALLY
+    (`globals()[...]`, `exec`) is invisible to a static reading, so the transform REFUSES those forms in any module
+    that declares a site; this reads ONE module at a time, so a binding lost ACROSS modules is read by
+    `lost_cross_module_references` in verify(), and the transform refuses a site another module reaches. A changed
+    VALUE with no lost name — the round-12 verdict's F1 — is the scope resolver's pairing, which its join check now
+    refuses rather than guesses; the pairing oracle over random programs is the class-level instrument."""
 
     def bound(text):
         top = symtable.symtable(text, "<twin-check>", "exec")
@@ -558,6 +562,130 @@ def lost_bindings(src_text: str, twin_text: str) -> set:
         return out
 
     return (bound(src_text) - bound(twin_text)) & reads(twin_text)
+
+
+def _module_file(root: pathlib.Path, dotted: str):
+    """The file for `<package>.<a>.<b>` under `root` (the package directory), or None: a module or a package."""
+    parts = dotted.split(".")[1:]
+    base = root.joinpath(*parts) if parts else root
+    for cand in (base.with_suffix(".py") if parts else None, base / "__init__.py"):
+        if cand is not None and cand.is_file():
+            return cand
+    return None
+
+
+def _dotted_of(root: pathlib.Path, path: pathlib.Path, pkg: str | None = None) -> str:
+    rel = path.relative_to(root).with_suffix("")
+    parts = [pkg or root.name, *rel.parts]
+    return ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
+
+
+def _exported(path: pathlib.Path) -> set:
+    """What `from <module> import *` binds: a literal `__all__` if the module has one, else its public names."""
+    tree = ast.parse(path.read_text())
+    for stmt in tree.body:
+        if isinstance(stmt, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
+            targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+            if any(isinstance(t, ast.Name) and t.id == "__all__" for t in targets) and stmt.value is not None:
+                try:
+                    return set(ast.literal_eval(stmt.value))
+                except ValueError:
+                    return set()
+    return {n for n in _module_bindings(path) if not n.startswith("_")}
+
+
+def _module_bindings(path: pathlib.Path) -> set:
+    """Module-level names a module binds, by the interpreter's own scope analysis."""
+    top = symtable.symtable(path.read_text(), str(path), "exec")
+    return {s.get_name() for s in top.get_symbols() if s.is_assigned() or s.is_imported()}
+
+
+def cross_module_references(root: pathlib.Path, pkg: str | None = None) -> list:
+    """Every reference, anywhere in the package at `root`, from one module to a NAME in another: `from X import N`
+    (relative or absolute), `from X import *` (through X's `__all__` or public names), and an ATTRIBUTE read through
+    a module object — bound by `from . import a`, `import pkg.a as m`, or `import pkg.a` and read as `pkg.a.N`.
+    Returned as (importer, line, target module file, name, form). ROUND 13, the round-12 verdict's F2 and research's
+    stage-1 R2: removing a declared site broke a sibling's import with verify() clean, and the attribute route
+    (`from . import a` … `a.S`) broke at call time the same way.
+
+    NAMED LIMIT: a reference spelled dynamically — `getattr(module, "S")`, `importlib.import_module(...)` then an
+    attribute — is not a static reference and is not listed. Research counted the site-declaring modules' dynamic
+    reads at round 13: 27 `getattr` calls, every one on an ordinary object; 0 globals(), vars(), __dict__,
+    sys.modules, exec or eval."""
+    root = pathlib.Path(root); pkg = pkg or root.name       # a twin's directory may be named apart from its package
+    files = sorted(p for p in root.rglob("*.py") if "__pycache__" not in p.parts)
+    refs = []
+    for path in files:
+        tree = ast.parse(path.read_text())
+        here = _dotted_of(root, path, pkg)
+        package = here if path.name == "__init__.py" else here.rsplit(".", 1)[0]
+        modules = {}                                      # local name -> dotted module it is bound to
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                if node.level:
+                    base = package.split(".")
+                    base = base[:len(base) - (node.level - 1)] if node.level > 1 else base
+                    target = ".".join(base + ([node.module] if node.module else []))
+                else:
+                    target = node.module or ""
+                if target != pkg and not target.startswith(pkg + "."):
+                    continue
+                tfile = _module_file(root, target)
+                for a in node.names:
+                    if a.name == "*":
+                        if tfile is not None:
+                            refs += [(path, node.lineno, tfile, n, "star") for n in sorted(_exported(tfile))]
+                    elif _module_file(root, f"{target}.{a.name}") is not None:
+                        modules[a.asname or a.name] = f"{target}.{a.name}"          # a submodule, bound as a name
+                    elif tfile is not None:
+                        refs.append((path, node.lineno, tfile, a.name, "from-import"))
+            elif isinstance(node, ast.Import):
+                for a in node.names:
+                    if a.name == pkg or a.name.startswith(pkg + "."):
+                        if a.asname:
+                            modules[a.asname] = a.name
+                        else:
+                            modules[pkg] = pkg                                     # `import pkg.a` binds `pkg`
+        if not modules:
+            continue
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load)):
+                continue
+            chain, cur = [node.attr], node.value
+            while isinstance(cur, ast.Attribute):
+                chain.insert(0, cur.attr); cur = cur.value
+            if not isinstance(cur, ast.Name) or cur.id not in modules:
+                continue
+            dotted = modules[cur.id]
+            for i, part in enumerate(chain):              # walk down submodules; the first non-module part is the name
+                if _module_file(root, f"{dotted}.{part}") is not None and i < len(chain) - 1:
+                    dotted = f"{dotted}.{part}"; continue
+                tfile = _module_file(root, dotted)
+                if tfile is not None and tfile != path:
+                    refs.append((path, node.lineno, tfile, part, "attribute"))
+                break
+    return refs
+
+
+def _resolves(root: pathlib.Path, tfile: pathlib.Path, name: str) -> bool:
+    return name in _module_bindings(tfile) or _module_file(root, f"{_dotted_of(root, tfile)}.{name}") is not None
+
+
+def lost_cross_module_references(src: pathlib.Path, out: pathlib.Path) -> list:
+    """The references the TWIN still makes that do not resolve in the twin and DID resolve in the source: an
+    ImportError, an AttributeError at import (a star over a stale `__all__`), or an AttributeError at call time.
+    verify()'s cross-module reading. It is a DIFFERENTIAL over the twin's own references — a reference the transform
+    removed (`_census.declare_site`) is not the twin's and is not reported — and it asks nothing about which names
+    are sites, so it does not share the transform's site recognition."""
+    lost = []
+    for path, line, tfile, name, form in cross_module_references(out, pkg=src.name):
+        if _resolves(out, tfile, name):
+            continue
+        src_target = src / tfile.relative_to(out)
+        if src_target.is_file() and _resolves(src, src_target, name):
+            lost.append(f"{path.relative_to(out)}:{line}: {form} of {name!r} from {tfile.relative_to(out)} — bound "
+                        f"there in the source and not in the twin: the twin fails where the source ran")
+    return lost
 
 
 def declared_names(tree: ast.Module) -> tuple[set[str], set[str]]:
@@ -621,6 +749,27 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
             raise Refused(f"line {n.lineno}: the declared site {n.id!r} is loaded outside fire()/consult() — as a value, "
                           f"an argument or a container element — and the twin removes its declaration, so it would be "
                           f"unbound there")
+    # ROUND 13 — THE MODULE NAMESPACE REACHED DYNAMICALLY, in a module that declares a site. Round 12 DISCLOSED this as
+    # a limit (`globals()["S"]`: the twin raised KeyError with verify() clean) and the round-12 verdict returned the
+    # disclosed silent limits as blocking. No static reading can say which name such a form reaches, so a site module
+    # holding one is REFUSED. Keyed on the forms that reach THE MODULE's namespace — research's census at round 13
+    # found 0 of them in the 28 site-declaring modules, and 27 `getattr` calls, all on ordinary objects: a refusal
+    # keyed on getattr would have refused 8 real modules. NAMED LIMIT: `getattr(<this module>, "S")` via an imported
+    # self-reference is not recognised; 0 in the tree.
+    if declared:
+        for n in ast.walk(tree):
+            form = None
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name):
+                if n.func.id in ("globals", "exec", "eval") or (n.func.id == "vars" and not n.args):
+                    form = f"{n.func.id}()"
+            elif isinstance(n, ast.Attribute) and n.attr == "__dict__":
+                form = "a `__dict__`"
+            elif isinstance(n, ast.Attribute) and n.attr == "modules" and isinstance(n.value, ast.Name) and n.value.id == "sys":
+                form = "`sys.modules`"
+            if form:
+                raise Refused(f"line {n.lineno}: {form} in a module that declares a site — the module's namespace is "
+                              f"reached dynamically, so no static reading can say whether a declared site is read "
+                              f"through it (round 13: round 12 disclosed `globals()['S']` as a silent limit)")
     # ROUND 10: THE GUESSED-ALIAS FALLBACK IS GONE. `aliases or {"_census", "census"}` treated those two
     # spellings as the census in a module that imports no census at all, so an ordinary object bound to
     # `_census` had its condition rewritten and the twin computed a different answer. Removing it PRESERVES
@@ -719,11 +868,40 @@ STUB = ('"""INV-7 twin stub: the census module with NOTHING declared — the har
         'def trace(on=True):\n    pass\n\ndef trace_snapshot():\n    return []\n\ndef trace_reset():\n    pass\n\ndef reset_counters():\n    pass\n')
 
 
+def _refuse_cross_module_sites(src: pathlib.Path) -> None:
+    """ROUND 13, the round-12 verdict's F2: a declared site is removed from its module, so ANY other module that
+    reaches it — imported by name, star-imported, or read as a module attribute (research's stage-1 R2) — would break
+    in the twin. Refused, with both ends named. And a site listed in its own module's literal `__all__` is refused
+    whether or not anything star-imports it today: the export is a promise the twin cannot keep."""
+    declared = {}
+    def sites(f):
+        if f not in declared:
+            declared[f] = declared_names(ast.parse(f.read_text()))[0]
+        return declared[f]
+    for path, line, tfile, name, form in cross_module_references(src):
+        if name in sites(tfile):
+            raise Refused(f"{path.relative_to(src)}: line {line}: {form} of the declared site {name!r} from "
+                          f"{tfile.relative_to(src)} — the twin removes the site, so this module would fail where the "
+                          f"source runs (round 13, the round-12 verdict's F2)")
+    for f in sorted(p for p in src.rglob("*.py") if "__pycache__" not in p.parts):
+        tree = ast.parse(f.read_text())
+        for stmt in tree.body:
+            if isinstance(stmt, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__all__" for t in stmt.targets):
+                try:
+                    listed = set(ast.literal_eval(stmt.value))
+                except ValueError:
+                    listed = set()
+                if listed & sites(f):
+                    raise Refused(f"{f.relative_to(src)}: line {stmt.lineno}: `__all__` exports the declared site(s) "
+                                  f"{sorted(listed & sites(f))} — the twin removes them, so a star import fails")
+
+
 def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
     """Copy src/veracium to out, un-instrumenting every module; census.py itself is replaced by a stub that
     exposes the harness surface the observer touches (enabled(), registry()) and declares nothing. Writes the
     MANIFEST beside the twin (out/../twin_manifest.json): source hashes before and after, every count, the
     permitted transformations by name."""
+    _refuse_cross_module_sites(pathlib.Path(src))
     if out.exists():
         shutil.rmtree(out)
     shutil.copytree(src, out, ignore=shutil.ignore_patterns("__pycache__"))
@@ -741,6 +919,9 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
                                   "a transform that changes a function's exit count", "an emitted module still carrying a census token",
                                   "a census surface import binding a name the twin's STUB does not define",
                                   "declare_site imported under another name",
+                                  "a declared site referenced from another module (imported by name, star-imported, or read as a module attribute)",
+                                  "a declared site listed in its module's literal __all__",
+                                  "globals(), vars(), exec, eval, a __dict__ or sys.modules in a module that declares a site",
                                   "a declared site loaded outside fire()/consult() (as a value, an argument or a container element, including at a definition-time position: a default, decorator, annotation, or class base or keyword)"],
                 "modules": {}}
     for p in sorted(out.rglob("*.py")):
@@ -754,8 +935,10 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
             continue
         try:
             new, stats = uninstrument_source(text)
-        except Refused as e:
-            raise Refused(f"{rel}: {e}") from None
+        except (Refused, _scope.UnresolvableScope) as e:
+            # ROUND 13 (research's S2-6): an UnresolvableScope escaped here WITHOUT the module path, because only
+            # Refused was wrapped — a refusal naming a line and not the file it is in. Each keeps its own type.
+            raise type(e)(f"{rel}: {e}") from None
         p.write_text(new)
         # ROUND 10: summed BY PROPERTY, not by an exclusion list. This read `if k != "exits"`, so every
         # new stat had to be remembered in two places — and adding one that is not a number KeyErrors here,
@@ -837,6 +1020,9 @@ def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib
                                 f"the source — the difference is NOT one of the permitted instrumentation changes")
         except SyntaxError as e:
             problems.append(f"{rel}: the twin does not parse ({e})")
+    # ROUND 13, the round-12 verdict's F2 — a CROSS-MODULE reading. Every check above reads one module at a time, so a
+    # sibling's `from .a import S` breaking with ImportError read clean. A differential over the twin's own references.
+    problems += lost_cross_module_references(src, out)
     man_path = manifest if manifest is not None else out.parent / "twin_manifest.json"
     if not man_path.exists():
         problems.append(f"no twin manifest at {man_path} — the derivation's own record of what it rewrote is missing")

@@ -80,9 +80,9 @@ def export_twin(repo: pathlib.Path, commit: str, out: pathlib.Path) -> dict:
     alone once other specs touch src. A commit id keeps the historical form (an export of an old tree) for the
     record; it is a different product as soon as src/ moved for any other reason."""
     twin = out / "twin"; twin.mkdir(parents=True, exist_ok=True)
+    spec = importlib.util.spec_from_file_location("inv7_uninstrument", HERE / "inv7_uninstrument.py")
+    un = importlib.util.module_from_spec(spec); spec.loader.exec_module(un)       # both branches ask its predicates
     if commit == "derive":
-        spec = importlib.util.spec_from_file_location("inv7_uninstrument", HERE / "inv7_uninstrument.py")
-        un = importlib.util.module_from_spec(spec); spec.loader.exec_module(un)
         totals = un.derive(repo / "src" / "veracium", twin / "src" / "veracium")
         # ROUND 7, F4d: WITH the source. Called without it, verify() checked only that no instrumentation token
         # survived — the preservation half was dead code in every run this harness ever made, so a twin that
@@ -98,7 +98,11 @@ def export_twin(repo: pathlib.Path, commit: str, out: pathlib.Path) -> dict:
     assert p1.returncode == 0
     # the twin carries the census MODULE (tranche 1) and no site: `declare_site` occurs only in census.py
     hits = sh(["grep", "-rl", "declare_site", str(twin / "src" / "veracium")]).stdout.split()
-    assert [pathlib.Path(h).name for h in hits] == ["census.py"], hits
+    # ROUND 13 (research's R4, carried from round 12): "is this the census file?" asked of the ONE predicate, not by a
+    # `Path.name` reading of its own — the fourth reading of that question, and the one the round-12 gate could not see
+    # because it sits outside the transform's file.
+    root = twin / "src" / "veracium"
+    assert [un.is_census_module_file(pathlib.Path(h).relative_to(root)) for h in hits] == [True], hits
     since = sh(["git", "log", "--format=%h %s", f"{full}..HEAD", "--", "src/"], cwd=repo).stdout.strip().splitlines()
     return {"commit": full, "src": str(twin / "src"), "src_commits_since_twin": since}
 

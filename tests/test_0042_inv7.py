@@ -1103,10 +1103,13 @@ def test_every_census_decision_routes_through_one_predicate():
     # a floor written here: `test_r12_f2_the_gate_refuses_a_second_reading_wherever_it_stands` appends a unit
     # holding each vocabulary class and asserts it is refused.
     #
-    # NAMED BOUNDARY, not chased: this file only. Two readings OUTSIDE it are known and queued rather than claimed:
-    # `inv7_harness.export_twin` (research's R4, next round) and `scope_resolution.Resolver.site_names`, a third copy
-    # of site-declaration recognition found while this was written. And a unit deciding without ever writing the
-    # constant (a name built by concatenation) is out of reach of this or any static check.
+    # NAMED BOUNDARY: this file only. Round 13 dealt with the two readings OUTSIDE it that round 12 queued:
+    # `inv7_harness.export_twin` now asks `is_census_module_file`; and site-declaration recognition — the transform's,
+    # `scope_resolution.Resolver.site_names`, and `installed_sites.scan` — is PINNED, not unified, by
+    # `test_r13_the_three_site_readers_answer_as_pinned` (they disagree on four shapes the tree does not use, each
+    # loudly). Widening THIS gate to the evidence directory was measured and not done: 7 units hold the vocabulary,
+    # and `"enabled"` as a report field and `"fire"` in the inventory are other concepts under the same word. A unit
+    # deciding without ever writing the constant (a name built by concatenation) is out of reach of any static check.
     def string_constants(fn):
         """The string constants a unit HOLDS — its own docstring excluded, because prose ABOUT the vocabulary is not
         a decision made WITH it (the must-not-fire half of the round-12 battery)."""
@@ -1634,3 +1637,175 @@ def test_r12_s2c_2_the_silent_route_is_refused_on_3_12_plus_and_reported_below()
         out, stats = un.uninstrument_source(src, "<s2c2>")
         assert "_census.enabled()" in out and stats["unresolved_bypass_candidates"] >= 1, \
             "on 3.10/3.11 the read resolves to the module's alias, and the live call must be reported"
+
+
+# ROUND 13 — THE ROUND-12 VERDICT'S F1, END TO END. The resolver cells live in the scope file
+# (test_r13_f1_every_scope_inside_a_comprehension_gets_its_own_table); this is the verdict's own statement, through
+# derive() and the manifest: a census read handed the wrong table stayed LIVE in the twin with verify() clean AND
+# `unresolved_bypass_candidates == 0`. One scope binds `_census` as its own parameter; the other reads the module's.
+_R13_F1_SHAPES = [
+    ("element-binds/if-reads",     "    return [(lambda _census: 0)(0) for x in [1] if (lambda: _census.enabled())()]\n"),
+    ("element-binds/later-iter",   "    return [(lambda _census: 0)(0) for x in [1] for y in (lambda: [_census.enabled()])()]\n"),
+    ("key-binds/value-reads",      "    return list({(lambda _census: 0)(0): (lambda: _census.enabled())() for x in [1]}.values())\n"),
+    ("element-binds/later-target", "    return [(lambda _census: 0)(0) for x in [[0]] for x[(lambda: _census.enabled())()] in [1]]\n"),
+]
+
+
+@pytest.mark.parametrize("cell,line", _R13_F1_SHAPES, ids=[c for c, _ in _R13_F1_SHAPES])
+def test_r13_f1_a_census_read_the_twin_keeps_is_reported_not_silent(cell, line, tmp_path):
+    """"The disclosed scope-order gap changes a measured decision from [True] to [False] while verify() reports clean
+    and the manifest records zero unresolved candidates." Reproduced at the round-12 pin on 3.10–3.13: the twin kept a
+    live `_census.enabled()`, so its result depended on the census (the dict shape: [False] off, [True] on), and
+    nothing said so. The read is still one the transform cannot rewrite in place; what must hold is that it is
+    REPORTED, with its line, and never counted as zero."""
+    un = _load("inv7_uninstrument_r13_f1", EVIDENCE / "inv7_uninstrument.py")
+    slug = re.sub(r"\W", "_", cell)
+    src = tmp_path / f"r13src_{slug}"; src.mkdir()
+    (src / "__init__.py").write_text("")
+    (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
+    (src / "mod.py").write_text("from . import census as _census\nS = _census.declare_site('s')\n\n\ndef f():\n" + line)
+    out = tmp_path / f"r13twin_{slug}"
+    un.derive(src, out)
+    totals = json.loads((out.parent / "twin_manifest.json").read_text())["totals"]
+    assert totals["unresolved_bypass_candidates"] == 1, \
+        f"{cell}: a live census read in the twin is counted as {totals['unresolved_bypass_candidates']} unresolved"
+
+
+# ROUND 13 — THE ROUND-12 VERDICT'S F2: "Removing a declared site breaks a sibling module's import with ImportError;
+# verify() again reports clean." Every shape by which another module reaches a declared site, including research's
+# stage-1 R2 (the site read as a MODULE ATTRIBUTE, which fails at call time rather than import).
+_R13_A = "from . import census as _census\nS = _census.declare_site('a.s')\n\n\ndef g(v):\n    return S.fire(v)\n"
+_R13_F2_CELLS = [
+    ("from-import",               "from .a import S\n\n\ndef f():\n    return S is not None\n", ""),
+    ("absolute from-import",      "from vpkg.a import S\n\n\ndef f():\n    return S is not None\n", ""),
+    ("star import over __all__",  "from .a import *\n\n\ndef f():\n    return g(True)\n", "__all__ = ['S', 'g']\n"),
+    ("attribute via from . import a", "from . import a\n\n\ndef f():\n    return a.S is not None\n", ""),
+    ("attribute via import as",   "import vpkg.a as m\n\n\ndef f():\n    return m.S is not None\n", ""),
+    ("attribute via dotted chain", "import vpkg.a\n\n\ndef f():\n    return vpkg.a.S is not None\n", ""),
+]
+
+
+def _r13_pkg(tmp_path, slug, b_text, a_extra):
+    src = tmp_path / slug / "vpkg"; src.mkdir(parents=True)
+    (src / "__init__.py").write_text("")
+    (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
+    (src / "a.py").write_text(_R13_A + a_extra)
+    (src / "b.py").write_text(b_text)
+    return src
+
+
+def _r13_run_b(root):
+    code = f"import sys; sys.path.insert(0, {str(root)!r}); import vpkg.b as b; print(b.f())"
+    return subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+
+
+@pytest.mark.parametrize("cell,b_text,a_extra", _R13_F2_CELLS, ids=[c for c, _, _ in _R13_F2_CELLS])
+def test_r13_f2_a_site_another_module_reaches_is_refused_and_verify_sees_it_alone(cell, b_text, a_extra, tmp_path,
+                                                                                  monkeypatch):
+    """Two independent answers. derive() REFUSES — naming both ends. And with that refusal disabled, verify() ALONE
+    reports the broken reference, while the twin really does fail where the source runs: verify()'s cross-module
+    reading does not rest on the transform's."""
+    un = _load("inv7_uninstrument_r13_f2", EVIDENCE / "inv7_uninstrument.py")
+    slug = re.sub(r"\W", "_", cell)
+    src = _r13_pkg(tmp_path, slug, b_text, a_extra)
+    with pytest.raises(un.Refused, match=r"declared site 'S'|`__all__` exports the declared site"):
+        un.derive(src, tmp_path / slug / "twin" / "vpkg")
+    monkeypatch.setattr(un, "_refuse_cross_module_sites", lambda s: None)
+    out = tmp_path / slug / "twin" / "vpkg"
+    un.derive(src, out)
+    lost = [p for p in un.verify(out, src) if "bound there in the source and not in the twin" in p]
+    assert lost, f"{cell}: with derive()'s refusal disabled, verify() reports the twin clean"
+    assert _r13_run_b(src.parent).returncode == 0, f"{cell}: the SOURCE does not run: {_r13_run_b(src.parent).stderr}"
+    assert _r13_run_b(out.parent).returncode != 0, f"{cell}: the twin runs — the cell does not exercise the defect"
+
+
+def test_r13_f2_a_sibling_using_only_ordinary_names_is_neither_refused_nor_reported(tmp_path):
+    """The acceptance half: a sibling importing a FUNCTION from a site-declaring module, by name and as an attribute."""
+    un = _load("inv7_uninstrument_r13_f2_ok", EVIDENCE / "inv7_uninstrument.py")
+    for slug, b_text in (("by_name", "from .a import g\n\n\ndef f():\n    return g(True)\n"),
+                         ("by_attribute", "from . import a\n\n\ndef f():\n    return a.g(True)\n")):
+        src = _r13_pkg(tmp_path, slug, b_text, "")
+        out = tmp_path / slug / "twin" / "vpkg"
+        un.derive(src, out)
+        assert un.verify(out, src) == [], f"{slug}: {un.verify(out, src)}"
+        assert _r13_run_b(out.parent).stdout.strip() == "True"
+
+
+# ROUND 13 — ROUND 12'S DISCLOSED LIMIT `globals()["S"]` (the twin raised KeyError with verify() clean). The module
+# namespace reached dynamically, in a module that declares a site, is REFUSED. Acceptance cells first: research's
+# census found 27 `getattr` calls in the site modules, all on ordinary objects, and none of them may be refused.
+_R13_NS_HEAD = "from . import census as _census\nS = _census.declare_site('s')\n\n\n"
+_R13_NS_ACCEPTED = [
+    ("getattr on an object",  "def f(o):\n    return getattr(o, 'name', None)\n"),
+    ("vars of an object",     "def f(o):\n    return vars(o)\n"),
+    ("an attribute named modules", "def f(o):\n    return o.modules\n"),
+]
+_R13_NS_REFUSED = [
+    ("globals()",             "def f():\n    return globals()['S'].fire(1)\n", "globals()"),
+    ("vars()",                "def f():\n    return vars()['S']\n", "vars()"),
+    ("exec",                  "def f():\n    exec('S.fire(1)')\n", "exec()"),
+    ("eval",                  "def f():\n    return eval('S')\n", "eval()"),
+    ("sys.modules",           "import sys\n\n\ndef f():\n    return getattr(sys.modules[__name__], 'S')\n", "`sys.modules`"),
+    ("a __dict__",            "def f(m):\n    return m.__dict__['S']\n", "a `__dict__`"),
+]
+
+
+@pytest.mark.parametrize("cell,body", _R13_NS_ACCEPTED, ids=[c for c, _ in _R13_NS_ACCEPTED])
+def test_r13_ordinary_dynamic_access_in_a_site_module_is_not_refused(cell, body):
+    un = _load("inv7_uninstrument_r13_ns_ok", EVIDENCE / "inv7_uninstrument.py")
+    un.uninstrument_source(_R13_NS_HEAD + body, f"<{cell}>")
+
+
+@pytest.mark.parametrize("cell,body,form", _R13_NS_REFUSED, ids=[c for c, _, _ in _R13_NS_REFUSED])
+def test_r13_the_module_namespace_reached_dynamically_in_a_site_module_is_refused(cell, body, form):
+    un = _load("inv7_uninstrument_r13_ns", EVIDENCE / "inv7_uninstrument.py")
+    with pytest.raises(un.Refused, match=re.escape(form) + ".*reached dynamically"):
+        un.uninstrument_source(_R13_NS_HEAD + body, f"<{cell}>")
+
+
+# ROUND 13 — THREE READERS OF "WHICH NAMES ARE SITES", PINNED RATHER THAN UNIFIED. The transform (`declared_names`),
+# the scope resolver (`Resolver.site_names`) and the binding scan (`installed_sites.scan`) each recognise a site
+# declaration. Round 12's gate is scoped to the transform's file and named the other two as its boundary. Measured at
+# round 13 over eleven declaration shapes: they AGREE on the three the tree uses and DISAGREE on four others — and every
+# disagreement is LOUD end to end (derive refuses, or the evidence run's reconciliation refuses a registered id the scan
+# does not show). Unifying them into one definition is a refactor across four modules; this pins the whole matrix so a
+# drift in ANY reader fails here, with the shape named, instead of surfacing as a disagreement a round later.
+_R13_READER_SHAPES = {
+    #  shape                  source                                                             site_names / declared_names / scan names
+    "bare call":           ("from .census import declare_site\nS = declare_site('a')\n",              (["S"], ["S"], ["S"])),
+    "alias attribute":     ("from . import census as _census\nS = _census.declare_site('a')\n",       (["S"], ["S"], ["S"])),
+    "other object attr":   ("x = None\nS = x.declare_site('a')\n",                                    (["S"], ["S"], ["S"])),
+    "annotated":           ("from .census import declare_site\nS: object = declare_site('a')\n",      ([], [], [])),
+    "tuple target":        ("from .census import declare_site\nS, T = declare_site('a'), 1\n",       ([], [], [])),
+    "chained target":      ("from .census import declare_site\nS = T = declare_site('a')\n",         ([], [], [])),
+    "inside a function":   ("from .census import declare_site\ndef f():\n    S = declare_site('a')\n", ([], [], ["S"])),
+    "inside if":           ("from .census import declare_site\nif True:\n    S = declare_site('a')\n", ([], [], ["S"])),
+    "non-literal id":      ("from .census import declare_site\nS = declare_site(NAME)\n",            (["S"], ["S"], [])),
+    "keyword id":          ("from .census import declare_site\nS = declare_site(site_id='a')\n",     (["S"], ["S"], [])),
+    "aliased import":      ("from .census import declare_site as ds\nS = ds('a')\n",                 ([], [], [])),
+}
+
+
+@pytest.mark.parametrize("shape", sorted(_R13_READER_SHAPES), ids=sorted(_R13_READER_SHAPES))
+def test_r13_the_three_site_readers_answer_as_pinned(shape, tmp_path):
+    un = _load("inv7_uninstrument_r13_readers", EVIDENCE / "inv7_uninstrument.py")
+    sr_ = _load("scope_resolution_r13_readers", EVIDENCE / "scope_resolution.py")
+    inst = _load("installed_sites_r13_readers", EVIDENCE / "installed_sites.py")
+    src, want = _R13_READER_SHAPES[shape]
+    (tmp_path / "m.py").write_text(src)
+    got = (sorted(sr_.Resolver(src, "<r>").site_names()), sorted(un.declared_names(ast.parse(src))[0]),
+           sorted({r["name"] for r in inst.scan(tmp_path) if r["name"]}))
+    assert got == want, f"{shape}: (site_names, declared_names, scan) = {got}, pinned {want}"
+
+
+def test_r13_s2_6_an_unresolvable_scope_in_derive_names_its_module(tmp_path):
+    """RESEARCH'S S2-6: derive() wrapped only `Refused`, so an `UnresolvableScope` escaped naming a line and not the
+    module. It now names the module and keeps its type (a caller catching UnresolvableScope still catches it)."""
+    un = _load("inv7_uninstrument_r13_s26", EVIDENCE / "inv7_uninstrument.py")
+    src = tmp_path / "vpkg"; src.mkdir()
+    (src / "__init__.py").write_text(""); (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
+    (src / "deep" ).mkdir(); (src / "deep" / "__init__.py").write_text("")
+    (src / "deep" / "m.py").write_text("from .. import census as _census\nG = ((lambda: (_census := 1)) for x in range(3) "
+                                       "if (lambda: _census.enabled())())\n")
+    with pytest.raises(un._scope.UnresolvableScope, match=re.escape(str(pathlib.Path("deep") / "m.py")) + ": line 2"):
+        un.derive(src, tmp_path / "twin" / "vpkg")
