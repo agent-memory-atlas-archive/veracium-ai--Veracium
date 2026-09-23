@@ -247,7 +247,10 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     assert re.search(r'^  healthy: \{.*"any_errors": false.*"subsequence_holds": true', text, re.M)
     assert re.search(r'^  failing: \{.*"all_unmeasured": true.*"subsequence_holds": true', text, re.M)
     assert re.search(r'^  off: \{"census_enabled": false, "registry_size": (\d+)\}', text, re.M).group(1) == str(len(declaration.DECLARED_IDS))
-    assert re.search(r'^  uninstrumented: \{"census_enabled": false, "registry_size": 0', text, re.M)
+    # the reference arm's checks: census off and an empty registry (and, since round 14, a stand-in use count of 0 —
+    # asserted with the derivation below); parsed as JSON rather than matched as a key-order-dependent prefix
+    _u = json.loads(re.search(r"^  uninstrumented: (\{.*\})$", text, re.M).group(1))
+    assert _u.get("census_enabled") is False and _u.get("registry_size") == 0, _u
     # the tests the run could not compare are NAMED (a reader sees the boundary of the claim), each a node id
     # round 7c: the exclusions are the STANDING list (by name, with a cause) plus any NEWLY non-reproducible test —
     # the verdict line counts both apart, the two headings list them, and a NEW one is a finding the harness's exit
@@ -289,16 +292,22 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     # that matters is asserted elsewhere: the uninstrumented arm registered zero sites. (A first version asserted
     # every listed commit was an 0042 tranche — true until the next spec touched src; a census of the moment
     # mistaken for a rule.)
-    # the twin is DERIVED from HEAD by removing the instrumentation (2026-09-19; an exported old commit is a
-    # different product as soon as src/ moves for any other reason): the transcript states the derivation and
-    # the number of sites removed equals the declaration's ids at HEAD — the twin lacks exactly what HEAD declares
+    # the twin is DERIVED from HEAD by un-instrumenting it (2026-09-19; an exported old commit is a different product
+    # as soon as src/ moves for any other reason): the transcript states the derivation, and — since round 14 — the
+    # number of declarations PRESERVED as inert stand-ins equals the declaration's ids at HEAD
     m = re.search(r"^twin \(uninstrumented\): derived from HEAD ([0-9a-f]{40}) by inv7_uninstrument\.py$", text, re.M)
     assert m, "the transcript's twin is not the derived one"
     assert m.group(1) == pin
-    d = re.search(r"^twin derivation: (\d+) declare_site removed, (\d+) fire\(\) unwrapped, (\d+) consult blocks spliced, (\d+) census-enabled bypass blocks removed", text, re.M)
+    d = re.search(r"^twin derivation: (\d+) declare_site preserved as inert stand-ins, (\d+) fire\(\) unwrapped, (\d+) consult blocks spliced, (\d+) census-enabled bypass blocks removed", text, re.M)
     assert d, "the transcript does not state the derivation"
     assert int(d.group(1)) == len(declaration.DECLARED_IDS), (d.group(1), len(declaration.DECLARED_IDS))
     assert int(d.group(2)) > 0 and int(d.group(3)) > 0 and int(d.group(4)) == 4       # the four hot-predicate bypasses
+    # ROUND 14: "uninstrumented", MEASURED — the reference arm's printed checks carry a stand-in use count of exactly 0
+    # and an empty registry (research's stage-1 B2; INV-7 is frozen and its reference arm is the uninstrumented one)
+    u = re.search(r"^  uninstrumented: (\{.*\})$", text, re.M)
+    assert u, "the transcript does not print the reference arm's checks"
+    uc = json.loads(u.group(1))
+    assert uc.get("inert_calls") == 0 and uc.get("registry_size") == 0, uc
 
 
 # ---- leg 3: the harness's mutation matrix ------------------------------------------------------------
