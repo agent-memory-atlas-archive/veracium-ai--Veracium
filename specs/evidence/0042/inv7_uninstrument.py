@@ -608,10 +608,20 @@ def cross_module_references(root: pathlib.Path, pkg: str | None = None) -> list:
     stage-1 R2: removing a declared site broke a sibling's import with verify() clean, and the attribute route
     (`from . import a` … `a.S`) broke at call time the same way.
 
-    NAMED LIMIT: a reference spelled dynamically — `getattr(module, "S")`, `importlib.import_module(...)` then an
-    attribute — is not a static reference and is not listed. Research counted the site-declaring modules' dynamic
-    reads at round 13: 27 `getattr` calls, every one on an ordinary object; 0 globals(), vars(), __dict__,
-    sys.modules, exec or eval."""
+    AND EVERY OTHER USE OF A MODULE OBJECT (round 13, research's pre-seal P1). This docstring's first form named "a
+    reference spelled dynamically" as a limit, and it was SILENT: `getattr(a, 'S')` and `import_module('pkg.a').S`
+    broke the twin with verify() clean. A fix keyed on those SPELLINGS was then shown six more bypasses (`vars(a)`,
+    `a.__dict__`, `operator.attrgetter('S')(a)`, `sys.modules[...]`, and aliases of `getattr` and `import_module`),
+    so the rule is keyed on USE, research's: once an expression resolves to a package module — a name bound by an
+    import, `import_module("<package module>")` inline or bound to a name (recognised by its BINDING, so an alias is
+    seen), or a submodule attribute of either — its only uses are `m.<static, non-dunder attribute>` and the plain
+    builtin `getattr(m, "<literal>")`, each listed as a static reference. Any other use is listed as an ESCAPE (name
+    None), which `derive()` refuses when the module's CLOSURE holds a site — itself, every module under it if it is a
+    package, and transitively every package module it binds (research's refinement: a module declaring no site can
+    carry one as an attribute). Dynamic ACQUISITION — `sys.modules`, a
+    non-literal `import_module`, `__import__` of the package — is listed as "dynamic" and refused anywhere. Measured on
+    the real tree: the same static references as before, 0 dynamic rows, and ONE escape (`store/sqlite.py` passes the
+    `semantic` module object to a method), which is not refused because `semantic.py` declares no site."""
     root = pathlib.Path(root); pkg = pkg or root.name       # a twin's directory may be named apart from its package
     files = sorted(p for p in root.rglob("*.py") if "__pycache__" not in p.parts)
     refs = []
@@ -646,24 +656,104 @@ def cross_module_references(root: pathlib.Path, pkg: str | None = None) -> list:
                             modules[a.asname] = a.name
                         else:
                             modules[pkg] = pkg                                     # `import pkg.a` binds `pkg`
-        if not modules:
-            continue
+        # BINDINGS, NOT SPELLINGS (research's input to P1, after B2): what `import_module`, `sys` and `sys.modules` are
+        # called in THIS module is read from its imports, so `from importlib import import_module as im` is seen.
+        im_names, importlib_names, sys_names, sys_modules_names = {"__import__"}, set(), set(), set()
         for node in ast.walk(tree):
-            if not (isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load)):
-                continue
-            chain, cur = [node.attr], node.value
-            while isinstance(cur, ast.Attribute):
-                chain.insert(0, cur.attr); cur = cur.value
-            if not isinstance(cur, ast.Name) or cur.id not in modules:
-                continue
-            dotted = modules[cur.id]
-            for i, part in enumerate(chain):              # walk down submodules; the first non-module part is the name
-                if _module_file(root, f"{dotted}.{part}") is not None and i < len(chain) - 1:
-                    dotted = f"{dotted}.{part}"; continue
-                tfile = _module_file(root, dotted)
-                if tfile is not None and tfile != path:
-                    refs.append((path, node.lineno, tfile, part, "attribute"))
-                break
+            if isinstance(node, ast.ImportFrom) and not node.level and node.module in ("importlib", "sys"):
+                for a in node.names:
+                    if node.module == "importlib" and a.name == "import_module":
+                        im_names.add(a.asname or a.name)
+                    if node.module == "sys" and a.name == "modules":
+                        sys_modules_names.add(a.asname or a.name)
+            elif isinstance(node, ast.Import):
+                for a in node.names:
+                    if a.name == "importlib":
+                        importlib_names.add(a.asname or a.name)
+                    if a.name == "sys":
+                        sys_names.add(a.asname or a.name)
+
+        def is_import_module(call):
+            f = call.func
+            return (isinstance(f, ast.Name) and f.id in im_names) or \
+                (isinstance(f, ast.Attribute) and f.attr == "import_module" and isinstance(f.value, ast.Name)
+                 and f.value.id in importlib_names)
+
+        def literal(node):
+            return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
+
+        def in_pkg(dotted):
+            return dotted is not None and (dotted == pkg or dotted.startswith(pkg + "."))
+
+        for node in ast.walk(tree):                   # `m = import_module("pkg.a")` binds a module like an import
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) and is_import_module(node.value) \
+                    and node.value.args and in_pkg(literal(node.value.args[0])):
+                for t in node.targets:
+                    if isinstance(t, ast.Name):
+                        modules[t.id] = literal(node.value.args[0])
+
+        def module_of(expr):
+            """The package module an expression evaluates to, or None."""
+            if isinstance(expr, ast.Name) and isinstance(expr.ctx, ast.Load):
+                return modules.get(expr.id)
+            if isinstance(expr, ast.Call) and is_import_module(expr) and expr.args \
+                    and not (isinstance(expr.func, ast.Name) and expr.func.id == "__import__"):
+                d = literal(expr.args[0])
+                return d if in_pkg(d) else None
+            if isinstance(expr, ast.Attribute) and isinstance(expr.ctx, ast.Load):
+                base = module_of(expr.value)
+                if base is not None and _module_file(root, f"{base}.{expr.attr}") is not None:
+                    return f"{base}.{expr.attr}"
+            return None
+
+        def add(dotted, name, line, form):
+            tfile = _module_file(root, dotted)
+            if tfile is not None and tfile != path:
+                refs.append((path, line, tfile, name, form))
+
+        parent = {}
+        for node in ast.walk(tree):
+            for child in ast.iter_child_nodes(node):
+                parent[id(child)] = node
+
+        def is_plain_getattr(call):
+            return isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == "getattr" \
+                and "getattr" not in modules and len(call.args) >= 2
+
+        for node in ast.walk(tree):
+            dotted = module_of(node) if isinstance(node, (ast.Name, ast.Call, ast.Attribute)) else None
+            if dotted is not None:
+                up = parent.get(id(node))
+                # ROUND 13, P1 — KEYED ON USE (research's rule): a package module OBJECT may be used only as `m.<attr>`
+                # with a static, non-dunder attribute, or as the first argument of the plain builtin
+                # `getattr(m, "<literal>")`, which is the same static reference. Any other use — passed to a call,
+                # subscripted, its `__dict__` taken, aliased — lets the module object ESCAPE, whatever function it
+                # escapes into (`vars`, `operator.attrgetter`, an alias of `getattr`); derive() refuses that when the
+                # module's closure holds a site (`_site_closure`).
+                if isinstance(up, ast.Attribute) and up.value is node and not up.attr.startswith("__"):
+                    if module_of(up) is None:
+                        add(dotted, up.attr, up.lineno, "attribute")
+                elif is_plain_getattr(up) and up.args[0] is node and literal(up.args[1]) is not None:
+                    add(dotted, literal(up.args[1]), up.lineno, "getattr")
+                elif isinstance(up, ast.Assign) and isinstance(node, ast.Call):
+                    pass                                   # `m = import_module("pkg.a")`: the binding itself
+                else:
+                    tfile = _module_file(root, dotted)
+                    if tfile is not None and tfile != path:
+                        refs.append((path, getattr(node, "lineno", 0), tfile, None,
+                                     "escape: a package module object used other than as a static attribute read"))
+            # DYNAMIC ACQUISITION, anywhere in the package (research's (b)): no static reading can say which module
+            if isinstance(node, ast.Attribute) and node.attr == "modules" and isinstance(node.value, ast.Name) \
+                    and node.value.id in sys_names or isinstance(node, ast.Name) and node.id in sys_modules_names \
+                    and isinstance(node.ctx, ast.Load):
+                refs.append((path, node.lineno, None, None, "dynamic: sys.modules"))
+            elif isinstance(node, ast.Call) and is_import_module(node) and node.args:
+                d = literal(node.args[0])
+                if isinstance(node.func, ast.Name) and node.func.id == "__import__":
+                    if d is None or in_pkg(d):
+                        refs.append((path, node.lineno, None, None, "dynamic: __import__ of the package"))
+                elif d is None:
+                    refs.append((path, node.lineno, None, None, "dynamic: import_module with a non-literal argument"))
     return refs
 
 
@@ -679,6 +769,8 @@ def lost_cross_module_references(src: pathlib.Path, out: pathlib.Path) -> list:
     are sites, so it does not share the transform's site recognition."""
     lost = []
     for path, line, tfile, name, form in cross_module_references(out, pkg=src.name):
+        if tfile is None or name is None:
+            continue                                      # dynamic or escape: refused by derive(), not resolvable here
         if _resolves(out, tfile, name):
             continue
         src_target = src / tfile.relative_to(out)
@@ -894,6 +986,60 @@ STUB = ('"""INV-7 twin stub: the census module with NOTHING declared — the har
         'def trace(on=True):\n    pass\n\ndef trace_snapshot():\n    return []\n\ndef trace_reset():\n    pass\n\ndef reset_counters():\n    pass\n')
 
 
+def _module_level_module_bindings(root: pathlib.Path, path: pathlib.Path) -> list:
+    """The package modules a module binds AT MODULE LEVEL (its attributes that are module objects): `from . import x`,
+    `from .p import x` where x is a submodule, `import pkg.x as y`, `import pkg.x` (which binds the package), and
+    `m = import_module("pkg.x")`."""
+    pkg = root.name
+    here = _dotted_of(root, path)
+    package = here if path.name == "__init__.py" else here.rsplit(".", 1)[0]
+    out = []
+    for node in ast.parse(path.read_text()).body:
+        if isinstance(node, ast.ImportFrom):
+            if node.level:
+                base = package.split(".")
+                base = base[:len(base) - (node.level - 1)] if node.level > 1 else base
+                target = ".".join(base + ([node.module] if node.module else []))
+            else:
+                target = node.module or ""
+            for a in node.names:
+                f = _module_file(root, f"{target}.{a.name}")
+                if f is not None:
+                    out.append(f)
+        elif isinstance(node, ast.Import):
+            for a in node.names:
+                if a.name == pkg or a.name.startswith(pkg + "."):
+                    f = _module_file(root, a.name if a.asname else pkg)
+                    if f is not None:
+                        out.append(f)
+        elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) and node.value.args \
+                and isinstance(node.value.args[0], ast.Constant) and isinstance(node.value.args[0].value, str) \
+                and node.value.args[0].value.startswith(pkg):
+            f = _module_file(root, node.value.args[0].value)
+            if f is not None:
+                out.append(f)
+    return out
+
+
+def _site_closure(root: pathlib.Path, tfile: pathlib.Path, sites) -> pathlib.Path | None:
+    """A site-declaring module reachable THROUGH the module object `tfile` — the module itself; for a package, every
+    module under it (a package object carries its imported submodules as attributes); and, transitively, every package
+    module it binds at module level. Research's pre-seal refinement of P1: "refuse the escape when the target declares
+    a site" looked only at the escaped module, and `c` (no site) carrying `a` (a site) as `c.a` escaped silently."""
+    seen, stack = set(), [tfile]
+    while stack:
+        f = stack.pop()
+        if f in seen:
+            continue
+        seen.add(f)
+        if sites(f):
+            return f
+        if f.name == "__init__.py":
+            stack.extend(p for p in f.parent.rglob("*.py") if "__pycache__" not in p.parts)
+        stack.extend(_module_level_module_bindings(root, f))
+    return None
+
+
 def _refuse_cross_module_sites(src: pathlib.Path) -> None:
     """ROUND 13, the round-12 verdict's F2: a declared site is removed from its module, so ANY other module that
     reaches it — imported by name, star-imported, or read as a module attribute (research's stage-1 R2) — would break
@@ -905,6 +1051,16 @@ def _refuse_cross_module_sites(src: pathlib.Path) -> None:
             declared[f] = declared_names(ast.parse(f.read_text()))[0]
         return declared[f]
     for path, line, tfile, name, form in cross_module_references(src):
+        if form.startswith("escape"):
+            carried = _site_closure(src, tfile, sites)
+            if carried:
+                raise Refused(f"{path.relative_to(src)}: line {line}: {form}, and {tfile.relative_to(src)} carries the "
+                              f"site-declaring module {carried.relative_to(src)} — once the module object escapes, no static "
+                              f"reading can say which of its names is read (round 13, research's pre-seal P1)")
+            continue
+        if form.startswith("dynamic"):
+            raise Refused(f"{path.relative_to(src)}: line {line}: {form} — no static reading can say whether it reaches a "
+                          f"declared site the twin removes (round 13, research's pre-seal P1)")
         if name in sites(tfile):
             raise Refused(f"{path.relative_to(src)}: line {line}: {form} of the declared site {name!r} from "
                           f"{tfile.relative_to(src)} — the twin removes the site, so this module would fail where the "
@@ -947,6 +1103,8 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
                                   "declare_site imported under another name",
                                   "a declared site referenced from another module (imported by name, star-imported, or read as a module attribute)",
                                   "a declared site listed in its module's literal __all__",
+                                  "a package module whose closure holds a site-declaring module, used other than as a static attribute read (passed, subscripted, its __dict__ taken, an aliased or non-literal getattr)",
+                                  "a module acquired dynamically (sys.modules, import_module with a non-literal argument, __import__ of the package)",
                                   "globals(), vars(), exec, eval, a __dict__ or sys.modules in a module that declares a site",
                                   "a declared site loaded outside fire()/consult() (as a value, an argument or a container element, including at a definition-time position: a default, decorator, annotation, or class base or keyword)"],
                 "modules": {}}

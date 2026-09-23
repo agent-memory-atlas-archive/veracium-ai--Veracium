@@ -1682,6 +1682,10 @@ _R13_F2_CELLS = [
     ("attribute via from . import a", "from . import a\n\n\ndef f():\n    return a.S is not None\n", ""),
     ("attribute via import as",   "import vpkg.a as m\n\n\ndef f():\n    return m.S is not None\n", ""),
     ("attribute via dotted chain", "import vpkg.a\n\n\ndef f():\n    return vpkg.a.S is not None\n", ""),
+    # ROUND 13, research's pre-seal P1: round 13's own README named these as a limit, and the limit was SILENT
+    ("getattr with a literal",    "from . import a\n\n\ndef f():\n    return getattr(a, 'S') is not None\n", ""),
+    ("import_module with a literal", "import importlib\n\n\ndef f():\n    return importlib.import_module('vpkg.a').S is not None\n", ""),
+    ("import_module aliased",     "from importlib import import_module as im\n\n\ndef f():\n    return im('vpkg.a').S is not None\n", ""),
 ]
 
 
@@ -1840,3 +1844,76 @@ def test_r13_n3_a_site_in_a_literal_all_is_refused_with_no_importer(tmp_path):
     src = _r13_pkg(tmp_path, "n3", "from .a import g\n\n\ndef f():\n    return g(True)\n", "__all__ = ['S', 'g']\n")
     with pytest.raises(un.Refused, match=r"`__all__` exports the declared site"):
         un.derive(src, tmp_path / "n3" / "twin" / "vpkg")
+
+
+_R13_P1_DYNAMIC = [
+    ("getattr, non-literal name", "from . import a\nNAME = 'S'\n\n\ndef f():\n    return getattr(a, NAME) is not None\n", "escape"),
+    ("import_module, non-literal", "import importlib\nM = 'vpkg.a'\n\n\ndef f():\n    return importlib.import_module(M).S is not None\n", "import_module with a non-literal"),
+    ("__import__ of the package",  "def f():\n    return __import__('vpkg.a', fromlist=['S']).S is not None\n", "__import__ of the package"),
+    # research's six, sent before P1 was committed — every one in a module declaring NO site, so B2's namespace
+    # refusal never applied; keyed on the spelling of the access, each was a bypass nobody listed
+    ("sys.modules",                "import sys\nimport vpkg.a\n\n\ndef f():\n    return sys.modules['vpkg.a'].S is not None\n", "sys.modules"),
+    ("vars of the module",         "from . import a\n\n\ndef f():\n    return vars(a)['S'] is not None\n", "escape"),
+    ("the module's __dict__",      "from . import a\n\n\ndef f():\n    return a.__dict__['S'] is not None\n", "escape"),
+    ("operator.attrgetter",        "import operator\nfrom . import a\n\n\ndef f():\n    return operator.attrgetter('S')(a) is not None\n", "escape"),
+    ("getattr aliased",            "from . import a\n_ga = getattr\n\n\ndef f():\n    return _ga(a, 'S') is not None\n", "escape"),
+]
+
+
+@pytest.mark.parametrize("cell,b_text,form", _R13_P1_DYNAMIC, ids=[c for c, _, _ in _R13_P1_DYNAMIC])
+def test_r13_p1_a_package_module_reached_dynamically_is_refused(cell, b_text, form, tmp_path):
+    """RESEARCH'S PRE-SEAL P1: this round's README named "a reference spelled dynamically" as a limit of the
+    cross-module checks, and it was SILENT — the twin broke with verify() clean, the class the round-12 verdict was
+    returned for. KEYED ON USE, not on the spelling of the access (research's rule, after B2): a package module OBJECT
+    whose closure holds a site may be used only as `m.<static attribute>` or in the plain builtin `getattr(m, "<literal>")`;
+    any other use lets it ESCAPE, into whatever function, and is refused. Dynamic acquisition of a module
+    (`sys.modules`, a non-literal `import_module`, `__import__` of the package) is refused anywhere in the package."""
+    un = _load("inv7_uninstrument_r13_p1", EVIDENCE / "inv7_uninstrument.py")
+    src = _r13_pkg(tmp_path, re.sub(r"\W", "_", cell), b_text, "")
+    with pytest.raises(un.Refused, match=re.escape(form)):
+        un.derive(src, tmp_path / "twin" / "vpkg")
+
+
+def test_r13_p1_import_module_of_the_standard_library_is_not_refused(tmp_path):
+    """The acceptance half, measured on the real tree: its one `import_module` call names the standard library."""
+    un = _load("inv7_uninstrument_r13_p1_ok", EVIDENCE / "inv7_uninstrument.py")
+    src = _r13_pkg(tmp_path, "stdlib", "import importlib\n\n\ndef f():\n    return importlib.import_module('re') is not None\n", "")
+    out = tmp_path / "twin" / "vpkg"
+    un.derive(src, out)
+    assert un.verify(out, src) == []
+
+
+def _r13_closure_pkg(tmp_path, slug, b_text, extra):
+    src = _r13_pkg(tmp_path, slug, b_text, "")
+    for name, text in extra.items():
+        (src / name).write_text(text)
+    return src
+
+
+def test_r13_p1_an_escaping_module_that_carries_a_site_module_is_refused(tmp_path):
+    """RESEARCH'S REFINEMENT OF P1: the escape rule first asked only whether the ESCAPED module declares a site. `c`,
+    declaring none, carries `a` (which does) as `c.a` — passed to a function that reads `m.a.S` through a parameter,
+    nothing resolves statically, verify() has nothing to diff, and the twin raised AttributeError. The same for a
+    PACKAGE object, which carries its imported submodules. An escape is refused when the module's closure — itself,
+    for a package every module under it, and transitively every package module it binds — holds a site."""
+    un = _load("inv7_uninstrument_r13_closure", EVIDENCE / "inv7_uninstrument.py")
+    carried = _r13_closure_pkg(tmp_path, "carried", "from . import c\n\n\ndef g2(m):\n    return getattr(m.a, 'S')\n\n\n"
+                               "def f():\n    return g2(c) is not None\n", {"c.py": "from . import a\n"})
+    with pytest.raises(un.Refused, match=r"carries the site-declaring module a\.py"):
+        un.derive(carried, tmp_path / "carried" / "twin" / "vpkg")
+    package = _r13_closure_pkg(tmp_path, "package", "import vpkg\nimport vpkg.a\n\n\ndef g2(m):\n    return m.a.S\n\n\n"
+                               "def f():\n    return g2(vpkg) is not None\n", {})
+    with pytest.raises(un.Refused, match=r"carries the site-declaring module"):
+        un.derive(package, tmp_path / "package" / "twin" / "vpkg")
+
+
+def test_r13_p1_an_escaping_module_whose_closure_holds_no_site_is_accepted(tmp_path):
+    """The acceptance half, the real tree's own shape: store/sqlite.py passes the `semantic` module object to a method,
+    and semantic.py neither declares a site nor binds any package module — its closure is empty, so it is not refused."""
+    un = _load("inv7_uninstrument_r13_closure_ok", EVIDENCE / "inv7_uninstrument.py")
+    src = _r13_closure_pkg(tmp_path, "empty", "from . import d\n\n\ndef g2(m):\n    return m.h()\n\n\n"
+                           "def f():\n    return g2(d) == 1\n", {"d.py": "def h():\n    return 1\n"})
+    out = tmp_path / "empty" / "twin" / "vpkg"
+    un.derive(src, out)
+    assert un.verify(out, src) == []
+    assert _r13_run_b(out.parent).stdout.strip() == "True"
