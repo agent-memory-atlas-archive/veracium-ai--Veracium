@@ -1350,6 +1350,17 @@ _R12_CELLS = [
      '"""Doc."""\nfrom __future__ import annotations\nfrom . import census\nS = census.declare_site(\'s\')\n\n'
      'def f():\n    census.enable(True)\n    return census.enabled()\n',
      ("works", True)),
+    # ROUND 12 STAGE 2, research's S2-4 — survivors of their mutant campaign, each a real behaviour NO test pinned:
+    # M4b matched receivers by NAME rather than identity and survived, because both R2 cells above load the site
+    # ONLY as a value. A site that is fired AND loaded as a value is the row that tells identity from name.
+    ("S2-4-site-fired-AND-loaded-as-a-value",
+     "from . import census as _census\nS = _census.declare_site('s')\n\ndef f(q):\n    return S.fire(len([S]))\n",
+     ("refuses", "outside fire()/consult()")),
+    # M10 dropped `.consult()` from the instrumentation tokens and survived: that token is the ONLY guard against a
+    # consult in EXPRESSION position, which the transform does not rewrite, and no test contained one.
+    ("S2-4-consult-in-expression-position",
+     "from . import census as _census\nS = _census.declare_site('s')\n\ndef f():\n    x = S.consult()\n    return x\n",
+     ("refuses", ".consult()")),
 ]
 
 
@@ -1490,3 +1501,67 @@ def test_r12_f2_the_gate_refuses_a_second_reading_wherever_it_stands(tmp_path, m
             wrong.append(f"{label}: gate {'PASSED' if passed else 'REFUSED'}, should have "
                          f"{'passed' if should_pass else 'refused'}")
     assert not wrong, "the enumeration gate misjudged:\n  " + "\n  ".join(wrong)
+
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ROUND 12 STAGE 2 — research's S2-1 (the resolver misplaced every definition-time position), S2-2 (lost_bindings'
+# builtin subtraction hid the one silent case) and S2-4 (survivors). The positions are LOADED from the scope file.
+# ------------------------------------------------------------------------------------------------------------------
+
+_SCOPE_TESTS = _load("t0042_scope_positions", ROOT / "tests" / "test_0042_scope_resolution.py")
+
+
+@pytest.mark.parametrize("pos,body", _SCOPE_TESTS.DEFINITION_TIME_POSITIONS,
+                         ids=[p for p, _ in _SCOPE_TESTS.DEFINITION_TIME_POSITIONS])
+def test_r12_s2_1_a_site_loaded_at_a_definition_time_position_is_refused(pos, body):
+    """R2 refuses a declared site LOADED outside fire()/consult(), and asks the resolver which loads are the site.
+    The resolver answered "not the site" for every definition-time position, so R2 missed all of them: the twin
+    removed the declaration and kept the load. `lost_bindings` caught those in verify() — the backstop paid for itself
+    on its first adversarial run — but R2's own refused form was FALSE at every one of these positions."""
+    un = _load("inv7_uninstrument_r12_s21a", EVIDENCE / "inv7_uninstrument.py")
+    with pytest.raises(un.Refused, match=re.escape("outside fire()/consult()")):
+        un.uninstrument_source(_SCOPE_TESTS._S21_HEAD + body.replace("__X__", "S"), f"<{pos}>")
+
+
+@pytest.mark.parametrize("pos,body", _SCOPE_TESTS.DEFINITION_TIME_POSITIONS,
+                         ids=[p for p, _ in _SCOPE_TESTS.DEFINITION_TIME_POSITIONS])
+def test_r12_s2_1_a_census_consult_at_a_definition_time_position_is_reported_not_silent(pos, body):
+    """THE SILENT ONE. Round 11 made the unresolved-bypass detector shape-agnostic: every `<alias>.enabled()` the
+    transform does not rewrite is REPORTED, so a twin carrying a live census call cannot call itself clean. It asks
+    the resolver whether the name is the module's alias — and at a definition-time position the resolver said no, so
+    the detector filed it as "a local of the same name: not ours". Measured: `def f(q, on=_census.enabled())` left
+    the live call in the twin with unresolved=0 and verify() CLEAN, while the same read in a function BODY was
+    reported. Round 11's own claim — "walks every call wherever it stands" — was false for header positions."""
+    un = _load("inv7_uninstrument_r12_s21b", EVIDENCE / "inv7_uninstrument.py")
+    out, stats = un.uninstrument_source(_SCOPE_TESTS._S21_HEAD + body.replace("__X__", "_census.enabled()"), f"<{pos}>")
+    assert "_census.enabled()" in out, f"{pos}: the fixture no longer leaves a live consult, so it tests nothing"
+    assert stats["unresolved_bypass_candidates"] >= 1, (
+        f"{pos}: the twin keeps a live `_census.enabled()` and the manifest reports it CLEAN (unresolved=0)")
+
+
+def test_r12_s2_2_lost_bindings_does_not_hide_a_lost_builtin_shadow():
+    """RESEARCH'S S2-2. `lost_bindings` subtracted `dir(builtins)`, reasoning that a builtin name cannot be a lost
+    binding. It is the ONE case that can be SILENT: a lost binding can only be a builtin's name if the source SHADOWED
+    that builtin, and losing the shadow raises no NameError — the name resolves to the builtin instead. Measured end
+    to end: a site named `id`, read in a default, gave a twin passing the builtin `id` function where the source
+    passed the site, with verify() CLEAN (the same site named `S` was reported).
+
+    BOTH HALVES: the shadow must be reported, AND an ordinary builtin read the source never bound must not be — the
+    subtraction was never what kept `len` out, the differential is (it only reports names the SOURCE bound)."""
+    un = _load("inv7_uninstrument_r12_s22", EVIDENCE / "inv7_uninstrument.py")
+    src = "from . import census as _census\nid = _census.declare_site('s')\n\ndef f(x=id):\n    return len([x])\n"
+    twin = "\ndef f(x=id):\n    return len([x])\n"
+    lost = un.lost_bindings(src, twin)
+    assert "id" in lost, f"the source's `id` is gone from the twin and still read there, and it was not reported: {lost}"
+    assert "len" not in lost, "an ordinary builtin read the source never bound was reported as lost"
+
+
+def test_r12_s2_4_a_module_carrying_only_a_consult_is_parsed_not_skipped():
+    """RESEARCH'S S2-4, survivor M9: `may_skip_uninstrumenting` spelled out its own tokens, and a mutant restoring
+    that SURVIVED because no test held a module whose only route into the census is `.consult()`. Such a module was
+    skipped unparsed before round 12 and must be parsed now: the skip heuristic asks the owner of the token list."""
+    un = _load("inv7_uninstrument_r12_s24", EVIDENCE / "inv7_uninstrument.py")
+    assert un.may_skip_uninstrumenting("x = 1\n"), "control: a module with no route into the census may be skipped"
+    assert not un.may_skip_uninstrumenting("def f(site):\n    with site.consult():\n        return 1\n"), \
+        "a module whose only census token is `.consult()` was skipped unparsed"

@@ -42,6 +42,9 @@ _BLOCK_NAME = {ast.Lambda: "lambda", ast.ListComp: "listcomp", ast.SetComp: "set
                ast.DictComp: "dictcomp", ast.GeneratorExp: "genexpr"}
 _INLINABLE = (ast.ListComp, ast.SetComp, ast.DictComp)      # no block from 3.12 (PEP 709)
 _COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+# Fields of a def/class statement evaluated in the ENCLOSING scope when the statement runs (round 12, S2-1).
+# Defaults and annotations live one level down, inside `ast.arguments`, and are split there.
+_DEFINITION_TIME_FIELDS = frozenset({"decorator_list", "bases", "keywords", "returns"})
 SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda,
                ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
 
@@ -185,10 +188,54 @@ class Resolver:
                                         f"{type(child).__name__} — the resolver will not guess its scope")
             inner = queue[cursor]; self._cursor[key] = cursor + 1
             self._owner[id(child)] = inner
-            self._assign(child, inner)                     # a real block resets any inlined shadowing
+            self._assign_definition(child, block, inner, shadowed)
             return
         self._owner[id(child)] = block
         self._assign(child, block, shadowed)
+
+    def _assign_definition(self, node, block, inner, shadowed: frozenset) -> None:
+        """A `def`, `lambda` or `class` statement: its BODY and its parameter BINDINGS belong to the inner block, and
+        everything evaluated WHEN THE STATEMENT RUNS belongs to the enclosing one.
+
+        ROUND 12, research's stage-2 S2-1 — THE RESOLVER SENT EVERY CHILD OF THE STATEMENT TO THE INNER BLOCK. Python
+        evaluates decorators, defaults (positional, positional-only, keyword-only), argument and return annotations,
+        and a class's bases and keywords in the ENCLOSING scope, when the statement executes — so a site or census
+        alias read there is the MODULE's binding, and this answered "a local: not ours". Measured at d61fd62: twelve
+        definition-time positions, all twelve wrong, and two consumers took the answer at face value — round 12's R2
+        refusal missed every one of them, and round 11's unresolved-bypass detector went SILENT
+        (`def f(q, on=_census.enabled())` left a live census call in the twin with nothing reported). The
+        comprehension handler below already made exactly this distinction for its first iterable; definitions
+        never got it.
+
+        EACH NODE IS VISITED EXACTLY ONCE. The tempting fix — assign everything to the inner block as before, then
+        RE-assign the definition-time parts to the enclosing one — visits a lambda or comprehension nested inside a
+        default TWICE, and each visit consumes a symbol-table block from the cursor queue: a wrong answer, or an
+        UnresolvableScope on a correct module. The statement is split before anything is recursed into.
+
+        NAMED BOUNDARY: PEP 695 type parameters (3.12+) and PEP 649 annotation scopes (3.14) evaluate in scopes of
+        their own. Neither can appear in code that must parse on 3.10, this project's floor, so `type_params` keeps
+        the inner block and annotations are treated as 3.10-3.13 evaluate them."""
+        for field, value in ast.iter_fields(node):
+            for item in (value if isinstance(value, list) else [value]):
+                if not isinstance(item, ast.AST):
+                    continue
+                if field in _DEFINITION_TIME_FIELDS:
+                    self._assign_child(item, block, shadowed)         # evaluated where the statement runs
+                elif isinstance(item, ast.arguments):
+                    self._owner[id(item)] = inner; self._comp_local[id(item)] = frozenset()
+                    for afield, avalue in ast.iter_fields(item):
+                        for a in (avalue if isinstance(avalue, list) else [avalue]):
+                            if not isinstance(a, ast.AST):
+                                continue                               # kw_defaults holds None for "no default"
+                            if afield in ("defaults", "kw_defaults"):
+                                self._assign_child(a, block, shadowed)
+                            else:                                      # an ast.arg: the PARAMETER binds inside,
+                                self._owner[id(a)] = inner             # its ANNOTATION is evaluated outside
+                                self._comp_local[id(a)] = frozenset()
+                                if a.annotation is not None:
+                                    self._assign_child(a.annotation, block, shadowed)
+                else:
+                    self._assign_child(item, inner, frozenset())       # a real block resets any inlined shadowing
 
     def _comprehension(self, child, block, shadowed: frozenset) -> None:
         """A comprehension, in BOTH regimes and with the language's own rule applied once for both.

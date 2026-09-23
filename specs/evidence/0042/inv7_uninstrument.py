@@ -528,9 +528,19 @@ def lost_bindings(src_text: str, twin_text: str) -> set:
     so a comprehension variable appears as a module-level binding AND read there and on 3.10/3.11 does not — an
     absolute check would false-positive on half the regimes, while the difference cancels it on all four.
 
-    NAMED LIMIT: a name bound dynamically (`globals()[...]`, `exec`) is invisible to a static reading. What this
-    cannot see is call-time-only behaviour and a changed VALUE; those stay with the behaviour regressions."""
-    import builtins
+    NO BUILTIN EXCLUSION (round 12, research's stage-2 S2-2). This subtracted `dir(builtins)`, on the reasoning that
+    a builtin name cannot be a lost binding. It is the ONE case that can be SILENT: a lost binding can only carry a
+    builtin's name if the source SHADOWED that builtin, and losing the shadow raises no NameError — the name quietly
+    resolves to the builtin. Measured: a site named `id`, read in a default, gave a twin passing the builtin `id`
+    function where the source passed the site, with verify() CLEAN. The subtraction was never what kept ordinary
+    builtin reads out; the differential is, because it only reports names the SOURCE bound.
+
+    NAMED LIMITS: a name bound dynamically (`globals()[...]`, `exec`) is invisible to a static reading — research
+    measured `globals()["S"]` giving a twin KeyError with verify() clean, exactly where this says. This reads ONE
+    module at a time, so a binding lost ACROSS modules is outside it too, and those fail at IMPORT, not at call time
+    (research's stage-2 S2-3): `from .a import S` in a module whose sibling `a` declared S (ImportError), and a site
+    named in `__all__` with a star importer (AttributeError). Beyond that, what this cannot see is call-time-only
+    behaviour and a changed VALUE; those stay with the behaviour regressions."""
 
     def bound(text):
         top = symtable.symtable(text, "<twin-check>", "exec")
@@ -547,7 +557,7 @@ def lost_bindings(src_text: str, twin_text: str) -> set:
         walk(top)
         return out
 
-    return ((bound(src_text) - bound(twin_text)) & reads(twin_text)) - set(dir(builtins))
+    return (bound(src_text) - bound(twin_text)) & reads(twin_text)
 
 
 def declared_names(tree: ast.Module) -> tuple[set[str], set[str]]:
@@ -731,7 +741,7 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
                                   "a transform that changes a function's exit count", "an emitted module still carrying a census token",
                                   "a census surface import binding a name the twin's STUB does not define",
                                   "declare_site imported under another name",
-                                  "a declared site loaded outside fire()/consult() (as a value, an argument or a container element)"],
+                                  "a declared site loaded outside fire()/consult() (as a value, an argument or a container element, including at a definition-time position: a default, decorator, annotation, or class base or keyword)"],
                 "modules": {}}
     for p in sorted(out.rglob("*.py")):
         rel = str(p.relative_to(out)); before = p.read_bytes()

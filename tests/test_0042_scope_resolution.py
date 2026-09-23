@@ -1039,3 +1039,62 @@ def test_every_refused_row_names_the_rule_that_caught_it():
         if got != RULE_OWNER[label]:
             wrong.append(f"{label}: declared {RULE_OWNER[label]}, derived {got}")
     assert not wrong, "rows changed hands between the rules:\n  " + "\n  ".join(wrong)
+
+
+
+# ------------------------------------------------------------------------------------------------------------------
+# ROUND 12, research's STAGE-2 S2-1 — THE RESOLVER PLACED EVERY DEFINITION-TIME POSITION IN THE INNER SCOPE.
+# ------------------------------------------------------------------------------------------------------------------
+
+# Every position Python evaluates in the ENCLOSING scope when a def, lambda or class statement runs. `__X__` is filled
+# with the name under test. Research's stage-2 read named seven; enumerating the grammar found TWELVE, and all twelve
+# were wrong at d61fd62 (plus a nested composition). ONE LIST, shared by the inv7 tests, which load it from here by
+# path — two copies of a position list would be the hand-kept pair this whole round removed.
+DEFINITION_TIME_POSITIONS = [
+    ("default",                     "def f(x=__X__):\n    return x\n"),
+    ("kw-only-default",             "def f(*, x=__X__):\n    return x\n"),
+    ("positional-only-default",     "def f(x=__X__, /):\n    return x\n"),
+    ("function-decorator-arg",      "@deco(__X__)\ndef f():\n    return 1\n"),
+    ("arg-annotation",              "def f(x: __X__ = 1):\n    return x\n"),
+    ("star-args-annotation",        "def f(*a: __X__):\n    return a\n"),
+    ("star-star-kwargs-annotation", "def f(**k: __X__):\n    return k\n"),
+    ("return-annotation",           "def f() -> __X__:\n    return 1\n"),
+    ("lambda-default",              "g = lambda x=__X__: x\n"),
+    ("class-base",                  "class K(__X__):\n    pass\n"),
+    ("class-keyword",               "class K(metaclass=__X__):\n    pass\n"),
+    ("class-decorator-arg",         "@deco(__X__)\nclass K:\n    pass\n"),
+    ("nested-function-default",     "def outer():\n    def inner(x=__X__):\n        return x\n    return inner\n"),
+    # A SCOPE NESTED INSIDE A DEFAULT. The fix's own docstring claims each node is visited EXACTLY ONCE, because
+    # re-assigning a default after the fact would visit its lambda or comprehension twice and consume two
+    # symbol-table blocks. A claim with no test is a docstring: these are the test.
+    ("lambda-inside-a-default",     "def f(x=lambda: __X__):\n    return x\n"),
+    ("comprehension-inside-a-default", "def f(x=[v for v in [__X__]]):\n    return x\n"),
+]
+_S21_HEAD = "from . import census as _census\nS = _census.declare_site('s')\n\ndef deco(v):\n    return lambda fn: fn\n\n"
+
+
+@pytest.mark.parametrize("cell,body,want", [
+    ("control-function-body", "def f():\n    return S\n", [True]),
+    ("control-a-parameter-named-S-shadows-it", "def f(S=1):\n    return S\n", [False]),
+    # THE ACCEPTANCE HALF, and the one a careless fix breaks: the default is the ENCLOSING scope's even when the
+    # body binds the same name, and the body's own `S` stays local.
+    ("default-is-enclosing-while-the-body-binds-S", "def f(x=S):\n    S = 2\n    return S + x\n", [True, False]),
+] + [(pos, body.replace("__X__", "S"), None) for pos, body in DEFINITION_TIME_POSITIONS],
+    ids=lambda v: v if isinstance(v, str) and "\n" not in v else "")
+def test_r12_s2_1_definition_time_positions_resolve_in_the_enclosing_scope(cell, body, want):
+    """RESEARCH'S STAGE-2 S2-1, measured before this was written: `refers_to_declared_site` returned True in a
+    function BODY and False in a default, a decorator, an annotation and a class keyword. Python evaluates all of
+    those in the ENCLOSING scope, when the `def`/`lambda`/`class` statement runs — the resolver sent every child of
+    the statement to the inner block. The comprehension handler beside it already made exactly this distinction for
+    its first iterable; definitions never got it.
+
+    Two consumers took the answer at face value: round 12's R2 refusal (a site loaded as a value), which MISSED all
+    of these, and round 11's unresolved-bypass detector, which went SILENT — `def f(q, on=_census.enabled())` left a
+    live census call in the twin with nothing reported. Loads are compared in SOURCE ORDER."""
+    r = sr.Resolver(_S21_HEAD + body, f"<{cell}>"); r.refuse_site_rebindings({"S"})
+    loads = sorted((n for n in ast.walk(r.tree) if isinstance(n, ast.Name) and n.id == "S" and isinstance(n.ctx, ast.Load)),
+                   key=lambda n: (n.lineno, n.col_offset))
+    assert loads, f"{cell}: the fixture loads no `S` at all, so it tests nothing"
+    got = [r.refers_to_declared_site(n, "S") for n in loads]
+    expected = want if want is not None else [True] * len(loads)
+    assert got == expected, f"{cell}: the resolver says {got}, Python evaluates these as {expected}"
