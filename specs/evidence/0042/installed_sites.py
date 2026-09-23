@@ -78,10 +78,23 @@ def _binding_bodies(src: str, filename: str = "<scan>") -> dict:
     counters never moved. The set of forms that bind a name is defined by the LANGUAGE, so the question now goes to
     CPython's own scope analysis (`scope_resolution.Resolver`, symtable): a use counts only where the name resolves
     to the MODULE binding, which is false for a local, a parameter, or a name bound by an enclosing function."""
+    return _binding_scan(src, filename)[0]
+
+
+def binding_body_defs(src: str, filename: str = "<scan>") -> list:
+    """The function nodes whose bodies BIND a site (consult and fire on the module-level site in ONE body) — the
+    bodies `bound` rests on. ROUND 13's verdict F2: the scan-to-runtime check compared the functions it happened to
+    collect and never asked whether THESE were among them; a property setter was not collected, so a setter that
+    bound a site on disk could differ from the one that ran and the scan's `bound` stood unchecked."""
+    return _binding_scan(src, filename)[1]
+
+
+def _binding_scan(src: str, filename: str = "<scan>") -> tuple:
     r = Resolver(src, filename)
     sites = r.site_names()
     r.refuse_site_rebindings(sites)
     per_body: dict = {}
+    binding_defs: list = []
     for fn in ast.walk(r.tree):
         if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
@@ -100,7 +113,9 @@ def _binding_bodies(src: str, filename: str = "<scan>") -> dict:
         for name, methods in uses.items():
             if set(BINDING_METHODS) <= methods:
                 per_body.setdefault(name, set()).update(methods)
-    return per_body
+                if fn not in binding_defs:
+                    binding_defs.append(fn)
+    return per_body, binding_defs
 
 
 def scan(root: pathlib.Path) -> list[dict]:
@@ -158,67 +173,102 @@ def _code_objects(code, out=None) -> dict:
 
 
 def _running_code(mod) -> dict:
-    """The code objects of the functions a RUNNING module defines at top level and in its classes, unwrapped."""
+    """The code objects of the functions a RUNNING module defines — at top level and in its classes, RECURSIVELY into
+    nested classes — keyed (name, first line), unwrapped, and compiled from THIS module's file. ROUND 14 (the round-13
+    verdict's F2): a property contributes its getter, SETTER and DELETER; a `cached_property` its function; a static
+    or class method its function. The first form took `fget` alone, so a setter was never compared."""
+    import functools
     import inspect
-    out = {}
+    out, seen = {}, set()
+    here = pathlib.Path(mod.__file__).resolve()
+
     def add(obj):
         obj = inspect.unwrap(obj) if callable(obj) else obj
         code = getattr(obj, "__code__", None)
         # compiled FROM THIS FILE: a dataclass's or namedtuple's generated `__init__`/`__repr__`/`__eq__` belong to the
-        # running module and are compiled by `exec` from text that is not in the source (measured: 48 of them on
-        # 3.12, 88 on 3.13, every one refused before this filter) — they are not what the scan read.
+        # running module and are compiled by `exec` from text that is not in the source (measured at round 13: 48 on
+        # 3.12, 88 on 3.13) — they are not what the scan read.
         if code is not None and getattr(obj, "__module__", None) == mod.__name__ \
-                and pathlib.Path(code.co_filename).resolve() == pathlib.Path(mod.__file__).resolve():
+                and pathlib.Path(code.co_filename).resolve() == here:
             out[(code.co_name, code.co_firstlineno)] = code
+
+    def members(obj):
+        for fn in (obj, getattr(obj, "__func__", None), getattr(obj, "fget", None), getattr(obj, "fset", None),
+                   getattr(obj, "fdel", None), obj.func if isinstance(obj, functools.cached_property) else None):
+            if fn is not None:
+                add(fn)
+
+    def walk_class(cls):
+        if id(cls) in seen:
+            return
+        seen.add(id(cls))
+        for member in list(vars(cls).values()):
+            if isinstance(member, type) and member.__module__ == mod.__name__:
+                walk_class(member)
+            else:
+                members(member)
     for obj in list(vars(mod).values()):
         if isinstance(obj, type) and obj.__module__ == mod.__name__:
-            for member in list(vars(obj).values()):      # a snapshot: a class dict can change under iteration
-                for fn in (member, getattr(member, "__func__", None), getattr(member, "fget", None)):
-                    if fn is not None:
-                        add(fn)
+            walk_class(obj)
         elif callable(obj):
             add(obj)
     return out
 
 
-def _defined_functions(tree: ast.Module) -> int:
-    """How many functions a module ENDS UP holding where `_running_code` looks — top level, and directly in top-level
-    classes — counted as DISTINCT NAMES per scope, because a later `def` of the same name replaces the earlier one
-    (measured: store/schema_version.py defines three functions twice, store/sqlite.py one method twice; a property's
-    getter and setter share one name and one `fget`). Counting statements refused both modules."""
-    n = len({s.name for s in tree.body if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef))})
-    for stmt in tree.body:
-        if isinstance(stmt, ast.ClassDef):
-            n += len({x.name for x in stmt.body if isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef))})
-    return n
+def _outermost_def(tree, fn):
+    """The def whose code object carries `fn`: `fn` itself if every node above it is the module or a class (or a
+    module/class-level if/try/with, which do not open a scope), else the outermost function around it — whose code
+    holds `fn`'s in its constants, so comparing it compares `fn`."""
+    parents = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[id(child)] = node
+    chain, cur = [], fn
+    while id(cur) in parents:
+        cur = parents[id(cur)]; chain.append(cur)
+    outer = fn
+    for node in chain:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            outer = node
+    return outer
 
 
+def _code_key(fn) -> tuple:
+    """(name, first line) as CPython keys a function's code: its first DECORATOR's line when decorated."""
+    return (fn.name, min([fn.lineno] + [d.lineno for d in fn.decorator_list]))
 def scan_is_the_program_that_ran(root: pathlib.Path, scanned: list[dict], registry: dict) -> list[str]:
-    """ROUND 13 — THE SCAN'S TWO INPUTS ARE THE PROGRAM THAT RAN (the ledger's row 321, research's stage-2 finding of
-    2026-09-21, taken into round 13 on the owner's word as a SILENT limit the round-12 package never disclosed).
-    `scan()` reads each module from disk and its `bound` is a JOIN between two things: the MODULE-LEVEL table
-    `NAME = declare_site(id)` and the FUNCTION BODIES that consult and fire NAME. The reconciliation compared module
-    names and site ids, never content, so an edit the process never saw could flip `bound` with nothing to refuse.
+    """THE SCAN'S TWO INPUTS ARE THE PROGRAM THAT RAN (round 13; the ledger's row 321). `scan()` reads each module from
+    disk and its `bound` is a JOIN between the MODULE-LEVEL table `NAME = declare_site(id)` and the FUNCTION BODIES
+    that consult and fire NAME, so an edit the process never saw could flip `bound` with nothing to refuse.
 
-    Per scanned module the process has loaded — found by its MODULE NAME, so a module that ran from another copy is
-    refused rather than skipped as "not loaded" (research's stage-1 attack on round 13's first form):
-      0. the module RAN FROM the scanned file (`__file__` resolves to it);
-      1. the file's bytes NOW equal the bytes the scan read (their sha256);
-      2. THE TABLE, BY IDENTITY: for every scanned `NAME = declare_site(id)`, the running module's NAME IS the object
-         the census registry holds for id, and every id the registry holds for that module is scanned. Research's
-         case: `S = declare_site('a'); T = object()` ran, `S = object(); T = declare_site('a')` was scanned — every
-         function's code object equal, the scan saying bound where the site was not;
-      3. THE BODIES: every function the running module defines at top level and in its classes has a code object
-         EQUAL to the one compiled from the scanned bytes, and the number compared equals the number of definitions
-         in the scanned source — so a module whose functions were all filtered out cannot pass by comparing none.
-    NOT `__loader__.get_source`, the first proposed remedy: it re-reads the file at call time and shows the edit
-    (measured by both seats). SCOPE, named: the scan's two inputs, not the whole program — a default value or a
-    decorator argument evaluated at module level is not what `bound` reads. Returns refusals; [] is the claim."""
+    Per package module this process has loaded — every SCANNED module, AND every running module that holds a
+    registered site (ROUND 14, research's N2: a module whose declaration was deleted from disk after import has no
+    scanned row, and round 13's loop, over scanned rows, never visited it) — found by its MODULE NAME:
+      0. it ran from the scanned file; 1. the file's bytes equal the bytes the scan read;
+      2. THE TABLE, BY IDENTITY: every scanned `NAME = declare_site(id)` IS the object the registry holds for id, and
+         every registered site the running module holds is scanned;
+      3. THE BODIES `bound` RESTS ON (ROUND 14, the round-13 verdict's F2): every body the scan counts as binding a
+         site — through its outermost def, whose code carries any nested body — is FOUND among the running module's
+         code objects and EQUAL to the one compiled from the scanned bytes. Round 13 compared the functions it
+         collected and required a COUNT; it collected a property's getter alone, so a SETTER binding a site on disk
+         could differ from the one that ran, and the count, by name, treated getter and setter as one. A binding body
+         not found is REFUSED — that is what makes a body added on disk after import, or a decorator that hides its
+         function, loud; and every function that IS found is compared too.
+    NOT `__loader__.get_source`, which re-reads the file at call time and shows the edit. SCOPE, named: the scan's two
+    inputs, not the whole program — a default value or a decorator argument evaluated at module level is not what
+    `bound` reads. Returns refusals; [] is the complete claim."""
     import sys as _sys
     root = pathlib.Path(root).resolve(); pkg = root.name
     by_module: dict[str, list] = {}
-    for s in scanned:
-        by_module.setdefault(s["module"], []).append(s)
+    for s_ in scanned:
+        by_module.setdefault(s_["module"], []).append(s_)
+    registered = {id(site) for site in registry.values()}
+    for name, mod in list(_sys.modules.items()):             # N2: running modules holding a registered site, too
+        f = getattr(mod, "__file__", None)
+        if not f or not pathlib.Path(f).resolve().is_relative_to(root):
+            continue
+        if any(id(v) in registered for v in list(vars(mod).values())):
+            by_module.setdefault(str(pathlib.Path(f).resolve().relative_to(root)), [])
     problems = []
     for rel, rows in sorted(by_module.items()):
         parts = pathlib.PurePosixPath(rel).with_suffix("").parts
@@ -232,7 +282,7 @@ def scan_is_the_program_that_ran(root: pathlib.Path, scanned: list[dict], regist
             problems.append(f"{rel}: the running module {name} was loaded from {ran_from}, not the scanned file")
             continue
         raw = path.read_bytes()
-        if hashlib.sha256(raw).hexdigest() != rows[0]["sha256"]:
+        if rows and hashlib.sha256(raw).hexdigest() != rows[0]["sha256"]:
             problems.append(f"{rel}: the file changed after the scan read it — the scan does not describe these bytes")
             continue
         for r in rows:
@@ -246,16 +296,25 @@ def scan_is_the_program_that_ran(root: pathlib.Path, scanned: list[dict], regist
         for rid, site in registry.items():
             if rid not in scanned_ids and any(site is getattr(mod, n, None) for n in list(vars(mod))):
                 problems.append(f"{rel}: the running module holds the registered site {rid!r}, which the scan does not show")
-        tree = ast.parse(raw.decode())
-        compiled = _code_objects(compile(raw.decode(), str(path), "exec", dont_inherit=True))
+        text = raw.decode()
+        tree = ast.parse(text)
+        compiled = _code_objects(compile(text, str(path), "exec", dont_inherit=True))
         ran = _running_code(mod)
-        if len(ran) != _defined_functions(tree):
-            problems.append(f"{rel}: {len(ran)} running functions compared against {_defined_functions(tree)} defined in the "
-                            f"scanned source — the comparison does not cover the module")
+        by_pos = {(x.lineno, x.col_offset): x for x in ast.walk(tree) if isinstance(x, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        for found in binding_body_defs(text, str(path)):
+            fn = by_pos[(found.lineno, found.col_offset)]      # THIS parse's node: parents are looked up in `tree`
+            outer = _outermost_def(tree, fn)
+            key = _code_key(outer)
+            if key not in ran:
+                problems.append(f"{rel}: the body that binds a site at line {fn.lineno} ({fn.name}, through {outer.name} "
+                                f"at line {key[1]}) is NOT among the running module's functions — the scan's `bound` "
+                                f"rests on a body this process cannot be shown to have run")
+            elif ran[key] != compiled.get(key):
+                problems.append(f"{rel}: the body that binds a site at line {fn.lineno} ({fn.name}) as it RAN differs from "
+                                f"the source the scan read — the scan's `bound` describes a different program")
         for key, code in sorted(ran.items(), key=lambda kv: kv[0][1]):
             if compiled.get(key) != code:
-                problems.append(f"{rel}: {key[0]} (line {key[1]}) as it RAN differs from the source the scan read — the "
-                                f"scan's `bound` describes a different program")
+                problems.append(f"{rel}: {key[0]} (line {key[1]}) as it RAN differs from the source the scan read")
     return problems
 
 

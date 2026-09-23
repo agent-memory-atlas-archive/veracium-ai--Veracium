@@ -139,7 +139,6 @@ class Uninstrument(ast.NodeTransformer):
         # goes to the same resolver the binding scan uses — CPython's own scope analysis.
         self.resolver = resolver
         self.sites = 0; self.fires = 0; self.consults = 0; self.consult_stmts = 0; self.bypasses = 0; self.imports = 0
-        self.removed_imports: list = []
 
     def _is_site(self, name, node) -> bool:
         """`name`, used at `node`, is the module-level declared site — not a local, a parameter, or an enclosing
@@ -196,58 +195,29 @@ class Uninstrument(ast.NodeTransformer):
 
     # module-level: drop declare_site assignments, and the census BINDINGS that exist only for instrumentation
     def visit_Module(self, node):
-        kept = []
+        # ROUND 14, the round-13 verdict's F1 — NOTHING IS REMOVED. Every declaration `NAME = declare_site(...)` and every
+        # census import stays in the twin VERBATIM, and the twin's STUB census answers `declare_site` with an INERT
+        # stand-in per declaration (see STUB). Rounds 11 to 13 removed the declaration and then chased, one spelling at
+        # a time, every route by which another piece of code could still reach the name it bound — an import, a
+        # star, `__all__`, an attribute, `getattr`, `import_module`, `sys.modules`, `__globals__`, `inspect`, `pkgutil`,
+        # `runpy`… — and the round-13 verdict found five more. A name that is never unbound cannot be reached and
+        # found missing, however the route is spelled. What stays refused here is what the transform must RECOGNISE:
+        # a declaration made through an alias of `declare_site`, and a census name the STUB does not answer.
         for stmt in node.body:
             if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.value, ast.Call) \
                     and is_site_declaration(stmt.value):
-                self.sites += 1; continue
-            # ROUND 11: all branches ask the SAME predicates. The third used to strip a name spelled `census` out
-            # of ANY import, and the second checked `module` and never `level` — two halves of one decision
-            # answering differently about one statement.
-            #
-            # ROUND 12 (the round-11 verdict's F1): THE UNIT IS THE BINDING, NOT THE STATEMENT. A surface import was
-            # dropped WHOLE, so `from .census import declare_site, enabled` took `enabled` with it while the module
-            # still called it — NameError in the twin, verify() clean. Round 11 had fixed exactly this for the
-            # partial MODULE import (research's B-S2-2) and left the surface branch dropping the lot: the named
-            # cell fixed, the matrix never enumerated. Now each NAME is decided: an instrumentation name is
-            # stripped, a harness name the STUB answers is KEPT, anything else is REFUSED at the boundary.
+                self.sites += 1
             if is_census_surface_import(stmt):
-                live = []
                 for a in stmt.names:
-                    if is_instrumentation_name(a.name):
-                        if a.asname and a.asname != a.name:
-                            raise Refused(f"line {stmt.lineno}: `{a.name}` is imported under another name "
-                                          f"({a.asname!r}); a site declaration is recognised by that name, so a "
-                                          f"declaration made through this alias could not be recognised or removed")
-                        continue
+                    if is_instrumentation_name(a.name) and a.asname and a.asname != a.name:
+                        raise Refused(f"line {stmt.lineno}: `{a.name}` is imported under another name "
+                                      f"({a.asname!r}); a site declaration is recognised by that name, so a "
+                                      f"declaration made through this alias could not be recognised")
                     if a.name not in _stub_names():
                         raise Refused(f"line {stmt.lineno}: this census import binds `{a.name}`, which the twin's "
-                                      f"STUB census does not define. The STUB exposes only the harness surface "
-                                      f"({', '.join(sorted(_stub_names()))}); a real-census or type-only name is "
-                                      f"THIS boundary, not a transform defect — the twin would fail at import")
-                    live.append(a)
-                if len(live) < len(stmt.names):
-                    self.imports += 1
-                if live:
-                    stmt.names = live; kept.append(stmt)
-                continue
-            if is_census_module_import(stmt):
-                self.imports += 1; self.removed_imports.append(stmt); continue   # restored if the module still uses the surface
-            # PARTIAL: the statement binds the census AND other names. Strip the census names and KEEP the
-            # statement, so its neighbours survive (round 11, research's stage-2 B-S2-2).
-            # ROUND 12: the strip asks the PREDICATE'S OWN RESULT (`a not in partial`, an identity test on the same
-            # alias nodes) rather than re-testing the name against a literal of its own — that literal was a second
-            # reading of "which names are the census", waived by the round-11 gate because this unit also calls a
-            # predicate (the verdict's F2, met at the same line as its F1). And the stripped alias is now RECORDED
-            # for restoration exactly like a whole-statement import: it was dropped and never restorable, so a
-            # module still using its census through a mixed import lost it (the verdict's F1, module cell).
-            partial = census_names_in_import(stmt)
-            if partial:
-                stmt.names = [a for a in stmt.names if a not in partial]
-                self.imports += 1
-                self.removed_imports.append(ast.copy_location(ast.ImportFrom(module=None, names=partial, level=1), stmt))
-            kept.append(stmt)
-        node.body = kept
+                                      f"STUB census does not define. The STUB exposes only the harness surface and "
+                                      f"`declare_site` ({', '.join(sorted(_stub_names()))}); a real-census or type-only "
+                                      f"name is THIS boundary, not a transform defect — the twin would fail at import")
         self.generic_visit(node)
         return node
 
@@ -420,24 +390,6 @@ def _in_recognised_bypass(tree, call) -> bool:
     return False
 
 
-def is_census_module_import(stmt) -> bool:
-    """`from . import census [as X]` — the census MODULE, bound under a name this module then uses.
-
-    LEVEL AND MODULE BOTH CHECKED. `from .. import census` is a DIFFERENT package's census and is not this
-    one; `from totally_unrelated import census` is not a census at all. Round 10 narrowed this in
-    `declared_names` and left `visit_Module` on the broad test, which is how recognition and removal came to
-    give opposite answers about one statement.
-
-    ROUND 11 STAGE 2: TRUE ONLY WHEN **EVERY** NAME IS THE CENSUS, because the caller DELETES the whole
-    statement. `from . import census as _census, helpers` used to satisfy this, so the statement went and
-    `helpers` went with it while the twin still called `helpers.tweak` — a NameError, which is the round-10
-    verdict's finding 2 through a route the reviewer did not name. A statement binding the census AND
-    something else has its census names stripped and is KEPT; `census_names_in_import` is what both callers
-    ask, so the whole-statement case and the partial case cannot drift apart."""
-    names = census_names_in_import(stmt)
-    return bool(names) and len(names) == len(stmt.names)
-
-
 def census_names_in_import(stmt) -> list:
     """The `census` aliases a sibling `from . import ...` binds — [] if it is not one.
 
@@ -492,7 +444,9 @@ def instrumentation_tokens_in(text: str) -> list:
     transform's own emitted-module refusal AND for verify(), which kept a second tuple with a FOURTH token
     (`from .census import`). The two had drifted, and the fix for F1 would have made them contradict — a
     correct twin keeping `from .census import enabled` refused by verify() on its first run."""
-    return [tok for tok in ("declare_site", ".consult()", ".fire(") if tok in text]
+    # ROUND 14: `declare_site` is no longer a token that must not survive — every declaration stays in the twin, bound
+    # to the STUB's inert stand-in. What must not survive is a MEASUREMENT: a consult or a fire.
+    return [tok for tok in (".consult()", ".fire(") if tok in text]
 
 
 def _stub_names() -> frozenset:
@@ -501,23 +455,6 @@ def _stub_names() -> frozenset:
     tree = ast.parse(STUB)
     return frozenset(n.name for n in tree.body if isinstance(n, ast.FunctionDef)) | frozenset(
         tg.id for n in tree.body if isinstance(n, ast.Assign) for tg in n.targets if isinstance(tg, ast.Name))
-
-
-def _restoration_index(body: list) -> int:
-    """Where a restored census import may be placed: after the module docstring and after every
-    `from __future__` import.
-
-    ROUND 12, research's stage-1 R3 — MEASURED ONE LINE FROM LIVE: restoration inserted at `body[0]`, ahead of
-    both. A docstring then stops being one (`__doc__` silently None), and a `from __future__` import no longer
-    first is a SyntaxError that `ast.parse` ACCEPTS and `compile()` refuses — which is why verify() could not see
-    it. schema.py, the tree's only module-level census import, has both; appending `_ON = _census.enabled()` to
-    it made restoration fire and the twin fail to compile. D2 widens restoration to partial aliases, which is
-    more routes into exactly this, so the placement had to move before D2 could land."""
-    i = 1 if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant) \
-        and isinstance(body[0].value.value, str) else 0
-    while i < len(body) and isinstance(body[i], ast.ImportFrom) and body[i].module == "__future__":
-        i += 1
-    return i
 
 
 def lost_bindings(src_text: str, twin_text: str) -> set:
@@ -608,20 +545,15 @@ def cross_module_references(root: pathlib.Path, pkg: str | None = None) -> list:
     stage-1 R2: removing a declared site broke a sibling's import with verify() clean, and the attribute route
     (`from . import a` … `a.S`) broke at call time the same way.
 
-    AND EVERY OTHER USE OF A MODULE OBJECT (round 13, research's pre-seal P1). This docstring's first form named "a
-    reference spelled dynamically" as a limit, and it was SILENT: `getattr(a, 'S')` and `import_module('pkg.a').S`
-    broke the twin with verify() clean. A fix keyed on those SPELLINGS was then shown six more bypasses (`vars(a)`,
-    `a.__dict__`, `operator.attrgetter('S')(a)`, `sys.modules[...]`, and aliases of `getattr` and `import_module`),
-    so the rule is keyed on USE, research's: once an expression resolves to a package module — a name bound by an
-    import, `import_module("<package module>")` inline or bound to a name (recognised by its BINDING, so an alias is
-    seen), or a submodule attribute of either — its only uses are `m.<static, non-dunder attribute>` and the plain
-    builtin `getattr(m, "<literal>")`, each listed as a static reference. Any other use is listed as an ESCAPE (name
-    None), which `derive()` refuses when the module's CLOSURE holds a site — itself, every module under it if it is a
-    package, and transitively every package module it binds (research's refinement: a module declaring no site can
-    carry one as an attribute). Dynamic ACQUISITION — `sys.modules`, a
-    non-literal `import_module`, `__import__` of the package — is listed as "dynamic" and refused anywhere. Measured on
-    the real tree: the same static references as before, 0 dynamic rows, and ONE escape (`store/sqlite.py` passes the
-    `semantic` module object to a method), which is not refused because `semantic.py` declares no site."""
+    ALSO a literal `getattr(<package module>, "S")` and `import_module("<package module>")` — inline or bound to a name,
+    recognised by its binding — which are the same static reference (round 13, research's pre-seal P1).
+
+    ROUND 14 — WHAT THIS IS FOR NOW. Rounds 12 and 13 used these references to REFUSE a declared site that another
+    module reached, because the twin removed the declaration; the round-13 verdict found five more routes (`pkgutil`,
+    `runpy`, `importlib.util`, `__globals__`, `inspect`) and the list could not close. Round 14 keeps every declaration
+    bound, so nothing here is refused. This remains as `verify()`'s cross-module DIFFERENTIAL — a reference the twin
+    still makes that resolved in the source and does not in the twin — and it can still fire: a transform that
+    deleted a declaration is the mutant that shows it (tests/test_0042_inv7.py)."""
     root = pathlib.Path(root); pkg = pkg or root.name       # a twin's directory may be named apart from its package
     files = sorted(p for p in root.rglob("*.py") if "__pycache__" not in p.parts)
     refs = []
@@ -656,22 +588,18 @@ def cross_module_references(root: pathlib.Path, pkg: str | None = None) -> list:
                             modules[a.asname] = a.name
                         else:
                             modules[pkg] = pkg                                     # `import pkg.a` binds `pkg`
-        # BINDINGS, NOT SPELLINGS (research's input to P1, after B2): what `import_module`, `sys` and `sys.modules` are
-        # called in THIS module is read from its imports, so `from importlib import import_module as im` is seen.
-        im_names, importlib_names, sys_names, sys_modules_names = {"__import__"}, set(), set(), set()
+        # BINDINGS, NOT SPELLINGS (research's input to P1, after B2): what `import_module` is called in THIS module is
+        # read from its imports, so `from importlib import import_module as im` is seen.
+        im_names, importlib_names = {"__import__"}, set()
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and not node.level and node.module in ("importlib", "sys"):
+            if isinstance(node, ast.ImportFrom) and not node.level and node.module == "importlib":
                 for a in node.names:
-                    if node.module == "importlib" and a.name == "import_module":
+                    if a.name == "import_module":
                         im_names.add(a.asname or a.name)
-                    if node.module == "sys" and a.name == "modules":
-                        sys_modules_names.add(a.asname or a.name)
             elif isinstance(node, ast.Import):
                 for a in node.names:
                     if a.name == "importlib":
                         importlib_names.add(a.asname or a.name)
-                    if a.name == "sys":
-                        sys_names.add(a.asname or a.name)
 
         def is_import_module(call):
             f = call.func
@@ -727,36 +655,15 @@ def cross_module_references(root: pathlib.Path, pkg: str | None = None) -> list:
             dotted = module_of(node) if isinstance(node, (ast.Name, ast.Call, ast.Attribute)) else None
             if dotted is not None:
                 up = parent.get(id(node))
-                # ROUND 13, P1 — KEYED ON USE (research's rule): a package module OBJECT may be used only as `m.<attr>`
-                # with a static, non-dunder attribute, or as the first argument of the plain builtin
-                # `getattr(m, "<literal>")`, which is the same static reference. Any other use — passed to a call,
-                # subscripted, its `__dict__` taken, aliased — lets the module object ESCAPE, whatever function it
-                # escapes into (`vars`, `operator.attrgetter`, an alias of `getattr`); derive() refuses that when the
-                # module's closure holds a site (`_site_closure`).
+                # A package module read as `m.<static, non-dunder attribute>`, or through the plain builtin
+                # `getattr(m, "<literal>")`, is a static reference. (Round 13 also listed every OTHER use as an escape
+                # and every dynamic acquisition, for derive() to refuse; round 14 keeps every name bound, so those
+                # refusals are gone and nothing consumes such rows.)
                 if isinstance(up, ast.Attribute) and up.value is node and not up.attr.startswith("__"):
                     if module_of(up) is None:
                         add(dotted, up.attr, up.lineno, "attribute")
                 elif is_plain_getattr(up) and up.args[0] is node and literal(up.args[1]) is not None:
                     add(dotted, literal(up.args[1]), up.lineno, "getattr")
-                elif isinstance(up, ast.Assign) and isinstance(node, ast.Call):
-                    pass                                   # `m = import_module("pkg.a")`: the binding itself
-                else:
-                    tfile = _module_file(root, dotted)
-                    if tfile is not None:
-                        refs.append((path, getattr(node, "lineno", 0), tfile, None,
-                                     "escape: a package module object used other than as a static attribute read"))
-            # DYNAMIC ACQUISITION, anywhere in the package (research's (b)): no static reading can say which module
-            if isinstance(node, ast.Attribute) and node.attr == "modules" and isinstance(node.value, ast.Name) \
-                    and node.value.id in sys_names or isinstance(node, ast.Name) and node.id in sys_modules_names \
-                    and isinstance(node.ctx, ast.Load):
-                refs.append((path, node.lineno, None, None, "dynamic: sys.modules"))
-            elif isinstance(node, ast.Call) and is_import_module(node) and node.args:
-                d = literal(node.args[0])
-                if isinstance(node.func, ast.Name) and node.func.id == "__import__":
-                    if d is None or in_pkg(d):
-                        refs.append((path, node.lineno, None, None, "dynamic: __import__ of the package"))
-                elif d is None:
-                    refs.append((path, node.lineno, None, None, "dynamic: import_module with a non-literal argument"))
     return refs
 
 
@@ -773,7 +680,7 @@ def lost_cross_module_references(src: pathlib.Path, out: pathlib.Path) -> list:
     lost = []
     for path, line, tfile, name, form in cross_module_references(out, pkg=src.name):
         if tfile is None or name is None:
-            continue                                      # dynamic or escape: refused by derive(), not resolvable here
+            continue
         if _resolves(out, tfile, name):
             continue
         src_target = src / tfile.relative_to(out)
@@ -852,53 +759,9 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # at call time and `REGISTRY = [S]` at import, both with verify() CLEAN, because the name is ASSIGNMENT-bound and
     # an import-scoped check could not see it. Refused here, where the resolver can still say which loads are the
     # site; `lost_bindings` in verify() is the second, independent reading of the same fact.
-    receivers = {id(n.func.value) for n in ast.walk(tree)
-                 if (_is_fire_call(n) or _is_consult_call(n)) and isinstance(n.func.value, ast.Name)}
-    for n in ast.walk(tree):
-        if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load) and n.id in declared and id(n) not in receivers \
-                and resolver.refers_to_declared_site(n, n.id):
-            raise Refused(f"line {n.lineno}: the declared site {n.id!r} is loaded outside fire()/consult() — as a value, "
-                          f"an argument or a container element — and the twin removes its declaration, so it would be "
-                          f"unbound there")
-    # ROUND 13 — THE MODULE NAMESPACE REACHED DYNAMICALLY, in a module that declares a site. Round 12 DISCLOSED this as
-    # a limit (`globals()["S"]`: the twin raised KeyError with verify() clean) and the round-12 verdict returned the
-    # disclosed silent limits as blocking. No static reading can say which name such a form reaches, so a site module
-    # holding one is REFUSED. Keyed on the forms that reach THE MODULE's namespace — research's census at round 13
-    # found 0 of them in the 28 site-declaring modules, and 27 `getattr` calls, all on ordinary objects: a refusal
-    # keyed on getattr would have refused 8 real modules. A module reaching its OWN namespace through an imported
-    # self-reference (`import pkg.b as me; getattr(me, "S")`) is not this rule's: `cross_module_references` lists it like
-    # a sibling's reference (round 13, research's pre-seal D1 — this comment first named it as a limit, and it was silent).
-    # ROUND 13, research's stage-2 B2 — KEYED ON BINDING, NOT SPELLING. The first form refused a CALL spelled
-    # `globals()` and an attribute spelled `sys.modules`, and let three aliases through silently: `_g = globals;
-    # _g()['S']`, `import sys as _s; _s.modules[...]`, `from sys import modules`. Now ANY load of the four builtins
-    # (a call or not — `vars(obj)` included, measured to touch no real site module), `.modules` on any name an
-    # import bound to `sys`, and `from sys import modules` itself.
-    if declared:
-        sys_names = {a.asname or a.name for st in ast.walk(tree) if isinstance(st, ast.Import)
-                     for a in st.names if a.name == "sys"}
-        for n in ast.walk(tree):
-            form = None
-            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load) and n.id in ("globals", "vars", "exec", "eval"):
-                form = f"{n.id}()"
-            elif isinstance(n, ast.Attribute) and n.attr == "__dict__":
-                form = "a `__dict__`"
-            elif isinstance(n, ast.Attribute) and n.attr == "modules" and isinstance(n.value, ast.Name) \
-                    and n.value.id in sys_names:
-                form = "`sys.modules`"
-            elif isinstance(n, ast.ImportFrom) and n.module == "sys" and not n.level \
-                    and any(a.name == "modules" for a in n.names):
-                form = "`sys.modules`"
-            if form:
-                raise Refused(f"line {n.lineno}: {form} in a module that declares a site — the module's namespace is "
-                              f"reached dynamically, so no static reading can say whether a declared site is read "
-                              f"through it (round 13: round 12 disclosed `globals()['S']` as a silent limit)")
-    # ROUND 10: THE GUESSED-ALIAS FALLBACK IS GONE. `aliases or {"_census", "census"}` treated those two
-    # spellings as the census in a module that imports no census at all, so an ordinary object bound to
-    # `_census` had its condition rewritten and the twin computed a different answer. Removing it PRESERVES
-    # ordinary behaviour in that module (the verdict's "preserve ordinary behavior OR explicitly refuse" —
-    # preserving is the half that cannot over-refuse). Measured before removal: the twin derives
-    # BYTE-IDENTICALLY, 162/302/152/4, digest a0f42316…, because every bypass is in schema.py, which
-    # derives its alias properly.
+    # ROUND 14: round 12's R2 ("a declared site loaded outside fire()/consult()") and round 13's dynamic-namespace
+    # refusal are GONE — both existed because the declaration was removed, and with the name kept bound to a faithful
+    # stand-in, a site loaded as a value, or reached through `globals()`, is correct code (research's stage-1 read).
     census_aliases = aliases
     # AND THE BINDING MUST NOT HAVE MOVED. `from . import census as _census` followed by `_census = On()`
     # imports the census and then replaces it; the name still resolves to module scope, so the scope
@@ -964,10 +827,6 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # alias today is `_census`. Same shape as `_NESTED_BINDING_OPS` nearly reusing the wider tuple and as the
     # packaging README hand-listing filenames the stage derives — a literal next to the derivation that
     # should have produced it.
-    still_used = any(isinstance(n, ast.Name) and n.id in census_aliases for n in ast.walk(tree))
-    if still_used and t.removed_imports:
-        k = _restoration_index(tree.body)                  # ROUND 12, R3: after the docstring and `from __future__`
-        tree.body[k:k] = t.removed_imports; t.imports -= len(t.removed_imports)
     out = ast.unparse(tree) + "\n"
     exits_after = exits_per_function(ast.parse(out))
     if exits_after != exits_before:
@@ -984,102 +843,23 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     return out, stats
 
 
-STUB = ('"""INV-7 twin stub: the census module with NOTHING declared — the harness surface only."""\n'
-        '_ENABLED = False\n\ndef enable(on=True):\n    global _ENABLED; _ENABLED = bool(on)\n\n'
+STUB = ('"""INV-7 twin stub: the census module with NOTHING MEASURED — the harness surface, and `declare_site`\n'
+        'answering each declaration with its own INERT stand-in (round 14). A stand-in carries its site_id and declines,\n'
+        'compares by identity like the real Site, records nothing, and COUNTS any use, so the capture can assert the\n'
+        'twin measured nothing: inert_calls() must read 0 and registry() stays empty."""\n'
+        '_ENABLED = False\n_INERT_CALLS = 0\n\n'
+        'class _InertSite:\n'
+        '    consulted = 0\n    fired = 0\n    errors = 0\n\n'
+        '    def __init__(self, site_id, declines=None):\n        self.site_id = site_id\n        self._declines = declines\n\n'
+        '    def _use(self):\n        global _INERT_CALLS\n        _INERT_CALLS += 1\n\n'
+        '    def consult(self):\n        self._use()\n        return self\n\n'
+        '    def __enter__(self):\n        return self\n\n    def __exit__(self, *exc):\n        return False\n\n'
+        '    def fire(self, decision=None, *args, **kwargs):\n        self._use()\n        return decision\n\n'
+        'def declare_site(site_id, declines=None):\n    return _InertSite(site_id, declines)\n\n'
+        'def inert_calls():\n    return _INERT_CALLS\n\n'
+        'def enable(on=True):\n    global _ENABLED; _ENABLED = bool(on)\n\n'
         'def enabled():\n    return _ENABLED\n\ndef registry():\n    return ()\n\ndef counters():\n    return {}\n\n'
         'def trace(on=True):\n    pass\n\ndef trace_snapshot():\n    return []\n\ndef trace_reset():\n    pass\n\ndef reset_counters():\n    pass\n')
-
-
-def _module_level_module_bindings(root: pathlib.Path, path: pathlib.Path) -> list:
-    """The package modules a module binds AT MODULE LEVEL (its attributes that are module objects): `from . import x`,
-    `from .p import x` where x is a submodule, `import pkg.x as y`, `import pkg.x` (which binds the package), and
-    `m = import_module("pkg.x")`."""
-    pkg = root.name
-    here = _dotted_of(root, path)
-    package = here if path.name == "__init__.py" else here.rsplit(".", 1)[0]
-    out = []
-    for node in ast.parse(path.read_text()).body:
-        if isinstance(node, ast.ImportFrom):
-            if node.level:
-                base = package.split(".")
-                base = base[:len(base) - (node.level - 1)] if node.level > 1 else base
-                target = ".".join(base + ([node.module] if node.module else []))
-            else:
-                target = node.module or ""
-            for a in node.names:
-                f = _module_file(root, f"{target}.{a.name}")
-                if f is not None:
-                    out.append(f)
-        elif isinstance(node, ast.Import):
-            for a in node.names:
-                if a.name == pkg or a.name.startswith(pkg + "."):
-                    f = _module_file(root, a.name if a.asname else pkg)
-                    if f is not None:
-                        out.append(f)
-        elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) and node.value.args \
-                and isinstance(node.value.args[0], ast.Constant) and isinstance(node.value.args[0].value, str) \
-                and node.value.args[0].value.startswith(pkg):
-            f = _module_file(root, node.value.args[0].value)
-            if f is not None:
-                out.append(f)
-    return out
-
-
-def _site_closure(root: pathlib.Path, tfile: pathlib.Path, sites) -> pathlib.Path | None:
-    """A site-declaring module reachable THROUGH the module object `tfile` — the module itself; for a package, every
-    module under it (a package object carries its imported submodules as attributes); and, transitively, every package
-    module it binds at module level. Research's pre-seal refinement of P1: "refuse the escape when the target declares
-    a site" looked only at the escaped module, and `c` (no site) carrying `a` (a site) as `c.a` escaped silently."""
-    seen, stack = set(), [tfile]
-    while stack:
-        f = stack.pop()
-        if f in seen:
-            continue
-        seen.add(f)
-        if sites(f):
-            return f
-        if f.name == "__init__.py":
-            stack.extend(p for p in f.parent.rglob("*.py") if "__pycache__" not in p.parts)
-        stack.extend(_module_level_module_bindings(root, f))
-    return None
-
-
-def _refuse_cross_module_sites(src: pathlib.Path) -> None:
-    """ROUND 13, the round-12 verdict's F2: a declared site is removed from its module, so ANY other module that
-    reaches it — imported by name, star-imported, or read as a module attribute (research's stage-1 R2) — would break
-    in the twin. Refused, with both ends named. And a site listed in its own module's literal `__all__` is refused
-    whether or not anything star-imports it today: the export is a promise the twin cannot keep."""
-    declared = {}
-    def sites(f):
-        if f not in declared:
-            declared[f] = declared_names(ast.parse(f.read_text()))[0]
-        return declared[f]
-    for path, line, tfile, name, form in cross_module_references(src):
-        if form.startswith("escape"):
-            carried = _site_closure(src, tfile, sites)
-            if carried:
-                raise Refused(f"{path.relative_to(src)}: line {line}: {form}, and {tfile.relative_to(src)} carries the "
-                              f"site-declaring module {carried.relative_to(src)} — once the module object escapes, no static "
-                              f"reading can say which of its names is read (round 13, research's pre-seal P1)")
-            continue
-        if form.startswith("dynamic"):
-            raise Refused(f"{path.relative_to(src)}: line {line}: {form} — no static reading can say whether it reaches a "
-                          f"declared site the twin removes (round 13, research's pre-seal P1)")
-        if name in sites(tfile):
-            raise Refused(f"{path.relative_to(src)}: line {line}: {form} of the declared site {name!r} from "
-                          f"{tfile.relative_to(src)} — the twin removes the site, so this module would fail where the "
-                          f"source runs (round 13, the round-12 verdict's F2)")
-    for f in sorted(p for p in src.rglob("*.py") if "__pycache__" not in p.parts):
-        tree = ast.parse(f.read_text())
-        for stmt in tree.body:
-            if isinstance(stmt, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "__all__" for t in stmt.targets):
-                try:
-                    listed = set(ast.literal_eval(stmt.value))
-                except ValueError:
-                    listed = set()
-                if listed & sites(f):
-                    raise Refused(f"{f.relative_to(src)}: line {stmt.lineno}: `__all__` exports the declared site(s) "
-                                  f"{sorted(listed & sites(f))} — the twin removes them, so a star import fails")
 
 
 def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
@@ -1087,14 +867,13 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
     exposes the harness surface the observer touches (enabled(), registry()) and declares nothing. Writes the
     MANIFEST beside the twin (out/../twin_manifest.json): source hashes before and after, every count, the
     permitted transformations by name."""
-    _refuse_cross_module_sites(pathlib.Path(src))
     if out.exists():
         shutil.rmtree(out)
     shutil.copytree(src, out, ignore=shutil.ignore_patterns("__pycache__"))
     totals = {"sites": 0, "fires": 0, "consults": 0, "consult_statements": 0, "bypasses": 0, "unresolved_bypass_candidates": 0, "imports": 0, "modules_changed": 0}
     manifest = {"permitted_transformations": [
-                    "NAME = declare_site(...) removed (module level)",
-                    "census bindings removed PER NAME: declare_site stripped from a surface import (the statement kept if a harness name the STUB answers remains); a census module import or alias removed, and RESTORED after the docstring and any from __future__ import if the module still reads it",
+                    "NAME = declare_site(...) PRESERVED; the twin's STUB census answers it with an inert stand-in per declaration (round 14)",
+                    "census imports PRESERVED (round 14)",
                     "with NAME.consult(): body -> body (NAME declared)", "NAME.consult() statement removed (NAME declared)",
                     "NAME.fire(X, ...) -> X (NAME declared; raise/return/assign)",
                     "if <census>.enabled(): [assign,] return NAME.fire(...) -> if False: [assign,] return X (kept dead; exit ordinals preserved)",
@@ -1102,15 +881,9 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
                 "refused_forms": ["fire()/consult() on an undeclared name", "fire() through an attribute chain", "fire() with no decision argument",
                                   "a with mixing consult and non-consult items", "an enabled block of any other shape",
                                   "a census-enabled bypass whose else branch is not simple assignments", "nonlocal/global naming a declared site",
-                                  "a transform that changes a function's exit count", "an emitted module still carrying a census token",
+                                  "a transform that changes a function's exit count", "an emitted module still carrying a measurement (a consult or a fire)",
                                   "a census surface import binding a name the twin's STUB does not define",
-                                  "declare_site imported under another name",
-                                  "a declared site referenced from another module (imported by name, star-imported, or read as a module attribute)",
-                                  "a declared site listed in its module's literal __all__",
-                                  "a package module whose closure holds a site-declaring module, used other than as a static attribute read (passed, subscripted, its __dict__ taken, an aliased or non-literal getattr)",
-                                  "a module acquired dynamically (sys.modules, import_module with a non-literal argument, __import__ of the package)",
-                                  "globals(), vars(), exec, eval, a __dict__ or sys.modules in a module that declares a site",
-                                  "a declared site loaded outside fire()/consult() (as a value, an argument or a container element, including at a definition-time position: a default, decorator, annotation, or class base or keyword)"],
+                                  "declare_site imported under another name"],
                 "modules": {}}
     for p in sorted(out.rglob("*.py")):
         rel = str(p.relative_to(out)); before = p.read_bytes()

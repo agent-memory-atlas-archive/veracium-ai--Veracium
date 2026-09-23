@@ -300,6 +300,7 @@ def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict, 
     if "uninstrumented" in arms:
         checks["uninstrumented"] = {"census_enabled": summaries["uninstrumented"]["census_enabled"],
                                     "registry_size": summaries["uninstrumented"]["census_registry_size"],
+                                    "inert_calls": summaries["uninstrumented"].get("census_inert_calls"),
                                     "veracium_file": summaries["uninstrumented"]["veracium_file"]}
 
     return verdict, checks
@@ -376,8 +377,10 @@ def main():
          f"twin (uninstrumented): {twin['commit'] if twin else '-'}"]
     if twin and twin.get("derivation"):
         d = twin["derivation"]
-        L += [f"twin derivation: {d['sites']} declare_site removed, {d['fires']} fire() unwrapped, {d['consults']} consult blocks spliced, "
-              f"{d['bypasses']} census-enabled bypass blocks removed, across {d['modules_changed']} modules; the twin's census registry is empty (asserted below)"]
+        # ROUND 14: declarations are PRESERVED and bound to the STUB's inert stand-ins; what makes the arm "uninstrumented"
+        # in INV-7's sense is MEASURED: the registry stays empty and the stand-ins record zero uses (both gated below).
+        L += [f"twin derivation: {d['sites']} declare_site preserved as inert stand-ins, {d['fires']} fire() unwrapped, {d['consults']} consult blocks spliced, "
+              f"{d['bypasses']} census-enabled bypass blocks removed, across {d['modules_changed']} modules; the twin's census registry is empty and its stand-ins recorded 0 uses (asserted below)"]
     elif twin:
         L += ["src commits between the twin and HEAD (the uninstrumented arm runs the twin's src; its census registry is empty — asserted below):"]
         L += [f"  {c}" for c in twin["src_commits_since_twin"]]
@@ -466,6 +469,9 @@ def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> in
         gates["off:census_disabled"] = checks.get("off", {}).get("census_enabled") is False
     if "uninstrumented" in arms:
         u = checks.get("uninstrumented", {}); gates["uninstrumented:empty_registry"] = u.get("registry_size") == 0 and u.get("census_enabled") is False
+        # ROUND 14 (research's stage-1 B2): the inert stand-ins recorded NO use across the whole reference run. `is 0`
+        # compares the integer, so a missing count (None — a real census, or an observer that never read it) FAILS.
+        gates["uninstrumented:inert_stand_ins_unused"] = u.get("inert_calls") == 0 and u.get("inert_calls") is not None
     verdict["gates"] = gates
     return 0 if all(gates.values()) else 1
 

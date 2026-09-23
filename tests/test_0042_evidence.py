@@ -9,6 +9,7 @@ against emptied inputs.
 import importlib
 import importlib.util
 import json
+import re
 import pathlib
 
 import pytest
@@ -582,7 +583,7 @@ def test_r13_the_scan_describes_the_program_that_ran_and_refuses_otherwise(tmp_p
       the TABLE swapped — research's case: `S = declare_site(..); T = object()` ran, `S = object(); T = declare_site(..)`
         was scanned, every function body identical, the scan saying bound where it was not — refused by IDENTITY;
       SCANNED, THEN EDITED — refused, the file is no longer the bytes the scan read;
-      a function REMOVED from the running module — refused by the count, so filtering cannot leave nothing compared;
+      the BINDING BODY removed from the running module — refused: the body `bound` rests on is not shown to have run;
       RAN FROM ANOTHER FILE — refused, found by module name rather than skipped as not loaded."""
     inst = _load("installed_sites")
     clean, _, reg = _r13_bind_pkg(tmp_path, "clean")
@@ -606,15 +607,78 @@ def test_r13_the_scan_describes_the_program_that_ran_and_refuses_otherwise(tmp_p
     assert any("changed after the scan" in p for p in inst.scan_is_the_program_that_ran(late, scanned, reg))
 
     gone, mod, reg = _r13_bind_pkg(tmp_path, "gone")
-    del mod.extra
+    del mod.decide
     got = inst.scan_is_the_program_that_ran(gone, inst.scan(gone), reg)
-    assert any("does not cover the module" in p for p in got), got
+    assert any("is NOT among the running module's functions" in p for p in got), got
 
     moved, mod, reg = _r13_bind_pkg(tmp_path, "moved")
     other = tmp_path / "elsewhere_m.py"; other.write_text(_R13_BIND_SRC)
     mod.__file__ = str(other)
     got = inst.scan_is_the_program_that_ran(moved, inst.scan(moved), reg)
     assert any("was loaded from" in p for p in got), got
+
+
+# ROUND 14 — THE ROUND-13 VERDICT'S F2: "The scan-to-runtime check omits property setters, allowing false binding
+# evidence." Each cell: a module RAN with a body that does NOT bind the site (bound False); the file on disk is then
+# edited so the SAME body binds it (bound True as scanned); the check must refuse, because the body `bound` rests on
+# is not the one that ran. Research's census of the tree's binding bodies fixed the shapes: module-level defs,
+# methods, PROPERTY accessors, bodies NESTED in a function, a contextmanager METHOD, a staticmethod; plus a
+# cached_property, a nested-class method, and a decorator that hides its function (no __wrapped__).
+_R14_HEAD = "import contextlib\nimport functools\nfrom .census_stub import declare_site\nS = declare_site('r14.f2')\n\n\n"
+_R14_BIND = "with S.consult():\n{i}    return S.fire(x)"
+_R14_F2_CELLS = [
+    ("property setter", "class K:\n    @property\n    def v(self):\n        return 1\n\n    @v.setter\n    def v(self, x):\n        {body}\n",
+     "self._v = x", "with S.consult():\n            self._v = S.fire(x)", "as it RAN differs"),
+    ("property deleter", "class K:\n    @property\n    def v(self):\n        return 1\n\n    @v.deleter\n    def v(self, x=None):\n        {body}\n",
+     "return None", "with S.consult():\n            return S.fire(x)", "as it RAN differs"),
+    ("nested-class method", "class K:\n    class J:\n        def m(self, x):\n            {body}\n",
+     "return x", "with S.consult():\n                return S.fire(x)", "as it RAN differs"),
+    ("cached_property", "class K:\n    x = 1\n\n    @functools.cached_property\n    def v(self):\n        x = self.x\n        {body}\n",
+     "return x", "with S.consult():\n            return S.fire(x)", "as it RAN differs"),
+    ("contextmanager method", "class K:\n    @contextlib.contextmanager\n    def cm(self, x):\n        {body}\n",
+     "yield x", "with S.consult():\n            yield S.fire(x)", "as it RAN differs"),
+    ("body nested in a function", "def outer():\n    def inner(x):\n        {body}\n    return inner\n",
+     "return x", "with S.consult():\n            return S.fire(x)", "as it RAN differs"),
+    ("a decorator hiding its function", "def hide(fn):\n    return lambda *a: 1\n\n\n@hide\ndef d(x):\n    {body}\n",
+     "return x", "with S.consult():\n        return S.fire(x)", "is NOT among the running module's functions"),
+]
+
+
+def _r14_f2_run(tmp_path, tag, ran, scanned):
+    import sys, uuid
+    name = f"r14f2_{tag}_{uuid.uuid4().hex[:8]}"
+    pkg = tmp_path / name; pkg.mkdir()
+    (pkg / "__init__.py").write_text(""); (pkg / "census_stub.py").write_text(_R13_STUB); (pkg / "m.py").write_text(ran)
+    sys.path.insert(0, str(tmp_path))
+    try:
+        importlib.import_module(f"{name}.m"); stub = importlib.import_module(f"{name}.census_stub")
+    finally:
+        sys.path.remove(str(tmp_path))
+    inst = _load("installed_sites")
+    before = {r["id"]: r["bound"] for r in inst.scan(pkg)}
+    (pkg / "m.py").write_text(scanned)
+    rows = inst.scan(pkg)
+    return before, {r["id"]: r["bound"] for r in rows}, inst.scan_is_the_program_that_ran(pkg, rows, stub.REGISTRY)
+
+
+@pytest.mark.parametrize("cell,shape,ran_body,scanned_body,refusal", _R14_F2_CELLS, ids=[c[0] for c in _R14_F2_CELLS])
+def test_r14_f2_a_binding_body_that_did_not_run_is_refused(cell, shape, ran_body, scanned_body, refusal, tmp_path):
+    """False binding evidence, refused wherever the binding body lives. The control half is the first assertion: the
+    module as it RAN does not bind the site and the edited file does — exactly the flip the check exists to catch."""
+    before, after, got = _r14_f2_run(tmp_path, re.sub(r"\W", "_", cell), _R14_HEAD + shape.format(body=ran_body),
+                                     _R14_HEAD + shape.format(body=scanned_body))
+    assert before == {"r14.f2": False} and after == {"r14.f2": True}, (cell, before, after)
+    assert any(refusal in p for p in got), f"{cell}: false binding evidence stood: {got}"
+
+
+def test_r14_n2_a_declaration_deleted_after_import_is_refused(tmp_path):
+    """RESEARCH'S N2 (round 13's IM2 survivor): a module whose declaration sits AFTER its functions and is deleted
+    from disk after import has NO scanned row — so round 13's loop, over scanned modules, never visited it. The
+    running module still holds the registered site; the check now visits every running module that does."""
+    ran = "from .census_stub import declare_site\n\n\ndef decide(x):\n    return x\n\n\nS = declare_site('r14.n2')\n"
+    before, after, got = _r14_f2_run(tmp_path, "n2", ran, ran.replace("\n\nS = declare_site('r14.n2')\n", "\n"))
+    assert before == {"r14.n2": False} and after == {}, (before, after)
+    assert any("which the scan does not show" in p for p in got), got
 
 
 def test_r13_the_real_tree_s_scan_is_the_program_this_process_ran():

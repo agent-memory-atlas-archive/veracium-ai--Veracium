@@ -349,6 +349,9 @@ def pytest_sessionfinish(session, exitstatus):
         "arm": ARM, "mode": MODE, "exitstatus": int(exitstatus), "python": sys.version.split()[0],
         "veracium_file": veracium.__file__, "duration_s": round(time.time() - _T0, 1),
         "census_enabled": C.enabled(), "census_registry_size": len(C.registry()),
+        # ROUND 14: the twin's STUB answers each declaration with an inert stand-in that COUNTS any use. Under the real
+        # census there is no such count (None); under the twin it must read 0 — INV-7's reference arm measured nothing.
+        "census_inert_calls": C.inert_calls() if hasattr(C, "inert_calls") else None,
     }
     if MODE == "trace":
         (OUT / "observer_trace.bin").write_bytes(bytes(_RECORDS))

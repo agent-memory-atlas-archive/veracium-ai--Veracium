@@ -311,7 +311,10 @@ def _fabricate(tmp_path, arm, records, symbols=("m.py:f", "m.py:g"), labels=("No
     bounds = boundaries if boundaries is not None else [[0, "t.py::a"], [2, "t.py::b"]]
     (d / "test_boundaries.jsonl").write_text("".join(json.dumps(b) + "\n" for b in bounds))
     summary = {"symbols": list(symbols), "labels": list(labels), "records": len(recs), "record_width": 3, "census_enabled": enabled,
-               "census_registry_size": registry_size, "veracium_file": "x", "pytest_exit": 0}
+               "census_registry_size": registry_size, "veracium_file": "x", "pytest_exit": 0,
+               # ROUND 14: the observer's reading of the twin STUB's inert stand-ins — 0 on the reference arm, and None
+               # under the real census, which has no such count
+               "census_inert_calls": 0 if arm.startswith("uninstrumented") else None}
     if census is not None:
         (d / "census_trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in census))
         summary["census_counters"] = counters or {}
@@ -447,6 +450,12 @@ def test_r6_5_iii_the_harness_exit_requires_every_arm_and_every_cross_check(tmp_
     # gate 4: the twin registered a site
     c4 = json.loads(json.dumps(c)); c4["uninstrumented"]["registry_size"] = 1
     assert harness.final_status(v, c4, S, arms) == 1
+    # gate 4b (round 14, research's stage-1 B2): the twin's inert stand-ins were USED — once is enough — or the count
+    # is MISSING (None: a real census in the reference arm, or an observer that never read it). Both fail; 0 passes.
+    for bad in (1, None):
+        c4b = json.loads(json.dumps(c)); c4b["uninstrumented"]["inert_calls"] = bad
+        assert harness.final_status(v, c4b, S, arms) == 1 and v["gates"]["uninstrumented:inert_stand_ins_unused"] is False, bad
+    assert harness.final_status(v, c, S, arms) == 0
     # gate 5 (round 7, research): a control pair disagreeing on a test NOT on the standing list is a finding → exit 1;
     # the same test on the standing list by name → excluded, exit 0
     S["healthy-control"] = _fabricate(tmp_path, "healthy-control", [(0, 0), (1, 1), (1, 0)], census=census, counters=ok, enabled=True)
@@ -1077,7 +1086,9 @@ def test_every_census_decision_routes_through_one_predicate():
     # multi-name-import finding — and THIS GATE CAUGHT IT THE MOMENT IT EXISTED, along with `declared_names`
     # which calls it. That is the gate doing the job it was written for, one round early: a new consumer of
     # the census literal cannot appear without either becoming a predicate or routing through one.
-    PREDICATES = {"is_census_module_import", "is_census_surface_import", "census_names_in_import",
+    # ROUND 14: `is_census_module_import` is GONE — it decided whether a whole import statement could be DELETED, and
+    # the twin now keeps every census import, so nothing asks it (the "never called" half of this gate said so).
+    PREDICATES = {"is_census_surface_import", "census_names_in_import",
                   "is_census_module_file", "may_skip_uninstrumenting",
                   # ROUND 12 (research's R4a): every word the transform RECOGNISES instrumentation by now has one home
                   "is_instrumentation_name", "instrumentation_tokens_in",
@@ -1339,12 +1350,12 @@ _R12_CELLS = [
      "from .census import declare_site as ds\nS = ds('s')\n\ndef f():\n    return 1\n",
      ("refuses", "under another name")),
     ("R2-site-passed-as-a-value",
-     "from . import census as _census\nS = _census.declare_site('s')\n\ndef f():\n    return register(S)\n\n"
+     "from . import census as _census\nS = _census.declare_site('s')\n\ndef f():\n    return register(S) is S\n\n"
      "def register(s):\n    return s\n",
-     ("refuses", "outside fire()/consult()")),
+     ("works", True)),                    # round 14: the name stays bound — R2's refusal is gone
     ("R2-site-in-a-module-level-registry",
      "from . import census as _census\nS = _census.declare_site('s')\nREGISTRY = [S]\n\ndef f():\n    return 1\n",
-     ("refuses", "outside fire()/consult()")),
+     ("works", 1)),
     ("R3-restored-import-with-a-docstring",
      '"""Doc."""\nfrom . import census\nS = census.declare_site(\'s\')\n\ndef f():\n    census.enable(True)\n'
      '    return census.enabled()\n',
@@ -1357,8 +1368,8 @@ _R12_CELLS = [
     # M4b matched receivers by NAME rather than identity and survived, because both R2 cells above load the site
     # ONLY as a value. A site that is fired AND loaded as a value is the row that tells identity from name.
     ("S2-4-site-fired-AND-loaded-as-a-value",
-     "from . import census as _census\nS = _census.declare_site('s')\n\ndef f(q):\n    return S.fire(len([S]))\n",
-     ("refuses", "outside fire()/consult()")),
+     "from . import census as _census\nS = _census.declare_site('s')\n\ndef f(q=None):\n    return S.fire(len([S]))\n",
+     ("works", 1)),
     # M10 dropped `.consult()` from the instrumentation tokens and survived: that token is the ONLY guard against a
     # consult in EXPRESSION position, which the transform does not rewrite, and no test contained one.
     ("S2-4-consult-in-expression-position",
@@ -1423,36 +1434,58 @@ def test_r12_r4_one_reading_of_which_file_is_the_census(tmp_path):
     assert un.verify(out, src) == [], "verify() and derive() still disagree about which file is the census"
 
 
-@pytest.mark.parametrize("mutant,helper,cell", [
-    ("D1 reverted: the surface branch drops the WHOLE statement again", "is_instrumentation_name",
-     "from .census import declare_site, enabled\nS = declare_site('s')\n\ndef f():\n    return enabled()\n"),
-    ("R3 reverted: a restored import is inserted at body[0] again", "_restoration_index",
-     '"""Doc."""\nfrom __future__ import annotations\nfrom . import census\nS = census.declare_site(\'s\')\n\n'
-     'def f():\n    census.enable(True)\n    return census.enabled()\n'),
-], ids=["lost-binding", "does-not-compile"])
-def test_r12_verify_catches_a_transform_defect_it_did_not_write(mutant, helper, cell, tmp_path, monkeypatch):
-    """THE E HALF OF F1, AND THE ONE THAT MATTERS: verify() re-derives the twin with the SAME transform and compares,
-    so a transform defect reproduces identically and reads clean. We learned exactly this in round 9 (F3) and
-    answered it with one case-specific behaviour test. This asserts the general remedy: verify() now carries two
-    checks of a DIFFERENT KIND — every emitted module must COMPILE, and no name the source binds at module level may
-    be read by the twin and bound nowhere in it — and they must catch the transform's OWN defects.
+def _r14_deleting_visit_module(is_declaration):
+    """THE MUTANT: round 13's transform — the declaration REMOVED. Round 14 keeps every name bound, which is exactly
+    what makes the checks below unable to fire on the real transform; this puts back the behaviour they exist for."""
+    def visit_Module(self, node):
+        node.body = [st for st in node.body
+                     if not (isinstance(st, ast.Assign) and isinstance(st.value, ast.Call) and is_declaration(st.value))]
+        self.generic_visit(node)
+        return node
+    return visit_Module
 
-    THE SUPERSEDED IMPLEMENTATION IS THE MUTANT. Each case patches ONE helper back to the round-11 behaviour, so the
-    transform AND verify()'s re-derivation both run the defective code — exactly the situation in which the
-    structure comparison cannot see anything. At the pin the helper does not exist and the pin's transform IS the
-    defective one, so the same case runs there and verify() reports clean: that is the RED."""
-    un = _load("inv7_uninstrument_r12_verify", EVIDENCE / "inv7_uninstrument.py")
-    if helper == "is_instrumentation_name":
-        monkeypatch.setattr(un, helper, lambda name: True, raising=False)       # every surface name stripped
-    else:
-        monkeypatch.setattr(un, helper, lambda body: 0, raising=False)          # restored import goes first
-    src = tmp_path / "r12src_mut"; src.mkdir()
+
+def _r14_future_breaking_visit_module(is_declaration):
+    """THE MUTANT: a transform that emits a statement ahead of `from __future__` — `ast.parse` accepts it, `compile()`
+    does not (round 12's R3 shape)."""
+    def visit_Module(self, node):
+        node.body.insert(0, ast.Expr(ast.Constant(0)))
+        self.generic_visit(node)
+        return node
+    return visit_Module
+
+
+@pytest.mark.parametrize("mutant,cell,sibling,reported", [
+    (_r14_deleting_visit_module, "from . import census\nS = census.declare_site('s')\nREG = [S]\n\n"
+     "def f():\n    return REG[0] is S\n", None, "LOST BINDING"),
+    (_r14_deleting_visit_module, "from . import census\nS = census.declare_site('s')\n\ndef f():\n    return 1\n",
+     "from .mod import S\n\ndef g():\n    return S is not None\n", "bound there in the source and not in the twin"),
+    (_r14_future_breaking_visit_module, '"""Doc."""\nfrom __future__ import annotations\nfrom . import census\n'
+     "S = census.declare_site('s')\n\ndef f():\n    return census.enabled()\n", None, "does not COMPILE"),
+], ids=["lost-binding", "lost-cross-module-reference", "does-not-compile"])
+def test_r12_verify_catches_a_transform_defect_it_did_not_write(mutant, cell, sibling, reported, tmp_path, monkeypatch):
+    """THE E HALF OF round 11's F1: verify() re-derives the twin with the SAME transform and compares, so a transform
+    defect reproduces identically and reads clean. Its checks of a DIFFERENT KIND — every emitted module COMPILES
+    (round 12), no module-level name the source binds is read by the twin and bound nowhere (`lost_bindings`, round
+    12), no cross-module reference the twin makes fails to resolve (`lost_cross_module_references`, round 13) — must
+    catch the transform's OWN defects.
+
+    ROUND 14 (research's stage-1 B3): the real transform now REMOVES NOTHING, so on it the lost-binding and
+    cross-module checks cannot fire at all — a check that cannot fail is kept only if it is SHOWN to fail on the
+    defect it exists for. Each cell patches the transform with a mutant — round 13's own declaration removal, or a
+    statement emitted ahead of `from __future__` — so the transform AND verify()'s re-derivation both run it, which
+    is exactly the situation the structure comparison cannot see; the named check must report it."""
+    un = _load("inv7_uninstrument_r14_verify", EVIDENCE / "inv7_uninstrument.py")
+    monkeypatch.setattr(un.Uninstrument, "visit_Module", mutant(un.is_site_declaration))
+    src = tmp_path / "r14src_mut"; src.mkdir()
     (src / "__init__.py").write_text(""); (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
     (src / "mod.py").write_text(cell)
-    out = tmp_path / "r12twin_mut"
+    if sibling:
+        (src / "sib.py").write_text(sibling)
+    out = tmp_path / "r14twin_mut"
     un.derive(src, out)
     problems = un.verify(out, src)
-    assert problems, f"{mutant}: the twin is broken and verify() reports it CLEAN — it can only see what it re-derives"
+    assert any(reported in p for p in problems), f"the twin is broken and verify() does not report {reported!r}: {problems}"
 
 
 def test_r12_f2_the_gate_refuses_a_second_reading_wherever_it_stands(tmp_path, monkeypatch):
@@ -1515,16 +1548,17 @@ def test_r12_f2_the_gate_refuses_a_second_reading_wherever_it_stands(tmp_path, m
 _SCOPE_TESTS = _load("t0042_scope_positions", ROOT / "tests" / "test_0042_scope_resolution.py")
 
 
+
+
 @pytest.mark.parametrize("pos,body", _SCOPE_TESTS.DEFINITION_TIME_POSITIONS,
                          ids=[p for p, _ in _SCOPE_TESTS.DEFINITION_TIME_POSITIONS])
-def test_r12_s2_1_a_site_loaded_at_a_definition_time_position_is_refused(pos, body):
-    """R2 refuses a declared site LOADED outside fire()/consult(), and asks the resolver which loads are the site.
-    The resolver answered "not the site" for every definition-time position, so R2 missed all of them: the twin
-    removed the declaration and kept the load. `lost_bindings` caught those in verify() — the backstop paid for itself
-    on its first adversarial run — but R2's own refused form was FALSE at every one of these positions."""
-    un = _load("inv7_uninstrument_r12_s21a", EVIDENCE / "inv7_uninstrument.py")
-    with pytest.raises(un.Refused, match=re.escape("outside fire()/consult()")):
-        un.uninstrument_source(_SCOPE_TESTS._S21_HEAD + body.replace("__X__", "S"), f"<{pos}>")
+def test_r14_a_site_loaded_at_a_definition_time_position_keeps_its_declaration(pos, body):
+    """Round 12's S2-1 made R2 refuse a declared site LOADED at every definition-time position, because the twin
+    removed the declaration and kept the load. ROUND 14 removes nothing: the load is correct code, the declaration is
+    PRESERVED, and the transform derives it (R2 is gone — research's stage-1 read)."""
+    un = _load("inv7_uninstrument_r14_s21", EVIDENCE / "inv7_uninstrument.py")
+    out, stats = un.uninstrument_source(_SCOPE_TESTS._S21_HEAD + body.replace("__X__", "S"), f"<{pos}>")
+    assert "S = _census.declare_site('s')" in out and stats["sites"] == 1, out
 
 
 @pytest.mark.parametrize("pos,body", _SCOPE_TESTS.DEFINITION_TIME_POSITIONS,
@@ -1671,22 +1705,8 @@ def test_r13_f1_a_census_read_the_twin_keeps_is_reported_not_silent(cell, line, 
         f"{cell}: a live census read in the twin is counted as {totals['unresolved_bypass_candidates']} unresolved"
 
 
-# ROUND 13 — THE ROUND-12 VERDICT'S F2: "Removing a declared site breaks a sibling module's import with ImportError;
-# verify() again reports clean." Every shape by which another module reaches a declared site, including research's
-# stage-1 R2 (the site read as a MODULE ATTRIBUTE, which fails at call time rather than import).
+# A two-module package whose `a` declares a site — the shape every cross-module cell below is built in.
 _R13_A = "from . import census as _census\nS = _census.declare_site('a.s')\n\n\ndef g(v):\n    return S.fire(v)\n"
-_R13_F2_CELLS = [
-    ("from-import",               "from .a import S\n\n\ndef f():\n    return S is not None\n", ""),
-    ("absolute from-import",      "from vpkg.a import S\n\n\ndef f():\n    return S is not None\n", ""),
-    ("star import over __all__",  "from .a import *\n\n\ndef f():\n    return g(True)\n", "__all__ = ['S', 'g']\n"),
-    ("attribute via from . import a", "from . import a\n\n\ndef f():\n    return a.S is not None\n", ""),
-    ("attribute via import as",   "import vpkg.a as m\n\n\ndef f():\n    return m.S is not None\n", ""),
-    ("attribute via dotted chain", "import vpkg.a\n\n\ndef f():\n    return vpkg.a.S is not None\n", ""),
-    # ROUND 13, research's pre-seal P1: round 13's own README named these as a limit, and the limit was SILENT
-    ("getattr with a literal",    "from . import a\n\n\ndef f():\n    return getattr(a, 'S') is not None\n", ""),
-    ("import_module with a literal", "import importlib\n\n\ndef f():\n    return importlib.import_module('vpkg.a').S is not None\n", ""),
-    ("import_module aliased",     "from importlib import import_module as im\n\n\ndef f():\n    return im('vpkg.a').S is not None\n", ""),
-]
 
 
 def _r13_pkg(tmp_path, slug, b_text, a_extra):
@@ -1703,24 +1723,6 @@ def _r13_run_b(root):
     return subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
 
 
-@pytest.mark.parametrize("cell,b_text,a_extra", _R13_F2_CELLS, ids=[c for c, _, _ in _R13_F2_CELLS])
-def test_r13_f2_a_site_another_module_reaches_is_refused_and_verify_sees_it_alone(cell, b_text, a_extra, tmp_path,
-                                                                                  monkeypatch):
-    """Two independent answers. derive() REFUSES — naming both ends. And with that refusal disabled, verify() ALONE
-    reports the broken reference, while the twin really does fail where the source runs: verify()'s cross-module
-    reading does not rest on the transform's."""
-    un = _load("inv7_uninstrument_r13_f2", EVIDENCE / "inv7_uninstrument.py")
-    slug = re.sub(r"\W", "_", cell)
-    src = _r13_pkg(tmp_path, slug, b_text, a_extra)
-    with pytest.raises(un.Refused, match=r"declared site 'S'|`__all__` exports the declared site"):
-        un.derive(src, tmp_path / slug / "twin" / "vpkg")
-    monkeypatch.setattr(un, "_refuse_cross_module_sites", lambda s: None)
-    out = tmp_path / slug / "twin" / "vpkg"
-    un.derive(src, out)
-    lost = [p for p in un.verify(out, src) if "bound there in the source and not in the twin" in p]
-    assert lost, f"{cell}: with derive()'s refusal disabled, verify() reports the twin clean"
-    assert _r13_run_b(src.parent).returncode == 0, f"{cell}: the SOURCE does not run: {_r13_run_b(src.parent).stderr}"
-    assert _r13_run_b(out.parent).returncode != 0, f"{cell}: the twin runs — the cell does not exercise the defect"
 
 
 def test_r13_f2_a_sibling_using_only_ordinary_names_is_neither_refused_nor_reported(tmp_path):
@@ -1735,42 +1737,10 @@ def test_r13_f2_a_sibling_using_only_ordinary_names_is_neither_refused_nor_repor
         assert _r13_run_b(out.parent).stdout.strip() == "True"
 
 
-# ROUND 13 — ROUND 12'S DISCLOSED LIMIT `globals()["S"]` (the twin raised KeyError with verify() clean). The module
-# namespace reached dynamically, in a module that declares a site, is REFUSED — keyed on BINDING since research's
-# stage-2 B2 (any load of the four builtins, and `modules` on any name bound to sys), which also refuses `vars(obj)`:
-# measured to touch no real site module. Acceptance cells first: research's census found 27 `getattr` calls in the
-# site modules, all on ordinary objects, and none of them may be refused.
-_R13_NS_HEAD = "from . import census as _census\nS = _census.declare_site('s')\n\n\n"
-_R13_NS_ACCEPTED = [
-    ("getattr on an object",  "def f(o):\n    return getattr(o, 'name', None)\n"),
-    ("an attribute named modules", "def f(o):\n    return o.modules\n"),
-]
-_R13_NS_REFUSED = [
-    ("globals()",             "def f():\n    return globals()['S'].fire(1)\n", "globals()"),
-    ("vars()",                "def f():\n    return vars()['S']\n", "vars()"),
-    ("exec",                  "def f():\n    exec('S.fire(1)')\n", "exec()"),
-    ("eval",                  "def f():\n    return eval('S')\n", "eval()"),
-    ("sys.modules",           "import sys\n\n\ndef f():\n    return getattr(sys.modules[__name__], 'S')\n", "`sys.modules`"),
-    ("a __dict__",            "def f(m):\n    return m.__dict__['S']\n", "a `__dict__`"),
-    # ROUND 13, research's stage-2 B2: the first form was keyed on SPELLING and let these three through silently
-    ("globals by another name", "_g = globals\n\n\ndef f():\n    return _g()['S']\n", "globals()"),
-    ("sys by another name",   "import sys as _s\n\n\ndef f():\n    return _s.modules[__name__].S\n", "`sys.modules`"),
-    ("modules imported from sys", "from sys import modules\n\n\ndef f():\n    return modules[__name__].S\n", "`sys.modules`"),
-    ("vars of an object",     "def f(o):\n    return vars(o)\n", "vars()"),
-]
 
 
-@pytest.mark.parametrize("cell,body", _R13_NS_ACCEPTED, ids=[c for c, _ in _R13_NS_ACCEPTED])
-def test_r13_ordinary_dynamic_access_in_a_site_module_is_not_refused(cell, body):
-    un = _load("inv7_uninstrument_r13_ns_ok", EVIDENCE / "inv7_uninstrument.py")
-    un.uninstrument_source(_R13_NS_HEAD + body, f"<{cell}>")
 
 
-@pytest.mark.parametrize("cell,body,form", _R13_NS_REFUSED, ids=[c for c, _, _ in _R13_NS_REFUSED])
-def test_r13_the_module_namespace_reached_dynamically_in_a_site_module_is_refused(cell, body, form):
-    un = _load("inv7_uninstrument_r13_ns", EVIDENCE / "inv7_uninstrument.py")
-    with pytest.raises(un.Refused, match=re.escape(form) + ".*reached dynamically"):
-        un.uninstrument_source(_R13_NS_HEAD + body, f"<{cell}>")
 
 
 # ROUND 13 — THREE READERS OF "WHICH NAMES ARE SITES", PINNED RATHER THAN UNIFIED. The transform (`declared_names`),
@@ -1837,41 +1807,109 @@ def test_r13_b3_a_declare_site_method_on_an_outside_object_is_not_a_site(tmp_pat
         un.uninstrument_source(src, "<b3>")
 
 
-def test_r13_n3_a_site_in_a_literal_all_is_refused_with_no_importer(tmp_path):
-    """RESEARCH'S STAGE-2 N3 (taken into this commit by dev — a refusal the manifest CLAIMS, which no test drove): a
-    declared site listed in its own module's literal `__all__` is refused even when nothing star-imports it today."""
-    un = _load("inv7_uninstrument_r13_n3", EVIDENCE / "inv7_uninstrument.py")
-    src = _r13_pkg(tmp_path, "n3", "from .a import g\n\n\ndef f():\n    return g(True)\n", "__all__ = ['S', 'g']\n")
-    with pytest.raises(un.Refused, match=r"`__all__` exports the declared site"):
-        un.derive(src, tmp_path / "n3" / "twin" / "vpkg")
 
 
-_R13_P1_DYNAMIC = [
-    ("getattr, non-literal name", "from . import a\nNAME = 'S'\n\n\ndef f():\n    return getattr(a, NAME) is not None\n", "escape"),
-    ("import_module, non-literal", "import importlib\nM = 'vpkg.a'\n\n\ndef f():\n    return importlib.import_module(M).S is not None\n", "import_module with a non-literal"),
-    ("__import__ of the package",  "def f():\n    return __import__('vpkg.a', fromlist=['S']).S is not None\n", "__import__ of the package"),
-    # research's six, sent before P1 was committed — every one in a module declaring NO site, so B2's namespace
-    # refusal never applied; keyed on the spelling of the access, each was a bypass nobody listed
-    ("sys.modules",                "import sys\nimport vpkg.a\n\n\ndef f():\n    return sys.modules['vpkg.a'].S is not None\n", "sys.modules"),
-    ("vars of the module",         "from . import a\n\n\ndef f():\n    return vars(a)['S'] is not None\n", "escape"),
-    ("the module's __dict__",      "from . import a\n\n\ndef f():\n    return a.__dict__['S'] is not None\n", "escape"),
-    ("operator.attrgetter",        "import operator\nfrom . import a\n\n\ndef f():\n    return operator.attrgetter('S')(a) is not None\n", "escape"),
-    ("getattr aliased",            "from . import a\n_ga = getattr\n\n\ndef f():\n    return _ga(a, 'S') is not None\n", "escape"),
+
+
+
+
+# ROUND 14 — THE ROUND-13 VERDICT'S F1: "Site-reachability gaps still produce broken twins with clean verification."
+# Rounds 12 and 13 removed the declaration and then REFUSED, one spelling at a time, every route by which code could
+# still reach the name; the verdict found five more (pkgutil, runpy, importlib.util, __globals__, inspect). Round 14
+# keeps every declared name bound to an inert stand-in, so no route can find it missing. Every route rounds 12 and 13
+# refused, and every route the verdict found, is a cell here, and must DERIVE, VERIFY CLEAN, and give the same
+# answer in the twin as in the source (the source runs the real census, default off; the twin the STUB).
+_R14_SELF = "from . import census as _census\nS = _census.declare_site('b.s')\n\n\ndef g(v):\n    return S.fire(v)\n\n\n"
+_R14_ROUTES = [
+    # round 13's cross-module refusals (F2, R2 of its stage-1, N3)
+    ("from-import",                  "from .a import S\n\n\ndef f():\n    return S is not None\n", {}),
+    ("absolute from-import",         "from vpkg.a import S\n\n\ndef f():\n    return S is not None\n", {}),
+    ("star import over __all__",     "from .a import *\n\n\ndef f():\n    return S is not None and g(True)\n", {"a+": "__all__ = ['S', 'g']\n"}),
+    ("attribute via from . import a", "from . import a\n\n\ndef f():\n    return a.S is not None\n", {}),
+    ("attribute via import as",      "import vpkg.a as m\n\n\ndef f():\n    return m.S is not None\n", {}),
+    ("attribute via dotted chain",   "import vpkg.a\n\n\ndef f():\n    return vpkg.a.S is not None\n", {}),
+    ("a literal __all__, no importer", "from .a import g\n\n\ndef f():\n    return g(True)\n", {"a+": "__all__ = ['S', 'g']\n"}),
+    # round 13's P1 and the six bypasses sent before its commit
+    ("getattr, literal",             "from . import a\n\n\ndef f():\n    return getattr(a, 'S') is not None\n", {}),
+    ("getattr, non-literal",         "from . import a\nNAME = 'S'\n\n\ndef f():\n    return getattr(a, NAME) is not None\n", {}),
+    ("getattr aliased",              "from . import a\n_ga = getattr\n\n\ndef f():\n    return _ga(a, 'S') is not None\n", {}),
+    ("import_module, literal",       "import importlib\n\n\ndef f():\n    return importlib.import_module('vpkg.a').S is not None\n", {}),
+    ("import_module aliased",        "from importlib import import_module as im\n\n\ndef f():\n    return im('vpkg.a').S is not None\n", {}),
+    ("import_module, non-literal",   "import importlib\nM = 'vpkg.a'\n\n\ndef f():\n    return importlib.import_module(M).S is not None\n", {}),
+    ("__import__",                   "def f():\n    return __import__('vpkg.a', fromlist=['S']).S is not None\n", {}),
+    ("sys.modules",                  "import sys\nimport vpkg.a\n\n\ndef f():\n    return sys.modules['vpkg.a'].S is not None\n", {}),
+    ("vars of the module",           "from . import a\n\n\ndef f():\n    return vars(a)['S'] is not None\n", {}),
+    ("the module's __dict__",        "from . import a\n\n\ndef f():\n    return a.__dict__['S'] is not None\n", {}),
+    ("operator.attrgetter",          "import operator\nfrom . import a\n\n\ndef f():\n    return operator.attrgetter('S')(a) is not None\n", {}),
+    # round 13's closure refinement and D1
+    ("a module carrying a site",     "from . import c\n\n\ndef h(m):\n    return getattr(m.a, 'S')\n\n\ndef f():\n    return h(c) is not None\n", {"c.py": "from . import a\n"}),
+    ("a package object",             "import vpkg\nimport vpkg.a\n\n\ndef h(m):\n    return m.a.S\n\n\ndef f():\n    return h(vpkg) is not None\n", {}),
+    ("self: import pkg.b as me",     "import vpkg.b as me\n" + _R14_SELF + "def f():\n    return getattr(me, 'S') is not None\n", {}),
+    ("self: from . import b as me",  "from . import b as me\n" + _R14_SELF + "def f():\n    return me.S is not None\n", {}),
+    ("self: import_module",          "import importlib\n" + _R14_SELF + "def f():\n    return importlib.import_module('vpkg.b').S is not None\n", {}),
+    # round 13's namespace refusal (B2), in the site's own module
+    ("globals()",                    _R14_SELF + "def f():\n    return globals()['S'] is S\n", {}),
+    ("globals by another name",      "_gl = globals\n" + _R14_SELF + "def f():\n    return _gl()['S'] is not None\n", {}),
+    ("vars()",                       _R14_SELF + "V = vars()\n\n\ndef f():\n    return V['S'] is not None\n", {}),
+    ("eval",                         _R14_SELF + "def f():\n    return eval('S') is not None\n", {}),
+    ("exec",                         _R14_SELF + "def f():\n    ns = {}\n    exec('X = S', globals(), ns)\n    return ns['X'] is S\n", {}),
+    ("sys by another name",          "import sys as _s\n" + _R14_SELF + "def f():\n    return _s.modules[__name__].S is not None\n", {}),
+    # round 12's R2 — a declared site loaded as a value
+    ("the site passed as a value",   _R14_SELF + "def f():\n    return register(S) is S\n\n\ndef register(s):\n    return s\n", {}),
+    ("the site in a module registry", _R14_SELF + "REGISTRY = [S]\n\n\ndef f():\n    return REGISTRY[0] is S\n", {}),
+    # the round-13 verdict's F1: five routes the round-13 refusals did not name
+    ("pkgutil.resolve_name",         "import pkgutil\n\n\ndef f():\n    return pkgutil.resolve_name('vpkg.a:S') is not None\n", {}),
+    ("runpy.run_module",             "import runpy\n\n\ndef f():\n    return runpy.run_module('vpkg.a')['S'] is not None\n", {}),
+    ("importlib.util loading",       "import importlib.util\n\n\ndef f():\n    sp = importlib.util.find_spec('vpkg.a'); m = importlib.util.module_from_spec(sp)\n    sp.loader.exec_module(m)\n    return m.S is not None\n", {}),
+    ("a function's __globals__",     "from .a import g\n\n\ndef f():\n    return g.__globals__['S'] is not None\n", {}),
+    ("inspect.getmodule",            "import inspect\nfrom .a import g\n\n\ndef f():\n    return inspect.getmodule(g).S is not None\n", {}),
 ]
 
 
-@pytest.mark.parametrize("cell,b_text,form", _R13_P1_DYNAMIC, ids=[c for c, _, _ in _R13_P1_DYNAMIC])
-def test_r13_p1_a_package_module_reached_dynamically_is_refused(cell, b_text, form, tmp_path):
-    """RESEARCH'S PRE-SEAL P1: this round's README named "a reference spelled dynamically" as a limit of the
-    cross-module checks, and it was SILENT — the twin broke with verify() clean, the class the round-12 verdict was
-    returned for. KEYED ON USE, not on the spelling of the access (research's rule, after B2): a package module OBJECT
-    whose closure holds a site may be used only as `m.<static attribute>` or in the plain builtin `getattr(m, "<literal>")`;
-    any other use lets it ESCAPE, into whatever function, and is refused. Dynamic acquisition of a module
-    (`sys.modules`, a non-literal `import_module`, `__import__` of the package) is refused anywhere in the package."""
-    un = _load("inv7_uninstrument_r13_p1", EVIDENCE / "inv7_uninstrument.py")
-    src = _r13_pkg(tmp_path, re.sub(r"\W", "_", cell), b_text, "")
-    with pytest.raises(un.Refused, match=re.escape(form)):
-        un.derive(src, tmp_path / "twin" / "vpkg")
+@pytest.mark.parametrize("cell,b_text,extra", _R14_ROUTES, ids=[c for c, _, _ in _R14_ROUTES])
+def test_r14_f1_no_route_to_a_declared_site_breaks_the_twin(cell, b_text, extra, tmp_path):
+    """THE ROUND-13 VERDICT'S F1, closed by construction rather than by one more refusal: the twin keeps every
+    declaration, bound to the STUB's inert stand-in, so however a route is spelled it finds a name that is there."""
+    un = _load("inv7_uninstrument_r14_f1", EVIDENCE / "inv7_uninstrument.py")
+    slug = re.sub(r"\W", "_", cell)
+    src = _r13_closure_pkg(tmp_path, slug, b_text, {k: v for k, v in extra.items() if k != "a+"})
+    if "a+" in extra:
+        (src / "a.py").write_text((src / "a.py").read_text() + extra["a+"])
+    out = tmp_path / slug / "twin" / "vpkg"
+    un.derive(src, out)
+    assert un.verify(out, src) == [], f"{cell}: {un.verify(out, src)}"
+    ran_src, ran_twin = _r13_run_b(src.parent), _r13_run_b(out.parent)
+    assert ran_src.returncode == 0, f"{cell}: the SOURCE does not run: {ran_src.stderr[-300:]}"
+    assert (ran_twin.returncode, ran_twin.stdout) == (0, ran_src.stdout), \
+        f"{cell}: source printed {ran_src.stdout!r}, the twin {ran_twin.stdout!r} {ran_twin.stderr[-300:]}"
+
+
+def test_r14_a_fire_the_transform_cannot_bind_is_still_refused():
+    """What round 14 KEEPS refusing (research's stage-1 read): a `fire()` whose receiver is not this module's declared
+    site by name — reached through `globals()`, another module, or any expression — is a MEASUREMENT the transform
+    cannot unwrap, and a live measurement in the twin is refused, not left to run."""
+    un = _load("inv7_uninstrument_r14_fire", EVIDENCE / "inv7_uninstrument.py")
+    for body in ("def f():\n    return globals()['S'].fire(1)\n", "from .a import S as T\n\n\ndef f():\n    return T.fire(1)\n"):
+        with pytest.raises(un.Refused):
+            un.uninstrument_source(_R14_SELF + body, "<fire>")
+
+
+def test_r14_the_stand_in_is_faithful_to_identity_and_names_where_it_is_not(tmp_path):
+    """RESEARCH'S STAGE-1 B1: ONE stand-in per declaration. The real Site compares by identity, so two declarations are
+    two objects, and a dict keyed by sites holds one entry per site; a single shared stand-in held one entry where the
+    source held two — silent. And where the stand-in is NOT the real Site, it is named here, measured: its counters
+    read zero, and re-declaring an id (a module reloaded) is refused by the real census and not by the stand-in."""
+    un = _load("inv7_uninstrument_r14_b1", EVIDENCE / "inv7_uninstrument.py")
+    b = _R14_SELF + "T = _census.declare_site('b.t')\n\n\ndef f():\n    d = {S: 1, T: 2}\n    return (S is T, len(d), d[S], d[T], S.site_id)\n"
+    src = _r13_pkg(tmp_path, "b1", b, "")
+    out = tmp_path / "b1" / "twin" / "vpkg"
+    un.derive(src, out)
+    ran_src, ran_twin = _r13_run_b(src.parent), _r13_run_b(out.parent)
+    assert ran_twin.stdout == ran_src.stdout == "(False, 2, 1, 2, 'b.s')\n", (ran_src.stdout, ran_twin.stdout)
+    code = (f"import sys, importlib; sys.path.insert(0, {str(out.parent)!r}); import vpkg.a as a; "
+            f"print(a.S.consulted, a.S.fired, a.S.errors); importlib.reload(a); print('reloaded')")
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert r.stdout.split() == ["0", "0", "0", "reloaded"], r.stdout + r.stderr   # the named non-faithfulness
 
 
 def test_r13_p1_import_module_of_the_standard_library_is_not_refused(tmp_path):
@@ -1890,59 +1928,9 @@ def _r13_closure_pkg(tmp_path, slug, b_text, extra):
     return src
 
 
-def test_r13_p1_an_escaping_module_that_carries_a_site_module_is_refused(tmp_path):
-    """RESEARCH'S REFINEMENT OF P1: the escape rule first asked only whether the ESCAPED module declares a site. `c`,
-    declaring none, carries `a` (which does) as `c.a` — passed to a function that reads `m.a.S` through a parameter,
-    nothing resolves statically, verify() has nothing to diff, and the twin raised AttributeError. The same for a
-    PACKAGE object, which carries its imported submodules. An escape is refused when the module's closure — itself,
-    for a package every module under it, and transitively every package module it binds — holds a site."""
-    un = _load("inv7_uninstrument_r13_closure", EVIDENCE / "inv7_uninstrument.py")
-    carried = _r13_closure_pkg(tmp_path, "carried", "from . import c\n\n\ndef g2(m):\n    return getattr(m.a, 'S')\n\n\n"
-                               "def f():\n    return g2(c) is not None\n", {"c.py": "from . import a\n"})
-    with pytest.raises(un.Refused, match=r"carries the site-declaring module a\.py"):
-        un.derive(carried, tmp_path / "carried" / "twin" / "vpkg")
-    package = _r13_closure_pkg(tmp_path, "package", "import vpkg\nimport vpkg.a\n\n\ndef g2(m):\n    return m.a.S\n\n\n"
-                               "def f():\n    return g2(vpkg) is not None\n", {})
-    with pytest.raises(un.Refused, match=r"carries the site-declaring module"):
-        un.derive(package, tmp_path / "package" / "twin" / "vpkg")
 
 
-def test_r13_p1_an_escaping_module_whose_closure_holds_no_site_is_accepted(tmp_path):
-    """The acceptance half, the real tree's own shape: store/sqlite.py passes the `semantic` module object to a method,
-    and semantic.py neither declares a site nor binds any package module — its closure is empty, so it is not refused."""
-    un = _load("inv7_uninstrument_r13_closure_ok", EVIDENCE / "inv7_uninstrument.py")
-    src = _r13_closure_pkg(tmp_path, "empty", "from . import d\n\n\ndef g2(m):\n    return m.h()\n\n\n"
-                           "def f():\n    return g2(d) == 1\n", {"d.py": "def h():\n    return 1\n"})
-    out = tmp_path / "empty" / "twin" / "vpkg"
-    un.derive(src, out)
-    assert un.verify(out, src) == []
-    assert _r13_run_b(out.parent).stdout.strip() == "True"
 
 
-_R13_D1_SELF = [
-    ("import pkg.b as me; getattr",  "import vpkg.b as me\n", "def f():\n    return getattr(me, 'S') is not None\n"),
-    ("from . import b as me; me.S",  "from . import b as me\n", "def f():\n    return me.S is not None\n"),
-    ("import_module of itself",      "import importlib\n", "def f():\n    return importlib.import_module('vpkg.b').S is not None\n"),
-]
 
 
-@pytest.mark.parametrize("cell,head,body", _R13_D1_SELF, ids=[c for c, _, _ in _R13_D1_SELF])
-def test_r13_d1_a_module_reaching_its_own_site_through_itself_is_refused_and_verify_sees_it(cell, head, body, tmp_path,
-                                                                                           monkeypatch):
-    """RESEARCH'S PRE-SEAL D1: the scanner exempted a module's references to its OWN file, and the transform's source
-    named that as a limit — "`getattr(<this module>, "S")` via an imported self-reference is not recognised" — while
-    the README said nothing open was silent. It was silent in all three spellings. derive() refuses; with that refusal
-    disabled, verify() ALONE reports the reference, and the twin fails where the source runs."""
-    un = _load("inv7_uninstrument_r13_d1", EVIDENCE / "inv7_uninstrument.py")
-    slug = re.sub(r"\W", "_", cell)
-    src = tmp_path / slug / "vpkg"; src.mkdir(parents=True)
-    (src / "__init__.py").write_text(""); (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
-    (src / "b.py").write_text(head + "from . import census as _census\nS = _census.declare_site('b.s')\n\n\n"
-                              "def g(v):\n    return S.fire(v)\n\n\n" + body)
-    with pytest.raises(un.Refused, match=r"declared site 'S' from b\.py"):
-        un.derive(src, tmp_path / slug / "twin" / "vpkg")
-    monkeypatch.setattr(un, "_refuse_cross_module_sites", lambda s: None)
-    out = tmp_path / slug / "twin" / "vpkg"
-    un.derive(src, out)
-    assert any("bound there in the source and not in the twin" in p for p in un.verify(out, src)), cell
-    assert _r13_run_b(src.parent).returncode == 0 and _r13_run_b(out.parent).returncode != 0
