@@ -691,9 +691,25 @@ def lost_cross_module_references(src: pathlib.Path, out: pathlib.Path) -> list:
 def declared_names(tree: ast.Module) -> tuple[set[str], set[str]]:
     """(the module-level names bound by `NAME = declare_site(...)`, the aliases the census module is imported as)."""
     declared, aliases = set(), set()
+    # ROUND 13 (research's stage-2 B3): a declaration is recognised by its BINDING, not its spelling. This accepted
+    # ANY callee named `declare_site`, so `N = mock.MagicMock().declare_site('a')` — an object from outside the
+    # package — was removed from the twin as a site, with verify() CLEAN: the source's `N.fire(4)` returned a
+    # MagicMock, the twin's returned 4. Only `declare_site` bound by a census surface import, or `<census
+    # alias>.declare_site`, declares a site; any other spelling keeps its token in the twin, which the token check
+    # refuses. All 162 real declarations are one of the two.
+    surface = {a.asname or a.name for st in tree.body if is_census_surface_import(st) for a in st.names
+               if is_instrumentation_name(a.name)}
+    census_bound = {a.asname or a.name for st in tree.body for a in census_names_in_import(st)}
+
+    def is_bound_declaration(call) -> bool:
+        f = call.func
+        if isinstance(f, ast.Name):
+            return f.id in surface and is_site_declaration(call)
+        return isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name) and f.value.id in census_bound \
+            and is_site_declaration(call)
     for stmt in tree.body:
         if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name) \
-                and isinstance(stmt.value, ast.Call) and is_site_declaration(stmt.value):
+                and isinstance(stmt.value, ast.Call) and is_bound_declaration(stmt.value):
             declared.add(stmt.targets[0].id)
         # ROUND 10, research's stage-1 B1. This tested `any(a.name == "census")` and NEVER LOOKED AT
         # `stmt.module` OR `stmt.level`, so six of seven spellings were collected — including
@@ -756,15 +772,25 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # found 0 of them in the 28 site-declaring modules, and 27 `getattr` calls, all on ordinary objects: a refusal
     # keyed on getattr would have refused 8 real modules. NAMED LIMIT: `getattr(<this module>, "S")` via an imported
     # self-reference is not recognised; 0 in the tree.
+    # ROUND 13, research's stage-2 B2 — KEYED ON BINDING, NOT SPELLING. The first form refused a CALL spelled
+    # `globals()` and an attribute spelled `sys.modules`, and let three aliases through silently: `_g = globals;
+    # _g()['S']`, `import sys as _s; _s.modules[...]`, `from sys import modules`. Now ANY load of the four builtins
+    # (a call or not — `vars(obj)` included, measured to touch no real site module), `.modules` on any name an
+    # import bound to `sys`, and `from sys import modules` itself.
     if declared:
+        sys_names = {a.asname or a.name for st in ast.walk(tree) if isinstance(st, ast.Import)
+                     for a in st.names if a.name == "sys"}
         for n in ast.walk(tree):
             form = None
-            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name):
-                if n.func.id in ("globals", "exec", "eval") or (n.func.id == "vars" and not n.args):
-                    form = f"{n.func.id}()"
+            if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load) and n.id in ("globals", "vars", "exec", "eval"):
+                form = f"{n.id}()"
             elif isinstance(n, ast.Attribute) and n.attr == "__dict__":
                 form = "a `__dict__`"
-            elif isinstance(n, ast.Attribute) and n.attr == "modules" and isinstance(n.value, ast.Name) and n.value.id == "sys":
+            elif isinstance(n, ast.Attribute) and n.attr == "modules" and isinstance(n.value, ast.Name) \
+                    and n.value.id in sys_names:
+                form = "`sys.modules`"
+            elif isinstance(n, ast.ImportFrom) and n.module == "sys" and not n.level \
+                    and any(a.name == "modules" for a in n.names):
                 form = "`sys.modules`"
             if form:
                 raise Refused(f"line {n.lineno}: {form} in a module that declares a site — the module's namespace is "

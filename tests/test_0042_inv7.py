@@ -1732,12 +1732,13 @@ def test_r13_f2_a_sibling_using_only_ordinary_names_is_neither_refused_nor_repor
 
 
 # ROUND 13 — ROUND 12'S DISCLOSED LIMIT `globals()["S"]` (the twin raised KeyError with verify() clean). The module
-# namespace reached dynamically, in a module that declares a site, is REFUSED. Acceptance cells first: research's
-# census found 27 `getattr` calls in the site modules, all on ordinary objects, and none of them may be refused.
+# namespace reached dynamically, in a module that declares a site, is REFUSED — keyed on BINDING since research's
+# stage-2 B2 (any load of the four builtins, and `modules` on any name bound to sys), which also refuses `vars(obj)`:
+# measured to touch no real site module. Acceptance cells first: research's census found 27 `getattr` calls in the
+# site modules, all on ordinary objects, and none of them may be refused.
 _R13_NS_HEAD = "from . import census as _census\nS = _census.declare_site('s')\n\n\n"
 _R13_NS_ACCEPTED = [
     ("getattr on an object",  "def f(o):\n    return getattr(o, 'name', None)\n"),
-    ("vars of an object",     "def f(o):\n    return vars(o)\n"),
     ("an attribute named modules", "def f(o):\n    return o.modules\n"),
 ]
 _R13_NS_REFUSED = [
@@ -1747,6 +1748,11 @@ _R13_NS_REFUSED = [
     ("eval",                  "def f():\n    return eval('S')\n", "eval()"),
     ("sys.modules",           "import sys\n\n\ndef f():\n    return getattr(sys.modules[__name__], 'S')\n", "`sys.modules`"),
     ("a __dict__",            "def f(m):\n    return m.__dict__['S']\n", "a `__dict__`"),
+    # ROUND 13, research's stage-2 B2: the first form was keyed on SPELLING and let these three through silently
+    ("globals by another name", "_g = globals\n\n\ndef f():\n    return _g()['S']\n", "globals()"),
+    ("sys by another name",   "import sys as _s\n\n\ndef f():\n    return _s.modules[__name__].S\n", "`sys.modules`"),
+    ("modules imported from sys", "from sys import modules\n\n\ndef f():\n    return modules[__name__].S\n", "`sys.modules`"),
+    ("vars of an object",     "def f(o):\n    return vars(o)\n", "vars()"),
 ]
 
 
@@ -1768,13 +1774,16 @@ def test_r13_the_module_namespace_reached_dynamically_in_a_site_module_is_refuse
 # declaration. Round 12's gate is scoped to the transform's file and named the other two as its boundary. Measured at
 # round 13 over eleven declaration shapes: they AGREE on the three the tree uses and DISAGREE on four others — and every
 # disagreement is LOUD end to end (derive refuses, or the evidence run's reconciliation refuses a registered id the scan
-# does not show). Unifying them into one definition is a refactor across four modules; this pins the whole matrix so a
+# does not show). ROUND 13 STAGE 2 (research's B3): "other object attr" WAS the silent one — an object from outside the
+# package with a `declare_site` method was removed from the twin as a site, verify() clean; the transform now
+# recognises a declaration only by its census BINDING, and the other two readers still say ['S'], each loudly caught
+# (the twin keeps the token). Unifying them into one definition is a refactor across four modules; this pins the whole matrix so a
 # drift in ANY reader fails here, with the shape named, instead of surfacing as a disagreement a round later.
 _R13_READER_SHAPES = {
     #  shape                  source                                                             site_names / declared_names / scan names
     "bare call":           ("from .census import declare_site\nS = declare_site('a')\n",              (["S"], ["S"], ["S"])),
     "alias attribute":     ("from . import census as _census\nS = _census.declare_site('a')\n",       (["S"], ["S"], ["S"])),
-    "other object attr":   ("x = None\nS = x.declare_site('a')\n",                                    (["S"], ["S"], ["S"])),
+    "other object attr":   ("x = None\nS = x.declare_site('a')\n",                                    (["S"], [], ["S"])),
     "annotated":           ("from .census import declare_site\nS: object = declare_site('a')\n",      ([], [], [])),
     "tuple target":        ("from .census import declare_site\nS, T = declare_site('a'), 1\n",       ([], [], [])),
     "chained target":      ("from .census import declare_site\nS = T = declare_site('a')\n",         ([], [], [])),
@@ -1809,3 +1818,25 @@ def test_r13_s2_6_an_unresolvable_scope_in_derive_names_its_module(tmp_path):
                                        "if (lambda: _census.enabled())())\n")
     with pytest.raises(un._scope.UnresolvableScope, match=re.escape(str(pathlib.Path("deep") / "m.py")) + ": line 2"):
         un.derive(src, tmp_path / "twin" / "vpkg")
+
+
+def test_r13_b3_a_declare_site_method_on_an_outside_object_is_not_a_site(tmp_path):
+    """RESEARCH'S STAGE-2 B3 — dev's own named attack, confirmed silent: `x = mock.MagicMock(); N =
+    x.declare_site('a')` was removed from the twin as a site, verify() CLEAN; the source's `N.fire(4)` returned a
+    MagicMock and the twin's returned 4. A declaration is now recognised only through a census binding, so this module
+    keeps its call and is refused — loudly — rather than rewritten."""
+    un = _load("inv7_uninstrument_r13_b3", EVIDENCE / "inv7_uninstrument.py")
+    src = ("from unittest import mock\nx = mock.MagicMock()\nN = x.declare_site('a')\n\n\n"
+           "def probe():\n    return type(N.fire(4)).__name__\n")
+    assert un.declared_names(ast.parse(src))[0] == set()
+    with pytest.raises(un.Refused):
+        un.uninstrument_source(src, "<b3>")
+
+
+def test_r13_n3_a_site_in_a_literal_all_is_refused_with_no_importer(tmp_path):
+    """RESEARCH'S STAGE-2 N3 (taken into this commit by dev — a refusal the manifest CLAIMS, which no test drove): a
+    declared site listed in its own module's literal `__all__` is refused even when nothing star-imports it today."""
+    un = _load("inv7_uninstrument_r13_n3", EVIDENCE / "inv7_uninstrument.py")
+    src = _r13_pkg(tmp_path, "n3", "from .a import g\n\n\ndef f():\n    return g(True)\n", "__all__ = ['S', 'g']\n")
+    with pytest.raises(un.Refused, match=r"`__all__` exports the declared site"):
+        un.derive(src, tmp_path / "n3" / "twin" / "vpkg")

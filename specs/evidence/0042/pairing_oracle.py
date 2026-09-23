@@ -152,6 +152,38 @@ def truth(src: str) -> dict:
     return out
 
 
+def is_tied(src: str) -> bool:
+    """Does the PROGRAM hold the case the join check exists for — a same-line, same-kind group of symbol-table blocks
+    two of which have EQUAL signatures and DIFFERENT fingerprints? Read from `symtable` directly, never from the
+    resolver's outcome (research's stage-2 B1: the gate first counted join-check REFUSALS as "tied programs reached",
+    and every one of the 39 it counted at its own settings was an over-refusal of an UNTIED program, so switching the
+    tied generators off left the assertion met). Research's definitions, so both seats count one thing: a signature is
+    a function block's parameters (`.0` excluded) or a comprehension block's non-parameter locals; a fingerprint is
+    the block type and every symbol's (name, parameter, local, global, free)."""
+    import symtable
+    groups = collections.defaultdict(list)
+
+    def walk(t):
+        for c in t.get_children():
+            groups[(c.get_lineno(), c.get_name())].append(c); walk(c)
+    walk(symtable.symtable(src, "<oracle>", "exec"))
+
+    def sig(b):
+        if b.get_name() in ("genexpr", "listcomp", "setcomp", "dictcomp"):
+            return ("comp", tuple(sorted(x.get_name() for x in b.get_symbols() if x.is_local() and not x.is_parameter())))
+        return ("fn", tuple(sorted(p for p in b.get_parameters() if p != ".0")) if b.get_type() == "function" else ())
+
+    def fp(b):
+        return (b.get_type(), tuple(sorted((x.get_name(), x.is_parameter(), x.is_local(), x.is_global(), x.is_free())
+                                           for x in b.get_symbols())))
+    for blocks in groups.values():
+        for i, a in enumerate(blocks):
+            for b in blocks[i + 1:]:
+                if sig(a) == sig(b) and fp(a) != fp(b):
+                    return True
+    return False
+
+
 def judge(resolver_module, src: str) -> tuple[str, int, int]:
     """-> (outcome, reads checked, reads the bytecode did not locate). OK, SILENT (a wrong answer, nothing refused),
     or REFUSED (loud — the resolver declined)."""
@@ -223,6 +255,8 @@ def run(n: int, seed: int, resolver_module=None) -> collections.Counter:
         src, discarded = program(rng)
         outcome, checked, unmapped = judge(mod, src)
         t[outcome] += 1; t["reads checked"] += checked; t["reads unmapped"] += unmapped; t["draws discarded"] += discarded
+        if is_tied(src):
+            t["TIED programs"] += 1; t[f"TIED programs {outcome}"] += 1
     return t
 
 

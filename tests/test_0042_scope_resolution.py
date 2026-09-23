@@ -1372,8 +1372,10 @@ def test_r13_the_pairing_oracle_finds_no_silent_answer_and_its_control_does():
       * the POSITIVE CONTROL — this tree's resolver with round 12's comprehension order restored and the join check
         removed, built from the source text in-process — DOES give silent answers on the same programs, so the gate
         can fail (research's R3(ii));
-      * the tied-signature programs are REACHED: the join check refuses some of them (research's R3 — a generator
-        giving every scope a unique signature made the check look complete by construction);
+      * the tied-signature programs are REACHED, counted from the PROGRAM (`is_tied`: equal signatures, different
+        fingerprints) and never from the resolver's outcome — research's stage-2 B1: the first form counted join-check
+        refusals, every one of which at these settings was an over-refusal of an UNTIED program, so turning the tied
+        generators off left it met. Measured: 33/47/33 tied programs on 3.12/3.11/3.13, and 0 with them off;
       * most programs are judged rather than refused, and many reads are checked — an oracle refusing everything, or
         judging nothing, would pass the first assertion vacuously;
       * the reads with no instruction position stay a small share (3.13's return annotations)."""
@@ -1382,7 +1384,8 @@ def test_r13_the_pairing_oracle_finds_no_silent_answer_and_its_control_does():
     control = po.run(_ORACLE_N, _ORACLE_SEED, po.positive_control_resolver())
     assert got["SILENT"] == 0, f"the resolver gave {got['SILENT']} silent wrong answers: {dict(got)}"
     assert control["SILENT"] >= 10, f"the positive control is no longer a mutant the programs reach: {dict(control)}"
-    assert got["REFUSED by the join check"] >= 10, f"the tied-signature programs are not reached: {dict(got)}"
+    assert got["TIED programs"] >= 20, f"the tied-signature programs are not reached: {dict(got)}"
+    assert got["TIED programs SILENT"] == 0, f"a tied program was answered silently wrong: {dict(got)}"
     assert got["OK"] >= 0.6 * _ORACLE_N and got["reads checked"] >= 5000, f"the oracle judges too little: {dict(got)}"
     assert got["reads unmapped"] <= 0.05 * got["reads checked"], f"too many reads unjudged: {dict(got)}"
 
