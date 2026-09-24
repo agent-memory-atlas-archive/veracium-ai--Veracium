@@ -29,8 +29,8 @@
 # runs — the uninstrumented main run and the healthy CONTROL run (sha256 9f96ac19c5c1bbc3…); the EXCLUDED line's
 # "[healthy, uninstrumented]" is the harness recording exactly those samples.
 # Recomputed by dev after the run, with the harness's own per-test segmentation (inv7_harness.segments): against the
-# uninstrumented CONTROL run, 6 runs differ in no test and the other 2 differ in that one test only; with it removed all
-# 8 runs agree at e36ff5a5a2ebdc97 — a dev-side definition: sha256 over the tests in sorted id order, each hashed as the
+# uninstrumented CONTROL run, 5 of the other 7 runs differ in no test and 2 differ in that one test only; with it removed
+# all 8 runs agree at e36ff5a5a2ebdc97 — a dev-side definition: sha256 over the tests in sorted id order, each hashed as the
 # id, a NUL, its decoded records as compact JSON, a newline. That serialisation is NOT the one behind the round-15
 # header's 9c10edb4498eea31, so the two values are not comparable. The standing test took 2 distinct outcomes this run.
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042

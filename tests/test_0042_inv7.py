@@ -2263,16 +2263,20 @@ def test_r16_the_reference_census_separates_a_declaration_time_defect(cell, muta
         (twin / "veracium" / "census.py").write_bytes((src / "veracium" / "census.py").read_bytes())
     elif twin_census == "head":
         (twin / "veracium" / "census.py").write_bytes((src / "veracium" / "census.py").read_bytes())
-    want_census = (src / "veracium" / "census.py").read_bytes() if twin_census == "head" else un.REFERENCE_CENSUS.read_bytes()
-    assert (twin / "veracium" / "census.py").read_bytes() == want_census
     out = base / f"cell-{slug}"
     arms = ["healthy", "failing", "off", "uninstrumented"]
     S = {a: _r16_arm(harness, repo, a, src, out, monkeypatch, twin=(twin if a == "uninstrumented" else None)) for a in arms}
     for a in arms:
         assert pathlib.Path(S[a]["veracium_file"]).is_relative_to(twin if a == "uninstrumented" else src), (a, S[a]["veracium_file"])
     v, _ = harness.compare(out, arms, S, ID_TO_SYMBOL)
+    # the VERDICT is asserted BEFORE the twin's census identity, deliberately: at the round-15 pin the "reference" cells
+    # derive with round 15's transform (HEAD's census verbatim), so the mutated one reads IDENTICAL with 0 census entries
+    # — the reviewer's finding, failing on its own assertion — where an identity check first would fail on a name the
+    # pin does not have (REFERENCE_CENSUS) and demonstrate nothing
     assert ("IDENTICAL" if v["identical"] else "DIVERGENT") == verdict, (cell, v["divergences"])
     assert S["uninstrumented"]["census_code_entries"] == 0, (cell, S["uninstrumented"].get("census_code_entry_detail"))
+    want_census = (src / "veracium" / "census.py").read_bytes() if twin_census == "head" else un.REFERENCE_CENSUS.read_bytes()
+    assert (twin / "veracium" / "census.py").read_bytes() == want_census
 
 
 def test_r16_run_arm_hands_the_child_an_absolute_import_path(tmp_path, monkeypatch):
