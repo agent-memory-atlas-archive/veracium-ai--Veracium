@@ -2196,12 +2196,33 @@ def test_r14_the_named_residual_is_uncounted_and_its_neighbours_count():
                 "list in (identity hit)": lambda: a in [a, b], "tuple in (identity hit)": lambda: a in (a, b),
                 "list ==": lambda: [a] == [a], "tuple ==": lambda: (a,) == (a,),
                 "list.index": lambda: [a].index(a), "list.count": lambda: [a].count(a)}
-    counted = {"list in (reaches another first)": lambda: b in [a, b], "set in": lambda: a in {a}, "dict key": lambda: {a: 1}[a]}
+    # `__class__`, exempt on the owner's word ("Faithful class, exempt"): uncounted, and its answer is the source's
+    residual["a read of __class__"] = lambda: a.__class__
+    counted = {"list in (reaches another first)": lambda: b in [a, b], "set in": lambda: a in {a}, "dict key": lambda: {a: 1}[a],
+               "a read of another attribute": lambda: a.site_id}
     got = {}
     for label, op in {**residual, **counted}.items():
         n0 = stub.inert_calls(); op(); got[label] = stub.inert_calls() - n0
     assert {k: got[k] for k in residual} == dict.fromkeys(residual, 0), got
     assert all(got[k] >= 1 for k in counted), got
+    assert (a.__class__.__name__, a.__class__.__qualname__) == ("Site", "Site")
+    # OPERATORS NEITHER CLASS DEFINES (the spec's v9.6 note names them): each counts 0 and raises the TypeError the REAL
+    # Site raises, message and all — the class is named Site, so the message names the same type. The neighbour that
+    # counts is an operator the stand-in DOES define (`==`, above in the K2 table).
+    import veracium.census as C
+    real = C.Site("r14.real")
+    operators = {"a + 1": lambda x: x + 1, "1 + a": lambda x: 1 + x, "-a": lambda x: -x, "a[0]": lambda x: x[0],
+                 "len(a)": lambda x: len(x), "iter(a)": lambda x: iter(x), "a()": lambda x: x()}
+    for label, op in operators.items():
+        n0 = stub.inert_calls()
+        with pytest.raises(TypeError) as twin_err:
+            op(a)
+        assert stub.inert_calls() == n0, f"{label} counted"
+        with pytest.raises(TypeError) as real_err:
+            op(real)
+        assert str(twin_err.value) == str(real_err.value), (label, str(twin_err.value), str(real_err.value))
+    n0 = stub.inert_calls(); a == 1
+    assert stub.inert_calls() > n0                          # the defined neighbour counts
     text = (EVIDENCE / "inv7_uninstrument.py").read_text()
     assert "short-circuits on identity" in text and "test_r14_the_named_residual_is_uncounted_and_its_neighbours_count" in text
 
