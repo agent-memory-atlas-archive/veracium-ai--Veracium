@@ -250,7 +250,7 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     assert re.search(r'^  healthy: \{.*"any_errors": false.*"subsequence_holds": true', text, re.M)
     assert re.search(r'^  failing: \{.*"all_unmeasured": true.*"subsequence_holds": true', text, re.M)
     assert re.search(r'^  off: \{"census_enabled": false, "registry_size": (\d+)\}', text, re.M).group(1) == str(len(declaration.DECLARED_IDS))
-    # the reference arm's checks: census off, and (round 15: the twin's census is the source's own) a registry holding the
+    # the reference arm's checks: census off, and (since round 15 the twin carries a real census; round 16 the REFERENCE one) a registry holding the
     # declaration's ids, equal to the off arm's as sets — its census-entry count is asserted with the derivation below;
     # parsed as JSON rather than matched as a key-order-dependent prefix
     _u = json.loads(re.search(r"^  uninstrumented: (\{.*\})$", text, re.M).group(1))
@@ -298,14 +298,17 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     # mistaken for a rule.)
     # the twin is DERIVED from HEAD by un-instrumenting it (2026-09-19; an exported old commit is a different product
     # as soon as src/ moves for any other reason): the transcript states the derivation, and — since round 14 — the
-    # number of declarations PRESERVED (since round 15 bound to the source's own census) equals the declaration's ids
+    # number of declarations PRESERVED (round 15 bound to the source's own census; since round 16 to the REFERENCE census,
+    # whose commit and digest the line prints from the transform's constants) equals the declaration's ids
     m = re.search(r"^twin \(uninstrumented\): derived from HEAD ([0-9a-f]{40}) by inv7_uninstrument\.py$", text, re.M)
     assert m, "the transcript's twin is not the derived one"
     assert m.group(1) == pin
-    d = re.search(r"^twin derivation: (\d+) declare_site preserved, bound to the source's own census\.py copied verbatim, (\d+) fire\(\) unwrapped, (\d+) consult blocks spliced, (\d+) census-enabled bypass blocks removed", text, re.M)
+    d = re.search(r"^twin derivation: (\d+) declare_site preserved, bound to the REFERENCE census \(accepted commit ([0-9a-f]{7})'s census\.py, sha256 ([0-9a-f]{16})\.\.\.\), (\d+) fire\(\) unwrapped, (\d+) consult blocks spliced, (\d+) census-enabled bypass blocks removed", text, re.M)
     assert d, "the transcript does not state the derivation"
+    un = _load("inv7_uninstrument_r16t", EVIDENCE / "inv7_uninstrument.py")
+    assert (d.group(2), d.group(3)) == (un.REFERENCE_CENSUS_COMMIT[:7], un.REFERENCE_CENSUS_SHA256[:16]), d.groups()[1:3]
     assert int(d.group(1)) == len(declaration.DECLARED_IDS), (d.group(1), len(declaration.DECLARED_IDS))
-    assert int(d.group(2)) > 0 and int(d.group(3)) > 0 and int(d.group(4)) == 4       # the four hot-predicate bypasses
+    assert int(d.group(4)) > 0 and int(d.group(5)) > 0 and int(d.group(6)) == 4       # the four hot-predicate bypasses
     # ROUND 15: "uninstrumented", MEASURED — the reference arm's printed checks carry 0 entries into census code during
     # the run, a disabled census, and a registry equal to the off arm's as sets (research's stage-1 conditions)
     u = re.search(r"^  uninstrumented: (\{.*\})$", text, re.M)
