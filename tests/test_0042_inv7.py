@@ -1953,7 +1953,8 @@ def test_r14_a_fire_the_transform_cannot_bind_is_still_refused():
             un.uninstrument_source(_R14_SELF + body, "<fire>")
 
 
-# ---- round 15: the twin keeps the SOURCE'S census.py verbatim (Quentin's decision, 2026-09-24) -------------------------
+# ---- round 15: the twin keeps a REAL census.py (Quentin's decision, 2026-09-24): round 15 the SOURCE'S verbatim; round 16
+# the REFERENCE census, an accepted commit's (tests below) — these round-15 tests hold under both --------------------------
 # The round-14 verdict: "The new stand-in can still change an instrumented decision from True to False while
 # verification is clean and its use counter stays at zero." Reproduced at 8074e6b through the stand-in's CLASS — its
 # counting overrides of object's dunders. The stand-in is gone: a declaration binds the source's own Site, so a question

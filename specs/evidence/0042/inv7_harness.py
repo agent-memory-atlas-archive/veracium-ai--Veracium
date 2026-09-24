@@ -92,7 +92,10 @@ def export_twin(repo: pathlib.Path, commit: str, out: pathlib.Path) -> dict:
         assert not problems, problems
         head = sh(["git", "rev-parse", "HEAD"], cwd=repo).stdout.strip()
         return {"commit": f"derived from HEAD {head} by inv7_uninstrument.py", "src": str(twin / "src"), "src_commits_since_twin": [],
-                "derivation": totals}
+                "derivation": totals,
+                # ROUND 16: the twin's census is the REFERENCE census; the transcript names it from the transform's own
+                # constants, never from typed text (the derivation line carried round 15's "copied verbatim" past round 15)
+                "reference_census": {"commit": un.REFERENCE_CENSUS_COMMIT, "sha256": un.REFERENCE_CENSUS_SHA256}}
     full = sh(["git", "rev-parse", commit], cwd=repo).stdout.strip()
     p1 = subprocess.Popen(["git", "archive", full, "src/veracium"], cwd=repo, stdout=subprocess.PIPE)
     subprocess.run(["tar", "-x", "-C", str(twin)], stdin=p1.stdout, check=True); p1.wait()
@@ -390,10 +393,11 @@ def main():
          f"twin (uninstrumented): {twin['commit'] if twin else '-'}"]
     if twin and twin.get("derivation"):
         d = twin["derivation"]
-        # ROUND 15: declarations are PRESERVED and the census is the source's own, copied verbatim; what makes the arm
-        # "uninstrumented" in INV-7's sense is MEASURED: no census code runs in it beyond its import, the declarations and
-        # the observer's reads, and its registry is the off arm's (both gated below).
-        L += [f"twin derivation: {d['sites']} declare_site preserved, bound to the source's own census.py copied verbatim, {d['fires']} fire() unwrapped, {d['consults']} consult blocks spliced, "
+        # ROUND 16: declarations are PRESERVED and the census is the REFERENCE census (an accepted commit's census.py, not
+        # the census under test); what makes the arm "uninstrumented" in INV-7's sense is MEASURED: no census code runs in it
+        # beyond its import, the declarations and the observer's reads, and its registry is the off arm's (gated below).
+        rc = twin.get("reference_census") or {}
+        L += [f"twin derivation: {d['sites']} declare_site preserved, bound to the REFERENCE census (accepted commit {str(rc.get('commit'))[:7]}'s census.py, sha256 {str(rc.get('sha256'))[:16]}...), {d['fires']} fire() unwrapped, {d['consults']} consult blocks spliced, "
               f"{d['bypasses']} census-enabled bypass blocks removed, across {d['modules_changed']} modules; no census code ran in the reference arm beyond its import, the declarations and the observer's reads, and its registry equals the off arm's (asserted below)"]
     elif twin:
         L += ["src commits between the twin and HEAD (the uninstrumented arm runs the twin's src; its census registry is empty — asserted below):"]

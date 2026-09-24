@@ -278,7 +278,8 @@ def decoded() -> list:
 
 
 # ---- ROUND 15: "UNINSTRUMENTED", MEASURED OUTSIDE THE TWIN --------------------------------------------------------------
-# The twin keeps the source's census.py VERBATIM (Quentin's decision, the round-14 verdict: a stand-in's class could be
+# The twin carries a REAL census module (round 15: HEAD's census.py verbatim; round 16: the REFERENCE census, an accepted
+# commit's census.py, so the census under test is not shared) — Quentin's decisions, the round-14 verdict: a stand-in's class could be
 # told apart from Site's), so every question about a Site answers as the census-off arm's does, by construction. What
 # the reference arm must show is that NO CENSUS CODE TAKES PART IN A DECISION, and that is counted here: a profile hook
 # records every ENTRY into the twin's census.py from code outside it, EXCLUDING, by frame (research's stage-1 B2):

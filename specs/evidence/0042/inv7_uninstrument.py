@@ -260,8 +260,8 @@ class Uninstrument(ast.NodeTransformer):
     # module-level: count the declarations (PRESERVED) and refuse the census imports the twin could not answer
     def visit_Module(self, node):
         # ROUND 14, the round-13 verdict's F1 — NOTHING IS REMOVED. Every declaration `NAME = declare_site(...)` and every
-        # census import stays in the twin VERBATIM, and (round 15) so does census.py itself, so a declaration binds the
-        # source's own Site. The twin removed every declaration from its first derivation, and rounds
+        # census import stays in the twin VERBATIM, and census.py is a real census (round 15 the source's; round 16 the
+        # REFERENCE census's), so a declaration binds a real Site. The twin removed every declaration from its first derivation, and rounds
         # 12 and 13 chased, one spelling at a time, every route by which another piece of code could still reach the
         # name it bound — an import, a star, `__all__`, an attribute, `getattr`, `import_module`, `sys.modules`,
         # `globals()` — and the round-13 verdict found five more (`pkgutil`, `runpy`, `importlib.util`, `__globals__`,
@@ -506,7 +506,7 @@ def instrumentation_tokens_in(text: str) -> list:
     (`from .census import`). The two had drifted, and the fix for F1 would have made them contradict — a
     correct twin keeping `from .census import enabled` refused by verify() on its first run."""
     # ROUND 14: `declare_site` is no longer a token that must not survive — every declaration stays in the twin (bound,
-    # since round 15, to the source's own census). What must not survive is a MEASUREMENT: a consult or a fire.
+    # since round 16, to the REFERENCE census). What must not survive is a MEASUREMENT: a consult or a fire.
     return [tok for tok in (".consult()", ".fire(") if tok in text]
 
 
@@ -532,7 +532,7 @@ def lost_bindings(src_text: str, twin_text: str) -> set:
     returned a disclosed silent limit as blocking, so each now has an owner): a name bound DYNAMICALLY
     (`globals()[...]`, `exec`) is invisible to a static reading; this reads ONE module at a time, so a binding lost
     ACROSS modules is read by `lost_cross_module_references` in verify(). ROUND 14: the transform removes no binding
-    — every declaration stays bound (since round 15 to the source's own census) — so neither limit can be reached through a declared site, and
+    — every declaration stays bound (since round 16 to the REFERENCE census) — so neither limit can be reached through a declared site, and
     the round-13 refusals of dynamic forms and of cross-module reach were withdrawn; this reading remains verify()'s
     check against a transform that DOES lose a binding (the mutant in tests/test_0042_inv7.py). A changed
     VALUE with no lost name — the round-12 verdict's F1 — is the scope resolver's pairing, which its join check now
@@ -826,7 +826,8 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # were the site; `lost_bindings` in verify() was the second, independent reading of the same fact.
     # ROUND 14: round 12's R2 ("a declared site loaded outside fire()/consult()") and round 13's dynamic-namespace
     # refusal are GONE — both existed because the declaration was removed; with the name kept bound (to a stand-in in
-    # round 14, to the source's own census since round 15), a site loaded as a value, or reached through `globals()`,
+    # round 14, to a real census since round 15 — the source's, then (round 16) the REFERENCE census), a site loaded as a
+    # value, or reached through `globals()`,
     # is correct code (research's stage-1 read).
     census_aliases = aliases
     # AND THE BINDING MUST NOT HAVE MOVED. `from . import census as _census` followed by `_census = On()`
