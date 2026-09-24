@@ -202,10 +202,11 @@ class Uninstrument(ast.NodeTransformer):
     def visit_Module(self, node):
         # ROUND 14, the round-13 verdict's F1 — NOTHING IS REMOVED. Every declaration `NAME = declare_site(...)` and every
         # census import stays in the twin VERBATIM, and the twin's STUB census answers `declare_site` with an INERT
-        # stand-in per declaration (see STUB). Rounds 11 to 13 removed the declaration and then chased, one spelling at
-        # a time, every route by which another piece of code could still reach the name it bound — an import, a
-        # star, `__all__`, an attribute, `getattr`, `import_module`, `sys.modules`, `__globals__`, `inspect`, `pkgutil`,
-        # `runpy`… — and the round-13 verdict found five more. A name that is never unbound cannot be reached and
+        # stand-in per declaration (see STUB). The twin removed every declaration from its first derivation, and rounds
+        # 12 and 13 chased, one spelling at a time, every route by which another piece of code could still reach the
+        # name it bound — an import, a star, `__all__`, an attribute, `getattr`, `import_module`, `sys.modules`,
+        # `globals()` — and the round-13 verdict found five more (`pkgutil`, `runpy`, `importlib.util`, `__globals__`,
+        # `inspect`). A name that is never unbound cannot be reached and
         # found missing, however the route is spelled. What stays refused here is what the transform must RECOGNISE:
         # a declaration made through an alias of `declare_site`, and a census name the STUB does not answer.
         # The declarations are COUNTED where they are recognised (`bound_declarations`, which `declared_names` also

@@ -1853,8 +1853,8 @@ def test_r13_b3_a_declare_site_method_on_an_outside_object_is_not_a_site(tmp_pat
 
 
 # ROUND 14 — THE ROUND-13 VERDICT'S F1: "Site-reachability gaps still produce broken twins with clean verification."
-# Rounds 12 and 13 removed the declaration and then REFUSED, one spelling at a time, every route by which code could
-# still reach the name; the verdict found five more (pkgutil, runpy, importlib.util, __globals__, inspect). Round 14
+# The twin removed every declaration from its first derivation, and rounds 12 and 13 REFUSED, one spelling at a time,
+# every route by which code could still reach the name; the verdict found five more (pkgutil, runpy, importlib.util, __globals__, inspect). Round 14
 # keeps every declared name bound to an inert stand-in, so no route can find it missing. Every route rounds 12 and 13
 # refused, and every route the verdict found, is a cell here, and must DERIVE, VERIFY CLEAN, and give the same
 # answer in the twin as in the source (the source runs the real census, default off; the twin the STUB).
