@@ -247,10 +247,11 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     assert re.search(r'^  healthy: \{.*"any_errors": false.*"subsequence_holds": true', text, re.M)
     assert re.search(r'^  failing: \{.*"all_unmeasured": true.*"subsequence_holds": true', text, re.M)
     assert re.search(r'^  off: \{"census_enabled": false, "registry_size": (\d+)\}', text, re.M).group(1) == str(len(declaration.DECLARED_IDS))
-    # the reference arm's checks: census off and an empty registry (and, since round 14, a stand-in use count of 0 —
-    # asserted with the derivation below); parsed as JSON rather than matched as a key-order-dependent prefix
+    # the reference arm's checks: census off, and (round 15: the twin's census is the source's own) a registry holding the
+    # declaration's ids, equal to the off arm's as sets — its census-entry count is asserted with the derivation below;
+    # parsed as JSON rather than matched as a key-order-dependent prefix
     _u = json.loads(re.search(r"^  uninstrumented: (\{.*\})$", text, re.M).group(1))
-    assert _u.get("census_enabled") is False and _u.get("registry_size") == 0, _u
+    assert _u.get("census_enabled") is False and _u.get("registry_size") == len(declaration.DECLARED_IDS) and _u.get("registry_equals_off") is True, _u
     # the tests the run could not compare are NAMED (a reader sees the boundary of the claim), each a node id
     # round 7c: the exclusions are the STANDING list (by name, with a cause) plus any NEWLY non-reproducible test —
     # the verdict line counts both apart, the two headings list them, and a NEW one is a finding the harness's exit
@@ -294,20 +295,28 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     # mistaken for a rule.)
     # the twin is DERIVED from HEAD by un-instrumenting it (2026-09-19; an exported old commit is a different product
     # as soon as src/ moves for any other reason): the transcript states the derivation, and — since round 14 — the
-    # number of declarations PRESERVED as inert stand-ins equals the declaration's ids at HEAD
+    # number of declarations PRESERVED (since round 15 bound to the source's own census) equals the declaration's ids
     m = re.search(r"^twin \(uninstrumented\): derived from HEAD ([0-9a-f]{40}) by inv7_uninstrument\.py$", text, re.M)
     assert m, "the transcript's twin is not the derived one"
     assert m.group(1) == pin
-    d = re.search(r"^twin derivation: (\d+) declare_site preserved as inert stand-ins, (\d+) fire\(\) unwrapped, (\d+) consult blocks spliced, (\d+) census-enabled bypass blocks removed", text, re.M)
+    d = re.search(r"^twin derivation: (\d+) declare_site preserved, bound to the source's own census\.py copied verbatim, (\d+) fire\(\) unwrapped, (\d+) consult blocks spliced, (\d+) census-enabled bypass blocks removed", text, re.M)
     assert d, "the transcript does not state the derivation"
     assert int(d.group(1)) == len(declaration.DECLARED_IDS), (d.group(1), len(declaration.DECLARED_IDS))
     assert int(d.group(2)) > 0 and int(d.group(3)) > 0 and int(d.group(4)) == 4       # the four hot-predicate bypasses
-    # ROUND 14: "uninstrumented", MEASURED — the reference arm's printed checks carry a stand-in use count of exactly 0
-    # and an empty registry (research's stage-1 B2; INV-7 is frozen and its reference arm is the uninstrumented one)
+    # ROUND 15: "uninstrumented", MEASURED — the reference arm's printed checks carry 0 entries into census code during
+    # the run, a disabled census, and a registry equal to the off arm's as sets (research's stage-1 conditions)
     u = re.search(r"^  uninstrumented: (\{.*\})$", text, re.M)
     assert u, "the transcript does not print the reference arm's checks"
     uc = json.loads(u.group(1))
-    assert uc.get("inert_calls") == 0 and uc.get("registry_size") == 0, uc
+    assert uc.get("census_code_entries") == 0 and uc.get("census_enabled") is False and uc.get("registry_equals_off") is True, uc
+    # and the gates and the exit are PRINTED (research's N-1): every one true, the exit 0, read from the transcript itself
+    g = re.search(r"^GATES \((\d+), (\d+) true; [^)]*\): (\{.*\})$", text, re.M)
+    assert g and g.group(1) == g.group(2) and all(json.loads(g.group(3)).values()), g and g.group(0)[:200]
+    # the gate NAME SET, not only their values (research's pre-commit note): a per-arm gate exists only when its arm ran,
+    # so a run missing the off arm would otherwise pass by omitting uninstrumented:registry_equals_off
+    assert {"uninstrumented:census_disabled", "uninstrumented:registry_equals_off", "uninstrumented:no_census_code_in_decisions",
+            "off:census_disabled", "healthy:subsequence", "failing:all_unmeasured", "identical"} <= set(json.loads(g.group(3))), sorted(json.loads(g.group(3)))
+    assert re.search(r"^HARNESS EXIT: 0$", text, re.M)
 
 
 # ---- leg 3: the harness's mutation matrix ------------------------------------------------------------
