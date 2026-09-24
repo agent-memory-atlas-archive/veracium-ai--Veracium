@@ -114,7 +114,12 @@ def run_arm(repo, arm, suites, out, decl, twin_src=None, mode="trace", out_name=
     env.update({"INV7_ARM": arm, "INV7_OUT": str(arm_out), "INV7_DECLARATION": str(decl), "INV7_MODE": mode,
                 "PYTHONDONTWRITEBYTECODE": "1", "PYTHONHASHSEED": "0"})
     path = [str(HERE)] + ([twin_src] if twin_src else [])
-    env["PYTHONPATH"] = os.pathsep.join(path + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else []))
+    # ROUND 16 (the round-15 verdict's second finding): the child runs with cwd=repo, so an INHERITED RELATIVE entry
+    # (`PYTHONPATH=src`, the way a reviewer runs an extracted package) named a directory under the wrong root and the
+    # child could not import the package. Every inherited entry is made ABSOLUTE against THIS process's cwd, where it was
+    # meant; an empty entry (the current directory) is kept as the absolute cwd too.
+    inherited = [os.path.abspath(e) for e in env.get("PYTHONPATH", "").split(os.pathsep)] if env.get("PYTHONPATH") else []
+    env["PYTHONPATH"] = os.pathsep.join(path + inherited)
     if twin_src:
         env["INV7_TWIN"] = twin_src
     cmd = [str(repo / ".venv" / "bin" / "python"), "-m", "pytest", "-q", "-p", "no:randomly", "-p", "no:cacheprovider",

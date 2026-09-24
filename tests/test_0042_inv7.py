@@ -24,10 +24,13 @@ from __future__ import annotations
 
 import ast
 import collections
+import hashlib
 import importlib.util
 import json
+import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 
@@ -802,7 +805,9 @@ def test_r7_f3c_the_serialised_verdict_carries_the_gates_both_readmes_promise(tm
 
 def _twin_fixture(tmp_path, body="from .census import declare_site\nS = declare_site('t')\n\ndef f(x):\n    with S.consult():\n        return S.fire(False)\n"):
     src = tmp_path / "src_tree" / "veracium"; src.mkdir(parents=True)
-    (src / "__init__.py").write_text(""); (src / "census.py").write_text("def declare_site(i, **k):\n    return None\n")
+    # the REAL census (round 16): the twin's census is the reference census, and derive() refuses a census whose Site has
+    # drifted from the reference's — a toy census with no Site at all is that, so this fixture carries the real one
+    (src / "__init__.py").write_text(""); (src / "census.py").write_text((ROOT / "src" / "veracium" / "census.py").read_text())
     (src / "m.py").write_text(body)
     out = tmp_path / "twin" / "src" / "veracium"
     un = _load("inv7_uninstrument_r7", EVIDENCE / "inv7_uninstrument.py")
@@ -1981,16 +1986,20 @@ def test_r15_every_question_about_a_site_answers_alike_in_source_and_twin(shape,
     assert (ran_twin.returncode, ran_twin.stdout) == (0, "True\n"), ran_twin.stderr[-300:]
 
 
-def test_r15_the_twin_census_is_the_source_s_byte_for_byte_and_verify_refuses_any_other(tmp_path):
-    """Research's stage-1 condition 5, as IDENTITY: the twin's census.py is the source's, byte for byte; a declaration
-    binds that module's Site and is the object its registry holds; and re-declaring an id — a module reloaded — is
-    refused in BOTH, so round 14's one named unfaithfulness (the stand-in did not refuse a reload) is gone, pinned gone.
-    The control: a twin whose census differs by one byte is refused by verify()."""
-    un = _load("inv7_uninstrument_r15_identity", EVIDENCE / "inv7_uninstrument.py")
+def test_r16_the_twin_census_is_the_reference_census_and_verify_refuses_any_other(tmp_path, monkeypatch):
+    """Round 16 (the owner's "(3) Accepted census"): the twin's census.py is the REFERENCE census — an accepted commit's
+    census.py, tracked as specs/evidence/0042/reference_census.py and pinned by digest — not HEAD's. (It equals HEAD's
+    today, byte for byte: census.py has not changed since round 8, so the protection is PROSPECTIVE and the separating
+    test below is what demonstrates it.) A declaration binds that module's Site and is the object its registry holds;
+    re-declaring an id — a reload — is refused in BOTH. The controls: a twin whose census differs by one byte at the
+    same length is refused by verify(); a reference file that is not the pinned digest is refused by derive()."""
+    un = _load("inv7_uninstrument_r16_identity", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_bytes()
+    assert hashlib.sha256(ref).hexdigest() == un.REFERENCE_CENSUS_SHA256
     src = _r13_pkg(tmp_path, "ident", _R14_SELF + "def f():\n    return 1\n", "")
     out = tmp_path / "ident" / "twin" / "vpkg"
     un.derive(src, out)
-    assert (out / "census.py").read_bytes() == (src / "census.py").read_bytes() == _R12_CENSUS_SRC.read_bytes()
+    assert (out / "census.py").read_bytes() == ref
     assert un.verify(out, src) == []
     code = ("import sys, importlib; sys.path.insert(0, {root!r}); import vpkg.b as b, vpkg.census as c\n"
             "print(type(b.S) is c.Site, c._REGISTRY['b.s'] is b.S)\n"
@@ -1998,13 +2007,16 @@ def test_r15_the_twin_census_is_the_source_s_byte_for_byte_and_verify_refuses_an
     for root in (src.parent, out.parent):
         r = subprocess.run([sys.executable, "-c", code.format(root=str(root))], capture_output=True, text=True)
         assert r.stdout.split("\n")[:2] == ["True True", "reload refused"], (root, r.stdout, r.stderr[-300:])
-    # one byte FLIPPED at the same length (research's pre-seal N-4: an appended byte also changes the length, so a
-    # verify() comparing lengths would have passed the old control)
+    # one byte FLIPPED at the same length in the TWIN's census: refused by verify()
     data = bytearray((out / "census.py").read_bytes()); i = data.index(b"census") + 1; data[i] ^= 0x20
-    assert len(data) == len((src / "census.py").read_bytes()) and bytes(data) != (src / "census.py").read_bytes()
+    assert len(data) == len(ref) and bytes(data) != ref
     (out / "census.py").write_bytes(bytes(data))
-    assert any("not the source's census" in p for p in un.verify(out, src)), un.verify(out, src)
-
+    assert any("not the reference census" in p for p in un.verify(out, src)), un.verify(out, src)
+    # and a reference FILE that is not the pinned digest: refused by derive() — advancing T is a spec change
+    fake = tmp_path / "reference_census.py"; fake.write_bytes(bytes(data))
+    monkeypatch.setattr(un, "REFERENCE_CENSUS", fake)
+    with pytest.raises(un.Refused, match="advancing T is a specification change"):
+        un.derive(src, tmp_path / "ident" / "twin2" / "vpkg")
 
 _R15_OFF_FORMS = {
     "with consult": lambda s: s.consult().__enter__(), "consult statement": lambda s: s.consult(),
@@ -2138,6 +2150,144 @@ def test_r15_the_registry_gate_fails_through_the_real_chain(cell, mutate, gate, 
     harness.final_status(v, c, S, arms)
     assert v["gates"]["uninstrumented:no_census_code_in_decisions"] is True, (cell, S["uninstrumented"].get("census_code_entry_detail"))
     assert v["gates"]["uninstrumented:registry_equals_off"] is gate, (cell, len(S["off"]["census_registry_ids"]), len(S["uninstrumented"]["census_registry_ids"]))
+
+
+_R16_DRIFT = [
+    # (cell, (old, new) in HEAD's census.py, drift expected) — HEAD's Site against the reference's, both directions
+    ("a method body changed", ('        with self._lock:\n            return dict(self.failures)', '        with self._lock:\n            return dict(self.failures) or {}'), True),
+    ("a member added to HEAD", ('    def failure_kinds(self) -> dict:', '    def extra(self):\n        return 1\n\n    def failure_kinds(self) -> dict:'), True),
+    ("a member removed from HEAD", ('    def __enter__(self):\n        return self                           # the count happened in consult(); the bracket only scopes the body\n\n', ''), True),
+    ("__slots__ changed", ('"_declines", "failures")', '"_declines", "failures", "extra")'), True),
+    ("a base class added", ('class Site:', 'class Site(object):'), True),
+    ("formatting only (a comment and blank lines)", ('    def failure_kinds(self) -> dict:', '    # a comment\n\n    def failure_kinds(self) -> dict:'), False),
+]
+
+
+@pytest.mark.parametrize("cell,edit,drift", _R16_DRIFT, ids=[c[0] for c in _R16_DRIFT])
+def test_r16_a_drifted_site_is_refused_and_t_must_advance(cell, edit, drift, tmp_path):
+    """Research's stage-1 condition 3: HEAD's Site and the reference census's Site compared MEMBER BY MEMBER, by source
+    (the AST of each member), in BOTH directions. Any behavioural difference — a body, a member added or removed, the
+    slots, the class header — is drift: derive() refuses it and verify() reports it, "T must advance"; a formatting-only
+    change is not drift. Today HEAD's Site equals the reference's, so the real tree reads no drift."""
+    un = _load("inv7_uninstrument_r16_drift", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    assert un.site_drift(_R12_CENSUS_SRC.read_text(), ref) == []
+    old, new = edit
+    assert ref.count(old) == 1, (cell, ref.count(old))
+    head = ref.replace(old, new)
+    found = un.site_drift(head, ref)
+    assert bool(found) is drift, (cell, found)
+    src = _r13_pkg(tmp_path, "drift", _R14_SELF + "def f():\n    return 1\n", "")
+    (src / "census.py").write_text(head)
+    out = tmp_path / "drift" / "twin" / "vpkg"
+    if drift:
+        with pytest.raises(un.Refused, match="T must advance"):
+            un.derive(src, out)
+    else:
+        un.derive(src, out)
+        assert un.verify(out, src) == []
+
+
+# THE SEPARATING TEST (research's stage-1 condition 1, run first in scratch before any code): the reviewer's class of
+# defect — census DECLARATION-time code that changes a later decision — against the round-15 construction and the round-16
+# one. The mutant: declare_site, when declaring 'authority.permitted', raises third-party authority in the declaring
+# module's `_RUNGS` (a dict defined above the declarations, read by effective() inside the declared decision permitted()).
+_R16_MUT_ANCHOR = "    with _REGISTRY_LOCK:\n        if site_id in _REGISTRY:\n            raise CensusError(f\"duplicate enforcement-point id {site_id!r}\")\n"
+_R16_MUT = _R16_MUT_ANCHOR + ("        if site_id == \"authority.permitted\":\n"
+                              "            import sys as _sys; _sys._getframe(1).f_globals[\"_RUNGS\"][\"third_party\"] = 3\n")
+_R16_SEP_SUITE = "tests/test_0011_entitlement.py"
+_R16_SEP_CELLS = [
+    # (cell, arms mutated?, the twin's census: "reference" | "head", expected verdict)
+    ("round-15 construction, mutated: the defect is SHARED", True, "head", "IDENTICAL"),
+    ("reference census, mutated: the defect SEPARATES", True, "reference", "DIVERGENT"),
+    ("reference census, unmutated: the control", False, "reference", "IDENTICAL"),
+    ("round-15 construction, unmutated: the baseline", False, "head", "IDENTICAL"),
+]
+
+
+@pytest.fixture(scope="module")
+def r16_trees(tmp_path_factory):
+    """The source tree twice (as is, and with the declaration-time mutant in census.py) and a shim repo whose
+    .venv/bin/python is THIS interpreter, for the separating test."""
+    base = tmp_path_factory.mktemp("r16sep")
+    trees = {}
+    for tag, mutated in (("head", False), ("mut", True)):
+        d = base / f"src-{tag}" / "veracium"
+        shutil.copytree(ROOT / "src" / "veracium", d, ignore=shutil.ignore_patterns("__pycache__"))
+        if mutated:
+            c = d / "census.py"; t = c.read_text(); assert t.count(_R16_MUT_ANCHOR) == 1; c.write_text(t.replace(_R16_MUT_ANCHOR, _R16_MUT))
+        trees[tag] = d.parent
+    repo = base / "repo"; (repo / ".venv" / "bin").mkdir(parents=True)
+    shim = repo / ".venv" / "bin" / "python"; shim.write_text(f"#!/bin/sh\nexec {sys.executable} \"$@\"\n"); shim.chmod(0o755)
+    return base, trees, repo
+
+
+def _r16_arm(harness, repo, arm, src_root, out, monkeypatch, twin=None, name=None):
+    monkeypatch.setenv("PYTHONPATH", str(src_root))
+    return harness.run_arm(repo, arm, [str(ROOT / _R16_SEP_SUITE)], out, EVIDENCE / "declaration.py", twin_src=(str(twin) if twin else None), out_name=name)
+
+
+def test_r16_the_mutant_changes_a_decision_at_all(r16_trees, monkeypatch):
+    """The separating test's NUMERATOR: the census-OFF arm on the mutated source against the census-OFF arm on the
+    source as is — the mutant must change a decision, or nothing the separating cells say means anything."""
+    harness = _load("inv7_harness_r16_num", EVIDENCE / "inv7_harness.py")
+    base, trees, repo = r16_trees
+    out = base / "numerator"
+    s = {n: _r16_arm(harness, repo, "off", trees[tag], out, monkeypatch, name=n) for n, tag in (("off", "head"), ("off-mut", "mut"))}
+    for n, v in s.items():
+        assert pathlib.Path(v["veracium_file"]).is_relative_to(trees["mut" if n == "off-mut" else "head"]), (n, v["veracium_file"])
+    a, b = (harness.segments(out / n, s[n]) for n in ("off", "off-mut"))
+    assert sorted(t for t in set(a) | set(b) if a.get(t) != b.get(t)), "the mutant changed no decision: the separating test would be vacuous"
+
+
+@pytest.mark.parametrize("cell,mutated,twin_census,verdict", _R16_SEP_CELLS, ids=[c[0] for c in _R16_SEP_CELLS])
+def test_r16_the_reference_census_separates_a_declaration_time_defect(cell, mutated, twin_census, verdict, r16_trees, monkeypatch):
+    """The round-15 verdict's class, through the REAL harness pieces (derive, run_arm with the observer, compare): a defect
+    in the census's declaration-time code, present in the three instrumented arms, reads IDENTICAL when the reference arm
+    carries the same census (round 15's construction — the verdict) and DIVERGENT when it carries the REFERENCE census
+    (round 16's); with no defect both read IDENTICAL. The reference arm's census-entry count is 0 in every cell."""
+    un = _load("inv7_uninstrument_r16_sep", EVIDENCE / "inv7_uninstrument.py")
+    harness = _load("inv7_harness_r16_sep", EVIDENCE / "inv7_harness.py")
+    base, trees, repo = r16_trees
+    src = trees["mut" if mutated else "head"]
+    slug = re.sub(r"\W", "_", cell)[:40]
+    twin = base / f"twin-{slug}"
+    un.derive(src / "veracium", twin / "veracium") if not mutated or twin_census == "reference" else None
+    if mutated and twin_census == "head":
+        # round 15's construction: the twin carries the census UNDER TEST verbatim (here, the mutated one)
+        un.derive(trees["head"] / "veracium", twin / "veracium")
+        (twin / "veracium" / "census.py").write_bytes((src / "veracium" / "census.py").read_bytes())
+    elif twin_census == "head":
+        (twin / "veracium" / "census.py").write_bytes((src / "veracium" / "census.py").read_bytes())
+    want_census = (src / "veracium" / "census.py").read_bytes() if twin_census == "head" else un.REFERENCE_CENSUS.read_bytes()
+    assert (twin / "veracium" / "census.py").read_bytes() == want_census
+    out = base / f"cell-{slug}"
+    arms = ["healthy", "failing", "off", "uninstrumented"]
+    S = {a: _r16_arm(harness, repo, a, src, out, monkeypatch, twin=(twin if a == "uninstrumented" else None)) for a in arms}
+    for a in arms:
+        assert pathlib.Path(S[a]["veracium_file"]).is_relative_to(twin if a == "uninstrumented" else src), (a, S[a]["veracium_file"])
+    v, _ = harness.compare(out, arms, S, ID_TO_SYMBOL)
+    assert ("IDENTICAL" if v["identical"] else "DIVERGENT") == verdict, (cell, v["divergences"])
+    assert S["uninstrumented"]["census_code_entries"] == 0, (cell, S["uninstrumented"].get("census_code_entry_detail"))
+
+
+def test_r16_run_arm_hands_the_child_an_absolute_import_path(tmp_path, monkeypatch):
+    """The round-15 verdict's second finding: the reviewer ran the extracted package with a RELATIVE import path, and the
+    child run_arm starts (cwd = the repo) could not import it — three tests failed. run_arm now makes every inherited
+    entry absolute against the parent's cwd. Captured at the subprocess boundary; the pre-fix form is the mutant."""
+    harness = _load("inv7_harness_r16_path", EVIDENCE / "inv7_harness.py")
+    seen = {}
+    def fake_run(cmd, cwd=None, env=None, capture_output=None, text=None):
+        seen["pp"] = env["PYTHONPATH"]; out = pathlib.Path(env["INV7_OUT"]); out.mkdir(parents=True, exist_ok=True)
+        (out / "summary.json").write_text("{}")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+    monkeypatch.setattr(harness.subprocess, "run", fake_run)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join(["src", "lib/extra"]))
+    harness.run_arm(tmp_path / "repo", "off", ["t.py"], tmp_path / "out", EVIDENCE / "declaration.py")
+    parts = seen["pp"].split(os.pathsep)
+    assert all(os.path.isabs(p) for p in parts), parts
+    assert str(tmp_path / "src") in parts and str(tmp_path / "lib" / "extra") in parts, parts
 
 
 def test_r13_p1_import_module_of_the_standard_library_is_not_refused(tmp_path):

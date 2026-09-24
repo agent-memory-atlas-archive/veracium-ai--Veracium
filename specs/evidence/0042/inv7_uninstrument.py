@@ -6,10 +6,13 @@ The first four-arm transcripts exported the twin from the commit the instrumenta
 later spec touched src the "uninstrumented" arm was also an OLDER product. So the twin is DERIVED: HEAD's src
 with the census MEASUREMENTS (every consult and every fire) removed by an AST transform that inverts the
 instrumenter's forms and nothing else — and, since round 6 (R6-6), REFUSES everything it has not established is
-instrumentation. Since round 14 the DECLARATIONS and census imports are PRESERVED verbatim; since round 15 census.py
-itself is copied VERBATIM too, so every declaration binds the source's own Site class and every question about it answers
-as the census-off arm's does, by construction. That no census code takes part in a decision is MEASURED, outside the
-twin, by the observer (inv7_observer.py's profile hook), not built into it:
+instrumentation. Since round 14 the DECLARATIONS and census imports are PRESERVED verbatim. The twin's census.py is the
+REFERENCE CENSUS (round 16): the census.py of an ACCEPTED commit, `REFERENCE_CENSUS_COMMIT`, tracked beside this file as
+reference_census.py and pinned by `REFERENCE_CENSUS_SHA256` — never HEAD's. So the census UNDER TEST is not in the
+reference arm (round 15 copied HEAD's, and the round-15 verdict showed a declaration-time defect in it shared by all four
+arms), while every declaration still binds a real Site: the reference's Site must equal HEAD's member for member
+(`site_drift`), or the transform refuses and T must advance. That no census code takes part in a decision is MEASURED,
+outside the twin, by the observer (inv7_observer.py's profile hook), not built into it:
 
     NAME = declare_site(...)                 ->  PRESERVED            NAME is then a DECLARED name of this module
     from .census import declare_site …      ->  PRESERVED            (declare_site under another name is REFUSED)
@@ -62,6 +65,62 @@ def _sibling(name):
 
 
 _scope = _sibling("scope_resolution")
+
+# ---- ROUND 16: THE REFERENCE CENSUS — an ACCEPTED commit's census.py, not HEAD's ----------------------------------------
+# The round-15 verdict: the twin carried HEAD's census.py, so a defect in its DECLARATION-time code (which the reference
+# arm executes) changed a decision in all four arms at once, and the trace diff could not see it. The owner's decision,
+# "(3) Accepted census": the twin carries the census.py of an accepted commit T, pinned by digest. The census under test
+# is then NOT shared with the reference, and the separating test (tests/test_0042_inv7.py) shows such a defect reading
+# DIVERGENT. Faithfulness still holds by construction — T's Site is a real Site — PROVIDED HEAD's Site has not drifted
+# from T's (`site_drift`); if it has, T must advance, which is a specification change.
+REFERENCE_CENSUS = pathlib.Path(__file__).resolve().parent / "reference_census.py"
+REFERENCE_CENSUS_COMMIT = "5d835e1453d9265acdbb60e3f9732ad7ebeffd2b"      # the round-15 pin: its census.py was reviewed there
+REFERENCE_CENSUS_SHA256 = "69beb1bb2f058d97de646638ec103f799c8e8e0e7c11b2abb196a3f41800683f"
+
+
+def reference_census_bytes() -> bytes:
+    """The reference census's bytes, REFUSED unless they are the pinned digest (a changed file is a changed T)."""
+    data = REFERENCE_CENSUS.read_bytes()
+    got = hashlib.sha256(data).hexdigest()
+    if got != REFERENCE_CENSUS_SHA256:
+        raise Refused(f"the reference census {REFERENCE_CENSUS.name} is sha256 {got[:16]}…, not the pinned "
+                      f"{REFERENCE_CENSUS_SHA256[:16]}… of accepted commit {REFERENCE_CENSUS_COMMIT[:7]}: advancing T is a "
+                      f"specification change, not an edit to this file")
+    return data
+
+
+def _site_members(text: str) -> dict:
+    tree = ast.parse(text)
+    cls = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "Site"]
+    if len(cls) != 1:
+        return {"<class Site>": f"{len(cls)} module-level class definition(s) named Site"}
+    out = {}
+    for n in cls[0].body:
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            out[n.name] = ast.dump(n)
+        elif isinstance(n, (ast.Assign, ast.AnnAssign)):
+            for tg in (n.targets if isinstance(n, ast.Assign) else [n.target]):
+                out[ast.unparse(tg)] = ast.dump(n)
+        elif isinstance(n, ast.Expr) and isinstance(getattr(n, "value", None), ast.Constant) and isinstance(n.value.value, str):
+            out["<docstring>"] = ast.dump(n)
+        else:
+            out[f"<statement at line {n.lineno}>"] = ast.dump(n)
+    for n in cls[0].decorator_list + cls[0].bases + cls[0].keywords:
+        out.setdefault("<class header>", "")
+        out["<class header>"] += ast.dump(n)
+    return out
+
+
+def site_drift(head_census: str, reference_census: str) -> list:
+    """Every way HEAD's Site differs from the reference census's Site, compared MEMBER BY MEMBER, by source (the AST of
+    each member, so a formatting-only change is not drift and any behavioural one is), in BOTH directions (research's
+    stage-1 condition 3). Empty means every question about a Site answers alike whichever census defined it; anything
+    else means T must advance."""
+    h, r = _site_members(head_census), _site_members(reference_census)
+    out = [f"Site.{k}: in HEAD's census and not in the reference census" for k in sorted(set(h) - set(r))]
+    out += [f"Site.{k}: in the reference census and not in HEAD's" for k in sorted(set(r) - set(h))]
+    out += [f"Site.{k}: differs between HEAD's census and the reference census" for k in sorted(set(h) & set(r)) if h[k] != r[k]]
+    return out
 
 
 def _strict_pairs(pairs):
@@ -351,7 +410,8 @@ class Uninstrument(ast.NodeTransformer):
 # predicate, so adding a word to a predicate bans it everywhere else without editing the gate.
 
 def is_census_module_file(rel) -> bool:
-    """The census module's OWN file, which the twin replaces with the stub.
+    """The census module's OWN file, which the twin replaces with the REFERENCE census (round 16; round 15 copied it
+    verbatim, rounds 7–14 replaced it with a stub).
 
     ROUND 11: a THIRD reading, found by the enumeration gate on its first run and NOT by the hand enumeration
     that preceded it — research's walk classified `derive` as "mention only, decides nothing", and it decides
@@ -854,8 +914,8 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
 
 
 def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
-    """Copy src/veracium to out, un-instrumenting every module; census.py itself is copied VERBATIM (round 15), so
-    each preserved declaration binds the source's own Site and registers as it does in the census-off arm. Writes the
+    """Copy src/veracium to out, un-instrumenting every module; census.py is replaced by the REFERENCE census (round
+    16), refused unless its digest is the pinned one and its Site equals HEAD's member for member. Writes the
     MANIFEST beside the twin (out/../twin_manifest.json): source hashes before and after, every count, the
     permitted transformations by name."""
     if out.exists():
@@ -863,8 +923,9 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
     shutil.copytree(src, out, ignore=shutil.ignore_patterns("__pycache__"))
     totals = {"sites": 0, "fires": 0, "consults": 0, "consult_statements": 0, "bypasses": 0, "unresolved_bypass_candidates": 0, "imports": 0, "modules_changed": 0}
     manifest = {"permitted_transformations": [
-                    "NAME = declare_site(...) PRESERVED (round 14), bound to the source's own census, copied verbatim (round 15)",
-                    "census imports PRESERVED (round 14)", "census.py copied VERBATIM (round 15)",
+                    "NAME = declare_site(...) PRESERVED (round 14), bound to the REFERENCE census's Site (round 16)",
+                    "census imports PRESERVED (round 14)",
+                    "census.py -> the REFERENCE census: accepted commit's census.py, pinned by digest, its Site equal to HEAD's (round 16)",
                     "with NAME.consult(): body -> body (NAME declared)", "NAME.consult() statement removed (NAME declared)",
                     "NAME.fire(X, ...) -> X (NAME declared; raise/return/assign)",
                     "if <census>.enabled(): [assign,] return NAME.fire(...) -> if False: [assign,] return X (kept dead; exit ordinals preserved)",
@@ -878,7 +939,14 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
     for p in sorted(out.rglob("*.py")):
         rel = str(p.relative_to(out)); before = p.read_bytes()
         if is_census_module_file(rel):
-            manifest["modules"][rel] = {"sha256_before": hashlib.sha256(before).hexdigest(), "sha256_after": hashlib.sha256(before).hexdigest(), "verbatim": True}
+            ref = reference_census_bytes()
+            drift = site_drift(before.decode(), ref.decode())
+            if drift:
+                raise Refused(f"{rel}: HEAD's Site has drifted from the reference census's (accepted commit "
+                              f"{REFERENCE_CENSUS_COMMIT[:7]}) — T must advance: " + "; ".join(drift))
+            p.write_bytes(ref)
+            manifest["modules"][rel] = {"sha256_before": hashlib.sha256(before).hexdigest(), "sha256_after": hashlib.sha256(ref).hexdigest(),
+                                        "reference": REFERENCE_CENSUS_COMMIT}
             continue
         text = before.decode()
         if may_skip_uninstrumenting(text):
@@ -946,8 +1014,10 @@ def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib
     for rel in sorted(twin_files & src_files):
         p_out = out / rel; text = p_out.read_text()
         if is_census_module_file(rel):                   # ROUND 12, R4: the transform's own reading, not a second one
-            if p_out.read_bytes() != (src / rel).read_bytes():
-                problems.append(f"{rel}: the census module is not the source's census, byte for byte (round 15: it is copied verbatim)")
+            if hashlib.sha256(p_out.read_bytes()).hexdigest() != REFERENCE_CENSUS_SHA256:
+                problems.append(f"{rel}: the census module is not the reference census (round 16: accepted commit "
+                                f"{REFERENCE_CENSUS_COMMIT[:7]}'s census.py, sha256 {REFERENCE_CENSUS_SHA256[:16]}…)")
+            problems += [f"{rel}: {d} — T must advance" for d in site_drift((src / rel).read_text(), p_out.read_text())]
             continue
         for token in instrumentation_tokens_in(text):   # ROUND 12, R1: the transform's definition, not a drifted copy
             problems.append(f"{rel}: {token!r} survives")
