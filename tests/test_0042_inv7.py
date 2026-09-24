@@ -1764,8 +1764,12 @@ def test_r13_f2_a_sibling_using_only_ordinary_names_is_neither_refused_nor_repor
 # disagreement is LOUD end to end (derive refuses, or the evidence run's reconciliation refuses a registered id the scan
 # does not show). ROUND 13 STAGE 2 (research's B3): "other object attr" WAS the silent one — an object from outside the
 # package with a `declare_site` method was removed from the twin as a site, verify() clean; the transform now
-# recognises a declaration only by its census BINDING, and the other two readers still say ['S'], each loudly caught
-# (the twin keeps the token). Unifying them into one definition is a refactor across four modules; this pins the whole matrix so a
+# recognises a declaration only by its census BINDING, and the other two readers still say ['S'], each loudly caught.
+# ROUND 14 CHANGED THE MECHANISM, NOT THE CLAIM: the token check no longer names `declare_site`, so the twin half is now
+# that an unrecognised declaration is PRESERVED verbatim (it cannot corrupt the twin) and a fire()/consult() on it is
+# refused (test_r13_b3_a_declare_site_method_on_an_outside_object_is_not_a_site); the scan half is
+# `check_registry_against_scan`, which refuses a scanned site in a loaded module that did not register
+# (test_r14_an_outside_declare_site_is_preserved_uncounted_and_the_scan_side_refuses). Unifying them into one definition is a refactor across four modules; this pins the whole matrix so a
 # drift in ANY reader fails here, with the shape named, instead of surfacing as a disagreement a round later.
 _R13_READER_SHAPES = {
     #  shape                  source                                                             site_names / declared_names / scan names
@@ -1793,6 +1797,27 @@ def test_r13_the_three_site_readers_answer_as_pinned(shape, tmp_path):
     got = (sorted(sr_.Resolver(src, "<r>").site_names()), sorted(un.declared_names(ast.parse(src))[0]),
            sorted({r["name"] for r in inst.scan(tmp_path) if r["name"]}))
     assert got == want, f"{shape}: (site_names, declared_names, scan) = {got}, pinned {want}"
+
+
+def test_r14_an_outside_declare_site_is_preserved_uncounted_and_the_scan_side_refuses(tmp_path):
+    """The "other object attr" shape end to end, after round 14 took `declare_site` out of the token check (found by
+    round 14's docstring sweep, research's stage-2 addendum). The TWIN half: a `declare_site` on an object outside the
+    package is ordinary code — preserved verbatim, and NOT counted as a site (the count asks the binding, like
+    recognition; it counted the callee's spelling, which inflated the manifest's "declare_site preserved" figure).
+    The SCAN half: the scan reads it as a site, and the registry check refuses it, loudly, because nothing registered."""
+    un = _load("inv7_uninstrument_r14_outside", EVIDENCE / "inv7_uninstrument.py")
+    inst = _load("installed_sites_r14_outside", EVIDENCE / "installed_sites.py")
+    text = "x = None\nS = x.declare_site('a')\n\n\ndef f():\n    return S\n"
+    out, stats = un.uninstrument_source(text, "<outside>")
+    assert "S = x.declare_site('a')" in out and stats["sites"] == 0, (stats["sites"], out)
+    # the counted half, beside it: a census declaration IS a site
+    _, real = un.uninstrument_source("from .census import declare_site\nS = declare_site('a')\n", "<census>")
+    assert real["sites"] == 1
+    (tmp_path / "m.py").write_text(text)
+    scanned = inst.scan(tmp_path)
+    assert [(r["id"], r["name"]) for r in scanned] == [("a", "S")]
+    refusals, _ = inst.check_registry_against_scan(scanned, {}, {r["module"] for r in scanned})
+    assert len(refusals) == 1 and "did not register" in refusals[0], refusals
 
 
 def test_r13_s2_6_an_unresolvable_scope_in_derive_names_its_module(tmp_path):
