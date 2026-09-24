@@ -113,9 +113,13 @@ def _site_members(text: str) -> dict:
 
 def site_drift(head_census: str, reference_census: str) -> list:
     """Every way HEAD's Site differs from the reference census's Site, compared MEMBER BY MEMBER, by source (the AST of
-    each member, so a formatting-only change is not drift and any behavioural one is), in BOTH directions (research's
-    stage-1 condition 3). Empty means every question about a Site answers alike whichever census defined it; anything
-    else means T must advance."""
+    each member, the class-body statements, the docstring and the class header), in BOTH directions (research's stage-1
+    condition 3): any change to Site's OWN definition is drift, and a formatting-only change is not. A change ELSEWHERE in
+    HEAD's census — a module-level helper a method calls — is NOT drift: it is census code under test, which the
+    reference arm does not carry, so the trace diff sees any decision it changes. Equal member ASTs build equal members
+    because T's Site evaluates no module-level name at class creation (measured at T by the second seat's round-16
+    pre-seal read; pinning that premise is queued). Empty means Site's definition is T's; anything else means T must
+    advance."""
     h, r = _site_members(head_census), _site_members(reference_census)
     out = [f"Site.{k}: in HEAD's census and not in the reference census" for k in sorted(set(h) - set(r))]
     out += [f"Site.{k}: in the reference census and not in HEAD's" for k in sorted(set(r) - set(h))]

@@ -2163,6 +2163,11 @@ _R16_DRIFT = [
     ("a member removed from HEAD", ('    def __enter__(self):\n        return self                           # the count happened in consult(); the bracket only scopes the body\n\n', ''), True),
     ("__slots__ changed", ('"_declines", "failures")', '"_declines", "failures", "extra")'), True),
     ("a base class added", ('class Site:', 'class Site(object):'), True),
+    # the second seat's round-16 pre-seal mutants M10, M3 and M4 each survived the cells above (N-1 to N-3)
+    ("a signature and default changed", ('    def failure_kinds(self) -> dict:', '    def failure_kinds(self, detail=False) -> dict:'), True),
+    ("a decorator added", ('    def failure_kinds(self) -> dict:', '    @staticmethod\n    def failure_kinds(self) -> dict:'), True),
+    ("a class-body statement added", ('    __slots__ = ("site_id",', '    if True:\n        pass\n    __slots__ = ("site_id",'), True),
+    ("the class docstring changed", ('    """One enforcement point\'s counters.', '    """One enforcement point\'s counters (changed).'), True),
     ("formatting only (a comment and blank lines)", ('    def failure_kinds(self) -> dict:', '    # a comment\n\n    def failure_kinds(self) -> dict:'), False),
 ]
 
@@ -2170,9 +2175,11 @@ _R16_DRIFT = [
 @pytest.mark.parametrize("cell,edit,drift", _R16_DRIFT, ids=[c[0] for c in _R16_DRIFT])
 def test_r16_a_drifted_site_is_refused_and_t_must_advance(cell, edit, drift, tmp_path):
     """Research's stage-1 condition 3: HEAD's Site and the reference census's Site compared MEMBER BY MEMBER, by source
-    (the AST of each member), in BOTH directions. Any behavioural difference — a body, a member added or removed, the
-    slots, the class header — is drift: derive() refuses it and verify() reports it, "T must advance"; a formatting-only
-    change is not drift. Today HEAD's Site equals the reference's, so the real tree reads no drift."""
+    (the AST of each member), in BOTH directions. A change to Site's OWN definition — a body, a signature or default, a
+    decorator, a member added or removed, the slots, a class-body statement, the docstring, the class header — is drift:
+    derive() refuses it and verify() reports it, "T must advance"; a formatting-only change is not drift. (A change to a
+    census helper OUTSIDE Site is not drift — it is census code under test, outside the reference arm — see site_drift.)
+    Today HEAD's Site equals the reference's, so the real tree reads no drift."""
     un = _load("inv7_uninstrument_r16_drift", EVIDENCE / "inv7_uninstrument.py")
     ref = un.REFERENCE_CENSUS.read_text()
     assert un.site_drift(_R12_CENSUS_SRC.read_text(), ref) == []
