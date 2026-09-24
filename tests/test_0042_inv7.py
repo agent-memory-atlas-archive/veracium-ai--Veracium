@@ -1998,7 +1998,11 @@ def test_r15_the_twin_census_is_the_source_s_byte_for_byte_and_verify_refuses_an
     for root in (src.parent, out.parent):
         r = subprocess.run([sys.executable, "-c", code.format(root=str(root))], capture_output=True, text=True)
         assert r.stdout.split("\n")[:2] == ["True True", "reload refused"], (root, r.stdout, r.stderr[-300:])
-    (out / "census.py").write_bytes((out / "census.py").read_bytes() + b"\n")
+    # one byte FLIPPED at the same length (research's pre-seal N-4: an appended byte also changes the length, so a
+    # verify() comparing lengths would have passed the old control)
+    data = bytearray((out / "census.py").read_bytes()); i = data.index(b"census") + 1; data[i] ^= 0x20
+    assert len(data) == len((src / "census.py").read_bytes()) and bytes(data) != (src / "census.py").read_bytes()
+    (out / "census.py").write_bytes(bytes(data))
     assert any("not the source's census" in p for p in un.verify(out, src)), un.verify(out, src)
 
 
@@ -2043,6 +2047,15 @@ _R15_CHAIN_CELLS = [
     ("an exec'd declaration", "def test_it():\n    exec(\"from veracium import census as c\\nc.declare_site('r15.exec')\", {})\n",
      lambda n: n is not None and n >= 1, False),
     ("the hook cleared mid-run", "import sys\n\n\ndef test_it():\n    sys.setprofile(None)\n", lambda n: n is None, False),
+    # research's pre-seal read, three survivors killed: the liveness check must see the hook REPLACED, not only cleared
+    # (N-1); a census call from a WORKER THREAD must count (N-2: threading.setprofile); and a PRODUCT module body calling
+    # a census function other than declare_site must count — the exclusion is the declaration's code object, not any
+    # call from a product module body (N-3; the fixture writes that module into the twin)
+    ("the hook replaced by another profiler", "import sys\n\n\ndef test_it():\n    sys.setprofile(lambda *a: None)\n", lambda n: n is None, False),
+    ("census code from a worker thread", "import importlib, threading\n\n\ndef test_it():\n    m = importlib.import_module(MOD)\n    S = getattr(m, NAME)\n"
+     "    t = threading.Thread(target=lambda: type(S).counters(S)); t.start(); t.join()\n", lambda n: n is not None and n >= 1, False),
+    ("a product module body calling enabled()", "import importlib\n\n\ndef test_it():\n    importlib.import_module('veracium.r15_probe_body')\n",
+     lambda n: n is not None and n >= 1, False),
 ]
 
 
@@ -2063,6 +2076,8 @@ def r15_twin(tmp_path_factory):
             # which hid this in its harness cell)
             site = (".".join(("veracium",) + p.relative_to(twin / "veracium").with_suffix("").parts).removesuffix(".__init__"), m.group(1)); break
     assert site is not None
+    # a PRODUCT module (under the twin's root) whose body calls a census function that is not declare_site (N-3)
+    (twin / "veracium" / "r15_probe_body.py").write_text("from . import census as _census\n\n_census.enabled()\n")
     repo = base / "repo"; (repo / ".venv" / "bin").mkdir(parents=True)
     shim = repo / ".venv" / "bin" / "python"; shim.write_text(f"#!/bin/sh\nexec {sys.executable} \"$@\"\n"); shim.chmod(0o755)
     return base, twin, repo, site
@@ -2090,6 +2105,39 @@ def test_r15_the_reference_arm_s_census_count_fails_through_the_real_chain(cell,
     n = s["census_code_entries"]
     assert entries_ok(n), (cell, n, s.get("census_code_entry_detail"))
     assert v["gates"]["uninstrumented:no_census_code_in_decisions"] is gate, (cell, n, v["gates"])
+
+
+_R15_REGISTRY_CELLS = [
+    # (cell, what the reference arm's test does to the registry — no census code runs, so only the registry gate moves, gate)
+    ("registries equal", "", True),
+    ("the reference registry lacks an id", "        del _c._REGISTRY[sorted(_c._REGISTRY)[0]]\n", False),
+    ("the reference registry has an extra id", "        _c._REGISTRY['r15.extra-id'] = object()\n", False),
+]
+
+
+@pytest.mark.parametrize("cell,mutate,gate", _R15_REGISTRY_CELLS, ids=[c[0] for c in _R15_REGISTRY_CELLS])
+def test_r15_the_registry_gate_fails_through_the_real_chain(cell, mutate, gate, r15_twin):
+    """Research's pre-seal B-1: no cell ever turned `uninstrumented:registry_equals_off` FALSE, so a comparison weakened
+    to a subset survived. Both arms run through the REAL chain (the off arm on the source, the reference arm on the twin);
+    the reference arm's test alters the registry WITHOUT running census code (a dict edit), so the count gate stays true
+    and only the registry gate can move — an id missing, or an extra one, each turns it false; equal registries pass."""
+    harness = _load("inv7_harness_r15_registry", EVIDENCE / "inv7_harness.py")
+    base, twin, repo, (mod, name) = r15_twin
+    slug = "reg_" + re.sub(r"\W", "_", cell)
+    t = base / slug / f"test_r15_{slug}.py"; t.parent.mkdir()
+    t.write_text(f"import importlib, os\nfrom veracium import census as _c\n\n\ndef test_it():\n    importlib.import_module({mod!r})\n"
+                 f"    if os.environ.get('INV7_ARM') == 'uninstrumented':\n" + (mutate or "        pass\n"))
+    out = base / slug / "out"
+    S = {"off": harness.run_arm(repo, "off", [str(t)], out, EVIDENCE / "declaration.py"),
+         "uninstrumented": harness.run_arm(repo, "uninstrumented", [str(t)], out, EVIDENCE / "declaration.py", twin_src=str(twin))}
+    for arm, s in S.items():
+        assert s["pytest_exit"] == 0, (cell, arm, s.get("pytest_result_line"), (out / arm / "pytest_stdout.txt").read_text()[-600:])
+    assert pathlib.Path(S["uninstrumented"]["veracium_file"]).is_relative_to(twin) and not pathlib.Path(S["off"]["veracium_file"]).is_relative_to(twin)
+    arms = ["off", "uninstrumented"]
+    v, c = harness.compare(out, arms, S, ID_TO_SYMBOL)
+    harness.final_status(v, c, S, arms)
+    assert v["gates"]["uninstrumented:no_census_code_in_decisions"] is True, (cell, S["uninstrumented"].get("census_code_entry_detail"))
+    assert v["gates"]["uninstrumented:registry_equals_off"] is gate, (cell, len(S["off"]["census_registry_ids"]), len(S["uninstrumented"]["census_registry_ids"]))
 
 
 def test_r13_p1_import_module_of_the_standard_library_is_not_refused(tmp_path):
