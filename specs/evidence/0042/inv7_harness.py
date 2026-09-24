@@ -26,6 +26,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import time
@@ -298,10 +299,17 @@ def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict, 
     if "off" in arms:
         checks["off"] = {"census_enabled": summaries["off"]["census_enabled"], "registry_size": summaries["off"]["census_registry_size"]}
     if "uninstrumented" in arms:
-        checks["uninstrumented"] = {"census_enabled": summaries["uninstrumented"]["census_enabled"],
-                                    "registry_size": summaries["uninstrumented"]["census_registry_size"],
-                                    "inert_calls": summaries["uninstrumented"].get("census_inert_calls"),
-                                    "veracium_file": summaries["uninstrumented"]["veracium_file"]}
+        u_s = summaries["uninstrumented"]; off_ids = summaries["off"].get("census_registry_ids") if "off" in arms else None
+        # ROUND 15: the twin's census is the source's own, so its registry holds the declarations exactly as the off arm's
+        # does — compared as SETS, both ways (research's stage-1 condition 4) — and the reference arm's entries into census
+        # code during the run are counted by the observer (None: the hook could not be shown alive).
+        checks["uninstrumented"] = {"census_enabled": u_s["census_enabled"],
+                                    "registry_size": u_s["census_registry_size"],
+                                    "registry_equals_off": (None if off_ids is None or u_s.get("census_registry_ids") is None
+                                                            else set(u_s["census_registry_ids"]) == set(off_ids)),
+                                    "census_code_entries": u_s.get("census_code_entries"),
+                                    "census_code_entry_detail": u_s.get("census_code_entry_detail"),
+                                    "veracium_file": u_s["veracium_file"]}
 
     return verdict, checks
 
@@ -377,14 +385,26 @@ def main():
          f"twin (uninstrumented): {twin['commit'] if twin else '-'}"]
     if twin and twin.get("derivation"):
         d = twin["derivation"]
-        # ROUND 14: declarations are PRESERVED and bound to the STUB's inert stand-ins; what makes the arm "uninstrumented"
-        # in INV-7's sense is MEASURED: the registry stays empty and the stand-ins record zero uses (both gated below).
-        L += [f"twin derivation: {d['sites']} declare_site preserved as inert stand-ins, {d['fires']} fire() unwrapped, {d['consults']} consult blocks spliced, "
-              f"{d['bypasses']} census-enabled bypass blocks removed, across {d['modules_changed']} modules; the twin's census registry is empty and its stand-ins recorded 0 uses (asserted below)"]
+        # ROUND 15: declarations are PRESERVED and the census is the source's own, copied verbatim; what makes the arm
+        # "uninstrumented" in INV-7's sense is MEASURED: no census code runs in it beyond its import, the declarations and
+        # the observer's reads, and its registry is the off arm's (both gated below).
+        L += [f"twin derivation: {d['sites']} declare_site preserved, bound to the source's own census.py copied verbatim, {d['fires']} fire() unwrapped, {d['consults']} consult blocks spliced, "
+              f"{d['bypasses']} census-enabled bypass blocks removed, across {d['modules_changed']} modules; no census code ran in the reference arm beyond its import, the declarations and the observer's reads, and its registry equals the off arm's (asserted below)"]
     elif twin:
         L += ["src commits between the twin and HEAD (the uninstrumented arm runs the twin's src; its census registry is empty — asserted below):"]
         L += [f"  {c}" for c in twin["src_commits_since_twin"]]
-    L += ["", f"python {summaries[arms[0]]['python']}; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0", "suites: " + " ".join(suites), ""]
+    L += ["", f"python {summaries[arms[0]]['python']}; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0", "suites: " + " ".join(suites)]
+    # ROUND 15 (research's stage-1 scope note): the census-entry count is IN-PROCESS. The suites that spawn a subprocess
+    # are DERIVED here by a static scan of each suite's text for `subprocess.` or `sys.executable`, never listed by hand.
+    spawning = [s for s in suites if not s.startswith("--") and (repo / s).is_file() and any(tok in (repo / s).read_text() for tok in ("subprocess.", "sys.executable"))]
+    L += [f"in-process: the reference arm's census-entry count covers the pytest process; {len(spawning)} of {len([s for s in suites if not s.startswith('--')])} suites spawn a subprocess "
+          f"(static scan for `subprocess.` / `sys.executable`), outside the hook as their decisions are outside the observer: " + (" ".join(spawning) or "none")]
+    # and the hook's liveness is checked at the END of the run (research's pre-commit note): a profiler or tracer set and
+    # restored mid-run is a window it cannot see, so the suites that set one are DERIVED by a static scan and printed
+    prof_re = re.compile(r"\b(setprofile|settrace|cProfile)\b|^\s*import profile\b|\bprofile\.run", re.M)
+    profiling = [x for x in suites if not x.startswith("--") and (repo / x).is_file() and prof_re.search((repo / x).read_text())]
+    L += [f"profilers and tracers: {len(profiling)} of {len([x for x in suites if not x.startswith('--')])} suites set one (static scan for `setprofile`, `settrace`, `cProfile`, "
+          f"`import profile`, `profile.run`); the census-entry hook is checked alive at the END of the run: " + (" ".join(profiling) or "none"), ""]
     L += ["ARM              RECORDS     SHA256(observer trace)                                            PYTEST"]
     for arm in arms:
         s = summaries[arm]
@@ -422,6 +442,10 @@ def main():
     # second, and assert the serialised object carries them rather than trusting the order to stay this way.
     status = final_status(verdict, checks, summaries, arms)
     assert "gates" in verdict, "final_status did not record its gates on the verdict"
+    # ROUND 15 (research's N-1): the gates and the exit are PRINTED, so a gate figure stated anywhere is readable from the
+    # committed transcript rather than inherited from a verdict.json that is not in the tree.
+    L += ["", f"GATES ({len(verdict['gates'])}, {sum(1 for v in verdict['gates'].values() if v is True)} true; the harness exit is 0 only if every one is true): "
+          + json.dumps(verdict["gates"], sort_keys=True), f"HARNESS EXIT: {status}"]
     (out / "inv7_transcript.txt").write_text("\n".join(L) + "\n")
     (out / "verdict.json").write_text(json.dumps({"verdict": verdict, "checks": checks}, indent=1, sort_keys=True) + "\n")
     written = json.loads((out / "verdict.json").read_text(), object_pairs_hook=_strict_pairs)
@@ -468,10 +492,13 @@ def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> in
     if "off" in arms:
         gates["off:census_disabled"] = checks.get("off", {}).get("census_enabled") is False
     if "uninstrumented" in arms:
-        u = checks.get("uninstrumented", {}); gates["uninstrumented:empty_registry"] = u.get("registry_size") == 0 and u.get("census_enabled") is False
-        # ROUND 14 (research's stage-1 B2): the inert stand-ins recorded NO use across the whole reference run. `is 0`
-        # compares the integer, so a missing count (None — a real census, or an observer that never read it) FAILS.
-        gates["uninstrumented:inert_stand_ins_unused"] = u.get("inert_calls") == 0 and u.get("inert_calls") is not None
+        u = checks.get("uninstrumented", {}); gates["uninstrumented:census_disabled"] = u.get("census_enabled") is False
+        # ROUND 15: the registry is the off arm's, as a set (only decidable when both arms ran), and NO census code ran
+        # in the reference arm beyond its import, the product's declarations and the observer's reads. `== 0 and is not
+        # None`: a missing count (the hook not alive, or a census with no observer) FAILS.
+        if "off" in arms:
+            gates["uninstrumented:registry_equals_off"] = u.get("registry_equals_off") is True
+        gates["uninstrumented:no_census_code_in_decisions"] = u.get("census_code_entries") == 0 and u.get("census_code_entries") is not None
     verdict["gates"] = gates
     return 0 if all(gates.values()) else 1
 

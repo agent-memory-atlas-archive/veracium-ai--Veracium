@@ -41,6 +41,7 @@ import json
 import os
 import pathlib
 import sys
+import threading
 import time
 
 ARM = os.environ.get("INV7_ARM", "off")
@@ -276,6 +277,76 @@ def decoded() -> list:
     return [(_SYMBOLS[_RECORDS[i]], _RECORDS[i + 1], _LABELS[_RECORDS[i + 2]]) for i in range(0, len(_RECORDS), RECORD_WIDTH)]
 
 
+# ---- ROUND 15: "UNINSTRUMENTED", MEASURED OUTSIDE THE TWIN --------------------------------------------------------------
+# The twin keeps the source's census.py VERBATIM (Quentin's decision, the round-14 verdict: a stand-in's class could be
+# told apart from Site's), so every question about a Site answers as the census-off arm's does, by construction. What
+# the reference arm must show is that NO CENSUS CODE TAKES PART IN A DECISION, and that is counted here: a profile hook
+# records every ENTRY into the twin's census.py from code outside it, EXCLUDING, by frame (research's stage-1 B2):
+#   the census module's own import (its module body executing);
+#   a DECLARATION — the callee IS census.declare_site's code object (identity, not its name), called from a MODULE BODY
+#     of a file under the twin's product root (not a test module, not exec'd text; a class or function body COUNTS);
+#   this observer's own reads (the caller's file is this file).
+# Anything else counts: a Site method however reached, enable() from product code, a counters() read.
+# SCOPE, stated (research's stage-1 notes): sys.setprofile sees PYTHON frames only — total for census.py because it is
+# pure Python, and a C-accelerated census would read 0 silently; and it is IN-PROCESS — census code in a subprocess a
+# test spawns is outside the hook, as that process's decisions are outside the observer (the harness transcript names
+# the suites that spawn one). THE HOOK MUST PROVE IT WAS ALIVE (B1): sys.setprofile is one global slot, so if anything
+# cleared or replaced it and did not restore it, the count is REPORTED AS None at the end of the run — never a 0 that
+# measured nothing — and the gate's `is not None` refuses it. The check is at the END: a hook replaced and restored
+# mid-run is a window it cannot see (the transcript prints the suites that set a profiler or tracer).
+_CENSUS_ENTRIES: dict = {}       # (callee, caller file, caller function) -> count, the entries that are NOT excluded
+_CENSUS_FILES: dict = {}         # co_filename -> "census" | "product" | "observer" | "other", resolved once per filename
+_DECL_CODE: list = []            # [census.declare_site.__code__], resolved once the census module has executed
+
+
+def _kind_of(filename: str) -> str:
+    k = _CENSUS_FILES.get(filename)
+    if k is None:
+        real = os.path.realpath(filename)
+        root = os.path.realpath(os.path.join(TWIN, "veracium")) if TWIN else None
+        if root and real == os.path.join(root, "census.py"):
+            k = "census"
+        elif root and real.startswith(root + os.sep):
+            k = "product"
+        elif real == os.path.realpath(__file__):
+            k = "observer"
+        else:
+            k = "other"
+        _CENSUS_FILES[filename] = k
+    return k
+
+
+def _census_profile(frame, event, arg):
+    if event != "call" or _kind_of(frame.f_code.co_filename) != "census":
+        return
+    back = frame.f_back
+    if back is None:
+        return
+    caller = _kind_of(back.f_code.co_filename)
+    if caller in ("census", "observer"):
+        return                                  # census calling itself; this observer's own reads
+    if frame.f_code.co_name == "<module>":
+        return                                  # the census module's own import
+    if not _DECL_CODE:
+        C = sys.modules.get("veracium.census")
+        if C is not None and hasattr(C, "declare_site"):
+            _DECL_CODE.append(C.declare_site.__code__)
+    if _DECL_CODE and frame.f_code is _DECL_CODE[0] and caller == "product" and back.f_code.co_name == "<module>":
+        return                                  # a declaration, from a product module's body
+    key = (frame.f_code.co_name, os.path.basename(back.f_code.co_filename), back.f_code.co_name)
+    _CENSUS_ENTRIES[key] = _CENSUS_ENTRIES.get(key, 0) + 1
+
+
+def _census_entries_or_none():
+    """The count, or None when the hook is not installed at the END of the run (research's B1). It is checked at the
+    end, not throughout: a profiler installed and then RESTORED mid-run (old = sys.getprofile(); ...; sys.setprofile(old))
+    is a window this cannot see, and cProfile sets the hook through the C API, so wrapping sys.setprofile would not see it
+    either. The harness transcript prints a static scan of the suites for profilers and tracers beside this count."""
+    if sys.getprofile() is not _census_profile:
+        return None
+    return sum(_CENSUS_ENTRIES.values())
+
+
 def _arm_setup() -> None:
     import veracium
     import veracium.census as C
@@ -299,6 +370,8 @@ def _arm_setup() -> None:
 
 def pytest_configure(config):
     OUT.mkdir(parents=True, exist_ok=True)
+    if ARM == "uninstrumented":                 # ROUND 15: before `_arm_setup` imports veracium, so no entry is missed
+        sys.setprofile(_census_profile); threading.setprofile(_census_profile)
     _arm_setup()
     if MODE == "trace":
         _install()
@@ -315,6 +388,7 @@ _BOUNDARIES: list = []          # (record index at test start, nodeid) — a sid
 # scalar flag — must be classified here before the fixture passes. `install()` still starts the symbol table empty.
 _STATE = ("_SYMBOLS", "_SYM_INDEX", "_LABELS", "_LAB_INDEX", "_RECORDS", "_HIST", "_EXCLUDED", "_WRAPPED", "_REBOUND",
           "_UNDO", "_REACH", "_LAST_COUNTERS", "_EXIT_MAPS", "_BOUNDARIES",
+          "_CENSUS_ENTRIES", "_CENSUS_FILES", "_DECL_CODE",   # round 15: the census-entry hook's counts and caches
           "DECL_PATH")                                   # reassigned by install(declaration_path); a scalar
 _CONSTANTS = {"ARM": "the arm, read once from the environment at import", "MODE": "trace or reach, read once at import",
               "OUT": "the output directory, read once at import", "TWIN": "the twin's src root, read once at import",
@@ -343,15 +417,22 @@ def pytest_runtest_logfinish(nodeid, location):
 
 
 def pytest_sessionfinish(session, exitstatus):
+    # read BEFORE anything else runs here: the liveness check must see the hook as the run left it
+    census_entries = _census_entries_or_none() if ARM == "uninstrumented" else None
+    if ARM == "uninstrumented":
+        sys.setprofile(None); threading.setprofile(None)
     import veracium
     import veracium.census as C
     summary = {
         "arm": ARM, "mode": MODE, "exitstatus": int(exitstatus), "python": sys.version.split()[0],
         "veracium_file": veracium.__file__, "duration_s": round(time.time() - _T0, 1),
         "census_enabled": C.enabled(), "census_registry_size": len(C.registry()),
-        # ROUND 14: the twin's STUB answers each declaration with an inert stand-in that COUNTS any use. Under the real
-        # census there is no such count (None); under the twin it must read 0 — INV-7's reference arm measured nothing.
-        "census_inert_calls": C.inert_calls() if hasattr(C, "inert_calls") else None,
+        # ROUND 15: the registry's ids (every arm), so the reference arm's can be compared with the off arm's as sets; and,
+        # in the reference arm, every entry into census code during the run that is not an import, a product-module
+        # declaration or this observer's read — 0 required; None if the hook cannot be shown alive (research's B1).
+        "census_registry_ids": sorted(C.registry()),
+        "census_code_entries": census_entries,
+        "census_code_entry_detail": [list(k) + [n] for k, n in sorted(_CENSUS_ENTRIES.items(), key=lambda kv: -kv[1])[:20]],
     }
     if MODE == "trace":
         (OUT / "observer_trace.bin").write_bytes(bytes(_RECORDS))

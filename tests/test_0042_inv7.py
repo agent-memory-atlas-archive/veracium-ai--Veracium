@@ -321,9 +321,10 @@ def _fabricate(tmp_path, arm, records, symbols=("m.py:f", "m.py:g"), labels=("No
     (d / "test_boundaries.jsonl").write_text("".join(json.dumps(b) + "\n" for b in bounds))
     summary = {"symbols": list(symbols), "labels": list(labels), "records": len(recs), "record_width": 3, "census_enabled": enabled,
                "census_registry_size": registry_size, "veracium_file": "x", "pytest_exit": 0,
-               # ROUND 14: the observer's reading of the twin STUB's inert stand-ins — 0 on the reference arm, and None
-               # under the real census, which has no such count
-               "census_inert_calls": 0 if arm.startswith("uninstrumented") else None}
+               # ROUND 15: every arm records its registry's ids (the reference arm's must equal the off arm's, as sets), and
+               # the reference arm records its entries into census code (0 required; None elsewhere: no hook runs there)
+               "census_registry_ids": ["a.id", "b.id"],
+               "census_code_entries": 0 if arm.startswith("uninstrumented") else None}
     if census is not None:
         (d / "census_trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in census))
         summary["census_counters"] = counters or {}
@@ -456,14 +457,18 @@ def test_r6_5_iii_the_harness_exit_requires_every_arm_and_every_cross_check(tmp_
     # gate 3: the census saw an id outside the declaration
     c3 = json.loads(json.dumps(c)); c3["healthy"]["census_ids_not_in_declaration"] = ["phantom.id"]
     assert harness.final_status(v, c3, S, arms) == 1
-    # gate 4: the twin registered a site
-    c4 = json.loads(json.dumps(c)); c4["uninstrumented"]["registry_size"] = 1
-    assert harness.final_status(v, c4, S, arms) == 1
-    # gate 4b (round 14, research's stage-1 B2): the twin's inert stand-ins were USED — once is enough — or the count
-    # is MISSING (None: a real census in the reference arm, or an observer that never read it). Both fail; 0 passes.
+    # gate 4 (round 15): the twin's registry is NOT the off arm's (or could not be compared)
+    for bad in (False, None):
+        c4 = json.loads(json.dumps(c)); c4["uninstrumented"]["registry_equals_off"] = bad
+        assert harness.final_status(v, c4, S, arms) == 1 and v["gates"]["uninstrumented:registry_equals_off"] is False, bad
+    # gate 4b (round 15): census code ran in the reference arm — once is enough — or the count is MISSING (None: the
+    # hook could not be shown alive, or no observer read it). Both fail; 0 passes.
     for bad in (1, None):
-        c4b = json.loads(json.dumps(c)); c4b["uninstrumented"]["inert_calls"] = bad
-        assert harness.final_status(v, c4b, S, arms) == 1 and v["gates"]["uninstrumented:inert_stand_ins_unused"] is False, bad
+        c4b = json.loads(json.dumps(c)); c4b["uninstrumented"]["census_code_entries"] = bad
+        assert harness.final_status(v, c4b, S, arms) == 1 and v["gates"]["uninstrumented:no_census_code_in_decisions"] is False, bad
+    # gate 4c: the reference arm's census was ENABLED
+    c4c = json.loads(json.dumps(c)); c4c["uninstrumented"]["census_enabled"] = True
+    assert harness.final_status(v, c4c, S, arms) == 1 and v["gates"]["uninstrumented:census_disabled"] is False
     assert harness.final_status(v, c, S, arms) == 0
     # gate 5 (round 7, research): a control pair disagreeing on a test NOT on the standing list is a finding → exit 1;
     # the same test on the standing list by name → excluded, exit 0
@@ -1352,14 +1357,15 @@ _R12_CELLS = [
     ("F1-surface-no-declare-site-name-live",
      "from .census import enabled\n\ndef f():\n    return enabled()\n",
      ("works", False)),
-    # round 14 (the faithful-class decision, 2026-09-24): the STUB's stand-in class is named Site, so Site is a name the
-    # STUB answers and its import WORKS; the boundary cell names a real-census name the STUB still does not define
-    ("surface-name-site-the-stub-now-defines",
+    # the census's Site class, imported by name: works (round 14 through a stand-in named Site; round 15, the real one)
+    ("surface-name-site",
      "from .census import declare_site, Site\nS = declare_site('s')\n\ndef f():\n    return isinstance(S, Site)\n",
      ("works", True)),
-    ("boundary-surface-name-the-stub-does-not-define",
-     "from .census import declare_site, CensusError\nS = declare_site('s')\n\ndef f():\n    return 1\n",
-     ("refuses", "STUB")),
+    # round 15: the twin's census IS the source's, so a real-census name the stand-in never answered now WORKS — the
+    # refusal of a name "the STUB does not define" had nothing left to refuse and is gone
+    ("surface-name-a-real-census-name",
+     "from .census import declare_site, CensusError\nS = declare_site('s')\n\ndef f():\n    return issubclass(CensusError, Exception)\n",
+     ("works", True)),
     ("boundary-declare-site-imported-under-another-name",
      "from .census import declare_site as ds\nS = ds('s')\n\ndef f():\n    return 1\n",
      ("refuses", "under another name")),
@@ -1933,333 +1939,148 @@ def test_r14_a_fire_the_transform_cannot_bind_is_still_refused():
             un.uninstrument_source(_R14_SELF + body, "<fire>")
 
 
-def test_r14_the_stand_in_is_faithful_to_identity_and_names_where_it_is_not(tmp_path):
-    """RESEARCH'S STAGE-1 B1: ONE stand-in per declaration. The real Site compares by identity, so two declarations are
-    two objects, and a dict keyed by sites holds one entry per site; a single shared stand-in held one entry where the
-    source held two — silent. And where the stand-in is NOT the real Site, it is named here, measured: its counters
-    read zero, and re-declaring an id (a module reloaded) is refused by the real census and not by the stand-in."""
-    un = _load("inv7_uninstrument_r14_b1", EVIDENCE / "inv7_uninstrument.py")
-    b = _R14_SELF + "T = _census.declare_site('b.t')\n\n\ndef f():\n    d = {S: 1, T: 2}\n    return (S is T, len(d), d[S], d[T], S.site_id)\n"
-    src = _r13_pkg(tmp_path, "b1", b, "")
-    out = tmp_path / "b1" / "twin" / "vpkg"
-    un.derive(src, out)
-    ran_src, ran_twin = _r13_run_b(src.parent), _r13_run_b(out.parent)
-    assert ran_twin.stdout == ran_src.stdout == "(False, 2, 1, 2, 'b.s')\n", (ran_src.stdout, ran_twin.stdout)
-    code = (f"import sys, importlib; sys.path.insert(0, {str(out.parent)!r}); import vpkg.a as a; "
-            f"print(a.S.consulted, a.S.fired, a.S.errors); importlib.reload(a); print('reloaded')")
-    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
-    assert r.stdout.split() == ["0", "0", "0", "reloaded"], r.stdout + r.stderr   # the named non-faithfulness
+# ---- round 15: the twin keeps the SOURCE'S census.py verbatim (Quentin's decision, 2026-09-24) -------------------------
+# The round-14 verdict: "The new stand-in can still change an instrumented decision from True to False while
+# verification is clean and its use counter stays at zero." Reproduced at 8074e6b through the stand-in's CLASS — its
+# counting overrides of object's dunders. The stand-in is gone: a declaration binds the source's own Site, so a question
+# about the class or an instance answers as the census-off arm's does BY CONSTRUCTION, and "no census code takes part in
+# a decision" is MEASURED outside the twin (inv7_observer.py's hook; research's stage-1 conditions B1–B3).
 
-
-# ---- round 14, research's stage 2: K1 (the stand-in's surface) and K2 (every use counts) --------------------------
-# The superseded stand-in (633697a) is kept, verbatim, as the NEGATIVE CONTROL each check below must refuse.
-_R14_V1_STUB = (
-    '_ENABLED = False\n'
-    '_INERT_CALLS = 0\n'
-    '\n'
-    'class _InertSite:\n'
-    '    consulted = 0\n'
-    '    fired = 0\n'
-    '    errors = 0\n'
-    '\n'
-    '    def __init__(self, site_id, declines=None):\n'
-    '        self.site_id = site_id\n'
-    '        self._declines = declines\n'
-    '\n'
-    '    def _use(self):\n'
-    '        global _INERT_CALLS\n'
-    '        _INERT_CALLS += 1\n'
-    '\n'
-    '    def consult(self):\n'
-    '        self._use()\n'
-    '        return self\n'
-    '\n'
-    '    def __enter__(self):\n'
-    '        return self\n'
-    '\n'
-    '    def __exit__(self, *exc):\n'
-    '        return False\n'
-    '\n'
-    '    def fire(self, decision=None, *args, **kwargs):\n'
-    '        self._use()\n'
-    '        return decision\n'
-    '\n'
-    'def declare_site(site_id, declines=None):\n'
-    '    return _InertSite(site_id, declines)\n'
-    '\n'
-    'def inert_calls():\n'
-    '    return _INERT_CALLS\n'
-    '\n'
-    'def enable(on=True):\n'
-    '    global _ENABLED; _ENABLED = bool(on)\n'
-    '\n'
-    'def enabled():\n'
-    '    return _ENABLED\n'
-    '\n'
-    'def registry():\n'
-    '    return ()\n'
-    '\n'
-    'def counters():\n'
-    '    return {}\n'
-    '\n'
-    'def trace(on=True):\n'
-    '    pass\n'
-    '\n'
-    'def trace_snapshot():\n'
-    '    return []\n'
-    '\n'
-    'def trace_reset():\n'
-    '    pass\n'
-    '\n'
-    'def reset_counters():\n'
-    '    pass\n'
-)
-
-
-def _r14_stub_module(text):
-    import types
-    mod = types.ModuleType("veracium.census")          # the name the twin's STUB runs under; never put in sys.modules
-    exec(compile(text, "<r14 stub>", "exec"), mod.__dict__)
-    return mod
-
-
-def _r14_params(fn):
-    import inspect
-    return [(p.name, p.kind, p.default) for p in inspect.signature(fn).parameters.values()]
-
-
-def _r14_surface_problems(stub):
-    """K1, derived from the REAL class: every name `dir(Site)` lists is answered, the slots are Site's own, every
-    method Site defines has Site's parameters (so a wrong-arity call raises in both), and on a census that is OFF each
-    method returns what Site's returns."""
-    import inspect
-    import veracium.census as C
-    assert C.enabled() is False                            # the premise the value comparisons stand on
-    I = type(stub.declare_site("r14.cls"))                  # type() is not a use, so this reads v1 and v2 alike
-    problems = [f"missing {n}" for n in sorted(set(dir(C.Site)) - set(dir(I)))]
-    # FAITHFUL CLASS (Quentin's decision, 2026-09-24): `__class__` is not counted, so what it answers must be the source's
-    for attr in ("__name__", "__qualname__", "__module__"):
-        if getattr(I, attr) != getattr(C.Site, attr):
-            problems.append(f"class {attr} {getattr(I, attr)!r} != {getattr(C.Site, attr)!r}")
-    if repr(stub.declare_site("r14.repr")).split(" at ")[0] != repr(C.Site("r14.repr")).split(" at ")[0]:
-        problems.append("repr differs")
-    if getattr(I, "__slots__", None) != C.Site.__slots__:
-        problems.append(f"slots {getattr(I, '__slots__', None)!r} != {C.Site.__slots__!r}")
-    for name, fn in vars(C.Site).items():
-        if inspect.isfunction(fn) and inspect.isfunction(vars(I).get(name)) and _r14_params(fn) != _r14_params(vars(I)[name]):
-            problems.append(f"{name}{inspect.signature(vars(I)[name])} != {name}{inspect.signature(fn)}")
-    for declines in (None, 0, (lambda v: v == 3)):
-        real, inert = C.Site("r14.k1", declines), stub.declare_site("r14.k1", declines)
-        for name in C.Site.__slots__:
-            try:
-                r, i = getattr(real, name), getattr(inert, name)
-            except AttributeError:
-                continue                                   # already reported as missing
-            if (type(r).__name__, r if name != "_lock" else None) != (type(i).__name__, i if name != "_lock" else None):
-                problems.append(f"{name}: {r!r} != {i!r}")
-        calls = [("counters", ()), ("failure_kinds", ()), ("fire", (7,)), ("fire", (None, "lbl")), ("fire", (3,), {"declined": True})]
-        calls += [("declined", (v,)) for v in (None, False, 0, 3, "x")] + [("declined", (ValueError("x"),))]
-        for name, args, *kw in calls:
-            kw = kw[0] if kw else {}
-            try:
-                r, i = getattr(real, name)(*args, **kw), getattr(inert, name)(*args, **kw)
-            except (AttributeError, TypeError) as e:
-                problems.append(f"{name}{args}: {type(e).__name__}"); continue
-            if r != i:
-                problems.append(f"{name}{args} with declines={declines!r}: Site {r!r}, stand-in {i!r}")
-        try:
-            if inert.consult() is not inert:
-                problems.append("consult() does not return the stand-in")
-        except AttributeError:
-            pass
-    return sorted(set(problems))
-
-
-# Every protocol Python dispatches on the TYPE (bypassing __getattribute__), with the dunder whose count it REACHES.
-# The stand-in must define each so the use counts; a dunder the stand-in defines without a row here is a problem, so a
-# new override cannot arrive without its positive control. A protocol that reaches another dunder is attributed to
-# THAT one: an override whose count another already makes was a mutant this campaign could not kill (__format__,
-# __str__ and __ne__ were dropped for it).
-_R14_PROTOCOL_OPS = [
-    ("__hash__", "hash()", lambda s: hash(s)), ("__hash__", "a dict key", lambda s: {s: 1}),
-    ("__eq__", "==", lambda s: s == 1), ("__eq__", "!= (object's __ne__ reaches __eq__)", lambda s: s != 1),
-    ("__lt__", "<", lambda s: s < 1), ("__le__", "<=", lambda s: s <= 1),
-    ("__gt__", ">", lambda s: s > 1), ("__ge__", ">=", lambda s: s >= 1),
-    ("__repr__", "repr()", repr), ("__repr__", "str() (object's __str__ reaches __repr__)", str),
-    ("__repr__", "an f-string (object's __format__ reaches str())", lambda s: f"{s}"),
-    ("__bool__", "bool()", bool), ("__bool__", "an if", lambda s: 1 if s else 0),
-    ("__enter__", "a with", lambda s: s.__class__.__enter__(s)), ("__exit__", "leaving a with", lambda s: type(s).__exit__(s, None, None, None)),
-    ("__sizeof__", "sys.getsizeof", lambda s: sys.getsizeof(s)),
-    ("__setattr__", "an assignment", lambda s: setattr(s, "fired", 1)), ("__delattr__", "a del", lambda s: delattr(s, "fired")),
+_R15_SHAPES = [
+    # the verdict's class, reproduced eight ways at 8074e6b (source True, twin False, verify clean, 0 uses) ...
+    "type(S).__hash__ is object.__hash__", "type(S).__eq__ is object.__eq__", "type(S).__repr__ is object.__repr__",
+    "type(S).__getattribute__ is object.__getattribute__", "'__eq__' not in vars(type(S))",
+    "not hasattr(type(S), '__bool__')", "S.__class__.__hash__ is object.__hash__",
+    "sorted(vars(type(S))) == sorted(vars(_census.Site))",
+    # ... the two controls of that reproduction, and the identity the class now carries
+    "object.__getattribute__(S, 'fired') == 0", "type(S).counters(S) == {'consulted': 0, 'fired': 0, 'errors': 0}",
+    "type(S) is _census.Site", "repr(S).startswith('<vpkg.census.Site object at ')",
 ]
 
 
-def _r14_counting_problems(stub):
-    """K2: EVERY use of a stand-in moves `inert_calls()` — reading any name `dir(Site)` lists, and every type-level
-    protocol in the table — while binding, holding and comparing identity do not (the acceptance half: a twin that
-    merely keeps its declarations bound must read 0, or the gate could not pass on correct code)."""
-    import copy, pickle
-    import veracium.census as C
-    problems = []
-
-    def moved(op):
-        s = stub.declare_site("r14.k2")
-        before = stub.inert_calls()
-        try:
-            op(s)
-        except Exception:
-            pass
-        return stub.inert_calls() - before
-
-    def with_block(s):
-        with s:
-            pass
-
-    import inspect
-    for name in sorted(dir(C.Site)):
-        if name == "__class__":
-            continue                                        # exempt, asserted in the acceptance half below
-        if not moved(lambda s: getattr(s, name)):
-            problems.append(f"reading .{name} did not count")
-    # every method the real Site defines, called THROUGH THE CLASS (`type(S).counters(S)`) — no instance attribute is
-    # read, so only the method body's own count can see it
-    for name, fn in sorted(vars(C.Site).items()):
-        if inspect.isfunction(fn) and not (name.startswith("__") and name.endswith("__")):
-            n_args = sum(1 for p in list(inspect.signature(fn).parameters.values())[1:]
-                         if p.default is inspect.Parameter.empty and p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD))
-            if not moved(lambda s: getattr(type(s), name)(s, *[None] * n_args)):
-                problems.append(f"type(S).{name}(S) did not count")
-    for dunder, label, op in _R14_PROTOCOL_OPS + [("__enter__", "a with statement", with_block),
-                                                  ("__reduce_ex__", "copy.copy", copy.copy), ("__reduce_ex__", "pickle", pickle.dumps),
-                                                  ("__dict__", "dir()", dir)]:
-        if not moved(op):
-            problems.append(f"{label} did not count")
-    if moved(with_block) < 2:
-        problems.append("a with statement counted fewer than both bracket dunders")
-    # the OVERRIDES: dunder FUNCTIONS the class defines (copyreg caches `__slotnames__` on it once copy has run)
-    defined = {n for n, v in vars(type(stub.declare_site("r14.cls"))).items() if n.startswith("__") and n.endswith("__") and callable(v)}
-    exempt = {"__init__", "__getattribute__"}              # construction, and the counter itself (every name read above)
-    problems += [f"{n} is overridden with no row in _R14_PROTOCOL_OPS" for n in sorted(defined - exempt - {d for d, _, _ in _R14_PROTOCOL_OPS})]
-    for label, op in [("binding", lambda s: [s, (s,), {"k": s}]), ("identity", lambda s: (s is s, id(s), type(s))),
-                      ("reading __class__", lambda s: s.__class__),
-                      # pydantic 2.7's model construction over a module namespace (CI's floor lane, 9fc74c2): the
-                      # failed type check falls back to reading __class__
-                      ("isinstance against an unrelated class", lambda s: isinstance(s, KeyError))]:
-        if moved(op):
-            problems.append(f"{label} COUNTED — a twin that only keeps its declarations bound would fail the gate")
-    return problems
-
-
-def test_r14_k1_the_stand_in_answers_every_member_the_real_site_defines(tmp_path):
-    """RESEARCH'S STAGE 2, K1: the round-14 stand-in lacked `failures`, `declined`, `counters`, `failure_kinds` (and
-    the private members), and dropping R2 made a product read of one legal: derive and verify were CLEAN, the source
-    gave 0 and the twin AttributeError. The surface is now checked against the REAL class, never a list; the superseded
-    stand-in is the negative control, and the end-to-end reproduction runs source and twin."""
-    un = _load("inv7_uninstrument_r14_k1", EVIDENCE / "inv7_uninstrument.py")
-    assert _r14_surface_problems(_r14_stub_module(un.STUB)) == []
-    v1 = _r14_surface_problems(_r14_stub_module(_R14_V1_STUB))
-    assert {"missing failures", "missing declined", "missing counters", "missing failure_kinds"} <= set(v1), v1
-    # ...and the class itself, imported by name (a class the STUB defines is a name it answers): isinstance and type()
-    # read as the source's, the faithful-class decision (2026-09-24)
-    b = _R14_SELF + ("from .census import Site\n\n\n"
-                     "def f():\n    return (S.failures, S.counters(), S.failure_kinds(), S.declined(None), S.declined(1),\n"
-                     "            S.site_id, S.consulted, S.fired, S.errors, S.fire(4), isinstance(S, Site), type(S).__name__)\n")
-    src = _r13_pkg(tmp_path, "k1", b, "")
-    out = tmp_path / "k1" / "twin" / "vpkg"
+@pytest.mark.parametrize("shape", _R15_SHAPES, ids=range(len(_R15_SHAPES)))
+def test_r15_every_question_about_a_site_answers_alike_in_source_and_twin(shape, tmp_path):
+    """The round-14 verdict's class, end to end: derive, verify CLEAN, run source and twin — the same answer, which is
+    the source's True. Under round 14's stand-in the first eight read False in the twin."""
+    un = _load("inv7_uninstrument_r15_shapes", EVIDENCE / "inv7_uninstrument.py")
+    src = _r13_pkg(tmp_path, "shape", _R14_SELF + f"def f():\n    return {shape}\n", "")
+    out = tmp_path / "shape" / "twin" / "vpkg"
     un.derive(src, out)
     assert un.verify(out, src) == []
     ran_src, ran_twin = _r13_run_b(src.parent), _r13_run_b(out.parent)
-    assert ran_src.stdout == "({}, {'consulted': 0, 'fired': 0, 'errors': 0}, {}, True, False, 'b.s', 0, 0, 0, 4, True, 'Site')\n", ran_src.stdout + ran_src.stderr
-    assert (ran_twin.returncode, ran_twin.stdout) == (0, ran_src.stdout), ran_twin.stderr[-400:]
+    assert ran_src.stdout == "True\n", ran_src.stdout + ran_src.stderr
+    assert (ran_twin.returncode, ran_twin.stdout) == (0, "True\n"), ran_twin.stderr[-300:]
 
 
-def test_r14_k2_every_use_of_a_stand_in_counts():
-    """RESEARCH'S STAGE 2, K2 (unit half): "0 uses" must mean no use. The round-14 stand-in counted fire() and consult()
-    only; reading site_id, hashing it into a dict and repr() left the count at 0. The superseded stand-in is the
-    negative control; binding and identity are the acceptance half and must NOT count."""
-    un = _load("inv7_uninstrument_r14_k2", EVIDENCE / "inv7_uninstrument.py")
-    assert _r14_counting_problems(_r14_stub_module(un.STUB)) == []
-    v1 = _r14_counting_problems(_r14_stub_module(_R14_V1_STUB))
-    assert {"reading .site_id did not count", "hash() did not count", "a dict key did not count", "repr() did not count"} <= set(v1), v1
+def test_r15_the_twin_census_is_the_source_s_byte_for_byte_and_verify_refuses_any_other(tmp_path):
+    """Research's stage-1 condition 5, as IDENTITY: the twin's census.py is the source's, byte for byte; a declaration
+    binds that module's Site and is the object its registry holds; and re-declaring an id — a module reloaded — is
+    refused in BOTH, so round 14's one named unfaithfulness (the stand-in did not refuse a reload) is gone, pinned gone.
+    The control: a twin whose census differs by one byte is refused by verify()."""
+    un = _load("inv7_uninstrument_r15_identity", EVIDENCE / "inv7_uninstrument.py")
+    src = _r13_pkg(tmp_path, "ident", _R14_SELF + "def f():\n    return 1\n", "")
+    out = tmp_path / "ident" / "twin" / "vpkg"
+    un.derive(src, out)
+    assert (out / "census.py").read_bytes() == (src / "census.py").read_bytes() == _R12_CENSUS_SRC.read_bytes()
+    assert un.verify(out, src) == []
+    code = ("import sys, importlib; sys.path.insert(0, {root!r}); import vpkg.b as b, vpkg.census as c\n"
+            "print(type(b.S) is c.Site, c._REGISTRY['b.s'] is b.S)\n"
+            "try:\n    importlib.reload(b); print('reload accepted')\nexcept c.CensusError: print('reload refused')\n")
+    for root in (src.parent, out.parent):
+        r = subprocess.run([sys.executable, "-c", code.format(root=str(root))], capture_output=True, text=True)
+        assert r.stdout.split("\n")[:2] == ["True True", "reload refused"], (root, r.stdout, r.stderr[-300:])
+    (out / "census.py").write_bytes((out / "census.py").read_bytes() + b"\n")
+    assert any("not the source's census" in p for p in un.verify(out, src)), un.verify(out, src)
 
 
-def test_r14_the_named_residual_is_uncounted_and_its_neighbours_count():
-    """The source NAMES what the stand-in cannot count (the comment above inv7_uninstrument.STUB); this pins that list
-    as EXECUTED, in both directions, so the prose cannot drift from the stand-in: every named residual counts 0, and
-    its nearest counted neighbour counts (research's stage 2: CPython short-circuits list/tuple comparison on identity
-    before calling __eq__; a set or dict reaches __hash__). If a future stand-in starts counting a residual, this
-    fails and the comment is revisited."""
-    un = _load("inv7_uninstrument_r14_resid", EVIDENCE / "inv7_uninstrument.py")
-    stub = _r14_stub_module(un.STUB)
-    a, b = stub.declare_site("r14.a"), stub.declare_site("r14.b")
-    residual = {"is": lambda: a is b, "id()": lambda: id(a), "type()": lambda: type(a),
-                "list in (identity hit)": lambda: a in [a, b], "tuple in (identity hit)": lambda: a in (a, b),
-                "list ==": lambda: [a] == [a], "tuple ==": lambda: (a,) == (a,),
-                "list.index": lambda: [a].index(a), "list.count": lambda: [a].count(a)}
-    # `__class__`, exempt on the owner's word ("Faithful class, exempt"): uncounted, and its answer is the source's
-    residual["a read of __class__"] = lambda: a.__class__
-    counted = {"list in (reaches another first)": lambda: b in [a, b], "set in": lambda: a in {a}, "dict key": lambda: {a: 1}[a],
-               "a read of another attribute": lambda: a.site_id}
-    got = {}
-    for label, op in {**residual, **counted}.items():
-        n0 = stub.inert_calls(); op(); got[label] = stub.inert_calls() - n0
-    assert {k: got[k] for k in residual} == dict.fromkeys(residual, 0), got
-    assert all(got[k] >= 1 for k in counted), got
-    assert (a.__class__.__name__, a.__class__.__qualname__) == ("Site", "Site")
-    # OPERATORS NEITHER CLASS DEFINES (the spec's v9.6 note names them): each counts 0 and raises the TypeError the REAL
-    # Site raises, message and all — the class is named Site, so the message names the same type. The neighbour that
-    # counts is an operator the stand-in DOES define (`==`, above in the K2 table).
+_R15_OFF_FORMS = {
+    "with consult": lambda s: s.consult().__enter__(), "consult statement": lambda s: s.consult(),
+    "fire True": lambda s: s.fire(True), "fire False": lambda s: s.fire(False), "fire None": lambda s: s.fire(None),
+    "fire labelled": lambda s: s.fire(ValueError("x"), "lbl"), "fire declined=True": lambda s: s.fire(7, declined=True),
+    "fire declined=False": lambda s: s.fire(None, declined=False), "declined": lambda s: s.declined(None),
+}
+
+
+def test_r15_b3_with_the_census_off_consult_and_fire_leave_every_slot_unchanged():
+    """Research's stage-1 B3 — THE PREMISE of "uncounted = faithful". A read that runs no census Python code (a slot, `is`,
+    `id`, `type`, object's dunders) is uncounted by the hook, and it answers as the source's only because the twin's
+    Sites are real Sites in the OFF state and, in that state, consult and fire leave EVERY slot as it was. The slots are
+    DERIVED from `Site.__slots__`; each form runs on a fresh Site and the whole slot state is compared before and after
+    (the lock and the failures dict by identity, the rest by value)."""
     import veracium.census as C
-    real = C.Site("r14.real")
-    operators = {"a + 1": lambda x: x + 1, "1 + a": lambda x: 1 + x, "-a": lambda x: -x, "a[0]": lambda x: x[0],
-                 "len(a)": lambda x: len(x), "iter(a)": lambda x: iter(x), "a()": lambda x: x()}
-    for label, op in operators.items():
-        n0 = stub.inert_calls()
-        with pytest.raises(TypeError) as twin_err:
-            op(a)
-        assert stub.inert_calls() == n0, f"{label} counted"
-        with pytest.raises(TypeError) as real_err:
-            op(real)
-        assert str(twin_err.value) == str(real_err.value), (label, str(twin_err.value), str(real_err.value))
-    n0 = stub.inert_calls(); a == 1
-    assert stub.inert_calls() > n0                          # the defined neighbour counts
-    text = (EVIDENCE / "inv7_uninstrument.py").read_text()
-    assert "short-circuits on identity" in text and "test_r14_the_named_residual_is_uncounted_and_its_neighbours_count" in text
+    assert C.enabled() is False
+    for label, form in _R15_OFF_FORMS.items():
+        s = C.Site("r15.b3", None)
+        before = {n: getattr(s, n) for n in C.Site.__slots__}
+        form(s)
+        after = {n: getattr(s, n) for n in C.Site.__slots__}
+        for n in C.Site.__slots__:
+            same = after[n] is before[n] if n in ("_lock", "failures", "_declines") else after[n] == before[n]
+            assert same, (label, n, before[n], after[n])
+        assert s.failures == {}, (label, s.failures)
 
 
-def test_r14_k2_a_twin_arm_that_touches_a_stand_in_fails_the_harness_gate(tmp_path):
-    """RESEARCH'S STAGE 2, K2 (harness half): the gate was driven only by FABRICATED counts, so a STUB that counted
-    nothing, or an observer that read the wrong thing, would read 0 forever with the gate true. This runs the REAL
-    chain — the real tree's twin, the observer inside a pytest run, run_arm's summary, compare's checks, final_status —
-    on a one-test suite that reads a declared site's attribute (gate FALSE) and on its control, which reaches the same
-    site by identity only (gate TRUE)."""
-    un = _load("inv7_uninstrument_r14_k2h", EVIDENCE / "inv7_uninstrument.py")
-    harness = _load("inv7_harness_r14_k2h", EVIDENCE / "inv7_harness.py")
-    twin = tmp_path / "twin"
+_R15_CHAIN_CELLS = [
+    # (cell, test module text, the entries predicate, the gate's expected value)
+    ("declaration only", "import importlib\n\n\ndef test_it():\n    m = importlib.import_module(MOD)\n    assert getattr(m, NAME) is not None\n",
+     lambda n: n == 0, True),
+    ("product code enables the census", "from veracium import Memory\nfrom veracium.config import MemoryConfig\n\n\ndef test_it(tmp_path):\n"
+     "    m = Memory(llm=lambda *a, **k: '', config=MemoryConfig(db_path=str(tmp_path / 'b.db'), census_enabled=True)); m.close()\n",
+     lambda n: n is not None and n >= 1, False),
+    ("a Site method through the class", "import importlib\n\n\ndef test_it():\n    m = importlib.import_module(MOD)\n    S = getattr(m, NAME)\n"
+     "    assert type(S).counters(S) is not None\n", lambda n: n is not None and n >= 1, False),
+    ("a declaration from a TEST module body", "from veracium import census as _c\n\nT = _c.declare_site('r15.test-module-body')\n\n\n"
+     "def test_it():\n    assert T is not None\n", lambda n: n is not None and n >= 1, False),
+    ("an exec'd declaration", "def test_it():\n    exec(\"from veracium import census as c\\nc.declare_site('r15.exec')\", {})\n",
+     lambda n: n is not None and n >= 1, False),
+    ("the hook cleared mid-run", "import sys\n\n\ndef test_it():\n    sys.setprofile(None)\n", lambda n: n is None, False),
+]
+
+
+@pytest.fixture(scope="module")
+def r15_twin(tmp_path_factory):
+    """The REAL tree's twin, derived once for the chain cells, and a throwaway repo whose `.venv/bin/python` is THIS
+    interpreter (run_arm runs `<repo>/.venv/bin/python`; CI and a packaged copy have no .venv)."""
+    un = _load("inv7_uninstrument_r15_chain", EVIDENCE / "inv7_uninstrument.py")
+    base = tmp_path_factory.mktemp("r15chain")
+    twin = base / "twin"
     un.derive(ROOT / "src" / "veracium", twin / "veracium")
     site = None
     for p in sorted((twin / "veracium").rglob("*.py")):
         m = re.search(r"^(\w+) = (?:\w+\.)?declare_site\(", p.read_text(), re.M)
         if m and not un.is_census_module_file(str(p.relative_to(twin / "veracium"))):
-            site = (".".join(("veracium",) + p.relative_to(twin / "veracium").with_suffix("").parts), m.group(1)); break
+            # a package's __init__ is imported by the PACKAGE's name: importing `veracium.__init__` executes the body a
+            # second time, and the real census rightly refuses the duplicate declarations (round 14's stand-in did not,
+            # which hid this in its harness cell)
+            site = (".".join(("veracium",) + p.relative_to(twin / "veracium").with_suffix("").parts).removesuffix(".__init__"), m.group(1)); break
     assert site is not None
-    # run_arm runs `<repo>/.venv/bin/python`: a throwaway repo whose interpreter is THIS one, so the cell runs where
-    # no .venv exists (CI, a packaged copy)
-    repo = tmp_path / "repo"; (repo / ".venv" / "bin").mkdir(parents=True)
+    repo = base / "repo"; (repo / ".venv" / "bin").mkdir(parents=True)
     shim = repo / ".venv" / "bin" / "python"; shim.write_text(f"#!/bin/sh\nexec {sys.executable} \"$@\"\n"); shim.chmod(0o755)
-    results = {}
-    for cell, use in (("touches", "getattr(m, NAME).site_id"), ("control", "getattr(m, NAME) is not None")):
-        t = tmp_path / cell / f"test_r14_{cell}.py"; t.parent.mkdir()
-        t.write_text(f"import importlib\n\nNAME = {site[1]!r}\n\n\ndef test_it():\n    m = importlib.import_module({site[0]!r})\n    assert {use}\n")
-        out = tmp_path / cell / "out"
-        s = harness.run_arm(repo, "uninstrumented", [str(t)], out, EVIDENCE / "declaration.py", twin_src=str(twin))
-        assert s["pytest_exit"] == 0, (cell, s.get("pytest_result_line"), (out / "uninstrumented" / "pytest_stdout.txt").read_text()[-600:])
-        assert pathlib.Path(s["veracium_file"]).is_relative_to(twin), s["veracium_file"]     # the arm ran the twin
-        v, c = harness.compare(out, ["uninstrumented"], {"uninstrumented": s}, ID_TO_SYMBOL)
-        results[cell] = (s["census_inert_calls"], harness.final_status(v, c, {"uninstrumented": s}, ["uninstrumented"]),
-                         v["gates"]["uninstrumented:inert_stand_ins_unused"])
-    assert results["control"] == (0, 0, True), results
-    assert results["touches"][0] >= 1 and results["touches"][1:] == (1, False), results
+    return base, twin, repo, site
+
+
+@pytest.mark.parametrize("cell,text,entries_ok,gate", _R15_CHAIN_CELLS, ids=[c[0] for c in _R15_CHAIN_CELLS])
+def test_r15_the_reference_arm_s_census_count_fails_through_the_real_chain(cell, text, entries_ok, gate, r15_twin):
+    """Research's stage-1 conditions 2, 3 and B1–B2, through the REAL chain — the real tree's twin, the observer inside
+    a pytest run, run_arm's summary, compare's checks, final_status's gate. Declarations from product module bodies and
+    the observer's own reads are excluded (the acceptance cell reads 0, gate TRUE); census code reached any other way
+    counts — product code enabling the census, a Site method through the class, a declaration from a TEST module body
+    or from exec'd text (the exclusion needs the product root, not only a module body) — and a hook cleared mid-run
+    reports None, never a 0 that measured nothing."""
+    harness = _load("inv7_harness_r15_chain", EVIDENCE / "inv7_harness.py")
+    base, twin, repo, (mod, name) = r15_twin
+    slug = re.sub(r"\W", "_", cell)
+    t = base / slug / f"test_r15_{slug}.py"; t.parent.mkdir()
+    t.write_text(f"MOD = {mod!r}\nNAME = {name!r}\n" + text)
+    out = base / slug / "out"
+    s = harness.run_arm(repo, "uninstrumented", [str(t)], out, EVIDENCE / "declaration.py", twin_src=str(twin))
+    assert s["pytest_exit"] == 0, (cell, s.get("pytest_result_line"), (out / "uninstrumented" / "pytest_stdout.txt").read_text()[-600:])
+    assert pathlib.Path(s["veracium_file"]).is_relative_to(twin), s["veracium_file"]
+    v, c = harness.compare(out, ["uninstrumented"], {"uninstrumented": s}, ID_TO_SYMBOL)
+    harness.final_status(v, c, {"uninstrumented": s}, ["uninstrumented"])
+    n = s["census_code_entries"]
+    assert entries_ok(n), (cell, n, s.get("census_code_entry_detail"))
+    assert v["gates"]["uninstrumented:no_census_code_in_decisions"] is gate, (cell, n, v["gates"])
 
 
 def test_r13_p1_import_module_of_the_standard_library_is_not_refused(tmp_path):

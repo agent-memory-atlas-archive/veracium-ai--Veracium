@@ -6,9 +6,10 @@ The first four-arm transcripts exported the twin from the commit the instrumenta
 later spec touched src the "uninstrumented" arm was also an OLDER product. So the twin is DERIVED: HEAD's src
 with the census MEASUREMENTS (every consult and every fire) removed by an AST transform that inverts the
 instrumenter's forms and nothing else — and, since round 6 (R6-6), REFUSES everything it has not established is
-instrumentation. Since round 14 the DECLARATIONS and census imports are PRESERVED verbatim, and census.py is
-replaced by a STUB whose `declare_site` answers each declaration with an inert stand-in (a class named Site) that
-records nothing and counts every use (see STUB):
+instrumentation. Since round 14 the DECLARATIONS and census imports are PRESERVED verbatim; since round 15 census.py
+itself is copied VERBATIM too, so every declaration binds the source's own Site class and every question about it answers
+as the census-off arm's does, by construction. That no census code takes part in a decision is MEASURED, outside the
+twin, by the observer (inv7_observer.py's profile hook), not built into it:
 
     NAME = declare_site(...)                 ->  PRESERVED            NAME is then a DECLARED name of this module
     from .census import declare_site …      ->  PRESERVED            (declare_site under another name is REFUSED)
@@ -28,8 +29,7 @@ records nothing and counts every use (see STUB):
 REFUSED (never guessed): `other.fire(...)` on a name that is not a declared site of the module; `a.b.fire(...)`
 (an attribute chain the transform cannot bind); a consult on an undeclared name; a `with` mixing consult and
 non-consult items; an enabled-block of any other shape (a side effect inside it would be product behaviour);
-`nonlocal`/`global` naming a declared site; a census import binding a name the STUB does not define; and
-`declare_site` imported under another name. (Rounds 12 and 13 also refused a declared site another module reaches
+`nonlocal`/`global` naming a declared site; and `declare_site` imported under another name. (Rounds 12 and 13 also refused a declared site another module reaches
 and the dynamic forms `globals()`, `vars()`, `exec`, `eval`, a `__dict__` or `sys.modules`; those refusals existed
 only because the declaration was removed, and round 14, which keeps every declaration bound, withdrew them — each
 such route now derives, verifies clean and runs as the source does.) Every statement that is not one of the listed
@@ -201,14 +201,14 @@ class Uninstrument(ast.NodeTransformer):
     # module-level: count the declarations (PRESERVED) and refuse the census imports the twin could not answer
     def visit_Module(self, node):
         # ROUND 14, the round-13 verdict's F1 — NOTHING IS REMOVED. Every declaration `NAME = declare_site(...)` and every
-        # census import stays in the twin VERBATIM, and the twin's STUB census answers `declare_site` with an INERT
-        # stand-in per declaration (see STUB). The twin removed every declaration from its first derivation, and rounds
+        # census import stays in the twin VERBATIM, and (round 15) so does census.py itself, so a declaration binds the
+        # source's own Site. The twin removed every declaration from its first derivation, and rounds
         # 12 and 13 chased, one spelling at a time, every route by which another piece of code could still reach the
         # name it bound — an import, a star, `__all__`, an attribute, `getattr`, `import_module`, `sys.modules`,
         # `globals()` — and the round-13 verdict found five more (`pkgutil`, `runpy`, `importlib.util`, `__globals__`,
         # `inspect`). A name that is never unbound cannot be reached and
         # found missing, however the route is spelled. What stays refused here is what the transform must RECOGNISE:
-        # a declaration made through an alias of `declare_site`, and a census name the STUB does not answer.
+        # a declaration made through an alias of `declare_site`.
         # The declarations are COUNTED where they are recognised (`bound_declarations`, which `declared_names` also
         # reads), not here: round 14's docstring sweep found this loop counting by the callee's SPELLING while
         # recognition asks the BINDING (round 13's B3), and a membership test on `declared` here is round 7's F4a form.
@@ -219,11 +219,6 @@ class Uninstrument(ast.NodeTransformer):
                         raise Refused(f"line {stmt.lineno}: `{a.name}` is imported under another name "
                                       f"({a.asname!r}); a site declaration is recognised by that name, so a "
                                       f"declaration made through this alias could not be recognised")
-                    if a.name not in _stub_names():
-                        raise Refused(f"line {stmt.lineno}: this census import binds `{a.name}`, which the twin's "
-                                      f"STUB census does not define. The STUB exposes the harness surface, `declare_site` "
-                                      f"and its stand-in class ({', '.join(sorted(_stub_names()))}); a real-census or type-only "
-                                      f"name is THIS boundary, not a transform defect — the twin would fail at import")
         self.generic_visit(node)
         return node
 
@@ -432,11 +427,9 @@ def is_instrumentation_name(name: str) -> bool:
     """The one name on the census SURFACE that is instrumentation rather than a harness read.
 
     ROUND 12 (the verdict's F1): a surface import is decided per NAME. ROUND 14: nothing is stripped — `declare_site`
-    is kept and answered by the STUB's inert stand-in, and it must be imported under its own name (an alias is
-    refused, since a declaration is recognised by this name); every other name must be one the STUB answers, or the
-    transform refuses.
-    Research measured the boundary: 28 of the tree's 28 surface imports import `declare_site` alone, and the
-    real census's public names missing from the STUB are exactly the ones a refusal should name."""
+    is kept, and it must be imported under its own name (an alias is refused, since a declaration is recognised by
+    this name). ROUND 15: the twin's census is the source's own module, so every other surface name resolves as it does
+    in the source; the round-12 refusal of a name the stub did not answer had nothing left to refuse and is gone."""
     return name == "declare_site"
 
 
@@ -452,17 +445,9 @@ def instrumentation_tokens_in(text: str) -> list:
     transform's own emitted-module refusal AND for verify(), which kept a second tuple with a FOURTH token
     (`from .census import`). The two had drifted, and the fix for F1 would have made them contradict — a
     correct twin keeping `from .census import enabled` refused by verify() on its first run."""
-    # ROUND 14: `declare_site` is no longer a token that must not survive — every declaration stays in the twin, bound
-    # to the STUB's inert stand-in. What must not survive is a MEASUREMENT: a consult or a fire.
+    # ROUND 14: `declare_site` is no longer a token that must not survive — every declaration stays in the twin (bound,
+    # since round 15, to the source's own census). What must not survive is a MEASUREMENT: a consult or a fire.
     return [tok for tok in (".consult()", ".fire(") if tok in text]
-
-
-def _stub_names() -> frozenset:
-    """The names the twin's STUB census defines — DERIVED from STUB, so the refusal boundary a surface import is
-    held to cannot drift from the stub that will actually answer it."""
-    tree = ast.parse(STUB)
-    return frozenset(n.name for n in tree.body if isinstance(n, (ast.FunctionDef, ast.ClassDef))) | frozenset(
-        tg.id for n in tree.body if isinstance(n, ast.Assign) for tg in n.targets if isinstance(tg, ast.Name))
 
 
 def lost_bindings(src_text: str, twin_text: str) -> set:
@@ -487,7 +472,7 @@ def lost_bindings(src_text: str, twin_text: str) -> set:
     returned a disclosed silent limit as blocking, so each now has an owner): a name bound DYNAMICALLY
     (`globals()[...]`, `exec`) is invisible to a static reading; this reads ONE module at a time, so a binding lost
     ACROSS modules is read by `lost_cross_module_references` in verify(). ROUND 14: the transform removes no binding
-    — every declaration stays bound to its stand-in — so neither limit can be reached through a declared site, and
+    — every declaration stays bound (since round 15 to the source's own census) — so neither limit can be reached through a declared site, and
     the round-13 refusals of dynamic forms and of cross-module reach were withdrawn; this reading remains verify()'s
     check against a transform that DOES lose a binding (the mutant in tests/test_0042_inv7.py). A changed
     VALUE with no lost name — the round-12 verdict's F1 — is the scope resolver's pairing, which its join check now
@@ -780,8 +765,9 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # an import-scoped check could not see it. It was refused here, where the resolver could still say which loads
     # were the site; `lost_bindings` in verify() was the second, independent reading of the same fact.
     # ROUND 14: round 12's R2 ("a declared site loaded outside fire()/consult()") and round 13's dynamic-namespace
-    # refusal are GONE — both existed because the declaration was removed, and with the name kept bound to a faithful
-    # stand-in, a site loaded as a value, or reached through `globals()`, is correct code (research's stage-1 read).
+    # refusal are GONE — both existed because the declaration was removed; with the name kept bound (to a stand-in in
+    # round 14, to the source's own census since round 15), a site loaded as a value, or reached through `globals()`,
+    # is correct code (research's stage-1 read).
     census_aliases = aliases
     # AND THE BINDING MUST NOT HAVE MOVED. `from . import census as _census` followed by `_census = On()`
     # imports the census and then replaces it; the name still resolves to module scope, so the scope
@@ -865,192 +851,11 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     return out, stats
 
 
-# ROUND 14, research's stage 2 (K1, K2). The stand-in answers the WHOLE surface the real `Site` defines — its
-# `__slots__` exactly, every method, inert and value-faithful to a census that is off (counters read the slots,
-# `declined` is the real rule) — so a product read of any `Site` member derives, verifies and RUNS in the twin
-# (K1: `S.failures` gave AttributeError with verify clean, once round 14 dropped the R2 refusal that had kept such
-# reads out). And EVERY use counts (K2): `__getattribute__` counts each attribute access on an instance; every method
-# body counts, so a call reached through the class (`type(S).counters(S)`) counts too; and each protocol Python
-# dispatches on the TYPE, bypassing `__getattribute__` (hash, repr, ==, the four orderings, bool, with, sizeof,
-# setattr, delattr), has a counting override. Protocols that REACH one of those count through it and have no override
-# of their own, since an override whose count another already makes is a counter no test can redden: str() and
-# format() reach __repr__ (object's), != reaches __eq__, and dir(), copy and pickle reach the instance through
-# `__getattribute__` (`__dict__`, `__reduce_ex__`).
-# `__class__` IS NOT COUNTED, and the class is NAMED `Site` so that is faithful (Quentin's decision, 2026-09-24): CI's
-# pydantic-2.7.0 floor lane found that pydantic's model construction runs `isinstance(v, _PydanticWeakRef)` over every
-# module global, and `isinstance` falls back to reading `v.__class__` — 126 "uses" at import, a correct twin gated as
-# used. The class's name, qualname, module, repr and `type()` now read as the source's, and every `isinstance` a
-# program can reach agrees (the only class it could compare against is the twin census's own `Site`). The residual,
-# named: the class OBJECT's identity, and its members read through the class, which are the stand-in's.
-# The surface is pinned against the real class and each use has a positive control
-# (test_r14_k1_the_stand_in_answers_every_member_the_real_site_defines, test_r14_k2_every_use_of_a_stand_in_counts).
-# NOT counted, and not countable by any hook a Python object can define: identity operations (`is`, `id()`,
-# `type()`); any comparison CPython short-circuits on identity before calling `__eq__` — list/tuple `in`, `==`,
-# `index` and `count` on an identity hit (research's stage 2; a set or dict reaches `__hash__` and counts); and
-# operators neither `Site` nor the stand-in defines, which raise TypeError identically in both. Harmless in behaviour —
-# identity is faithful per declaration, so no decision can diverge through it — and pinned as uncounted
-# (test_r14_the_named_residual_is_uncounted_and_its_neighbours_count), so this list cannot go stale silently.
-STUB = '''"""INV-7 twin stub: the census module with NOTHING MEASURED — the harness surface, and `declare_site`
-answering each declaration with its own INERT stand-in (round 14): a class named Site, like the real one, that
-answers every member the real Site defines, compares by identity like it, records nothing, and COUNTS every use —
-any attribute access but `__class__`, every method call however reached, and every type-level protocol — so the
-capture can assert the twin measured nothing: inert_calls() must read 0 and registry() stays empty."""
-import threading as _threading
-
-_ENABLED = False
-_INERT_CALLS = 0
-
-
-def _count():
-    global _INERT_CALLS
-    _INERT_CALLS += 1
-
-
-_get = object.__getattribute__
-
-
-class Site:
-    __slots__ = ("site_id", "consulted", "fired", "errors", "_lock", "_declines", "failures")
-
-    def __init__(self, site_id, declines=None):
-        for k, v in (("site_id", site_id), ("consulted", 0), ("fired", 0), ("errors", 0),
-                     ("_lock", _threading.Lock()), ("_declines", declines), ("failures", {})):
-            object.__setattr__(self, k, v)
-
-    def __getattribute__(self, name):
-        if name != "__class__":
-            _count()
-        return _get(self, name)
-
-    def __setattr__(self, name, value):
-        _count()
-        object.__setattr__(self, name, value)
-
-    def __delattr__(self, name):
-        _count()
-        object.__delattr__(self, name)
-
-    def declined(self, decision):
-        _count()
-        d = _get(self, "_declines")
-        if d is None:
-            return decision is None or decision is False or isinstance(decision, BaseException)
-        if callable(d):
-            return bool(d(decision))
-        return decision is d
-
-    def _bump(self, field):
-        _count()
-
-    def consult(self):
-        _count()
-        return self
-
-    def _measurement_failed(self, exc):
-        _count()
-
-    def fire(self, decision, label=None, *, declined=None):
-        _count()
-        return decision
-
-    def counters(self):
-        _count()
-        return {"consulted": _get(self, "consulted"), "fired": _get(self, "fired"), "errors": _get(self, "errors")}
-
-    def failure_kinds(self):
-        _count()
-        return dict(_get(self, "failures"))
-
-    def __enter__(self):
-        _count()
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        _count()
-        return False
-
-    def __hash__(self):
-        _count()
-        return object.__hash__(self)
-
-    def __eq__(self, other):
-        _count()
-        return object.__eq__(self, other)
-
-    def __lt__(self, other):
-        _count()
-        return NotImplemented
-
-    def __le__(self, other):
-        _count()
-        return NotImplemented
-
-    def __gt__(self, other):
-        _count()
-        return NotImplemented
-
-    def __ge__(self, other):
-        _count()
-        return NotImplemented
-
-    def __repr__(self):
-        _count()
-        return object.__repr__(self)
-
-    def __bool__(self):
-        _count()
-        return True
-
-    def __sizeof__(self):
-        _count()
-        return object.__sizeof__(self)
-
-
-def declare_site(site_id, declines=None):
-    return Site(site_id, declines)
-
-
-def inert_calls():
-    return _INERT_CALLS
-
-
-def enable(on=True):
-    global _ENABLED; _ENABLED = bool(on)
-
-
-def enabled():
-    return _ENABLED
-
-
-def registry():
-    return ()
-
-
-def counters():
-    return {}
-
-
-def trace(on=True):
-    pass
-
-
-def trace_snapshot():
-    return []
-
-
-def trace_reset():
-    pass
-
-
-def reset_counters():
-    pass
-'''
 
 
 def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
-    """Copy src/veracium to out, un-instrumenting every module; census.py itself is replaced by the STUB, which
-    exposes the harness surface the observer touches (enabled(), registry()) and answers each preserved declaration
-    with an inert stand-in that registers nothing and counts every use (round 14). Writes the
+    """Copy src/veracium to out, un-instrumenting every module; census.py itself is copied VERBATIM (round 15), so
+    each preserved declaration binds the source's own Site and registers as it does in the census-off arm. Writes the
     MANIFEST beside the twin (out/../twin_manifest.json): source hashes before and after, every count, the
     permitted transformations by name."""
     if out.exists():
@@ -1058,8 +863,8 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
     shutil.copytree(src, out, ignore=shutil.ignore_patterns("__pycache__"))
     totals = {"sites": 0, "fires": 0, "consults": 0, "consult_statements": 0, "bypasses": 0, "unresolved_bypass_candidates": 0, "imports": 0, "modules_changed": 0}
     manifest = {"permitted_transformations": [
-                    "NAME = declare_site(...) PRESERVED; the twin's STUB census answers it with an inert stand-in per declaration (round 14)",
-                    "census imports PRESERVED (round 14)",
+                    "NAME = declare_site(...) PRESERVED (round 14), bound to the source's own census, copied verbatim (round 15)",
+                    "census imports PRESERVED (round 14)", "census.py copied VERBATIM (round 15)",
                     "with NAME.consult(): body -> body (NAME declared)", "NAME.consult() statement removed (NAME declared)",
                     "NAME.fire(X, ...) -> X (NAME declared; raise/return/assign)",
                     "if <census>.enabled(): [assign,] return NAME.fire(...) -> if False: [assign,] return X (kept dead; exit ordinals preserved)",
@@ -1068,13 +873,12 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
                                   "a with mixing consult and non-consult items", "an enabled block of any other shape",
                                   "a census-enabled bypass whose else branch is not simple assignments", "nonlocal/global naming a declared site",
                                   "a transform that changes a function's exit count", "an emitted module still carrying a measurement (a consult or a fire)",
-                                  "a census surface import binding a name the twin's STUB does not define",
                                   "declare_site imported under another name"],
                 "modules": {}}
     for p in sorted(out.rglob("*.py")):
         rel = str(p.relative_to(out)); before = p.read_bytes()
         if is_census_module_file(rel):
-            p.write_text(STUB); manifest["modules"][rel] = {"sha256_before": hashlib.sha256(before).hexdigest(), "sha256_after": hashlib.sha256(STUB.encode()).hexdigest(), "stub": True}
+            manifest["modules"][rel] = {"sha256_before": hashlib.sha256(before).hexdigest(), "sha256_after": hashlib.sha256(before).hexdigest(), "verbatim": True}
             continue
         text = before.decode()
         if may_skip_uninstrumenting(text):
@@ -1114,7 +918,7 @@ def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib
       2. TOKENS — no instrumentation token (`instrumentation_tokens_in`, the ONE definition the transform's own
          refusal uses) survives an emitted module. ROUND 12: this clause used to add a fourth token, "census
          import", and it was TRUE only because every surface import was dropped whole; once a harness name the
-         STUB answers is kept (the verdict's F1), a correct twin carries `from .census import enabled` — research's
+         census answers is kept (the verdict's F1), a correct twin carries `from .census import enabled` — research's
          R1 measured verify() refusing exactly that. ROUND 14: `declare_site` is no longer a token — every declaration
          survives by design — and the tokens are the MEASUREMENTS, `.consult()` and `.fire(`.
       3. STRUCTURE — the twin's AST equals the AST of RE-DERIVING the transform from the source, compared with
@@ -1142,8 +946,8 @@ def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib
     for rel in sorted(twin_files & src_files):
         p_out = out / rel; text = p_out.read_text()
         if is_census_module_file(rel):                   # ROUND 12, R4: the transform's own reading, not a second one
-            if text != STUB:
-                problems.append(f"{rel}: the census module is not the twin STUB")
+            if p_out.read_bytes() != (src / rel).read_bytes():
+                problems.append(f"{rel}: the census module is not the source's census, byte for byte (round 15: it is copied verbatim)")
             continue
         for token in instrumentation_tokens_in(text):   # ROUND 12, R1: the transform's definition, not a drifted copy
             problems.append(f"{rel}: {token!r} survives")
