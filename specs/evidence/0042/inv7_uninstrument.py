@@ -453,7 +453,7 @@ def _stub_names() -> frozenset:
     """The names the twin's STUB census defines — DERIVED from STUB, so the refusal boundary a surface import is
     held to cannot drift from the stub that will actually answer it."""
     tree = ast.parse(STUB)
-    return frozenset(n.name for n in tree.body if isinstance(n, ast.FunctionDef)) | frozenset(
+    return frozenset(n.name for n in tree.body if isinstance(n, (ast.FunctionDef, ast.ClassDef))) | frozenset(
         tg.id for n in tree.body if isinstance(n, ast.Assign) for tg in n.targets if isinstance(tg, ast.Name))
 
 
@@ -847,21 +847,32 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
 # `__slots__` exactly, every method, inert and value-faithful to a census that is off (counters read the slots,
 # `declined` is the real rule) — so a product read of any `Site` member derives, verifies and RUNS in the twin
 # (K1: `S.failures` gave AttributeError with verify clean, once round 14 dropped the R2 refusal that had kept such
-# reads out). And EVERY use counts (K2): `__getattribute__` counts each attribute access on an instance, and each
-# protocol Python dispatches on the TYPE, bypassing `__getattribute__` (hash, repr, ==, the four orderings, bool,
-# with, sizeof, setattr, delattr), is defined here to count. Protocols that REACH one of those count through it
-# and have no override of their own, since an override whose count another already makes is a counter no test can
-# redden: str() and format() reach __repr__ (object's), != reaches __eq__, and dir(), copy and pickle reach the
-# instance through `__getattribute__` (`__dict__`, `__reduce_ex__`). The
-# surface is pinned against the real class and each use has a positive control
+# reads out). And EVERY use counts (K2): `__getattribute__` counts each attribute access on an instance; every method
+# body counts, so a call reached through the class (`type(S).counters(S)`) counts too; and each protocol Python
+# dispatches on the TYPE, bypassing `__getattribute__` (hash, repr, ==, the four orderings, bool, with, sizeof,
+# setattr, delattr), has a counting override. Protocols that REACH one of those count through it and have no override
+# of their own, since an override whose count another already makes is a counter no test can redden: str() and
+# format() reach __repr__ (object's), != reaches __eq__, and dir(), copy and pickle reach the instance through
+# `__getattribute__` (`__dict__`, `__reduce_ex__`).
+# `__class__` IS NOT COUNTED, and the class is NAMED `Site` so that is faithful (Quentin's decision, 2026-09-24): CI's
+# pydantic-2.7.0 floor lane found that pydantic's model construction runs `isinstance(v, _PydanticWeakRef)` over every
+# module global, and `isinstance` falls back to reading `v.__class__` — 126 "uses" at import, a correct twin gated as
+# used. The class's name, qualname, module, repr and `type()` now read as the source's, and every `isinstance` a
+# program can reach agrees (the only class it could compare against is the twin census's own `Site`). The residual,
+# named: the class OBJECT's identity, and its members read through the class, which are the stand-in's.
+# The surface is pinned against the real class and each use has a positive control
 # (test_r14_k1_the_stand_in_answers_every_member_the_real_site_defines, test_r14_k2_every_use_of_a_stand_in_counts).
 # NOT counted, and not countable by any hook a Python object can define: identity operations (`is`, `id()`,
-# `type()`), and operators neither `Site` nor the stand-in defines, which raise TypeError identically in both.
+# `type()`); any comparison CPython short-circuits on identity before calling `__eq__` — list/tuple `in`, `==`,
+# `index` and `count` on an identity hit (research's stage 2; a set or dict reaches `__hash__` and counts); and
+# operators neither `Site` nor the stand-in defines, which raise TypeError identically in both. Harmless in behaviour —
+# identity is faithful per declaration, so no decision can diverge through it — and pinned as uncounted
+# (test_r14_the_named_residual_is_uncounted_and_its_neighbours_count), so this list cannot go stale silently.
 STUB = '''"""INV-7 twin stub: the census module with NOTHING MEASURED — the harness surface, and `declare_site`
-answering each declaration with its own INERT stand-in (round 14). A stand-in answers every member the real Site
-defines, compares by identity like it, records nothing, and COUNTS every use — any attribute access and every
-type-level protocol — so the capture can assert the twin measured nothing: inert_calls() must read 0 and
-registry() stays empty."""
+answering each declaration with its own INERT stand-in (round 14): a class named Site, like the real one, that
+answers every member the real Site defines, compares by identity like it, records nothing, and COUNTS every use —
+any attribute access but `__class__`, every method call however reached, and every type-level protocol — so the
+capture can assert the twin measured nothing: inert_calls() must read 0 and registry() stays empty."""
 import threading as _threading
 
 _ENABLED = False
@@ -876,7 +887,7 @@ def _count():
 _get = object.__getattribute__
 
 
-class _InertSite:
+class Site:
     __slots__ = ("site_id", "consulted", "fired", "errors", "_lock", "_declines", "failures")
 
     def __init__(self, site_id, declines=None):
@@ -885,7 +896,8 @@ class _InertSite:
             object.__setattr__(self, k, v)
 
     def __getattribute__(self, name):
-        _count()
+        if name != "__class__":
+            _count()
         return _get(self, name)
 
     def __setattr__(self, name, value):
@@ -897,6 +909,7 @@ class _InertSite:
         object.__delattr__(self, name)
 
     def declined(self, decision):
+        _count()
         d = _get(self, "_declines")
         if d is None:
             return decision is None or decision is False or isinstance(decision, BaseException)
@@ -905,21 +918,25 @@ class _InertSite:
         return decision is d
 
     def _bump(self, field):
-        pass
+        _count()
 
     def consult(self):
+        _count()
         return self
 
     def _measurement_failed(self, exc):
-        pass
+        _count()
 
     def fire(self, decision, label=None, *, declined=None):
+        _count()
         return decision
 
     def counters(self):
+        _count()
         return {"consulted": _get(self, "consulted"), "fired": _get(self, "fired"), "errors": _get(self, "errors")}
 
     def failure_kinds(self):
+        _count()
         return dict(_get(self, "failures"))
 
     def __enter__(self):
@@ -968,7 +985,7 @@ class _InertSite:
 
 
 def declare_site(site_id, declines=None):
-    return _InertSite(site_id, declines)
+    return Site(site_id, declines)
 
 
 def inert_calls():

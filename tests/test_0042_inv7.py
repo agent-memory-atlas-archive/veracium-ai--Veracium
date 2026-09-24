@@ -1352,8 +1352,13 @@ _R12_CELLS = [
     ("F1-surface-no-declare-site-name-live",
      "from .census import enabled\n\ndef f():\n    return enabled()\n",
      ("works", False)),
+    # round 14 (the faithful-class decision, 2026-09-24): the STUB's stand-in class is named Site, so Site is a name the
+    # STUB answers and its import WORKS; the boundary cell names a real-census name the STUB still does not define
+    ("surface-name-site-the-stub-now-defines",
+     "from .census import declare_site, Site\nS = declare_site('s')\n\ndef f():\n    return isinstance(S, Site)\n",
+     ("works", True)),
     ("boundary-surface-name-the-stub-does-not-define",
-     "from .census import declare_site, Site\nS = declare_site('s')\n\ndef f():\n    return 1\n",
+     "from .census import declare_site, CensusError\nS = declare_site('s')\n\ndef f():\n    return 1\n",
      ("refuses", "STUB")),
     ("boundary-declare-site-imported-under-another-name",
      "from .census import declare_site as ds\nS = ds('s')\n\ndef f():\n    return 1\n",
@@ -1988,7 +1993,7 @@ _R14_V1_STUB = (
 
 def _r14_stub_module(text):
     import types
-    mod = types.ModuleType("r14_stub")
+    mod = types.ModuleType("veracium.census")          # the name the twin's STUB runs under; never put in sys.modules
     exec(compile(text, "<r14 stub>", "exec"), mod.__dict__)
     return mod
 
@@ -2005,8 +2010,14 @@ def _r14_surface_problems(stub):
     import inspect
     import veracium.census as C
     assert C.enabled() is False                            # the premise the value comparisons stand on
-    I = stub._InertSite
+    I = type(stub.declare_site("r14.cls"))                  # type() is not a use, so this reads v1 and v2 alike
     problems = [f"missing {n}" for n in sorted(set(dir(C.Site)) - set(dir(I)))]
+    # FAITHFUL CLASS (Quentin's decision, 2026-09-24): `__class__` is not counted, so what it answers must be the source's
+    for attr in ("__name__", "__qualname__", "__module__"):
+        if getattr(I, attr) != getattr(C.Site, attr):
+            problems.append(f"class {attr} {getattr(I, attr)!r} != {getattr(C.Site, attr)!r}")
+    if repr(stub.declare_site("r14.repr")).split(" at ")[0] != repr(C.Site("r14.repr")).split(" at ")[0]:
+        problems.append("repr differs")
     if getattr(I, "__slots__", None) != C.Site.__slots__:
         problems.append(f"slots {getattr(I, '__slots__', None)!r} != {C.Site.__slots__!r}")
     for name, fn in vars(C.Site).items():
@@ -2079,9 +2090,20 @@ def _r14_counting_problems(stub):
         with s:
             pass
 
+    import inspect
     for name in sorted(dir(C.Site)):
+        if name == "__class__":
+            continue                                        # exempt, asserted in the acceptance half below
         if not moved(lambda s: getattr(s, name)):
             problems.append(f"reading .{name} did not count")
+    # every method the real Site defines, called THROUGH THE CLASS (`type(S).counters(S)`) — no instance attribute is
+    # read, so only the method body's own count can see it
+    for name, fn in sorted(vars(C.Site).items()):
+        if inspect.isfunction(fn) and not (name.startswith("__") and name.endswith("__")):
+            n_args = sum(1 for p in list(inspect.signature(fn).parameters.values())[1:]
+                         if p.default is inspect.Parameter.empty and p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD))
+            if not moved(lambda s: getattr(type(s), name)(s, *[None] * n_args)):
+                problems.append(f"type(S).{name}(S) did not count")
     for dunder, label, op in _R14_PROTOCOL_OPS + [("__enter__", "a with statement", with_block),
                                                   ("__reduce_ex__", "copy.copy", copy.copy), ("__reduce_ex__", "pickle", pickle.dumps),
                                                   ("__dict__", "dir()", dir)]:
@@ -2090,10 +2112,14 @@ def _r14_counting_problems(stub):
     if moved(with_block) < 2:
         problems.append("a with statement counted fewer than both bracket dunders")
     # the OVERRIDES: dunder FUNCTIONS the class defines (copyreg caches `__slotnames__` on it once copy has run)
-    defined = {n for n, v in vars(stub._InertSite).items() if n.startswith("__") and n.endswith("__") and callable(v)}
+    defined = {n for n, v in vars(type(stub.declare_site("r14.cls"))).items() if n.startswith("__") and n.endswith("__") and callable(v)}
     exempt = {"__init__", "__getattribute__"}              # construction, and the counter itself (every name read above)
     problems += [f"{n} is overridden with no row in _R14_PROTOCOL_OPS" for n in sorted(defined - exempt - {d for d, _, _ in _R14_PROTOCOL_OPS})]
-    for label, op in [("binding", lambda s: [s, (s,), {"k": s}]), ("identity", lambda s: (s is s, id(s), type(s)))]:
+    for label, op in [("binding", lambda s: [s, (s,), {"k": s}]), ("identity", lambda s: (s is s, id(s), type(s))),
+                      ("reading __class__", lambda s: s.__class__),
+                      # pydantic 2.7's model construction over a module namespace (CI's floor lane, 9fc74c2): the
+                      # failed type check falls back to reading __class__
+                      ("isinstance against an unrelated class", lambda s: isinstance(s, KeyError))]:
         if moved(op):
             problems.append(f"{label} COUNTED — a twin that only keeps its declarations bound would fail the gate")
     return problems
@@ -2108,14 +2134,17 @@ def test_r14_k1_the_stand_in_answers_every_member_the_real_site_defines(tmp_path
     assert _r14_surface_problems(_r14_stub_module(un.STUB)) == []
     v1 = _r14_surface_problems(_r14_stub_module(_R14_V1_STUB))
     assert {"missing failures", "missing declined", "missing counters", "missing failure_kinds"} <= set(v1), v1
-    b = _R14_SELF + ("def f():\n    return (S.failures, S.counters(), S.failure_kinds(), S.declined(None), S.declined(1),\n"
-                     "            S.site_id, S.consulted, S.fired, S.errors, S.fire(4))\n")
+    # ...and the class itself, imported by name (a class the STUB defines is a name it answers): isinstance and type()
+    # read as the source's, the faithful-class decision (2026-09-24)
+    b = _R14_SELF + ("from .census import Site\n\n\n"
+                     "def f():\n    return (S.failures, S.counters(), S.failure_kinds(), S.declined(None), S.declined(1),\n"
+                     "            S.site_id, S.consulted, S.fired, S.errors, S.fire(4), isinstance(S, Site), type(S).__name__)\n")
     src = _r13_pkg(tmp_path, "k1", b, "")
     out = tmp_path / "k1" / "twin" / "vpkg"
     un.derive(src, out)
     assert un.verify(out, src) == []
     ran_src, ran_twin = _r13_run_b(src.parent), _r13_run_b(out.parent)
-    assert ran_src.stdout == "({}, {'consulted': 0, 'fired': 0, 'errors': 0}, {}, True, False, 'b.s', 0, 0, 0, 4)\n", ran_src.stdout + ran_src.stderr
+    assert ran_src.stdout == "({}, {'consulted': 0, 'fired': 0, 'errors': 0}, {}, True, False, 'b.s', 0, 0, 0, 4, True, 'Site')\n", ran_src.stdout + ran_src.stderr
     assert (ran_twin.returncode, ran_twin.stdout) == (0, ran_src.stdout), ran_twin.stderr[-400:]
 
 
@@ -2127,6 +2156,29 @@ def test_r14_k2_every_use_of_a_stand_in_counts():
     assert _r14_counting_problems(_r14_stub_module(un.STUB)) == []
     v1 = _r14_counting_problems(_r14_stub_module(_R14_V1_STUB))
     assert {"reading .site_id did not count", "hash() did not count", "a dict key did not count", "repr() did not count"} <= set(v1), v1
+
+
+def test_r14_the_named_residual_is_uncounted_and_its_neighbours_count():
+    """The source NAMES what the stand-in cannot count (the comment above inv7_uninstrument.STUB); this pins that list
+    as EXECUTED, in both directions, so the prose cannot drift from the stand-in: every named residual counts 0, and
+    its nearest counted neighbour counts (research's stage 2: CPython short-circuits list/tuple comparison on identity
+    before calling __eq__; a set or dict reaches __hash__). If a future stand-in starts counting a residual, this
+    fails and the comment is revisited."""
+    un = _load("inv7_uninstrument_r14_resid", EVIDENCE / "inv7_uninstrument.py")
+    stub = _r14_stub_module(un.STUB)
+    a, b = stub.declare_site("r14.a"), stub.declare_site("r14.b")
+    residual = {"is": lambda: a is b, "id()": lambda: id(a), "type()": lambda: type(a),
+                "list in (identity hit)": lambda: a in [a, b], "tuple in (identity hit)": lambda: a in (a, b),
+                "list ==": lambda: [a] == [a], "tuple ==": lambda: (a,) == (a,),
+                "list.index": lambda: [a].index(a), "list.count": lambda: [a].count(a)}
+    counted = {"list in (reaches another first)": lambda: b in [a, b], "set in": lambda: a in {a}, "dict key": lambda: {a: 1}[a]}
+    got = {}
+    for label, op in {**residual, **counted}.items():
+        n0 = stub.inert_calls(); op(); got[label] = stub.inert_calls() - n0
+    assert {k: got[k] for k in residual} == dict.fromkeys(residual, 0), got
+    assert all(got[k] >= 1 for k in counted), got
+    text = (EVIDENCE / "inv7_uninstrument.py").read_text()
+    assert "short-circuits on identity" in text and "test_r14_the_named_residual_is_uncounted_and_its_neighbours_count" in text
 
 
 def test_r14_k2_a_twin_arm_that_touches_a_stand_in_fails_the_harness_gate(tmp_path):
