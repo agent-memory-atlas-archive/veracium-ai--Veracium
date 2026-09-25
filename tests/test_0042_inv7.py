@@ -2453,6 +2453,98 @@ def test_r18_the_function_fields_compared_are_derived_per_interpreter():
     assert got == want, (sys.version_info[:2], sorted(got ^ want))
 
 
+# ---- round 19: the ROUND-18 VERDICT — identity, not names --------------------------------------------------------------
+# The verdict: `class tuple(tuple)` overriding __contains__, rebound as Site.__slots__ and the name deleted, read as the
+# built-in tuple on both routes, in derive(), verify() and the runtime gate. The normaliser trusted CLAIMS — isinstance(),
+# `__module__ == "builtins"`, a qualname — and every one can be made by Python code. A type is now described by name only
+# when Py_TPFLAGS_IMMUTABLETYPE is set (Python code cannot create such a type, nor write its name); every other type is
+# described in full, and a subclass's content is read through the immutable base's own methods.
+_R19_WITNESS = ("class tuple(tuple):\n    def __contains__(self, item):\n        return False\n"
+                "Site.__slots__ = tuple(Site.__slots__)\ndel tuple")
+_R19_SPOOF = _R19_WITNESS.replace("class tuple(tuple):\n", "class tuple(tuple):\n    __module__ = 'builtins'\n    __qualname__ = 'tuple'\n", 1)
+_R19_CELLS = [
+    ("the verdict's witness: a tuple subclass named tuple as Site.__slots__", None, _r17_after(_R19_WITNESS), "B"),
+    ("the spoof: the subclass also claims module builtins and qualname tuple", None, _r17_after(_R19_SPOOF), "B"),
+    ("a str subclass NAMED str with an overriding __eq__, where T holds a real str", _r17_after("Site.label = 'x'"),
+     lambda s: s.replace("Site.label = 'x'", "class str(str):\n    def __eq__(self, o):\n        return True\n    __hash__ = str.__hash__\nSite.label = str('x')\ndel str", 1), "B"),
+    ("an int subclass NAMED int, where T holds a real int", _r17_after("Site.limit = 3"),
+     lambda s: s.replace("Site.limit = 3", "class int(int):\n    pass\nSite.limit = int(3)\ndel int", 1), "B"),
+    ("a dict subclass NAMED dict overriding get, where T holds a real dict", _r17_after("Site.table = {'a': 1}"),
+     lambda s: s.replace("Site.table = {'a': 1}", "class dict(dict):\n    def get(self, k, d=None):\n        return 0\nSite.table = dict({'a': 1})\ndel dict", 1), "B"),
+]
+
+
+@pytest.mark.parametrize("cell,prepare,edit,routes", _R19_CELLS, ids=[c[0] for c in _R19_CELLS])
+def test_r19_a_subclass_is_never_read_as_the_builtin_it_names(cell, prepare, edit, routes, tmp_path):
+    """The round-18 verdict's class, each cell asserting the verdict first (site_drift, which the round-18 pin has)."""
+    test_r17_site_drift_reads_the_definition_and_the_realized_class(cell, prepare, edit, routes, tmp_path)
+
+
+def test_r19_an_equal_real_builtin_is_not_drift():
+    """The acceptance half: Site.__slots__ rebound to an EQUAL real tuple is the same class — not drift."""
+    un = _load("inv7_uninstrument_r19a", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    assert un.site_drift(_r17_after("Site.__slots__ = tuple(Site.__slots__)")(ref), ref) == []
+
+
+def test_r19_the_immutable_criterion_per_interpreter():
+    """The one property the rule trusts, pinned on this interpreter: set on the built-ins route B meets and on C types
+    (heap ones included), CLEAR on every class Python code makes — the spoof, a plain class, a metaclass-built one — and
+    an immutable type's name cannot be written."""
+    import re as _re
+    import threading
+    import types
+    un = _load("inv7_uninstrument_r19i", EVIDENCE / "inv7_uninstrument.py")
+
+    class _Spoof(tuple):
+        __module__ = "builtins"; __qualname__ = "tuple"
+
+    class _Meta(type):
+        pass
+    for tp in (tuple, list, dict, str, int, type, object, types.FunctionType, types.CellType, types.MappingProxyType,
+               types.CodeType, type(threading.Lock()), _re.Pattern):
+        assert un._immutable(tp), tp
+    for tp in (_Spoof, type("_Plain", (), {}), _Meta("_Built", (), {})):
+        assert not un._immutable(tp), tp
+    with pytest.raises(TypeError):
+        tuple.__qualname__ = "not tuple"
+
+
+def test_r19_the_runtime_gate_reads_the_witness_and_the_spoof_as_different():
+    """The runtime gate digests site_description in each arm; the verdict says it accepted the witness. Read the way the
+    observer reads it — the Site each census builds, described and digested — the witness and the spoof now differ from
+    T's."""
+    un = _load("inv7_uninstrument_r19g", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    digest = lambda text: un.site_description_digest(un.site_description(un._realized_site(text, "_x")))["digest"]
+    for body in (_R19_WITNESS, _R19_SPOOF):
+        assert digest(_r17_after(body)(ref)) != digest(ref), body[:40]
+
+
+def test_r19_a_census_rebinding_a_builtin_cannot_reach_the_transform(tmp_path):
+    """The second seat's stage-1 read: route B used to exec each census INSIDE the transform, so `import builtins;
+    builtins.tuple = …` in HEAD's census rebound the transform's own built-ins (a __builtins__ copy does not isolate —
+    `import builtins` returns the real module). It now runs in an isolated interpreter: the transform's built-ins are
+    untouched, and derive() and verify() behave exactly as without the line."""
+    import builtins
+    un = _load("inv7_uninstrument_r19b", EVIDENCE / "inv7_uninstrument.py")
+    real = builtins.tuple
+    ref = un.REFERENCE_CENSUS.read_text()
+    polluting = _r17_after("import builtins as _b\n_b.tuple = list")(ref)
+    try:
+        assert un.site_drift(polluting, ref) == []
+        assert builtins.tuple is real, "the census rebound the TRANSFORM's built-ins"
+        for tag, census_text in (("clean", ref), ("polluting", polluting)):
+            src = _r13_pkg(tmp_path, tag, _R14_SELF + "def f():\n    return 1\n", "")
+            (src / "census.py").write_text(census_text)
+            out = tmp_path / tag / "twin" / "vpkg"
+            un.derive(src, out)
+            assert un.verify(out, src) == [], tag
+            assert builtins.tuple is real, tag
+    finally:
+        builtins.tuple = real
+
+
 # ---- round 18, N-6: the Site each arm IMPORTED, compared at runtime --------------------------------------------------
 # site_drift reads both censuses in the TRANSFORM's process, so a change to Site made after the class and CONDITIONAL on
 # the arm's runtime state (its environment, what it imports) is seen by neither route. The observer now digests route B's

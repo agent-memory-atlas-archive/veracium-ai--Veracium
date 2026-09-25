@@ -173,30 +173,70 @@ def _data_descriptors(tp: type) -> list:
     return names
 
 
+# ROUND 19 — IDENTITY, NOT NAMES (the round-18 verdict; the second seat's stage-1 read). The round-18 rule matched scalars
+# and containers by isinstance() and described a type in `builtins` by NAME, so `class tuple(tuple)` overriding
+# __contains__, rebound as Site.__slots__, read as the built-in tuple on both routes and at runtime. A name is a CLAIM —
+# __module__ and __qualname__ are writable on any class Python code creates. What Python code CANNOT fake is
+# Py_TPFLAGS_IMMUTABLETYPE (1 << 8, 3.10+): set on every type Python code cannot create (the built-ins, and C types such
+# as _thread.lock and re.Pattern, heap types included), and an immutable type's __module__ and __qualname__ cannot be
+# written. So a type is described BY NAME only if it is immutable; every other type is described by this same rule.
+_IMMUTABLE_TYPE = 1 << 8
+_SCALARS = frozenset({"str", "bytes", "int", "float", "complex", "bool", "NoneType", "ellipsis"})
+_SEQUENCES = frozenset({"tuple", "list"})
+_SETS = frozenset({"set", "frozenset"})
+_MAPPINGS = frozenset({"dict", "mappingproxy"})
+
+
+def _immutable(tp: type) -> bool:
+    return bool(type.__dict__["__flags__"].__get__(tp) & _IMMUTABLE_TYPE)
+
+
+def _builtin(tp: type, names: frozenset) -> bool:
+    """IS `tp` the built-in of that name — by the immutable flag (unforgeable) and the name it then cannot fake."""
+    return _immutable(tp) and tp.__module__ == "builtins" and tp.__qualname__ in names
+
+
+def _base_content(obj, tp: type, seen: dict):
+    """An instance of a MUTABLE subclass of a built-in scalar or container: its content read through the IMMUTABLE BASE's
+    own methods (tuple.__iter__, dict.items, str.__repr__), never the subclass's, which may override them."""
+    for b in tp.__mro__[1:]:
+        if _builtin(b, _SEQUENCES):
+            return (b.__qualname__, tuple(_normalise(x, seen) for x in b.__iter__(obj)))
+        if _builtin(b, _SETS):
+            return (b.__qualname__, tuple(sorted(repr(_normalise(x, seen)) for x in b.__iter__(obj))))
+        if _builtin(b, _MAPPINGS):
+            return (b.__qualname__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in b.items(obj)))
+        if _builtin(b, _SCALARS):
+            return (b.__qualname__, b.__repr__(obj))
+    return None
+
+
 def _normalise(obj, seen: dict) -> tuple:
-    """ANY object: its type's qualname and EVERY data descriptor along its type's MRO — read-only ones included, because a
-    read-only field can hold writable state (a staticmethod's __func__; a closure's cells) — each value normalised by this
-    same rule; containers element-wise; a code object by every non-callable co_* field except its location; a built-in
-    type by name; a leaf (no data descriptors) by address-free repr. An object met again is recorded by the position at
-    which it was first described, so equal structures stay equal and cycles end."""
-    import types
-    if isinstance(obj, (str, bytes, int, float, complex, bool, type(None), type(Ellipsis))):
-        return (type(obj).__name__, repr(obj))
+    """ANY object by what it IS: a built-in scalar or container — by the immutable flag, never isinstance — by value or
+    element-wise; a code object by every non-callable co_* field except its location; a CLASS by module and qualname only
+    if it is immutable, else by this same rule; anything else by its TYPE's identity (by name if immutable, described
+    in full if not), EVERY data descriptor along its type's MRO (read-only included — a read-only field can hold
+    writable state), each normalised recursively, and — for a mutable subclass of a built-in — its content read through
+    the base's own methods. A leaf with no data descriptors keeps its address-free repr. An object met again is
+    recorded by the position at which it was first described, so equal structures stay equal and cycles end."""
+    tp = type(obj)
+    if _builtin(tp, _SCALARS):
+        return (tp.__qualname__, repr(obj))
     if id(obj) in seen:
         return ("<ref>", seen[id(obj)])
     seen[id(obj)] = len(seen)
-    tp = type(obj)
-    if isinstance(obj, type) and obj.__module__ == "builtins":
-        return ("builtin-type", obj.__qualname__)
-    if isinstance(obj, (tuple, list)):
-        return (tp.__name__, tuple(_normalise(x, seen) for x in obj))
-    if isinstance(obj, (set, frozenset)):
-        return (tp.__name__, tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
-    if isinstance(obj, (dict, types.MappingProxyType)):
-        return (tp.__name__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()))
-    if isinstance(obj, types.CodeType):
+    if issubclass(tp, type) and _immutable(obj):
+        return ("immutable-type", obj.__module__, obj.__qualname__)
+    if _builtin(tp, _SEQUENCES):
+        return (tp.__qualname__, tuple(_normalise(x, seen) for x in obj))
+    if _builtin(tp, _SETS):
+        return (tp.__qualname__, tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
+    if _builtin(tp, _MAPPINGS):
+        return (tp.__qualname__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()))
+    if _builtin(tp, frozenset({"code"})):
         fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
         return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
+    identity = ("immutable-type", tp.__module__, tp.__qualname__) if _immutable(tp) else ("class", _normalise(tp, seen))
     fields = []
     for n in _data_descriptors(tp):
         if n in _NAMESPACE_REFS:
@@ -209,9 +249,10 @@ def _normalise(obj, seen: dict) -> tuple:
         if n == "__flags__" and isinstance(v, int):
             v = v & ~_CACHE_BIT
         fields.append((n, _normalise(v, seen)))
-    if not fields:
-        return (tp.__qualname__, _addressless(repr(obj)))
-    return (tp.__qualname__, tuple(fields))
+    content = None if _immutable(tp) else _base_content(obj, tp, seen)
+    if not fields and content is None:
+        return (identity, _addressless(repr(obj)))
+    return (identity, tuple(fields), content)
 
 
 def _normal_code(co) -> tuple:
@@ -254,9 +295,11 @@ def _type_level_value(cls, name):
     except AttributeError:
         return ("<unset>",)
     if name in ("__mro__", "__bases__"):
-        return tuple(c.__qualname__ for c in v)
+        # a class reference by an identity it cannot fake: an immutable class by module and qualname; a mutable one is
+        # marked as such here and described in full in its own `base.` entry
+        return tuple((c.__module__, c.__qualname__) if _immutable(c) else ("mutable class", c.__qualname__) for c in v)
     if name == "__base__":
-        return getattr(v, "__qualname__", repr(v))
+        return (v.__module__, v.__qualname__) if isinstance(v, type) and _immutable(v) else ("mutable class", getattr(v, "__qualname__", repr(v)))
     if name == "__flags__":
         # the attribute-cache bit masked (_CACHE_BIT above); found by dev building round 18's cells, 2026-09-25
         return ("int", v & ~_CACHE_BIT)
@@ -276,9 +319,10 @@ def site_description(cls) -> list:
     out += [(f"vars.{k}", _normal_value(x, {id(cls): 0})) for k, x in v.items()]
     # every NON-built-in base, described by the same rule (a base's content is inherited behaviour; route A does not see
     # a base class defined outside Site's own ClassDef)
-    out += [(f"base.{b.__qualname__}", _normalise(b, {id(cls): 0})) for b in cls.__mro__[1:] if b.__module__ != "builtins"]
+    out += [(f"base.{i}", _normalise(b, {id(cls): 0})) for i, b in enumerate(cls.__mro__[1:], 1) if not _immutable(b)]
     out += [(f"type.{n}", _type_level_value(cls, n)) for n in _type_level_fields(type(cls))]
-    out.append(("metaclass", type(cls).__qualname__))
+    meta = type(cls)
+    out.append(("metaclass", (meta.__module__, meta.__qualname__) if _immutable(meta) else _normalise(meta, {id(cls): 0})))
     return out
 
 
@@ -288,14 +332,53 @@ def site_description_digest(desc: list) -> dict:
     return {"digest": hashlib.sha256(repr(entries).encode()).hexdigest(), "entries": entries}
 
 
+_ISOLATED_CHILD = """
+import builtins, importlib.util, inspect, json, re, sys, types
+spec = importlib.util.spec_from_file_location("_inv7_uninstrument_isolated", sys.argv[1])
+un = importlib.util.module_from_spec(spec); spec.loader.exec_module(un)
+write, dumps = sys.stdout.write, json.dumps          # bound BEFORE the census runs
+bdict = vars(builtins); saved = dict(bdict)          # a census may rebind a built-in; the DESCRIBER must not see it
+site = un._realized_site(sys.stdin.read(), "_inv7_head_census")
+bdict.clear(); bdict.update(saved)                   # bound names only: `vars` itself is a built-in
+if not isinstance(site, type):
+    write(dumps("the census does not build a class named Site")); sys.exit(0)
+write(dumps([[k, repr(v)] for k, v in un.site_description(site)]))
+"""
+
+
+def _described_in_isolation(census_text: str):
+    """ROUTE B's reading of the Site a census builds, made in a FRESH interpreter (`python -I`, no user site, no
+    PYTHONPATH) and returned as data — [(entry, repr of its normalised value)], or a string saying why it could not be
+    made. The transform process never executes census code: a census that rebinds a built-in (`import builtins;
+    builtins.tuple = …`) changes only the child (round 19, the second seat's stage-1 read: a __builtins__ copy does not
+    isolate, because `import builtins` returns the real module), and inside the child the builtins module is restored
+    after the census runs, so the describer reads with the real built-ins.
+    A DESIGN ASSUMPTION, stated by its scope, not a gap of this route: describing an object needs the object, and the
+    object needs the process that ran the census, so census code can reach the describer — a census that patches it
+    forges its own description in four lines, even with no import statement (the second seat's probe, round 19). The
+    same holds for the N-6 runtime gate and for the INV-7 trace itself: every arm runs census code in the process that
+    records it, and a census can rewrite its own arm's trace (executed round 19: four appended lines took a healthy arm
+    from 519 records to 0, its pytest still green). The measurement assumes census code CHANGES BEHAVIOUR and does not
+    ATTACK THE MEASUREMENT; route A, which reads only the ClassDef, is the one reading outside that assumption."""
+    import json
+    import subprocess
+    r = subprocess.run([sys.executable, "-I", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve())],
+                       input=census_text, capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        return f"the isolated interpreter exited {r.returncode}: {r.stderr.strip()[-300:]}"
+    out = json.loads(r.stdout, object_pairs_hook=_strict_pairs)       # 0026's evidence-boundary rule: never plain
+    return out if isinstance(out, str) else [tuple(e) for e in out]
+
+
 def _realized_drift(head_census: str, reference_census: str) -> list:
     """ROUTE B — the Site CLASS each census BUILDS, read by `site_description` and compared entry by entry. It sees what
     route A cannot: a module-level statement after the class (`Site.__doc__ = …`, `Site.fire.__defaults__ = …`,
     `setattr(Site, …)`, `Site.__qualname__ = …`), and a module-level name read at class creation whose VALUE differs."""
-    h, r = _realized_site(head_census, "_inv7_head_census"), _realized_site(reference_census, "_inv7_head_census")
-    if not isinstance(h, type) or not isinstance(r, type):
-        return ["Site: a census does not build a class named Site"]
-    hd, rd = dict(site_description(h)), dict(site_description(r))
+    h, r = _described_in_isolation(head_census), _described_in_isolation(reference_census)
+    for label, d in (("HEAD's", h), ("the reference", r)):
+        if isinstance(d, str):
+            return [f"Site: {label} census could not be described in an isolated interpreter — {d}"]
+    hd, rd = dict(h), dict(r)
     out = []
     for k in list(rd) + [k for k in hd if k not in rd]:
         if hd.get(k, "<absent>") == rd.get(k, "<absent>"):
