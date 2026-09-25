@@ -2199,6 +2199,96 @@ def test_r16_a_drifted_site_is_refused_and_t_must_advance(cell, edit, drift, tmp
         assert un.verify(out, src) == []
 
 
+# ---- round 17: the drift check read TWO ways -----------------------------------------------------------------------
+# The round-16 verdict: the drift check modelled Site's class body (an ORDERED sequence in which a name can repeat) as a
+# MAP, so a docstring moved below `__slots__`, or changed with T's text re-added later, read no drift while the source and
+# the reference answered `Site.__doc__` differently. The second seat's stage-1 read: whole-ClassDef equality is necessary
+# and NOT sufficient — a module-level statement after the class (`Site.__doc__ = …`) changes the class Site names with the
+# ClassDef equal. So drift is read two ways, and each cell names the route(s) that must see it: A, the DEFINITION as
+# written (the whole ClassDef); B, the class each census BUILDS when executed. A mutant removing either route fails a cell.
+_R17_DOC_SLOTS = re.compile(r'(class Site:\n)(    """One enforcement point.*?"""\n)(    __slots__ = \(.*?\)\n)', re.S)
+_R17_ENTER_EXIT = ("    def __enter__(self):\n        return self                           # the count happened in consult(); the bracket only scopes the body\n\n"
+                   "    def __exit__(self, exc_type, exc, tb):\n        return False                          # never swallows the decision's raise\n")
+_R17_AFTER = "\ndef _label_of(decision) -> str:"
+
+
+def _r17_after(line):
+    return lambda s: s.replace(_R17_AFTER, "\n" + line + "\n\n" + _R17_AFTER, 1)
+
+
+def _r17_sub(pattern, fn):
+    def edit(s):
+        assert len(pattern.findall(s)) == 1, "the cell's anchor must match exactly once"
+        return pattern.sub(fn, s, count=1)
+    return edit
+
+
+def _r17_swap_enter_exit(s):
+    a, b = _R17_ENTER_EXIT.split("\n\n")
+    assert s.count(_R17_ENTER_EXIT) == 1
+    return s.replace(_R17_ENTER_EXIT, b + "\n" + a + "\n")
+
+
+_R17_BASE_X = ("class _X:\n    def __new__(cls, *a):\n        return a[0] if a and isinstance(a[0], type) else super().__new__(cls)\n\n\n")
+_R17_CELLS = [
+    # (cell, prepare BOTH sides (None: T as is), HEAD's edit, the route(s) that must see it)
+    ("the verdict's first: the docstring moved below __slots__", None,
+     _r17_sub(_R17_DOC_SLOTS, lambda m: m.group(1) + m.group(3) + m.group(2)), "AB"),
+    ("the verdict's second: the docstring changed and T's text re-added later", None,
+     _r17_sub(_R17_DOC_SLOTS, lambda m: m.group(1) + '    """A DIFFERENT docstring."""\n' + m.group(3) + m.group(2)), "AB"),
+    ("a duplicate method BEFORE the original (the original wins: behaviour-neutral, still drift)", None,
+     lambda s: s.replace("    def failure_kinds(self) -> dict:", "    def failure_kinds(self) -> dict:\n        return {}\n\n    def failure_kinds(self) -> dict:", 1), "A"),
+    ("two methods swapped (behaviour-neutral order, still drift)", None, _r17_swap_enter_exit, "AB"),
+    ("post-class: Site.__doc__ assigned", None, _r17_after("Site.__doc__ = 'changed after the class'"), "B"),
+    ("post-class: Site.fire's defaults replaced", None, _r17_after("Site.fire.__defaults__ = ('changed',)"), "B"),
+    ("post-class: setattr(Site, 'extra', 1)", None, _r17_after("setattr(Site, 'extra', 1)"), "B"),
+    ("post-class: Site.fire rebound", None, _r17_after("Site.fire = Site.__enter__"), "B"),
+    ("a module-level name read at class creation, with a different VALUE",
+     lambda s: s.replace("class Site:", "_SLOT_EXTRA = ()\n\n\nclass Site:", 1).replace('"_declines", "failures")', '"_declines", "failures") + _SLOT_EXTRA', 1),
+     lambda s: s.replace("_SLOT_EXTRA = ()", "_SLOT_EXTRA = ('extra',)", 1), "B"),
+    ("a base class X in T, a decorator X in HEAD (the header compared by field, not as one string)",
+     lambda s: s.replace("class Site:", _R17_BASE_X + "class Site(_X):", 1),
+     lambda s: s.replace("class Site(_X):", "@_X\nclass Site:", 1), "AB"),
+]
+
+
+@pytest.mark.parametrize("cell,prepare,edit,routes", _R17_CELLS, ids=[c[0] for c in _R17_CELLS])
+def test_r17_site_drift_reads_the_definition_and_the_realized_class(cell, prepare, edit, routes, tmp_path):
+    """Each cell's change is drift, seen by EXACTLY the route(s) it names; the union is site_drift. A cell that edits
+    T's census alone also runs derive (which must refuse, "T must advance"); a cell that must prepare BOTH sides (T has
+    no base class or module-level slot name to vary) reads site_drift on the pair, since T is pinned."""
+    un = _load("inv7_uninstrument_r17", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    base = prepare(ref) if prepare else ref
+    assert base != ref or prepare is None
+    head = edit(base)
+    assert head != base, (cell, "the edit changed nothing")
+    assert un.site_drift(base, base) == [], (cell, "the prepared reference drifts from itself")
+    # the VERDICT first, through the name the round-16 pin also has, so at that pin the cell fails on the defect itself
+    # (site_drift reads [] for the change) and not on a name round 17 introduced
+    found = un.site_drift(head, base)
+    assert found, (cell, "site_drift read NO drift for a change to Site's definition")
+    if prepare is None:
+        src = _r13_pkg(tmp_path, "r17", _R14_SELF + "def f():\n    return 1\n", "")
+        (src / "census.py").write_text(head)
+        with pytest.raises(un.Refused, match="T must advance"):
+            un.derive(src, tmp_path / "r17" / "twin" / "vpkg")
+    a, b = un._definition_drift(head, base), un._realized_drift(head, base)
+    assert (bool(a), bool(b)) == ("A" in routes, "B" in routes), (cell, a, b)
+    assert found == a + b
+
+
+def test_r17_formatting_is_not_drift_on_either_route():
+    """The acceptance half: comments and blank lines inside and after Site are not drift (site_drift is the union of the
+    two routes, so an empty union is an empty route each)."""
+    un = _load("inv7_uninstrument_r17f", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    head = ref.replace("    def failure_kinds(self) -> dict:", "    # a comment\n\n    def failure_kinds(self) -> dict:", 1)
+    head = head.replace(_R17_AFTER, "\n# a comment after the class\n" + _R17_AFTER, 1)
+    assert head != ref
+    assert un.site_drift(head, ref) == []
+
+
 # THE SEPARATING TEST (research's stage-1 condition 1, run first in scratch before any code): the reviewer's class of
 # defect — census DECLARATION-time code that changes a later decision — against the round-15 construction and the round-16
 # one. The mutant: declare_site, when declaring 'authority.permitted', raises third-party authority in the declaring

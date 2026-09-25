@@ -89,13 +89,19 @@ def reference_census_bytes() -> bytes:
     return data
 
 
+def _site_classdef(text: str):
+    cls = [n for n in ast.parse(text).body if isinstance(n, ast.ClassDef) and n.name == "Site"]
+    return cls[0] if len(cls) == 1 else None
+
+
 def _site_members(text: str) -> dict:
-    tree = ast.parse(text)
-    cls = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "Site"]
-    if len(cls) != 1:
-        return {"<class Site>": f"{len(cls)} module-level class definition(s) named Site"}
+    """A per-member reading of Site's body — the DIAGNOSTIC only, never the verdict (round 17: as a verdict it lost
+    statement order and let a later statement shadow an earlier one under the same key)."""
+    cls = _site_classdef(text)
+    if cls is None:
+        return {"<class Site>": "not exactly one module-level class definition named Site"}
     out = {}
-    for n in cls[0].body:
+    for n in cls.body:
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             out[n.name] = ast.dump(n)
         elif isinstance(n, (ast.Assign, ast.AnnAssign)):
@@ -105,26 +111,102 @@ def _site_members(text: str) -> dict:
             out["<docstring>"] = ast.dump(n)
         else:
             out[f"<statement at line {n.lineno}>"] = ast.dump(n)
-    for n in cls[0].decorator_list + cls[0].bases + cls[0].keywords:
-        out.setdefault("<class header>", "")
-        out["<class header>"] += ast.dump(n)
+    return out
+
+
+def _definition_drift(head_census: str, reference_census: str) -> list:
+    """ROUTE A — Site's DEFINITION as written: the whole ClassDef, compared as one ast.dump. That is ordered, keeps
+    duplicate definitions, compares the header by field (decorators, bases and keywords apart) and the docstring by
+    position, and carries no line numbers, so a formatting-only change (comments, blank lines) is not drift."""
+    h, r = _site_classdef(head_census), _site_classdef(reference_census)
+    if h is None or r is None:
+        return [f"Site: {'HEAD' if h is None else 'the reference'} census does not define exactly one module-level class Site"]
+    if ast.dump(h) == ast.dump(r):
+        return []
+    out = []
+    for field in ("decorator_list", "bases", "keywords"):
+        if [ast.dump(x) for x in getattr(h, field)] != [ast.dump(x) for x in getattr(r, field)]:
+            out.append(f"Site's class header ({field}) differs from the reference census's")
+    hm, rm = _site_members(head_census), _site_members(reference_census)
+    out += [f"Site.{k}: in HEAD's census and not in the reference census" for k in sorted(set(hm) - set(rm))]
+    out += [f"Site.{k}: in the reference census and not in HEAD's" for k in sorted(set(rm) - set(hm))]
+    out += [f"Site.{k}: differs between HEAD's census and the reference census" for k in sorted(set(hm) & set(rm)) if hm[k] != rm[k]]
+    if not out:
+        # the member map cannot NAME this difference (an order change, or a duplicate a later statement shadows), so it
+        # is reported by POSITION: the diagnostic never goes silent while the verdict says drift
+        hb, rb = [ast.dump(n) for n in h.body], [ast.dump(n) for n in r.body]
+        k = next((i for i in range(min(len(hb), len(rb))) if hb[i] != rb[i]), min(len(hb), len(rb)))
+        out.append(f"Site's class body differs from the reference census's at statement {k} "
+                   f"({len(hb)} statements in HEAD's, {len(rb)} in the reference's): an order change or a duplicate definition")
+    return out
+
+
+def _normal_code(co) -> tuple:
+    """A code object with WHERE it was written removed (file, first line, line and position tables) and WHAT it does
+    kept: bytecode, names, constants — nested code objects normalised the same way, recursively."""
+    fields = [f for f in ("co_argcount", "co_posonlyargcount", "co_kwonlyargcount", "co_nlocals", "co_flags", "co_code",
+                          "co_names", "co_varnames", "co_freevars", "co_cellvars", "co_name", "co_qualname",
+                          "co_exceptiontable") if hasattr(co, f)]
+    consts = tuple(_normal_code(c) if hasattr(c, "co_code") else (type(c).__name__, repr(c)) for c in co.co_consts)
+    return tuple((f, getattr(co, f)) for f in fields) + (("co_consts", consts),)
+
+
+def _normal_value(v) -> tuple:
+    if isinstance(v, (staticmethod, classmethod)):
+        return (type(v).__name__, _normal_value(v.__func__))
+    if isinstance(v, property):
+        return ("property",) + tuple(_normal_value(f) for f in (v.fget, v.fset, v.fdel)) + (repr(v.__doc__),)
+    if hasattr(v, "__code__") and hasattr(v, "__defaults__"):
+        return ("function", _normal_code(v.__code__), repr(v.__defaults__), repr(v.__kwdefaults__),
+                repr(getattr(v, "__annotations__", None)), repr(v.__doc__), repr(sorted(vars(v).items())),
+                repr(tuple(c.cell_contents for c in (v.__closure__ or ()))))
+    if type(v).__name__ == "member_descriptor":
+        return ("slot", v.__name__)
+    return (type(v).__name__, repr(v))
+
+
+def _realized_site(text: str, name: str):
+    """T's or HEAD's census EXECUTED in its own fresh module namespace, inside the transform process — never inside an
+    arm — and its Site returned. Module-level code in census.py builds only its own state (locks, an empty registry)."""
+    import types
+    mod = types.ModuleType(name)
+    exec(compile(text, f"<{name}>", "exec"), mod.__dict__)
+    return mod.__dict__.get("Site")
+
+
+def _realized_drift(head_census: str, reference_census: str) -> list:
+    """ROUTE B — the Site CLASS each census BUILDS, compared attribute by attribute: its MRO by name, the keys of
+    vars(Site) in order, and each value normalised (functions by code, defaults, keyword defaults, annotations, doc,
+    attributes and closure; slots by name; anything else by type and repr). It sees what route A cannot: a module-level
+    statement after the class (`Site.__doc__ = …`, `Site.fire.__defaults__ = …`, `setattr(Site, …)`), and a module-level
+    name read at class creation whose VALUE differs."""
+    h, r = _realized_site(head_census, "_inv7_head_census"), _realized_site(reference_census, "_inv7_head_census")
+    if not isinstance(h, type) or not isinstance(r, type):
+        return ["Site: a census does not build a class named Site"]
+    out = []
+    if [c.__name__ for c in h.__mro__] != [c.__name__ for c in r.__mro__]:
+        out.append("Site's realized MRO differs from the reference census's")
+    hv, rv = dict(vars(h)), dict(vars(r))
+    out += [f"Site.{k} (realized): in HEAD's census and not in the reference census" for k in sorted(set(hv) - set(rv))]
+    out += [f"Site.{k} (realized): in the reference census and not in HEAD's" for k in sorted(set(rv) - set(hv))]
+    out += [f"Site.{k} (realized): differs between HEAD's census and the reference census" for k in sorted(set(hv) & set(rv))
+            if _normal_value(hv[k]) != _normal_value(rv[k])]
+    if not out and list(hv) != list(rv):
+        out.append("Site's realized attributes are in a different order from the reference census's")
     return out
 
 
 def site_drift(head_census: str, reference_census: str) -> list:
-    """Every way HEAD's Site differs from the reference census's Site, compared MEMBER BY MEMBER, by source (the AST of
-    each member, the class-body statements, the docstring and the class header), in BOTH directions (research's stage-1
-    condition 3): any change to Site's OWN definition is drift, and a formatting-only change is not. A change ELSEWHERE in
-    HEAD's census — a module-level helper a method calls — is NOT drift: it is census code under test, which the
-    reference arm does not carry, so the trace diff sees any decision it changes. Equal member ASTs build equal members
-    because T's Site evaluates no module-level name at class creation (measured at T by the second seat's round-16
-    pre-seal read; pinning that premise is queued). Empty means Site's definition is T's; anything else means T must
-    advance."""
-    h, r = _site_members(head_census), _site_members(reference_census)
-    out = [f"Site.{k}: in HEAD's census and not in the reference census" for k in sorted(set(h) - set(r))]
-    out += [f"Site.{k}: in the reference census and not in HEAD's" for k in sorted(set(r) - set(h))]
-    out += [f"Site.{k}: differs between HEAD's census and the reference census" for k in sorted(set(h) & set(r)) if h[k] != r[k]]
-    return out
+    """Every way HEAD's Site differs from the reference census's Site, read TWO independent ways (round 17, the round-16
+    verdict and the second seat's stage-1 read): ROUTE A compares Site's DEFINITION as written — the whole class, ordered,
+    duplicates kept — and ROUTE B compares the Site class each census BUILDS when executed. Drift is the UNION: either
+    route seeing a difference means Site's definition is not T's, and T must advance. Formatting-only changes are not
+    drift on either route. A change ELSEWHERE in HEAD's census — a module-level helper a method calls — is NOT drift: it
+    is census code under test, which the reference arm does not carry, so the trace diff sees any decision it changes;
+    and a Site method that runs in the reference arm is counted by the census-entry hook. Both routes are read under ONE
+    interpreter (ast.dump fields and code layout differ across versions). Empty means Site is T's; anything else means T
+    must advance."""
+    return _definition_drift(head_census, reference_census) + _realized_drift(head_census, reference_census)
 
 
 def _strict_pairs(pairs):
