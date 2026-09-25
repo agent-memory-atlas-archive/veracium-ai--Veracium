@@ -42,6 +42,54 @@ _BLOCK_NAME = {ast.Lambda: "lambda", ast.ListComp: "listcomp", ast.SetComp: "set
                ast.DictComp: "dictcomp", ast.GeneratorExp: "genexpr"}
 _INLINABLE = (ast.ListComp, ast.SetComp, ast.DictComp)      # no block from 3.12 (PEP 709)
 _COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+
+# ROUND 20 (the round-19 verdict's F2, and its class): the names the compiler puts in a COMPREHENSION'S block without an
+# ast.Name. ROUTE 1, CPython's source per version: symtable_visit_expr's Name case adds `__class__` as a USE whenever a
+# function-like block — and a comprehension's block is one — loads `super` (Python/symtable.c, v3.12.3 lines 2163-2168,
+# v3.13.15 lines 2293-2298: "Special-case super: it counts as a use of __class__"). Every other implicit name goes to a
+# block that is not a comprehension's: `.0` is its parameter (the merge skips parameters), and `__classdict__`,
+# `.type_params`, `.generic_base`, `.defaults`, `.kwdefaults` and `__type_params__` to type-parameter, annotation and
+# class blocks. ROUTE 2, the second seat's stdlib census, is run by tests/test_0042_scope_resolution.py and must find
+# nothing in a comprehension's block outside this set, `.0` and the mangled private names. Mangling is not an implicit
+# name but a SPELLING (_mangle below), and it applies to every explicit name.
+_IMPLICIT_IN_COMPREHENSION = {"super": "__class__"}
+# ROUTE 1 in full — every name Python/symtable.c adds to ANY block without an ast.Name (v3.12.3/v3.13.15: `.0` the
+# comprehension's implicit argument; `__class__` for a `super` load; `__classdict__`, `.type_params`, `.generic_base`,
+# `.defaults`, `.kwdefaults`, `__type_params__` for type-parameter, annotation and class blocks). The route-2 test holds
+# the stdlib's blocks to it; this is the superset the comprehension subset above was read from.
+_IMPLICIT_NAMES_ALL_BLOCKS = frozenset({".0", "__class__", "__classdict__", ".type_params", ".generic_base", ".defaults",
+                                        ".kwdefaults", "__type_params__"})
+
+
+def _mangle(private, name: str) -> str:
+    """CPython's _Py_Mangle (Python/symtable.c): inside a class, `__x` is spelled `_Class__x` in the symbol table —
+    unless it ends in `__` or holds a dot, or the class name is all underscores. `private` is the innermost enclosing
+    class's name (functions inherit it), or None at module level."""
+    if private is None or not name.startswith("__") or name.endswith("__") or "." in name:
+        return name
+    stripped = private.lstrip("_")
+    return "_" + stripped + name if stripped else name
+
+
+def _private_map(tree) -> dict:
+    """id(node) -> the class name that mangles its names: CPython's st_private, set on entering a class BODY and
+    inherited by every function and comprehension inside it; a class's decorators, bases and keywords are evaluated in
+    the enclosing scope. (Generic classes' type-parameter scopes, PEP 695, are not modelled: a comprehension there is
+    left to the join check, which refuses what the signature cannot fit.)"""
+    out: dict = {}
+
+    def visit(node, private):
+        out[id(node)] = private
+        if isinstance(node, ast.ClassDef):
+            for c in [*node.decorator_list, *node.bases, *node.keywords]:
+                visit(c, private)
+            for c in node.body:
+                visit(c, node.name)
+            return
+        for c in ast.iter_child_nodes(node):
+            visit(c, private)
+    visit(tree, None)
+    return out
 # Fields of a def/class statement evaluated in the ENCLOSING scope when the statement runs (round 12, S2-1).
 # Defaults and annotations live one level down, inside `ast.arguments`, and are split there.
 _DEFINITION_TIME_FIELDS = frozenset({"decorator_list", "bases", "keywords", "returns"})
@@ -169,6 +217,7 @@ class Resolver:
         self._owner: dict[int, symtable.SymbolTable] = {}
         self._comp_local: dict[int, frozenset] = {}
         self._joined: dict[tuple, list] = {}          # key -> [(node, block)] in the order the queue was drained
+        self._private = _private_map(self.tree)       # id(node) -> the class name its symbols are mangled with
         self._assign(self.tree, self.table)
         self._check_join()
 
@@ -190,21 +239,25 @@ class Resolver:
         return (block.get_type(), tuple(sorted((s.get_name(), s.is_parameter(), s.is_local(), s.is_global(),
                                                  s.is_free()) for s in block.get_symbols())))
 
-    @staticmethod
-    def _fits(node, block) -> bool:
+    def _fits(self, node, block) -> bool:
+        """Does `block` fit `node`? Compared in the SYMBOL TABLE'S spelling: names mangled as the compiler mangles
+        them (round 20 — the AST's `__p` in a method is `_C__p` there, so an unmangled signature refused a valid
+        same-line pair)."""
+        private = self._private.get(id(node))
         if isinstance(node, _COMPREHENSIONS):
             if block.get_type() != "function":
                 return False
             locals_ = {s.get_name() for s in block.get_symbols() if s.is_local() and not s.is_parameter()}
-            return Resolver._comprehension_signature(node) == locals_
+            return Resolver._comprehension_signature(node, private) == locals_
         if isinstance(node, (ast.Lambda, ast.FunctionDef, ast.AsyncFunctionDef)):
             a = node.args
             params = [x.arg for x in a.posonlyargs + a.args + a.kwonlyargs] + [x.arg for x in (a.vararg, a.kwarg) if x]
-            return block.get_type() == "function" and sorted(block.get_parameters()) == sorted(params)
+            return block.get_type() == "function" and sorted(block.get_parameters()) == sorted(
+                _mangle(private, x) for x in params)
         return True                                                       # a class is joined by its NAME already
 
     @staticmethod
-    def _comprehension_signature(node) -> frozenset:
+    def _comprehension_signature(node, private=None) -> frozenset:
         """The names a comprehension's own BLOCK holds as non-parameter locals, derived from the AST: its own targets
         and, on 3.12+, the targets of every INLINABLE comprehension nested in its body — PEP 709 merges an inlined
         comprehension's variables into the block that contains it (measured: `(x for x in a if [y for y in b])` holds
@@ -213,8 +266,8 @@ class Resolver:
         corroborates a pairing by the signature: `(n for n …)` and `(tg for n … for tg …)` on one line — live at
         inv7_uninstrument.py:499 — are told apart only by `tg`, and a subset test fitted the first to both."""
         if sys.version_info < (3, 12):
-            return frozenset(Resolver._comprehension_targets(node))
-        return frozenset(Resolver._inlined_block(node)[1])
+            return frozenset(_mangle(private, n) for n in Resolver._comprehension_targets(node))
+        return frozenset(Resolver._inlined_block(node, private)[1])
 
     @staticmethod
     def _comprehension_parts(node) -> list:
@@ -228,7 +281,7 @@ class Resolver:
         return parts + ([node.value, node.key] if isinstance(node, ast.DictComp) else [node.elt])
 
     @staticmethod
-    def _inlined_block(node) -> tuple:
+    def _inlined_block(node, private=None) -> tuple:
         """(every name the block holds, its locals) for a comprehension's block on 3.12+, AFTER its own inlining — a
         second implementation of CPython's rule (symtable's inline_comprehension, in the ANALYSIS pass, after the
         whole block was visited): an inlined comprehension's name is merged into the block ONLY IF THE BLOCK DOES NOT
@@ -238,13 +291,18 @@ class Resolver:
         target, so `(x for x in a if {k: v for k, v in [(v, 1)]})` — whose block holds `v` from the dictcomp's first
         iterable, as a global — read {k, v, x} against symtable's {k, x}, and a same-line pair was refused though the
         resolver would answer it rightly. Checked against symtable over the pairing oracle's corpus and the product
-        and evidence modules on 3.12 and 3.13 (tests/test_0042_scope_resolution.py)."""
+        and evidence modules on 3.12 and 3.13 (tests/test_0042_scope_resolution.py). Round 20 (the round-19 verdict's
+        F2): the block also holds what the COMPILER adds without an ast.Name — `__class__` when it loads `super`
+        (_IMPLICIT_IN_COMPREHENSION, above) — and every name is spelled as the symbol table spells it (_mangle), so
+        `[__class__ for __class__ in b]` beside a `super` read is not merged, and a class-private target is `_C__p`."""
         held: dict = {}
         inlined: list = []
 
         def visit(x):
             if isinstance(x, ast.Name):
-                held.setdefault(x.id, None)
+                held.setdefault(_mangle(private, x.id), None)
+                if isinstance(x.ctx, ast.Load) and x.id in _IMPLICIT_IN_COMPREHENSION:
+                    held.setdefault(_IMPLICIT_IN_COMPREHENSION[x.id], None)
             if isinstance(x, _INLINABLE):
                 visit(x.generators[0].iter); inlined.append(x); return
             if isinstance(x, ast.GeneratorExp):
@@ -257,9 +315,9 @@ class Resolver:
                 visit(c)
         for part in Resolver._comprehension_parts(node):
             visit(part)
-        locs = set(Resolver._comprehension_targets(node))
+        locs = {_mangle(private, n) for n in Resolver._comprehension_targets(node)}
         for child in inlined:
-            c_held, c_locs = Resolver._inlined_block(child)
+            c_held, c_locs = Resolver._inlined_block(child, private)
             for k in c_held:
                 if k not in held:
                     held[k] = None

@@ -1456,7 +1456,11 @@ def _r19_signature_disagreements(src: str, label: str) -> tuple:
             walk(c)
     walk(symtable.symtable(src, label, "exec"))
     nodes = collections.defaultdict(list)
-    for n in ast.walk(ast.parse(src)):
+    tree = ast.parse(src)
+    # round 20: compared in the symbol table's (mangled) spelling; a module without the map (the round-19 pin) is
+    # compared as it was, so a round-20 cell fails there on the defect rather than on a missing name
+    private = sr._private_map(tree) if hasattr(sr, "_private_map") else None
+    for n in ast.walk(tree):
         if type(n) in _R19_COMP_NAME:
             nodes[(n.lineno, _R19_COMP_NAME[type(n)])].append(n)
     bad, compared, ambiguous = set(), 0, 0
@@ -1466,7 +1470,8 @@ def _r19_signature_disagreements(src: str, label: str) -> tuple:
             ambiguous += 1
             continue
         compared += len(bl)
-        got = sorted(tuple(sorted(sr.Resolver._comprehension_signature(n))) for n in ns)
+        got = sorted(tuple(sorted(sr.Resolver._comprehension_signature(n, private.get(id(n))) if private is not None
+                                  else sr.Resolver._comprehension_signature(n))) for n in ns)
         if got != sorted(bl):
             bad.add((label, key, tuple(sorted(bl)), tuple(got)))
     return bad, compared, ambiguous
@@ -1508,3 +1513,159 @@ def test_r19_a_name_the_block_also_reads_is_not_merged():
     assert _r19_signature_disagreements(src, "<k>")[0] == set()
     node = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.GeneratorExp))
     assert "k" not in sr.Resolver._comprehension_signature(node)
+
+
+# ---- round 20: the ROUND-19 VERDICT'S F2 — names the COMPILER puts in a block, and names it SPELLS differently ---------
+# A `super` load makes symtable add `__class__` to the block (no ast.Name for it), so `[__class__ for __class__ in b]`
+# beside it is NOT merged; and inside a class every `__x` is `_Class__x` in the symbol table. The signature missed both,
+# and the join check refused valid same-line pairs (loud over-refusals, never a silent wrong pairing). The reviewer's
+# seven cells, the second seat's stage-1 cells (super in a function nested in a method, and in a lambda; mangling), and
+# a generated corpus over the dimensions; each program must compile, match symtable, and RESOLVE.
+_R20_G = "(x for x in a if {inner} and {outer}), (y for y in b)"
+
+
+def _r20_fn(body):
+    return "def f(a, b):\n    return " + body + "\n"
+
+
+def _r20_meth(body, cls="C"):
+    return f"class {cls}:\n    def m(self, a, b):\n        return " + body + "\n"
+
+
+_R20_CELLS = [
+    ("ordinary inner target, with super", _r20_fn(_R20_G.format(inner="[k for k in b]", outer="super"))),
+    ("inner target __class__, without super", _r20_fn(_R20_G.format(inner="[__class__ for __class__ in b]", outer="a"))),
+    ("inner target __class__, with a bare super (the verdict's witness)",
+     _r20_fn(_R20_G.format(inner="[__class__ for __class__ in b]", outer="super"))),
+    ("an explicit outer __class__ read as well",
+     _r20_fn(_R20_G.format(inner="[__class__ for __class__ in b]", outer="super and __class__"))),
+    ("the same generators on separate lines",
+     "def f(a, b):\n    g = (x for x in a if [__class__ for __class__ in b] and super)\n    return g, (y for y in b)\n"),
+    ("a method with a bare super", _r20_meth(_R20_G.format(inner="[__class__ for __class__ in b]", outer="super"))),
+    ("a method calling super(C, self)",
+     _r20_meth(_R20_G.format(inner="[__class__ for __class__ in b]", outer="super(C, self)"))),
+    ("super in a function nested in a method",
+     "class C:\n    def m(self, a, b):\n        def h():\n            return "
+     + _R20_G.format(inner="[__class__ for __class__ in b]", outer="super") + "\n        return h\n"),
+    ("super inside a lambda inside the generator (the lambda's block holds __class__, not the generator's)",
+     _r20_fn(_R20_G.format(inner="[__class__ for __class__ in b]", outer="(lambda: super)"))),
+    ("a class-private inner target in a method (spelled _C__p)", _r20_meth(_R20_G.format(inner="[__p for __p in b]", outer="a"))),
+    ("a class-private outer read and inner target", _r20_meth(_R20_G.format(inner="[__p for __p in b]", outer="__p"))),
+    ("a class named with underscores only: no mangling", _r20_meth(_R20_G.format(inner="[__p for __p in b]", outer="a"), cls="__")),
+    ("same-line list comprehensions with a class-private target (the non-inlined path)",
+     "class C:\n    def m(self, a, b):\n        return [__p for __p in a], [y for y in b]\n"),
+    ("same-line lambdas with a class-private parameter",
+     "class C:\n    def m(self):\n        return (lambda __p: __p), (lambda q: q)\n"),
+]
+
+
+@pytest.mark.parametrize("cell,src", _R20_CELLS, ids=[c[0] for c in _R20_CELLS])
+def test_r20_f2_compiler_names_and_mangling_match_symtable_and_resolve(cell, src):
+    compile(src, "<r20>", "exec")
+    assert _r19_signature_disagreements(src, "<r20>")[0] == set(), cell
+    sr.Resolver(src, "<r20>")
+
+
+def _r20_corpus():
+    """The dimensions, crossed: the enclosing context x the inner comprehension's kind x its target x the outer read x
+    the layout. Every program compiles; none depends on running zero-argument super."""
+    contexts = {"function": _r20_fn, "method": _r20_meth, "method of a class named _C_": lambda b: _r20_meth(b, cls="_C_"),
+                "function nested in a method": lambda b: (
+                    "class C:\n    def m(self, a, b):\n        def h():\n            return " + b + "\n        return h\n")}
+    kinds = {"list": "[{t} for {t} in b]", "set": "{{{t} for {t} in b}}", "dict": "{{{t}: 1 for {t} in b}}"}
+    targets = ["k", "__class__", "__p", "__p__"]
+    outers = ["a", "super", "super(C, self)", "__class__", "__p", "(lambda: super)"]
+    out = []
+    for cname, ctx in contexts.items():
+        for kname, kind in kinds.items():
+            for t in targets:
+                for o in outers:
+                    inner = kind.format(t=t)
+                    one = ctx(f"(x for x in a if {inner} and {o}), (y for y in b)")
+                    out.append((f"{cname}/{kname}/{t}/{o}/one line", one))
+                    two = one.replace("), (y for y in b)", "),\\\n            (y for y in b)")
+                    out.append((f"{cname}/{kname}/{t}/{o}/two lines", two))
+    return out
+
+
+def test_r20_f2_the_generated_corpus_equals_symtable_and_resolves():
+    """Over every cross of the dimensions: the signature equals symtable's non-parameter locals for every comprehension
+    block (no key skipped), and the resolver accepts every program — each same-line pair has distinct signatures, so a
+    refusal here could only be the over-refusal this round fixes."""
+    corpus = _r20_corpus()
+    bad, compared, ambiguous, refused = set(), 0, 0, []
+    for label, src in corpus:
+        compile(src, label, "exec")
+        b, c, a = _r19_signature_disagreements(src, label)
+        bad |= b; compared += c; ambiguous += a
+        try:
+            sr.Resolver(src, label)
+        except sr.UnresolvableScope as e:
+            refused.append((label, str(e)[:80]))
+    assert bad == set(), sorted(bad)[:5]
+    assert refused == [], refused[:5]
+    assert ambiguous == 0 and compared >= len(corpus), (compared, ambiguous, len(corpus))
+
+
+@pytest.mark.parametrize("mutant", ["super adds nothing (the round-19 walk)", "no mangling (the round-19 spelling)"])
+def test_r20_f2_each_superseded_rule_fails_the_corpus(mutant, monkeypatch):
+    """Each half of the fix is load-bearing: with it removed, the corpus and cells above find a disagreement or a
+    refusal on 3.12+ (on 3.10 and 3.11 nothing is inlined, so only the mangling half is visible there)."""
+    if mutant.startswith("super"):
+        if sys.version_info < (3, 12):
+            pytest.skip("no comprehension is inlined before 3.12, so a held __class__ decides nothing there")
+        monkeypatch.setattr(sr, "_IMPLICIT_IN_COMPREHENSION", {})
+    else:
+        monkeypatch.setattr(sr, "_mangle", lambda private, name: name)
+    hits = 0
+    for label, src in _r20_corpus() + _R20_CELLS:
+        try:
+            hits += bool(_r19_signature_disagreements(src, label)[0])
+            sr.Resolver(src, label)
+        except sr.UnresolvableScope:
+            hits += 1
+    assert hits > 0, mutant
+
+
+def test_r20_f2_route_two_finds_no_implicit_name_route_one_lacks():
+    """The second seat's route 2 (stage-1 read of round 20): over every stdlib module, a symbol whose name is never a
+    NAME token in its module is compiler-introduced or mangled; every such name must be in route 1
+    (_IMPLICIT_NAMES_ALL_BLOCKS, read from Python/symtable.c) or a mangled spelling of a token. Route 2 must also SEE
+    `__class__` (the stdlib's functions read super), or the check has no teeth. ITS BLIND SPOT, named: no stdlib module
+    triggers `__classdict__`, which only route 1 carries."""
+    if sys.version_info < (3, 12):
+        pytest.skip("before 3.12 tokenize returns an f-string as ONE token, so every name read inside one looks "
+                    "compiler-introduced (measured: len, abs, repr on 3.10/3.11); the census is exact from 3.12 (PEP 701)")
+    import collections
+    import io
+    import symtable
+    import sysconfig
+    import tokenize
+    import warnings
+    lib = pathlib.Path(sysconfig.get_paths()["stdlib"])
+    found = collections.Counter(); files = 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for f in sorted(lib.rglob("*.py")):
+            if "site-packages" in f.parts:
+                continue
+            try:
+                src = f.read_text(encoding="utf-8")
+                table = symtable.symtable(src, str(f), "exec")
+                toks = {t.string for t in tokenize.generate_tokens(io.StringIO(src).readline) if t.type == tokenize.NAME}
+            except (SyntaxError, UnicodeDecodeError, ValueError, tokenize.TokenError):
+                continue
+            files += 1
+            stack = [table]
+            while stack:
+                b = stack.pop(); stack.extend(b.get_children())
+                for s in b.get_symbols():
+                    n = s.get_name()
+                    if n in toks:
+                        continue
+                    tail = "__" + n.split("__", 1)[1] if n.startswith("_") and "__" in n[1:] else None
+                    found["<mangled>" if tail in toks else n] += 1
+    assert files >= 300, files
+    unknown = {n for n in found if n != "<mangled>"} - sr._IMPLICIT_NAMES_ALL_BLOCKS
+    assert unknown == set(), (sorted(unknown), dict(found))
+    assert found["__class__"] > 0, dict(found)

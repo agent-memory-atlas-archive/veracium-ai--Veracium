@@ -2587,6 +2587,147 @@ def test_r19_the_isolated_child_never_writes_bytecode(caller, form, expect_writt
     assert bool(written) is expect_written, (caller, form, written)
 
 
+# ---- round 20: the ROUND-19 VERDICT'S F1 — census output across the isolated child's boundary ------------------------
+# Round 19 returned the child's description on stdout, which the census shares, so `print("census initialized")` made
+# derive() and verify() raise a bare JSONDecodeError. The response now travels in a file the child owns, and the child
+# ends with os._exit(0) once it is written. Each cell is a suffix appended to the reference census, run through derive()
+# AND verify(): "accept" means no census problem at all; "refuse" means a NAMED failure ("could not be described"), never
+# a bare exception; "drift" means the named drift survives the output. The exit-path cells are the second seat's round-20
+# stage-1 read, each executed there at the round-19 pin.
+_R20_REAL_DRIFT = '\nSite.fire.__name__ = "changed"\nSite.__doc__ = Site.__doc__\n'
+_R20_F1_CELLS = [
+    ("no suffix", "", "accept"),
+    ("print()", "\nprint()\n", "accept"),
+    ("a banner on stdout", '\nprint("census initialized")\n', "accept"),
+    ('print("null")', '\nprint("null")\n', "accept"),
+    ("sys.stdout.write without a newline", '\nimport sys as _s\n_s.stdout.write("census initialized")\n', "accept"),
+    ("stdout text that looks like the response", "\nprint('[[\"mro\", \"x\"]]')\n", "accept"),
+    ("a banner on stderr", '\nimport sys as _s\n_s.stderr.write("census initialized\\n")\n', "accept"),
+    ("sys.stdout closed", "\nimport sys as _s\n_s.stdout.close()\n", "accept"),
+    ("file descriptor 1 closed", "\nimport os as _o\n_o.close(1)\n", "accept"),
+    ("an atexit hook that prints", "\nimport atexit as _a\n_a.register(print, 'bye')\n", "accept"),
+    ("an atexit hook that exits 3", "\nimport atexit as _a, os as _o\n_a.register(_o._exit, 3)\n", "accept"),
+    ("a non-daemon thread still running", "\nimport threading as _t, time as _tm\n_t.Thread(target=_tm.sleep, args=(600,)).start()\n", "accept"),
+    ("a daemon thread still running", "\nimport threading as _t, time as _tm\n_t.Thread(target=_tm.sleep, args=(600,), daemon=True).start()\n", "accept"),
+    ("the working directory changed", "\nimport os as _o\n_o.chdir('/')\n", "accept"),
+    ("os._exit(0) during import", "\nimport os as _o\n_o._exit(0)\n", "refuse"),
+    ("sys.exit(3) during import", "\nimport sys as _s\n_s.exit(3)\n", "refuse"),
+    ("an exception during import", "\nraise RuntimeError('census failed')\n", "refuse"),
+    ("real drift, silent", _R20_REAL_DRIFT, "drift"),
+    ("real drift with a banner on stdout", _R20_REAL_DRIFT + 'print("census initialized")\n', "drift"),
+]
+
+
+@pytest.mark.parametrize("cell,suffix,expect", _R20_F1_CELLS, ids=[c[0] for c in _R20_F1_CELLS])
+def test_r20_census_output_never_reaches_the_isolated_child_s_response(cell, suffix, expect, tmp_path, monkeypatch):
+    """The verdict's matrix and the second seat's exit paths, through derive() and through an independently invoked
+    verify() over a valid twin whose manifest carries the edited census's source hash (the reviewer's own setup, so a
+    problem here is never a manifest mismatch)."""
+    un = _load("inv7_uninstrument_r20f1", EVIDENCE / "inv7_uninstrument.py")
+    # raising=False: the matrix reaches the defect through names the round-19 pin also has, so there every cell fails
+    # on the transport itself (a bare JSONDecodeError), not on this round's budget constant
+    monkeypatch.setattr(un, "_ISOLATION_TIMEOUT", 8, raising=False)
+    ref = un.REFERENCE_CENSUS.read_text()
+    head = ref + suffix
+    # derive() over the edited census
+    src = _r13_pkg(tmp_path, "derive", _R14_SELF + "def f():\n    return 1\n", "")
+    (src / "census.py").write_text(head)
+    out = tmp_path / "derive" / "twin" / "vpkg"
+    if expect == "accept":
+        un.derive(src, out)
+    else:
+        with pytest.raises(un.Refused, match="could not be described" if expect == "refuse" else r"Site\.fire \(realized\)") as e:
+            un.derive(src, out)
+        assert "JSONDecodeError" not in str(e.value), (cell, str(e.value)[:300])
+    # verify() over a clean twin, the source census then edited and its hash carried into the manifest
+    src = _r13_pkg(tmp_path, "verify", _R14_SELF + "def f():\n    return 1\n", "")
+    (src / "census.py").write_text(ref)
+    out = tmp_path / "verify" / "twin" / "vpkg"
+    un.derive(src, out)
+    (src / "census.py").write_text(head)
+    man_path = out.parent / "twin_manifest.json"
+    man = json.loads(man_path.read_text())
+    man["modules"]["census.py"]["sha256_before"] = hashlib.sha256(head.encode()).hexdigest()
+    man_path.write_text(json.dumps(man, indent=1, sort_keys=True) + "\n")
+    problems = [p for p in un.verify(out, src) if p.startswith("census.py")]
+    if expect == "accept":
+        assert problems == [], (cell, problems)
+    elif expect == "refuse":
+        assert problems and all("could not be described" in p for p in problems), (cell, problems)
+    else:
+        assert any("Site.fire (realized)" in p and "T must advance" in p for p in problems), (cell, problems)
+
+
+def test_r20_a_census_whose_import_never_ends_is_a_named_failure(tmp_path, monkeypatch):
+    """The second seat's stage-1 cell: a census whose import never finishes. The child's budget (lowered here) ends it,
+    and derive() refuses by name — never a bare TimeoutExpired. A cell of its own because it needs the budget constant
+    this round introduced (the round-19 pin hard-coded 300s)."""
+    un = _load("inv7_uninstrument_r20f1t", EVIDENCE / "inv7_uninstrument.py")
+    monkeypatch.setattr(un, "_ISOLATION_TIMEOUT", 8)
+    ref = un.REFERENCE_CENSUS.read_text()
+    src = _r13_pkg(tmp_path, "slow", _R14_SELF + "def f():\n    return 1\n", "")
+    (src / "census.py").write_text(ref + "\nwhile True:\n    pass\n")
+    with pytest.raises(un.Refused, match="did not finish within 8s"):
+        un.derive(src, tmp_path / "slow" / "twin" / "vpkg")
+
+
+# The superseded forms, each substituted at an anchor that must match once, and the cell that kills it.
+_R20_F1_MUTANTS = [
+    ("the response on stdout (round 19's transport)",
+     [('with open_(response, "w", encoding="ascii") as f:\n    f.write(body); f.flush()\n', "sys.stdout.write(body); sys.stdout.flush()\n"),
+      ('body = response.read_text(encoding="ascii") if response.exists() else None', "body = r.stdout")],
+     '\nprint("census initialized")\n'),
+    ("no final os._exit", [("exit_(0)                                             #", "pass                                                 #")],
+     "\nimport threading as _t, time as _tm\n_t.Thread(target=_tm.sleep, args=(600,)).start()\n"),
+    ("the timeout left uncaught", [("        except subprocess.TimeoutExpired:\n", "        except ZeroDivisionError:\n")],
+     "\nwhile True:\n    pass\n"),
+]
+
+
+@pytest.mark.parametrize("mutant,subs,killer", _R20_F1_MUTANTS, ids=[m[0] for m in _R20_F1_MUTANTS])
+def test_r20_each_superseded_transport_fails_its_cell(mutant, subs, killer, tmp_path):
+    """Each mutant must MISREAD its killing cell — a spurious refusal or a bare exception where the shipped module reads
+    no drift — or the matrix above is not the thing that holds the fix in place."""
+    text = (EVIDENCE / "inv7_uninstrument.py").read_text()
+    for a, b in subs:
+        assert text.count(a) == 1, (mutant, "the anchor moved", a[:60])
+        text = text.replace(a, b)
+    ev = tmp_path / "evidence"
+    shutil.copytree(EVIDENCE, ev, ignore=shutil.ignore_patterns("__pycache__"))
+    (ev / "inv7_uninstrument.py").write_text(text)
+    mut = _load("inv7_uninstrument_r20f1_mut", ev / "inv7_uninstrument.py")
+    mut._ISOLATION_TIMEOUT = 8
+    ref = mut.REFERENCE_CENSUS.read_text()
+    try:
+        found = mut.site_drift(ref + killer, ref)
+    except Exception as e:                                       # a bare exception is the defect's own symptom
+        found = [f"raised {type(e).__name__}"]
+    assert found, (mutant, "the mutant read the killing cell as no drift — it is not killed")
+
+
+# ---- round 20: the ROUND-19 VERDICT'S F2, end to end — a valid helper beside a measured decision must DERIVE -----------
+# The verdict put `(x for x in a if [__class__ for __class__ in b] and super), (y for y in b)` in a temporary product
+# module beside an ordinary site and the shipped derive() raised UnresolvableScope. The signature cells live in
+# tests/test_0042_scope_resolution.py; these are the derivation controls: each helper derives, and the twin verifies.
+_R20_F2_HELPERS = [
+    ("the verdict's witness", "def h(a, b):\n    return (x for x in a if [__class__ for __class__ in b] and super), (y for y in b)\n"),
+    ("a method calling super(C, self)",
+     "class C:\n    def m(self, a, b):\n        return (x for x in a if [__class__ for __class__ in b] and super(C, self)), (y for y in b)\n"),
+    ("a class-private inner target", "class C:\n    def m(self, a, b):\n        return (x for x in a if [__p for __p in b]), (y for y in b)\n"),
+    ("same-line lambdas with a class-private parameter", "class C:\n    def m(self):\n        return (lambda __p: __p), (lambda q: q)\n"),
+]
+
+
+@pytest.mark.parametrize("cell,helper", _R20_F2_HELPERS, ids=[c[0] for c in _R20_F2_HELPERS])
+def test_r20_a_valid_helper_beside_a_measured_decision_derives(cell, helper, tmp_path):
+    un = _load("inv7_uninstrument_r20f2", EVIDENCE / "inv7_uninstrument.py")
+    src = _r13_pkg(tmp_path, "f2", _R14_SELF + "def f():\n    return 1\n\n\n" + helper, "")
+    (src / "census.py").write_text(un.REFERENCE_CENSUS.read_text())
+    out = tmp_path / "f2" / "twin" / "vpkg"
+    un.derive(src, out)
+    assert un.verify(out, src) == [], cell
+
+
 # ---- round 18, N-6: the Site each arm IMPORTED, compared at runtime --------------------------------------------------
 # site_drift reads both censuses in the TRANSFORM's process, so a change to Site made after the class and CONDITIONAL on
 # the arm's runtime state (its environment, what it imports) is seen by neither route. The observer now digests route B's

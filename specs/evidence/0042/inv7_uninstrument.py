@@ -333,17 +333,23 @@ def site_description_digest(desc: list) -> dict:
 
 
 _ISOLATED_CHILD = """
-import builtins, importlib.util, inspect, json, re, sys, types
+import builtins, importlib.util, json, os, sys
 spec = importlib.util.spec_from_file_location("_inv7_uninstrument_isolated", sys.argv[1])
 un = importlib.util.module_from_spec(spec); spec.loader.exec_module(un)
-write, dumps = sys.stdout.write, json.dumps          # bound BEFORE the census runs
+response, dumps, open_, exit_ = sys.argv[2], json.dumps, open, os._exit     # bound BEFORE the census runs
+census = sys.stdin.read()
 bdict = vars(builtins); saved = dict(bdict)          # a census may rebind a built-in; the DESCRIBER must not see it
-site = un._realized_site(sys.stdin.read(), "_inv7_head_census")
+site = un._realized_site(census, "_inv7_head_census")
 bdict.clear(); bdict.update(saved)                   # bound names only: `vars` itself is a built-in
-if not isinstance(site, type):
-    write(dumps("the census does not build a class named Site")); sys.exit(0)
-write(dumps([[k, repr(v)] for k, v in un.site_description(site)]))
+body = (dumps([[k, repr(v)] for k, v in un.site_description(site)]) if isinstance(site, type)
+        else dumps("the census does not build a class named Site"))
+with open_(response, "w", encoding="ascii") as f:
+    f.write(body); f.flush()
+exit_(0)                                             # neither the census's atexit hooks nor its threads outlive this
 """
+
+# The child's wall-clock budget; a module constant so a test can lower it (a census whose import never ends).
+_ISOLATION_TIMEOUT = 300
 
 
 def _described_in_isolation(census_text: str):
@@ -358,7 +364,17 @@ def _described_in_isolation(census_text: str):
     into the evidence directory it was loaded from (found by the round-19 stage's untouched-tree check; passing on only
     the caller's `-B` missed the redirected caller, the second seat's stage-1 read). The description does not depend on
     the child's hash seed.
-    A DESIGN ASSUMPTION, stated by its scope, not a gap of this route: describing an object needs the object, and the
+    THE RESPONSE TRAVELS ON A CHANNEL THE CHILD OWNS (round 20, the round-19 verdict's F1): a file at an absolute path in
+    a temporary directory outside the evidence tree, removed afterwards — never stdout, which the census shares, so
+    a census that prints is not a census that cannot be described. The census keeps its stdout and stderr; they are
+    read only to name a failure. The child ends with os._exit(0) once the response is written and closed, so a
+    census's atexit hooks and non-daemon threads cannot append to it, change its exit or hold it open; a complete,
+    well-formed response is authoritative and the exit code is diagnostic only. No response, a malformed one, one
+    of the wrong shape and a child that outruns its budget are each a NAMED failure, which derive() refuses and
+    verify() reports as "could not be described" — never a bare exception. The census can read the response path
+    from argv; within the accepted scope (below) it does not attack the measurement.
+    INV-7's ACCEPTED SCOPE (the round-19 verdict accepted it; before then it was an unstated assumption), not a gap of
+    this route: describing an object needs the object, and the
     object needs the process that ran the census, so census code can reach the describer — a census that patches it
     forges its own description in four lines, even with no import statement (the second seat's probe, round 19). The
     same holds for the N-6 runtime gate and for the INV-7 trace itself: every arm runs census code in the process that
@@ -367,12 +383,34 @@ def _described_in_isolation(census_text: str):
     ATTACK THE MEASUREMENT; route A, which reads only the ClassDef, is the one reading outside that assumption."""
     import json
     import subprocess
-    r = subprocess.run([sys.executable, "-I", "-B", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve())],
-                       input=census_text, capture_output=True, text=True, timeout=300)
-    if r.returncode != 0:
-        return f"the isolated interpreter exited {r.returncode}: {r.stderr.strip()[-300:]}"
-    out = json.loads(r.stdout, object_pairs_hook=_strict_pairs)       # 0026's evidence-boundary rule: never plain
-    return out if isinstance(out, str) else [tuple(e) for e in out]
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix="inv7_route_b_") as d:
+        response = pathlib.Path(d).resolve() / "description.json"
+        try:
+            r = subprocess.run([sys.executable, "-I", "-B", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve()),
+                                str(response)], input=census_text, capture_output=True, text=True,
+                               timeout=_ISOLATION_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            return f"the isolated interpreter did not finish within {_ISOLATION_TIMEOUT}s"
+        try:
+            body = response.read_text(encoding="ascii") if response.exists() else None
+        except (OSError, UnicodeDecodeError) as e:
+            body, unreadable = None, f"{type(e).__name__}: {e}"
+        else:
+            unreadable = None
+    context = (f"exit {r.returncode}; stderr: {r.stderr.strip()[-200:]!r}; stdout: {r.stdout.strip()[-200:]!r}")
+    if body is None:
+        return f"the isolated interpreter wrote no description ({unreadable or context})"
+    try:
+        out = json.loads(body, object_pairs_hook=_strict_pairs)       # 0026's evidence-boundary rule: never plain
+    except ValueError as e:
+        return f"the isolated interpreter's description is malformed ({e}; {context})"
+    if isinstance(out, str):
+        return out
+    if not (isinstance(out, list) and all(isinstance(e, list) and len(e) == 2 and all(isinstance(x, str) for x in e)
+                                          for e in out)):
+        return f"the isolated interpreter's description has the wrong shape ({context})"
+    return [tuple(e) for e in out]
 
 
 def _realized_drift(head_census: str, reference_census: str) -> list:
