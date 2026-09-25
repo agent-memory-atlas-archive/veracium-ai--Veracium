@@ -5,7 +5,12 @@ Spec-Status: accepted
 | | |
 |---|---|
 | **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc); v7 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ccf0715041f3148a); v8.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 b94d814d20b96d2c); v9.2 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 a230ae09793790be) — ACCEPTED at the design level, the flip on the owner's word |
-| **Version** | **v11.1 — ROUTE B IS ONE RECURSIVE RULE, AND THE REFERENCE ARM'S `Site` IS CHECKED WHERE IT RUNS.** An implementation note (round 18); no frozen invariant's text changes, and `Spec-Status` stays `accepted`. It records the round-17 verdict (banked `1aa6d68`, body sha16 `41121680bbb74898`): "*RETURNED for one implementation correction … the design amendment remains accepted*". Route B's function normaliser omitted the WRITABLE `__name__`, `__qualname__` and `__module__`. **v11.0.1's hand list of function fields is WITHDRAWN.** A round-18 paragraph states:
+| **Version** | **v11.2 — THE JOIN CHECK'S NAMED OVER-REFUSAL IS CLOSED, AND THE ORACLE NOW GENERATES ANNOTATIONS.** An implementation note (round 19); no frozen invariant's text changes, and `Spec-Status` stays `accepted`. v9.5's round-13 paragraph named two limits "recorded for the next round" and one count. All three are annotated IN PLACE:
+- the over-refusal is closed on 3.12 and later;
+- the oracle's generator now emits parameter, keyword-only and return annotations;
+- the count of modules the join check refuses none of is dated.
+
+A round-19 paragraph states the mechanism and the evidence. **Prior cell follows.** **v11.1 — ROUTE B IS ONE RECURSIVE RULE, AND THE REFERENCE ARM'S `Site` IS CHECKED WHERE IT RUNS.** An implementation note (round 18); no frozen invariant's text changes, and `Spec-Status` stays `accepted`. It records the round-17 verdict (banked `1aa6d68`, body sha16 `41121680bbb74898`): "*RETURNED for one implementation correction … the design amendment remains accepted*". Route B's function normaliser omitted the WRITABLE `__name__`, `__qualname__` and `__module__`. **v11.0.1's hand list of function fields is WITHDRAWN.** A round-18 paragraph states:
 - the recursive rule that replaces it, with its three named exclusions;
 - the attribute-cache bit that an earlier form compared by accident;
 - the import-time check of the realized `Site` in every arm, which closes v11.0.1's named context limit;
@@ -514,11 +519,13 @@ Spec-Status: accepted
 > and that block must be the one the walk gave it; otherwise the resolver refuses. Two scopes can share a signature
 > and still differ in their symbols — two parameter-less lambdas, one binding a name by an assignment expression —
 > and that case is refused, not trusted. At this version it refuses none of the 74 modules under `src/veracium/` and
-> `specs/evidence/0042/` (`test_r13_the_join_check_refuses_nothing_in_the_product_or_the_evidence`), and the round-12
+> `specs/evidence/0042/` (`test_r13_the_join_check_refuses_nothing_in_the_product_or_the_evidence`) *(v11.2: 74 at round 13's
+> pin. The same test now reads 75, the one module added since being the round-16 reference census)*, and the round-12
 > order with the check removed answers the pinned cells silently wrong while the same order with the check present
 > refuses each of them (`test_r13_the_join_check_turns_the_old_orders_silent_answers_into_refusals`). WHAT IT CANNOT
 > SEE, named: it over-refuses one shape — an inlinable comprehension, merged into a generator expression, that reads
-> one of its own later targets in its first iterable — loudly, and that is recorded for the next round.
+> one of its own later targets in its first iterable — loudly, and that is recorded for the next round. *(v11.2: CLOSED on
+> 3.12 and later by round 19, see below.)*
 > THE GATE (`specs/evidence/0042/pairing_oracle.py`, driven by
 > `test_r13_the_pairing_oracle_finds_no_silent_answer_and_its_control_does`): 400 generated programs at seed 13, dense
 > with same-line scopes and including tied signatures, each read judged against the load instruction CPython itself
@@ -528,7 +535,41 @@ Spec-Status: accepted
 > outcome, and that none of those is answered silently wrong; and that most programs are judged and few reads go
 > unlocated. WHAT IT CANNOT SEE, named: it needs instruction positions and SKIPS, visibly and inventoried, on 3.10;
 > and it generates no parameter annotations — the positions where the order among header roles was subtle — which is
-> recorded for the next round.
+> recorded for the next round. *(v11.2: CLOSED by round 19, see below.)*
+>
+> **ROUND 19: THE OVER-REFUSAL'S CAUSE, FIXED AT ITS SOURCE, AND THE ORACLE TAKES ANNOTATIONS** (v11.2, research as the
+> specification's author).
+> - **The cause.** CPython 3.12 inlines a comprehension into its parent in the ANALYSIS pass, after the whole block has been
+>   visited. It merges an inlined comprehension's bound name into the parent only if the parent does not already hold that
+>   name. A comprehension's first iterable is visited in the parent, so a target it reads there was already held, and was
+>   not merged. The signature merged it anyway, so the block fitted no node, and the resolver refused correct code.
+> - **The fix.** On 3.12 and later, the comprehension signature is a second implementation of that merge rule, walking the
+>   block in CPython's visiting order. It is accepted DIRECTLY against the interpreter: over the pairing oracle's corpus and
+>   every module under `src/veracium/` and `specs/evidence/0042/`, the signature equals the non-parameter locals `symtable`
+>   reports for each block, and the SET of disagreements is empty on 3.11, 3.12 and 3.13
+>   (`tests/test_0042_scope_resolution.py::test_r19_the_comprehension_signature_equals_symtable_over_the_corpus`). The
+>   reproduction resolves on every version
+>   (`tests/test_0042_scope_resolution.py::test_r19_n4_the_reproduction_resolves_on_every_version`). A name the block
+>   ALSO reads after the inner comprehension is not merged, as measured against `symtable`, not as predicted
+>   (`tests/test_0042_scope_resolution.py::test_r19_a_name_the_block_also_reads_is_not_merged`).
+> - **Nothing new is accepted silently.** The gate still finds no silent wrong answer, and its positive control still
+>   fires. The shape `symtable` answers differently from the interpreter (round 12's S2c-2) is still refused.
+> - **What remains, named.** One untied over-refusal is refused identically on 3.11, which has no inlining, so it has
+>   another cause. It is recorded, not zeroed.
+> - **The oracle's generator now emits annotations,** in six roles (parameter, keyword-only and return, on a module-level
+>   function and on a method). The test asserts that every role is actually JUDGED on each interpreter, so a role that never
+>   reaches an instruction cannot pass silently. A control under `from __future__ import annotations`, where annotations
+>   are strings and load nothing, must read "no instruction" and never "wrong". The gate's refusals rose with the new
+>   roles, all through two refusals that exist by design (round 12's S2c-2 shape and header-role collisions): they are
+>   loud, not lost coverage.
+> - **Attributing the reads 3.13 cannot locate, read by read,** corrected an earlier attribution. They are reads FUSED into a
+>   store-and-load superinstruction (a local read right after its own store), plus reads inside annotations. The earlier
+>   note had attributed them to return annotations alone, before reads carried roles.
+> - **The planned SM4 cell cannot exist, and the argument is recorded.** The join check requires EVERY node of a same-line
+>   group to fit exactly one block, so any accepted wrong pairing is a permutation. A signature that ignores the inlined
+>   merge equals each node's own targets, while the real locals are those targets plus the inlined names, and the two
+>   are disjoint by the merge rule. Summing over the permutation forces every inlined set to be empty. So that mutant can
+>   only over-refuse, never accept silently, and the direct tests above kill it.
 >
 > The OTHER "by construction" sentence in this note, below — the module-level binding count being total over syntax
 > — is NOT affected: it reads the compiled code object, which is the interpreter's own reading, and none of rounds
