@@ -319,7 +319,29 @@ def compare(out: pathlib.Path, arms: list, summaries: dict, id_to_symbol: dict, 
                                     "census_code_entry_detail": u_s.get("census_code_entry_detail"),
                                     "veracium_file": u_s["veracium_file"]}
 
+    if "uninstrumented" in arms:
+        checks["site_realized"] = site_realized_check(summaries)
     return verdict, checks
+
+
+def site_realized_check(summaries: dict) -> dict:
+    """ROUND 18, N-6: EVERY run's (the four arms' and every control's) digest of the Site it imported, at import time,
+    must be equal — the runtime corroboration of site_drift, which reads the censuses in the TRANSFORM's context and so
+    cannot see a post-class change conditional on the arm's runtime state. A missing digest fails. When they differ, the
+    FIRST differing entry against the reference run is named, not only two digests."""
+    got = {a: (s.get("site_realized") or {}) for a, s in sorted(summaries.items())}
+    missing = sorted(a for a, d in got.items() if not d.get("digest"))
+    digests = {a: d["digest"] for a, d in got.items() if d.get("digest")}
+    out = {"runs": len(got), "missing": missing, "distinct_digests": len(set(digests.values())),
+           "equal": bool(got) and not missing and len(set(digests.values())) == 1, "first_difference": None}
+    ref = got.get("uninstrumented") or {}
+    for a, d in got.items():
+        if d.get("digest") and ref.get("digest") and d["digest"] != ref["digest"]:
+            re_, de = dict(map(tuple, ref.get("entries") or [])), dict(map(tuple, d.get("entries") or []))
+            key = next((k for k in list(re_) + list(de) if re_.get(k) != de.get(k)), None)
+            out["first_difference"] = {"run": a, "entry": key}
+            break
+    return out
 
 
 def main():
@@ -508,6 +530,8 @@ def final_status(verdict: dict, checks: dict, summaries: dict, arms: list) -> in
         if "off" in arms:
             gates["uninstrumented:registry_equals_off"] = u.get("registry_equals_off") is True
         gates["uninstrumented:no_census_code_in_decisions"] = u.get("census_code_entries") == 0 and u.get("census_code_entries") is not None
+        # ROUND 18 (N-6): every run imported the same Site — T's, as the twin builds it — in its own runtime environment
+        gates["uninstrumented:site_realized_equal"] = (checks.get("site_realized") or {}).get("equal") is True
     verdict["gates"] = gates
     return 0 if all(gates.values()) else 1
 

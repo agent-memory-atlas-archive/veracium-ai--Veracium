@@ -339,7 +339,9 @@ def _fabricate(tmp_path, arm, records, symbols=("m.py:f", "m.py:g"), labels=("No
                # ROUND 15: every arm records its registry's ids (the reference arm's must equal the off arm's, as sets), and
                # the reference arm records its entries into census code (0 required; None elsewhere: no hook runs there)
                "census_registry_ids": ["a.id", "b.id"],
-               "census_code_entries": 0 if arm.startswith("uninstrumented") else None}
+               "census_code_entries": 0 if arm.startswith("uninstrumented") else None,
+               # ROUND 18 (N-6): every run records the digest of the Site it imported; fabricated arms import the same one
+               "site_realized": {"digest": "fabricated", "entries": [["mro", "fabricated"]]}}
     if census is not None:
         (d / "census_trace.jsonl").write_text("".join(json.dumps(r) + "\n" for r in census))
         summary["census_counters"] = counters or {}
@@ -2389,6 +2391,141 @@ def test_r18_a_census_entry_with_no_python_caller_is_counted(monkeypatch):
     frame = type("F", (), {"f_code": code, "f_back": None})()
     obs._census_profile(frame, "call", None)
     assert obs._CENSUS_ENTRIES == {("consult", "<no Python caller>", "<no Python caller>"): 1}
+
+
+# ---- round 18: the ROUND-17 VERDICT — function-object metadata, and one recursive rule ---------------------------------
+# The verdict: route B's function normaliser omitted the function objects' own writable fields. Its witness pairs each
+# change with `Site.__doc__ = Site.__doc__`, a type setattr that CLEARS the attribute-cache bit, so no incidental __flags__
+# difference can catch it. Every value is now described by ONE recursive rule (every data descriptor, read-only included,
+# normalised recursively; exclusions named by property), so a staticmethod's inner function and a closure's cells are
+# covered without a case of their own.
+_R18_RESET = "\nSite.__doc__ = Site.__doc__"
+_R18_STATIC = ("    def failure_kinds(self) -> dict:", "    @staticmethod\n    def _probe():\n        return 1\n\n    def failure_kinds(self) -> dict:")
+_R18_V17_CELLS = [
+    ("the verdict's witness: Site.fire.__name__", None, _r17_after('Site.fire.__name__ = "changed"' + _R18_RESET), "B"),
+    ("the verdict's witness: Site.fire.__qualname__", None, _r17_after('Site.fire.__qualname__ = "changed"' + _R18_RESET), "B"),
+    ("the verdict's witness: Site.fire.__module__", None, _r17_after('Site.fire.__module__ = "changed"' + _R18_RESET), "B"),
+    ("a function's __type_params__ (its descriptor on 3.12+, its __dict__ before)", None,
+     _r17_after("import typing as _typing\nSite.fire.__type_params__ = (_typing.TypeVar('T'),)" + _R18_RESET), "B"),
+    ("a staticmethod's inner function renamed through its read-only __func__",
+     lambda s: s.replace(*_R18_STATIC, 1),
+     _r17_after('Site.__dict__["_probe"].__func__.__name__ = "renamed"' + _R18_RESET), "B"),
+    ("a closure cell's contents changed after the class", _r17_after(_R18_MAKER),
+     _r17_after("Site.extra.__closure__[0].cell_contents = 2" + _R18_RESET), "B"),
+]
+
+
+@pytest.mark.parametrize("cell,prepare,edit,routes", _R18_V17_CELLS, ids=[c[0] for c in _R18_V17_CELLS])
+def test_r18_function_metadata_is_compared_by_one_recursive_rule(cell, prepare, edit, routes, tmp_path):
+    """The round-17 verdict's class, each cell asserting the verdict first (site_drift, which the round-17 pin has)."""
+    test_r17_site_drift_reads_the_definition_and_the_realized_class(cell, prepare, edit, routes, tmp_path)
+
+
+def test_r18_a_census_helper_outside_site_is_not_drift():
+    """The acceptance half of the NAMESPACE exclusion: a change to a module-level census helper a Site method calls is
+    census code UNDER TEST — the reference arm does not carry it, so the trace diff sees any decision it changes — and
+    must not read as Site drift, though every Site method's __globals__ holds the changed helper."""
+    un = _load("inv7_uninstrument_r18h", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    head = ref.replace('    return "decision"\n', '    return "a decision"\n', 1)
+    assert head != ref
+    assert un.site_drift(head, ref) == []
+
+
+def test_r18_the_function_fields_compared_are_derived_per_interpreter():
+    """The fields the rule reads off a function, DERIVED from the function type (every data descriptor along its MRO, minus
+    the named namespace references): pinned per interpreter, so a Python that adds a field shows here, not silently."""
+    import types
+    un = _load("inv7_uninstrument_r18f", EVIDENCE / "inv7_uninstrument.py")
+    got = set(un._data_descriptors(types.FunctionType)) - set(un._NAMESPACE_REFS)
+    want = {"__annotations__", "__closure__", "__code__", "__defaults__", "__dict__", "__doc__", "__kwdefaults__",
+            "__module__", "__name__", "__qualname__"} | ({"__type_params__"} if sys.version_info >= (3, 12) else set())
+    assert got == want, (sys.version_info[:2], sorted(got ^ want))
+
+
+# ---- round 18, N-6: the Site each arm IMPORTED, compared at runtime --------------------------------------------------
+# site_drift reads both censuses in the TRANSFORM's process, so a change to Site made after the class and CONDITIONAL on
+# the arm's runtime state (its environment, what it imports) is seen by neither route. The observer now digests route B's
+# description of the Site each run imported — right after `import veracium.census`, BEFORE the arm's own intervention —
+# and the gate uninstrumented:site_realized_equal requires every run's digest (arms and controls) equal.
+_R18_COND = ('\nif os.environ.get("INV7_ARM") == "healthy":\n    Site.__doc__ = "changed only in the healthy arm"\n')
+
+
+def test_r18_site_realized_check_is_equal_missing_or_names_the_first_difference():
+    harness = _load("inv7_harness_r18c", EVIDENCE / "inv7_harness.py")
+    d = lambda digest, entries: {"site_realized": {"digest": digest, "entries": entries}}
+    same = {"uninstrumented": d("aa", [["mro", "1"], ["vars.x", "2"]]), "healthy": d("aa", [["mro", "1"], ["vars.x", "2"]])}
+    assert harness.site_realized_check(same) == {"runs": 2, "missing": [], "distinct_digests": 1, "equal": True, "first_difference": None}
+    miss = dict(same, off={"site_realized": None})
+    assert harness.site_realized_check(miss)["equal"] is False and harness.site_realized_check(miss)["missing"] == ["off"]
+    diff = dict(same, healthy=d("bb", [["mro", "1"], ["vars.x", "3"]]))
+    got = harness.site_realized_check(diff)
+    assert got["equal"] is False and got["first_difference"] == {"run": "healthy", "entry": "vars.x"}, got
+
+
+def test_r18_final_status_gates_on_the_site_realized_check():
+    """The gate is WIRED: final_status names it, and it follows checks["site_realized"]["equal"]."""
+    harness = _load("inv7_harness_r18g", EVIDENCE / "inv7_harness.py")
+    for equal in (True, False):
+        v = {"identical": True, "control": {}}
+        checks = {"uninstrumented": {"census_enabled": False, "census_code_entries": 0}, "site_realized": {"equal": equal}}
+        harness.final_status(v, checks, {"uninstrumented": {"pytest_exit": 0}}, ["uninstrumented"])
+        assert v["gates"]["uninstrumented:site_realized_equal"] is equal, v["gates"]
+
+
+def test_r18_the_failing_arm_changes_site_so_the_digest_is_taken_at_import():
+    """The NEGATIVE control for WHERE the digest is taken: the failing arm replaces Site._bump by construction, so a
+    session-end digest would differ in that arm on every run — the gate would be false on the unmutated tree."""
+    un = _load("inv7_uninstrument_r18n", EVIDENCE / "inv7_uninstrument.py")
+    S = un._realized_site(un.REFERENCE_CENSUS.read_text(), "_x")
+    before = un.site_description_digest(un.site_description(S))["digest"]
+
+    def boom(self, field):
+        raise RuntimeError("INV-7 forced counter failure")
+    S._bump = boom                                          # exactly what inv7_observer._arm_setup does in the failing arm
+    assert un.site_description_digest(un.site_description(S))["digest"] != before
+
+
+@pytest.fixture(scope="module")
+def r18_trees(tmp_path_factory):
+    """The source as is, and with a post-class change to Site CONDITIONAL on the arm's environment; a shim repo."""
+    base = tmp_path_factory.mktemp("r18n6")
+    trees = {}
+    for tag, cond in (("head", False), ("cond", True)):
+        d = base / f"src-{tag}" / "veracium"
+        shutil.copytree(ROOT / "src" / "veracium", d, ignore=shutil.ignore_patterns("__pycache__"))
+        if cond:
+            c = d / "census.py"; c.write_text(c.read_text() + _R18_COND)
+        trees[tag] = d.parent
+    repo = base / "repo"; (repo / ".venv" / "bin").mkdir(parents=True)
+    shim = repo / ".venv" / "bin" / "python"; shim.write_text(f"#!/bin/sh\nexec {sys.executable} \"$@\"\n"); shim.chmod(0o755)
+    return base, trees, repo
+
+
+@pytest.mark.parametrize("tag,equal", [("head", True), ("cond", False)], ids=["unconditional: every run imports T's Site", "conditional on the arm's environment: the gate is FALSE"])
+def test_r18_the_runtime_gate_sees_a_change_the_transform_cannot(tag, equal, r18_trees, monkeypatch):
+    """Through the REAL chain (derive, run_arm with the observer, site_realized_check): the conditional change is NOT
+    drift at transform time — site_drift reads [] and derive succeeds — and the runtime gate is FALSE, naming the entry;
+    with no such change the gate is TRUE."""
+    un = _load("inv7_uninstrument_r18r", EVIDENCE / "inv7_uninstrument.py")
+    harness = _load("inv7_harness_r18r", EVIDENCE / "inv7_harness.py")
+    base, trees, repo = r18_trees
+    src = trees[tag]
+    assert un.site_drift((src / "veracium" / "census.py").read_text(), un.REFERENCE_CENSUS.read_text()) == []
+    twin = base / f"twin-{tag}"
+    un.derive(src / "veracium", twin / "veracium")
+    out = base / f"cell-{tag}"
+    S = {}
+    # the unconditional cell also runs the FAILING arm, whose own intervention replaces Site._bump: its digest must still
+    # equal the reference's, which holds only because the digest is taken at IMPORT (a session-end digest would differ)
+    for arm in (("uninstrumented", "healthy", "failing") if equal else ("uninstrumented", "healthy")):
+        monkeypatch.setenv("PYTHONPATH", str(src))
+        S[arm] = harness.run_arm(repo, arm, [str(ROOT / _R16_SEP_SUITE)], out, EVIDENCE / "declaration.py",
+                                 twin_src=(str(twin) if arm == "uninstrumented" else None))
+    got = harness.site_realized_check(S)
+    assert got["missing"] == [] and got["equal"] is equal, got
+    if not equal:
+        assert got["first_difference"] == {"run": "healthy", "entry": "vars.__doc__"}, got
 
 
 # THE SEPARATING TEST (research's stage-1 condition 1, run first in scratch before any code): the reviewer's class of

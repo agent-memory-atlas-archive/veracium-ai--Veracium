@@ -352,9 +352,24 @@ def _census_entries_or_none():
     return sum(_CENSUS_ENTRIES.values())
 
 
+_SITE_REALIZED: dict = {}
+
+
+def _site_realized(site_cls) -> dict:
+    """Round 18, N-6 (the second seat's design, dev's import-time point): route B's description of the Site this arm
+    actually IMPORTED, taken right after `import veracium.census` and BEFORE the arm's own intervention (the failing arm
+    replaces Site._bump by construction, so a session-end digest would differ there on every run). The description is
+    inv7_uninstrument.site_description — the SAME reading route B compares at transform time."""
+    spec = importlib.util.spec_from_file_location("_inv7_site_desc", pathlib.Path(__file__).resolve().parent / "inv7_uninstrument.py")
+    un = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(un)
+    return un.site_description_digest(un.site_description(site_cls))
+
+
 def _arm_setup() -> None:
     import veracium
     import veracium.census as C
+    _SITE_REALIZED.update(_site_realized(C.Site))
     if ARM == "uninstrumented":
         assert TWIN and pathlib.Path(veracium.__file__).resolve().is_relative_to(pathlib.Path(TWIN).resolve()), \
             (veracium.__file__, TWIN)
@@ -394,6 +409,7 @@ _BOUNDARIES: list = []          # (record index at test start, nodeid) — a sid
 _STATE = ("_SYMBOLS", "_SYM_INDEX", "_LABELS", "_LAB_INDEX", "_RECORDS", "_HIST", "_EXCLUDED", "_WRAPPED", "_REBOUND",
           "_UNDO", "_REACH", "_LAST_COUNTERS", "_EXIT_MAPS", "_BOUNDARIES",
           "_CENSUS_ENTRIES", "_CENSUS_FILES", "_DECL_CODE",   # round 15: the census-entry hook's counts and caches
+          "_SITE_REALIZED",                              # round 18 (N-6): the imported Site's digest, taken at arm setup
           "DECL_PATH")                                   # reassigned by install(declaration_path); a scalar
 _CONSTANTS = {"ARM": "the arm, read once from the environment at import", "MODE": "trace or reach, read once at import",
               "OUT": "the output directory, read once at import", "TWIN": "the twin's src root, read once at import",
@@ -438,6 +454,8 @@ def pytest_sessionfinish(session, exitstatus):
         "census_registry_ids": sorted(C.registry()),
         "census_code_entries": census_entries,
         "census_code_entry_detail": [list(k) + [n] for k, n in sorted(_CENSUS_ENTRIES.items(), key=lambda kv: -kv[1])[:20]],
+        # ROUND 18 (N-6): the Site this arm imported, digested at import time — None if setup never took it
+        "site_realized": dict(_SITE_REALIZED) or None,
     }
     if MODE == "trace":
         (OUT / "observer_trace.bin").write_bytes(bytes(_RECORDS))

@@ -141,36 +141,88 @@ def _definition_drift(head_census: str, reference_census: str) -> list:
     return out
 
 
-def _normal_code(co) -> tuple:
-    """A code object with WHERE it was written removed (file, first line, line and position tables) and WHAT it does
-    kept: bytecode, names, constants — nested code objects normalised the same way, recursively."""
-    fields = [f for f in ("co_argcount", "co_posonlyargcount", "co_kwonlyargcount", "co_nlocals", "co_flags", "co_code",
-                          "co_names", "co_varnames", "co_freevars", "co_cellvars", "co_name", "co_qualname",
-                          "co_exceptiontable") if hasattr(co, f)]
-    consts = tuple(_normal_code(c) if hasattr(c, "co_code") else (type(c).__name__, repr(c)) for c in co.co_consts)
-    return tuple((f, getattr(co, f)) for f in fields) + (("co_consts", consts),)
+# ROUND 18 — ONE RECURSIVE RULE (the round-17 verdict, and the second seat's stage-1 read of its fix). Rounds 16, 17 and
+# the round-17 verdict each found the same shape one level deeper: the class body read as a map; the class's type-level
+# fields outside vars(); the FUNCTION objects' own writable fields (__name__, __qualname__, __module__) outside a hand list.
+# Each fix derived one level and listed the next. Now ANY object is described by the same rule, recursively, and the only
+# things not compared are named below, each by the property that justifies it:
+_NAMESPACE_REFS = ("__globals__", "__builtins__")   # the defining module's namespace — census code under test, by design
+_CODE_LOCATION = ("co_filename", "co_firstlineno", "co_linetable", "co_lnotab")   # WHERE code was written, not what it does
+_CACHE_BIT = 1 << 19      # Py_TPFLAGS_VALID_VERSION_TAG (CPython's Include/object.h): the type's attribute-cache state, set
+                          # by a plain lookup on 3.10–3.12 (measured by both seats); IS_ABSTRACT (1 << 20) stays compared
+# `__class__` is not read as a field: every object's type is the first component of its description. A BUILT-IN type is
+# compared by name: it is the interpreter's own, the same object on both sides.
 
 
 def _addressless(text: str) -> str:
     """A repr with its memory address removed: two builds of one class give two addresses for the same object (a lock, a
     function's default object), and an address is WHERE, never WHAT — without this the fallback would read the same
-    definition as drift, loudly (the second seat's round-17 stage-2 note, N-8)."""
+    definition as drift, loudly (the second seat's round-17 stage-2 note, N-8). An address printed in any OTHER format
+    still reads as drift (over-refusal, loud)."""
     import re
     return re.sub(r" at 0x[0-9a-fA-F]+", " at 0x…", text)
 
 
-def _normal_value(v) -> tuple:
-    if isinstance(v, (staticmethod, classmethod)):
-        return (type(v).__name__, _normal_value(v.__func__))
-    if isinstance(v, property):
-        return ("property",) + tuple(_normal_value(f) for f in (v.fget, v.fset, v.fdel)) + (repr(v.__doc__),)
-    if hasattr(v, "__code__") and hasattr(v, "__defaults__"):
-        return ("function", _normal_code(v.__code__), _addressless(repr(v.__defaults__)), _addressless(repr(v.__kwdefaults__)),
-                _addressless(repr(getattr(v, "__annotations__", None))), repr(v.__doc__), _addressless(repr(sorted(vars(v).items()))),
-                _addressless(repr(tuple(c.cell_contents for c in (v.__closure__ or ())))))
-    if type(v).__name__ == "member_descriptor":
-        return ("slot", v.__name__)
-    return (type(v).__name__, _addressless(repr(v)))
+def _data_descriptors(tp: type) -> list:
+    import inspect
+    names = []
+    for k in tp.__mro__:
+        for n, d in vars(k).items():
+            if n not in names and n != "__class__" and inspect.isdatadescriptor(d):
+                names.append(n)
+    return names
+
+
+def _normalise(obj, seen: dict) -> tuple:
+    """ANY object: its type's qualname and EVERY data descriptor along its type's MRO — read-only ones included, because a
+    read-only field can hold writable state (a staticmethod's __func__; a closure's cells) — each value normalised by this
+    same rule; containers element-wise; a code object by every non-callable co_* field except its location; a built-in
+    type by name; a leaf (no data descriptors) by address-free repr. An object met again is recorded by the position at
+    which it was first described, so equal structures stay equal and cycles end."""
+    import types
+    if isinstance(obj, (str, bytes, int, float, complex, bool, type(None), type(Ellipsis))):
+        return (type(obj).__name__, repr(obj))
+    if id(obj) in seen:
+        return ("<ref>", seen[id(obj)])
+    seen[id(obj)] = len(seen)
+    tp = type(obj)
+    if isinstance(obj, type) and obj.__module__ == "builtins":
+        return ("builtin-type", obj.__qualname__)
+    if isinstance(obj, (tuple, list)):
+        return (tp.__name__, tuple(_normalise(x, seen) for x in obj))
+    if isinstance(obj, (set, frozenset)):
+        return (tp.__name__, tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
+    if isinstance(obj, (dict, types.MappingProxyType)):
+        return (tp.__name__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()))
+    if isinstance(obj, types.CodeType):
+        fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
+        return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
+    fields = []
+    for n in _data_descriptors(tp):
+        if n in _NAMESPACE_REFS:
+            continue
+        try:
+            v = getattr(obj, n)
+        except AttributeError:
+            fields.append((n, ("<unset>",)))
+            continue
+        if n == "__flags__" and isinstance(v, int):
+            v = v & ~_CACHE_BIT
+        fields.append((n, _normalise(v, seen)))
+    if not fields:
+        return (tp.__qualname__, _addressless(repr(obj)))
+    return (tp.__qualname__, tuple(fields))
+
+
+def _normal_code(co) -> tuple:
+    """A code object by the recursive rule's code branch (kept by name for its callers and cells)."""
+    return _normalise(co, {})[1]
+
+
+def _normal_value(v, seen=None) -> tuple:
+    """A value in vars(Site), by the recursive rule. `seen` carries the Site class itself, so a reference back to it (a
+    slot's __objclass__) is recorded by position rather than describing the class again inside its own member."""
+    return _normalise(v, {} if seen is None else seen)
 
 
 def _realized_site(text: str, name: str):
@@ -206,39 +258,61 @@ def _type_level_value(cls, name):
     if name == "__base__":
         return getattr(v, "__qualname__", repr(v))
     if name == "__flags__":
-        # Py_TPFLAGS_VALID_VERSION_TAG (1 << 19, CPython's Include/object.h) records the type's ATTRIBUTE-CACHE state, and a
-        # plain lookup sets it on 3.10–3.12: without the mask, `Site.fire` alone after the class read as drift (found by dev
-        # building round 18's cells, 2026-09-25 — it also masked two mutants)
-        return ("int", v & ~(1 << 19))
-    return (type(v).__name__, _addressless(repr(v)))
+        # the attribute-cache bit masked (_CACHE_BIT above); found by dev building round 18's cells, 2026-09-25
+        return ("int", v & ~_CACHE_BIT)
+    return _normalise(v, {id(cls): 0})
+
+
+def site_description(cls) -> list:
+    """Route B's reading of ONE built Site class, as ordered (key, normalised value) entries — the ONE definition both
+    route B (two descriptions compared, at transform time) and the observer's runtime gate (one description digested in
+    each arm, round 18's N-6) read, so the two cannot disagree about what "the same class" means: its MRO by name, the
+    names of vars(Site) in order, each vars value normalised (functions by code, defaults, keyword defaults, annotations,
+    doc, attributes and closure; slots by name; anything else by type and address-free repr), every TYPE-LEVEL field its
+    metaclass defines (derived, not listed; the attribute-cache bit masked), and the metaclass. vars() is read FIRST:
+    reading __annotations__ on 3.10+ inserts one into vars."""
+    v = dict(vars(cls))
+    out = [("mro", tuple(c.__name__ for c in cls.__mro__)), ("vars.order", tuple(v))]
+    out += [(f"vars.{k}", _normal_value(x, {id(cls): 0})) for k, x in v.items()]
+    # every NON-built-in base, described by the same rule (a base's content is inherited behaviour; route A does not see
+    # a base class defined outside Site's own ClassDef)
+    out += [(f"base.{b.__qualname__}", _normalise(b, {id(cls): 0})) for b in cls.__mro__[1:] if b.__module__ != "builtins"]
+    out += [(f"type.{n}", _type_level_value(cls, n)) for n in _type_level_fields(type(cls))]
+    out.append(("metaclass", type(cls).__qualname__))
+    return out
+
+
+def site_description_digest(desc: list) -> dict:
+    """A description as its digest and per-entry sha16s, so a runtime disagreement NAMES the entry that differs."""
+    entries = [[k, hashlib.sha256(repr(val).encode()).hexdigest()[:16]] for k, val in desc]
+    return {"digest": hashlib.sha256(repr(entries).encode()).hexdigest(), "entries": entries}
 
 
 def _realized_drift(head_census: str, reference_census: str) -> list:
-    """ROUTE B — the Site CLASS each census BUILDS, compared attribute by attribute: its MRO by name, the keys of
-    vars(Site) in order, every TYPE-LEVEL field its metaclass defines (__name__, __qualname__, … — derived, not
-    listed), its metaclass, and each vars value normalised (functions by code, defaults, keyword defaults, annotations, doc,
-    attributes and closure; slots by name; anything else by type and repr). It sees what route A cannot: a module-level
-    statement after the class (`Site.__doc__ = …`, `Site.fire.__defaults__ = …`, `setattr(Site, …)`), and a module-level
-    name read at class creation whose VALUE differs."""
+    """ROUTE B — the Site CLASS each census BUILDS, read by `site_description` and compared entry by entry. It sees what
+    route A cannot: a module-level statement after the class (`Site.__doc__ = …`, `Site.fire.__defaults__ = …`,
+    `setattr(Site, …)`, `Site.__qualname__ = …`), and a module-level name read at class creation whose VALUE differs."""
     h, r = _realized_site(head_census, "_inv7_head_census"), _realized_site(reference_census, "_inv7_head_census")
     if not isinstance(h, type) or not isinstance(r, type):
         return ["Site: a census does not build a class named Site"]
+    hd, rd = dict(site_description(h)), dict(site_description(r))
     out = []
-    if [c.__name__ for c in h.__mro__] != [c.__name__ for c in r.__mro__]:
-        out.append("Site's realized MRO differs from the reference census's")
-    hv, rv = dict(vars(h)), dict(vars(r))
-    out += [f"Site.{k} (realized): in HEAD's census and not in the reference census" for k in sorted(set(hv) - set(rv))]
-    out += [f"Site.{k} (realized): in the reference census and not in HEAD's" for k in sorted(set(rv) - set(hv))]
-    out += [f"Site.{k} (realized): differs between HEAD's census and the reference census" for k in sorted(set(hv) & set(rv))
-            if _normal_value(hv[k]) != _normal_value(rv[k])]
-    if not out and list(hv) != list(rv):
-        out.append("Site's realized attributes are in a different order from the reference census's")
-    # the TYPE-LEVEL fields, read AFTER the vars() snapshot above (reading __annotations__ on 3.10+ inserts one into vars)
-    fields = _type_level_fields(type(h)) + [n for n in _type_level_fields(type(r)) if n not in _type_level_fields(type(h))]
-    out += [f"Site.{n} (realized, on the type): differs between HEAD's census and the reference census" for n in fields
-            if _type_level_value(h, n) != _type_level_value(r, n)]
-    if type(h).__qualname__ != type(r).__qualname__:
-        out.append("Site's realized metaclass differs from the reference census's")
+    for k in list(rd) + [k for k in hd if k not in rd]:
+        if hd.get(k, "<absent>") == rd.get(k, "<absent>"):
+            continue
+        if k == "mro":
+            out.append("Site's realized MRO differs from the reference census's")
+        elif k == "vars.order":
+            out.append("Site's realized attributes differ in their names or order from the reference census's")
+        elif k == "metaclass":
+            out.append("Site's realized metaclass differs from the reference census's")
+        elif k.startswith("vars."):
+            name = k[len("vars."):]
+            where = "in HEAD's census and not in the reference census" if k not in rd else (
+                "in the reference census and not in HEAD's" if k not in hd else "differs between HEAD's census and the reference census")
+            out.append(f"Site.{name} (realized): {where}")
+        else:
+            out.append(f"Site.{k[len('type.'):]} (realized, on the type): differs between HEAD's census and the reference census")
     return out
 
 
