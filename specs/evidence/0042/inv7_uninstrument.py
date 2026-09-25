@@ -352,7 +352,12 @@ def _described_in_isolation(census_text: str):
     made. The transform process never executes census code: a census that rebinds a built-in (`import builtins;
     builtins.tuple = …`) changes only the child (round 19, the second seat's stage-1 read: a __builtins__ copy does not
     isolate, because `import builtins` returns the real module), and inside the child the builtins module is restored
-    after the census runs, so the describer reads with the real built-ins.
+    after the census runs, so the describer reads with the real built-ins. The child never writes bytecode (`-B`,
+    always): `-I` drops every PYTHON* variable, PYTHONDONTWRITEBYTECODE and PYTHONPYCACHEPREFIX among them, and a child
+    does not inherit `-B`, so without it a transform run with bytecode off, or with its caches redirected, wrote caches
+    into the evidence directory it was loaded from (found by the round-19 stage's untouched-tree check; passing on only
+    the caller's `-B` missed the redirected caller, the second seat's stage-1 read). The description does not depend on
+    the child's hash seed.
     A DESIGN ASSUMPTION, stated by its scope, not a gap of this route: describing an object needs the object, and the
     object needs the process that ran the census, so census code can reach the describer — a census that patches it
     forges its own description in four lines, even with no import statement (the second seat's probe, round 19). The
@@ -362,7 +367,7 @@ def _described_in_isolation(census_text: str):
     ATTACK THE MEASUREMENT; route A, which reads only the ClassDef, is the one reading outside that assumption."""
     import json
     import subprocess
-    r = subprocess.run([sys.executable, "-I", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve())],
+    r = subprocess.run([sys.executable, "-I", "-B", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve())],
                        input=census_text, capture_output=True, text=True, timeout=300)
     if r.returncode != 0:
         return f"the isolated interpreter exited {r.returncode}: {r.stderr.strip()[-300:]}"

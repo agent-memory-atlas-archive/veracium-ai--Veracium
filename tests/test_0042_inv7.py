@@ -2545,6 +2545,48 @@ def test_r19_a_census_rebinding_a_builtin_cannot_reach_the_transform(tmp_path):
         builtins.tuple = real
 
 
+_R19_SHIPPED_FLAGS = '[sys.executable, "-I", "-B", "-c",'
+# the two superseded forms, each the mutant of one caller: `-I` alone (the round-19 fix as first committed to the
+# working tree), and the caller's `-B` passed on conditionally (the first fix, which the second seat's stage-1 read
+# showed misses a caller whose caches are redirected)
+_R19_BARE = '[sys.executable, "-I", "-c",'
+_R19_CONDITIONAL = '[sys.executable, "-I", *(["-B"] if sys.flags.dont_write_bytecode else []), "-c",'
+
+
+@pytest.mark.parametrize("caller,form,expect_written", [
+    ("-B", "shipped", False), ("-B", "bare -I", True),
+    ("PYTHONPYCACHEPREFIX", "shipped", False), ("PYTHONPYCACHEPREFIX", "conditional -B", True)])
+def test_r19_the_isolated_child_never_writes_bytecode(caller, form, expect_written, tmp_path):
+    """Found by the round-19 stage's untouched-tree check: `-I` drops every PYTHON* variable — PYTHONDONTWRITEBYTECODE
+    and PYTHONPYCACHEPREFIX among them — and a child does not inherit `-B`, so route B's child wrote caches into the
+    evidence directory of a transform run with bytecode OFF, or with its caches REDIRECTED. The child now never writes
+    bytecode. Each cell runs one caller over a fresh copy of the evidence directory. For each caller the shipped module
+    writes nothing there, and the superseded form that caller defeats DOES write — so neither half is vacuous, and the
+    prefix caller separates the shipped form from the conditional one (the second seat's stage-1 read)."""
+    probe = ("import importlib.util, sys\n"
+             "s = importlib.util.spec_from_file_location('u', sys.argv[1]); m = importlib.util.module_from_spec(s)\n"
+             "sys.modules['u'] = m; s.loader.exec_module(m)\n"
+             "ref = m.REFERENCE_CENSUS.read_text(); assert m.site_drift(ref, ref) == []\n")
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONDONTWRITEBYTECODE", "PYTHONPYCACHEPREFIX")}
+    argv = [sys.executable]
+    if caller == "-B":
+        argv.append("-B")
+    else:
+        env["PYTHONPYCACHEPREFIX"] = str(tmp_path / "prefix")      # the caller's OWN caches go there, not beside the code
+    ev = tmp_path / "evidence"
+    shutil.copytree(EVIDENCE, ev, ignore=shutil.ignore_patterns("__pycache__"))
+    if form != "shipped":
+        text = (ev / "inv7_uninstrument.py").read_text()
+        assert text.count(_R19_SHIPPED_FLAGS) == 1, "the mutant's anchor moved"
+        (ev / "inv7_uninstrument.py").write_text(
+            text.replace(_R19_SHIPPED_FLAGS, _R19_BARE if form == "bare -I" else _R19_CONDITIONAL))
+    r = subprocess.run(argv + ["-c", probe, str(ev / "inv7_uninstrument.py")],
+                       capture_output=True, text=True, env=env, timeout=300)
+    assert r.returncode == 0, (caller, form, r.stderr[-500:])
+    written = sorted(str(q.relative_to(ev)) for q in ev.rglob("*.pyc"))
+    assert bool(written) is expect_written, (caller, form, written)
+
+
 # ---- round 18, N-6: the Site each arm IMPORTED, compared at runtime --------------------------------------------------
 # site_drift reads both censuses in the TRANSFORM's process, so a change to Site made after the class and CONDITIONAL on
 # the arm's runtime state (its environment, what it imports) is seen by neither route. The observer now digests route B's
