@@ -1843,17 +1843,32 @@ def test_r14_an_outside_declare_site_is_preserved_uncounted_and_the_scan_side_re
     assert len(refusals) == 1 and "did not register" in refusals[0], refusals
 
 
-def test_r13_s2_6_an_unresolvable_scope_in_derive_names_its_module(tmp_path):
+def test_r13_s2_6_an_unresolvable_scope_in_derive_names_its_module(tmp_path, monkeypatch):
     """RESEARCH'S S2-6: derive() wrapped only `Refused`, so an `UnresolvableScope` escaped naming a line and not the
-    module. It now names the module and keeps its type (a caller catching UnresolvableScope still catches it)."""
+    module. It now names the module and keeps its type (a caller catching UnresolvableScope still catches it).
+    REWRITTEN (queued since round 13, the second seat's round-18 stage-1 read): the first form held a program only the
+    join check's CURRENT refusal set cannot resolve, so the test was coupled to that set — at the round-12 pin nothing was
+    raised at all, and a join check that learned to resolve the shape would have turned it vacuous. The refusal is now
+    made by the resolver the transform calls, replaced for ONE module, so the test asserts the wrapping alone."""
     un = _load("inv7_uninstrument_r13_s26", EVIDENCE / "inv7_uninstrument.py")
+    marker = "# r18: this module's scope is unresolvable"
+    real = un._scope.Resolver
+
+    class Unresolvable(real):
+        def __init__(self, text, *a, **k):
+            if marker in text:
+                raise un._scope.UnresolvableScope("line 2: a scope the resolver refuses (injected)")
+            super().__init__(text, *a, **k)
+
+    monkeypatch.setattr(un._scope, "Resolver", Unresolvable)
     src = tmp_path / "vpkg"; src.mkdir()
     (src / "__init__.py").write_text(""); (src / "census.py").write_text(_R12_CENSUS_SRC.read_text())
-    (src / "deep" ).mkdir(); (src / "deep" / "__init__.py").write_text("")
-    (src / "deep" / "m.py").write_text("from .. import census as _census\nG = ((lambda: (_census := 1)) for x in range(3) "
-                                       "if (lambda: _census.enabled())())\n")
-    with pytest.raises(un._scope.UnresolvableScope, match=re.escape(str(pathlib.Path("deep") / "m.py")) + ": line 2"):
+    (src / "deep").mkdir(); (src / "deep" / "__init__.py").write_text("")
+    (src / "deep" / "m.py").write_text("from .. import census as _census\n" + marker + "\nX = _census.enabled()\n")
+    with pytest.raises(un._scope.UnresolvableScope) as caught:
         un.derive(src, tmp_path / "twin" / "vpkg")
+    assert str(caught.value).startswith(str(pathlib.Path("deep") / "m.py") + ": "), str(caught.value)
+    assert "(injected)" in str(caught.value), "the refusal is not the injected one: the test would be asserting something else"
 
 
 def test_r13_b3_a_declare_site_method_on_an_outside_object_is_not_a_site(tmp_path):
@@ -1987,7 +2002,9 @@ def test_r15_every_question_about_a_site_answers_alike_in_source_and_twin(shape,
     assert un.verify(out, src) == []
     ran_src, ran_twin = _r13_run_b(src.parent), _r13_run_b(out.parent)
     assert ran_src.stdout == "True\n", ran_src.stdout + ran_src.stderr
-    assert (ran_twin.returncode, ran_twin.stdout) == (0, "True\n"), ran_twin.stderr[-300:]
+    # the message carries what the twin ANSWERED as well as its stderr, which is empty when it simply answers False (the
+    # class-shapes row printed a blank failure line in round 15)
+    assert (ran_twin.returncode, ran_twin.stdout) == (0, "True\n"), (shape, ran_twin.returncode, ran_twin.stdout, ran_twin.stderr[-300:])
 
 
 def test_r16_the_twin_census_is_the_reference_census_and_verify_refuses_any_other(tmp_path, monkeypatch):
@@ -2292,6 +2309,88 @@ def test_r17_formatting_is_not_drift_on_either_route():
     assert un.site_drift(head, ref) == []
 
 
+# ---- round 18 (queued after round 17's pre-seal reads; worked while the round-17 verdict is out) ------------------------
+# N-7: a cell for each of the second seat's route-B stage-2 survivors that a change can reach — a method differing ONLY in
+# a constant (BM1), a closure differing ONLY in its value (BM2), an attribute set on a method (BM3); and the class header's
+# `keywords` field, which the comparison covered and no cell varied. (BM4 — type-level values compared by type only — has
+# no cell: every writable type-level field is also visible in vars(Site) or the MRO, measured; see the second seat's note.)
+_R18_EXIT_CONST = "Site.__exit__.__code__ = Site.__exit__.__code__.replace(co_consts=tuple(True if c is False else c for c in Site.__exit__.__code__.co_consts))"
+_R18_MAKER = "def _r18_make(v):\n    def extra(self):\n        return v\n    return extra\n\n\nSite.extra = _r18_make(1)"
+_R18_CELLS = [
+    ("a method differing ONLY in a constant", None, _r17_after(_R18_EXIT_CONST), "B"),
+    ("a method differing ONLY in its closure's value", _r17_after(_R18_MAKER),
+     lambda s: s.replace("Site.extra = _r18_make(1)", "Site.extra = _r18_make(2)", 1), "B"),
+    ("an attribute set on a method", None, _r17_after("Site.fire.marker = 1"), "B"),
+    ("the class header's keywords field (metaclass=type: the same class built, a different definition)", None,
+     lambda s: s.replace("class Site:", "class Site(metaclass=type):", 1), "A"),
+]
+
+
+@pytest.mark.parametrize("cell,prepare,edit,routes", _R18_CELLS, ids=[c[0] for c in _R18_CELLS])
+def test_r18_route_b_sees_constants_closures_and_method_attributes(cell, prepare, edit, routes, tmp_path):
+    """The same shape as the round-17 cells: the verdict first, through site_drift; then exactly the named route(s)."""
+    test_r17_site_drift_reads_the_definition_and_the_realized_class(cell, prepare, edit, routes, tmp_path)
+
+
+def test_r18_the_constant_cell_changes_only_a_constant():
+    """The cell's premise, pinned: the edited __exit__ differs from T's in co_consts and in nothing else route B reads."""
+    un = _load("inv7_uninstrument_r18c", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    h, r = un._realized_site(_r17_after(_R18_EXIT_CONST)(ref), "_x").__exit__, un._realized_site(ref, "_x").__exit__
+    hn, rn = dict(un._normal_code(h.__code__)), dict(un._normal_code(r.__code__))
+    assert [k for k in rn if hn[k] != rn[k]] == ["co_consts"], [k for k in rn if hn[k] != rn[k]]
+
+
+def test_r18_an_address_is_not_drift():
+    """N-8, the acceptance half: the SAME definition built twice holds objects at different addresses (a lock here); that
+    is where, not what, and must not read as drift on either route."""
+    un = _load("inv7_uninstrument_r18a", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    both = _r17_after("Site._probe_lock = threading.Lock()\nSite.fire.marker = threading.Lock()")(ref)
+    assert "at 0x" in repr(un._realized_site(both, "_x")._probe_lock)          # the premise: the repr carries an address
+    assert un.site_drift(both, both) == []
+
+
+_R18_NEUTRAL = [
+    # (cell, a behaviour-neutral line after the class) — each sets the type's attribute-cache bit (1 << 19) on 3.10–3.12,
+    # measured by both seats; none is drift (round 17's check read each as drift, through __flags__)
+    ("a bare lookup", "Site.fire"),
+    ("an instance created and used", "_r18_probe = Site('r18.probe')\n_r18_probe.site_id"),
+    ("hasattr of a missing name", "hasattr(Site, 'no_such_member')"),
+]
+
+
+@pytest.mark.parametrize("cell,line", _R18_NEUTRAL, ids=[c[0] for c in _R18_NEUTRAL])
+def test_r18_a_behaviour_neutral_use_after_the_class_is_not_drift(cell, line):
+    """The acceptance half of the __flags__ comparison: EXACTLY the attribute-cache bit is masked."""
+    un = _load("inv7_uninstrument_r18l", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    assert un.site_drift(_r17_after(line)(ref), ref) == [], cell
+
+
+def test_r18_the_abstract_flag_is_not_masked():
+    """...and ONLY that bit: `Site.__abstractmethods__ = …` sets IS_ABSTRACT (1 << 20), which is semantic — Site can no
+    longer be instantiated — and must read as drift, on route B, with the __flags__ field among what it reports."""
+    un = _load("inv7_uninstrument_r18ab", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    head = _r17_after("Site.__abstractmethods__ = frozenset({'fire'})")(ref)
+    b = un._realized_drift(head, ref)
+    assert any(x.startswith("Site.__flags__ ") for x in b), b
+    assert un._definition_drift(head, ref) == []
+
+
+def test_r18_a_census_entry_with_no_python_caller_is_counted(monkeypatch):
+    """`back is None` — a census entry reached with no Python caller (from C, or a thread's first frame) — was DROPPED
+    by the census-entry hook, so it read as no entry at all. It is counted now; the gate requires 0."""
+    obs = _load("inv7_observer_r18", EVIDENCE / "inv7_observer.py")
+    monkeypatch.setattr(obs, "_CENSUS_ENTRIES", {})
+    monkeypatch.setattr(obs, "_kind_of", lambda filename: "census")
+    code = compile("def consult(): pass", "census.py", "exec").co_consts[0]
+    frame = type("F", (), {"f_code": code, "f_back": None})()
+    obs._census_profile(frame, "call", None)
+    assert obs._CENSUS_ENTRIES == {("consult", "<no Python caller>", "<no Python caller>"): 1}
+
+
 # THE SEPARATING TEST (research's stage-1 condition 1, run first in scratch before any code): the reviewer's class of
 # defect — census DECLARATION-time code that changes a later decision — against the round-15 construction and the round-16
 # one. The mutant: declare_site, when declaring 'authority.permitted', raises third-party authority in the declaring
@@ -2373,7 +2472,9 @@ def test_r16_the_reference_census_separates_a_declaration_time_defect(cell, muta
     # derive with round 15's transform (HEAD's census verbatim), so the mutated one reads IDENTICAL with 0 census entries
     # — the reviewer's finding, failing on its own assertion — where an identity check first would fail on a name the
     # pin does not have (REFERENCE_CENSUS) and demonstrate nothing
-    assert ("IDENTICAL" if v["identical"] else "DIVERGENT") == verdict, (cell, v["divergences"])
+    got = "IDENTICAL" if v["identical"] else "DIVERGENT"
+    # the message names the verdict it READ, so a RED at an earlier pin prints what it saw (N-4: it printed the empty set)
+    assert got == verdict, (cell, f"read {got}, expected {verdict}", v["divergences"])
     assert S["uninstrumented"]["census_code_entries"] == 0, (cell, S["uninstrumented"].get("census_code_entry_detail"))
     want_census = (src / "veracium" / "census.py").read_bytes() if twin_census == "head" else un.REFERENCE_CENSUS.read_bytes()
     assert (twin / "veracium" / "census.py").read_bytes() == want_census

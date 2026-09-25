@@ -322,6 +322,10 @@ def _census_profile(frame, event, arg):
         return
     back = frame.f_back
     if back is None:
+        # a census entry with NO Python caller (reached from C, or a thread's first frame): COUNTED, never dropped — a
+        # dropped entry is an uncounted one, and the gate requires 0 (round 17's queued `back is None`, research's N)
+        key = (frame.f_code.co_name, "<no Python caller>", "<no Python caller>")
+        _CENSUS_ENTRIES[key] = _CENSUS_ENTRIES.get(key, 0) + 1
         return
     caller = _kind_of(back.f_code.co_filename)
     if caller in ("census", "observer"):

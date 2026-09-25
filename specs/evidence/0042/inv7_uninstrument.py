@@ -151,18 +151,26 @@ def _normal_code(co) -> tuple:
     return tuple((f, getattr(co, f)) for f in fields) + (("co_consts", consts),)
 
 
+def _addressless(text: str) -> str:
+    """A repr with its memory address removed: two builds of one class give two addresses for the same object (a lock, a
+    function's default object), and an address is WHERE, never WHAT — without this the fallback would read the same
+    definition as drift, loudly (the second seat's round-17 stage-2 note, N-8)."""
+    import re
+    return re.sub(r" at 0x[0-9a-fA-F]+", " at 0x…", text)
+
+
 def _normal_value(v) -> tuple:
     if isinstance(v, (staticmethod, classmethod)):
         return (type(v).__name__, _normal_value(v.__func__))
     if isinstance(v, property):
         return ("property",) + tuple(_normal_value(f) for f in (v.fget, v.fset, v.fdel)) + (repr(v.__doc__),)
     if hasattr(v, "__code__") and hasattr(v, "__defaults__"):
-        return ("function", _normal_code(v.__code__), repr(v.__defaults__), repr(v.__kwdefaults__),
-                repr(getattr(v, "__annotations__", None)), repr(v.__doc__), repr(sorted(vars(v).items())),
-                repr(tuple(c.cell_contents for c in (v.__closure__ or ()))))
+        return ("function", _normal_code(v.__code__), _addressless(repr(v.__defaults__)), _addressless(repr(v.__kwdefaults__)),
+                _addressless(repr(getattr(v, "__annotations__", None))), repr(v.__doc__), _addressless(repr(sorted(vars(v).items()))),
+                _addressless(repr(tuple(c.cell_contents for c in (v.__closure__ or ())))))
     if type(v).__name__ == "member_descriptor":
         return ("slot", v.__name__)
-    return (type(v).__name__, repr(v))
+    return (type(v).__name__, _addressless(repr(v)))
 
 
 def _realized_site(text: str, name: str):
@@ -197,7 +205,12 @@ def _type_level_value(cls, name):
         return tuple(c.__qualname__ for c in v)
     if name == "__base__":
         return getattr(v, "__qualname__", repr(v))
-    return (type(v).__name__, repr(v))
+    if name == "__flags__":
+        # Py_TPFLAGS_VALID_VERSION_TAG (1 << 19, CPython's Include/object.h) records the type's ATTRIBUTE-CACHE state, and a
+        # plain lookup sets it on 3.10–3.12: without the mask, `Site.fire` alone after the class read as drift (found by dev
+        # building round 18's cells, 2026-09-25 — it also masked two mutants)
+        return ("int", v & ~(1 << 19))
+    return (type(v).__name__, _addressless(repr(v)))
 
 
 def _realized_drift(head_census: str, reference_census: str) -> list:
