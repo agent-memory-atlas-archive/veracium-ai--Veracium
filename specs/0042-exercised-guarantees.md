@@ -5,7 +5,13 @@ Spec-Status: accepted
 | | |
 |---|---|
 | **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc); v7 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ccf0715041f3148a); v8.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 b94d814d20b96d2c); v9.2 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 a230ae09793790be) — ACCEPTED at the design level, the flip on the owner's word |
-| **Version** | **v11.0.1 — ROUTE B READS THE CLASS'S TYPE-LEVEL ATTRIBUTES TOO, AND ITS CONTEXT LIMIT IS NAMED.** A text correction to v11.0's round-17 paragraph, matching the round-17 fix; nothing else changes. Research's pre-seal read found `Site.__qualname__` reassigned after the class statement passing BOTH routes. `__qualname__` and `__name__` are slots of the TYPE object, not in `vars(Site)`, so v11.0's "the two built `Site` classes are compared" was false. Route B now also compares every data descriptor the METACLASS defines, read off each built class. The paragraph also names what route B cannot see: a post-class change CONDITIONAL on runtime context. **Prior cell follows.** **v11.0 — THE ROUND-16 AMENDMENT TO INV-7 IS ACCEPTED AND FOLDED IN: THE REFERENCE ARM IS FREE OF THE CENSUS UNDER TEST.** 🔴 **A frozen invariant's text changes in this version, BY ACCEPTANCE:** the round-16 verdict (banked `a17ebc7`, body sha16 `fb62c45af45289a7`): "*design amendment ACCEPTED; implementation RETURNED for one correction*". The changes:
+| **Version** | **v11.1 — ROUTE B IS ONE RECURSIVE RULE, AND THE REFERENCE ARM'S `Site` IS CHECKED WHERE IT RUNS.** An implementation note (round 18); no frozen invariant's text changes, and `Spec-Status` stays `accepted`. It records the round-17 verdict (banked `1aa6d68`, body sha16 `41121680bbb74898`): "*RETURNED for one implementation correction … the design amendment remains accepted*". Route B's function normaliser omitted the WRITABLE `__name__`, `__qualname__` and `__module__`. **v11.0.1's hand list of function fields is WITHDRAWN.** A round-18 paragraph states:
+- the recursive rule that replaces it, with its three named exclusions;
+- the attribute-cache bit that an earlier form compared by accident;
+- the import-time check of the realized `Site` in every arm, which closes v11.0.1's named context limit;
+- that the INV-7 run is re-made, not carried, because the observer changed.
+
+**Prior cell follows.** **v11.0.1 — ROUTE B READS THE CLASS'S TYPE-LEVEL ATTRIBUTES TOO, AND ITS CONTEXT LIMIT IS NAMED.** A text correction to v11.0's round-17 paragraph, matching the round-17 fix; nothing else changes. Research's pre-seal read found `Site.__qualname__` reassigned after the class statement passing BOTH routes. `__qualname__` and `__name__` are slots of the TYPE object, not in `vars(Site)`, so v11.0's "the two built `Site` classes are compared" was false. Route B now also compares every data descriptor the METACLASS defines, read off each built class. The paragraph also names what route B cannot see: a post-class change CONDITIONAL on runtime context. **Prior cell follows.** **v11.0 — THE ROUND-16 AMENDMENT TO INV-7 IS ACCEPTED AND FOLDED IN: THE REFERENCE ARM IS FREE OF THE CENSUS UNDER TEST.** 🔴 **A frozen invariant's text changes in this version, BY ACCEPTANCE:** the round-16 verdict (banked `a17ebc7`, body sha16 `fb62c45af45289a7`): "*design amendment ACCEPTED; implementation RETURNED for one correction*". The changes:
 - INV-7's row now defines UNINSTRUMENTED as the accepted text.
 - Part A-2's third-arm reason takes the accepted wording, and its superseded sentence moves to §11.
 - The PENDING block becomes an ACCEPTED record.
@@ -313,7 +319,9 @@ Spec-Status: accepted
 >   - the class attributes in both directions and in order;
 >   - every value normalised: functions by their compiled code without line information (nested code included), with
 >     their defaults, keyword defaults, annotations, docstrings, attributes and closures; wrapped descriptors unwrapped;
->     everything else by type and representation;
+>     everything else by type and representation. *(v11.1: this HAND LIST is WITHDRAWN as incomplete. The round-17 verdict
+>     showed a function's writable `__name__`, `__qualname__` and `__module__` outside it. Round 18's recursive rule
+>     replaces it.)*
 >   - **the class's TYPE-LEVEL attributes** (v11.0.1), which are not in `vars(Site)`: every data descriptor defined along the
 >     METACLASS's method resolution order, read off each built class and compared by value (class tuples by qualified
 >     name). This set is derived from the metaclass, not listed: it is 17 fields on CPython 3.12 and 3.13 and 16 on 3.10
@@ -338,14 +346,83 @@ Spec-Status: accepted
 >
 > These are in `tests/test_0042_inv7.py::test_r17_site_drift_reads_the_definition_and_the_realized_class`. At the round-16
 > pin, each cell fails on its own verdict assertion: the defect, not a missing name. The acceptance half is
-> `tests/test_0042_inv7.py::test_r17_formatting_is_not_drift_on_either_route`. **Still without a cell of its own:** the
-> class header's `keywords` field. Route A compares it by field, and so does route B through the built class.
+> `tests/test_0042_inv7.py::test_r17_formatting_is_not_drift_on_either_route`. *(v11.0.1 said the class header's `keywords`
+> field had no cell of its own. Round 18 added one, in
+> `tests/test_0042_inv7.py::test_r18_route_b_sees_constants_closures_and_method_attributes`.)*
 >
 > **WHAT ROUTE B CANNOT SEE, named (v11.0.1):** it builds both classes in the TRANSFORM's context (a fresh module namespace
 > in the transform's process), not in an arm's runtime context. **A post-class change CONDITIONAL on runtime state** (an
 > environment variable, what else is imported, `sys.modules`) is outside the class statement, so route A cannot see it, and
 > it may not run in the transform's context, so route B may not either. Building HEAD's class inside a real arm and
-> comparing it there would close this. It is recorded for the next round.
+> comparing it there would close this. It is recorded for the next round. *(v11.1: closed at runtime by round 18's
+> import-time check, below.)*
+>
+> **ROUND 18: ROUTE B BECOMES ONE RECURSIVE RULE, AND THE REALIZED `Site` IS CHECKED INSIDE EVERY ARM** (v11.1, research as the
+> specification's author; the round-17 verdict's one correction). The verdict: route B's function normaliser omitted the
+> WRITABLE `__name__`, `__qualname__` and `__module__`. The reviewer's witness renamed a method after the class statement
+> and then wrote `Site.__doc__ = Site.__doc__`. That line deliberately neutralised an incidental catch (next paragraph but
+> one), so both routes and `verify()` read clean while `type(S).fire.__name__` differed between source and reference.
+>
+> **The pattern, which has now recurred three times, and the rule that ends it.**
+> - Round 16: the class body as a map.
+> - Round 17: the class's type-level fields.
+> - Round 17's verdict: a function's own fields.
+>
+> Each fix derived ONE level and listed the next. Route B now normalises ANY object by ONE recursive rule: its type's
+> qualified name, plus EVERY data descriptor along its type's method resolution order, read-only ones included, each
+> normalised the same way.
+> - Built-in scalars are compared by `repr`, containers element by element, code objects by every non-callable `co_*`
+>   field, and objects with no data descriptors by an address-free `repr`.
+> - An object met again is recorded as a reference to where it was first described, so cycles end.
+> - Read-only fields are followed because their values can hold writable state: a `staticmethod`'s read-only `__func__`
+>   is a function whose name can be changed, and closure cells are writable.
+> - The functions, wrappers, properties and cells have no case of their own. The fields compared are derived per
+>   interpreter, not listed.
+>
+> **Exclusions, only by a named property:**
+> 1. **Namespace references** (`__globals__`, `__builtins__`): T's module and HEAD's legitimately differ, because they are
+>    the census under test. The acceptance cell is a census helper outside `Site` changed in HEAD, which reads no drift.
+> 2. **The source-location fields of code objects** (`co_filename`, `co_firstlineno`, `co_linetable`, `co_lnotab`):
+>    formatting is not drift.
+> 3. **`__flags__` bit 19** (`Py_TPFLAGS_VALID_VERSION_TAG`, the type's attribute cache). Measured: on 3.10 and 3.12 a
+>    bare lookup, an instance created and used, or a `hasattr` of a missing name sets it, and on 3.13 none does. Comparing
+>    it read a behaviour-neutral line as drift, a false "T must advance". That is loud, but it was also incidental: it
+>    "caught" two changes through the cache, not through what changed. Bit 20 (`Py_TPFLAGS_IS_ABSTRACT`) is semantic and
+>    stays compared.
+>
+> **Cells:**
+> - the verdict's witness for each of `__name__`, `__qualname__` and `__module__`, each WITH `Site.__doc__ = Site.__doc__`;
+> - a function's `__type_params__`;
+> - a `staticmethod`'s inner function renamed through its read-only `__func__`;
+> - a closure cell changed after the class.
+>
+> These are in `tests/test_0042_inv7.py::test_r18_function_metadata_is_compared_by_one_recursive_rule`. The derived field
+> set is asserted per interpreter by `tests/test_0042_inv7.py::test_r18_the_function_fields_compared_are_derived_per_interpreter`.
+> The exclusions' acceptance halves are `tests/test_0042_inv7.py::test_r18_a_census_helper_outside_site_is_not_drift` and
+> `tests/test_0042_inv7.py::test_r18_a_behaviour_neutral_use_after_the_class_is_not_drift`. The abstract bit is kept by
+> `tests/test_0042_inv7.py::test_r18_the_abstract_flag_is_not_masked`. At the round-17 pin, the three witness cells, the
+> type-parameter cell and the `staticmethod` cell fail on their own assertion. The closure cell passes there, because
+> closure contents were already compared, so it is a regression guard, not a demonstration.
+>
+> **The realized `Site`, checked where it runs.** v11.0.1 named what route B cannot see: a post-class change CONDITIONAL on
+> runtime state. The observer now takes, in every run of every arm (controls included), a digest of route B's description
+> of the `Site` class actually imported. It does so immediately after the census is imported and before the arm's own
+> intervention. The harness gate `uninstrumented:site_realized_equal` requires every digest to be equal, and names the first
+> difference when they are not. Three cases:
+> - census code conditional on the environment runs at import, so it is captured;
+> - product code that modifies `Site` runs identically in every arm, the reference included;
+> - census code that changes `Site` later is census code under test, which the trace diff and the census-entry hook see.
+>
+> The timing is load-bearing, and it is shown. The failing arm replaces a `Site` method by construction, so a digest taken
+> at session end would differ on every real run
+> (`tests/test_0042_inv7.py::test_r18_the_failing_arm_changes_site_so_the_digest_is_taken_at_import`). Through the real
+> chain, a HEAD census whose post-class change is conditional on a variable the arms set turns the gate FALSE while
+> `site_drift` reads no drift at transform time, and an unconditional one reads TRUE
+> (`tests/test_0042_inv7.py::test_r18_the_runtime_gate_sees_a_change_the_transform_cannot`).
+>
+> **The INV-7 run is RE-MADE, not carried**, because the observer changed: it now also counts a census entry with no Python
+> caller (`tests/test_0042_inv7.py::test_r18_a_census_entry_with_no_python_caller_is_counted`) and records the realized `Site`.
+> Its figures are in the transcript committed with this version, not here.
 >
 > **One fact a reader must not miss:** T's census.py is byte-equal to HEAD's today (unchanged since round 8). So at this
 > version the reference arm's twin is byte-identical to round 15's. **The construction differs from round 15's only when
@@ -1088,7 +1165,8 @@ this spec exists to find.
 > 3. **Advancing T** (to a later commit whose census an external round has accepted) is a SPEC change, recorded here with its
 >    digest. It is never a constant edit.
 > 4. **HEAD's product may import only census names T defines,** and HEAD's `Site` must be T's `Site`. A difference is refused
->    by `derive()` as "T must advance"; how it is detected is stated under round 16's and round 17's implementation notes.
+>    by `derive()` as "T must advance"; how it is detected is stated under the round-16, round-17 and round-18
+>    implementation notes.
 >
 > **T, pinned here:** commit `5d835e1453d9265acdbb60e3f9732ad7ebeffd2b`; its census.py, tracked as
 > `specs/evidence/0042/reference_census.py`, has sha256 `69beb1bb2f058d97de646638ec103f799c8e8e0e7c11b2abb196a3f41800683f`.

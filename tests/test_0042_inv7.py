@@ -321,7 +321,11 @@ def test_the_pinned_transcript_is_this_tree_and_reads_identical_across_four_arms
     # the gate NAME SET, not only their values (research's pre-commit note): a per-arm gate exists only when its arm ran,
     # so a run missing the off arm would otherwise pass by omitting uninstrumented:registry_equals_off
     assert {"uninstrumented:census_disabled", "uninstrumented:registry_equals_off", "uninstrumented:no_census_code_in_decisions",
+            "uninstrumented:site_realized_equal",
             "off:census_disabled", "healthy:subsequence", "failing:all_unmeasured", "identical"} <= set(json.loads(g.group(3))), sorted(json.loads(g.group(3)))
+    # ROUND 18 (N-6): the printed check — every run (the four arms and their four controls) imported the same Site
+    sr = json.loads(re.search(r"^  site_realized: (\{.*\})$", text, re.M).group(1))
+    assert sr["equal"] is True and sr["missing"] == [] and sr["distinct_digests"] == 1 and sr["runs"] == 8, sr
     assert re.search(r"^HARNESS EXIT: 0$", text, re.M)
 
 
