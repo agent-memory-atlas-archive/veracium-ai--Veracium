@@ -55,10 +55,20 @@ class _Gen:
 
     def __init__(self, rng):
         self.rng, self.n, self.binders, self.reads = rng, 0, [], 0
+        self.role, self.read_roles = "expression", []          # round 19 (N5): the ROLE each read was generated in
 
     def read(self):
         self.reads += 1
+        self.read_roles.append(self.role)
         return f"@R{self.reads - 1}@"
+
+    def in_role(self, role, depth):
+        """An expression generated as `role` (an annotation) — every read inside it, however deep, carries the role."""
+        outer, self.role = self.role, role
+        try:
+            return self.expr(depth)
+        finally:
+            self.role = outer
 
     def expr(self, depth):
         r = self.rng.random()
@@ -98,29 +108,50 @@ class _Gen:
 
 
 def program(rng) -> tuple[str, int]:
+    src, discarded, _roles = program_with_roles(rng)
+    return src, discarded
+
+
+def program_with_roles(rng, future: bool = False) -> tuple[str, int, list]:
     """-> (one module, programs discarded to reach it). Every name bound once at module level, then one line holding
     the generated scopes — a def with its header roles, a lambda, a class header, or a bare expression. The walrus has
     lexical restrictions the generator does not model (none inside a comprehension's iterable, even within a lambda),
     so a draw that does not COMPILE is discarded and counted rather than encoded as another rule here."""
     discarded = 0
     while True:
-        src = _draw(rng)
+        src, roles = _draw(rng, future)
         try:
             compile(src, "<oracle>", "exec", dont_inherit=True)
-            return src, discarded
+            return src, discarded, roles
         except SyntaxError:
             discarded += 1
 
 
-def _draw(rng) -> str:
-    g = _Gen(rng); shape = rng.choice(["def", "def", "lambda", "class", "expr", "expr"]); D = rng.choice([1, 2, 3])
+def _draw(rng, future: bool = False) -> tuple[str, list]:
+    """-> (one module, each read's role). Round 19 (N5, the second seat's stage-1 read): annotations are ROLES — a
+    parameter's, a keyword-only parameter's and the return's, on a module-level def and on a METHOD in a class body,
+    where class-scope resolution is subtle — so the gate judges reads inside them. `future=True` draws only annotated
+    shapes under `from __future__ import annotations`, the NAMED control: stringified annotations have no load, so
+    those reads must read "no instruction", never "wrong"."""
+    g = _Gen(rng)
+    shape = rng.choice(["def", "method"]) if future else rng.choice(["def", "def", "method", "lambda", "class", "expr", "expr"])
+    D = rng.choice([1, 2, 3])
 
     def maybe():
         return g.expr(D) if rng.random() < 0.5 else None
+
+    def maybe_ann(role):
+        return g.in_role(role, D) if (future or rng.random() < 0.5) else None
+
+    def header(first, where):
+        a = maybe_ann(f"{where} parameter annotation"); d = maybe(); ka = maybe_ann(f"{where} keyword-only annotation")
+        kd = maybe(); ret = maybe_ann(f"{where} return annotation")
+        return (f"({first}a0{': ' + a if a else ''}{' = ' + d if d else ''}, *, k0{': ' + ka if ka else ''}"
+                f"{' = ' + kd if kd else ''}){' -> ' + ret if ret else ''}")
     if shape == "def":
-        d = maybe(); kd = maybe(); ret = maybe()
-        line = (f"def f(a0{' = ' + d if d else ''}, *, k0{' = ' + kd if kd else ''})"
-                f"{' -> ' + ret if ret else ''}: return {g.expr(D)}")
+        line = f"def f{header('', 'function')}: return {g.expr(D)}"
+    elif shape == "method":
+        line = f"class C:\n    def m{header('self, ', 'method')}: return {g.expr(D)}"
     elif shape == "lambda":
         k = g.n; g.n += 1; p = f"p{k}"; g.binders.append(p)
         d = maybe(); line = f"L = lambda {p}{'=' + d if d else ''}: {g.expr(D)}"
@@ -129,14 +160,19 @@ def _draw(rng) -> str:
     else:
         line = f"X = ({g.expr(D)}, {g.expr(D)})"
     line, names = g.fill(line)
-    return "def mk(*a, **k): return object\nM = 0\n" + "".join(f"{nm} = 0\n" for nm in names) + line + "\n"
+    head = "from __future__ import annotations\n" if future else ""
+    return head + "def mk(*a, **k): return object\nM = 0\n" + "".join(f"{nm} = 0\n" for nm in names) + line + "\n", list(g.read_roles)
 
 
 def truth(src: str) -> dict:
     """(line, column, name) -> the compiler resolved this read to the MODULE. Every load of a tagged name, in every
     code object, located by its instruction position (3.11+). A read with no instruction at its position is NOT judged
-    and is counted as unmapped: measured on 3.13, reads inside a function's RETURN ANNOTATION carry none (1.6% of reads
-    at seed 0; the same positions are judged on 3.11 and 3.12). The gate bounds the unmapped share."""
+    and is counted as unmapped. On 3.11 and 3.12 there are none. On 3.13 there are two causes, each measured read by read
+    (round 19, the corpus at seed 13 after annotations became roles — 182 unmapped reads, every one attributed): 138 are
+    reads FUSED into a STORE_FAST_LOAD_FAST superinstruction (a local read immediately after its own store, e.g. a
+    comprehension target read at the start of the body — the instruction is a STORE and carries one position), and 44
+    are reads inside ANNOTATIONS, parameter and return alike. An earlier form of this docstring attributed them to
+    return annotations alone, measured at a time no read carried its role. The gate bounds the unmapped share."""
     out = {}
 
     def walk(co):
@@ -184,9 +220,11 @@ def is_tied(src: str) -> bool:
     return False
 
 
-def judge(resolver_module, src: str) -> tuple[str, int, int]:
+def judge(resolver_module, src: str, roles: list | None = None, by_role: collections.Counter | None = None) -> tuple[str, int, int]:
     """-> (outcome, reads checked, reads the bytecode did not locate). OK, SILENT (a wrong answer, nothing refused),
-    or REFUSED (loud — the resolver declined)."""
+    or REFUSED (loud — the resolver declined). With `roles` (each read's role, from program_with_roles) and a
+    `by_role` counter, every read is also tallied as (role, "judged") or (role, "no instruction") — round 19 (N5): a role
+    whose reads are never judged would pass the gate silently, so the gate MEASURES the numerator per role."""
     tr = truth(src)
     try:
         r = resolver_module.Resolver(src, "<oracle>")
@@ -198,9 +236,15 @@ def judge(resolver_module, src: str) -> tuple[str, int, int]:
         if isinstance(n, ast.Tuple) and len(n.elts) == 2 and isinstance(n.elts[0], ast.Name) \
                 and isinstance(n.elts[1], ast.Constant) and type(n.elts[1].value) is int:
             nm = n.elts[0]; key = (nm.lineno, nm.col_offset, nm.id)
+            role = roles[n.elts[1].value // 1000] if roles is not None else None
             if key not in tr:
-                unmapped += 1; continue
+                unmapped += 1
+                if by_role is not None:
+                    by_role[(role, "no instruction")] += 1
+                continue
             checked += 1
+            if by_role is not None:
+                by_role[(role, "judged")] += 1
             if r.refers_to_module_binding(nm, nm.id) != tr[key]:
                 wrong = True
     return ("SILENT" if wrong else "OK"), checked, unmapped
@@ -252,8 +296,8 @@ def run(n: int, seed: int, resolver_module=None) -> collections.Counter:
     mod = resolver_module or _load_resolver(HERE / "scope_resolution.py", "scope_resolution_oracle")
     rng = random.Random(seed); t = collections.Counter()
     for _ in range(n):
-        src, discarded = program(rng)
-        outcome, checked, unmapped = judge(mod, src)
+        src, discarded, roles = program_with_roles(rng)
+        outcome, checked, unmapped = judge(mod, src, roles, t)
         t[outcome] += 1; t["reads checked"] += checked; t["reads unmapped"] += unmapped; t["draws discarded"] += discarded
         if is_tied(src):
             t["TIED programs"] += 1; t[f"TIED programs {outcome}"] += 1

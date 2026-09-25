@@ -1375,7 +1375,8 @@ def test_r13_the_pairing_oracle_finds_no_silent_answer_and_its_control_does():
       * the tied-signature programs are REACHED, counted from the PROGRAM (`is_tied`: equal signatures, different
         fingerprints) and never from the resolver's outcome — research's stage-2 B1: the first form counted join-check
         refusals, every one of which at these settings was an over-refusal of an UNTIED program, so turning the tied
-        generators off left it met. Measured: 33/47/33 tied programs on 3.12/3.11/3.13, and 0 with them off;
+        generators off left it met. Measured: 33/47/33 tied programs on 3.12/3.11/3.13 before round 19 made annotations
+        roles, 41/50/41 after, and 0 with the tied generators off (measured before round 19, not re-measured since);
       * most programs are judged rather than refused, and many reads are checked — an oracle refusing everything, or
         judging nothing, would pass the first assertion vacuously;
       * the reads with no instruction position stay a small share (3.13's return annotations)."""
@@ -1388,6 +1389,24 @@ def test_r13_the_pairing_oracle_finds_no_silent_answer_and_its_control_does():
     assert got["TIED programs SILENT"] == 0, f"a tied program was answered silently wrong: {dict(got)}"
     assert got["OK"] >= 0.6 * _ORACLE_N and got["reads checked"] >= 5000, f"the oracle judges too little: {dict(got)}"
     assert got["reads unmapped"] <= 0.05 * got["reads checked"], f"too many reads unjudged: {dict(got)}"
+    # ROUND 19 (N5, the second seat's stage-1 read): ANNOTATIONS ARE ROLES the gate judges — a parameter's, a
+    # keyword-only parameter's and the return's, on a module-level function AND on a method in a class body. The
+    # NUMERATOR is measured per role (a role whose reads are never judged would pass the gate silently): each must
+    # judge some reads on this interpreter, from the SAME run as the assertions above.
+    roles = [f"{w} {r} annotation" for w in ("function", "method") for r in ("parameter", "keyword-only", "return")]
+    judged = {role: got[(role, "judged")] for role in roles}
+    assert all(n > 0 for n in judged.values()), judged
+    # ...and the NAMED control: under `from __future__ import annotations` an annotation holds no load, so every read
+    # in one must read "no instruction" — never judged, and so never "wrong".
+    import collections
+    import random
+    fut = collections.Counter(); rng = random.Random(_ORACLE_SEED)
+    for _ in range(60):
+        src, _discarded, rl = po.program_with_roles(rng, future=True)
+        fut[po.judge(sr, src, rl, fut)[0]] += 1
+    assert fut["SILENT"] == 0, dict(fut)
+    assert all(fut[(role, "judged")] == 0 for role in roles), {k: v for k, v in fut.items() if isinstance(k, tuple)}
+    assert sum(fut[(role, "no instruction")] for role in roles) > 0, "the future control reached no annotation read"
 
 
 def test_r13_s2d_1_the_s2c_2_refusal_walks_deep_into_the_first_iterable():
@@ -1412,3 +1431,80 @@ def test_r13_s2d_1_the_s2c_2_refusal_walks_deep_into_the_first_iterable():
     else:
         for body in (killing, research):
             sr.Resolver(body, "<s2d1>")
+
+# ---- round 19 (N4): the comprehension signature is CPython's inlining rule, checked against symtable ------------------
+# 3.12's symtable merges an inlined comprehension's name into the enclosing block ONLY IF THE BLOCK DOES NOT ALREADY HOLD
+# IT (inline_comprehension, in the analysis pass). The first form merged every inlined target, so a genexp whose inner
+# dictcomp's first iterable reads one of the dictcomp's own targets read a local symtable does not have, and a same-line
+# pair was refused though the resolver would answer it rightly — ~4.5% of the oracle's programs on 3.12 and 3.13.
+_R19_COMP_NAME = {ast.GeneratorExp: "genexpr", ast.ListComp: "listcomp", ast.SetComp: "setcomp", ast.DictComp: "dictcomp"}
+
+
+def _r19_signature_disagreements(src: str, label: str) -> tuple:
+    """For every comprehension block symtable reports, keyed by (line, block name): the multiset of its non-parameter
+    locals against the multiset of the resolver's signatures for the AST nodes of that kind on that line. -> (the SET
+    of disagreements, blocks compared, keys whose node and block counts differ)."""
+    import collections
+    import symtable
+    blocks = collections.defaultdict(list)
+
+    def walk(b):
+        for c in b.get_children():
+            if c.get_name() in _R19_COMP_NAME.values():
+                blocks[(c.get_lineno(), c.get_name())].append(
+                    tuple(sorted(s.get_name() for s in c.get_symbols() if s.is_local() and not s.is_parameter())))
+            walk(c)
+    walk(symtable.symtable(src, label, "exec"))
+    nodes = collections.defaultdict(list)
+    for n in ast.walk(ast.parse(src)):
+        if type(n) in _R19_COMP_NAME:
+            nodes[(n.lineno, _R19_COMP_NAME[type(n)])].append(n)
+    bad, compared, ambiguous = set(), 0, 0
+    for key, bl in blocks.items():
+        ns = nodes.get(key, [])
+        if len(ns) != len(bl):
+            ambiguous += 1
+            continue
+        compared += len(bl)
+        got = sorted(tuple(sorted(sr.Resolver._comprehension_signature(n))) for n in ns)
+        if got != sorted(bl):
+            bad.add((label, key, tuple(sorted(bl)), tuple(got)))
+    return bad, compared, ambiguous
+
+
+def test_r19_the_comprehension_signature_equals_symtable_over_the_corpus():
+    """The DIRECT acceptance (the second seat's round-19 stage-1 read, BLOCKING): the signature is a second
+    implementation of symtable's rule, so ANY disagreement is a defect — over the pairing oracle's corpus (seed 13, 400
+    programs) and every product and evidence module. The SET of disagreements must be empty; the count compared must
+    be large, and no key may be skipped as ambiguous (a skipped key would be an unchecked one)."""
+    import random
+    po = _load("pairing_oracle_r19", EVIDENCE / "pairing_oracle.py")
+    rng = random.Random(_ORACLE_SEED)
+    sources = [(f"oracle#{i}", po.program(rng)[0]) for i in range(_ORACLE_N)]
+    sources += [(str(p.relative_to(ROOT)), p.read_text())
+                for p in sorted(list((ROOT / "src" / "veracium").rglob("*.py")) + list(EVIDENCE.glob("*.py")))]
+    bad, compared, ambiguous = set(), 0, 0
+    for label, src in sources:
+        b, c, a = _r19_signature_disagreements(src, label)
+        bad |= b; compared += c; ambiguous += a
+    assert bad == set(), sorted(bad)[:5]
+    assert ambiguous == 0 and compared >= 400, (compared, ambiguous)
+
+
+def test_r19_n4_the_reproduction_resolves_on_every_version():
+    """The over-refusal, as found: on 3.12 and 3.13 the first genexp's block holds `v` from its dictcomp's first
+    iterable, as a global, and the old signature counted `v` as a merged local — the same-line pair was refused. The
+    signature now equals symtable's locals, and the pair resolves; on 3.11 (no inlining) it always did."""
+    src = "def f(a, b):\n    return (x for x in a if {k: v for k, v in [(v, 1)]}), (y for y in b)\n"
+    assert _r19_signature_disagreements(src, "<n4>")[0] == set()
+    sr.Resolver(src, "<n4>")
+
+
+def test_r19_a_name_the_block_also_reads_is_not_merged():
+    """The rule's other half, measured against symtable rather than predicted (dev's stage-1 plan predicted the
+    opposite): the block reading `k` ANYWHERE — here after the inner comprehension — already holds it when inlining
+    runs, so the listcomp's `k` is NOT merged as a local of the genexp."""
+    src = "def f(a, b):\n    return (x for x in a if [k for k in b] and k)\n"
+    assert _r19_signature_disagreements(src, "<k>")[0] == set()
+    node = next(n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.GeneratorExp))
+    assert "k" not in sr.Resolver._comprehension_signature(node)

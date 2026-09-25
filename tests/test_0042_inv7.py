@@ -2416,6 +2416,12 @@ _R18_V17_CELLS = [
      _r17_after('Site.__dict__["_probe"].__func__.__name__ = "renamed"' + _R18_RESET), "B"),
     ("a closure cell's contents changed after the class", _r17_after(_R18_MAKER),
      _r17_after("Site.extra.__closure__[0].cell_contents = 2" + _R18_RESET), "B"),
+    # N-9 (the second seat's round-18 stage 2, RM4): a back-reference is recorded by the POSITION of the object it
+    # repeats, and that position is load-bearing only when one object recurs INSIDE one value — each attribute is
+    # described separately, so two swapped attributes are told apart by content alone. Here a container repeats an
+    # alias, and the repeat points back to a DIFFERENT earlier object; positionless references read the two alike.
+    ("a repeated alias pointing back to a different object", _r17_after("Site._aliases = (Site.fire, Site.consult, Site.fire)"),
+     lambda s: s.replace("(Site.fire, Site.consult, Site.fire)", "(Site.fire, Site.consult, Site.consult)", 1), "B"),
 ]
 
 

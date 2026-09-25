@@ -212,18 +212,60 @@ class Resolver:
         enclosing scope) or any scope that keeps a block of its own. EQUALITY, not a subset, because research's rule
         corroborates a pairing by the signature: `(n for n …)` and `(tg for n … for tg …)` on one line — live at
         inv7_uninstrument.py:499 — are told apart only by `tg`, and a subset test fitted the first to both."""
-        names = set(Resolver._comprehension_targets(node))
-        if sys.version_info >= (3, 12):
-            first = node.generators[0].iter if node.generators else None
-            stack = [c for c in ast.iter_child_nodes(node) if c is not first]
-            while stack:
-                n = stack.pop()
-                if isinstance(n, _INLINABLE):
-                    names |= Resolver._comprehension_targets(n)
-                elif isinstance(n, SCOPE_NODES):
-                    continue                                   # a lambda, def, class or genexp keeps its own block
-                stack.extend(ast.iter_child_nodes(n))
-        return frozenset(names)
+        if sys.version_info < (3, 12):
+            return frozenset(Resolver._comprehension_targets(node))
+        return frozenset(Resolver._inlined_block(node)[1])
+
+    @staticmethod
+    def _comprehension_parts(node) -> list:
+        """CPython's visiting order INSIDE a comprehension's block (symtable_handle_comprehension): the first target and
+        its ifs, each later generator's target, iter and ifs, then the value (a dictcomp's, BEFORE its key), then the
+        element. The first iterable is not here: it is evaluated in the enclosing block."""
+        g0 = node.generators[0]
+        parts = [g0.target, *g0.ifs]
+        for g in node.generators[1:]:
+            parts += [g.target, g.iter, *g.ifs]
+        return parts + ([node.value, node.key] if isinstance(node, ast.DictComp) else [node.elt])
+
+    @staticmethod
+    def _inlined_block(node) -> tuple:
+        """(every name the block holds, its locals) for a comprehension's block on 3.12+, AFTER its own inlining — a
+        second implementation of CPython's rule (symtable's inline_comprehension, in the ANALYSIS pass, after the
+        whole block was visited): an inlined comprehension's name is merged into the block ONLY IF THE BLOCK DOES NOT
+        ALREADY HOLD IT, in any role — and the block holds every name its own code meets, including an inlined
+        comprehension's first iterable, which runs in the block. Children are merged in the order their blocks were
+        created (visiting order), each after its OWN inlining. Round 19 (N4): the first form merged every inlined
+        target, so `(x for x in a if {k: v for k, v in [(v, 1)]})` — whose block holds `v` from the dictcomp's first
+        iterable, as a global — read {k, v, x} against symtable's {k, x}, and a same-line pair was refused though the
+        resolver would answer it rightly. Checked against symtable over the pairing oracle's corpus and the product
+        and evidence modules on 3.12 and 3.13 (tests/test_0042_scope_resolution.py)."""
+        held: dict = {}
+        inlined: list = []
+
+        def visit(x):
+            if isinstance(x, ast.Name):
+                held.setdefault(x.id, None)
+            if isinstance(x, _INLINABLE):
+                visit(x.generators[0].iter); inlined.append(x); return
+            if isinstance(x, ast.GeneratorExp):
+                visit(x.generators[0].iter); return               # its own block; its first iterable runs here
+            if isinstance(x, ast.Lambda):
+                for d in x.args.defaults + [k for k in x.args.kw_defaults if k is not None]:
+                    visit(d)                                      # its own block; its defaults are evaluated here
+                return
+            for c in ast.iter_child_nodes(x):
+                visit(c)
+        for part in Resolver._comprehension_parts(node):
+            visit(part)
+        locs = set(Resolver._comprehension_targets(node))
+        for child in inlined:
+            c_held, c_locs = Resolver._inlined_block(child)
+            for k in c_held:
+                if k not in held:
+                    held[k] = None
+                    if k in c_locs:
+                        locs.add(k)
+        return list(held), locs
 
     def _check_join(self) -> None:
         for key, pairs in self._joined.items():
