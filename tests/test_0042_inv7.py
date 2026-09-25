@@ -2243,6 +2243,9 @@ _R17_CELLS = [
     ("post-class: Site.fire's defaults replaced", None, _r17_after("Site.fire.__defaults__ = ('changed',)"), "B"),
     ("post-class: setattr(Site, 'extra', 1)", None, _r17_after("setattr(Site, 'extra', 1)"), "B"),
     ("post-class: Site.fire rebound", None, _r17_after("Site.fire = Site.__enter__"), "B"),
+    # the second seat's round-17 pre-seal read: fields on the TYPE object, not in vars(Site)
+    ("post-class: Site.__qualname__ assigned", None, _r17_after("Site.__qualname__ = 'NotSite'"), "B"),
+    ("post-class: Site.__name__ assigned", None, _r17_after("Site.__name__ = 'NotSite'"), "B"),
     ("a module-level name read at class creation, with a different VALUE",
      lambda s: s.replace("class Site:", "_SLOT_EXTRA = ()\n\n\nclass Site:", 1).replace('"_declines", "failures")', '"_declines", "failures") + _SLOT_EXTRA', 1),
      lambda s: s.replace("_SLOT_EXTRA = ()", "_SLOT_EXTRA = ('extra',)", 1), "B"),

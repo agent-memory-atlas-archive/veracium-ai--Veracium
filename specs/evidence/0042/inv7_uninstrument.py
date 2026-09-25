@@ -174,9 +174,36 @@ def _realized_site(text: str, name: str):
     return mod.__dict__.get("Site")
 
 
+def _type_level_fields(meta: type) -> list:
+    """The fields a class carries ON THE TYPE OBJECT rather than in its vars(): every data descriptor its METACLASS (and
+    the metaclass's MRO) defines — for `type`, __name__, __qualname__, __module__, __doc__, __mro__, __bases__, __base__,
+    the size and flag fields and the rest. DERIVED from the metaclass, never listed (round 17, the second seat's pre-seal
+    read: `Site.__qualname__ = …` after the class changed repr(type(S)) with vars(Site) equal)."""
+    import inspect
+    names = []
+    for k in meta.__mro__:
+        for n, v in vars(k).items():
+            if inspect.isdatadescriptor(v) and n not in names and n != "__dict__":
+                names.append(n)
+    return names
+
+
+def _type_level_value(cls, name):
+    try:
+        v = getattr(cls, name)
+    except AttributeError:
+        return ("<unset>",)
+    if name in ("__mro__", "__bases__"):
+        return tuple(c.__qualname__ for c in v)
+    if name == "__base__":
+        return getattr(v, "__qualname__", repr(v))
+    return (type(v).__name__, repr(v))
+
+
 def _realized_drift(head_census: str, reference_census: str) -> list:
     """ROUTE B — the Site CLASS each census BUILDS, compared attribute by attribute: its MRO by name, the keys of
-    vars(Site) in order, and each value normalised (functions by code, defaults, keyword defaults, annotations, doc,
+    vars(Site) in order, every TYPE-LEVEL field its metaclass defines (__name__, __qualname__, … — derived, not
+    listed), its metaclass, and each vars value normalised (functions by code, defaults, keyword defaults, annotations, doc,
     attributes and closure; slots by name; anything else by type and repr). It sees what route A cannot: a module-level
     statement after the class (`Site.__doc__ = …`, `Site.fire.__defaults__ = …`, `setattr(Site, …)`), and a module-level
     name read at class creation whose VALUE differs."""
@@ -193,6 +220,12 @@ def _realized_drift(head_census: str, reference_census: str) -> list:
             if _normal_value(hv[k]) != _normal_value(rv[k])]
     if not out and list(hv) != list(rv):
         out.append("Site's realized attributes are in a different order from the reference census's")
+    # the TYPE-LEVEL fields, read AFTER the vars() snapshot above (reading __annotations__ on 3.10+ inserts one into vars)
+    fields = _type_level_fields(type(h)) + [n for n in _type_level_fields(type(r)) if n not in _type_level_fields(type(h))]
+    out += [f"Site.{n} (realized, on the type): differs between HEAD's census and the reference census" for n in fields
+            if _type_level_value(h, n) != _type_level_value(r, n)]
+    if type(h).__qualname__ != type(r).__qualname__:
+        out.append("Site's realized metaclass differs from the reference census's")
     return out
 
 

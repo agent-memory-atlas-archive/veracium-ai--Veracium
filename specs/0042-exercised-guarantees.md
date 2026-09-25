@@ -5,7 +5,7 @@ Spec-Status: accepted
 | | |
 |---|---|
 | **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc); v7 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ccf0715041f3148a); v8.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 b94d814d20b96d2c); v9.2 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 a230ae09793790be) — ACCEPTED at the design level, the flip on the owner's word |
-| **Version** | **v11.0 — THE ROUND-16 AMENDMENT TO INV-7 IS ACCEPTED AND FOLDED IN: THE REFERENCE ARM IS FREE OF THE CENSUS UNDER TEST.** 🔴 **A frozen invariant's text changes in this version, BY ACCEPTANCE:** the round-16 verdict (banked `a17ebc7`, body sha16 `fb62c45af45289a7`): "*design amendment ACCEPTED; implementation RETURNED for one correction*". The changes:
+| **Version** | **v11.0.1 — ROUTE B READS THE CLASS'S TYPE-LEVEL ATTRIBUTES TOO, AND ITS CONTEXT LIMIT IS NAMED.** A text correction to v11.0's round-17 paragraph, matching the round-17 fix; nothing else changes. Research's pre-seal read found `Site.__qualname__` reassigned after the class statement passing BOTH routes. `__qualname__` and `__name__` are slots of the TYPE object, not in `vars(Site)`, so v11.0's "the two built `Site` classes are compared" was false. Route B now also compares every data descriptor the METACLASS defines, read off each built class. The paragraph also names what route B cannot see: a post-class change CONDITIONAL on runtime context. **Prior cell follows.** **v11.0 — THE ROUND-16 AMENDMENT TO INV-7 IS ACCEPTED AND FOLDED IN: THE REFERENCE ARM IS FREE OF THE CENSUS UNDER TEST.** 🔴 **A frozen invariant's text changes in this version, BY ACCEPTANCE:** the round-16 verdict (banked `a17ebc7`, body sha16 `fb62c45af45289a7`): "*design amendment ACCEPTED; implementation RETURNED for one correction*". The changes:
 - INV-7's row now defines UNINSTRUMENTED as the accepted text.
 - Part A-2's third-arm reason takes the accepted wording, and its superseded sentence moves to §11.
 - The PENDING block becomes an ACCEPTED record.
@@ -313,7 +313,14 @@ Spec-Status: accepted
 >   - the class attributes in both directions and in order;
 >   - every value normalised: functions by their compiled code without line information (nested code included), with
 >     their defaults, keyword defaults, annotations, docstrings, attributes and closures; wrapped descriptors unwrapped;
->     everything else by type and representation.
+>     everything else by type and representation;
+>   - **the class's TYPE-LEVEL attributes** (v11.0.1), which are not in `vars(Site)`: every data descriptor defined along the
+>     METACLASS's method resolution order, read off each built class and compared by value (class tuples by qualified
+>     name). This set is derived from the metaclass, not listed: it is 17 fields on CPython 3.12 and 3.13 and 16 on 3.10
+>     and 3.11 (`__type_params__` arrives in 3.12). It includes `__name__`, `__qualname__`, `__module__`, `__doc__`,
+>     `__mro__` and `__bases__`. The metaclass itself is compared by qualified name. v11.0 compared the class's dict and
+>     its MRO only, so a post-class `Site.__qualname__ = …` passed both routes. Research's pre-seal read executed that
+>     against the round-17 staging.
 >
 > **Route A cannot see a change made by code OUTSIDE the class statement** (for example `Site.__doc__ = …` after it), because
 > the class statement is unchanged. Research executed that counterexample at stage 1, and route B sees it. **Route B cannot
@@ -325,7 +332,7 @@ Spec-Status: accepted
 > - a duplicate method before the original;
 > - two methods swapped;
 > - four modifications after the class statement: the docstring assigned, a method's defaults replaced, an attribute added
->   by `setattr`, a method rebound;
+>   by `setattr`, a method rebound, and (v11.0.1) `Site.__qualname__` and `Site.__name__` assigned;
 > - a module-level name read at class creation with a different value;
 > - a base in T against a decorator in HEAD.
 >
@@ -333,6 +340,12 @@ Spec-Status: accepted
 > pin, each cell fails on its own verdict assertion: the defect, not a missing name. The acceptance half is
 > `tests/test_0042_inv7.py::test_r17_formatting_is_not_drift_on_either_route`. **Still without a cell of its own:** the
 > class header's `keywords` field. Route A compares it by field, and so does route B through the built class.
+>
+> **WHAT ROUTE B CANNOT SEE, named (v11.0.1):** it builds both classes in the TRANSFORM's context (a fresh module namespace
+> in the transform's process), not in an arm's runtime context. **A post-class change CONDITIONAL on runtime state** (an
+> environment variable, what else is imported, `sys.modules`) is outside the class statement, so route A cannot see it, and
+> it may not run in the transform's context, so route B may not either. Building HEAD's class inside a real arm and
+> comparing it there would close this. It is recorded for the next round.
 >
 > **One fact a reader must not miss:** T's census.py is byte-equal to HEAD's today (unchanged since round 8). So at this
 > version the reference arm's twin is byte-identical to round 15's. **The construction differs from round 15's only when
