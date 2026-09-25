@@ -5,7 +5,7 @@ Spec-Status: accepted
 | | |
 |---|---|
 | **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), each adoption at rest and re-read from the file, dated per entry: v3.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 28068200aa6f90fa); v4 2026-09-18 from the same file (sha16 0fd0af01bfb56a39); v5 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 f8cf6f68e0016625); v6 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ba262106068d3efc); v7 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 ccf0715041f3148a); v8.1 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 b94d814d20b96d2c); v9.2 2026-09-18 from `0042-exercised-guarantees-CANDIDATE.md` (sha16 a230ae09793790be) — ACCEPTED at the design level, the flip on the owner's word |
-| **Version** | **v11.2 — THE JOIN CHECK'S NAMED OVER-REFUSAL IS CLOSED, AND THE ORACLE NOW GENERATES ANNOTATIONS.** An implementation note (round 19); no frozen invariant's text changes, and `Spec-Status` stays `accepted`. v9.5's round-13 paragraph named two limits "recorded for the next round" and one count. All three are annotated IN PLACE:
+| **Version** | **v11.3 — A NAME IS A CLAIM: A TYPE IS DESCRIBED BY NAME ONLY IF PYTHON CODE CANNOT HAVE MADE IT; AND THE TRUST BOUNDARY INV-7 HAS ALWAYS RESTED ON IS STATED, AND PUT TO THE REVIEWER.** Two parts, of two kinds. (1) **An implementation note** (round 19; the round-18 verdict's one correction): route B describes a type by module and qualified name only if `Py_TPFLAGS_IMMUTABLETYPE` is set, and describes every other type by its one recursive rule. Each census is executed and described in a fresh interpreter, so it cannot reach the transform. A round-19 paragraph after round 18's states the mechanism, the fourth rung of the ladder, the cells, and the INV-7 run re-made. (2) 🔴 **Not an implementation note: a PROPOSED addition to INV-7's scope, pending external design review**, on the owner's word "Disclose + state it" (2026-09-25). It sits beside the frozen text, after §6's table, and edits none of it. Census code changes behaviour; it does not attack the measurement. Three of INV-7's four readings run inside a process that executed census code, and a forge of one of them is shown silent. `Spec-Status` stays `accepted` for everything outside the proposal. **Prior cell follows.** **v11.2 — THE JOIN CHECK'S NAMED OVER-REFUSAL IS CLOSED, AND THE ORACLE NOW GENERATES ANNOTATIONS.** An implementation note (round 19); no frozen invariant's text changes, and `Spec-Status` stays `accepted`. v9.5's round-13 paragraph named two limits "recorded for the next round" and one count. All three are annotated IN PLACE:
 - the over-refusal is closed on 3.12 and later;
 - the oracle's generator now emits parameter, keyword-only and return annotations;
 - the count of modules the join check refuses none of is dated.
@@ -435,6 +435,57 @@ A round-19 paragraph states the mechanism and the evidence. **Prior cell follows
 > pin. **The residual, named:** a declaration-time defect present in BOTH T and HEAD is shared by all four arms. It is bounded
 > by T being a commit an external round accepted, and advancing T is a reviewed act, not a constant edit. The amendment below
 > states both.
+
+> **ROUND 19: A TYPE IS DESCRIBED BY NAME ONLY IF PYTHON CODE CANNOT HAVE MADE IT, AND ROUTE B RUNS OUTSIDE THE TRANSFORM**
+> (v11.3, research as the specification's author; the round-18 verdict's one correction, banked `4cc6320`, body sha16
+> `37d2d04ebba57959`: "*RETURNED for one implementation correction … the design remains accepted*"). The verdict's witness
+> appends `class tuple(tuple)` with an overriding `__contains__`, rebinds `Site.__slots__` to an instance of it and deletes
+> the name. Both routes, `derive()`, `verify()` and the runtime gate read that as the built-in `tuple`, while
+> `"site_id" in type(S).__slots__` differs between source and reference. Round 18's rule chose its branches by
+> `isinstance()` and described a type in `builtins` by its NAME. The spoof variant also sets `__module__ = 'builtins'` and
+> `__qualname__ = 'tuple'`, and passes every name test.
+>
+> **The pattern, a fourth time.** Round 18's paragraph listed three levels, each a representation trusted in place of the
+> thing. The fourth is **a name trusted as an identity.** `__module__` and `__qualname__` are claims: Python code can write
+> both on any class it creates. The rule now rests on a property Python code cannot fake. `Py_TPFLAGS_IMMUTABLETYPE`
+> (`1 << 8`, 3.10 and later) is set on every type Python code cannot create, and an immutable type's `__module__` and
+> `__qualname__` cannot be written. That covers the built-ins, and C types such as `_thread.lock` and `re.Pattern`, which
+> are heap types, so "heap type" would have been the wrong property. Measured on 3.10, 3.12 and 3.13 by both seats: the
+> flag is set on every built-in route B meets and clear on the spoof, a plain class and a class built by a Python
+> metaclass.
+> - A type is described by module and qualified name **only if it is immutable.** Every other type is described by the
+>   same recursive rule as any object.
+> - The scalar, sequence, set, mapping and code branches are entered only for an immutable type of that name. No
+>   `isinstance()` chooses a branch.
+> - An instance of a MUTABLE subclass of a built-in is described by its class, in full, and by its content read through the
+>   immutable base's own methods (`tuple.__iter__`, `dict.items`, `str.__repr__`), never the subclass's.
+> - `__mro__`, `__bases__`, `__base__` and the metaclass use the same identity. Every non-immutable base is described in
+>   its own entry. Round 18 filtered these by `__module__ != "builtins"`, which is the forgeable test.
+>
+> **Route B no longer runs in the transform's process.** Round 18 executed each census inside the transform. A census
+> that rebinds a built-in (`import builtins; builtins.tuple = …`) therefore rebound the transform's own built-ins, and a copy
+> of `__builtins__` does not isolate, because `import builtins` returns the real module (executed). Each census is now
+> executed and described in a fresh `python -I`, and its description returns as data read under 0026's strict-pairs rule.
+> Inside that child, the built-ins are restored after the census runs, so the describer reads with the real ones. This
+> protects the TRANSFORM. It does not protect the DESCRIPTION: the describer shares the child's process with the census it
+> describes. That limit is not specific to route B. It is the trust boundary proposed after §6's table.
+>
+> **Cells:**
+> - the verdict's witness, the spoof, and same-named subclasses of `str` (overriding `__eq__`), `int` and `dict` (overriding
+>   `get`), each through round 17's drift body, verdict first:
+>   `tests/test_0042_inv7.py::test_r19_a_subclass_is_never_read_as_the_builtin_it_names`;
+> - the acceptance half, an equal REAL `tuple`, not drift: `tests/test_0042_inv7.py::test_r19_an_equal_real_builtin_is_not_drift`;
+> - the property itself, pinned per interpreter: `tests/test_0042_inv7.py::test_r19_the_immutable_criterion_per_interpreter`;
+> - the runtime gate's reading: `tests/test_0042_inv7.py::test_r19_the_runtime_gate_reads_the_witness_and_the_spoof_as_different`;
+> - a census rebinding a built-in leaves the transform untouched and `derive()`/`verify()` unchanged:
+>   `tests/test_0042_inv7.py::test_r19_a_census_rebinding_a_builtin_cannot_reach_the_transform`.
+>
+> At the round-18 pin the five subclass cells, the gate reading and the rebinding cell fail. The acceptance cell passes
+> there, as an acceptance half must. The subclass cells first used differently named classes, and those passed at the
+> round-18 pin, caught by the name. The verdict's class is SAME-named, so the cells are too.
+>
+> **The INV-7 run is RE-MADE, not carried**, because the normaliser the runtime digest calls changed. Its figures are in
+> the transcript committed with this version, not here.
 
 > **Implementation note, round 6 pre-seal (2026-09-20).** Building the per-site decision trace the round-5
 > verdict asked for at implementation review found two defects in the runtime leg, both fixed before the seal
@@ -1217,6 +1268,45 @@ this spec exists to find.
 > `tests/test_0042_inv7.py::test_r16_the_reference_census_separates_a_declaration_time_defect`), the pin
 > (`tests/test_0042_inv7.py::test_r16_the_twin_census_is_the_reference_census_and_verify_refuses_any_other`), and the
 > drift check (`tests/test_0042_inv7.py::test_r17_site_drift_reads_the_definition_and_the_realized_class`).
+
+> 🔴 **PROPOSED: THE TRUST BOUNDARY INV-7 RESTS ON — round 19, PENDING EXTERNAL DESIGN REVIEW. The INV-7 row above is the
+> accepted, frozen text; this block is not yet accepted.** (v11.3; research as the specification's author; the owner's word
+> "Disclose + state it", 2026-09-25.) INV-7 has made this assumption since the round-5 acceptance. It is stated here for
+> the first time, and put to the reviewer as a design question, as round 16's amendment was.
+>
+> **Proposed addition to the INV-7 row, and to §3b's "cannot alter a decision":** "…established against census code that
+> CHANGES BEHAVIOUR, not against census code written to ATTACK THE MEASUREMENT."
+>
+> **Why it cannot be a checked property.** Python has no in-process confinement. Any reading made inside a process that
+> executed census code can be rewritten by that code:
+>
+> | reading | where it runs | inside a process that ran the census? |
+> |---|---|---|
+> | route A, `Site`'s definition as written | the transform, reading source | **no**, but it reads only the ClassDef, never a statement after it |
+> | route B, the realized `Site` described | a fresh interpreter per census (round 19) | **yes**, the child that executed it |
+> | the realized-`Site` digest (`uninstrumented:site_realized_equal`) | each arm | **yes** |
+> | the decision trace itself | each arm's observer | **yes** |
+>
+> **Shown by running it:**
+> - **Route B forged, SILENT.** The round-19 spoof alone reads one drift entry. With four more lines appended, which install a
+>   name-trusting predicate into the describer, it reads **none, while the decision still changes.** The same attack
+>   **with no import statement** also reads none: it reaches `sys` through `object.__subclasses__()`. So an allowlist of the
+>   census's imports cannot close this, even one derived from T's.
+> - **A trace erased, LOUD.** Four appended lines replace the observer's recorder in an arm: 519 records become 0, and the
+>   arm's suite stays green. An empty trace reads DIVERGENT against the reference arm, so this move is detected.
+>
+> **Inferred, NOT built** (by the owner's decision): **a SILENT trace forge**, in which the census changes a decision and
+> records the reference arm's label for it. The write access it needs is shown above. The forge is not. **Nothing in this
+> specification claims that this move is detected.**
+>
+> **What would move the boundary:** a reading made outside every process that executed census code. Route A is the only one,
+> and it reads only the ClassDef. Widening it to the whole module would reverse the accepted round-16 rule that a change
+> ELSEWHERE in HEAD's census is not drift. **The question to the reviewer:** is this boundary acceptable as INV-7's stated
+> scope, or does INV-7 require a reading the census cannot reach?
+>
+> **Evidence:** research's probe, repository veracium-research at commit 99a110ec (probe and transcript under its
+> probes directory); dev's trace run, `specs/evidence/0042/trust_boundary_probe.py` with its recorded output `specs/evidence/0042/trust_boundary_probe.txt` (committed at `9932c7f`, and reproduced from a clean export by the second seat); the stated limit in the docstring of `_described_in_isolation` in
+> `specs/evidence/0042/inv7_uninstrument.py`.
 
 ## 7. Failure modes and reversibility
 
