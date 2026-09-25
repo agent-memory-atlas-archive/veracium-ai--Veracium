@@ -420,7 +420,8 @@ def _realized_drift(head_census: str, reference_census: str) -> list:
     h, r = _described_in_isolation(head_census), _described_in_isolation(reference_census)
     for label, d in (("HEAD's", h), ("the reference", r)):
         if isinstance(d, str):
-            return [f"Site: {label} census could not be described in an isolated interpreter — {d}"]
+            raise SiteUndescribed(f"{label} census could not be described in an isolated interpreter — this is not "
+                                  f"drift, and T does not advance: {d}")
     hd, rd = dict(h), dict(r)
     out = []
     for k in list(rd) + [k for k in hd if k not in rd]:
@@ -451,7 +452,9 @@ def site_drift(head_census: str, reference_census: str) -> list:
     is census code under test, which the reference arm does not carry, so the trace diff sees any decision it changes;
     and a Site method that runs in the reference arm is counted by the census-entry hook. Both routes are read under ONE
     interpreter (ast.dump fields and code layout differ across versions). Empty means Site is T's; anything else means T
-    must advance."""
+    must advance. A census that cannot be DESCRIBED (it crashes, exits, or never finishes on import) is not drift and is
+    never reported as drift: route B raises SiteUndescribed, which derive() refuses and verify() reports as what it is
+    (round 20, the second seat's stage-2 read of the round-19 verdict's F1 contract — "a contextual failure")."""
     return _definition_drift(head_census, reference_census) + _realized_drift(head_census, reference_census)
 
 
@@ -468,6 +471,11 @@ def _strict_pairs(pairs):
 
 class Refused(Exception):
     pass
+
+
+class SiteUndescribed(Refused):
+    """Route B could not describe a census's Site — a crash, an exit or an unfinished import in the isolated child,
+    or a response that is absent or malformed. A refusal of its own, because it is NOT drift: T must not advance for it."""
 
 
 def _receiver(call: ast.Call):
@@ -1273,7 +1281,10 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
         rel = str(p.relative_to(out)); before = p.read_bytes()
         if is_census_module_file(rel):
             ref = reference_census_bytes()
-            drift = site_drift(before.decode(), ref.decode())
+            try:
+                drift = site_drift(before.decode(), ref.decode())
+            except SiteUndescribed as e:
+                raise SiteUndescribed(f"{rel}: {e}") from e
             if drift:
                 raise Refused(f"{rel}: HEAD's Site has drifted from the reference census's (accepted commit "
                               f"{REFERENCE_CENSUS_COMMIT[:7]}) — T must advance: " + "; ".join(drift))
@@ -1350,7 +1361,10 @@ def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib
             if hashlib.sha256(p_out.read_bytes()).hexdigest() != REFERENCE_CENSUS_SHA256:
                 problems.append(f"{rel}: the census module is not the reference census (round 16: accepted commit "
                                 f"{REFERENCE_CENSUS_COMMIT[:7]}'s census.py, sha256 {REFERENCE_CENSUS_SHA256[:16]}…)")
-            problems += [f"{rel}: {d} — T must advance" for d in site_drift((src / rel).read_text(), p_out.read_text())]
+            try:
+                problems += [f"{rel}: {d} — T must advance" for d in site_drift((src / rel).read_text(), p_out.read_text())]
+            except SiteUndescribed as e:
+                problems.append(f"{rel}: {e}")
             continue
         for token in instrumentation_tokens_in(text):   # ROUND 12, R1: the transform's definition, not a drifted copy
             problems.append(f"{rel}: {token!r} survives")

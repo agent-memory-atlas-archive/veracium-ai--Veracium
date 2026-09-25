@@ -2639,6 +2639,8 @@ def test_r20_census_output_never_reaches_the_isolated_child_s_response(cell, suf
         with pytest.raises(un.Refused, match="could not be described" if expect == "refuse" else r"Site\.fire \(realized\)") as e:
             un.derive(src, out)
         assert "JSONDecodeError" not in str(e.value), (cell, str(e.value)[:300])
+        if expect == "refuse":        # the second seat's stage-2 read: a census that cannot be described has not DRIFTED
+            assert "T must advance" not in str(e.value) and "drifted" not in str(e.value), (cell, str(e.value)[:300])
     # verify() over a clean twin, the source census then edited and its hash carried into the manifest
     src = _r13_pkg(tmp_path, "verify", _R14_SELF + "def f():\n    return 1\n", "")
     (src / "census.py").write_text(ref)
@@ -2653,7 +2655,7 @@ def test_r20_census_output_never_reaches_the_isolated_child_s_response(cell, suf
     if expect == "accept":
         assert problems == [], (cell, problems)
     elif expect == "refuse":
-        assert problems and all("could not be described" in p for p in problems), (cell, problems)
+        assert problems and all("could not be described" in p and "T must advance" not in p for p in problems), (cell, problems)
     else:
         assert any("Site.fire (realized)" in p and "T must advance" in p for p in problems), (cell, problems)
 
@@ -2669,6 +2671,34 @@ def test_r20_a_census_whose_import_never_ends_is_a_named_failure(tmp_path, monke
     (src / "census.py").write_text(ref + "\nwhile True:\n    pass\n")
     with pytest.raises(un.Refused, match="did not finish within 8s"):
         un.derive(src, tmp_path / "slow" / "twin" / "vpkg")
+
+
+def test_r20_an_undescribable_census_is_never_reported_as_drift(tmp_path):
+    """The second seat's stage-2 read of c6b2620: a census that crashes on import was refused as "HEAD's Site has
+    drifted … — T must advance", which is false twice over — Site did not drift, and advancing T is a specification
+    change nobody should make for a crash. Route B's could-not-describe is a refusal of its own on EITHER side, never
+    a drift entry; and the wrapping it replaced is the mutant, which must misreport the crash."""
+    un = _load("inv7_uninstrument_r20u", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text()
+    crash = "\nraise RuntimeError('census failed')\n"
+    for head, reference, who in ((ref + crash, ref, "HEAD's census"), (ref, ref + crash, "the reference census")):
+        with pytest.raises(un.Refused, match=f"{who} could not be described") as e:
+            un.site_drift(head, reference)
+        assert "T must advance" not in str(e.value) and "not drift" in str(e.value), str(e.value)[:300]
+    text = (EVIDENCE / "inv7_uninstrument.py").read_text()
+    shipped = ('            raise SiteUndescribed(f"{label} census could not be described in an isolated interpreter — this is not "\n'
+               '                                  f"drift, and T does not advance: {d}")')
+    assert text.count(shipped) == 1, "the mutant's anchor moved"
+    ev = tmp_path / "evidence"
+    shutil.copytree(EVIDENCE, ev, ignore=shutil.ignore_patterns("__pycache__"))
+    (ev / "inv7_uninstrument.py").write_text(text.replace(
+        shipped, '            return [f"Site: {label} census could not be described in an isolated interpreter — {d}"]'))
+    mut = _load("inv7_uninstrument_r20u_mut", ev / "inv7_uninstrument.py")
+    src = _r13_pkg(tmp_path, "mut", _R14_SELF + "def f():\n    return 1\n", "")
+    (src / "census.py").write_text(ref + crash)
+    with pytest.raises(mut.Refused) as e:
+        mut.derive(src, tmp_path / "mut" / "twin" / "vpkg")
+    assert "T must advance" in str(e.value), "the superseded wrapping no longer misreports a crash — the mutant is not killed"
 
 
 # The superseded forms, each substituted at an anchor that must match once, and the cell that kills it.

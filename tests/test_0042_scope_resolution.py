@@ -1632,17 +1632,21 @@ def test_r20_f2_route_two_finds_no_implicit_name_route_one_lacks():
     NAME token in its module is compiler-introduced or mangled; every such name must be in route 1
     (_IMPLICIT_NAMES_ALL_BLOCKS, read from Python/symtable.c) or a mangled spelling of a token. Route 2 must also SEE
     `__class__` (the stdlib's functions read super), or the check has no teeth. ITS BLIND SPOT, named: no stdlib module
-    triggers `__classdict__`, which only route 1 carries."""
+    triggers `__classdict__`, which only route 1 carries. THE STDLIB DIFFERS BY HOST: CI's carries Lib/test, a
+    Debian build does not, and the first form passed here and failed on CI (c6b2620) on CPython's own non-ASCII
+    identifier tests; R20_ROUTE_TWO_STDLIB points the census at any Lib/ (a CPython source tree's) to run it in full."""
     if sys.version_info < (3, 12):
         pytest.skip("before 3.12 tokenize returns an f-string as ONE token, so every name read inside one looks "
                     "compiler-introduced (measured: len, abs, repr on 3.10/3.11); the census is exact from 3.12 (PEP 701)")
     import collections
     import io
+    import os
     import symtable
     import sysconfig
     import tokenize
+    import unicodedata
     import warnings
-    lib = pathlib.Path(sysconfig.get_paths()["stdlib"])
+    lib = pathlib.Path(os.environ.get("R20_ROUTE_TWO_STDLIB") or sysconfig.get_paths()["stdlib"])
     found = collections.Counter(); files = 0
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -1652,7 +1656,10 @@ def test_r20_f2_route_two_finds_no_implicit_name_route_one_lacks():
             try:
                 src = f.read_text(encoding="utf-8")
                 table = symtable.symtable(src, str(f), "exec")
-                toks = {t.string for t in tokenize.generate_tokens(io.StringIO(src).readline) if t.type == tokenize.NAME}
+                # NFKC, as the compiler normalises every identifier (PEP 3131): `µ` is `μ` in the symbol table, and
+                # CPython's own Lib/test spells `Unicode` in mathematical fraktur (CI's full stdlib, not this box's)
+                toks = {unicodedata.normalize("NFKC", t.string)
+                        for t in tokenize.generate_tokens(io.StringIO(src).readline) if t.type == tokenize.NAME}
             except (SyntaxError, UnicodeDecodeError, ValueError, tokenize.TokenError):
                 continue
             files += 1
