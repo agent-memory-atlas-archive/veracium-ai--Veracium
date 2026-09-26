@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Accepted: the implementation of specs/0042, exercised guarantees, at external round 23 — "ACCEPTED. The
+  round-22 regression is fixed; no new findings."** The implementation review ran rounds 6 to 23 on round 5's
+  design acceptance, as amended by acceptance at round 16 (the meaning of UNINSTRUMENTED: INV-7's reference arm
+  carries the census of an accepted commit, pinned by digest) and at round 19 (INV-7's scope: census code that
+  changes behaviour, not census code written to attack the measurement). The accepted code is pin `d00cd86`,
+  reviewed as the round-23 package; the reviewer's own run read 4,136 passed and 35 skips, each explained, with no
+  failures. Every finding was in the ACCEPTANCE CHECKS — the evidence layer under `specs/evidence/0042/` and its
+  tests — and `src/` is byte-identical to the round-8 package's pin. Rounds 6 to 22 raised 34 findings against the
+  implementation; each is a row in the spec's generated Review closure ledger, closed by a test a reader can run
+  (`specs/closure_findings.py`), and each round's package and verdict are rows in `specs/reviews.py`. The spec moves
+  to v12.4, which records what was accepted and what the acceptance does not cover: the limits it names stay named,
+  and an interpreter the package did not run — CPython 3.14 — is new ground for this evidence, to be reviewed as a
+  change to it. This entry also stands for rounds 11 to 23, which this file did not record one by one; their
+  mechanisms are in the spec's implementation notes and in each round's closure rows.
+
 - **Fixed: the census's round-9 implementation finding — the twin transform establishes that a census alias
   is bound once by a sibling census import, and stops claiming the one thing a static reading cannot reach
   (specs/0042, round 10; one finding, in the ACCEPTANCE CHECKS).** Round 8's F1 and F2 are closed; no product
