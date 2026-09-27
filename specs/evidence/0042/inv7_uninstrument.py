@@ -170,11 +170,17 @@ _CLASS_LOCATION = ("__firstlineno__",)
 _LAZY_ANNOTATION = ("__annotations__", "__annotate__")
 
 
-def _read_created(k, x) -> bool:
-    """A key an annotation READ creates in a class namespace, normalised BY VALUE: the cache is derived from
-    `__annotate_func__` and left out; `__annotate_func__` None and `__annotations__` {} are the same as absent."""
-    return (k == "__annotations_cache__" or (k == "__annotate_func__" and x is None)
-            or (k == "__annotations__" and type(x) is dict and not x))
+def _read_created(k, x, namespace) -> bool:
+    """A key an annotation READ creates in a class namespace, normalised BY VALUE: `__annotate_func__` None and
+    `__annotations__` {} are the same as absent, and the cache is left out ONLY WHEN IT IS DERIVED — the namespace
+    also holds a callable `__annotate_func__` it was computed from, or it is {} (a bare class read). An ASSIGNED
+    `cls.__annotations__ = {...}` on 3.14 stores the value in the cache ALONE and removes `__annotate_func__`
+    (measured on 3.14.7), so there the cache IS the class's annotations and is compared: dropping it unconditionally
+    read an assigned change as no drift (the second seat's round-24 stage 2, F1 — round 17's shape again, assigned
+    metadata unseen, introduced by this normalisation)."""
+    if k == "__annotations_cache__":
+        return (type(x) is dict and not x) or callable(namespace.get("__annotate_func__"))
+    return (k == "__annotate_func__" and x is None) or (k == "__annotations__" and type(x) is dict and not x)
 
 
 def _is_class_namespace(m) -> bool:
@@ -193,7 +199,8 @@ def _is_class_namespace(m) -> bool:
 
 def _class_vars(cls) -> dict:
     """vars(cls) without its location and without the keys a read creates (_read_created)."""
-    return {k: x for k, x in vars(cls).items() if k not in _CLASS_LOCATION and not _read_created(k, x)}
+    ns = vars(cls)
+    return {k: x for k, x in ns.items() if k not in _CLASS_LOCATION and not _read_created(k, x, ns)}
 
 
 _CACHE_BIT = 1 << 19      # Py_TPFLAGS_VALID_VERSION_TAG (CPython's Include/object.h): the type's attribute-cache state, set
@@ -280,9 +287,9 @@ def _normalise(obj, seen: dict) -> tuple:
     if _builtin(tp, _SETS):
         return (tp.__qualname__, tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
     if _builtin(tp, _MAPPINGS):
-        ns = any(_read_created(k, v) for k, v in obj.items()) and _is_class_namespace(obj)
+        ns = any(_read_created(k, v, obj) for k, v in obj.items()) and _is_class_namespace(obj)
         return (tp.__qualname__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()
-                                       if not (ns and _read_created(k, v))))
+                                       if not (ns and _read_created(k, v, obj))))
     if _builtin(tp, frozenset({"code"})):
         fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
         return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))

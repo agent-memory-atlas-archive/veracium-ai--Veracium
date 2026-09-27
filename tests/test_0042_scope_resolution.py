@@ -1093,6 +1093,51 @@ LAZY_POSITIONS = [
 ]
 
 
+# THE DYNAMIC READS (the second seat's B3 item 3, and round 24's stage-2 F2): a read in a scope that holds __classdict__
+# is resolved by the interpreter at EVALUATION, from the class namespace as it then stands, else the globals — so the
+# answer depends on what the class body binds LATER (C) and on what is set on the class after it exists (D). The
+# resolver must refuse to answer, as DynamicScope; an answer either way is wrong for one of these programs.
+_DYNAMIC_READS = [
+    ("C: the class binds the name after the annotation", "SITE = 1\nclass C:\n    x: SITE\n    SITE = 2\n", 2),
+    ("D: the name is set on the class after it exists", "SITE = 1\nclass D:\n    x: SITE\nD.SITE = 3\n", 3),
+    ("a class that never binds the name", "SITE = 1\nclass E:\n    x: SITE\n", 1),
+    ("a method's annotation", "SITE = 1\nclass F:\n    def m(self, a: SITE): pass\n    SITE = 4\n", 4),
+    ("a generic method's bound, in a class", "SITE = 1\nclass G:\n    def m[T: SITE](self): pass\n    SITE = 5\n", 5),
+    ("a generic class's base, nested in a class", "SITE = 1\nclass H:\n    SITE = 6\n    class I[T](mk(SITE)): pass\n", 6),
+]
+
+
+@pytest.mark.parametrize("cell,src,evaluates_to", _DYNAMIC_READS, ids=[c[0] for c in _DYNAMIC_READS])
+def test_py314_a_class_scope_read_is_answered_dynamic_never_statically(cell, src, evaluates_to):
+    import annotationlib
+    r = sr.Resolver("def mk(v): return object\n" + src, f"<{cell}>")
+    reads = [n for n in ast.walk(r.tree) if isinstance(n, ast.Name) and n.id == "SITE" and isinstance(n.ctx, ast.Load)]
+    assert len(reads) == 1, (cell, len(reads))
+    with pytest.raises(sr.DynamicScope):
+        r.refers_to_module_binding(reads[0], "SITE")
+    # and the interpreter really does read the class namespace there (the reason no static answer is right)
+    ns = {}
+    exec(compile("def mk(v):\n    mk.seen = v\n    return type('Base', (), {})\n" + src, f"<{cell}>", "exec", dont_inherit=True), ns)
+    cls = next(v for k, v in ns.items() if isinstance(v, type) and k in "CDEFGH")
+    if "class H" in src:
+        got = ns["mk"].seen
+    elif "[T: SITE]" in src:
+        got = cls.m.__type_params__[0].__bound__
+    elif "def m(" in src:
+        got = annotationlib.get_annotations(cls.m)["a"]
+    else:
+        got = annotationlib.get_annotations(cls)["x"]
+    assert got == evaluates_to, (cell, got)
+
+
+def test_py314_a_top_level_generic_class_base_is_answered_lexically():
+    """The acceptance half: a generic class at MODULE level has a type-parameter scope with no __classdict__ — its base
+    is a plain global read (LOAD_GLOBAL, measured) and is answered, not refused."""
+    r = sr.Resolver("def mk(v): return object\nSITE = 1\nclass C[T](mk(SITE)): pass\n", "<top-generic>")
+    read = next(n for n in ast.walk(r.tree) if isinstance(n, ast.Name) and n.id == "SITE" and isinstance(n.ctx, ast.Load))
+    assert r.refers_to_module_binding(read, "SITE") is True
+
+
 @pytest.mark.parametrize("pos,body", LAZY_POSITIONS, ids=[p for p, _ in LAZY_POSITIONS])
 def test_py314_a_site_used_in_a_lazy_position_is_refused_by_name(pos, body):
     r = sr.Resolver(_S21_HEAD + body.replace("__X__", "S"), f"<{pos}>"); r.refuse_site_rebindings({"S"})

@@ -3639,6 +3639,26 @@ def test_py314_another_reader_of_the_annotations_is_not_drift():
         assert un.site_description_digest(un.site_description(mod.Site))["digest"] == first, text[:40]
 
 
+def test_py314_an_assigned_class_annotation_is_drift():
+    """The second seat's round-24 stage 2, F1: on 3.14 `Site.__annotations__ = {...}` stores the value in
+    `__annotations_cache__` ALONE and removes `__annotate_func__`, so the cache IS the annotations there. Two classes
+    that differ only in what was ASSIGNED — to a bare class, or one value against another — must describe differently;
+    the control (an annotated class against the same class assigned) stays different too."""
+    import types as _types
+    un = _load("inv7_uninstrument_f1", EVIDENCE / "inv7_uninstrument.py")
+
+    def site(src, assign=None):
+        m = _types.ModuleType("f1")
+        exec(compile(src, "<f1>", "exec", dont_inherit=True), m.__dict__)
+        if assign is not None:
+            m.Site.__annotations__ = assign
+        return un.site_description_digest(un.site_description(m.Site))["digest"]
+    bare, annotated = "class Site:\n    def fire(self): pass\n", "class Site:\n    x: int\n    def fire(self): pass\n"
+    assert site(bare) != site(bare, {"x": str}), "an annotation assigned to a bare class reads as no drift"
+    assert site(bare, {"x": str}) != site(bare, {"x": bytes}), "two assigned annotations read as no drift"
+    assert site(annotated) != site(annotated, {"x": str}), "the control: an assignment over declared annotations"
+
+
 def test_py314_a_census_dict_carrying_an_annotation_key_is_still_compared():
     """The normalisation is scoped to CLASS NAMESPACES (the second seat's N2): an ordinary census dict that happens to
     carry `__annotations_cache__`, `__annotate_func__` None or `__annotations__` {} is data, and a change in it reads."""
@@ -3646,6 +3666,12 @@ def test_py314_a_census_dict_carrying_an_annotation_key_is_still_compared():
     for key, a, b in (("__annotations_cache__", {"x": 1}, {"x": 2}), ("__annotate_func__", None, 0),
                       ("__annotations__", {}, {"y": 1})):
         assert un._normalise({key: a}, {}) != un._normalise({key: b}, {}), key
+    # each READ-CREATED FORM against the empty mapping: in a class namespace they are the same, in census data they are
+    # not — and only this comparison drops BOTH sides under an unscoped normalisation (the scoping mutant survived the
+    # pairs above once F1 made the cache conditional)
+    for form in ({"__annotations_cache__": {}}, {"__annotate_func__": None}, {"__annotations__": {}},
+                 {"__annotate_func__": len, "__annotations_cache__": {"x": 1}}):
+        assert un._normalise(form, {}) != un._normalise({k: v for k, v in form.items() if k == "__annotate_func__" and v is len}, {}), form
 
 
 _B1_MUTANTS = [
@@ -3659,10 +3685,13 @@ _B1_MUTANTS = [
      'if inspect.isdatadescriptor(v) and n not in names and n != "__dict__" and n not in _LAZY_ANNOTATION:',
      'if inspect.isdatadescriptor(v) and n not in names and n != "__dict__":',
      test_py314_describing_a_site_leaves_its_vars_unchanged),
-    ("the read-created keys not normalised", '    return (k == "__annotations_cache__" or (k == "__annotate_func__" and x is None)\n',
-     "    return False and (k == \"__annotations_cache__\" or (k == \"__annotate_func__\" and x is None)\n",
-     test_py314_another_reader_of_the_annotations_is_not_drift),
-    ("the normalisation applied to every mapping", "        ns = any(_read_created(k, v) for k, v in obj.items()) and _is_class_namespace(obj)\n",
+    ("the read-created keys not normalised", '    return (k == "__annotate_func__" and x is None) or (k == "__annotations__" and type(x) is dict and not x)\n',
+     "    return False\n", test_py314_another_reader_of_the_annotations_is_not_drift),
+    ("the derived cache not dropped", '        return (type(x) is dict and not x) or callable(namespace.get("__annotate_func__"))\n',
+     "        return False\n", test_py314_another_reader_of_the_annotations_is_not_drift),
+    ("the cache dropped unconditionally (F1)", '        return (type(x) is dict and not x) or callable(namespace.get("__annotate_func__"))\n',
+     "        return True\n", test_py314_an_assigned_class_annotation_is_drift),
+    ("the normalisation applied to every mapping", "        ns = any(_read_created(k, v, obj) for k, v in obj.items()) and _is_class_namespace(obj)\n",
      "        ns = True\n", test_py314_a_census_dict_carrying_an_annotation_key_is_still_compared),
 ]
 

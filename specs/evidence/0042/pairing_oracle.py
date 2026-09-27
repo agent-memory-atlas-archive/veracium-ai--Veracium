@@ -291,7 +291,11 @@ def judge(resolver_module, src: str, roles: list | None = None, by_role: collect
                 if ops.get(key) != "LOAD_FROM_DICT_OR_GLOBALS":
                     wrong = True
                 continue
-            if answer != tr[key]:
+            if answer != tr[key] or ops.get(key) == "LOAD_FROM_DICT_OR_GLOBALS":
+                # BOTH DIRECTIONS (the second seat's round-24 stage 2, F2 — round 22's shape again): MODULE_OPS counts
+                # LOAD_FROM_DICT_OR_GLOBALS as a module read, so a PLAIN answer on such a read agreed with the truth
+                # and a resolver answering class-scope annotation reads lexically passed. That opcode is emitted exactly
+                # where the reading block holds __classdict__ (measured on 3.14.7), and only a DYNAMIC answer is right
                 wrong = True
     return ("SILENT" if wrong else "OK"), checked, unmapped
 
