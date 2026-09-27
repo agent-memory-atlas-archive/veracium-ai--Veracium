@@ -165,8 +165,19 @@ _CLASS_LOCATION = ("__firstlineno__",)
 #   the keys a READ creates in vars() are normalised by value (_class_vars), so who read the class first is not drift;
 #   any other object whose type carries an `__annotate__` descriptor keeps `__annotations__` UNREAD while `__annotate__`
 #   is set; the function it holds is described by the recursive rule as its own field, never called.
+#   ROUND 25 — a WRAPPER (classmethod, staticmethod: a type carrying `__func__`, `__annotate__` and `__dict__`) has
+#   NEITHER read: on 3.14 reading its `__annotate__` STORES the wrapped function's in the wrapper's own `__dict__`, and
+#   reading `__annotations__` stores the evaluated dict there — calling the wrapped `__annotate__` to make it. Found by
+#   round 25's own R24-2 cell: a generic Site reaches typing's `_Final.__init_subclass__`, a classmethod, and described
+#   differently the second time. Both are DERIVED from `__func__`, which is described; the wrapper's `__dict__` drops
+#   exactly the keys a read put there (`_wrapper_vars`), so an ASSIGNED value is still compared.
 # NAMED LIMIT: annotations that code has already MATERIALISED and then mutated in place (fn.__annotations__["x"] = …, or a
 # class's cache) are not seen — the cache is derived from `__annotate__` and cannot be read without the read that runs it.
+# The same limit in a new place (round 25): a wrapper's `__annotations__` that the wrapped function REFERENCES is read as
+# derived, so one materialised and then mutated in place is not seen.
+# NAMED LIMIT (round 25, the second seat's A5, next round): a MODULE object reached by the description is not described
+# without side effects — reading an unannotated module's `__annotate__` writes None into its dict, and the fall-through
+# reads `__annotations__` ({} written). The real Site reaches 0 module objects (measured on both censuses, 11 types).
 _LAZY_ANNOTATION = ("__annotations__", "__annotate__")
 
 
@@ -195,6 +206,47 @@ def _is_class_namespace(m) -> bool:
         return False
     return any(isinstance(r, type) and any(x is d for x in gc.get_referents(type.__dict__["__dict__"].__get__(r)))
                for r in gc.get_referrers(d))
+
+
+# ROUND 25 (the round-24 verdict's R24-2): B1 made the describer non-executing for ONE family of lazy evaluator, the
+# annotation, and PEP 695 brings others — a TypeVar's bound, constraints and default, a ParamSpec's or TypeVarTuple's
+# default, a type alias's value — each computed by a compiler-generated evaluator the first time its value is READ.
+# Measured on 3.14.7: each such type carries a data descriptor `evaluate_<x>` beside the value `__<x>__`; the
+# evaluator is a FUNCTION exactly when the value is lazy (None when it is plain), reading it runs nothing, and it stays
+# a function after the value is computed. So the pairing is DERIVED from the descriptors — any `evaluate_<x>` holding a
+# callable beside a `__<x>__` — never listed, and a later type following the pattern is covered; the value is never
+# read, and the evaluator is described by the recursive rule, by its code, never called: a changed lazy definition
+# still describes differently.
+def _lazy_values(obj, descriptors) -> dict:
+    """{value descriptor: its evaluator's name} for every lazily evaluated value `obj` carries."""
+    out = {}
+    for n in descriptors:
+        if n.startswith("evaluate_"):
+            value = "__" + n[len("evaluate_"):] + "__"
+            if value in descriptors and callable(getattr(obj, n, None)):
+                out[value] = n
+    return out
+
+
+_WRAPPER = frozenset({"__func__", "__annotate__", "__dict__"})
+
+
+def _wrapper_vars(obj) -> dict:
+    """vars(wrapper) without the keys a READ of the wrapper's annotations created (round 25). A read stores the wrapped
+    function's own objects: `__annotate__` IS `__func__.__annotate__` (a plain read of a function's attribute, which
+    runs and writes nothing), and `__annotations__` is the dict the function itself holds — found among the function's
+    REFERENTS, so the check evaluates nothing (measured on 3.14.7: derived, referenced; assigned, not — for
+    classmethod and staticmethod, annotated and bare)."""
+    import gc
+    ns, func = vars(obj), obj.__func__
+    out = {}
+    for k, x in ns.items():
+        if k == "__annotate__" and x is getattr(func, "__annotate__", None):
+            continue
+        if k == "__annotations__" and any(r is x for r in gc.get_referents(func)):
+            continue
+        out[k] = x
+    return out
 
 
 def _class_vars(cls) -> dict:
@@ -273,13 +325,19 @@ def _normalise(obj, seen: dict) -> tuple:
     in full if not), EVERY data descriptor along its type's MRO (read-only included — a read-only field can hold
     writable state), each normalised recursively, and — for a mutable subclass of a built-in — its content read through
     the base's own methods. A leaf with no data descriptors keeps its address-free repr. An object met again is
-    recorded by the position at which it was first described, so equal structures stay equal and cycles end."""
+    recorded by the position at which it was first described, so equal structures stay equal and cycles end; each
+    described object is HELD in `seen` until the description ends, so a position never names a freed address."""
     tp = type(obj)
     if _builtin(tp, _SCALARS):
         return (tp.__qualname__, repr(obj))
     if id(obj) in seen:
-        return ("<ref>", seen[id(obj)])
-    seen[id(obj)] = len(seen)
+        ref = seen[id(obj)]
+        return ("<ref>", ref[0] if type(ref) is tuple else ref)
+    # ROUND 25: the object is HELD beside its position for as long as `seen` lives. Keyed by id() alone, an object made
+    # DURING the description — `_class_vars`'s dict, `_wrapper_vars`'s, a fresh `__annotations__` — was freed once
+    # described, and a later object given the same address read as a `<ref>` to it: allocation-dependent, found as a
+    # generic Site describing differently the second time (round 25's R24-2 cell). Positions are unchanged.
+    seen[id(obj)] = (len(seen), obj)
     if issubclass(tp, type) and _immutable(obj):
         return ("immutable-type", obj.__module__, obj.__qualname__)
     if _builtin(tp, _SEQUENCES):
@@ -296,13 +354,24 @@ def _normalise(obj, seen: dict) -> tuple:
     identity = ("immutable-type", tp.__module__, tp.__qualname__) if _immutable(tp) else ("class", _normalise(tp, seen))
     fields = []
     is_class = issubclass(tp, type)
-    lazy = (not is_class and "__annotate__" in _data_descriptors(tp)
+    descriptors = _data_descriptors(tp)
+    wrapper = not is_class and _WRAPPER <= set(descriptors)
+    lazy = (not is_class and not wrapper and "__annotate__" in descriptors
             and getattr(obj, "__annotate__", None) is not None)
-    for n in _data_descriptors(tp):
+    lazy_values = _lazy_values(obj, descriptors)
+    for n in descriptors:
         if n in _NAMESPACE_REFS:
+            continue
+        if n in lazy_values:
+            fields.append((n, ("<lazy: described by " + lazy_values[n] + ">",)))
             continue
         if is_class and n in _LAZY_ANNOTATION:
             continue                                      # a class: its annotation content is in __dict__, read below
+        if wrapper and n in _LAZY_ANNOTATION:
+            continue                                      # a wrapper: both are its __func__'s, described as that field
+        if wrapper and n == "__dict__":
+            fields.append((n, _normalise(_wrapper_vars(obj), seen)))
+            continue
         if n == "__annotations__" and lazy:
             fields.append((n, ("<lazy: described by __annotate__>",)))
             continue
@@ -897,6 +966,12 @@ class Uninstrument(ast.NodeTransformer):
     def generic_visit(self, node):
         # statement lists may receive lists from visit_With (splicing) — flatten them
         for field, old in ast.iter_fields(node):
+            # ROUND 25 (the round-24 verdict's R24-1): an annotation whose text is DATA — every annotation under the
+            # future import, a function-local one without it — is LEFT EXACTLY AS WRITTEN: its census call is never
+            # executed, and rewriting it changed the string a program reads. The classifier is the resolver's, shared
+            # with the binding scan; verify() checks the result INDEPENDENTLY, by comparing annotation ASTs.
+            if isinstance(old, ast.AST) and self.resolver is not None and id(old) in self.resolver.preserved_roots:
+                continue
             if isinstance(old, list):
                 new = []
                 for item in old:
@@ -1041,6 +1116,15 @@ def instrumentation_tokens_in(text: str) -> list:
     correct twin keeping `from .census import enabled` refused by verify() on its first run."""
     # ROUND 14: `declare_site` is no longer a token that must not survive — every declaration stays in the twin (bound,
     # since round 16, to the REFERENCE census). What must not survive is a MEASUREMENT: a consult or a fire.
+    # ROUND 25 (R24-1): a call inside an annotation whose text is DATA is not a measurement and is KEPT as written, so
+    # the search runs over the EXECUTABLE code: those annotations (the shared classifier's) are blanked first, and
+    # only they. Text that does not parse is searched whole.
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return [tok for tok in (".consult()", ".fire(") if tok in text]
+    if _scope.blank_data_annotations(tree):
+        text = ast.unparse(tree)
     return [tok for tok in (".consult()", ".fire(") if tok in text]
 
 
@@ -1408,7 +1492,16 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     # an unestablished alias (reported); and a bypass in an unrecognised STATEMENT SHAPE (silent). This walks
     # every `<Name>.enabled()` call wherever it stands, and reports the ones the transform did not rewrite.
     unresolved = []
+    # ROUND 25 (R24-1): census calls left AS WRITTEN inside a data annotation, listed rather than skipped silently —
+    # they are neither rewritten nor measured, and a reader should see that they were examined. Present in the
+    # manifest only when there is one (none in the product), so a module without any keeps its manifest bytes.
+    preserved = sorted({f"{ast.unparse(n)} at line {n.lineno}" for n in ast.walk(tree)
+                        if isinstance(n, ast.Call) and resolver.in_preserved_annotation(n)
+                        and isinstance(n.func, ast.Attribute) and isinstance(n.func.value, ast.Name)
+                        and (n.func.value.id in declared or n.func.value.id in census_aliases)})
     for node in ast.walk(tree):
+        if resolver.in_preserved_annotation(node):
+            continue
         if _is_enabled_call(node):
             nm = node.func.value.id
             if nm in census_aliases:
@@ -1442,6 +1535,8 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
              # the COUNT sums into the manifest totals; the DETAIL stays per module, under a key the
              # totals loop does not know, so a reviewer sees both the headline and which call it was.
              "unresolved_bypass_candidates": len(unresolved), "unresolved_bypass_detail": unresolved}
+    if preserved:
+        stats["preserved_annotation_census_calls"] = preserved       # a list: carried per module, never summed
     # no INSTRUMENTATION may survive in the emitted module (a stub-answered surface read may)
     for token in instrumentation_tokens_in(out):         # ROUND 12, R1: ONE definition, shared with verify()
         raise Refused(f"the emitted module still carries {token!r}")
@@ -1513,6 +1608,25 @@ def derive(src: pathlib.Path, out: pathlib.Path) -> dict:
     return totals
 
 
+def annotations_in_order(text: str) -> list:
+    """ROUND 25 (R24-1) — every annotation in `text`, in SOURCE order (a depth-first walk over the fields; `ast.walk`
+    is breadth-first and its order moves when the transform changes nesting), as `ast.dump`. It deliberately
+    knows NOTHING of which annotations are data and which are executed — it never calls the transform's classifier
+    (`scope_resolution.preserved_annotation_roots`), so a defect in that classifier cannot hide here. Its use is
+    verify()'s check that the twin's annotations equal the source's, ALL of them: measured over src/veracium at
+    the round-25 change, zero annotations in 56 modules differ, so no annotation change is a permitted one."""
+    out = []
+    def go(node):
+        for field, value in ast.iter_fields(node):
+            if field in ("annotation", "returns") and isinstance(value, ast.AST):
+                out.append(ast.dump(value))
+            for child in (value if isinstance(value, list) else [value]):
+                if isinstance(child, ast.AST):
+                    go(child)
+    go(ast.parse(text))
+    return out
+
+
 def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib.Path | None = None) -> list[str]:
     """Does the twin at `out` differ from `src` BY THE INSTRUMENTATION AND NOTHING ELSE? Round 7, F4: the previous
     version answered only half the question and answered that half loosely. It checked that no instrumentation
@@ -1537,6 +1651,9 @@ def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib
          general form): every emitted module must COMPILE — `ast.parse` accepts a `from __future__` import that is
          no longer first, `compile()` does not — and `lost_bindings` finds any name the source binds at module
          level that the twin reads and binds nowhere. Neither re-derives anything, so neither inherits the defect.
+      3c. ROUND 25 (R24-1) — ANNOTATIONS: every annotation in the twin equals the source's, in order, by `ast.dump`
+         (`annotations_in_order`). The token check in 2 exempts the annotations whose text is data; this check does
+         not consult that classification, so a rewrite inside one — the round-24 finding — is named here.
       4. MANIFEST — every module's `sha256_before` matches the source file and `sha256_after` the emitted one, and
          the manifest's module set equals the file set. A manifest is looked for beside the twin unless one is given.
     """
@@ -1570,6 +1687,14 @@ def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib
             problems.append(f"{rel}: the twin does not COMPILE ({e.msg}, line {e.lineno}) — `ast.parse` accepts text "
                             f"`compile()` refuses, such as a `from __future__` import that is no longer first")
             continue
+        # ROUND 25 (R24-1): the annotations, INDEPENDENTLY of the classifier that exempts some of them from the
+        # token check above — a census call the transform rewrote inside an annotation, or one it dropped, is named.
+        src_anns, twin_anns = annotations_in_order(_read_source(src / rel)), annotations_in_order(text)
+        if src_anns != twin_anns:
+            first = next((i for i, (x, y) in enumerate(zip(src_anns, twin_anns)) if x != y), min(len(src_anns), len(twin_anns)))
+            problems.append(f"{rel}: the twin's ANNOTATIONS differ from the source's ({len(src_anns)} in the source, "
+                            f"{len(twin_anns)} in the twin; the first difference is annotation #{first + 1}) — an "
+                            f"annotation is kept as written, never rewritten")
         lost = lost_bindings(_read_source(src / rel), text)
         if lost:
             problems.append(f"{rel}: LOST BINDING(S) {sorted(lost)} — bound at module level in the source, still read "

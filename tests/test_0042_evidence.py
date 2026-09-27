@@ -11,6 +11,7 @@ import importlib.util
 import json
 import re
 import pathlib
+import sys
 
 import pytest
 
@@ -143,7 +144,7 @@ def test_a0quater_scan_finds_the_binding_and_the_registry_checks_it_and_the_unlo
     inst = _load("installed_sites")
     fx = inst.scan(inst.FIXTURE); reg, loaded = inst.load_fixture()
     assert {s["id"] for s in fx} == inst.FIX_DISCOVERED
-    assert all(set(s) == {"id", "module", "qualname", "line", "name", "consult", "fire", "bound", "sha256"} for s in fx)
+    assert all(set(s) == {"id", "module", "qualname", "line", "name", "consult", "fire", "bound", "annotation_calls", "sha256"} for s in fx)
     assert all(s["bound"] and s["consult"] and s["fire"] for s in fx), "the fixture's three sites must all be BOUND (consult AND fire)"
     ref, oor = inst.check_registry_against_scan(fx, reg, loaded)
     assert ref == [] and len(oor) == 1 and "lifecycle.forget.scope" in oor[0] and "NAMED" in oor[0]
@@ -694,3 +695,111 @@ def test_r13_the_real_tree_s_scan_is_the_program_this_process_ran():
         importlib.import_module(".".join(["veracium", *(parts[:-1] if parts[-1] == "__init__" else parts)]))
     from veracium import census
     assert inst.scan_is_the_program_that_ran(root, scanned, census._REGISTRY) == []
+
+
+# ---- round 25 (the round-24 verdict's R24-1, research's stage-1 ruling): the binding scan counts what RUNS in a body ---
+_R25_HEAD = "from . import census as _census\nS = _census.declare_site('m.s')\n\n"
+_R25_FUT = "from __future__ import annotations\n"
+# (cell, module, bound?, the annotation calls listed). A call is a binding only where it runs INSIDE a call of the
+# function: its body, and what a nested definition statement evaluates there — never the function's own signature
+# (defaults and decorators run once, at definition, in the enclosing scope) and never an annotation's text.
+_R25_SCAN = [
+    ("a real binding", _R25_HEAD + "def f(v):\n    with S.consult():\n        raise S.fire(v)\n", True, []),
+    ("consult only in a future-import annotation", _R25_FUT + _R25_HEAD + "def f(v: S.consult()):\n    raise S.fire(v)\n",
+     False, ["S.consult() at line 5"]),
+    ("both only in future-import annotations", _R25_FUT + _R25_HEAD + "def f(v: S.consult()) -> S.fire(1):\n    return v\n",
+     False, ["S.consult() at line 5", "S.fire() at line 5"]),
+    ("consult only in a function-local annotation", _R25_HEAD + "def f(v):\n    x: S.consult() = 1\n    raise S.fire(v)\n",
+     False, ["S.consult() at line 5"]),
+    ("consult only in the function's own default", _R25_HEAD + "def f(v=S.consult()):\n    raise S.fire(v)\n", False, []),
+    ("consult only in the function's own decorator", _R25_HEAD + "@S.consult()\ndef f(v):\n    raise S.fire(v)\n", False, []),
+    ("consult in a nested def's default (runs in the body)",
+     _R25_HEAD + "def f(v):\n    def g(w=S.consult()):\n        pass\n    raise S.fire(v)\n", True, []),
+    ("consult in a nested class's base (runs in the body)",
+     _R25_HEAD + "def f(v):\n    class K(S.consult()):\n        pass\n    raise S.fire(v)\n", True, []),
+    ("consult only in a nested body", _R25_HEAD + "def f(v):\n    def g():\n        S.consult()\n    raise S.fire(v)\n", False, []),
+]
+
+
+@pytest.mark.parametrize("cell,src,bound,listed", _R25_SCAN, ids=[c[0] for c in _R25_SCAN])
+def test_r25_the_binding_scan_counts_what_runs_in_the_body_and_lists_annotation_calls(cell, src, bound, listed):
+    inst = _load("installed_sites")
+    per_body, _defs, annotation_calls = inst._binding_scan(src, f"<{cell}>")
+    assert ("S" in per_body) is bound, (cell, per_body)
+    assert annotation_calls == listed, (cell, annotation_calls)
+
+
+def test_r25_a_nested_definitions_decorator_and_default_bind_the_enclosing_frame_not_the_nested_one():
+    """Research's stage-1 ask: the calls a nested definition statement evaluates — its decorator, its default — run in
+    the ENCLOSING function's frame, each time that function runs; so they bind the enclosing function, and the nested
+    function binds nothing."""
+    inst = _load("installed_sites")
+    src = _R25_HEAD + "def f(v):\n    @S.consult()\n    def g(w=S.fire(v)):\n        return w\n    return g\n"
+    per_body, defs, _calls = inst._binding_scan(src, "<nested>")
+    assert per_body == {"S": {"consult", "fire"}} and [d.name for d in defs] == ["f"], (per_body, [d.name for d in defs])
+
+
+def test_r25_scan_reports_annotation_calls_per_site_empty_meaning_examined(tmp_path):
+    """Research's "don't skip silently": every record carries `annotation_calls`; an EMPTY list is the zero count (the
+    fixture's sites, all bound, none in an annotation), and a site whose only calls are annotation text lists them and
+    reads NOT bound."""
+    inst = _load("installed_sites")
+    assert all(r["annotation_calls"] == [] and r["bound"] for r in inst.scan(inst.FIXTURE))
+    (tmp_path / "m.py").write_text(_R25_SCAN[2][1], encoding="utf-8")
+    (row,) = inst.scan(tmp_path)
+    assert row["bound"] is False and (row["consult"], row["fire"]) == (False, False), row
+    assert row["annotation_calls"] == ["S.consult() at line 5", "S.fire() at line 5"], row
+    # a call in a variable annotation INSIDE the body — the one place the diagnostic's frame reaches annotation text
+    (tmp_path / "m.py").write_text(_R25_SCAN[3][1], encoding="utf-8")
+    (row,) = inst.scan(tmp_path)
+    assert (row["bound"], row["consult"], row["fire"]) == (False, False, True), row
+    assert row["annotation_calls"] == ["S.consult() at line 5"], row
+
+
+def _r25_scan_mutant(tmp_path, filename, anchor, replacement):
+    import shutil
+    ev = tmp_path / "ev"
+    shutil.copytree(EVIDENCE, ev, ignore=shutil.ignore_patterns("__pycache__"))
+    text = (ev / filename).read_text(encoding="utf-8")
+    assert text.count(anchor) == 1, (filename, anchor)
+    (ev / filename).write_text(text.replace(anchor, replacement), encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("installed_sites_r25_mutant", ev / "installed_sites.py")
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); return m
+
+
+_R25_SCAN_MUTANTS = [
+    ("a data annotation's call counted", "installed_sites.py",
+     "            if _binding_call(c, sites) and not r.in_preserved_annotation(c) \\\n",
+     "            if _binding_call(c, sites) \\\n"),
+    ("the function's own signature walked", "installed_sites.py",
+     "    todo = list(fn.body)\n", "    todo = list(fn.body) + fn.args.defaults + fn.decorator_list\n"),
+    ("a nested definition's evaluated parts skipped", "installed_sites.py",
+     "            todo += n.decorator_list + n.args.defaults + [d for d in n.args.kw_defaults if d is not None]\n",
+     "            pass\n"),
+]
+
+
+@pytest.mark.parametrize("mutant,filename,anchor,replacement", _R25_SCAN_MUTANTS, ids=[m[0] for m in _R25_SCAN_MUTANTS])
+def test_r25_each_scan_rule_is_load_bearing(mutant, filename, anchor, replacement, tmp_path):
+    mut = _r25_scan_mutant(tmp_path, filename, anchor, replacement)
+    wrong = []
+    for cell, src, bound, listed in _R25_SCAN:
+        try:
+            per_body, _d, calls = mut._binding_scan(src, f"<{cell}>")
+            if ("S" in per_body) is not bound or calls != listed:
+                wrong.append(cell)
+        except Exception as e:
+            wrong.append(f"{cell}: {type(e).__name__}")
+    assert wrong, f"{mutant}: every scan cell still reads right"
+
+
+def test_r25_the_diagnostic_skips_data_annotations_too(tmp_path, monkeypatch):
+    """The `consult`/`fire` diagnostic reads the same frame and the same classifier as the binding: with the data
+    exemption removed it reports a use the binding does not count, and the report cell fails."""
+    mut = _r25_scan_mutant(tmp_path, "installed_sites.py",
+                           "and node.func.attr in BINDING_METHODS and id(node) not in data:",
+                           "and node.func.attr in BINDING_METHODS:")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a: mut)
+    (tmp_path / "cell").mkdir()
+    with pytest.raises(AssertionError):
+        test_r25_scan_reports_annotation_calls_per_site_empty_meaning_examined(tmp_path / "cell")

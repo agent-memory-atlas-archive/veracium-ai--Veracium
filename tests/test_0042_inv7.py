@@ -3918,3 +3918,416 @@ def _r13_closure_pkg(tmp_path, slug, b_text, extra):
 
 
 
+
+
+# ---- round 25: the round-24 verdict's R24-1 — an annotation whose text is DATA is kept as written -------------------
+def _r25_mutant(tmp_path, filename, anchor, replacement, tag):
+    """The evidence directory copied with ONE file mutated, and inv7_uninstrument loaded from the copy — it loads its
+    siblings (scope_resolution) by its own path, so a mutant in either file reaches the transform and verify()."""
+    ev = tmp_path / tag
+    shutil.copytree(EVIDENCE, ev, ignore=shutil.ignore_patterns("__pycache__"))
+    text = (ev / filename).read_text(encoding="utf-8")
+    assert text.count(anchor) == 1, (tag, filename, "the anchor moved")
+    (ev / filename).write_text(text.replace(anchor, replacement), encoding="utf-8")
+    return _load(f"inv7_uninstrument_r25_{tag}", ev / "inv7_uninstrument.py")
+
+
+_R25_ANN = "S.fire(123)"
+# every annotation POSITION the grammar has; the regime is the second axis. The expected outcome is NOT listed here: it
+# is DERIVED from the compiler (`_r25_executable`), so a position whose evaluation 3.14 changes moves its own cell
+_R25_POSITIONS = [
+    ("def parameter",            f"def f(x: {_R25_ANN}):\n    pass\n"),
+    ("def return",               f"def f() -> {_R25_ANN}:\n    pass\n"),
+    ("def positional-only",      f"def f(x: {_R25_ANN}, /):\n    pass\n"),
+    ("def keyword-only",         f"def f(*, k: {_R25_ANN}):\n    pass\n"),
+    ("def *args",                f"def f(*a: {_R25_ANN}):\n    pass\n"),
+    ("def **kwargs",             f"def f(**k: {_R25_ANN}):\n    pass\n"),
+    ("async def parameter",      f"async def f(x: {_R25_ANN}):\n    pass\n"),
+    ("method parameter",         f"class C:\n    def m(self, x: {_R25_ANN}):\n        pass\n"),
+    ("nested def parameter",     f"def outer():\n    def inner(x: {_R25_ANN}):\n        pass\n    return inner\n"),
+    ("generic def parameter",    f"def f[T](x: {_R25_ANN}):\n    pass\n"),
+    ("module variable",          f"x: {_R25_ANN}\n"),
+    ("module variable with value", f"x: {_R25_ANN} = 1\n"),
+    ("module parenthesised target", f"(x): {_R25_ANN} = 1\n"),
+    ("module attribute target",  f"class O:\n    pass\no = O()\no.a: {_R25_ANN} = 1\n"),
+    ("module subscript target",  f"d = {{}}\nd['k']: {_R25_ANN} = 1\n"),
+    ("class variable",           f"class C:\n    y: {_R25_ANN}\n"),
+    ("class attribute target",   f"class C:\n    o = None\n    o.a: {_R25_ANN} = 1\n"),
+    ("class variable in a function", f"def f():\n    class K:\n        y: {_R25_ANN}\n    return K\n"),
+    ("function-local variable",  f"def f():\n    z: {_R25_ANN} = 1\n    return z\n"),
+    ("function-local attribute target", f"def f(o):\n    o.a: {_R25_ANN} = 1\n"),
+]
+_R25_REGIMES = [("lazy", ""), ("future import", "from __future__ import annotations\n")]
+_R25_HEAD = "from . import census as _census\nS = _census.declare_site('m.s')\n\n"
+
+
+def _r25_executable(prologue, body) -> bool:
+    """Can the annotation's call EVER run? The compiler's answer: does any code object compiled from the module load the
+    call's argument 123 as a value (a stringified annotation holds it inside a string constant; an annotation that is
+    never evaluated is compiled away)."""
+    import dis
+    todo, hit = [compile(prologue + "S = None\n" + body, "<r25>", "exec", dont_inherit=True)], False
+    while todo:
+        co = todo.pop()
+        hit = hit or any(i.opname in ("LOAD_SMALL_INT", "LOAD_CONST") and i.argval == 123 for i in dis.get_instructions(co))
+        todo += [c for c in co.co_consts if hasattr(c, "co_code")]
+    return hit
+
+
+_R25_MATRIX = [(f"{pos} / {regime}", prologue, body) for pos, body in _R25_POSITIONS for regime, prologue in _R25_REGIMES]
+
+
+@pytest.mark.parametrize("cell,prologue,body", _R25_MATRIX, ids=[c[0] for c in _R25_MATRIX])
+def test_r25_every_annotation_position_by_regime_is_preserved_or_refused_as_the_compiler_evaluates_it(cell, prologue, body):
+    """The verdict's R24-1, as a MATRIX (research's stage 1): every annotation position × {lazy, future import}. An
+    annotation whose call can run is REFUSED (the census use would run apart from its decision); one that can never run
+    is DATA and is kept byte-for-byte — never rewritten (the round-24 defect: `S.fire(123)` became `123`) and never
+    refused. Which is which comes from the compiler, not from a list."""
+    un = _load("inv7_uninstrument_r25_matrix", EVIDENCE / "inv7_uninstrument.py")
+    src = prologue + _R25_HEAD + body
+    if _r25_executable(prologue, body):
+        with pytest.raises(Exception, match="runs apart from the decision beside it"):
+            un.uninstrument_source(src, f"<{cell}>")
+        return
+    out, stats = un.uninstrument_source(src, f"<{cell}>")
+    assert un.annotations_in_order(out) == un.annotations_in_order(src), (cell, out)
+    assert _R25_ANN in out and stats["preserved_annotation_census_calls"] == [f"{_R25_ANN} at line {src.count(chr(10), 0, src.index(_R25_ANN)) + 1}"], (cell, stats)
+
+
+def test_r25_the_matrix_holds_both_outcomes_in_the_lazy_regime_and_only_data_under_the_future_import():
+    """The acceptance half of the matrix, COUNTED: a matrix whose derivation read every cell one way would pass the cells
+    above vacuously. On 3.14 the lazy regime refuses the def, method, module and class annotations and keeps the local and
+    non-simple-target ones; the future import makes every one data."""
+    got = {(regime, _r25_executable(prologue, body)) for pos, body in _R25_POSITIONS for regime, prologue in _R25_REGIMES}
+    assert got == {("lazy", True), ("lazy", False), ("future import", False)}, got
+    kept = sorted(pos for pos, body in _R25_POSITIONS if not _r25_executable("", body))
+    assert kept == sorted(["module parenthesised target", "module attribute target", "module subscript target",
+                           "class attribute target", "function-local variable", "function-local attribute target"]), kept
+
+
+_R25_B_FUTURE = ("from __future__ import annotations\n" + _R14_SELF +
+                 "def f(x: S.fire(123)) -> S.consult():\n    return x\n\n\nV: S.fire(7) = 1\n\n\n"
+                 "def h():\n    z: S.fire(9) = 1\n    return z\n")
+_R25_READ = ("import json, sys; sys.path.insert(0, sys.argv[1]); import vpkg.b as b\n"
+             "fired = []\n"
+             "class Rec:\n"
+             "    def fire(self, *a):\n        fired.append(a)\n        return a[0]\n"
+             "    def consult(self):\n        fired.append('consult')\n"
+             "b.S = Rec()\n"
+             "print(json.dumps({'f': b.f.__annotations__, 'module': b.__annotations__, 'h': b.h(), 'fired': fired}))\n")
+
+
+def test_r25_the_reviewers_cases_end_to_end_the_twin_reads_the_sources_annotations(tmp_path):
+    """The verdict's two cases, a function's and a module variable's, and the function-local one (research's stage 1:
+    "ship a cell showing the local annotation's census call stays in the twin text and never runs"): derive, verify()
+    clean, and the SOURCE and the TWIN each imported in a child — `f.__annotations__` and the module's `__annotations__`
+    read identically (the strings as written), and calling `h` runs no census call in either."""
+    read = _r25_e2e(_load("inv7_uninstrument_r25_e2e", EVIDENCE / "inv7_uninstrument.py"), tmp_path, _R25_B_FUTURE)
+    assert read["twin"] == {"f": {"x": "S.fire(123)", "return": "S.consult()"}, "module": {"V": "S.fire(7)"}, "h": 1, "fired": []}, read
+
+
+def _r25_e2e(un, tmp_path, b_text):
+    src = _r13_pkg(tmp_path, "e2e", b_text, "")
+    out = tmp_path / "e2e" / "twin" / "vpkg"
+    un.derive(src, out)
+    assert un.verify(out, src) == [], un.verify(out, src)
+    twin_b = (out / "b.py").read_text(encoding="utf-8")
+    assert "def f(x: S.fire(123))" in twin_b and "V: S.fire(7) = 1" in twin_b and "z: S.fire(9) = 1" in twin_b, twin_b
+    read = {}
+    for arm, root in (("source", src.parent), ("twin", out.parent)):
+        r = subprocess.run([sys.executable, "-c", _R25_READ, str(root)], capture_output=True, text=True)
+        assert r.returncode == 0, (arm, r.stderr[-800:])
+        read[arm] = json.loads(r.stdout)
+    assert read["source"] == read["twin"], read
+    return read
+
+
+_R25_R24_TRANSFORM = ("    future = _future_annotations(tree)\n    roots = {}\n", "    future = False\n    roots = {}\n")
+
+
+def test_r25_rewriting_under_the_future_import_is_caught_by_verifys_independent_check(tmp_path):
+    """THE ROUND-24 TRANSFORM IS THE MUTANT (the classifier blind to the future import): it rewrites `S.fire(123)` to
+    `123` inside the annotation, and because verify()'s structure check RE-DERIVES with the same transform, only an
+    independent reading can see it — the annotation comparison, which never asks the classifier. The end-to-end cell
+    fails under it too."""
+    mut = _r25_mutant(tmp_path, "scope_resolution.py", *_R25_R24_TRANSFORM, "r24transform")
+    # the reviewer's shape: a FIRE in the annotation, which the round-24 transform rewrote silently (a consult there it
+    # left, and the token check refused the module — loud, so not the case this mutant is for)
+    fire_only = _R25_B_FUTURE.replace(" -> S.consult():", ":")
+    src = _r13_pkg(tmp_path, "mut", fire_only, "")
+    out = tmp_path / "mut" / "twin" / "vpkg"
+    mut.derive(src, out)
+    assert "def f(x: 123)" in (out / "b.py").read_text(encoding="utf-8"), "the mutant no longer rewrites: it tests nothing"
+    problems = mut.verify(out, src)
+    assert any("b.py: the twin's ANNOTATIONS differ" in p for p in problems), problems
+    assert not any("program structure differs" in p for p in problems), "the re-derivation saw it: the check is not the one tested"
+    with pytest.raises(AssertionError):
+        _r25_e2e(mut, tmp_path / "e2e-under-mutant", fire_only)
+    _r25_e2e(_load("inv7_uninstrument_r25_e2e_fire", EVIDENCE / "inv7_uninstrument.py"), tmp_path / "e2e-shipped", fire_only)
+
+
+def test_r25_verify_names_a_dropped_or_rewritten_annotation_the_classifier_would_exempt(tmp_path):
+    """verify()'s annotation check over a HAND-EDITED twin (no transform involved), both directions: an annotation
+    rewritten, and one dropped — each named; the clean twin is not."""
+    un = _load("inv7_uninstrument_r25_verify", EVIDENCE / "inv7_uninstrument.py")
+    src = _r13_pkg(tmp_path, "v", _R25_B_FUTURE, "")
+    out = tmp_path / "v" / "twin" / "vpkg"
+    un.derive(src, out)
+    assert un.verify(out, src) == []
+    man_path = out.parent / "twin_manifest.json"
+    for edit in (("def f(x: S.fire(123))", "def f(x: 123)"), ("def f(x: S.fire(123)) -> S.consult():", "def f(x: S.fire(123)):")):
+        good = (out / "b.py").read_text(encoding="utf-8")
+        assert good.count(edit[0]) == 1, edit
+        (out / "b.py").write_text(good.replace(edit[0], edit[1]), encoding="utf-8")
+        man = json.loads(man_path.read_text(encoding="utf-8")); old_after = man["modules"]["b.py"]["sha256_after"]
+        man["modules"]["b.py"]["sha256_after"] = hashlib.sha256((out / "b.py").read_bytes()).hexdigest()
+        man_path.write_text(json.dumps(man, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        assert any("b.py: the twin's ANNOTATIONS differ" in p for p in un.verify(out, src)), edit
+        (out / "b.py").write_text(good, encoding="utf-8")
+        man["modules"]["b.py"]["sha256_after"] = old_after
+        man_path.write_text(json.dumps(man, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    assert un.verify(out, src) == []
+
+
+def test_r25_the_token_check_exempts_data_annotations_and_nothing_else():
+    """`instrumentation_tokens_in` — ONE definition, the transform's refusal and verify()'s — skips exactly the
+    annotations the shared classifier calls data: the same call in a lazy annotation, in a default, in a body, or in a
+    string constant is still found; text that does not parse is searched whole."""
+    un = _load("inv7_uninstrument_r25_tokens", EVIDENCE / "inv7_uninstrument.py")
+    fut = "from __future__ import annotations\n"
+    assert un.instrumentation_tokens_in(fut + "def f(x: S.fire(1)): pass\n") == []
+    assert un.instrumentation_tokens_in("def f():\n    z: S.fire(1) = 1\n") == []
+    for text in ("def f(x: S.fire(1)): pass\n", fut + "def f(x=S.fire(1)): pass\n", fut + "def f():\n    return S.fire(1)\n",
+                 fut + "X = 'S.fire(1)'\n", fut + "def f(x: S.fire(1)):\n    return S.fire(2)\n", "def f(:\n    S.fire(1)\n"):
+        assert un.instrumentation_tokens_in(text) == [".fire("], text
+
+
+# ---- round 25: the round-24 verdict's R24-2 — lazy type metadata is described, never evaluated -----------------------
+# The reviewer's eleven cases: nine AFFECTED forms and the two annotation controls. Each is (label, the Site's source,
+# a path to the object holding the lazy value or None for a control, the evaluator's name).
+_R25_SIDE = "CALLS = []\ndef side(label):\n    CALLS.append(label)\n    return int\n"
+_R25_LAZY = [
+    ("method TypeVar bound", "class Site:\n    def fire[T: side('X')](self, value):\n        return value\n",
+     lambda m: m.Site.fire.__type_params__[0], "evaluate_bound"),
+    ("method TypeVar constraints", "class Site:\n    def fire[T: (side('X'), side('Y'))](self, value):\n        return value\n",
+     lambda m: m.Site.fire.__type_params__[0], "evaluate_constraints"),
+    ("method TypeVar default", "class Site:\n    def fire[T = side('X')](self, value):\n        return value\n",
+     lambda m: m.Site.fire.__type_params__[0], "evaluate_default"),
+    ("method ParamSpec default", "class Site:\n    def fire[**P = side('X')](self, value):\n        return value\n",
+     lambda m: m.Site.fire.__type_params__[0], "evaluate_default"),
+    ("method TypeVarTuple default", "class Site:\n    def fire[*Ts = side('X')](self, value):\n        return value\n",
+     lambda m: m.Site.fire.__type_params__[0], "evaluate_default"),
+    ("generic class bound", "class Site[T: side('X')]:\n    def fire(self, value):\n        return value\n",
+     lambda m: m.Site.__type_params__[0], "evaluate_bound"),
+    ("generic class default", "class Site[T = side('X')]:\n    def fire(self, value):\n        return value\n",
+     lambda m: m.Site.__type_params__[0], "evaluate_default"),
+    ("class-held alias", "class Site:\n    type Value = side('X')\n    def fire(self, value):\n        return value\n",
+     lambda m: m.Site.Value, "evaluate_value"),
+    ("class-held generic alias", "class Site:\n    type Value[V] = side('X')\n    def fire(self, value):\n        return value\n",
+     lambda m: m.Site.Value, "evaluate_value"),
+    # beyond the reviewer's nine: the alias's OWN type parameter, reached only by recursing into __type_params__
+    ("class-held alias's type-parameter bound", "class Site:\n    type Value[V: side('X')] = int\n    def fire(self, value):\n        return value\n",
+     lambda m: m.Site.Value.__type_params__[0], "evaluate_bound"),
+]
+_R25_CONTROLS = [
+    ("annotation control", "class Site:\n    def fire(self, value: side('X')) -> side('Y'):\n        return value\n", None, None),
+    ("future-import annotation control", "from __future__ import annotations\nclass Site:\n    def fire(self, value: side('X')):\n        return value\n", None, None),
+]
+
+
+def _r25_site(label, body):
+    import types
+    mod = types.ModuleType("r25site")
+    head, body = (body.split("\n", 1)[0] + "\n", body.split("\n", 1)[1]) if body.startswith("from __future__") else ("", body)
+    exec(compile(head + _R25_SIDE + body, f"<r25:{label}>", "exec", dont_inherit=True), mod.__dict__)
+    return mod
+
+
+def _r25_describe_counting(un, mod, label):
+    """(the digest, code objects ENTERED from the case's own source while describing) — through site_description AND
+    the runtime caller, the observer's `_site_realized` (the digest the arms compare)."""
+    entered = []
+
+    def hook(frame, event, arg):
+        if event == "call" and frame.f_code.co_filename == f"<r25:{label}>":
+            entered.append(frame.f_code.co_name)
+    sys.setprofile(hook)
+    try:
+        digest = un.site_description_digest(un.site_description(mod.Site))["digest"]
+        realized = observer._site_realized(mod.Site)["digest"]
+    finally:
+        sys.setprofile(None)
+    return digest, realized, entered
+
+
+@pytest.mark.parametrize("label,body,holder,evaluator", _R25_LAZY + _R25_CONTROLS, ids=[c[0] for c in _R25_LAZY + _R25_CONTROLS])
+def test_r25_describing_lazy_type_metadata_runs_no_census_code(label, body, holder, evaluator):
+    """The verdict's R24-2: describing a Site whose type parameters or class-held aliases carry LAZY values enters no
+    code compiled from the census's source and runs none of its side effects — through the describer AND the observer's
+    runtime digest. The case must really be lazy (the evaluator present and callable, the value unevaluated), or the
+    cell fails by name; the lazy value is described as such, and the two routes agree."""
+    un = _load("inv7_uninstrument_r25_lazy", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r25_site(label, body)
+    if holder is not None:
+        assert callable(getattr(holder(mod), evaluator)), f"{label}: not the lazy shape — this cell cannot run its case"
+    assert mod.CALLS == [], mod.CALLS
+    digest, realized, entered = _r25_describe_counting(un, mod, label)
+    assert mod.CALLS == [] and entered == [], (label, mod.CALLS, entered)
+    assert digest == realized, label
+    if holder is not None:
+        assert f"<lazy: described by {evaluator}>" in repr(un.site_description(mod.Site)), label
+
+
+@pytest.mark.parametrize("label,body,holder,evaluator", _R25_LAZY, ids=[c[0] for c in _R25_LAZY])
+def test_r25_a_changed_lazy_definition_still_describes_differently(label, body, holder, evaluator):
+    """The verdict's other half: "simply excluding every type-parameter/alias object would create another undetected-drift
+    gap". Two Sites differing ONLY in the lazy expression (`side('X')` against `side('Z')`) describe differently —
+    the evaluator is described by its code — and describing either still runs nothing."""
+    un = _load("inv7_uninstrument_r25_changed", EVIDENCE / "inv7_uninstrument.py")
+    a, b = _r25_site(label, body), _r25_site(label, body.replace("side('X')", "side('Z')"))
+    da, _, ea = _r25_describe_counting(un, a, label)
+    db, _, eb = _r25_describe_counting(un, b, label)
+    assert da != db, f"{label}: a changed lazy definition reads as no drift"
+    assert a.CALLS == b.CALLS == [] and ea == eb == [], (label, a.CALLS, b.CALLS)
+
+
+def test_r25_a_bare_type_parameter_is_read_eagerly_not_marked_lazy():
+    """The acceptance half (research's stage 1: so "lazy" is not concluded from the TYPE alone): a bare `[V]` carries no
+    evaluator — its evaluate_* read None — and its __bound__/__constraints__/__default__ are READ and described as values."""
+    import typing
+    un = _load("inv7_uninstrument_r25_bare", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r25_site("bare", "class Site:\n    def fire[V](self, value):\n        return value\n")
+    v = mod.Site.fire.__type_params__[0]
+    assert (v.evaluate_bound, v.evaluate_constraints, v.evaluate_default) == (None, None, None)
+    assert v.__bound__ is None and v.__constraints__ == () and v.__default__ is typing.NoDefault
+    desc = repr(un._normalise(v, {}))
+    assert "<lazy:" not in desc and "'__bound__'" in desc and "'__default__'" in desc, desc
+
+
+def test_r25_the_evaluator_pairing_is_derived_and_exists_on_this_interpreter():
+    """The pairing `evaluate_<x>` → `__<x>__` is DERIVED from the descriptor names, never listed — so the rule would
+    silently cover nothing if CPython renamed them. Asserted to EXIST: on 3.14, each PEP 695 type carries the pairs the
+    rule relies on."""
+    import typing
+    un = _load("inv7_uninstrument_r25_pairs", EVIDENCE / "inv7_uninstrument.py")
+    want = {typing.TypeVar: {"__bound__", "__constraints__", "__default__"}, typing.ParamSpec: {"__default__"},
+            typing.TypeVarTuple: {"__default__"}, typing.TypeAliasType: {"__value__"}}
+    for tp, values in want.items():
+        d = un._data_descriptors(tp)
+        assert values <= {"__" + n[len("evaluate_"):] + "__" for n in d if n.startswith("evaluate_")} <= set(d), (tp, sorted(d))
+
+
+_R25_READ_MUTANT = ("        if n in lazy_values:\n", "        if False:\n")
+
+
+def test_r25_the_lazy_value_rule_is_load_bearing(tmp_path, monkeypatch):
+    """THE READ MUTANT: the lazy value read like any other descriptor — every affected cell must then fail."""
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", *_R25_READ_MUTANT, "readlazy")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    for label, body, holder, evaluator in _R25_LAZY:
+        with pytest.raises(AssertionError):
+            test_r25_describing_lazy_type_metadata_runs_no_census_code(label, body, holder, evaluator)
+
+
+# ---- round 25, found by the R24-2 cells: a WRAPPER's annotations, and objects made during a description ---------------
+_R25_WRAPPERS = ("class Site:\n    @classmethod\n    def c(cls, x: side('cm')):\n        pass\n"
+                 "    @staticmethod\n    def s(x):\n        pass\n    def fire(self, value):\n        return value\n")
+
+
+def test_r25_describing_a_wrapper_writes_nothing_runs_nothing_and_is_stable():
+    """On 3.14 READING a classmethod's or staticmethod's `__annotate__` stores it in the wrapper's own `__dict__`, and
+    reading `__annotations__` stores the evaluated dict — calling the wrapped `__annotate__`. Describing a Site holding
+    an annotated classmethod and a bare staticmethod, and a generic Site (whose Generic[T] base reaches typing's own
+    classmethods), writes nothing into either wrapper, runs no census code, and describes the same three times."""
+    un = _load("inv7_uninstrument_r25_wrap", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r25_site("wrappers", _R25_WRAPPERS)
+    before = {k: dict(vars(vars(mod.Site)[k])) for k in ("c", "s")}
+    descs = [un.site_description(mod.Site) for _ in range(3)]
+    assert {k: dict(vars(vars(mod.Site)[k])) for k in ("c", "s")} == before, "the describer wrote into a wrapper"
+    assert mod.CALLS == [] and descs[0] == descs[1] == descs[2]
+    generic = _r25_site("generic", "class Site[T]:\n    def fire(self, value):\n        return value\n")
+    assert len({repr(un.site_description(generic.Site)) for _ in range(3)}) == 1, "a generic Site describes unstably"
+
+
+def test_r25_another_reader_of_a_wrapper_is_not_drift_and_an_assignment_is():
+    """Who read a wrapper's annotations first is not drift — a bare one, and an annotated one read (which evaluates it)
+    from outside; an ASSIGNED `__annotations__` or `__annotate__` on a wrapper is."""
+    un = _load("inv7_uninstrument_r25_wrapread", EVIDENCE / "inv7_uninstrument.py")
+
+    def digest(prepare=None):
+        m = _r25_site("wrappers", _R25_WRAPPERS)
+        if prepare:
+            prepare(m)
+        return un.site_description_digest(un.site_description(m.Site))["digest"]
+    base = digest()
+    assert digest(lambda m: (vars(m.Site)["s"].__annotations__, vars(m.Site)["s"].__annotate__)) == base
+    assert digest(lambda m: vars(m.Site)["c"].__annotations__) == base
+    assert digest(lambda m: setattr(vars(m.Site)["s"], "__annotations__", {"z": str})) != base
+    assert digest(lambda m: setattr(vars(m.Site)["c"], "__annotations__", {"z": str})) != base
+    assert digest(lambda m: setattr(vars(m.Site)["c"], "__annotate__", None)) != base
+
+
+def test_r25_every_described_object_is_held_until_the_description_ends():
+    """The id-reuse mechanism, asserted rather than hoped for: `seen` holds each object it gave a position, so no
+    address freed during the description can be read back as a `<ref>` (allocation-dependent otherwise — a cell relying
+    on reuse to happen would be flaky, so the property is asserted on the mechanism itself)."""
+    un = _load("inv7_uninstrument_r25_held", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r25_site("held", _R25_WRAPPERS)
+    seen = {}
+    un._normalise(mod.Site, seen)
+    assert seen and all(type(v) is tuple and id(v[1]) == k for k, v in seen.items()), \
+        [k for k, v in seen.items() if type(v) is not tuple][:3]
+
+
+_R25_WRAPPER_MUTANTS = [
+    ("the wrapper read like any object", "    wrapper = not is_class and _WRAPPER <= set(descriptors)\n",
+     "    wrapper = False\n", test_r25_describing_a_wrapper_writes_nothing_runs_nothing_and_is_stable),
+    ("the read-created wrapper keys kept", "        if k == \"__annotations__\" and any(r is x for r in gc.get_referents(func)):\n",
+     "        if False:\n", test_r25_another_reader_of_a_wrapper_is_not_drift_and_an_assignment_is),
+    ("the wrapper's annotation keys dropped unconditionally",
+     "        if k == \"__annotations__\" and any(r is x for r in gc.get_referents(func)):\n",
+     "        if k == \"__annotations__\":\n", test_r25_another_reader_of_a_wrapper_is_not_drift_and_an_assignment_is),
+    ("the wrapper's __annotate__ dropped unconditionally",
+     "        if k == \"__annotate__\" and x is getattr(func, \"__annotate__\", None):\n",
+     "        if k == \"__annotate__\":\n", test_r25_another_reader_of_a_wrapper_is_not_drift_and_an_assignment_is),
+    ("a described object not held", "    seen[id(obj)] = (len(seen), obj)\n", "    seen[id(obj)] = len(seen)\n",
+     test_r25_every_described_object_is_held_until_the_description_ends),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell", _R25_WRAPPER_MUTANTS, ids=[m[0] for m in _R25_WRAPPER_MUTANTS])
+def test_r25_each_wrapper_rule_is_load_bearing(mutant, anchor, replacement, cell, tmp_path, monkeypatch):
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "wrapm")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    with pytest.raises(AssertionError):
+        cell()
+
+
+_R25_CLASSIFIER_MUTANTS = [
+    ("every def annotation kept, whatever the regime", "                if future:\n                    for x in a.posonlyargs",
+     "                if True:\n                    for x in a.posonlyargs"),
+    ("every variable annotation kept, whatever the regime",
+     "                if isinstance(child, ast.AnnAssign) and (future or scope == \"function\" or not child.simple):",
+     "                if isinstance(child, ast.AnnAssign):"),
+    ("the function-local rule removed",
+     "                if isinstance(child, ast.AnnAssign) and (future or scope == \"function\" or not child.simple):",
+     "                if isinstance(child, ast.AnnAssign) and (future or not child.simple):"),
+    ("the non-simple-target rule removed",
+     "                if isinstance(child, ast.AnnAssign) and (future or scope == \"function\" or not child.simple):",
+     "                if isinstance(child, ast.AnnAssign) and (future or scope == \"function\"):"),
+    ("the future-import regime ignored", *_R25_R24_TRANSFORM),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement", _R25_CLASSIFIER_MUTANTS, ids=[m[0] for m in _R25_CLASSIFIER_MUTANTS])
+def test_r25_each_regime_rule_is_load_bearing(mutant, anchor, replacement, tmp_path, monkeypatch):
+    """Each rule of the shared classifier, removed or widened, fails at least one cell of the position × regime matrix."""
+    mut = _r25_mutant(tmp_path, "scope_resolution.py", anchor, replacement, "regimem")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    failed = []
+    for cell, prologue, body in _R25_MATRIX:
+        try:
+            test_r25_every_annotation_position_by_regime_is_preserved_or_refused_as_the_compiler_evaluates_it(cell, prologue, body)
+        except (AssertionError, pytest.fail.Exception, Exception) as e:
+            failed.append((cell, type(e).__name__))
+    assert failed, f"{mutant}: every matrix cell still passes"

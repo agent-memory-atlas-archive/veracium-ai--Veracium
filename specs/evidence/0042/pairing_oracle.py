@@ -9,6 +9,8 @@ the interpreter's compiler gives.
 
 GROUND TRUTH IS THE BYTECODE, NOTHING ELSE. A tagged read `(NAME, TAG)` compiles to a load instruction; LOAD_GLOBAL /
 LOAD_NAME / LOAD_FROM_DICT_OR_GLOBALS means the compiler resolved NAME to the module, any other LOAD means it did not.
+On the two class-namespace loads (DYNAMIC_OPS: ..._OR_GLOBALS and, round 25, ..._OR_DEREF) the only right answer is
+the resolver's DynamicScope refusal, in both directions.
 Research's first oracle computed expectations from a scoping MODEL of its own; that model disagreed with the bytecode
 on 3,868 of 303,193 reads, so it is not vendored — only the program generator and the bytecode reading are (research's
 stage-1 read of round 13, R3(i)). Instruction positions (3.11+) locate each read; 3.10 has none, so the gate SKIPS
@@ -42,6 +44,9 @@ import types
 
 HERE = pathlib.Path(__file__).resolve().parent
 MODULE_OPS = {"LOAD_GLOBAL", "LOAD_NAME", "LOAD_FROM_DICT_OR_GLOBALS"}
+# ROUND 25 (the round-24 verdict's N1): the two loads that read a CLASS NAMESPACE first and fall back — to the globals,
+# or to a closure cell (an enclosing function's variable, a type parameter). On either, only DynamicScope is right.
+DYNAMIC_OPS = {"LOAD_FROM_DICT_OR_GLOBALS", "LOAD_FROM_DICT_OR_DEREF"}
 
 
 def _load_resolver(path: pathlib.Path, name: str):
@@ -137,9 +142,14 @@ def _draw(rng, future: bool = False) -> tuple[str, list]:
     # THE 3.14 FLOOR (the second seat's B3, item 5): PEP 649 and PEP 695 are product syntax, so the corpus draws them
     # too — a module's and a class's variable annotations, a generic def with a bounded type variable, a generic
     # class's base and a type alias — each a ROLE, so the gate judges the reads inside them per role
+    # ROUND 25 (the round-24 verdict's N1): the corpus declared type parameters and never READ them, and held no
+    # enclosing function — so no read reached LOAD_FROM_DICT_OR_DEREF, the class-namespace-else-CLOSURE load, and
+    # the oracle's one-opcode rule for DynamicScope went unexercised. Every declared type parameter is now a binder
+    # (so every read names it), and three shapes put a class inside a function whose parameter is a binder.
     shape = rng.choice(["def", "method"]) if future else rng.choice(
         ["def", "def", "method", "lambda", "class", "expr", "expr", "module-annotation", "class-annotation",
-         "generic-def", "generic-class", "type-alias"])
+         "generic-def", "generic-class", "type-alias", "generic-method", "closure-class-annotation",
+         "closure-class-alias", "closure-generic-method"])
     D = rng.choice([1, 2, 3])
 
     def maybe():
@@ -167,12 +177,31 @@ def _draw(rng, future: bool = False) -> tuple[str, list]:
     elif shape == "class-annotation":
         line = f"class C:\n    V: {g.in_role('class variable annotation', D)}"
     elif shape == "generic-def":
+        g.binders.append("T")
         line = (f"def f[T: {g.in_role('type variable bound', D)}](a0: {g.in_role('generic function annotation', D)}): "
                 f"return {g.expr(D)}")
     elif shape == "generic-class":
+        g.binders.append("T")
         line = f"class C[T](mk({g.in_role('generic class base', D)})): pass"
     elif shape == "type-alias":
-        line = f"type A = {g.in_role('type alias value', D)}"
+        params = rng.choice(["", "[T]"])
+        if params:
+            g.binders.append("T")
+        line = f"type A{params} = {g.in_role('type alias value', D)}"
+    elif shape == "generic-method":
+        g.binders.append("T")
+        line = (f"class C:\n    def m[T](self, a0: {g.in_role('generic method annotation', D)}) -> "
+                f"{g.in_role('generic method return annotation', D)}: return {g.expr(D)}")
+    elif shape == "closure-class-annotation":
+        g.binders.append("q0")
+        line = f"def outer(q0):\n    class C:\n        V: {g.in_role('closure class variable annotation', D)}\n    return C"
+    elif shape == "closure-class-alias":
+        g.binders.append("q0")
+        line = f"def outer(q0):\n    class C:\n        type A = {g.in_role('closure class alias value', D)}\n    return C"
+    elif shape == "closure-generic-method":
+        g.binders += ["q0", "T"]
+        line = (f"def outer(q0):\n    class C:\n        def m[T](self, a0: {g.in_role('closure generic method annotation', D)}): "
+                f"return {g.expr(D)}\n    return C")
     else:
         line = f"X = ({g.expr(D)}, {g.expr(D)})"
     line, names = g.fill(line)
@@ -207,7 +236,7 @@ def truth(src: str) -> dict:
 
 def load_opnames(src: str) -> dict:
     """(line, column, name) -> the load OPCODE the compiler emitted for that read — truth()'s reading, keeping the
-    opcode, so a DYNAMIC answer (a class-scope annotation read) is judged against LOAD_FROM_DICT_OR_GLOBALS alone."""
+    opcode, so a DYNAMIC answer (a class-scope annotation read) is judged against DYNAMIC_OPS alone."""
     out = {}
 
     def walk(co):
@@ -284,18 +313,24 @@ def judge(resolver_module, src: str, roles: list | None = None, by_role: collect
             try:
                 answer = r.refers_to_module_binding(nm, nm.id)
             except getattr(resolver_module, "DynamicScope", ()) :
-                # the 3.14 floor (B3): "resolved at evaluation from the class namespace, else the globals" — right
-                # exactly when the compiler emitted that load, and a silent wrong answer anywhere else
+                # the 3.14 floor (B3): "resolved at evaluation from the class namespace, else the globals or a
+                # closure" — right exactly when the compiler emitted one of those loads, and a silent wrong answer
+                # anywhere else. ROUND 25 (N1): this accepted LOAD_FROM_DICT_OR_GLOBALS alone, so a named refusal on
+                # a namespace-else-closure read (a class annotation over an enclosing parameter, a generic method's
+                # annotation over its own type parameter) was reported SILENT — six of the reviewer's 26 cases
                 if by_role is not None:
                     by_role[(role, "dynamic")] += 1
-                if ops.get(key) != "LOAD_FROM_DICT_OR_GLOBALS":
+                    by_role[("dynamic on", ops.get(key))] += 1          # round 25: which fallback each one was
+                if ops.get(key) not in DYNAMIC_OPS:
                     wrong = True
                 continue
-            if answer != tr[key] or ops.get(key) == "LOAD_FROM_DICT_OR_GLOBALS":
+            if answer != tr[key] or ops.get(key) in DYNAMIC_OPS:
                 # BOTH DIRECTIONS (the second seat's round-24 stage 2, F2 — round 22's shape again): MODULE_OPS counts
                 # LOAD_FROM_DICT_OR_GLOBALS as a module read, so a PLAIN answer on such a read agreed with the truth
                 # and a resolver answering class-scope annotation reads lexically passed. That opcode is emitted exactly
                 # where the reading block holds __classdict__ (measured on 3.14.7), and only a DYNAMIC answer is right
+                # — and (round 25) the same holds on LOAD_FROM_DICT_OR_DEREF, where a plain False AGREES with MODULE_OPS
+                # (the fallback is a closure, not the module) and is still not the interpreter's answer
                 wrong = True
     return ("SILENT" if wrong else "OK"), checked, unmapped
 

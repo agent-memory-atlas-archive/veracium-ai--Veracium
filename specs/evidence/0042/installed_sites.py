@@ -89,38 +89,72 @@ def binding_body_defs(src: str, filename: str = "<scan>") -> list:
     return _binding_scan(src, filename)[1]
 
 
+def _in_frame(fn) -> list:
+    """ROUND 25 — the nodes whose code runs in `fn`'s OWN frame, each call: its BODY, and — for a definition nested in
+    it — the parts the definition statement evaluates there (decorators; a def's or lambda's defaults; a class's bases
+    and keywords). NOT `fn`'s own signature: its defaults and decorators run ONCE, when `fn` is defined, in the
+    ENCLOSING scope (the round-25 probe: `def f(v=S.consult()): raise S.fire(v)` read bound=True with the consult
+    never inside a decision). NOT a definition's annotations: on the 3.14 floor each is LAZY — it runs, if ever, when
+    something reads `__annotations__`, never as part of a call, and the TRANSFORM refuses a census use there — or
+    DATA (`scope_resolution.preserved_annotation_roots`). A variable annotation inside the body IS walked, and the
+    scan's caller skips it when it is data. NOT a nested body, lambda body or type-parameter list: each is a scope
+    of its own. A generator expression's body is kept, as before: it runs during the call that consumes it."""
+    out = []
+    todo = list(fn.body)
+    while todo:
+        n = todo.pop()
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            todo += n.decorator_list + n.args.defaults + [d for d in n.args.kw_defaults if d is not None]
+        elif isinstance(n, ast.Lambda):
+            todo += n.args.defaults + [d for d in n.args.kw_defaults if d is not None]
+        elif isinstance(n, ast.ClassDef):
+            todo += n.decorator_list + n.bases + [k.value for k in n.keywords]
+        else:
+            out.append(n)
+            todo += ast.iter_child_nodes(n)
+    return out
+
+
 def _binding_scan(src: str, filename: str = "<scan>") -> tuple:
+    """(per_body, binding_defs, annotation_calls). ROUND 25 (the round-24 verdict's R24-1, research's stage-1 ruling
+    "skip it as a binding, and report it"): a `NAME.consult()`/`NAME.fire()` inside an annotation whose text is DATA
+    — the shared classifier the transform uses, `Resolver.in_preserved_annotation` — is never a measurement, so it
+    never counts toward a binding; it is LISTED in `annotation_calls` ("NAME.method() at line N"), so an empty list
+    says the annotations were examined and held none, not that nobody looked. A binding is what is REACHED FROM ONE
+    FUNCTION'S FRAME (`_in_frame`, round 25): INSTALLED means both methods are called when that function runs, not that
+    the words appear somewhere inside its definition."""
     r = Resolver(src, filename)
     sites = r.site_names()
     r.refuse_site_rebindings(sites)
     per_body: dict = {}
     binding_defs: list = []
+    annotation_calls = sorted({f"{n.func.value.id}.{n.func.attr}() at line {n.lineno}" for n in ast.walk(r.tree)
+                               if _binding_call(n, sites) and r.in_preserved_annotation(n)})
     for fn in ast.walk(r.tree):
         if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
         uses: dict = {}
-
-        def visit(n_):
-            for c in ast.iter_child_nodes(n_):
-                if isinstance(c, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
-                    continue                                   # a nested scope is NOT this body
-                if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and isinstance(c.func.value, ast.Name) \
-                        and c.func.attr in BINDING_METHODS and c.func.value.id in sites \
-                        and r.refers_to_declared_site(c, c.func.value.id):
-                    uses.setdefault(c.func.value.id, set()).add(c.func.attr)
-                visit(c)
-        visit(fn)
+        for c in _in_frame(fn):
+            if _binding_call(c, sites) and not r.in_preserved_annotation(c) \
+                    and r.refers_to_declared_site(c, c.func.value.id):
+                uses.setdefault(c.func.value.id, set()).add(c.func.attr)
         for name, methods in uses.items():
             if set(BINDING_METHODS) <= methods:
                 per_body.setdefault(name, set()).update(methods)
                 if fn not in binding_defs:
                     binding_defs.append(fn)
-    return per_body, binding_defs
+    return per_body, binding_defs, annotation_calls
+
+
+def _binding_call(n, sites) -> bool:
+    return isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and isinstance(n.func.value, ast.Name) \
+        and n.func.attr in BINDING_METHODS and n.func.value.id in sites
 
 
 def scan(root: pathlib.Path) -> list[dict]:
     """Every `NAME = declare_site("<literal>")` under root, with the BINDING found for NAME inside ONE
-    function body of the same module: {id, module, qualname, line, name, consult, fire, bound, sha256} — `sha256` is the
+    function body of the same module: {id, module, qualname, line, name, consult, fire, bound, annotation_calls, sha256}
+    — `annotation_calls` (round 25) lists the site's calls kept as data inside an annotation, never counted; `sha256` is the
     digest of the bytes read (round 13: `scan_is_the_program_that_ran` binds them to the running code).
     `consult`/`fire` report whether ANY body uses the method (diagnostic); `bound` is true only when
     ONE body carries both on the unshadowed module-level name."""
@@ -145,19 +179,26 @@ def scan(root: pathlib.Path) -> list[dict]:
                 for d in declared:
                     if d["line"] == node.value.lineno and d["name"] is None:
                         d["name"] = node.targets[0].id
-        # diagnostic: any use anywhere in a function body (module-wide, the round-4 reading)
+        # diagnostic: any use anywhere in a function body (module-wide, the round-4 reading). ROUND 25: "in a function
+        # body" is the binding scan's own reading (`_in_frame`, the shared data-annotation classifier), so the
+        # diagnostic cannot report a use the binding would not count — a call in a signature or a data annotation.
+        data = {id(n) for root in _scope.preserved_annotation_roots(tree).values() for n in ast.walk(root)}
         anywhere = {}
         for fn in ast.walk(tree):
             if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                for node in ast.walk(fn):
+                for node in _in_frame(fn):
                     if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) \
-                            and node.func.attr in BINDING_METHODS:
+                            and node.func.attr in BINDING_METHODS and id(node) not in data:
                         anywhere.setdefault(node.func.value.id, set()).add(node.func.attr)
-        bound_names = _binding_bodies(src, str(p))      # symtable reads SOURCE: the same text the runtime executes
+        # symtable reads SOURCE: the same text the runtime executes
+        bound_names, _, annotation_calls = _binding_scan(src, str(p))
         for d in declared:
             u = anywhere.get(d["name"], set()) if d["name"] else set()
             d["consult"], d["fire"] = "consult" in u, "fire" in u
             d["bound"] = bool(d["name"]) and d["name"] in bound_names      # ONE body, both methods, unshadowed
+            # ROUND 25 (R24-1): the site's calls left as DATA in an annotation — never a binding, listed so an empty
+            # list reads "examined, none", not "not looked at"
+            d["annotation_calls"] = [c for c in annotation_calls if d["name"] and c.startswith(d["name"] + ".")]
             out.append(d)
     return out
 

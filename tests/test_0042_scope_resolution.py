@@ -7,6 +7,7 @@ forms that must NOT shadow (a comprehension target, a class-body attribute, a ne
 """
 from __future__ import annotations
 
+import annotationlib
 import ast
 import importlib.util
 import pathlib
@@ -1094,9 +1095,10 @@ LAZY_POSITIONS = [
 
 
 # THE DYNAMIC READS (the second seat's B3 item 3, and round 24's stage-2 F2): a read in a scope that holds __classdict__
-# is resolved by the interpreter at EVALUATION, from the class namespace as it then stands, else the globals — so the
-# answer depends on what the class body binds LATER (C) and on what is set on the class after it exists (D). The
-# resolver must refuse to answer, as DynamicScope; an answer either way is wrong for one of these programs.
+# is resolved by the interpreter at EVALUATION, from the class namespace as it then stands, else the globals (or, round
+# 25, a closure cell: the N1 cells at the end of this file) — so the answer depends on what the class body binds LATER
+# (C) and on what is set on the class after it exists (D). The resolver must refuse to answer, as DynamicScope; an
+# answer either way is wrong for one of these programs.
 _DYNAMIC_READS = [
     ("C: the class binds the name after the annotation", "SITE = 1\nclass C:\n    x: SITE\n    SITE = 2\n", 2),
     ("D: the name is set on the class after it exists", "SITE = 1\nclass D:\n    x: SITE\nD.SITE = 3\n", 3),
@@ -1512,7 +1514,10 @@ def _r19_nodes_with_blocks(tree) -> list:
     """The comprehension nodes that get a symbol-table block of their own on the 3.14 floor — written from the AST, apart
     from the resolver's rule (measured on 3.14.7): a generator expression always; a list, set or dict comprehension only
     when it is evaluated in an annotation that can see a class — the annotations of a def directly in a class body, or a
-    class-level variable annotation — and the module does not stringify its annotations. Everything else is inlined."""
+    class-level variable annotation — and the module does not stringify its annotations; and (round 25, measured when
+    the N1 corpus first drew a class-held alias) in ANY other lazy scope that can see a class, stringified or not: a
+    class-held alias's value, the bound or default of a type parameter of a class-held alias, method or class, and a
+    generic class's bases and keywords. Everything else is inlined."""
     future = any(isinstance(n, ast.ImportFrom) and n.module == "__future__" and any(a.name == "annotations" for a in n.names)
                  for n in tree.body)
     out = []
@@ -1546,8 +1551,28 @@ def _r19_nodes_with_blocks(tree) -> list:
         for c in ast.iter_child_nodes(node):
             visit(c, class_visible_annotation)
 
+    def visit_type_params(stmt):
+        for tp in getattr(stmt, "type_params", []):
+            for part in (getattr(tp, "bound", None), getattr(tp, "default_value", None)):
+                if part is not None:
+                    visit(part, True)
+
     def visit_class_statement(stmt):
+        if isinstance(stmt, getattr(ast, "TypeAlias", ())):
+            visit_type_params(stmt)
+            visit(stmt.value, True)
+            return
+        if isinstance(stmt, ast.ClassDef) and getattr(stmt, "type_params", None):
+            visit_type_params(stmt)
+            for c in [*stmt.bases, *stmt.keywords]:
+                visit(c, True)
+            for c in stmt.decorator_list:
+                visit(c, False)
+            for s in stmt.body:
+                visit_class_statement(s)
+            return
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            visit_type_params(stmt)
             anns = [x.annotation for x in stmt.args.posonlyargs + stmt.args.args + stmt.args.kwonlyargs
                     + [a for a in (stmt.args.vararg, stmt.args.kwarg) if a] if x.annotation is not None]
             anns += [stmt.returns] if stmt.returns is not None else []
@@ -1615,6 +1640,19 @@ def _r19_signature_disagreements(src: str, label: str) -> tuple:
     return bad, compared, ambiguous
 
 
+# round 25: every lazy scope that can see a class, each holding comprehensions whose blocks the model must place
+# (measured on 3.14.7; the N1 corpus reached only the first)
+_R25_CLASS_VISIBLE_LAZY = {
+    "class alias value": "class C:\n    type A = [q for q in (1,)]\n",
+    "class alias type-param bound": "class C:\n    type A[T: [q for q in (1,)]] = int\n",
+    "class method type-param bound": "class C:\n    def m[T: {q for q in (1,)}](self): pass\n",
+    "class method type-param default": "class C:\n    def m[T = {q: q for q in (1,)}](self): pass\n",
+    "stringified class alias value": "from __future__ import annotations\nclass C:\n    type A = [q for q in (1,)]\n",
+    "generic class base in a class": "class C:\n    class D[T]([q for q in (object,)][0]): pass\n",
+    "module alias value (inlined)": "type A = [q for q in (1,)]\n",
+}
+
+
 def test_r19_the_comprehension_signature_equals_symtable_over_the_corpus():
     """The DIRECT acceptance (the second seat's round-19 stage-1 read, BLOCKING): the signature is a second
     implementation of symtable's rule, so ANY disagreement is a defect — over the pairing oracle's corpus (seed 13, 400
@@ -1626,6 +1664,7 @@ def test_r19_the_comprehension_signature_equals_symtable_over_the_corpus():
     sources = [(f"oracle#{i}", po.program(rng)[0]) for i in range(_ORACLE_N)]
     sources += [(str(p.relative_to(ROOT)), p.read_text())
                 for p in sorted(list((ROOT / "src" / "veracium").rglob("*.py")) + list(EVIDENCE.glob("*.py")))]
+    sources += list(_R25_CLASS_VISIBLE_LAZY.items())
     bad, compared, ambiguous = set(), 0, 0
     for label, src in sources:
         b, c, a = _r19_signature_disagreements(src, label)
@@ -1856,3 +1895,73 @@ def test_r20_f2_the_stage_two_survivors_are_killed(mutant, anchor, replacement, 
     sr.Resolver(src, "<shipped>")
     with pytest.raises(mut.UnresolvableScope):
         mut.Resolver(src, "<mutant>")
+
+
+# ---- round 25: the round-24 verdict's N1 — the class-namespace-else-CLOSURE read ---------------------------------------
+# The reviewer's three named shapes. The compiler emits LOAD_FROM_DICT_OR_DEREF: the class namespace first, else the
+# enclosing function's (or type-parameter scope's) cell — so, like the globals fallback, no static answer is right.
+# (label, program with the read tagged `(SITE, 0)`, the value it evaluates to, the same with the class binding SITE after)
+_R25_DEREF = [
+    ("a class annotation closing over an enclosing parameter",
+     "def outer(SITE):\n    class C:\n        x: (SITE, 0)\n__BIND__    return C\nC = outer(7)\n",
+     lambda ns: annotationlib.get_annotations(ns["C"])["x"][0]),
+    ("a generic method's annotation over its own type parameter",
+     "class C:\n    def m[SITE](self, a: (SITE, 0)): pass\n__BIND__",
+     lambda ns: annotationlib.get_annotations(ns["C"].m)["a"][0]),
+    ("a class-held alias closing over a parameter",
+     "def outer(SITE):\n    class C:\n        type A = (SITE, 0)\n__BIND__    return C\nC = outer(7)\n",
+     lambda ns: ns["C"].A.__value__[0]),
+]
+
+
+def _r25_deref_program(src, bind):
+    indent = "        " if src.startswith("def outer") else "    "
+    return src.replace("__BIND__", f"{indent}SITE = 99\n" if bind else "")
+
+
+@pytest.mark.parametrize("cell,src,value", _R25_DEREF, ids=[c[0] for c in _R25_DEREF])
+def test_r25_a_namespace_else_closure_read_is_refused_by_name_and_the_oracle_counts_it_right(cell, src, value):
+    po = _load("pairing_oracle_r25", EVIDENCE / "pairing_oracle.py")
+    prog = _r25_deref_program(src, bind=False)
+    r = sr.Resolver(prog, f"<{cell}>")
+    (read,) = [n for n in ast.walk(r.tree) if isinstance(n, ast.Name) and n.id == "SITE" and isinstance(n.ctx, ast.Load)]
+    assert po.load_opnames(prog)[(read.lineno, read.col_offset, "SITE")] == "LOAD_FROM_DICT_OR_DEREF", cell
+    with pytest.raises(sr.DynamicScope, match="that closure"):
+        r.refers_to_module_binding(read, "SITE")
+    # the interpreter reads the closure, or the class namespace when the class binds the name — both, so neither
+    # static answer is right
+    for bind in (False, True):
+        ns = {}
+        exec(compile(_r25_deref_program(src, bind), f"<{cell}>", "exec", dont_inherit=True), ns)
+        got = value(ns)
+        assert (got == 99) is bind, (cell, bind, got)
+    assert po.judge(sr, prog)[:2] == ("OK", 1), cell
+
+
+def test_r25_the_one_opcode_judge_and_a_plain_answer_are_each_silent_on_a_closure_read(monkeypatch):
+    """Both directions, on the reviewer's shapes: the SUPERSEDED judge (DynamicScope right on the globals fallback
+    alone) calls the named refusal SILENT — the verdict's mislabel — and a resolver answering these reads PLAINLY
+    (False, which agrees with MODULE_OPS: the fallback is not the module) is SILENT under the shipped judge."""
+    po = _load("pairing_oracle_r25_both", EVIDENCE / "pairing_oracle.py")
+    plain = _mutant("            raise DynamicScope(\n", "            return False\n            raise DynamicScope(\n")
+    for cell, src, _value in _R25_DEREF:
+        prog = _r25_deref_program(src, bind=False)
+        assert po.judge(plain, prog)[0] == "SILENT", cell
+    monkeypatch.setattr(po, "DYNAMIC_OPS", {"LOAD_FROM_DICT_OR_GLOBALS"})
+    for cell, src, _value in _R25_DEREF:
+        assert po.judge(sr, _r25_deref_program(src, bind=False))[0] == "SILENT", cell
+
+
+def test_r25_the_corpus_reaches_closure_reads_and_every_new_role_is_judged(monkeypatch):
+    """The verdict asked the corpus to READ the type parameters it declares and to include enclosing-function closures.
+    Measured from the SAME seed-13 run the gate uses: the closure fallback is reached, each new role judges reads, and
+    the superseded one-opcode judge finds the mislabel at corpus scale (so the reach is not vacuous)."""
+    po = _load("pairing_oracle_r25_corpus", EVIDENCE / "pairing_oracle.py")
+    got = po.run(_ORACLE_N, _ORACLE_SEED, sr)
+    assert got["SILENT"] == 0, dict(got)
+    assert got[("dynamic on", "LOAD_FROM_DICT_OR_DEREF")] > 0 and got[("dynamic on", "LOAD_FROM_DICT_OR_GLOBALS")] > 0, dict(got)
+    for role in ("generic method annotation", "generic method return annotation", "closure class variable annotation",
+                 "closure class alias value", "closure generic method annotation"):
+        assert got[(role, "judged")] > 0, role
+    monkeypatch.setattr(po, "DYNAMIC_OPS", {"LOAD_FROM_DICT_OR_GLOBALS"})
+    assert po.run(_ORACLE_N, _ORACLE_SEED, sr)["SILENT"] > 0, "the corpus no longer reaches a closure read"

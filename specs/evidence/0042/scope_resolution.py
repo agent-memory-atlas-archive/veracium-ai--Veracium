@@ -226,12 +226,86 @@ class UnresolvableScope(Exception):
     """A name or a block the resolver will not guess at: an unjoinable scope, or `global <site>` with an assignment."""
 
 
+def _future_annotations(tree) -> bool:
+    """`from __future__ import annotations` in the module's PROLOGUE, read from the AST (a future import is only legal
+    there: after the docstring and before any other statement) — never by grepping the text."""
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant) and isinstance(stmt.value.value, str) \
+                and stmt is tree.body[0]:
+            continue                                                          # the module docstring
+        if isinstance(stmt, ast.ImportFrom) and stmt.module == "__future__":
+            if any(a.name == "annotations" for a in stmt.names):
+                return True
+            continue
+        break
+    return False
+
+
+def preserved_annotation_roots(tree) -> dict:
+    """ROUND 25 (the round-24 verdict's R24-1): {id(root): root} for every annotation whose TEXT is data, never code —
+    classified by the annotation's EVALUATION REGIME on the 3.14 floor, never by where the resolver happened to put it:
+      - under `from __future__ import annotations`, EVERY annotation — a def's parameters (positional-only, positional,
+        *args, keyword-only, **kwargs) and return, and every variable annotation — is stored as a STRING (the
+        interpreter unparses the same expression), so rewriting a call inside it changes the string a program can
+        read (the verdict: `f.__annotations__["x"]` read `S.fire(123)` in the source and `123` in the twin);
+      - without it, a FUNCTION-LOCAL variable annotation is never evaluated and never stored (PEP 526/649; its
+        annotation block holds `.format` alone, measured on 3.14.7);
+      - without it, an annotation whose target is not a bare name — `o.a: A = v`, `d[k]: A = v`, `(x): A = v`, where
+        the AST's `simple` is 0 — is never evaluated in ANY scope: 3.14 compiles it away (no code object carries it,
+        and the module's `__annotate__` is absent; measured on 3.14.7 at module and class scope, where the round-25
+        matrix first refused all four forms as lazy);
+      - every other annotation is evaluated LAZILY, and a census use there is refused (`refuse_if_lazy`)."""
+    future = _future_annotations(tree)
+    roots = {}
+
+    def keep(n):
+        if n is not None:
+            roots[id(n)] = n
+
+    def visit(node, scope):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                a = child.args
+                if future:
+                    for x in a.posonlyargs + a.args + a.kwonlyargs + [v for v in (a.vararg, a.kwarg) if v]:
+                        keep(x.annotation)
+                    keep(child.returns)
+                visit(child, "function")
+            elif isinstance(child, ast.Lambda):
+                visit(child, "function")
+            elif isinstance(child, ast.ClassDef):
+                visit(child, "class")
+            else:
+                if isinstance(child, ast.AnnAssign) and (future or scope == "function" or not child.simple):
+                    keep(child.annotation)
+                visit(child, scope)
+    visit(tree, "module")
+    return roots
+
+
+def blank_data_annotations(tree) -> int:
+    """Replace, IN PLACE, every annotation `preserved_annotation_roots` calls data by a bare name — so a search of the
+    unparsed tree reads only the code that can run (round 25; the transform's token check). Returns how many were
+    blanked. Kept beside the classifier so the one rule has one home, and the token predicate that uses it holds no
+    words of its own for it."""
+    roots = preserved_annotation_roots(tree)
+    blanked = 0
+    for node in ast.walk(tree):
+        for field in ("annotation", "returns"):
+            if id(getattr(node, field, None)) in roots:
+                setattr(node, field, ast.Name(id="_", ctx=ast.Load()))
+                blanked += 1
+    return blanked
+
+
 class DynamicScope(UnresolvableScope):
-    """A read the interpreter answers at EVALUATION time from a class namespace, else the globals
-    (LOAD_FROM_DICT_OR_GLOBALS): a class-body annotation or a class's type-parameter scope reads the namespace AS IT
-    STANDS WHEN EVALUATED — every later binding in the body, and anything set on the class after it exists (measured on
-    3.14.7, the second seat's B3). No static answer is right, so none is given: a distinct refusal the pairing oracle
-    counts as agreement with that opcode, and a census read resolving this way is refused by name."""
+    """A read the interpreter answers at EVALUATION time from a class namespace, else a FALLBACK: the globals
+    (LOAD_FROM_DICT_OR_GLOBALS) or, for a name an enclosing function or a type-parameter scope binds, that closure
+    cell (LOAD_FROM_DICT_OR_DEREF — round 25, the round-24 verdict's N1). A class-body annotation or a class's
+    type-parameter scope reads the namespace AS IT STANDS WHEN EVALUATED — every later binding in the body, and
+    anything set on the class after it exists (measured on 3.14.7, the second seat's B3). No static answer is right,
+    so none is given: a distinct refusal the pairing oracle counts as agreement with EITHER opcode (and only with
+    them), and a census read resolving this way is refused by name."""
 
 
 class Resolver:
@@ -259,6 +333,10 @@ class Resolver:
             for n in self.tree.body)
         self._assign(self.tree, self.table)
         self._check_join()
+        # ROUND 25 (the round-24 verdict's R24-1): which annotations are DATA — the ONE classifier the transform and
+        # the binding scan both ask (two copies of one rule drift). See `preserved_annotation_roots`.
+        self.preserved_roots = preserved_annotation_roots(self.tree)
+        self._preserved_nodes = {id(n) for root in self.preserved_roots.values() for n in ast.walk(root)}
 
     # ROUND 13 — THE JOIN IS CHECKED, not only ordered (the round-12 verdict's F1, and the class it belongs to). Every
     # silent defect in rounds 12 and 13 was one shape: two same-line, same-kind scopes whose symbol-table blocks this
@@ -476,7 +554,8 @@ class Resolver:
         if isinstance(child, ast.AnnAssign):
             # PEP 649: a module's, class's or function's annotated assignments share ONE annotation block per body,
             # created at the FIRST of them in source order — which is the first this walk meets. Its target and value
-            # stay in the body; the annotation is evaluated there, lazily (a function body's is never evaluated)
+            # stay in the body; the annotation is evaluated there, lazily (a function body's is never evaluated, nor —
+            # on 3.14, round 25 — one whose target is not a bare name: both are DATA, `preserved_annotation_roots`)
             self._owner[id(child)] = block
             for part in (child.target, child.value):
                 if part is not None:
@@ -714,13 +793,19 @@ class Resolver:
         if block.get_type() in _LAZY_BLOCK_TYPES and any(s.get_name() == "__classdict__" for s in block.get_symbols()):
             raise DynamicScope(
                 f"line {getattr(node, 'lineno', '?')}: {name!r} is read in a {block.get_type()} scope of a CLASS, which the "
-                f"interpreter resolves at evaluation from the class namespace as it then stands, else the globals — "
+                f"interpreter resolves at evaluation from the class namespace as it then stands, else the globals or, "
+                f"for a name an enclosing function or type-parameter scope binds, that closure — "
                 f"no static answer is right, so none is given (the 3.14 floor, the second seat's B3)")
         try:
             sym = block.lookup(name)
         except KeyError:
             return False                       # the name is not used in this block at all
         return bool(sym.is_global()) and not sym.is_local() and not sym.is_parameter()
+
+    def in_preserved_annotation(self, node) -> bool:
+        """Does `node` sit inside an annotation whose text is DATA (never executed) — so a census call in it is not
+        a measurement, and the transform must leave it exactly as written?"""
+        return id(node) in self._preserved_nodes
 
     def refuse_if_lazy(self, node, name: str) -> None:
         """A census use inside an annotation, type-parameter, type-alias or type-variable scope is REFUSED by name: an
