@@ -27,9 +27,10 @@
 # of the Site it imported, at import and before the arm's own intervention; the check `site_realized` below and the
 # gate uninstrumented:site_realized_equal require all of them equal (8 runs, 1 distinct digest). The GATES line and
 # the HARNESS EXIT at the end of this transcript print every gate.
-# CANONICAL DIGESTS ARE EQUAL THIS RUN: all eight runs — the four arms and their four controls — produced the same
-# observer-trace digest (90da7e25...), so the standing wall-clock test drew no variant, and the per-test verdict and
-# the whole-trace digests agree.
+# THE DIGESTS ARE EQUAL THIS RUN, BOTH KINDS: all eight runs — the four arms and their four controls — wrote
+# byte-identical observer traces (the RAW sha256 in the table below and in each summary.json, 90da7e25...), and the four
+# arms' CANONICAL digests over the decoded records (the CANONICAL DIGESTS line, 918b774b...) are equal. So the standing
+# wall-clock test drew no variant, and the per-test verdict and the whole-trace digests agree.
 # WHAT FOUR EQUAL TRACES DO NOT BIND (the INV-7 scope accepted at round 19): the observer records inside the arm's own
 # process, so census code that rewrites the recording is outside this comparison. The loud case is EXECUTED by
 # specs/evidence/0042/trust_boundary_probe.py (its output: trust_boundary_probe.txt, re-run on 3.14.7 at this pin); the
