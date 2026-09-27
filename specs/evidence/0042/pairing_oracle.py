@@ -134,7 +134,12 @@ def _draw(rng, future: bool = False) -> tuple[str, list]:
     shapes under `from __future__ import annotations`, the NAMED control: stringified annotations have no load, so
     those reads must read "no instruction", never "wrong"."""
     g = _Gen(rng)
-    shape = rng.choice(["def", "method"]) if future else rng.choice(["def", "def", "method", "lambda", "class", "expr", "expr"])
+    # THE 3.14 FLOOR (the second seat's B3, item 5): PEP 649 and PEP 695 are product syntax, so the corpus draws them
+    # too — a module's and a class's variable annotations, a generic def with a bounded type variable, a generic
+    # class's base and a type alias — each a ROLE, so the gate judges the reads inside them per role
+    shape = rng.choice(["def", "method"]) if future else rng.choice(
+        ["def", "def", "method", "lambda", "class", "expr", "expr", "module-annotation", "class-annotation",
+         "generic-def", "generic-class", "type-alias"])
     D = rng.choice([1, 2, 3])
 
     def maybe():
@@ -157,6 +162,17 @@ def _draw(rng, future: bool = False) -> tuple[str, list]:
         d = maybe(); line = f"L = lambda {p}{'=' + d if d else ''}: {g.expr(D)}"
     elif shape == "class":
         line = f"class C(mk({g.expr(D)})): pass"
+    elif shape == "module-annotation":
+        line = f"V: {g.in_role('module variable annotation', D)} = 0"
+    elif shape == "class-annotation":
+        line = f"class C:\n    V: {g.in_role('class variable annotation', D)}"
+    elif shape == "generic-def":
+        line = (f"def f[T: {g.in_role('type variable bound', D)}](a0: {g.in_role('generic function annotation', D)}): "
+                f"return {g.expr(D)}")
+    elif shape == "generic-class":
+        line = f"class C[T](mk({g.in_role('generic class base', D)})): pass"
+    elif shape == "type-alias":
+        line = f"type A = {g.in_role('type alias value', D)}"
     else:
         line = f"X = ({g.expr(D)}, {g.expr(D)})"
     line, names = g.fill(line)
@@ -167,12 +183,13 @@ def _draw(rng, future: bool = False) -> tuple[str, list]:
 def truth(src: str) -> dict:
     """(line, column, name) -> the compiler resolved this read to the MODULE. Every load of a tagged name, in every
     code object, located by its instruction position (3.11+). A read with no instruction at its position is NOT judged
-    and is counted as unmapped. On 3.11 and 3.12 there are none. On 3.13 there are two causes, each measured read by read
-    (round 19, the corpus at seed 13 after annotations became roles — 182 unmapped reads, every one attributed): 138 are
-    reads FUSED into a STORE_FAST_LOAD_FAST superinstruction (a local read immediately after its own store, e.g. a
-    comprehension target read at the start of the body — the instruction is a STORE and carries one position), and 44
-    are reads inside ANNOTATIONS, parameter and return alike. An earlier form of this docstring attributed them to
-    return annotations alone, measured at a time no read carried its role. The gate bounds the unmapped share."""
+    and is counted as unmapped. On the 3.14 floor there are two causes, each measured read by read (the corpus at seed
+    13 as the 3.14 floor draws it — PEP 649 and PEP 695 shapes included — every generator-tagged read of all 400
+    programs: 178 unmapped, every one attributed, 0 neither): 110 are reads FUSED into a STORE_FAST_LOAD_FAST
+    superinstruction (a local read immediately after its own store, e.g. a comprehension target read at the start of
+    the body — the instruction is a STORE and carries one position), and 68 are reads inside ANNOTATIONS. Derived by
+    unmapped313_attribution.py, shipped beside its output in a review package; the round-19 figures (3.13: 182 = 138
+    fused + 44 annotation) described the corpus before the floor. The gate bounds the unmapped share."""
     out = {}
 
     def walk(co):
@@ -181,6 +198,24 @@ def truth(src: str) -> dict:
             if ins.opname.startswith("LOAD") and isinstance(ins.argval, str) and pos is not None \
                     and pos.col_offset is not None:
                 out[(pos.lineno, pos.col_offset, ins.argval)] = ins.opname in MODULE_OPS
+        for c in co.co_consts:
+            if isinstance(c, types.CodeType):
+                walk(c)
+    walk(compile(src, "<oracle>", "exec", dont_inherit=True))
+    return out
+
+
+def load_opnames(src: str) -> dict:
+    """(line, column, name) -> the load OPCODE the compiler emitted for that read — truth()'s reading, keeping the
+    opcode, so a DYNAMIC answer (a class-scope annotation read) is judged against LOAD_FROM_DICT_OR_GLOBALS alone."""
+    out = {}
+
+    def walk(co):
+        for ins in dis.get_instructions(co):
+            pos = getattr(ins, "positions", None)
+            if ins.opname.startswith("LOAD") and isinstance(ins.argval, str) and pos is not None \
+                    and pos.col_offset is not None:
+                out[(pos.lineno, pos.col_offset, ins.argval)] = ins.opname
         for c in co.co_consts:
             if isinstance(c, types.CodeType):
                 walk(c)
@@ -232,6 +267,7 @@ def judge(resolver_module, src: str, roles: list | None = None, by_role: collect
         # split so the gate can assert the TIED-signature programs are reached: the join check refuses exactly those
         return ("REFUSED by the join check" if "join check" in str(e) else "REFUSED otherwise"), 0, 0
     checked = unmapped = 0; wrong = False
+    ops = load_opnames(src)
     for n in ast.walk(r.tree):
         if isinstance(n, ast.Tuple) and len(n.elts) == 2 and isinstance(n.elts[0], ast.Name) \
                 and isinstance(n.elts[1], ast.Constant) and type(n.elts[1].value) is int:
@@ -245,7 +281,17 @@ def judge(resolver_module, src: str, roles: list | None = None, by_role: collect
             checked += 1
             if by_role is not None:
                 by_role[(role, "judged")] += 1
-            if r.refers_to_module_binding(nm, nm.id) != tr[key]:
+            try:
+                answer = r.refers_to_module_binding(nm, nm.id)
+            except getattr(resolver_module, "DynamicScope", ()) :
+                # the 3.14 floor (B3): "resolved at evaluation from the class namespace, else the globals" — right
+                # exactly when the compiler emitted that load, and a silent wrong answer anywhere else
+                if by_role is not None:
+                    by_role[(role, "dynamic")] += 1
+                if ops.get(key) != "LOAD_FROM_DICT_OR_GLOBALS":
+                    wrong = True
+                continue
+            if answer != tr[key]:
                 wrong = True
     return ("SILENT" if wrong else "OK"), checked, unmapped
 

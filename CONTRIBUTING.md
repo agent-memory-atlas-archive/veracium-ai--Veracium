@@ -31,7 +31,7 @@ PYTHONPATH=src python bench/run_bench.py               # internal benchmark (see
 - **Every shipped capability gets a short example** — a recipe in
   `docs/recipes.md` (copy-pasteable, <15 lines) lands in the same PR/release
   as the feature. A feature without an example isn't done.
-- CI (py3.10–3.13 + packaging check) must be green; `main` requires it.
+- CI (py3.14, the pydantic floor + packaging check) must be green; `main` requires it.
 
 ## Wanted
 

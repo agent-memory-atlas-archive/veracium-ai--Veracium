@@ -1061,10 +1061,6 @@ DEFINITION_TIME_POSITIONS = [
     ("kw-only-default",             "def f(*, x=__X__):\n    return x\n"),
     ("positional-only-default",     "def f(x=__X__, /):\n    return x\n"),
     ("function-decorator-arg",      "@deco(__X__)\ndef f():\n    return 1\n"),
-    ("arg-annotation",              "def f(x: __X__ = 1):\n    return x\n"),
-    ("star-args-annotation",        "def f(*a: __X__):\n    return a\n"),
-    ("star-star-kwargs-annotation", "def f(**k: __X__):\n    return k\n"),
-    ("return-annotation",           "def f() -> __X__:\n    return 1\n"),
     ("lambda-default",              "g = lambda x=__X__: x\n"),
     ("class-base",                  "class K(__X__):\n    pass\n"),
     ("class-keyword",               "class K(metaclass=__X__):\n    pass\n"),
@@ -1077,6 +1073,33 @@ DEFINITION_TIME_POSITIONS = [
     ("comprehension-inside-a-default", "def f(x=[v for v in [__X__]]):\n    return x\n"),
 ]
 _S21_HEAD = "from . import census as _census\nS = _census.declare_site('s')\n\ndef deco(v):\n    return lambda fn: fn\n\n"
+
+# THE 3.14 FLOOR (the second seat's B3, item 4): positions evaluated in a scope OF THEIR OWN, apart from the decision
+# beside them — a def's annotations and a module's or class's variable annotations (PEP 649, lazily), a type alias's
+# value and a type variable's bound (PEP 695, lazily), and a generic class's bases (its type-parameter scope). Round 12
+# listed the four def annotations above as ENCLOSING-scope positions, true through 3.13; on the floor a census use at
+# any of these is REFUSED by name. The bodies carry no `from __future__ import annotations`, so the annotations are real.
+LAZY_POSITIONS = [
+    ("arg-annotation",              "def f(x: __X__ = 1):\n    return x\n"),
+    ("star-args-annotation",        "def f(*a: __X__):\n    return a\n"),
+    ("star-star-kwargs-annotation", "def f(**k: __X__):\n    return k\n"),
+    ("return-annotation",           "def f() -> __X__:\n    return 1\n"),
+    ("module-variable-annotation",  "v: __X__ = 1\n"),
+    ("class-variable-annotation",   "class K:\n    a: __X__\n"),
+    ("method-annotation",           "class K:\n    def m(self, a: __X__):\n        return a\n"),
+    ("type-alias-value",            "type A = __X__\n"),
+    ("type-variable-bound",         "def f[T: __X__]():\n    return 1\n"),
+    ("generic-class-base",          "class K[T](__X__):\n    pass\n"),
+]
+
+
+@pytest.mark.parametrize("pos,body", LAZY_POSITIONS, ids=[p for p, _ in LAZY_POSITIONS])
+def test_py314_a_site_used_in_a_lazy_position_is_refused_by_name(pos, body):
+    r = sr.Resolver(_S21_HEAD + body.replace("__X__", "S"), f"<{pos}>"); r.refuse_site_rebindings({"S"})
+    loads = [n for n in ast.walk(r.tree) if isinstance(n, ast.Name) and n.id == "S" and isinstance(n.ctx, ast.Load)]
+    assert len(loads) == 1, (pos, len(loads))
+    with pytest.raises(sr.UnresolvableScope, match="runs apart from the decision beside it"):
+        r.refers_to_declared_site(loads[0], "S")
 
 
 @pytest.mark.parametrize("cell,body,want", [
@@ -1440,6 +1463,77 @@ def test_r13_s2d_1_the_s2c_2_refusal_walks_deep_into_the_first_iterable():
 _R19_COMP_NAME = {ast.GeneratorExp: "genexpr", ast.ListComp: "listcomp", ast.SetComp: "setcomp", ast.DictComp: "dictcomp"}
 
 
+def _r19_nodes_with_blocks(tree) -> list:
+    """The comprehension nodes that get a symbol-table block of their own on the 3.14 floor — written from the AST, apart
+    from the resolver's rule (measured on 3.14.7): a generator expression always; a list, set or dict comprehension only
+    when it is evaluated in an annotation that can see a class — the annotations of a def directly in a class body, or a
+    class-level variable annotation — and the module does not stringify its annotations. Everything else is inlined."""
+    future = any(isinstance(n, ast.ImportFrom) and n.module == "__future__" and any(a.name == "annotations" for a in n.names)
+                 for n in tree.body)
+    out = []
+
+    def visit(node, class_visible_annotation):
+        if type(node) in _R19_COMP_NAME and (isinstance(node, ast.GeneratorExp) or class_visible_annotation):
+            out.append(node)
+        if isinstance(node, ast.ClassDef):
+            for c in [*node.decorator_list, *node.bases, *node.keywords]:
+                visit(c, class_visible_annotation)
+            for stmt in node.body:
+                visit_class_statement(stmt)
+            return
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for c in ast.iter_child_nodes(node):
+                visit(c, False)
+            return
+        if isinstance(node, ast.Lambda):              # its defaults run where it stands; its body in its own block
+            for d in node.args.defaults + [k for k in node.args.kw_defaults if k is not None]:
+                visit(d, class_visible_annotation)
+            visit(node.body, False)
+            return
+        if type(node) in _R19_COMP_NAME:
+            # its first iterable runs where it stands; everything else runs in its own block or, inlined, in the
+            # function-like block around it — neither of which is an annotation that can see a class
+            visit(node.generators[0].iter, class_visible_annotation)
+            g0 = node.generators[0]
+            for c in [g0.target, *g0.ifs] + [c for c in ast.iter_child_nodes(node) if c is not g0]:
+                visit(c, False)
+            return
+        for c in ast.iter_child_nodes(node):
+            visit(c, class_visible_annotation)
+
+    def visit_class_statement(stmt):
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            anns = [x.annotation for x in stmt.args.posonlyargs + stmt.args.args + stmt.args.kwonlyargs
+                    + [a for a in (stmt.args.vararg, stmt.args.kwarg) if a] if x.annotation is not None]
+            anns += [stmt.returns] if stmt.returns is not None else []
+            for a in anns:
+                visit(a, not future)
+            ids = {id(a) for a in anns}
+            for c in ast.iter_child_nodes(stmt):
+                if id(c) not in ids and not isinstance(c, ast.arguments):
+                    visit(c, False)
+            for d in stmt.args.defaults + [k for k in stmt.args.kw_defaults if k is not None]:
+                visit(d, False)
+            return
+        if isinstance(stmt, ast.AnnAssign):
+            visit(stmt.annotation, not future)
+            for c in (stmt.target, stmt.value):
+                if c is not None:
+                    visit(c, False)
+            return
+        if isinstance(stmt, (ast.If, ast.For, ast.While, ast.With, ast.Try)):
+            for field, value in ast.iter_fields(stmt):
+                for c in (value if isinstance(value, list) else [value]):
+                    if isinstance(c, ast.stmt):
+                        visit_class_statement(c)
+                    elif isinstance(c, ast.AST):
+                        visit(c, False)
+            return
+        visit(stmt, False)
+    visit(tree, False)
+    return out
+
+
 def _r19_signature_disagreements(src: str, label: str) -> tuple:
     """For every comprehension block symtable reports, keyed by (line, block name): the multiset of its non-parameter
     locals against the multiset of the resolver's signatures for the AST nodes of that kind on that line. -> (the SET
@@ -1460,9 +1554,8 @@ def _r19_signature_disagreements(src: str, label: str) -> tuple:
     # round 20: compared in the symbol table's (mangled) spelling; a module without the map (the round-19 pin) is
     # compared as it was, so a round-20 cell fails there on the defect rather than on a missing name
     private = sr._private_map(tree) if hasattr(sr, "_private_map") else None
-    for n in ast.walk(tree):
-        if type(n) in _R19_COMP_NAME:
-            nodes[(n.lineno, _R19_COMP_NAME[type(n)])].append(n)
+    for n in _r19_nodes_with_blocks(tree):
+        nodes[(n.lineno, _R19_COMP_NAME[type(n)])].append(n)
     bad, compared, ambiguous = set(), 0, 0
     for key, bl in blocks.items():
         ns = nodes.get(key, [])

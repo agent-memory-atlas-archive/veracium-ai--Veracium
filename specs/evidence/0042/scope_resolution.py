@@ -57,8 +57,11 @@ _IMPLICIT_IN_COMPREHENSION = {"super": "__class__"}
 # comprehension's implicit argument; `__class__` for a `super` load; `__classdict__`, `.type_params`, `.generic_base`,
 # `.defaults`, `.kwdefaults`, `__type_params__` for type-parameter, annotation and class blocks). The route-2 test holds
 # the stdlib's blocks to it; this is the superset the comprehension subset above was read from.
+# THE 3.14 FLOOR (2026-09-27) adds two, from 3.14's symtable.c: `.format`, the parameter of every annotation block
+# (PEP 649's __annotate__), and `__conditional_annotations__`, which a module or class body holds when an annotation
+# sits under a condition. Route 2 found both on 3.14.7 (the second seat's stage-1 read, B3).
 _IMPLICIT_NAMES_ALL_BLOCKS = frozenset({".0", "__class__", "__classdict__", ".type_params", ".generic_base", ".defaults",
-                                        ".kwdefaults", "__type_params__"})
+                                        ".kwdefaults", "__type_params__", ".format", "__conditional_annotations__"})
 
 
 def _mangle(private, name: str) -> str:
@@ -104,22 +107,32 @@ def _enclosing_parts(node) -> list:
     in sequence. Annotations are split by parameter kind because research measured their order — `**kwargs`'
     annotation comes BEFORE kw-only annotations, the opposite of `iter_fields` (round 12, S2b-1)."""
     parts = []
+    generic_class = isinstance(node, ast.ClassDef) and getattr(node, "type_params", None)
     for field, role in (("decorator_list", "decorator"), ("bases", "base"), ("keywords", "keyword")):
+        if generic_class and field != "decorator_list":
+            continue                  # a GENERIC class's bases and keywords run in its type-parameter scope (3.12+)
         parts += [(role, x) for x in (getattr(node, field, None) or [])]
-    if getattr(node, "returns", None) is not None:
-        parts.append(("return annotation", node.returns))
     a = getattr(node, "args", None)
     if isinstance(a, ast.arguments):
         parts += [("default", d) for d in a.defaults]
         parts += [("kw-only default", d) for d in a.kw_defaults if d is not None]
-        # ROUND 13 (research's S2c-3): the MEASURED order — `**kwargs` BEFORE kw-only. This list had kw-only first while
-        # the docstring cited the measurement; harmless while two header roles on one line are refused, and wrong for
-        # whoever relaxes that refusal.
+    return parts
+
+
+def _annotation_parts(node) -> list:
+    """(role, part) for every annotation of a def: on the 3.14 floor they are evaluated LAZILY, in the def's own
+    annotation block (PEP 649's `__annotate__`), never in the enclosing scope. The order is the one research measured
+    for the header (round 12/13: `**kwargs` BEFORE kw-only, then return); two roles on one key are refused, as before."""
+    parts = []
+    a = getattr(node, "args", None)
+    if isinstance(a, ast.arguments):
         for role, args in (("posonly annotation", a.posonlyargs), ("annotation", a.args),
                            ("*args annotation", [a.vararg] if a.vararg else []),
                            ("**kwargs annotation", [a.kwarg] if a.kwarg else []),
                            ("kw-only annotation", a.kwonlyargs)):
             parts += [(role, x.annotation) for x in args if x.annotation is not None]
+    if getattr(node, "returns", None) is not None:
+        parts.append(("return annotation", node.returns))
     return parts
 
 
@@ -197,8 +210,28 @@ def _expected_name(node) -> str:
     return node.name if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) else _BLOCK_NAME[type(node)]
 
 
+# THE BLOCK KINDS THIS RESOLVER JOINS, and every other kind is REFUSED at indexing (the 3.14 floor, the second seat's
+# item 6): the join check's guarantee — an order's silent answers become refusals — held only over the kinds it knew,
+# and 3.14's annotation blocks gave 8 silent answers through it. A block kind a later Python adds cannot reach an
+# answer: it refuses, naming the kind, until someone models it.
+_JOINED_BLOCK_TYPES = frozenset({"module", "function", "class", "annotation", "type parameters", "type alias",
+                                 "type variable"})
+# The kinds EVALUATED LAZILY — annotations when something reads them, a type alias's value and a type variable's
+# bound or default when something asks. A census use inside one does not run with the decision beside it, so it is
+# refused by name wherever the consumers ask (refuse_if_lazy).
+_LAZY_BLOCK_TYPES = frozenset({"annotation", "type parameters", "type alias", "type variable"})
+
+
 class UnresolvableScope(Exception):
     """A name or a block the resolver will not guess at: an unjoinable scope, or `global <site>` with an assignment."""
+
+
+class DynamicScope(UnresolvableScope):
+    """A read the interpreter answers at EVALUATION time from a class namespace, else the globals
+    (LOAD_FROM_DICT_OR_GLOBALS): a class-body annotation or a class's type-parameter scope reads the namespace AS IT
+    STANDS WHEN EVALUATED — every later binding in the body, and anything set on the class after it exists (measured on
+    3.14.7, the second seat's B3). No static answer is right, so none is given: a distinct refusal the pairing oracle
+    counts as agreement with that opcode, and a census read resolving this way is refused by name."""
 
 
 class Resolver:
@@ -218,6 +251,12 @@ class Resolver:
         self._comp_local: dict[int, frozenset] = {}
         self._joined: dict[tuple, list] = {}          # key -> [(node, block)] in the order the queue was drained
         self._private = _private_map(self.tree)       # id(node) -> the class name its symbols are mangled with
+        self._ann_of: dict[int, symtable.SymbolTable] = {}   # id(body block) -> that body's annotation block (3.14)
+        # `from __future__ import annotations` keeps every annotation a STRING: 3.14 then creates NO annotation block
+        # (measured on 3.14.7), and an annotation stays where 3.10-3.13 put it, in the enclosing scope, unevaluated
+        self._lazy_annotations = not any(
+            isinstance(n, ast.ImportFrom) and n.module == "__future__" and any(a.name == "annotations" for a in n.names)
+            for n in self.tree.body)
         self._assign(self.tree, self.table)
         self._check_join()
 
@@ -239,10 +278,24 @@ class Resolver:
         return (block.get_type(), tuple(sorted((s.get_name(), s.is_parameter(), s.is_local(), s.is_global(),
                                                  s.is_free()) for s in block.get_symbols())))
 
+    def _take(self, key, want: str, node) -> symtable.SymbolTable:
+        """The next block under `key`, which must be of kind `want` — a lazy scope's join (3.14): its annotation,
+        type-parameter, type-alias or type-variable block. A missing block, or one of another kind, is refused."""
+        queue = self._blocks.get(key) or []
+        cursor = self._cursor.get(key, 0)
+        if cursor >= len(queue) or queue[cursor].get_type() != want:
+            raise UnresolvableScope(f"line {key[0]}: no {want!r} symbol-table block named {key[1]!r} joins this "
+                                    f"{type(node).__name__} where the interpreter creates one — refused, not guessed")
+        block = queue[cursor]; self._cursor[key] = cursor + 1
+        self._joined.setdefault(key, []).append((("lazy", want), block))
+        return block
+
     def _fits(self, node, block) -> bool:
         """Does `block` fit `node`? Compared in the SYMBOL TABLE'S spelling: names mangled as the compiler mangles
         them (round 20 — the AST's `__p` in a method is `_C__p` there, so an unmangled signature refused a valid
         same-line pair)."""
+        if isinstance(node, tuple):                                       # a lazy scope's join: fitted by its KIND
+            return block.get_type() == node[1]
         private = self._private.get(id(node))
         if isinstance(node, _COMPREHENSIONS):
             if block.get_type() != "function":
@@ -254,7 +307,9 @@ class Resolver:
             params = [x.arg for x in a.posonlyargs + a.args + a.kwonlyargs] + [x.arg for x in (a.vararg, a.kwarg) if x]
             return block.get_type() == "function" and sorted(block.get_parameters()) == sorted(
                 _mangle(private, x) for x in params)
-        return True                                                       # a class is joined by its NAME already
+        # a class is joined by its NAME, and fits only a CLASS block: on the 3.14 floor a generic class's `type
+        # parameters` block carries the same name on the same line (measured), and "any block" fitted both
+        return block.get_type() == "class"
 
     @staticmethod
     def _comprehension_signature(node, private=None) -> frozenset:
@@ -265,8 +320,6 @@ class Resolver:
         enclosing scope) or any scope that keeps a block of its own. EQUALITY, not a subset, because research's rule
         corroborates a pairing by the signature: `(n for n …)` and `(tg for n … for tg …)` on one line — live at
         inv7_uninstrument.py:499 — are told apart only by `tg`, and a subset test fitted the first to both."""
-        if sys.version_info < (3, 12):
-            return frozenset(_mangle(private, n) for n in Resolver._comprehension_targets(node))
         return frozenset(Resolver._inlined_block(node, private)[1])
 
     @staticmethod
@@ -348,6 +401,11 @@ class Resolver:
         tests/test_0042_scope_resolution.py. symtable exposes no column, so order is the only join available; the
         alternative, refusing, would refuse real product source."""
         for child in block.get_children():
+            if child.get_type() not in _JOINED_BLOCK_TYPES:
+                raise UnresolvableScope(
+                    f"line {child.get_lineno()}: a symbol-table block of type {child.get_type()!r} ({child.get_name()!r}), "
+                    f"which this resolver does not join — refused rather than answered, so a block kind a new Python "
+                    f"adds can never reach a silent answer (the 3.14 floor, item 6)")
             self._blocks.setdefault((child.get_lineno(), child.get_name()), []).append(child)
             self._index(child)
 
@@ -376,7 +434,10 @@ class Resolver:
             self._comprehension(child, block, shadowed)
             return
         if isinstance(child, SCOPE_NODES):
-            self._refuse_role_collisions(child)          # ROUND 12, S2b-1: two or more HEADER roles on one key
+            # ROUND 12, S2b-1: two or more HEADER roles on one key. The annotations are header roles still, though on
+            # the 3.14 floor they run in their own block: the order BETWEEN a default's scopes and an annotation's is
+            # not measured, so the two groups are checked TOGETHER and a collision across them is refused, as before
+            self._refuse_role_collisions(child, _enclosing_parts(child) + _annotation_parts(child))
             # ROUND 12, S2b-1 — ORDER. The parts evaluated in the ENCLOSING scope are assigned FIRST: the interpreter
             # creates their nested blocks BEFORE this statement's own block exists, and this resolver used to take
             # its own block from the queue first — so a lambda in a lambda's default, or a return annotation beside
@@ -384,6 +445,23 @@ class Resolver:
             outer = [part for _, part in _enclosing_parts(child)]
             for part in outer:
                 self._assign_child(part, block, shadowed)
+            lazy_ids = set()
+            if getattr(child, "type_params", None):
+                # PEP 695 (3.12+, product syntax on the 3.14 floor): a generic def or class sits INSIDE a `type
+                # parameters` block of its own name; its parameters, their bounds and defaults, and a generic class's
+                # bases and keywords are evaluated there
+                block = self._take((child.lineno, child.name), "type parameters", child)
+                lazy_ids |= self._assign_type_params(child, block)
+                if isinstance(child, ast.ClassDef):
+                    for part in [*child.bases, *child.keywords]:
+                        lazy_ids.add(id(part)); self._assign_child(part, block, frozenset())
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # PEP 649 (the 3.14 floor): EVERY def has an annotation block, created before its own block, and its
+                # annotations are evaluated there, lazily — measured on 3.14.7, a def with none included. Under the
+                # future import there is none, and the (string) annotations stay in the enclosing scope
+                ann = self._take((child.lineno, "__annotate__"), "annotation", child) if self._lazy_annotations else block
+                for _, part in _annotation_parts(child):
+                    lazy_ids.add(id(part)); self._assign_child(part, ann, frozenset() if self._lazy_annotations else shadowed)
             key = (child.lineno, _expected_name(child))
             queue = self._blocks.get(key) or []
             cursor = self._cursor.get(key, 0)
@@ -393,12 +471,52 @@ class Resolver:
             inner = queue[cursor]; self._cursor[key] = cursor + 1
             self._owner[id(child)] = inner
             self._joined.setdefault(key, []).append((child, inner))
-            self._assign_definition(child, inner, {id(p) for p in outer})
+            self._assign_definition(child, inner, {id(p) for p in outer} | lazy_ids)
+            return
+        if isinstance(child, ast.AnnAssign):
+            # PEP 649: a module's, class's or function's annotated assignments share ONE annotation block per body,
+            # created at the FIRST of them in source order — which is the first this walk meets. Its target and value
+            # stay in the body; the annotation is evaluated there, lazily (a function body's is never evaluated)
+            self._owner[id(child)] = block
+            for part in (child.target, child.value):
+                if part is not None:
+                    self._assign_child(part, block, shadowed)
+            if not self._lazy_annotations:
+                self._assign_child(child.annotation, block, shadowed)      # a string under the future import
+                return
+            if id(block) not in self._ann_of:
+                self._ann_of[id(block)] = self._take((child.lineno, "__annotate__"), "annotation", child)
+            self._assign_child(child.annotation, self._ann_of[id(block)], frozenset())
+            return
+        if isinstance(child, getattr(ast, "TypeAlias", ())):
+            # `type X[V] = value` (PEP 695): the name binds in the body; the parameters live in a `type parameters`
+            # block and the value in a `type alias` block, both named for the alias, evaluated lazily
+            self._owner[id(child)] = block
+            self._assign_child(child.name, block, shadowed)
+            key = (child.lineno, child.name.id)
+            outer_block = block
+            if child.type_params:
+                outer_block = self._take(key, "type parameters", child)
+                self._assign_type_params(child, outer_block)
+            self._assign_child(child.value, self._take(key, "type alias", child), frozenset())
             return
         self._owner[id(child)] = block
         self._assign(child, block, shadowed)
 
-    def _refuse_role_collisions(self, node) -> None:
+    def _assign_type_params(self, node, block) -> set:
+        """A PEP 695 parameter list, in the `type parameters` block: each parameter binds there, and a bound and a
+        default are each evaluated in a `type variable` block named for the parameter, bound first (measured on
+        3.14.7: `T: int = str` gives two blocks named T, the bound's then the default's)."""
+        ids = set()
+        for tp in node.type_params:
+            ids.add(id(tp)); self._owner[id(tp)] = block; self._comp_local[id(tp)] = frozenset()
+            for part in (getattr(tp, "bound", None), getattr(tp, "default_value", None)):
+                if part is not None:
+                    ids.add(id(part))
+                    self._assign_child(part, self._take((tp.lineno, tp.name), "type variable", tp), frozenset())
+        return ids
+
+    def _refuse_role_collisions(self, node, parts=None) -> None:
         """REFUSE, rather than guess, when same-line nested scopes of one kind sit in TWO OR MORE HEADER ROLES of one
         statement. Round 12, research's stage-2b S2b-1 — and it was SILENT.
 
@@ -420,7 +538,7 @@ class Resolver:
             the order.
         One header role holding several scopes is not refused either: its scopes are walked and created in sequence."""
         roles: dict = {}
-        for role, part in _enclosing_parts(node):
+        for role, part in (_enclosing_parts(node) if parts is None else parts):
             for n in ast.walk(part):
                 if isinstance(n, SCOPE_NODES):
                     roles.setdefault((n.lineno, _expected_name(n)), set()).add(role)
@@ -456,9 +574,11 @@ class Resolver:
         default TWICE, and each visit consumes a symbol-table block from the cursor queue: a wrong answer, or an
         UnresolvableScope on a correct module. The statement is split before anything is recursed into.
 
-        NAMED BOUNDARY: PEP 695 type parameters (3.12+) and PEP 649 annotation scopes (3.14) evaluate in scopes of
-        their own. Neither can appear in code that must parse on 3.10, this project's floor, so `type_params` keeps
-        the inner block and annotations are treated as 3.10-3.13 evaluate them."""
+        THE BOUNDARY THIS DOCSTRING NAMED UNTIL THE 3.14 FLOOR (2026-09-27) IS RETIRED, not deleted: it said PEP 695
+        type parameters and PEP 649 annotation scopes "evaluate in scopes of their own" and, on a 3.10 floor, were
+        treated as 3.10-3.13 evaluate them. On 3.14 both are product syntax, so both are joined (in `_assign_child`):
+        annotations to the def's annotation block, type parameters, their bounds and defaults and a generic class's
+        bases to the type-parameter and type-variable blocks — and every node there is LAZY (_LAZY_BLOCK_TYPES)."""
         for field, value in ast.iter_fields(node):
             for item in (value if isinstance(value, list) else [value]):
                 if not isinstance(item, ast.AST) or id(item) in enclosing_ids:
@@ -499,7 +619,7 @@ class Resolver:
         # the answer right where it does not, which is not round 8's SILENT version divergence. Module level is
         # exempt because `refers_to_module_binding` answers module there without consulting the table. Refused on
         # Quentin's word; research measured it over-refuses nothing in the tree.
-        if sys.version_info >= (3, 12) and block.get_type() != "module" and child.generators \
+        if block.get_type() != "module" and child.generators \
                 and any(isinstance(n, _INLINABLE) for n in ast.walk(child.generators[0].iter)):
             raise UnresolvableScope(
                 f"line {child.lineno}: an inlinable comprehension sits in this comprehension's first iterable, inside a "
@@ -519,12 +639,20 @@ class Resolver:
         queue = self._blocks.get(key) or []
         cursor = self._cursor.get(key, 0)
         inner = None
-        if cursor < len(queue):
+        # WHICH COMPREHENSIONS ARE INLINED, by rule and never by whether a block happens to be left on the key (the 3.14
+        # floor, measured on 3.14.7): every list, set and dict comprehension is inlined — at module level, in a
+        # function, in a CLASS BODY too — EXCEPT one evaluated in an annotation or type scope that can SEE A CLASS (it
+        # holds __classdict__: a method's annotations, a class-level variable annotation), which keeps a block of its
+        # own. Inferring it from the queue let an inlined comprehension take a same-line block that belonged to one in
+        # such an annotation.
+        class_visible = block.get_type() in _LAZY_BLOCK_TYPES and any(
+            s.get_name() == "__classdict__" for s in block.get_symbols())
+        if not isinstance(child, _INLINABLE) or class_visible:
+            if cursor >= len(queue):
+                raise UnresolvableScope(f"line {child.lineno}: no symbol-table block joins this "
+                                        f"{type(child).__name__} — the resolver will not guess its scope")
             inner = queue[cursor]; self._cursor[key] = cursor + 1
             self._joined.setdefault(key, []).append((child, inner))
-        elif not isinstance(child, _INLINABLE):
-            raise UnresolvableScope(f"line {child.lineno}: no symbol-table block joins this "
-                                    f"{type(child).__name__} — the resolver will not guess its scope")
         self._owner[id(child)] = block
         body_block = inner if inner is not None else block
         body_shadow = frozenset() if inner is not None else shadowed | self._comprehension_targets(child)
@@ -583,11 +711,29 @@ class Resolver:
         block = self.block_of(node)
         if block.get_type() == "module":
             return True
+        if block.get_type() in _LAZY_BLOCK_TYPES and any(s.get_name() == "__classdict__" for s in block.get_symbols()):
+            raise DynamicScope(
+                f"line {getattr(node, 'lineno', '?')}: {name!r} is read in a {block.get_type()} scope of a CLASS, which the "
+                f"interpreter resolves at evaluation from the class namespace as it then stands, else the globals — "
+                f"no static answer is right, so none is given (the 3.14 floor, the second seat's B3)")
         try:
             sym = block.lookup(name)
         except KeyError:
             return False                       # the name is not used in this block at all
         return bool(sym.is_global()) and not sym.is_local() and not sym.is_parameter()
+
+    def refuse_if_lazy(self, node, name: str) -> None:
+        """A census use inside an annotation, type-parameter, type-alias or type-variable scope is REFUSED by name: an
+        annotation, an alias's value and a bound or default run whenever something evaluates them (pydantic reads
+        annotations when a model class is made), and a generic's parameter scope runs apart from the body it wraps —
+        never with the decision beside it, so no instrumentation claim about it holds. The product has none today, which is why
+        refusing costs nothing (the 3.14 floor, the second seat's B3 item 4)."""
+        block = self.block_of(node)
+        if block.get_type() in _LAZY_BLOCK_TYPES:
+            raise UnresolvableScope(
+                f"line {getattr(node, 'lineno', '?')}: the census name {name!r} is used inside a {block.get_type()} "
+                f"scope, which runs apart from the decision beside it — lazily for an annotation, a type alias or a "
+                f"type variable's bound or default, in a scope of its own for type parameters — refused")
 
     def refers_to_declared_site(self, node, name: str) -> bool:
         """THE SITE QUESTION: is the receiver `name`, used at `node`, THE DECLARED SITE OBJECT? That is the
@@ -599,6 +745,7 @@ class Resolver:
             raise UnresolvableScope(
                 f"the site question was asked about {name!r} before `refuse_site_rebindings` established that its "
                 f"module-level name is bound once — without that, a resolved NAME is not evidence about the OBJECT")
+        self.refuse_if_lazy(node, name)
         return self.refers_to_module_binding(node, name)
 
     def _compiled(self):

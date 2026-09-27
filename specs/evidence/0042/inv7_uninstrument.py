@@ -154,6 +154,48 @@ _CODE_LOCATION = ("co_filename", "co_firstlineno", "co_linetable", "co_lnotab") 
 # from round 18 until round 21, found by CI's 3.13 lane on a census with a coding cookie on line 1. Absent before 3.13,
 # so the description is unchanged there.
 _CLASS_LOCATION = ("__firstlineno__",)
+# PYTHON 3.14 (the floor from 2026-09-27; the second seat's stage-1 read, B1): annotations are LAZY (PEP 649). Defining a
+# class or function runs no annotation code; READING `__annotations__` calls `__annotate__`, which is census code, so a
+# describer that read it EXECUTED the census in the reference arm — seven census entries through _normalise, a real
+# UNINSTRUMENTED violation. And on a CLASS, reading `__annotations__` or `__annotate__` WRITES into vars() — a class with
+# no annotations gains `__annotate_func__` and `__annotations_cache__` (3.12 inserts `__annotations__ = {}`) — so the
+# describer mutated what it described, and so does ANY code in the process that reads them (typing.get_type_hints, the
+# product, a test). Three rules, each DERIVED from what an object carries, never from a version:
+#   a CLASS never has either attribute read: its annotation content is in vars(), read once;
+#   the keys a READ creates in vars() are normalised by value (_class_vars), so who read the class first is not drift;
+#   any other object whose type carries an `__annotate__` descriptor keeps `__annotations__` UNREAD while `__annotate__`
+#   is set; the function it holds is described by the recursive rule as its own field, never called.
+# NAMED LIMIT: annotations that code has already MATERIALISED and then mutated in place (fn.__annotations__["x"] = …, or a
+# class's cache) are not seen — the cache is derived from `__annotate__` and cannot be read without the read that runs it.
+_LAZY_ANNOTATION = ("__annotations__", "__annotate__")
+
+
+def _read_created(k, x) -> bool:
+    """A key an annotation READ creates in a class namespace, normalised BY VALUE: the cache is derived from
+    `__annotate_func__` and left out; `__annotate_func__` None and `__annotations__` {} are the same as absent."""
+    return (k == "__annotations_cache__" or (k == "__annotate_func__" and x is None)
+            or (k == "__annotations__" and type(x) is dict and not x))
+
+
+def _is_class_namespace(m) -> bool:
+    """Whether a mapping IS some class's namespace — the dict the type object itself holds, found by IDENTITY among the
+    referrers of the underlying dict — so the read-created keys are normalised there and nowhere else. A class's
+    namespace reaches a description through vars() AND through its annotation functions' closures (3.14's
+    `__classdict__` cell, which holds the type's own dict; found when the cell with REAL annotations failed). A census
+    dict that merely carries one of those keys is ordinary data and is compared as it stands (the second seat's N2)."""
+    import gc
+    d = m if type(m) is dict else next((x for x in gc.get_referents(m) if type(x) is dict), None)
+    if d is None:
+        return False
+    return any(isinstance(r, type) and any(x is d for x in gc.get_referents(type.__dict__["__dict__"].__get__(r)))
+               for r in gc.get_referrers(d))
+
+
+def _class_vars(cls) -> dict:
+    """vars(cls) without its location and without the keys a read creates (_read_created)."""
+    return {k: x for k, x in vars(cls).items() if k not in _CLASS_LOCATION and not _read_created(k, x)}
+
+
 _CACHE_BIT = 1 << 19      # Py_TPFLAGS_VALID_VERSION_TAG (CPython's Include/object.h): the type's attribute-cache state, set
                           # by a plain lookup on 3.10–3.12 (measured by both seats); IS_ABSTRACT (1 << 20) stays compared
 # `__class__` is not read as a field: every object's type is the first component of its description. A BUILT-IN type is
@@ -238,14 +280,27 @@ def _normalise(obj, seen: dict) -> tuple:
     if _builtin(tp, _SETS):
         return (tp.__qualname__, tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
     if _builtin(tp, _MAPPINGS):
-        return (tp.__qualname__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()))
+        ns = any(_read_created(k, v) for k, v in obj.items()) and _is_class_namespace(obj)
+        return (tp.__qualname__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()
+                                       if not (ns and _read_created(k, v))))
     if _builtin(tp, frozenset({"code"})):
         fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
         return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
     identity = ("immutable-type", tp.__module__, tp.__qualname__) if _immutable(tp) else ("class", _normalise(tp, seen))
     fields = []
+    is_class = issubclass(tp, type)
+    lazy = (not is_class and "__annotate__" in _data_descriptors(tp)
+            and getattr(obj, "__annotate__", None) is not None)
     for n in _data_descriptors(tp):
         if n in _NAMESPACE_REFS:
+            continue
+        if is_class and n in _LAZY_ANNOTATION:
+            continue                                      # a class: its annotation content is in __dict__, read below
+        if n == "__annotations__" and lazy:
+            fields.append((n, ("<lazy: described by __annotate__>",)))
+            continue
+        if is_class and n == "__dict__":
+            fields.append((n, _normalise(_class_vars(obj), seen)))
             continue
         try:
             v = getattr(obj, n)
@@ -290,7 +345,7 @@ def _type_level_fields(meta: type) -> list:
     names = []
     for k in meta.__mro__:
         for n, v in vars(k).items():
-            if inspect.isdatadescriptor(v) and n not in names and n != "__dict__":
+            if inspect.isdatadescriptor(v) and n not in names and n != "__dict__" and n not in _LAZY_ANNOTATION:
                 names.append(n)
     return names
 
@@ -318,9 +373,10 @@ def site_description(cls) -> list:
     each arm, round 18's N-6) read, so the two cannot disagree about what "the same class" means: its MRO by name, the
     names of vars(Site) in order, each vars value normalised (functions by code, defaults, keyword defaults, annotations,
     doc, attributes and closure; slots by name; anything else by type and address-free repr), every TYPE-LEVEL field its
-    metaclass defines (derived, not listed; the attribute-cache bit masked), and the metaclass. vars() is read FIRST:
-    reading __annotations__ on 3.10+ inserts one into vars."""
-    v = {k: x for k, x in vars(cls).items() if k not in _CLASS_LOCATION}
+    metaclass defines (derived, not listed; the attribute-cache bit masked), and the metaclass. A class's annotations
+    are never READ — a read runs census code on 3.14 and writes into vars on every version — so their content is
+    vars(), normalised by _class_vars."""
+    v = _class_vars(cls)
     out = [("mro", tuple(c.__name__ for c in cls.__mro__)), ("vars.order", tuple(v))]
     out += [(f"vars.{k}", _normal_value(x, {id(cls): 0})) for k, x in v.items()]
     # every NON-built-in base, described by the same rule (a base's content is inherited behaviour; route A does not see
@@ -543,7 +599,7 @@ def _source_encoding(data: bytes) -> str:
 
 class SourceUnreadable(Refused):
     """A file the transform must read as Python source, and cannot: EITHER it is not Python the interpreter accepts
-    (an unknown coding cookie, bytes invalid in the declared encoding outside a comment, a syntax error), OR the
+    (an unknown coding cookie, bytes invalid in its declared encoding, a syntax error), OR the
     interpreter accepts it and the transform's reading disagrees with the interpreter's — a failure of the transform,
     said so in the message, never passed off as the source's. A refusal of its own and never drift: T does not
     advance for it."""
@@ -552,11 +608,11 @@ class SourceUnreadable(Refused):
 def _source_text(data: bytes, label: str = "<source>") -> str:
     """A source's TEXT for analysis. The BYTES are first parsed exactly as the interpreter parses a file (its cookie,
     a BOM, its tokenizer), so what is accepted here is what Python would run, and anything else is a NAMED refusal.
-    Valid Python may still hold bytes invalid in its declared encoding, but only inside a COMMENT (the tokenizer does
-    not decode comment bytes; measured on 3.10–3.13, round 21, the second seat's stage-1c read); so the text is
-    decoded with errors="replace", which can change nothing but a comment's characters — which neither route reads
-    and no twin executes. (errors="surrogateescape" round-trips, but ast.parse and compile of a str re-encode it as
-    UTF-8 and reject the surrogate: measured on the same four interpreters.)
+    The text is decoded STRICTLY. Through 3.13 valid Python could hold a byte invalid in its declared encoding inside a
+    COMMENT, and rounds 21 to 23 decoded with errors="replace" for it; from 3.14 — the floor from 2026-09-27 — the
+    interpreter's own tokenizer refuses such a byte anywhere (measured on 3.14.7, the second seat's stage-1 read, B2),
+    so a source the bytes-parse accepts decodes in its declared encoding exactly, and a decode that fails after that
+    acceptance is the transform disagreeing with the interpreter, named below.
     THE INTERPRETER IS THE ORACLE, per file (round 22): the text is parsed too, and its syntax tree — positions included
     — must equal the one the interpreter built from the bytes. A wrong decoding changes a literal or a column, so any
     disagreement between _source_encoding and the interpreter's own tokenizer is a NAMED refusal, never a misreading."""
@@ -569,7 +625,7 @@ def _source_text(data: bytes, label: str = "<source>") -> str:
     # transform's, and is named as a disagreement with the interpreter — never as a source that is not Python.
     try:
         encoding = _source_encoding(data)
-        text = data.decode(encoding, errors="replace")
+        text = data.decode(encoding)
         from_text = ast.parse(text, filename=label)
     except (SyntaxError, LookupError, ValueError) as e:
         raise SourceUnreadable(f"{label}: the interpreter accepts this source and the transform cannot read it — its "
@@ -725,6 +781,7 @@ class Uninstrument(ast.NodeTransformer):
         if self.resolver is None:
             raise Refused(f"line {getattr(node, 'lineno', '?')}: no scope resolver was supplied, so {name!r} "
                           f"cannot be established as the census module rather than a local of the same name")
+        self.resolver.refuse_if_lazy(node, name)          # the 3.14 floor, B3 item 4: a lazy scope's census use refuses
         return self.resolver.refers_to_module_binding(node, name)
 
     # module-level: count the declarations (PRESERVED) and refuse the census imports the twin could not answer
@@ -1347,6 +1404,8 @@ def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]
     for node in ast.walk(tree):
         if _is_enabled_call(node):
             nm = node.func.value.id
+            if nm in census_aliases:
+                resolver.refuse_if_lazy(node.func.value, nm)
             if not resolver.refers_to_module_binding(node.func.value, nm):
                 continue                                   # a local or a parameter of the same name: not ours
             if nm not in census_aliases:

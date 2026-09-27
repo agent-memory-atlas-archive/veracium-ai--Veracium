@@ -190,8 +190,10 @@ INVENTORY = [
      "this review.)"),
     ("tests/test_eval.py", "skipif", "VERACIUM_EVAL",
      "env-flag", "live acceptance-eval tier"),
-    # (specs/0016 D2: the VERACIUM_MIN_DEP_JOB floor regression was removed
-    # with the D1 warning surface it exercised — Field(deprecated=...) is gone)
+    # (specs/0016 D2 removed the VERACIUM_MIN_DEP_JOB floor regression with the D1 warning surface it exercised;
+    # restored at the Python 3.14 floor, 2026-09-27, as a version assertion read from pyproject.toml)
+    ("tests/test_dependency_floor.py", "skipif", "VERACIUM_MIN_DEP_JOB",
+     "env-flag", "runs in CI's minimum-dependency job only: asserts the installed pydantic IS the declared floor"),
     ("tests/test_robustness.py", "skipif", "VERACIUM_ROBUSTNESS",
      "env-flag", "live robustness tier"),
     # (0037 v24.5, the round-9 reviewer's F2: the omitted-date default. The

@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- **BREAKING: Veracium requires Python 3.14 or newer, and pydantic 2.12 or newer.** `requires-python` moves from
+  `>=3.10` to `>=3.14` (the owner's decision, 2026-09-27), and CI tests 3.14 alone. pydantic's floor moves from 2.7 to
+  2.12 because no `pydantic-core` wheel exists for CPython 3.14 below 2.12; the 2.7 floor's original reason, specs/0016
+  D1's `Field(deprecated=...)`, had already lapsed when D2 removed it. The minimum-dependency CI job now pins 2.12.0
+  and, again, asserts the installed version equals the declared floor (`tests/test_dependency_floor.py`; the
+  assertion had gone with D2 while the job's comment still claimed it). **WHO MUST ACT:** anyone on Python 3.13 or
+  older stays on the last 3.10-floor release. **AND ON 3.14, THE STORE STILL QUALIFIES ONE SQLITE BUILD, 3.45.1**
+  (specs/0007; widening it is 0007's open question S-Q7, a spec change not yet made): a 3.14 whose `sqlite3` links
+  another build — uv's, python.org's and Homebrew's standalone builds bundle newer ones, measured at 3.53.1 for uv's
+  3.14.7 — refuses to open a store with `unsupported-sqlite`. A 3.14 linked against the system SQLite on Ubuntu 24.04,
+  as GitHub's setup-python builds are, runs. Evidence for 3.14 also changed: specs/0042's evidence layer reads
+  interpreter internals, and three 3.14 changes needed answers — lazy annotations (PEP 649: the INV-7 describer no
+  longer reads an annotation, which on 3.14 ran compiler-generated code in census.py's name), a tokenizer that refuses
+  an invalid byte even in a comment (the source reader now decodes strictly), and annotation and type-parameter scopes
+  in the symbol table (the scope resolver models them, refuses a block kind it does not know, and refuses a census use
+  inside one). Those are changes to accepted evidence and go to external review as 0042 round 24. Two evidence
+  outputs changed with the interpreter, not the code: 0041's carrier enumeration prints `X | None` where it printed
+  `Optional[X]` (34 lines; the counts do not move), and the 0029/0030 seam model reads both spellings and derives its
+  deep-nesting probe's depth from the running `json`.
+
 - **Accepted: the implementation of specs/0042, exercised guarantees, at external round 23 — "ACCEPTED. The
   round-22 regression is fixed; no new findings."** The implementation review ran rounds 6 to 23 on round 5's
   design acceptance, as amended by acceptance at round 16 (the meaning of UNINSTRUMENTED: INV-7's reference arm

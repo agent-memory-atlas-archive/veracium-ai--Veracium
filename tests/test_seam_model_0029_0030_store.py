@@ -480,10 +480,20 @@ def test_deeply_nested_payload_yields_undeterminable(store):
     round 8 is the boundary's definition (a region, not a type list), so
     the same type is caught inside project_store and propagated outside
     it. The discriminator is WHERE, no longer WHAT."""
-    import sys as _sys
+    import json as _json
     e, d = _revoked_superseded_fixture(store)
+    # THE DEPTH IS DERIVED FROM THE RUNNING INTERPRETER, never assumed: the reviewer's 10,000 raised on 3.10–3.13, and
+    # 3.14's json PARSES it (its limit moved; 100,000 still raises, measured 2026-09-27). The smallest power of ten from
+    # 10,000 that the interpreter's own json.loads refuses keeps the probe lethal on every version, and a limit that no
+    # longer refuses anything below ten million fails here, loudly, instead of quietly testing nothing.
     depth = 10_000
-    assert depth * 4 > _sys.getrecursionlimit()   # the probe stays lethal
+    while True:
+        try:
+            _json.loads("[" * depth + "]" * depth)
+        except RecursionError:
+            break
+        depth *= 10
+        assert depth <= 10_000_000, "json.loads no longer refuses deep nesting: the probe has nothing to probe"
     store._conn.execute(
         "INSERT INTO contribution_ledger (id, user_id, survivor_type, "
         "survivor_id, site, identity_digest, evidence_ref_digest, payload, "

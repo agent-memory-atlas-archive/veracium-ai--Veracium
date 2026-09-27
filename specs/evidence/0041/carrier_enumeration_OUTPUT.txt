@@ -48,11 +48,11 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      ContestedGroup.exposed.object              <class 'str'>
      ContestedGroup.exposed.note                <class 'str'>
      ContestedGroup.exposed.provenance.evidence_ref<class 'str'>
-     ContestedGroup.exposed.provenance.source_idtyping.Optional[str]
-     ContestedGroup.exposed.provenance.origin   typing.Optional[str]
-     ContestedGroup.exposed.invalidation_reason typing.Optional[str]
-     ContestedGroup.exposed.supersedes          typing.Optional[str]
-     ContestedGroup.exposed.original_relation   typing.Optional[str]
+     ContestedGroup.exposed.provenance.source_idstr | None
+     ContestedGroup.exposed.provenance.origin   str | None
+     ContestedGroup.exposed.invalidation_reason str | None
+     ContestedGroup.exposed.supersedes          str | None
+     ContestedGroup.exposed.original_relation   str | None
      ContestedGroup.exposed.agreement.markers   list[str]
      ContestedGroup.exposed.agreement.direction <class 'str'>
      ContestedGroup.exposed.agreement.lexicon   <class 'str'>
@@ -70,11 +70,11 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      ContributionRecord.survivor_type               <class 'str'>
      ContributionRecord.survivor_id                 <class 'str'>
      ContributionRecord.site                        <class 'str'>
-     ContributionRecord.identity_digest             typing.Optional[str]
-     ContributionRecord.evidence_ref_digest         typing.Optional[str]
-     ContributionRecord.op_key                      typing.Optional[str]
-     ContributionRecord.contributor_type            typing.Optional[str]
-     ContributionRecord.contributor_ref             typing.Optional[str]
+     ContributionRecord.identity_digest             str | None
+     ContributionRecord.evidence_ref_digest         str | None
+     ContributionRecord.op_key                      str | None
+     ContributionRecord.contributor_type            str | None
+     ContributionRecord.contributor_ref             str | None
      CorrectionAuthorisation.origin                      <class 'str'>
      CorrectionAuthorisation.prior_edge_id               <class 'str'>
      CorrectionAuthorisation.replacement_digest          <class 'str'>
@@ -85,11 +85,11 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      Edge.object                      <class 'str'>
      Edge.note                        <class 'str'>
      Edge.provenance.evidence_ref     <class 'str'>
-     Edge.provenance.source_id        typing.Optional[str]
-     Edge.provenance.origin           typing.Optional[str]
-     Edge.invalidation_reason         typing.Optional[str]
-     Edge.supersedes                  typing.Optional[str]
-     Edge.original_relation           typing.Optional[str]
+     Edge.provenance.source_id        str | None
+     Edge.provenance.origin           str | None
+     Edge.invalidation_reason         str | None
+     Edge.supersedes                  str | None
+     Edge.original_relation           str | None
      Edge.agreement.markers           list[str]
      Edge.agreement.direction         <class 'str'>
      Edge.agreement.lexicon           <class 'str'>
@@ -97,24 +97,24 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      Episode.date                        <class 'str'>
      Episode.summary                     <class 'str'>
      Episode.provenance.evidence_ref     <class 'str'>
-     Episode.provenance.source_id        typing.Optional[str]
-     Episode.provenance.origin           typing.Optional[str]
+     Episode.provenance.source_id        str | None
+     Episode.provenance.origin           str | None
      Episode.kind                        <class 'str'>
-     Episode.edge_id                     typing.Optional[str]
-     Episode.context_ref                 typing.Optional[str]
-     Episode.retired_reason              typing.Optional[str]
-     Episode.supersedes_episode          typing.Optional[str]
-     Episode.claimed_by                  typing.Optional[str]
-     Episode.operation_id                typing.Optional[str]
-     Episode.lineage                     typing.Optional[list[str]]
-     Episode.date_start                  typing.Optional[str]
-     Episode.date_end                    typing.Optional[str]
+     Episode.edge_id                     str | None
+     Episode.context_ref                 str | None
+     Episode.retired_reason              str | None
+     Episode.supersedes_episode          str | None
+     Episode.claimed_by                  str | None
+     Episode.operation_id                str | None
+     Episode.lineage                     list[str] | None
+     Episode.date_start                  str | None
+     Episode.date_end                    str | None
      OutcomeJudgmentDraft.event_timestamp             <class 'str'>
      OutcomeJudgmentDraft.summary                     <class 'str'>
-     OutcomeJudgmentDraft.context_ref                 typing.Optional[str]
+     OutcomeJudgmentDraft.context_ref                 str | None
      Provenance.evidence_ref                <class 'str'>
-     Provenance.source_id                   typing.Optional[str]
-     Provenance.origin                      typing.Optional[str]
+     Provenance.source_id                   str | None
+     Provenance.origin                      str | None
      Relation.name                        <class 'str'>
      Relation.desc                        <class 'str'>
      SupersessionPlan.incoming_edge.id            <class 'str'>
@@ -124,11 +124,11 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      SupersessionPlan.incoming_edge.object        <class 'str'>
      SupersessionPlan.incoming_edge.note          <class 'str'>
      SupersessionPlan.incoming_edge.provenance.evidence_ref<class 'str'>
-     SupersessionPlan.incoming_edge.provenance.source_idtyping.Optional[str]
-     SupersessionPlan.incoming_edge.provenance.origintyping.Optional[str]
-     SupersessionPlan.incoming_edge.invalidation_reasontyping.Optional[str]
-     SupersessionPlan.incoming_edge.supersedes    typing.Optional[str]
-     SupersessionPlan.incoming_edge.original_relationtyping.Optional[str]
+     SupersessionPlan.incoming_edge.provenance.source_idstr | None
+     SupersessionPlan.incoming_edge.provenance.originstr | None
+     SupersessionPlan.incoming_edge.invalidation_reasonstr | None
+     SupersessionPlan.incoming_edge.supersedes    str | None
+     SupersessionPlan.incoming_edge.original_relationstr | None
      SupersessionPlan.incoming_edge.agreement.markerslist[str]
      SupersessionPlan.incoming_edge.agreement.direction<class 'str'>
      SupersessionPlan.incoming_edge.agreement.lexicon<class 'str'>

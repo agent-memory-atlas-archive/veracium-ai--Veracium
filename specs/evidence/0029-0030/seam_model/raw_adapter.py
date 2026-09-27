@@ -160,6 +160,18 @@ def derive_use_only(disclosure: str) -> bool:
 # whether anything had constructed an `Edge` first. A control whose value moves
 # with import order is not a control; that is what exposed it.
 
+# PYTHON 3.14 (the floor from 2026-09-27): `str(Optional[str])` renders as `str | None`, so a sniff for the word
+# "Optional" went blind and the control below correctly reported the halves disagreeing on every optional field. The
+# string half now reads BOTH spellings of the same annotation -- one sniff, used by the rule and by its control, so the
+# two cannot drift apart.
+_NONE_IN_UNION = __import__("re").compile(r"\|\s*None\b|\bNone\s*\|")
+
+
+def _sniffs_optional(ann) -> bool:
+    s = str(ann)
+    return "Optional" in s or "NoneType" in s or bool(_NONE_IN_UNION.search(s))
+
+
 # NOTE the deliberate asymmetry with the CONSUMER side: this half derives what
 # production EMITS; the campaign asserts we refuse what ScopeView RAISES on.
 # Both halves are needed and neither implies the other.
@@ -175,8 +187,7 @@ def _field_rule(model, name):
     """
     f = model.model_fields[name]
     ann = f.annotation
-    optional = (type(None) in _typing.get_args(ann)
-                or "Optional" in str(ann) or "NoneType" in str(ann))
+    optional = type(None) in _typing.get_args(ann) or _sniffs_optional(ann)
     mn = mx = None
     for m in f.metadata:
         mn = getattr(m, "min_length", mn)
@@ -411,7 +422,7 @@ def control_presence_derivation_agrees() -> bool:
         for model, names in checked:
             for n in names:
                 ann = model.model_fields[n].annotation
-                sniff = ("Optional" in str(ann)) or ("NoneType" in str(ann))
+                sniff = _sniffs_optional(ann)
                 args = type(None) in _typing.get_args(ann)
                 if sniff != args:
                     out.append((model.__name__, n))

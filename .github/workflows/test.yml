@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.14"]
     steps:
       - uses: actions/checkout@v5
         with:
@@ -44,11 +44,14 @@ jobs:
 
   min-deps:
     # specs/0016 D1 (R6-4): a REAL minimum-dependency job — pydantic pinned to
-    # the exact 2.7.0 floor that Field(deprecated=...) requires (R5-3). The
-    # floor regression test asserts the installed version, so it cannot
-    # silently "pass" anywhere else; the whole suite also runs here so the
-    # floor is a supported configuration, not a marketing claim.
-    name: pytest (pydantic==2.7.0 floor)
+    # the declared floor. The floor is 2.12.0 from the Python 3.14 floor
+    # (2026-09-27): no pydantic-core wheel exists for 3.14 below it. D1's own
+    # reason for 2.7 (Field(deprecated=...), R5-3) lapsed at D2, which removed
+    # its only consumer. tests/test_dependency_floor.py asserts the installed
+    # version equals the floor pyproject.toml declares, so this job cannot
+    # silently "pass" on another version; the whole suite also runs here so
+    # the floor is a supported configuration, not a marketing claim.
+    name: pytest (pydantic floor)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -56,7 +59,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
       - name: Install with the pinned floor
         # CORE floor only: the [mcp] extra's own dependencies require a newer
@@ -66,7 +69,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-          pip install "pydantic==2.7.0"
+          pip install "pydantic==2.12.0"
       - name: Run tests at the floor
         env:
           VERACIUM_MIN_DEP_JOB: "1"
@@ -79,7 +82,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
       - name: Build distribution and validate metadata
         run: |

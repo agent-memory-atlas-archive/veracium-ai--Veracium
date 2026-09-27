@@ -1620,6 +1620,16 @@ def test_r12_s2_1_a_census_consult_at_a_definition_time_position_is_reported_not
         f"{pos}: the twin keeps a live `_census.enabled()` and the manifest reports it CLEAN (unresolved=0)")
 
 
+@pytest.mark.parametrize("pos,body", _SCOPE_TESTS.LAZY_POSITIONS, ids=[p for p, _ in _SCOPE_TESTS.LAZY_POSITIONS])
+def test_py314_a_census_consult_in_a_lazy_position_is_refused_not_transformed(pos, body):
+    """The 3.14 floor (the second seat's B3, item 4): `_census.enabled()` in an annotation, a type alias, a type
+    variable's bound or a generic class's base runs apart from the decision beside it — the transform refuses the
+    module by name rather than rewriting it or reporting it clean."""
+    un = _load("inv7_uninstrument_py314_lazy", EVIDENCE / "inv7_uninstrument.py")
+    with pytest.raises(Exception, match="runs apart from the decision beside it"):
+        un.uninstrument_source(_SCOPE_TESTS._S21_HEAD + body.replace("__X__", "_census.enabled()"), f"<{pos}>")
+
+
 def test_r12_s2_2_lost_bindings_does_not_hide_a_lost_builtin_shadow():
     """RESEARCH'S S2-2. `lost_bindings` subtracted `dir(builtins)`, reasoning that a builtin name cannot be a lost
     binding. It is the ONE case that can be SILENT: a lost binding can only be a builtin's name if the source SHADOWED
@@ -2449,7 +2459,8 @@ def test_r18_the_function_fields_compared_are_derived_per_interpreter():
     un = _load("inv7_uninstrument_r18f", EVIDENCE / "inv7_uninstrument.py")
     got = set(un._data_descriptors(types.FunctionType)) - set(un._NAMESPACE_REFS)
     want = {"__annotations__", "__closure__", "__code__", "__defaults__", "__dict__", "__doc__", "__kwdefaults__",
-            "__module__", "__name__", "__qualname__"} | ({"__type_params__"} if sys.version_info >= (3, 12) else set())
+            "__module__", "__name__", "__qualname__"} | ({"__type_params__"} if sys.version_info >= (3, 12) else set()) \
+        | ({"__annotate__"} if sys.version_info >= (3, 14) else set())     # PEP 649: lazy annotations (B1)
     assert got == want, (sys.version_info[:2], sorted(got ^ want))
 
 
@@ -2961,13 +2972,14 @@ def test_r21_the_transform_reads_and_writes_text_only_at_its_boundaries():
               if not (why.startswith("decode()") and 'sys.stdin.buffer.read().decode("utf-8")' in un._ISOLATED_CHILD.splitlines()[ln - 1])
               and not why.startswith("open()")]                       # the child's one decode is OUR utf-8 transport
     found += [("_ISOLATED_CHILD", *v) for v in child]
-    # and the one decode of a SOURCE carries an error handler: valid Python may hold bytes invalid in its declared
-    # encoding inside a comment (the second seat's stage-1c read), and a strict decode would crash on it
+    # and the one decode of a SOURCE is STRICT (the 3.14 floor, B2): round 21 required an error handler because 3.10-3.13
+    # ran a byte invalid in its declared encoding inside a comment; 3.14's tokenizer refuses that byte, so after the
+    # bytes-parse accepts a source nothing is left for a handler to repair, and a handler could only hide a disagreement
     tree = ast.parse(source)
     fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_source_text")
     decodes = [c for c in ast.walk(fn) if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and c.func.attr == "decode"]
-    if not (decodes and all(any(k.arg == "errors" for k in c.keywords) for c in decodes)):
-        found.append(("module", fn.lineno, "_source_text decodes without an error handler"))
+    if not (decodes and not any(any(k.arg == "errors" for k in c.keywords) for c in decodes)):
+        found.append(("module", fn.lineno, "_source_text decodes with an error handler, or not at all"))
     assert found == [], found
 
 
@@ -2998,8 +3010,9 @@ _R21_SOURCE_CELLS = [
      lambda _: _R21_COOKIE.format(enc="cp1252").encode() + (_R14_SELF + "def f():\n    return '— café'\n").encode("cp1252"), "accept"),
     ("product: UTF-8 BOM, a non-ASCII string", "product",
      lambda _: b"\xef\xbb\xbf" + (_R14_SELF + "def f():\n    return 'µ 中'\n").encode("utf-8"), "accept"),
-    # the second seat's stage-1c read: a byte invalid in the declared encoding is VALID PYTHON inside a comment (the
-    # tokenizer does not decode comment bytes; it imports and runs on 3.10-3.13), and an unknown cookie is not Python
+    # the second seat's stage-1c read: a byte invalid in the declared encoding was VALID PYTHON inside a comment on
+    # 3.10-3.13, and 3.14's tokenizer REFUSES it (B2): each cell's expectation below is therefore re-derived from the
+    # running interpreter (_r21_expect), never assumed; an unknown cookie is not Python on any version
     ("census: a trailing comment holding an invalid UTF-8 byte", "census", lambda ref: ref + b"\n# \xff comment\n", "accept"),
     ("census: a utf-8 cookie and a comment holding an invalid byte", "census",
      lambda ref: _R21_COOKIE.format(enc="utf-8").encode() + ref + b"\n# \xff\n", "accept"),
@@ -3018,6 +3031,17 @@ _R21_SOURCE_CELLS = [
 ]
 
 
+def _r21_expect(expect, make, un):
+    """The cell's stated expectation, unless the RUNNING interpreter refuses the bytes the cell writes — then a named
+    refusal, whatever the cell says (3.14 refuses an invalid byte in a comment, which 3.10-3.13 accepted: B2)."""
+    data = make(un.REFERENCE_CENSUS.read_bytes())
+    try:
+        compile(data, "<r21-expect>", "exec", dont_inherit=True)
+    except (SyntaxError, ValueError):
+        return "refuse"
+    return expect
+
+
 def _r21_source_cell(un, tmp_path, kind, make):
     ref = un.REFERENCE_CENSUS.read_bytes()
     src = _r13_pkg(tmp_path, "enc", _R14_SELF + "def f():\n    return 1\n", "")
@@ -3031,6 +3055,7 @@ def _r21_source_cell(un, tmp_path, kind, make):
 def test_r21_a_source_is_read_in_the_encoding_it_declares(cell, kind, make, expect, tmp_path):
     un = _load("inv7_uninstrument_r21src", EVIDENCE / "inv7_uninstrument.py")
     src, out = _r21_source_cell(un, tmp_path, kind, make)
+    expect = _r21_expect(expect, make, un)
     if expect == "drift":
         with pytest.raises(un.Refused, match="T must advance"):
             un.derive(src, out)
@@ -3060,12 +3085,13 @@ _R21_CP1252 = "product: cp1252 cookie, a cp1252 string (the cookie is lost in th
 
 
 @pytest.mark.parametrize("mutant,anchor,replacement,killer", [
-    ("a source decoded as UTF-8, whatever it declares", '        text = data.decode(encoding, errors="replace")',
+    ("a source decoded as UTF-8, whatever it declares", '        text = data.decode(encoding)',
      '        text = data.decode("utf-8", errors="replace")', _R21_CP1252),
     ("the twin written in the ORIGINAL's encoding", '    data = text.encode(_source_encoding(text.encode("utf-8")))',
      '    data = text.encode("cp1252")', _R21_CP1252),
-    ("a source decoded strictly (no error handler)", '        text = data.decode(encoding, errors="replace")',
-     "        text = data.decode(encoding)", "census: a trailing comment holding an invalid UTF-8 byte"),
+    # RETIRED at the 3.14 floor: "a source decoded strictly (no error handler)" was round 21's mutant of the lenient
+    # decode. Strict decoding IS the rule now (B2), and its converse — errors="replace" — is EQUIVALENT on 3.14: the
+    # bytes-parse refuses every source holding a byte invalid in its declared encoding before the decode is reached.
     ("an unreadable source raising bare", '        raise SourceUnreadable(f"{label} could not be read as Python source',
      '        raise\n        raise SourceUnreadable(f"{label} could not be read as Python source',
      "census: an unknown coding cookie (not Python: a named refusal)"),
@@ -3074,8 +3100,7 @@ _R21_CP1252 = "product: cp1252 cookie, a cp1252 string (the cookie is lost in th
     ("the bytes-parse removed (stage 2's V3)", "        from_bytes = ast.parse(data, filename=label)\n",
      '        from_bytes = ast.parse(data.decode(_source_encoding(data), errors="replace"), filename=label)\n',
      "census: an invalid byte in a string literal (not Python: a named refusal)"),
-], ids=["decode as utf-8", "write in the original's encoding", "strict decoding", "bare on an unknown cookie",
-        "bytes-parse removed"])
+], ids=["decode as utf-8", "write in the original's encoding", "bare on an unknown cookie", "bytes-parse removed"])
 def test_r21_each_superseded_source_rule_fails_a_cell(mutant, anchor, replacement, killer, tmp_path):
     text = (EVIDENCE / "inv7_uninstrument.py").read_text(encoding="utf-8")
     assert text.count(anchor) == 1, (mutant, "the anchor moved")
@@ -3085,6 +3110,7 @@ def test_r21_each_superseded_source_rule_fails_a_cell(mutant, anchor, replacemen
     mut = _load("inv7_uninstrument_r21srcmut", ev / "inv7_uninstrument.py")
     _, kind, make, expect = {c[0]: c for c in _R21_SOURCE_CELLS}[killer]
     src, out = _r21_source_cell(mut, tmp_path, kind, make)
+    expect = _r21_expect(expect, make, mut)
     try:
         if expect == "refuse":
             with pytest.raises(mut.Refused, match="could not be read as Python source"):
@@ -3229,10 +3255,15 @@ _R22_CELLS = [
 
 @pytest.mark.parametrize("cell,make", _R22_CELLS, ids=[c[0] for c in _R22_CELLS])
 def test_r22_a_header_the_interpreter_accepts_derives_and_verifies(cell, make, tmp_path):
-    """The verdict's class through derive() and verify(); a product twin RUNS as its source does."""
+    """The verdict's class through derive() and verify(); a product twin RUNS as its source does. A header the RUNNING
+    interpreter refuses (3.14 refuses an invalid byte in a line-1 comment, which 3.10-3.13 ran: B2) is a named refusal."""
     un = _load("inv7_uninstrument_r22cells", EVIDENCE / "inv7_uninstrument.py")
     kind = "census" if cell.startswith("census") else "product"
     src, out = _r21_source_cell(un, tmp_path, kind, make)
+    if _r21_expect("accept", make, un) == "refuse":
+        with pytest.raises(un.SourceUnreadable, match="could not be read as Python source"):
+            un.derive(src, out)
+        return
     _r21_holds(un, src, out, kind, cell)
 
 
@@ -3252,8 +3283,10 @@ def test_r22_the_interpreter_guard_fires_on_a_wrong_utf8_reading(monkeypatch):
     a MISSED cookie produces, since UTF-8 is the fallback — must be refused by name too. A latin-1-declared source
     holding a non-ASCII literal, with _source_encoding forced to "utf-8"."""
     un = _load("inv7_uninstrument_r22guard8", EVIDENCE / "inv7_uninstrument.py")
-    data = b"# -*- coding: latin-1 -*-\n" + "S = 'caf\u00e9'\n".encode("latin-1")
-    assert "caf\u00e9" in un._source_text(data, "m.py")
+    # latin-1 "Ã©" is the bytes C3 A9, which are ALSO valid UTF-8 ("é"): under the strict decode (the 3.14 floor) a
+    # wrong UTF-8 reading of plain latin-1 fails at the decode before the guard; these bytes reach the guard
+    data = b"# -*- coding: latin-1 -*-\n" + "S = 'caf\u00c3\u00a9'\n".encode("latin-1")
+    assert "caf\u00c3\u00a9" in un._source_text(data, "m.py")
     monkeypatch.setattr(un, "_source_encoding", lambda d: "utf-8")
     with pytest.raises(un.SourceUnreadable, match="disagrees with the interpreter"):
         un._source_text(data, "m.py")
@@ -3271,8 +3304,10 @@ def test_r22_the_guard_skipped_for_utf8_readings_fails_the_mirror_cell(tmp_path,
         text.replace(anchor, anchor + '        if encoding.startswith("utf-8"):\n            return text\n'), encoding="utf-8")
     mut = _load("inv7_uninstrument_r22w6", ev / "inv7_uninstrument.py")
     monkeypatch.setattr(mut, "_source_encoding", lambda d: "utf-8")
-    data = b"# -*- coding: latin-1 -*-\n" + "S = 'caf\u00e9'\n".encode("latin-1")
-    assert "caf\u00e9" not in mut._source_text(data, "m.py"), "the mutant refused the wrong UTF-8 reading — not killed"
+    # latin-1 "Ã©" is the bytes C3 A9, which are ALSO valid UTF-8 ("é"): under the strict decode (the 3.14 floor) a
+    # wrong UTF-8 reading of plain latin-1 fails at the decode before the guard; these bytes reach the guard
+    data = b"# -*- coding: latin-1 -*-\n" + "S = 'caf\u00c3\u00a9'\n".encode("latin-1")
+    assert "caf\u00c3\u00a9" not in mut._source_text(data, "m.py"), "the mutant refused the wrong UTF-8 reading — not killed"
 
 
 _R22_MUTANTS = [
@@ -3284,7 +3319,14 @@ _R22_MUTANTS = [
 ]
 
 
-@pytest.mark.parametrize("mutant,anchor,replacement", _R22_MUTANTS, ids=[m[0] for m in _R22_MUTANTS])
+# "round 21's detect_encoding" is RETIRED as a mutant at the 3.14 floor, with its measured reason: on 3.14.7 it agrees
+# with the interpreter on all 560 programs of the header corpus (3.12.3: 466, disagreeing on 94), because 3.14's C
+# tokenizer now refuses the non-UTF-8 header bytes the pure-Python one refused. It stays the round-23 set control's
+# reader (_R22_MUTANTS[0]), where it still separates: it must agree on the folded names.
+_R22_MUTANTS_AT_THE_FLOOR = [m for m in _R22_MUTANTS if m[0] != "round 21's detect_encoding"]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement", _R22_MUTANTS_AT_THE_FLOOR, ids=[m[0] for m in _R22_MUTANTS_AT_THE_FLOOR])
 def test_r22_each_superseded_reading_fails(mutant, anchor, replacement, tmp_path, monkeypatch):
     text = (EVIDENCE / "inv7_uninstrument.py").read_text(encoding="utf-8")
     assert text.count(anchor) == 1, (mutant, "the anchor moved")
@@ -3483,6 +3525,154 @@ def test_r23_a_refusal_after_the_interpreter_accepts_is_named_a_disagreement(mon
     monkeypatch.setattr(un, "_source_encoding", lookup_fails)
     with pytest.raises(un.SourceUnreadable, match="the interpreter accepts this source and the transform cannot read it"):
         un._source_text(b"S = 1\n", "m.py")
+
+# ---- Python 3.14 (the floor from 2026-09-27), B1: annotations are LAZY, and a describer must never run them ----------
+# PEP 649: defining a class runs no annotation code, and READING __annotations__ calls __annotate__ — census code — so
+# route B's describer executed the census in the reference arm (seven census entries, through _normalise). On a class,
+# reading __annotations__ or __annotate__ also WRITES into vars(), and ANY code in the process can do that read.
+_B1_CENSUS = """
+CALLS = []
+def side(x):
+    CALLS.append(x)
+    return x
+class Base:
+    base_kind: side("base class annotation")
+class Site(Base):
+    kind: side("class annotation")
+    def fire(self, decision: side("parameter annotation")) -> side("return annotation"):
+        return decision
+"""
+_B1_BARE = """
+CALLS = []
+class Site:
+    def fire(self, decision):
+        return decision
+"""
+
+
+def _b1_site(un, text, name):
+    import types
+    mod = types.ModuleType(name)
+    # dont_inherit: this file's `from __future__ import annotations` would otherwise make every annotation a STRING, and
+    # a string annotation runs nothing — the cells below could not fail (found by their own mutants, 2026-09-27)
+    exec(compile(text, f"<{name}>", "exec", dont_inherit=True), mod.__dict__)
+    if "side(" in text:
+        # THE ACCEPTANCE HALF (the second seat's N1): the case this cell is named for must really be present — lazy,
+        # unevaluated annotations — or the cell fails BY NAME rather than passing because nothing could run
+        # the SHAPE, read from the annotate function's code and never by calling it: the lazy shape's names `side`;
+        # the future-import shape's returns constant strings and names nothing (the second seat's precision)
+        assert mod.Site.fire.__annotate__ is not None and callable(vars(mod.Site).get("__annotate_func__")) \
+            and "side" in mod.Site.fire.__annotate__.__code__.co_names, \
+            "the census compiled without lazy annotations: this cell cannot run the case it is named for"
+        assert mod.CALLS == [], mod.CALLS
+    return mod
+
+
+def test_py314_describing_a_site_runs_no_annotation_code():
+    """Annotations with side effects, on a method AND on the class: describing the class — and digesting it, as the
+    observer does — runs none of them, on every interpreter (on <3.14 they ran once, at definition, which is before)."""
+    un = _load("inv7_uninstrument_b1a", EVIDENCE / "inv7_uninstrument.py")
+    mod = _b1_site(un, _B1_CENSUS, "b1a")
+    before = list(mod.CALLS)
+    un.site_description_digest(un.site_description(mod.Site))
+    assert mod.CALLS == before, mod.CALLS
+
+
+_B1_FUTURE = """from __future__ import annotations
+class Site:
+    kind: int
+    def fire(self, decision: str) -> bool:
+        return decision
+"""
+
+
+def test_py314_describing_a_future_import_site_runs_none_of_its_code():
+    """THE REAL CENSUS'S SHAPE (the second seat's precision, 2026-09-27): census.py stringifies its annotations, and on
+    3.14 its functions STILL carry a compiler-generated __annotate__ that returns those strings — calling it is a call
+    into code compiled from census.py, and it is what the observer counted (7 entries through _normalise). Measured
+    here by a profile hook counting calls into code compiled from the census's own filename while the class is
+    described: zero. The shape is asserted from the annotate function's code — constant strings, no names."""
+    import types as _types
+    un = _load("inv7_uninstrument_b1f", EVIDENCE / "inv7_uninstrument.py")
+    mod = _types.ModuleType("b1f")
+    exec(compile(_B1_FUTURE, "<b1f-census>", "exec", dont_inherit=True), mod.__dict__)
+    ann = mod.Site.fire.__annotate__
+    assert ann is not None and ann.__code__.co_names == () and "str" in ann.__code__.co_consts, \
+        "not the future-import shape: this cell cannot run the case it is named for"
+    entered = []
+
+    def hook(frame, event, arg):
+        if event == "call" and frame.f_code.co_filename == "<b1f-census>":
+            entered.append(frame.f_code.co_name)
+    sys.setprofile(hook)
+    try:
+        un.site_description_digest(un.site_description(mod.Site))
+    finally:
+        sys.setprofile(None)
+    assert entered == [], entered
+
+
+def test_py314_describing_a_site_leaves_its_vars_unchanged():
+    """The describer must not WRITE into what it describes: vars() has the same keys and values before and after one
+    description, for a class with annotations, for one without (on 3.14 a read of an unannotated class's __annotate__
+    alone inserts __annotate_func__), and for the mutable BASE route B describes beside Site."""
+    un = _load("inv7_uninstrument_b1b", EVIDENCE / "inv7_uninstrument.py")
+    for text in (_B1_CENSUS, _B1_BARE):
+        mod = _b1_site(un, text, "b1b")
+        classes = [c for c in mod.Site.__mro__ if c is not object]
+        before = [dict(vars(c)) for c in classes]
+        un.site_description(mod.Site)
+        after = [dict(vars(c)) for c in classes]
+        assert after == before, [sorted(set(a) ^ set(b)) for a, b in zip(after, before)]
+
+
+def test_py314_another_reader_of_the_annotations_is_not_drift():
+    """The second seat's cell: describe, read __annotations__ from OUTSIDE the describer (as typing.get_type_hints or the
+    product would), describe again — the digests are equal, for a class with annotations and one without. Without the
+    by-value normalisation of the keys that read creates, who read the class first would split the arms' digests."""
+    un = _load("inv7_uninstrument_b1c", EVIDENCE / "inv7_uninstrument.py")
+    for text in (_B1_CENSUS, _B1_BARE):
+        mod = _b1_site(un, text, "b1c")
+        first = un.site_description_digest(un.site_description(mod.Site))["digest"]
+        mod.Site.__annotations__                                          # someone else's read
+        mod.Site.fire.__annotations__
+        assert un.site_description_digest(un.site_description(mod.Site))["digest"] == first, text[:40]
+
+
+def test_py314_a_census_dict_carrying_an_annotation_key_is_still_compared():
+    """The normalisation is scoped to CLASS NAMESPACES (the second seat's N2): an ordinary census dict that happens to
+    carry `__annotations_cache__`, `__annotate_func__` None or `__annotations__` {} is data, and a change in it reads."""
+    un = _load("inv7_uninstrument_b1d", EVIDENCE / "inv7_uninstrument.py")
+    for key, a, b in (("__annotations_cache__", {"x": 1}, {"x": 2}), ("__annotate_func__", None, 0),
+                      ("__annotations__", {}, {"y": 1})):
+        assert un._normalise({key: a}, {}) != un._normalise({key: b}, {}), key
+
+
+_B1_MUTANTS = [
+    ("a function's lazy annotations read", "        if n == \"__annotations__\" and lazy:\n",
+     "        if False:\n", test_py314_describing_a_site_runs_no_annotation_code),
+    ("a function's lazy annotations read (the future-import shape)", "        if n == \"__annotations__\" and lazy:\n",
+     "        if False:\n", test_py314_describing_a_future_import_site_runs_none_of_its_code),
+    ("a class's annotation attributes read", "        if is_class and n in _LAZY_ANNOTATION:\n",
+     "        if False:\n", test_py314_describing_a_site_leaves_its_vars_unchanged),
+    ("the type-level annotation fields read",
+     'if inspect.isdatadescriptor(v) and n not in names and n != "__dict__" and n not in _LAZY_ANNOTATION:',
+     'if inspect.isdatadescriptor(v) and n not in names and n != "__dict__":',
+     test_py314_describing_a_site_leaves_its_vars_unchanged),
+    ("the read-created keys not normalised", '    return (k == "__annotations_cache__" or (k == "__annotate_func__" and x is None)\n',
+     "    return False and (k == \"__annotations_cache__\" or (k == \"__annotate_func__\" and x is None)\n",
+     test_py314_another_reader_of_the_annotations_is_not_drift),
+    ("the normalisation applied to every mapping", "        ns = any(_read_created(k, v) for k, v in obj.items()) and _is_class_namespace(obj)\n",
+     "        ns = True\n", test_py314_a_census_dict_carrying_an_annotation_key_is_still_compared),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell", _B1_MUTANTS, ids=[m[0] for m in _B1_MUTANTS])
+def test_py314_each_annotation_rule_is_load_bearing(mutant, anchor, replacement, cell, tmp_path, monkeypatch):
+    mut = _r23_mutant(tmp_path, anchor, replacement, "b1m")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    with pytest.raises(AssertionError):
+        cell()
 
 # ---- round 18, N-6: the Site each arm IMPORTED, compared at runtime --------------------------------------------------
 # site_drift reads both censuses in the TRANSFORM's process, so a change to Site made after the class and CONDITIONAL on

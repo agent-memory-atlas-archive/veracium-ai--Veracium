@@ -16,6 +16,16 @@ Spec-Requires: 0003, 0013, 0014, 0018
 
 ---
 
+> **Dependency floor note (2026-09-27, the Python 3.14 floor; not a design change).** D1 set `pydantic>=2.7`
+> because `Field(deprecated=...)` needs it (R5-3), and R6-4 made the floor a REAL CI job pinned at it. That REASON
+> LAPSED AT D2, which removed the D1 warning surface and with it the only `Field(deprecated=...)` in `src/`; the job
+> kept testing 2.7.0 for a reason that no longer existed, and its version assertion had gone with the surface while
+> the workflow comment still claimed it. On the owner's word (Quentin, 2026-09-27: the Python floor raised to 3.14,
+> "raise pydantic to 2.12"), the floor is now `pydantic>=2.12` for a DIFFERENT reason: no `pydantic-core` wheel
+> exists for CPython 3.14 below it (2.7 to 2.11 measured, each refusing on its core). R6-4's RULE stands and is
+> restored whole: the job pins the declared floor, and `tests/test_dependency_floor.py` asserts the installed
+> version equals the floor `pyproject.toml` declares. The four D1 passages below that name 2.7 are annotated in place.
+
 > **Amended by 0020/0021 (same-commit with the coupled acceptance flip,
 > 2026-08-16; external sign-off at review round 14; research's cross-spec
 > sign-off at `veracium-research/proposals/0020-0021-rider-signoff.md` @
@@ -214,7 +224,8 @@ tests every row:**
 | `typing.get_type_hints(Provenance)["source_type"]` | **the D1 annotation binds the private name** (`source_type: _SourceType`, the SAME enum object), so hints resolve to the identical class — no `NameError`; module `__getattr__` cannot intercept annotation resolution through module globals, so this cell CANNOT warn | **no — enumerated in the deprecation notice** |
 
 **The rest of the surface, ruled (R3-1):**
-- **Field access WARNS (R4-3, `pydantic>=2.7` — R5-3):** `Field(deprecated=...)` on
+- **Field access WARNS (R4-3, `pydantic>=2.7` — R5-3; *the surface was removed at D2, and the floor is 2.12 from
+  2026-09-27 for the Python 3.14 floor — see the dependency floor note*):** `Field(deprecated=...)` on
   `Provenance.source_type` — one warning per access, none on
   construction/dump, JSON schema marked. Only MODEL METADATA
   (`model_fields`, `get_type_hints`) remains un-warned, enumerated in the
@@ -406,7 +417,7 @@ byte-stable).
 | invariant | executable check | where it runs |
 |---|---|---|
 | I1 — **trust/recall-decision identity (narrowed by R2-1)**: identical sequences produce identical gates, disclosure routing, and renders before/after D2 — **EXCLUDING receipt identity and replay/conflict classification, which the defined collapse changes** (I7 owns those); the dumps differ exactly by the deleted key | `test_deletion_is_decision_invisible` (projection compare, receipt outcomes excluded) + the standing 0003/0008/0012 suites green | CI |
-| I2 — the COMPLETE D1 surface (R3-1/R4-3/R5-3): the SIX warnable rows each warn (five access paths + field access via `Field(deprecated=...)` under the `pydantic>=2.7` floor); `get_type_hints` resolves to the identical class without `NameError`; only model metadata is un-warned and notice-enumerated; the star-import namespace is byte-identical to pre-D1 (all 42 names); both `dir()` surfaces include the enum; a pickle round-trip emits exactly TWO warnings; **ordinary library import and operation emit ZERO deprecation warnings** (internal comparisons use model dumps — warning-free, reviewer-confirmed — and all internal imports bind the private name) | `test_sourcetype_import_warns_at_d1` (all seven rows) · `test_field_access_warns_at_pinned_floor` (runs in the DEDICATED minimum-dependency CI job — `pydantic==2.7.0` exact — and ASSERTS the installed version so it cannot silently run elsewhere; R6-4) · `test_star_import_namespace_is_byte_identical` · `test_dir_surfaces_include_sourcetype` · `test_pickle_roundtrip_emits_exactly_two_warnings` · `test_ordinary_operation_emits_no_deprecation_warning` | CI |
+| I2 — the COMPLETE D1 surface (R3-1/R4-3/R5-3): the SIX warnable rows each warn (five access paths + field access via `Field(deprecated=...)` under the `pydantic>=2.7` floor — *removed at D2; the floor is 2.12 from 2026-09-27*); `get_type_hints` resolves to the identical class without `NameError`; only model metadata is un-warned and notice-enumerated; the star-import namespace is byte-identical to pre-D1 (all 42 names); both `dir()` surfaces include the enum; a pickle round-trip emits exactly TWO warnings; **ordinary library import and operation emit ZERO deprecation warnings** (internal comparisons use model dumps — warning-free, reviewer-confirmed — and all internal imports bind the private name) | `test_sourcetype_import_warns_at_d1` (all seven rows) · `test_field_access_warns_at_pinned_floor` (runs in the DEDICATED minimum-dependency CI job — `pydantic==2.7.0` exact — and ASSERTS the installed version so it cannot silently run elsewhere; R6-4 — *removed at D2 (`a5c6d82`); the floor's version assertion is restored in `tests/test_dependency_floor.py`, pinned at 2.12.0 from 2026-09-27*) · `test_star_import_namespace_is_byte_identical` · `test_dir_surfaces_include_sourcetype` · `test_pickle_roundtrip_emits_exactly_two_warnings` · `test_ordinary_operation_emits_no_deprecation_warning` | CI |
 | I3 — old exports import with the key dropped; every other field preserved | `test_old_export_source_type_is_dropped` | CI |
 | I4 — FORMAT 6 refused by the v5 version gate before validation | `test_format_6_refused_by_version_gate` | CI |
 | I5 — the receipt era rule, ONE contract (R5-1/R6-3): a version<3 receipt refuses UNCONDITIONALLY ON SIGHT at both phases — no digest computed, no comparison branch (the adversarial regression replaces the digest functions with exploding sentinels over all three legal pre-v3 states, {(NULL,1,NULL), (NULL,2,json), (digest,2,json)}, at BOTH phases); a version-3 receipt follows the ordinary 0014 contract; the closed set {1,2,3} is validated on every read and write | `test_pre_d2_receipt_refuses_on_sight_phase_1` + `test_pre_d2_receipt_refuses_on_sight_phase_2` · `test_v3_receipts_follow_the_ordinary_contract` · the extended 0014 oracle test | CI |
@@ -464,8 +475,8 @@ byte-stable).
 | `src/veracium/cli.py` + `tests/test_migrate_cli.py` | D2 | **moved to 0018** — the CLI acquisition flow, exit codes, and the frozen-delegation amendment are 0018's carriers |
 | `src/veracium/portability.py` | D2 | `FORMAT_VERSION` 6; import drop rule |
 | `src/veracium/lifecycle.py` | **D1** (`_SourceType` binding) + D2 (construction site removed; `test_lifecycle.py:324` reshaped) |
-| `pyproject.toml` | **D1** | `pydantic>=2.7` (the `Field(deprecated=…)` floor — R5-3) |
-| `.github/workflows/test.yml` | **D1** | a REAL minimum-dependency job (`pydantic==2.7.0`) beside the latest job (R6-4) |
+| `pyproject.toml` | **D1** | `pydantic>=2.7` (the `Field(deprecated=…)` floor — R5-3) *— `pydantic>=2.12` from 2026-09-27, for the 3.14 wheel; see the dependency floor note* |
+| `.github/workflows/test.yml` | **D1** | a REAL minimum-dependency job (`pydantic==2.7.0`) beside the latest job (R6-4) *— pinned at `2.12.0` from 2026-09-27, with its version assertion restored* |
 | `specs/0007-store-schema-versioning.md` (accepted) | D2, same commit | the same-shape rule amendment block below (R6-2) |
 | `specs/0013-store-migrations.md` (accepted) + `specs/migrations_0013.py` + the migration tests + the outcome vocabulary + the terminal-state map + the pre-send gates | D2, same commit | the `unsupported-base` vocabulary amendment (R9-1 preflight form); the exhaustive outcome tests extend over the member with the zero-audit-rows assertion; NO terminal-state row is added (the preflight never reaches terminal facts) |
 | `specs/schema_evidence.py` + `specs/schema_model.py` + their tests | D2 | the same-shape resolver/HEAD-probe update (R6-2) |
