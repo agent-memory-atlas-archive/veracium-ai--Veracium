@@ -3708,8 +3708,14 @@ def test_py314_each_annotation_rule_is_load_bearing(mutant, anchor, replacement,
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
     # round 28's guard stops census code before its first line and REFUSES the Site: without the rule the Site is either
     # described by running its code (the cell's assertion) or refused (the guard) — never described without running it
-    with pytest.raises((AssertionError, mut.SiteUndescribed)):
+    try:
         cell()
+    except AssertionError:
+        pass
+    except mut.SiteUndescribed as e:
+        assert "would run code the describer did not write" in str(e), f"{mutant}: refused, but not by the guard: {e}"
+    else:
+        pytest.fail(f"{mutant}: the cell passed")
 
 # ---- round 18, N-6: the Site each arm IMPORTED, compared at runtime --------------------------------------------------
 # site_drift reads both censuses in the TRANSFORM's process, so a change to Site made after the class and CONDITIONAL on
@@ -4254,8 +4260,14 @@ def test_r25_the_lazy_value_rule_is_load_bearing(tmp_path, monkeypatch):
     mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", *_R25_READ_MUTANT, "readlazy")
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
     for label, body, holder, evaluator in _R25_LAZY:
-        with pytest.raises((AssertionError, mut.SiteUndescribed)):   # run, or refused by round 28's guard
+        try:   # run (the cell's assertion), or refused by round 28's guard — by the guard's own message, nothing else
             test_r25_describing_lazy_type_metadata_runs_no_census_code(label, body, holder, evaluator)
+        except AssertionError:
+            continue
+        except mut.SiteUndescribed as e:
+            assert "would run code the describer did not write" in str(e), (label, str(e))
+            continue
+        pytest.fail(f"{label}: the cell passed under the read mutant")
 
 
 # ---- round 25, found by the R24-2 cells: a WRAPPER's annotations, and objects made during a description ---------------
@@ -5223,6 +5235,50 @@ def test_r28_unrelated_garbage_cannot_land_inside_the_guarded_window():
     assert first == second
 
 
+_R28_TWO_ENTRIES = ("CALLS = []\n\nclass Getter:\n    def __call__(self, obj):\n        return 1\n    @property\n"
+                    "    def __isabstractmethod__(self):\n        CALLS.append('__isabstractmethod__')\n        return False\n\n"
+                    "class Site:\n    a = property(Getter())\n    b = property(Getter())\n"
+                    "    def fire(self, value):\n        return len(CALLS)\n")
+
+
+@pytest.mark.parametrize("route", ["site_description", "_site_realized"])
+def test_r28_a_second_entry_after_a_refusal_is_stopped_too(route):
+    """The refusal must not be catchable by the describer's own handlers (the second seat's stage-2 B3). Two properties,
+    each of whose C `__isabstractmethod__` getter would call census code: if the first refusal were an Exception, the
+    field loop's `except Exception` would record it as a raising getter, CPython would unset the tracer that raised, and
+    the SECOND entry would run unwatched. As a BaseException it ends the description at the first. Both callers."""
+    un = _load("inv7_uninstrument_r28_two_entries", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r28_module(_R28_TWO_ENTRIES)
+    refusal = un.SiteUndescribed if route == "site_description" else Exception
+    with pytest.raises(refusal, match="would run code the describer did not write"):
+        (un.site_description if route == "site_description" else observer._site_realized)(mod.Site)
+    assert mod.CALLS == [] and mod.Site().fire(0) == 0, f"census code ran after a refusal: {mod.CALLS}"
+
+
+def test_r28_collection_is_paused_inside_the_guarded_window():
+    """Observed, not hoped for (the second seat's stage-2 B1: the garbage cell's kill depended on the heap earlier tests
+    left). A probe compiled under the DESCRIBER's own filename — so the guard lets it run — is reached from inside the
+    window through a property's C `__isabstractmethod__` getter and records gc.isenabled() there: False inside, and
+    collection is on again after."""
+    import gc
+    un = _load("inv7_uninstrument_r28_gc_probe", EVIDENCE / "inv7_uninstrument.py")
+    seen = []
+    ns = {"SEEN": seen, "gc": gc}
+    src = ("class Probe:\n    def __call__(self, obj):\n        return 1\n    @property\n    def __isabstractmethod__(self):\n"
+           "        SEEN.append(gc.isenabled())\n        return False\n")
+    exec(compile(src, un._site_description.__code__.co_filename, "exec", dont_inherit=True), ns)
+
+    class Site:
+        value = property(ns["Probe"]())
+
+        def fire(self, value):
+            return value
+    assert gc.isenabled(), "the test itself must start with collection on"
+    un.site_description(Site)
+    assert seen == [False], f"collection inside the window: {seen}"
+    assert gc.isenabled(), "collection was not resumed"
+
+
 def _r28_cell(fn, *args):
     return lambda: fn(*args)
 
@@ -5231,60 +5287,70 @@ _R28_MUTANTS = [
     ("R27-1: the getattr default restored",
      "        return (_module(v), _qualname(v)) if _immutable(v) else (\"mutable class\", _qualname(v))",
      "        return (v.__module__, v.__qualname__) if _immutable(v) else (\"mutable class\", getattr(v, \"__qualname__\", repr(v)))",
-     _r28_cell(test_r28_describing_an_inherited_base_runs_no_display_code, "m", "display", _R28_INHERITED[0][1], "site_description")),
+     _r28_cell(test_r28_describing_an_inherited_base_runs_no_display_code, "m", "display", _R28_INHERITED[0][1], "site_description"), "refused"),
     ("a C field read through getattr",
      "            return d.__get__(obj, tp)\n", "            return getattr(obj, name)\n",
-     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[2][1], "site_description")),
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[2][1], "site_description"), "refused"),
     ("a Python descriptor called",
      "        return default\n    return _PYTHON_DESCRIPTOR\n", "        return default\n    return getattr(obj, name)\n",
-     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[0][1], "site_description")),
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[0][1], "site_description"), "refused"),
     ("a class named through its metaclass",
      "    return _TYPE_QUALNAME.__get__(tp)\n", "    return tp.__qualname__\n",
-     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[3][1], "site_description")),
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[3][1], "site_description"), "refused"),
     ("a descriptor's qualname read through its getter",
      "    return _qualname(target) + \".\" + name\n", "    return _read(obj, tp, \"__qualname__\")\n",
-     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[3][1], "site_description")),
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[3][1], "site_description"), "refused"),
     ("the data-descriptor test through inspect",
      "    return _has_static(tp, \"__set__\") or _has_static(tp, \"__delete__\")\n",
      "    import inspect\n    return inspect.isdatadescriptor(d)\n",
-     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[4][1], "site_description")),
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[4][1], "site_description"), "refused"),
     ("the guard never installed",
      "    sys.settrace(guard)\n", "    pass\n",
-     _r28_cell(test_r28_a_c_getter_that_would_run_census_code_is_refused_before_it_runs, "site_description")),
+     _r28_cell(test_r28_a_c_getter_that_would_run_census_code_is_refused_before_it_runs, "site_description"), (AssertionError, "__isabstractmethod__")),
     ("the guard's liveness not checked",
      "        alive = sys.gettrace() is guard\n", "        alive = True\n",
-     None),
+     None, (pytest.fail.Exception, "DID NOT RAISE")),
+    ("the refusal catchable as an Exception (the second seat's S3)",
+     "class _ForeignFrame(BaseException):\n", "class _ForeignFrame(Exception):\n",
+     _r28_cell(test_r28_a_second_entry_after_a_refusal_is_stopped_too, "site_description"), (AssertionError, "census code ran after a refusal")),
     ("collection not paused",
      "    gc.disable()\n    sys.settrace(guard)\n", "    sys.settrace(guard)\n",
-     test_r28_unrelated_garbage_cannot_land_inside_the_guarded_window),
+     test_r28_collection_is_paused_inside_the_guarded_window, (AssertionError, "collection inside the window")),
     ("StringIO's newline not read",
      "        io.StringIO: stream(io.StringIO, lambda obj: (\"newline\", repr(io.StringIO.__getstate__(obj)[1]))),\n",
      "        io.StringIO: stream(io.StringIO),\n",
-     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[0][:4], "site_description")),
+     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[0][:4], "site_description"), (AssertionError, "reads as no drift")),
     ("the export bit dropped",
      "        return (\"exported\", any(type(r) in by for r in gc.get_referrers(obj)))\n", "        return (\"exported\", False)\n",
-     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[2][:4], "site_description")),
+     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[2][:4], "site_description"), (AssertionError, "reads as no drift")),
     ("PickleBuffer not counted as an exporter",
      "(managed[0], pickle.PickleBuffer)", "(managed[0],)",
-     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[3][:4], "site_description")),
+     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[3][:4], "site_description"), (AssertionError, "reads as no drift")),
     ("the export bit dropped (the oracle alone)",
      "        return (\"exported\", any(type(r) in by for r in gc.get_referrers(obj)))\n", "        return (\"exported\", False)\n",
-     test_r28_every_reader_state_channel_is_drift),
+     test_r28_every_reader_state_channel_is_drift, (AssertionError, "read as no drift")),
     ("StringIO's newline not read (the oracle alone)",
      "        io.StringIO: stream(io.StringIO, lambda obj: (\"newline\", repr(io.StringIO.__getstate__(obj)[1]))),\n",
      "        io.StringIO: stream(io.StringIO),\n",
-     test_r28_every_reader_state_channel_is_drift),
+     test_r28_every_reader_state_channel_is_drift, (AssertionError, "read as no drift")),
     ("a raising getter escapes as a crash",
      "        except Exception as e:\n", "        except ZeroDivisionError as e:\n",
-     test_r28_every_reader_state_channel_is_drift),
+     test_r28_every_reader_state_channel_is_drift, (ValueError, "closed file")),
 ]
 
 
-@pytest.mark.parametrize("mutant,anchor,replacement,cell", _R28_MUTANTS, ids=[m[0] for m in _R28_MUTANTS])
-def test_r28_each_rule_is_load_bearing(mutant, anchor, replacement, cell, tmp_path, monkeypatch):
+_R28_GUARD_REFUSAL = "would run code the describer did not write"
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell,expected", _R28_MUTANTS, ids=[m[0] for m in _R28_MUTANTS])
+def test_r28_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
+    """Each mutant must fail its cell THE WAY IT IS NAMED FOR (the second seat's stage-2 B2): a refusal by the guard
+    carrying the guard's own message, or the cell's own assertion — never any exception, which an import error in the
+    mutated module would also satisfy."""
     mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r28m")
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
     if cell is None:   # the liveness check: a monkeypatch cell needs the mutated module's own attribute
         cell = lambda: test_r28_a_description_the_guard_did_not_watch_to_the_end_is_refused(monkeypatch)
-    with pytest.raises(BaseException):
+    exc, pattern = (mut.SiteUndescribed, _R28_GUARD_REFUSAL) if expected == "refused" else expected
+    with pytest.raises(exc, match=re.escape(pattern)):
         cell()
