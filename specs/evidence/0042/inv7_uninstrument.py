@@ -204,7 +204,7 @@ def _is_class_namespace(m) -> bool:
     d = m if type(m) is dict else next((x for x in gc.get_referents(m) if type(x) is dict), None)
     if d is None:
         return False
-    return any(isinstance(r, type) and any(x is d for x in gc.get_referents(type.__dict__["__dict__"].__get__(r)))
+    return any(issubclass(type(r), type) and any(x is d for x in gc.get_referents(type.__dict__["__dict__"].__get__(r)))
                for r in gc.get_referrers(d))
 
 
@@ -251,14 +251,19 @@ def _lazy_values(obj, descriptors) -> dict:
             value = "__" + n[len("evaluate_"):] + "__"
             if value not in descriptors:
                 continue
-            ev = getattr(obj, n, None)
+            ev = _read(obj, type(obj), n, None)
             if ev is None or type(ev) is _CONST_EVALUATOR:
                 continue
-            if isinstance(ev, types.FunctionType):
+            if issubclass(type(ev), types.FunctionType):
                 out[value] = n
                 continue
-            raise SiteUndescribed(f"{type(obj).__qualname__}.{value}: its evaluator `{n}` is a "
-                                  f"{type(ev).__module__}.{type(ev).__qualname__} — neither a function (a lazy value, "
+            if ev is _PYTHON_DESCRIPTOR:
+                # ROUND 28: an evaluator served by Python code (a property) is never called to find out which it is
+                raise SiteUndescribed(f"{_qualname(type(obj))}.{value}: its evaluator `{n}` is served by a Python "
+                                      f"descriptor, which the description never calls — so whether the value is lazy or "
+                                      f"eager cannot be known without running it, and it is refused")
+            raise SiteUndescribed(f"{_qualname(type(obj))}.{value}: its evaluator `{n}` is a "
+                                  f"{_module(type(ev))}.{_qualname(type(ev))} — neither a function (a lazy value, "
                                   f"described by its code) nor the constant evaluator (an eager value, read), so the "
                                   f"value cannot be described faithfully without calling it")
     return out
@@ -274,10 +279,11 @@ def _wrapper_vars(obj) -> dict:
     REFERENTS, so the check evaluates nothing (measured on 3.14.7: derived, referenced; assigned, not — for
     classmethod and staticmethod, annotated and bare)."""
     import gc
-    ns, func = vars(obj), obj.__func__
+    tp = type(obj)
+    ns, func = _read(obj, tp, "__dict__"), _read(obj, tp, "__func__")
     out = {}
     for k, x in ns.items():
-        if k == "__annotate__" and x is getattr(func, "__annotate__", None):
+        if k == "__annotate__" and x is _read(func, type(func), "__annotate__", None):
             continue
         if k == "__annotations__" and any(r is x for r in gc.get_referents(func)):
             continue
@@ -287,7 +293,7 @@ def _wrapper_vars(obj) -> dict:
 
 def _class_vars(cls) -> dict:
     """vars(cls) without its location and without the keys a read creates (_read_created)."""
-    ns = vars(cls)
+    ns = _tdict(cls)
     return {k: x for k, x in ns.items() if k not in _CLASS_LOCATION and not _read_created(k, x, ns)}
 
 
@@ -297,21 +303,122 @@ _CACHE_BIT = 1 << 19      # Py_TPFLAGS_VALID_VERSION_TAG (CPython's Include/obje
 # compared by name: it is the interpreter's own, the same object on both sides.
 
 
+_ADDRESS = __import__("re").compile(r" at 0x[0-9a-fA-F]+")   # compiled once: `.sub` is C, `re.sub` enters Python frames
+
+
 def _addressless(text: str) -> str:
     """A repr with its memory address removed: two builds of one class give two addresses for the same object (a lock, a
     function's default object), and an address is WHERE, never WHAT — without this the fallback would read the same
     definition as drift, loudly (the second seat's round-17 stage-2 note, N-8). An address printed in any OTHER format
     still reads as drift (over-refusal, loud)."""
-    import re
-    return re.sub(r" at 0x[0-9a-fA-F]+", " at 0x…", text)
+    return _ADDRESS.sub(" at 0x…", text)
+
+
+# ROUND 28 (the round-27 verdict's R27-1, and its class): THE DESCRIBER PERFORMS NO ATTRIBUTE LOOKUP ON WHAT IT DESCRIBES.
+# An attribute lookup is code the described object chooses: `getattr(obj, n)` enters type(obj).__getattribute__ before
+# any descriptor is consulted, a Python data descriptor's getter is census code, and on a CLASS every `cls.x` — `vars(cls)`,
+# `cls.__mro__`, `cls.__qualname__` — dispatches through its METACLASS. Measured at the round-27 pin (the second seat's
+# stage-1 read and dev's sweep): a base whose metaclass defines __repr__ ran through a getattr DEFAULT (the finding), and
+# a @property on a held instance or a metaclass, a __getattribute__ on an instance's class, on Site's metaclass or on a
+# held class's metaclass each ran census code during description. So a TYPE is read only through `type`'s own getsets
+# (`type.__dict__[name].__get__(cls)`), and an INSTANCE only through the C descriptor found statically along its type's
+# MRO, called directly (`d.__get__(obj, tp)`); a Python data descriptor is never called — its definition is described
+# with its type, and the instance state it would compute from is described where it lives (__dict__, slots).
+_TYPE_DICT = type.__dict__["__dict__"]
+_TYPE_MRO = type.__dict__["__mro__"]
+_TYPE_QUALNAME = type.__dict__["__qualname__"]
+_TYPE_NAME = type.__dict__["__name__"]
+_TYPE_MODULE = type.__dict__["__module__"]
+_TYPE_BASE = type.__dict__["__base__"]
+_TYPE_BASICSIZE = type.__dict__["__basicsize__"]
+_PYTHON_DESCRIPTOR = ("<python descriptor: never called; described with its type>",)
+
+
+def _mro(tp: type) -> tuple:
+    return _TYPE_MRO.__get__(tp)
+
+
+def _tdict(tp: type):
+    return _TYPE_DICT.__get__(tp)
+
+
+def _qualname(tp: type) -> str:
+    return _TYPE_QUALNAME.__get__(tp)
+
+
+def _module(tp: type) -> str:
+    return _TYPE_MODULE.__get__(tp)
+
+
+def _static(tp: type, name: str):
+    """The attribute `name` as `tp`'s MRO defines it, found without dispatch; None when absent."""
+    for k in _mro(tp):
+        d = _tdict(k)
+        if name in d:
+            return d[name]
+    return None
+
+
+def _derived_qualname(obj, tp: type):
+    """The `__qualname__` of a C descriptor, method-wrapper or builtin method WITHOUT its getter's lookup. CPython computes
+    it as `PyObject_GetAttr(<type>, "__qualname__") + "." + __name__` — a lookup through that type's METACLASS, which runs a
+    Python `__getattribute__` defined there (found by the round-28 cells: Site's metaclass entered twice, through the
+    `__dict__` and `__weakref__` getsets its vars hold). Where the metaclass is immutable no Python code can be reached and
+    the getter is called as before, so the carried descriptions do not move; otherwise the same string is formed here
+    from type's own `__qualname__` getset — the value the getter returns whenever the metaclass does not interfere."""
+    import types
+    name = _read(obj, tp, "__name__")
+    if issubclass(tp, types.BuiltinFunctionType):
+        s = _read(obj, tp, "__self__")
+        if s is None or issubclass(type(s), types.ModuleType):
+            return _read(obj, tp, "__qualname__")
+        target = s if issubclass(type(s), type) else type(s)
+    else:
+        target = _read(obj, tp, "__objclass__")
+    if _immutable(type(target)):
+        return _read(obj, tp, "__qualname__")
+    return _qualname(target) + "." + name
+
+
+def _read(obj, tp: type, name: str, default=AttributeError):
+    """`obj`'s field `name` through the C descriptor that defines it, called directly — never getattr. A Python data
+    descriptor is not called: `_PYTHON_DESCRIPTOR`. An unset slot raises AttributeError unless a default is given."""
+    import types
+    d = _static(tp, name)
+    if issubclass(type(d), (types.MemberDescriptorType, types.GetSetDescriptorType)):
+        try:
+            return d.__get__(obj, tp)
+        except AttributeError:
+            if default is AttributeError:
+                raise
+            return default
+    if d is None:
+        if default is AttributeError:
+            raise AttributeError(name)
+        return default
+    return _PYTHON_DESCRIPTOR
+
+
+def _has_static(tp: type, name: str) -> bool:
+    return any(name in _tdict(k) for k in _mro(tp))
+
+
+def _is_data_descriptor(d) -> bool:
+    """inspect.isdatadescriptor without its lookups: it asks `hasattr(type(d), "__set__")`, which dispatches through
+    type(d)'s METACLASS, and isclass/ismethod/isfunction, whose isinstance falls back to `d.__class__`. Here the type's MRO
+    dictionaries are read directly — which is also what the descriptor protocol itself consults (_PyType_Lookup)."""
+    import types
+    tp = type(d)
+    if issubclass(tp, (type, types.MethodType, types.FunctionType)):
+        return False
+    return _has_static(tp, "__set__") or _has_static(tp, "__delete__")
 
 
 def _data_descriptors(tp: type) -> list:
-    import inspect
     names = []
-    for k in tp.__mro__:
-        for n, d in vars(k).items():
-            if n not in names and n != "__class__" and inspect.isdatadescriptor(d):
+    for k in _mro(tp):
+        for n, d in _tdict(k).items():
+            if n not in names and n != "__class__" and _is_data_descriptor(d):
                 names.append(n)
     return names
 
@@ -336,21 +443,21 @@ def _immutable(tp: type) -> bool:
 
 def _builtin(tp: type, names: frozenset) -> bool:
     """IS `tp` the built-in of that name — by the immutable flag (unforgeable) and the name it then cannot fake."""
-    return _immutable(tp) and tp.__module__ == "builtins" and tp.__qualname__ in names
+    return _immutable(tp) and _module(tp) == "builtins" and _qualname(tp) in names
 
 
 def _base_content(obj, tp: type, seen: dict):
     """An instance of a MUTABLE subclass of a built-in scalar or container: its content read through the IMMUTABLE BASE's
     own methods (tuple.__iter__, dict.items, str.__repr__), never the subclass's, which may override them."""
-    for b in tp.__mro__[1:]:
+    for b in _mro(tp)[1:]:
         if _builtin(b, _SEQUENCES):
-            return (b.__qualname__, tuple(_normalise(x, seen) for x in b.__iter__(obj)))
+            return (_qualname(b), tuple(_normalise(x, seen) for x in b.__iter__(obj)))
         if _builtin(b, _SETS):
-            return (b.__qualname__, tuple(sorted(repr(_normalise(x, seen)) for x in b.__iter__(obj))))
+            return (_qualname(b), tuple(sorted(repr(_normalise(x, seen)) for x in b.__iter__(obj))))
         if _builtin(b, _MAPPINGS):
-            return (b.__qualname__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in b.items(obj)))
+            return (_qualname(b), tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in b.items(obj)))
         if _builtin(b, _SCALARS):
-            return (b.__qualname__, b.__repr__(obj))
+            return (_qualname(b), b.__repr__(obj))
     return None
 
 
@@ -365,7 +472,7 @@ def _normalise(obj, seen: dict) -> tuple:
     described object is HELD in `seen` until the description ends, so a position never names a freed address."""
     tp = type(obj)
     if _builtin(tp, _SCALARS):
-        return (tp.__qualname__, repr(obj))
+        return (_qualname(tp), repr(obj))
     if id(obj) in seen:
         ref = seen[id(obj)]
         return ("<ref>", ref[0] if type(ref) is tuple else ref)
@@ -375,40 +482,40 @@ def _normalise(obj, seen: dict) -> tuple:
     # generic Site describing differently the second time (round 25's R24-2 cell). Positions are unchanged.
     seen[id(obj)] = (len(seen), obj)
     if issubclass(tp, type) and _immutable(obj):
-        return ("immutable-type", obj.__module__, obj.__qualname__)
+        return ("immutable-type", _module(obj), _qualname(obj))
     if _builtin(tp, _SEQUENCES):
-        return (tp.__qualname__, tuple(_normalise(x, seen) for x in obj))
+        return (_qualname(tp), tuple(_normalise(x, seen) for x in obj))
     if _builtin(tp, _SETS):
-        return (tp.__qualname__, tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
+        return (_qualname(tp), tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
     if _builtin(tp, _MAPPINGS):
         ns = any(_read_created(k, v, obj) for k, v in obj.items()) and _is_class_namespace(obj)
-        return (tp.__qualname__, tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()
+        return (_qualname(tp), tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()
                                        if not (ns and _read_created(k, v, obj))))
     if _builtin(tp, frozenset({"code"})):
         fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
         return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
-    identity = ("immutable-type", tp.__module__, tp.__qualname__) if _immutable(tp) else ("class", _normalise(tp, seen))
+    identity = ("immutable-type", _module(tp), _qualname(tp)) if _immutable(tp) else ("class", _normalise(tp, seen))
     fields = []
     is_class = issubclass(tp, type)
     descriptors = _data_descriptors(tp)
     # ROUND 27, FAIL-CLOSED, DECIDED FROM THE TYPE BEFORE ANY READ (the second seat's stage-2 mark): an object whose C state
     # the description is not shown to read is refused before one of its fields is touched — a module's `__annotate__`
     # read WRITES into it (round 25's A5), and a refusal that came after the reads would already have done that.
-    reader = next((r for r in tp.__mro__ if r in _READERS), None)
+    reader = next((r for r in _mro(tp) if r in _READERS), None)
     base_read = None if (_immutable(tp) or reader is not None) else next(
-        (b for b in tp.__mro__[1:] if _builtin(b, _SCALARS | _SEQUENCES | _SETS | _MAPPINGS)), None)
+        (b for b in _mro(tp)[1:] if _builtin(b, _SCALARS | _SEQUENCES | _SETS | _MAPPINGS)), None)
     leaf = not reader and base_read is None and not [n for n in descriptors if n not in _NAMESPACE_REFS]
     if not leaf:
-        covered = set(_ALLOW_FIELDS) | (set(reader.__mro__) if reader else set()) | (set(base_read.__mro__) if base_read else set())
+        covered = set(_ALLOW_FIELDS) | (set(_mro(reader)) if reader else set()) | (set(_mro(base_read)) if base_read else set())
         hidden = [b for b in _hidden_c_bases(tp) if b not in covered]
         if hidden:
-            raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from {hidden[0].__module__}.{hidden[0].__qualname__}, "
+            raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} derives from {_module(hidden[0])}.{_qualname(hidden[0])}, "
                                   f"a C type holding instance storage that neither its fields nor any reader the description "
                                   f"trusts exposes in full: it cannot be described faithfully and is refused before any of it "
                                   f"is read (round 27, fail-closed)")
     wrapper = not is_class and _WRAPPER <= set(descriptors)
     lazy = (not is_class and not wrapper and "__annotate__" in descriptors
-            and getattr(obj, "__annotate__", None) is not None)
+            and _read(obj, tp, "__annotate__", None) is not None)
     lazy_values = _lazy_values(obj, descriptors)
     for n in descriptors:
         if n in _NAMESPACE_REFS:
@@ -430,15 +537,24 @@ def _normalise(obj, seen: dict) -> tuple:
             fields.append((n, _normalise(_class_vars(obj), seen)))
             continue
         try:
-            v = getattr(obj, n)
+            v = _derived_qualname(obj, tp) if n == "__qualname__" and tp in _COMPUTED_QUALNAME else _read(obj, tp, n)
         except AttributeError:
             fields.append((n, ("<unset>",)))
             continue
-        if n == "__flags__" and isinstance(v, int):
+        except Exception as e:
+            # ROUND 28: a C getter that RAISES is a state, recorded by the exception's type — a closed StringIO's
+            # `newlines` raises ValueError. Before, it escaped the describer as a crash (found by the round-28 oracle's
+            # closed-stream instances; present at the round-27 pin). _ForeignFrame is a BaseException and passes.
+            fields.append((n, ("<raises>", _module(type(e)), _qualname(type(e)))))
+            continue
+        if v is _PYTHON_DESCRIPTOR:
+            fields.append((n, _PYTHON_DESCRIPTOR))
+            continue
+        if n == "__flags__" and issubclass(type(v), int):
             v = v & ~_CACHE_BIT
         fields.append((n, _normalise(v, seen)))
     if reader is not None:
-        content = (reader.__qualname__, _READERS[reader](obj, seen))
+        content = (_qualname(reader), _READERS[reader](obj, seen))
     else:
         content = None if _immutable(tp) else _base_content(obj, tp, seen)
     if not fields and content is None:
@@ -450,8 +566,8 @@ def _exposed(b: type) -> int:
     """The bytes of instance storage `b` itself exposes through its own __dict__: 8 per member descriptor (a slot), and
     8 each for a `__dict__` or `__weakref__` descriptor. Exact for every Python-defined class, measured on 3.14.7."""
     import types
-    v = vars(b)
-    return (8 * sum(isinstance(x, types.MemberDescriptorType) for x in v.values())
+    v = _tdict(b)
+    return (8 * sum(issubclass(type(x), types.MemberDescriptorType) for x in v.values())
             + (8 if "__dict__" in v else 0) + (8 if "__weakref__" in v else 0))
 
 
@@ -464,11 +580,11 @@ def _hidden_c_bases(tp: type) -> list:
     EQUAL (no field at all), and deque, defaultdict, array, StringIO, BytesIO and a sha256 hash (a field or two, the
     state elsewhere) — each silent at every pin back to the accepted round 23."""
     out = []
-    for b in tp.__mro__:
-        base = b.__base__
+    for b in _mro(tp):
+        base = _TYPE_BASE.__get__(b)
         if b is object or base is None:
             continue
-        if b.__basicsize__ - base.__basicsize__ > _exposed(b):
+        if _TYPE_BASICSIZE.__get__(b) - _TYPE_BASICSIZE.__get__(base) > _exposed(b):
             out.append(b)
     return out
 
@@ -479,10 +595,10 @@ def _repr_reads(tp: type, hidden: list) -> bool:
     constant. With no hidden base there is nothing hidden to show."""
     if not hidden:
         return True
-    import inspect, types
-    found = inspect.getattr_static(tp, "__repr__")
-    owner = getattr(found, "__objclass__", None) if isinstance(found, types.WrapperDescriptorType) else None
-    return owner is not None and isinstance(owner, type) and issubclass(owner, hidden[0])
+    import types
+    found = _static(tp, "__repr__")
+    owner = getattr(found, "__objclass__", None) if issubclass(type(found), types.WrapperDescriptorType) else None
+    return owner is not None and issubclass(type(owner), type) and issubclass(owner, hidden[0])
 
 
 def _allowlists():
@@ -504,8 +620,25 @@ def _allowlists():
         `test_r27_a_python_subclass_of_a_stateful_c_type_is_read_by_its_c_repr_or_refused`.
       _READERS — read through the base type's OWN C methods, never an override, dispatching no Python code
         (`test_r27_a_reader_type_s_state_change_is_drift`): deque (its items), defaultdict (dict.items; default_factory is
-        a field), array (tolist; typecode is a field), StringIO and BytesIO (getvalue and tell, or closed)."""
-    import _thread, array, collections, io, itertools, types
+        a field), array (tolist; typecode is a field), StringIO and BytesIO (getvalue and tell, or closed).
+        ROUND 28 (the round-27 verdict's R27-2): content is not the whole state a reader's type holds. Each reader now
+        describes EVERY state channel its type has, and the cell `test_r28_every_reader_state_channel_is_drift` changes
+        each one alone: its pickle state (`__getstate__`, which is what the type itself says reconstructs it), its C
+        getsets and members (read as fields, as before), and — for a type that EXPORTS its buffer — whether an export is
+        outstanding, which turns a resize into BufferError:
+          StringIO — getvalue and tell, plus the NEWLINE setting from `io.StringIO.__getstate__` (value, newline, pos,
+            dict): newline='\n' and newline='\r\n' hold the same text and write different bytes; the decoder's seen-newline
+            record is the `newlines` getset, a field;
+          BytesIO — getvalue and tell, plus the export bit: `getbuffer()` always goes through an `_io._BytesIOBuffer`, a
+            gc-tracked object referring to the stream, so an outstanding view is a referrer of that exact type — the
+            BytesIO has no buffer protocol of its own, so there is no other way to export it;
+          array — tolist, plus the export bit: every Python-level export found holds the array from a gc-tracked object
+            of an exact type — `memoryview` through its `managedbuffer` (ctypes' from_buffer and a sliced view included),
+            `pickle.PickleBuffer` directly.
+        The exporter types are taken BY IDENTITY from the running interpreter, never by name, and a referrer is matched by
+        `type(r) is`, never isinstance. NAMED LIMIT: an array exported by a C extension that holds a raw Py_buffer
+        outside those objects has no Python-visible referrer, and its export is not seen."""
+    import _thread, array, collections, gc, io, itertools, pickle, types
     import typing
     fields = frozenset({
         types.GetSetDescriptorType, types.MemberDescriptorType, types.WrapperDescriptorType, types.MethodDescriptorType,
@@ -518,24 +651,44 @@ def _allowlists():
     def items(it, seen):
         return tuple(_normalise(x, seen) for x in it)
 
-    def stream(cls):
+    probe = io.BytesIO()
+    view = probe.getbuffer()
+    bytesio_buffer = [type(r) for r in gc.get_referrers(probe) if type(r) is not dict and type(r) is not list
+                      and type(r).__module__ == "_io"]
+    view.release()
+    managed = [type(r) for r in gc.get_referents(memoryview(b"")) if type(r) is not bytes]
+    assert len(bytesio_buffer) == 1 and len(managed) == 1, ("the buffer exporters are not where round 28 measured them on "
+                                                            "this interpreter", bytesio_buffer, managed)
+    exporters = {io.BytesIO: (bytesio_buffer[0],), array.array: (managed[0], pickle.PickleBuffer)}
+
+    def exported(obj, by):
+        return ("exported", any(type(r) in by for r in gc.get_referrers(obj)))
+
+    def stream(cls, *extra):
         def read(obj, seen):
             try:
-                return (_normalise(cls.getvalue(obj), seen), _normalise(cls.tell(obj), seen))
+                return (_normalise(cls.getvalue(obj), seen), _normalise(cls.tell(obj), seen)) + tuple(f(obj) for f in extra)
             except ValueError:
                 return ("<closed>",)
         return read
     readers = {
         collections.deque: lambda obj, seen: items(collections.deque.__iter__(obj), seen),
         collections.defaultdict: lambda obj, seen: tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in dict.items(obj)),
-        array.array: lambda obj, seen: items(array.array.tolist(obj), seen),
-        io.StringIO: stream(io.StringIO),
-        io.BytesIO: stream(io.BytesIO),
+        array.array: lambda obj, seen: (items(array.array.tolist(obj), seen), exported(obj, exporters[array.array])),
+        io.StringIO: stream(io.StringIO, lambda obj: ("newline", repr(io.StringIO.__getstate__(obj)[1]))),
+        io.BytesIO: stream(io.BytesIO, lambda obj: exported(obj, exporters[io.BytesIO])),
     }
     return fields, by_repr, readers
 
 
 _ALLOW_FIELDS, _ALLOW_REPR, _READERS = _allowlists()
+# the types whose `__qualname__` getter performs a lookup of its own (Objects/descrobject.c calculate_qualname and
+# wrapper_qualname; Objects/methodobject.c meth_get__qualname__), read through _derived_qualname
+_COMPUTED_QUALNAME = frozenset({
+    __import__("types").GetSetDescriptorType, __import__("types").MemberDescriptorType,
+    __import__("types").WrapperDescriptorType, __import__("types").MethodDescriptorType,
+    __import__("types").ClassMethodDescriptorType, __import__("types").MethodWrapperType,
+    __import__("types").BuiltinFunctionType})
 
 
 def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
@@ -555,7 +708,7 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
       a MUTABLE type WITH a C base (the second seat's `class S(itertools.count): __slots__ = ()`, where S(5) and S(7)
         behave differently): the C base can hold state that is NOT a Python object — measured, `count` keeps its counter
         as a C integer, and gc.get_referents(S(5)) and gc.get_referents(S(7)) are both [S, 1] — so referents cannot see
-        it. Its address-free repr is used only if the `__repr__` found STATICALLY (inspect.getattr_static, which runs no
+        it. Its address-free repr is used only if the `__repr__` found STATICALLY (in the MRO's own dictionaries, which runs no
         descriptor) is a C repr SLOT of a type in its own MRO — never any other callable — and its referents are all scalars — `count`'s repr
         reads S(5) against S(7); otherwise it is REFUSED;
       anything else — an immutable type holding a referent that is not a scalar — is REFUSED by name, never drift.
@@ -571,27 +724,27 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
     hidden = _hidden_c_bases(tp)
     unread = [b for b in hidden if b not in _ALLOW_REPR]
     if unread:
-        raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from {unread[0].__module__}.{unread[0].__qualname__}, "
+        raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} derives from {_module(unread[0])}.{_qualname(unread[0])}, "
                               f"a C type holding instance storage no field exposes and whose repr the description does not "
                               f"trust to show it: it cannot be described faithfully and is refused (round 27, fail-closed)")
     if _immutable(tp):
         if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, hidden):
             return (identity, _addressless(repr(obj)))
-        raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} holds {len(refs)} non-scalar referent(s) and has no field "
+        raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} holds {len(refs)} non-scalar referent(s) and has no field "
                               f"to read them through: its only description is its repr, which may run the held objects' display "
                               f"code, so it is refused rather than described")
-    if not hidden and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:
+    if not hidden and not [b for b in _mro(tp) if b is not object and _immutable(b)]:
         return (identity, ("referents", tuple(_normalise(r, seen) for r in refs)))
-    import inspect, types
-    found = inspect.getattr_static(tp, "__repr__")
+    import types
+    found = _static(tp, "__repr__")
     # ONLY a C type's own repr SLOT, from a type this object IS — a slot wrapper whose __objclass__ is in its MRO. Not any C
     # callable: a builtin or a partial or a methodcaller assigned as __repr__ can call back into Python, and another
     # type's slot does not format this object's state (the second seat's stage-1 probe, tightened by dev before commit).
-    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, "__objclass__", None) in tp.__mro__ \
+    c_slot = issubclass(type(found), types.WrapperDescriptorType) and getattr(found, "__objclass__", None) in _mro(tp) \
         and _repr_reads(tp, hidden)
     if c_slot and all(_builtin(type(r), _SCALARS) for r in refs):
         return (identity, _addressless(repr(obj)))
-    raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from a C type that can hold state no referent shows, "
+    raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} derives from a C type that can hold state no referent shows, "
                           f"and its repr is {'formatted from non-scalar referents' if c_slot else 'not its C base own repr slot'}: "
                           f"it cannot be described faithfully without executing it, so it is refused")
 
@@ -621,33 +774,39 @@ def _type_level_fields(meta: type) -> list:
     the metaclass's MRO) defines — for `type`, __name__, __qualname__, __module__, __doc__, __mro__, __bases__, __base__,
     the size and flag fields and the rest. DERIVED from the metaclass, never listed (round 17, the second seat's pre-seal
     read: `Site.__qualname__ = …` after the class changed repr(type(S)) with vars(Site) equal)."""
-    import inspect
     names = []
-    for k in meta.__mro__:
-        for n, v in vars(k).items():
-            if inspect.isdatadescriptor(v) and n not in names and n != "__dict__" and n not in _LAZY_ANNOTATION:
+    for k in _mro(meta):
+        for n, v in _tdict(k).items():
+            if _is_data_descriptor(v) and n not in names and n != "__dict__" and n not in _LAZY_ANNOTATION:
                 names.append(n)
     return names
 
 
 def _type_level_value(cls, name):
+    # ROUND 28: read through the metaclass's own C descriptor, never getattr — a metaclass's __getattribute__ or @property
+    # is census code; and a class is named through type's getsets, never a getattr DEFAULT (R27-1: `repr(v)` as a default
+    # ran a base's metaclass __repr__ even when the name was there)
     try:
-        v = getattr(cls, name)
+        v = _read(cls, type(cls), name)
     except AttributeError:
         return ("<unset>",)
+    if v is _PYTHON_DESCRIPTOR:
+        return _PYTHON_DESCRIPTOR
     if name in ("__mro__", "__bases__"):
         # a class reference by an identity it cannot fake: an immutable class by module and qualname; a mutable one is
         # marked as such here and described in full in its own `base.` entry
-        return tuple((c.__module__, c.__qualname__) if _immutable(c) else ("mutable class", c.__qualname__) for c in v)
+        return tuple((_module(c), _qualname(c)) if _immutable(c) else ("mutable class", _qualname(c)) for c in v)
     if name == "__base__":
-        return (v.__module__, v.__qualname__) if isinstance(v, type) and _immutable(v) else ("mutable class", getattr(v, "__qualname__", repr(v)))
+        if not issubclass(type(v), type):
+            return ("<not a class>",)
+        return (_module(v), _qualname(v)) if _immutable(v) else ("mutable class", _qualname(v))
     if name == "__flags__":
         # the attribute-cache bit masked (_CACHE_BIT above); found by dev building round 18's cells, 2026-09-25
         return ("int", v & ~_CACHE_BIT)
     return _normalise(v, {id(cls): 0})
 
 
-def site_description(cls) -> list:
+def _site_description(cls) -> list:
     """Route B's reading of ONE built Site class, as ordered (key, normalised value) entries — the ONE definition both
     route B (two descriptions compared, at transform time) and the observer's runtime gate (one description digested in
     each arm, round 18's N-6) read, so the two cannot disagree about what "the same class" means: its MRO by name, the
@@ -657,16 +816,65 @@ def site_description(cls) -> list:
     are never READ — a read runs census code on 3.14 and writes into vars on every version — so their content is
     vars(), normalised by _class_vars."""
     v = _class_vars(cls)
-    out = [("mro", tuple(c.__name__ for c in cls.__mro__)), ("vars.order", tuple(v))]
+    out = [("mro", tuple(_TYPE_NAME.__get__(c) for c in _mro(cls))), ("vars.order", tuple(v))]
     out += [(f"vars.{k}", _normal_value(x, {id(cls): 0})) for k, x in v.items()]
     # every NON-built-in base, described by the same rule (a base's content is inherited behaviour; route A does not see
     # a base class defined outside Site's own ClassDef)
-    out += [(f"base.{i}", _normalise(b, {id(cls): 0})) for i, b in enumerate(cls.__mro__[1:], 1) if not _immutable(b)]
+    out += [(f"base.{i}", _normalise(b, {id(cls): 0})) for i, b in enumerate(_mro(cls)[1:], 1) if not _immutable(b)]
     out += [(f"type.{n}", _type_level_value(cls, n)) for n in _type_level_fields(type(cls))]
     meta = type(cls)
-    out.append(("metaclass", (meta.__module__, meta.__qualname__) if _immutable(meta) else _normalise(meta, {id(cls): 0})))
+    out.append(("metaclass", (_module(meta), _qualname(meta)) if _immutable(meta) else _normalise(meta, {id(cls): 0})))
     return out
 
+
+class _ForeignFrame(BaseException):
+    """The guard's refusal, raised INSIDE the frame it refuses before that frame's first line runs. A BaseException, so no
+    `except Exception` between it and site_description can swallow it."""
+
+
+def site_description(cls) -> list:
+    """_site_description, run under a guard that REFUSES the first Python frame it did not write — before that frame's
+    first line executes (round 28, the second seat's N1 generalised to its mechanism). The describer reads through C
+    descriptors called directly and through type's own getsets, and performs no attribute lookup of its own; but a C
+    getter can perform one (a descriptor's `__qualname__` looks the name up on its class, through the metaclass), and
+    no census of the C getters it may reach can be complete. So the property is ENFORCED rather than argued: a trace
+    function sees every Python frame's `call` event, and raising there propagates out of the frame before its body
+    runs (measured on 3.10 through 3.14). Its own frames — this file's code objects — pass untraced. Garbage collection
+    is paused for the window, so an unrelated object's `__del__` cannot land inside it and refuse at random. The guard
+    must still be installed when the description returns: a refusal something swallowed would have unset it, and a
+    guard that was not alive proves nothing (the observer's B1 shape), so a description it did not watch to the end is
+    refused too. A census Site that needs its own code run to be described is refused, never described by running it.
+    NAMED LIMIT: a refusal that C code swallows (a finalizer's error handling; a getter that clears errors) also unsets
+    the tracer — CPython removes a trace function that raised — so frames after that point in the same window are not
+    stopped. The description is still refused (the entered frame was recorded, and the guard is no longer installed),
+    but code after the swallow ran. Pausing collection removes the one ordinary swallower, a finalizer, from the window."""
+    import gc, sys
+    own = _site_description.__code__.co_filename
+    entered = []
+
+    def guard(frame, event, arg):
+        if event == "call" and frame.f_code.co_filename != own:
+            entered.append(frame.f_code)
+            raise _ForeignFrame
+        return None
+    prev, collecting = sys.gettrace(), gc.isenabled()
+    gc.disable()
+    sys.settrace(guard)
+    try:
+        out = _site_description(cls)
+        alive = sys.gettrace() is guard
+    except _ForeignFrame:
+        out, alive = None, False
+    finally:
+        sys.settrace(prev)
+        if collecting:
+            gc.enable()
+    if entered or not alive:
+        where = (f"{entered[0].co_qualname if hasattr(entered[0], 'co_qualname') else entered[0].co_name} "
+                 f"({entered[0].co_filename}:{entered[0].co_firstlineno})") if entered else "an unseen frame (the guard was unset)"
+        raise SiteUndescribed(f"describing Site would run code the describer did not write — {where} — so it was stopped "
+                              f"before its first line and the Site is refused, never described by running it (round 28)")
+    return out
 
 def site_description_digest(desc: list) -> dict:
     """A description as its digest and per-entry sha16s, so a runtime disagreement NAMES the entry that differs."""

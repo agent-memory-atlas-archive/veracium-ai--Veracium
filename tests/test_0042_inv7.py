@@ -3688,8 +3688,8 @@ _B1_MUTANTS = [
     ("a class's annotation attributes read", "        if is_class and n in _LAZY_ANNOTATION:\n",
      "        if False:\n", test_py314_describing_a_site_leaves_its_vars_unchanged),
     ("the type-level annotation fields read",
-     'if inspect.isdatadescriptor(v) and n not in names and n != "__dict__" and n not in _LAZY_ANNOTATION:',
-     'if inspect.isdatadescriptor(v) and n not in names and n != "__dict__":',
+     'if _is_data_descriptor(v) and n not in names and n != "__dict__" and n not in _LAZY_ANNOTATION:',
+     'if _is_data_descriptor(v) and n not in names and n != "__dict__":',
      test_py314_describing_a_site_leaves_its_vars_unchanged),
     ("the read-created keys not normalised", '    return (k == "__annotate_func__" and x is None) or (k == "__annotations__" and type(x) is dict and not x)\n',
      "    return False\n", test_py314_another_reader_of_the_annotations_is_not_drift),
@@ -3706,7 +3706,9 @@ _B1_MUTANTS = [
 def test_py314_each_annotation_rule_is_load_bearing(mutant, anchor, replacement, cell, tmp_path, monkeypatch):
     mut = _r23_mutant(tmp_path, anchor, replacement, "b1m")
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
-    with pytest.raises(AssertionError):
+    # round 28's guard stops census code before its first line and REFUSES the Site: without the rule the Site is either
+    # described by running its code (the cell's assertion) or refused (the guard) — never described without running it
+    with pytest.raises((AssertionError, mut.SiteUndescribed)):
         cell()
 
 # ---- round 18, N-6: the Site each arm IMPORTED, compared at runtime --------------------------------------------------
@@ -4252,7 +4254,7 @@ def test_r25_the_lazy_value_rule_is_load_bearing(tmp_path, monkeypatch):
     mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", *_R25_READ_MUTANT, "readlazy")
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
     for label, body, holder, evaluator in _R25_LAZY:
-        with pytest.raises(AssertionError):
+        with pytest.raises((AssertionError, mut.SiteUndescribed)):   # run, or refused by round 28's guard
             test_r25_describing_lazy_type_metadata_runs_no_census_code(label, body, holder, evaluator)
 
 
@@ -4315,7 +4317,7 @@ _R25_WRAPPER_MUTANTS = [
      "        if k == \"__annotations__\" and any(r is x for r in gc.get_referents(func)):\n",
      "        if k == \"__annotations__\":\n", test_r25_another_reader_of_a_wrapper_is_not_drift_and_an_assignment_is),
     ("the wrapper's __annotate__ dropped unconditionally",
-     "        if k == \"__annotate__\" and x is getattr(func, \"__annotate__\", None):\n",
+     "        if k == \"__annotate__\" and x is _read(func, type(func), \"__annotate__\", None):\n",
      "        if k == \"__annotate__\":\n", test_r25_another_reader_of_a_wrapper_is_not_drift_and_an_assignment_is),
     ("a described object not held", "    seen[id(obj)] = (len(seen), obj)\n", "    seen[id(obj)] = len(seen)\n",
      test_r25_every_described_object_is_held_until_the_description_ends),
@@ -4398,7 +4400,7 @@ def test_r26_a_changed_eager_value_behind_the_constant_evaluator_is_drift(cell, 
     before, after = _r26_census(ctor, use, held, call, 1), _r26_census(ctor, use, held, call, 2)
     sb, sa = un._realized_site(before, "review_census"), un._realized_site(after, "review_census")
     ev = next(getattr(sb.param, n) for n in dir(type(sb.param)) if n.startswith("evaluate_") and getattr(sb.param, n) is not None)
-    assert not isinstance(ev, types.FunctionType), (cell, "a lazy case: this cell cannot run the regime it is named for", type(ev))
+    assert not issubclass(type(ev), types.FunctionType), (cell, "a lazy case: this cell cannot run the regime it is named for", type(ev))
     assert (sb().fire(0), sa().fire(0)) == (1, 2), cell
     db = un.site_description_digest(un.site_description(sb))["digest"]
     da = un.site_description_digest(un.site_description(sa))["digest"]
@@ -4439,9 +4441,13 @@ def test_r26_the_constructor_regimes_evaluator_holds_the_supplied_value():
 
 
 class _R26OtherEvaluator:
-    """A type pairing `evaluate_bound` with `__bound__` whose evaluator is NEITHER a function NOR the constant evaluator."""
-    evaluate_bound = property(lambda self: __import__("functools").partial(int))
-    __bound__ = property(lambda self: int)
+    """A type pairing `evaluate_bound` with `__bound__` whose evaluator is NEITHER a function NOR the constant evaluator —
+    held in C slots, which the description reads (round 28: a property serving it is never called; its own cell)."""
+    __slots__ = ("evaluate_bound", "__bound__")
+
+    def __init__(self):
+        self.evaluate_bound = __import__("functools").partial(int)
+        self.__bound__ = int
 
 
 def test_r26_any_other_evaluator_is_refused_by_name_never_read_as_lazy_or_eager():
@@ -4480,16 +4486,16 @@ def test_r26_the_constant_evaluator_type_refuses_an_interpreter_where_it_would_b
 
 _R26_MUTANTS = [
     ("round 25's rule: any callable evaluator is lazy",
-     "            if ev is None or type(ev) is _CONST_EVALUATOR:\n                continue\n            if isinstance(ev, types.FunctionType):\n",
+     "            if ev is None or type(ev) is _CONST_EVALUATOR:\n                continue\n            if issubclass(type(ev), types.FunctionType):\n",
      "            if ev is None:\n                continue\n            if callable(ev):\n",
      "value"),
     ("the constant-evaluator branch dropped",
      "            if ev is None or type(ev) is _CONST_EVALUATOR:\n", "            if ev is None:\n", "eager"),
     ("the function test widened to callable",
-     "            if isinstance(ev, types.FunctionType):\n", "            if callable(ev):\n", "other"),
+     "            if issubclass(type(ev), types.FunctionType):\n", "            if callable(ev):\n", "other"),
     ("the refusal branch dropped (another evaluator falls through to lazy)",
-     "            raise SiteUndescribed(f\"{type(obj).__qualname__}.{value}: its evaluator",
-     "            out[value] = n\n            continue\n            raise SiteUndescribed(f\"{type(obj).__qualname__}.{value}: its evaluator",
+     "            raise SiteUndescribed(f\"{_qualname(type(obj))}.{value}: its evaluator `{n}` is a \"",
+     "            out[value] = n\n            continue\n            raise SiteUndescribed(f\"{_qualname(type(obj))}.{value}: its evaluator `{n}` is a \"",
      "other"),
 ]
 
@@ -4785,19 +4791,19 @@ _R27_MUTANTS = [
      "        if True:\n            return (identity, _addressless(repr(obj)))",
      test_r27_an_interpreter_type_holding_a_non_scalar_is_refused_and_a_scalar_one_is_read),
     ("a Python-type leaf read through its repr (E3)",
-     "    if not hidden and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, (\"referents\", tuple(_normalise(r, seen) for r in refs)))",
-     "    if not hidden and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, _addressless(repr(obj)))",
+     "    if not hidden and not [b for b in _mro(tp) if b is not object and _immutable(b)]:\n        return (identity, (\"referents\", tuple(_normalise(r, seen) for r in refs)))",
+     "    if not hidden and not [b for b in _mro(tp) if b is not object and _immutable(b)]:\n        return (identity, _addressless(repr(obj)))",
      test_r27_a_stateless_slotted_instance_is_described_by_its_type_never_its_repr),
     ("any C callable trusted as the repr slot",
-     "    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, \"__objclass__\", None) in tp.__mro__ \\\n        and _repr_reads(tp, hidden)\n",
+     "    c_slot = issubclass(type(found), types.WrapperDescriptorType) and getattr(found, \"__objclass__\", None) in _mro(tp) \\\n        and _repr_reads(tp, hidden)\n",
      "    c_slot = callable(found)\n",
      test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf),
     ("no C base found stateful (the hidden-state rule dropped)",
-     "        if b.__basicsize__ - base.__basicsize__ > _exposed(b):\n            out.append(b)\n",
+     "        if _TYPE_BASICSIZE.__get__(b) - _TYPE_BASICSIZE.__get__(base) > _exposed(b):\n            out.append(b)\n",
      "        pass\n",
      test_r27_state_a_c_base_holds_and_no_field_exposes_is_refused_never_read_as_equal),
     ("any C repr slot trusted to show a stateful base's state",
-     "    return owner is not None and isinstance(owner, type) and issubclass(owner, hidden[0])\n",
+     "    return owner is not None and issubclass(type(owner), type) and issubclass(owner, hidden[0])\n",
      "    return True\n",
      test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf),
     ("getsets credited as exposure",
@@ -4805,15 +4811,15 @@ _R27_MUTANTS = [
      "            + (8 if \"__dict__\" in v else 0) + (8 if \"__weakref__\" in v else 0)\n            + 8 * sum(type(x).__name__ == \"getset_descriptor\" for x in v.values()))\n",
      test_r27_getsets_do_not_count_as_exposure_a_hash_is_refused),
     ("the fail-closed check dropped (a refused object read first)",
-     "        if hidden:\n            raise SiteUndescribed(f\"a {tp.__module__}.{tp.__qualname__} derives from {hidden[0].__module__}.{hidden[0].__qualname__}, \"\n                                  f\"a C type holding instance storage that neither its fields nor any reader",
-     "        if False:\n            raise SiteUndescribed(f\"a {tp.__module__}.{tp.__qualname__} derives from {hidden[0].__module__}.{hidden[0].__qualname__}, \"\n                                  f\"a C type holding instance storage that neither its fields nor any reader",
+     "        if hidden:\n            raise SiteUndescribed(f\"a {_module(tp)}.{_qualname(tp)} derives from {_module(hidden[0])}.{_qualname(hidden[0])}, \"\n                                  f\"a C type holding instance storage that neither its fields nor any reader",
+     "        if False:\n            raise SiteUndescribed(f\"a {_module(tp)}.{_qualname(tp)} derives from {_module(hidden[0])}.{_qualname(hidden[0])}, \"\n                                  f\"a C type holding instance storage that neither its fields nor any reader",
      test_r27_a_module_is_refused_before_it_is_touched),
     ("a reader calls the object's own method",
      "        collections.deque: lambda obj, seen: items(collections.deque.__iter__(obj), seen),\n",
      "        collections.deque: lambda obj, seen: items(iter(obj), seen),\n",
      test_r27_a_reader_types_state_change_is_drift_and_no_override_is_called),
     ("a C-based leaf read by referents alone (the second seat's E3)",
-     "    if not hidden and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n",
+     "    if not hidden and not [b for b in _mro(tp) if b is not object and _immutable(b)]:\n",
      "    if True:\n",
      test_r27_a_python_subclass_of_a_stateful_c_type_is_read_by_its_c_repr_or_refused),
 ]
@@ -4836,5 +4842,449 @@ def test_r27_each_leaf_rule_is_load_bearing(mutant, anchor, replacement, cell, t
                 failed.append(c[0])
         assert len(failed) == len(_R27_FORMS) - 1, f"{mutant}: only {failed} failed"
         return
+    with pytest.raises(BaseException):
+        cell()
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ROUND 28 — the round-27 verdict's two findings, widened by the second seat's stage-1 read to ONE property: THE DESCRIBER
+# PERFORMS NO ATTRIBUTE LOOKUP ON WHAT IT DESCRIBES. R27-1: `getattr(v, "__qualname__", repr(v))` evaluated its default
+# first, so a base's metaclass __repr__ ran during description. R27-2: a reader exempted its type's C state while reading
+# content only — a StringIO's newline setting and an outstanding buffer export read as no drift.
+
+_R28_DISPLAY_BASE = ("import typing\n\nCALLS = []\n\nclass Display(type):\n    def __repr__(cls):\n        CALLS.append('display')\n"
+                     "        return 'Base'\n\nclass Base(metaclass=Display):\n    pass\n\n{body}")
+_R28_PLAIN_BASE = "import typing\n\nCALLS = []\n\nclass Base:\n    pass\n\n{body}"
+_R28_INHERITED = [
+    # the verdict's fixture: Site itself derives from the display base
+    ("Site derives from it", "class Site(Base):\n    def fire(self, value):\n        return len(CALLS)\n"),
+    # the verdict's "held-class and unpaired-evaluator controls", now with the display on the held class's BASE
+    ("a held class derives from it", "class Held(Base):\n    pass\n\nclass Site:\n    held = Held\n"
+                                     "    def fire(self, value):\n        return len(CALLS)\n"),
+    ("a TypeVar bound to a class deriving from it", "class Held(Base):\n    pass\n\nclass Site:\n"
+                                                    "    param = typing.TypeVar('T', bound=Held)\n"
+                                                    "    def fire(self, value):\n        return len(CALLS)\n"),
+    ("an unpaired evaluator of such a class", "class Held(Base):\n    pass\n\nclass Site:\n"
+                                              "    ev = typing.TypeVar('T', bound=Held).evaluate_bound\n"
+                                              "    def fire(self, value):\n        return len(CALLS)\n"),
+]
+_R28_INHERITED_CELLS = [(f"{base}-base: {form} through {route}", base, body, route)
+                        for form, body in _R28_INHERITED for base in ("display", "plain")
+                        for route in ("site_description", "_site_realized")]
+
+
+def _r28_module(src):
+    import types as _types
+    m = _types.ModuleType("review_census")
+    exec(compile(src, "<review_census>", "exec", dont_inherit=True), m.__dict__)
+    return m
+
+
+@pytest.mark.parametrize("cell,base,body,route", _R28_INHERITED_CELLS, ids=[c[0] for c in _R28_INHERITED_CELLS])
+def test_r28_describing_an_inherited_base_runs_no_display_code(cell, base, body, route):
+    """R27-1, every place a display base can sit, BOTH callers: the base's metaclass __repr__ is never entered and the
+    decision that counts its calls stays 0. The plain base is the control. Fails at the round-27 pin on the display call."""
+    un = _load("inv7_uninstrument_r28_inherited", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r28_module((_R28_DISPLAY_BASE if base == "display" else _R28_PLAIN_BASE).format(body=body))
+    assert mod.CALLS == [] and mod.Site().fire(0) == 0, cell
+    (un.site_description if route == "site_description" else observer._site_realized)(mod.Site)
+    assert mod.CALLS == [] and mod.Site().fire(0) == 0, f"{cell}: describing ran display code {mod.CALLS}"
+
+
+def test_r28_a_mutable_base_is_still_described_in_full():
+    """The verdict: "preserve the recursive description of mutable bases; do not omit their behavior to avoid the call".
+    Two display bases differing only in a method describe differently — through the describer and through site_drift."""
+    un = _load("inv7_uninstrument_r28_base_drift", EVIDENCE / "inv7_uninstrument.py")
+
+    def census(v):
+        return ("CALLS = []\n\nclass Display(type):\n    def __repr__(cls):\n        CALLS.append('display')\n        return 'Base'\n\n"
+                f"class Base(metaclass=Display):\n    def decision(self):\n        return {v}\n\n"
+                "class Site(Base):\n    def fire(self, value):\n        return self.decision()\n")
+    a, b = _r28_module(census(1)), _r28_module(census(2))
+    assert un.site_description(a.Site) != un.site_description(b.Site)
+    assert a.CALLS == [] and b.CALLS == []
+    assert un.site_drift(census(2), census(1)) != []
+    assert un.site_drift(census(1), census(1)) == []
+
+
+# Every way an ATTRIBUTE LOOKUP could hand control to census code, each counting its calls. The second seat's stage-1 read
+# measured these at the round-27 pin: the instance-class __getattribute__ 1 call, Site's metaclass __getattribute__ 23,
+# a held class's metaclass __getattribute__ 18, both callers. The `__class__` property and a slotted class with its own
+# __getattribute__ were examined and entered 0 times there; they are kept as rows so a regression is seen.
+_R28_LOOKUP = [
+    ("a property on a held instance",
+     "class P:\n    @property\n    def v(self):\n        CALLS.append('property')\n        return 1\n\n"
+     "class Site:\n    held = P()\n"),
+    ("a property on Site's metaclass",
+     "class M(type):\n    @property\n    def v(cls):\n        CALLS.append('meta property')\n        return 1\n\n"
+     "class Site(metaclass=M):\n    pass\n"),
+    ("__getattribute__ on a held instance's class",
+     "class H:\n    __slots__ = ('a',)\n    def __getattribute__(self, n):\n        CALLS.append(n)\n"
+     "        return object.__getattribute__(self, n)\n\nh = H()\nh.a = 1\n\nclass Site:\n    held = h\n"),
+    ("__getattribute__ on Site's metaclass",
+     "class M(type):\n    def __getattribute__(cls, n):\n        CALLS.append(n)\n        return type.__getattribute__(cls, n)\n\n"
+     "class Site(metaclass=M):\n    pass\n"),
+    ("__getattribute__ on a held class's metaclass",
+     "class M(type):\n    def __getattribute__(cls, n):\n        CALLS.append(n)\n        return type.__getattribute__(cls, n)\n\n"
+     "class Held(metaclass=M):\n    pass\n\nclass Site:\n    held = Held\n"),
+    ("a __class__ property on a held instance",
+     "class W:\n    @property\n    def __class__(self):\n        CALLS.append('__class__')\n        return W\n\n"
+     "class Site:\n    held = W()\n"),
+    ("__getattribute__ on a held instance's slotted class, reached as a referrer",
+     "class G:\n    __slots__ = ('d',)\n    def __getattribute__(self, n):\n        CALLS.append(n)\n"
+     "        return object.__getattribute__(self, n)\n\nclass Site:\n    pass\n\ng = G()\ng.d = Site.__dict__\n"),
+]
+_R28_LOOKUP_CELLS = [(f"{row} through {route}", src, route) for row, src in _R28_LOOKUP
+                     for route in ("site_description", "_site_realized")]
+
+
+@pytest.mark.parametrize("cell,src,route", _R28_LOOKUP_CELLS, ids=[c[0] for c in _R28_LOOKUP_CELLS])
+def test_r28_describing_performs_no_attribute_lookup_on_what_it_describes(cell, src, route):
+    """The widened property (the second seat's N1): no getattr, no `x.attr`, no getattr default, on the described object
+    or its class — a property is recorded and never called, and no __getattribute__ is entered, through either caller."""
+    un = _load("inv7_uninstrument_r28_lookup", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r28_module("CALLS = []\n\n" + src)
+    mod.CALLS.clear()
+    (un.site_description if route == "site_description" else observer._site_realized)(mod.Site)
+    assert mod.CALLS == [], f"{cell}: describing entered census code {mod.CALLS}"
+
+
+def test_r28_a_property_never_called_is_still_described_by_its_code():
+    """Recording a Python descriptor rather than calling it must not hide it: a changed getter — on a held instance's
+    class and on Site's metaclass — describes differently."""
+    un = _load("inv7_uninstrument_r28_property_drift", EVIDENCE / "inv7_uninstrument.py")
+    for label, src in (("held instance", "class P:\n    @property\n    def v(self):\n        return {v}\n\nclass Site:\n    held = P()\n"),
+                       ("metaclass", "class M(type):\n    @property\n    def v(cls):\n        return {v}\n\nclass Site(metaclass=M):\n    pass\n")):
+        a, b = (un.site_description(_r28_module(src.format(v=v)).Site) for v in (1, 2))
+        assert a != b, f"{label}: a changed property getter reads as no drift"
+
+
+def test_r28_an_evaluator_served_by_a_property_is_refused_and_never_called():
+    """_lazy_values reads an evaluator through `_read`: served by a Python property, it is never called to find out which
+    regime it is — refused, naming the field."""
+    un = _load("inv7_uninstrument_r28_evaluator_property", EVIDENCE / "inv7_uninstrument.py")
+    calls = []
+
+    class Served:
+        evaluate_bound = property(lambda self: calls.append("evaluate_bound") or __import__("functools").partial(int))
+        __bound__ = property(lambda self: calls.append("__bound__") or int)
+
+    class Site:
+        param = Served()
+
+        def fire(self, value):
+            return value
+    with pytest.raises(un.SiteUndescribed, match=r"Served\.__bound__: its evaluator `evaluate_bound` is served by a Python descriptor"):
+        un.site_description(Site)
+    assert calls == [], calls
+
+
+# R27-2: each pair holds EQUAL content and differs in configuration or export state; the view is retained by an ordinary
+# module variable, as the verdict's fixtures do. The decision each pair feeds differs.
+_R28_READER_PAIRS = [
+    ("stringio_newline",
+     "import io\n\nclass Site:\n    def fire(self, value):\n        self.s.seek(0)\n        self.s.write('x\\n')\n"
+     "        return self.s.getvalue()\n\nSite.s = io.StringIO('seed', newline={arg})\n", "'\\n'", "'\\r\\n'"),
+    ("bytesio_export",
+     "import io\n\nclass Site:\n    def fire(self, value):\n        try:\n            return self.b.truncate(1)\n"
+     "        except BufferError:\n            return 'BufferError'\n\nSite.b = io.BytesIO(b'xy')\nVIEW = {arg}\n",
+     "None", "Site.b.getbuffer()"),
+    ("array_export",
+     "import array\n\nclass Site:\n    def fire(self, value):\n        try:\n            self.a.append(3)\n            return 'ok'\n"
+     "        except BufferError:\n            return 'BufferError'\n\nSite.a = array.array('i', [1, 2])\nVIEW = {arg}\n",
+     "None", "memoryview(Site.a)"),
+    ("array_pickle_buffer_export",
+     "import array, pickle\n\nclass Site:\n    def fire(self, value):\n        try:\n            self.a.append(3)\n            return 'ok'\n"
+     "        except BufferError:\n            return 'BufferError'\n\nSite.a = array.array('i', [1, 2])\nVIEW = {arg}\n",
+     "None", "pickle.PickleBuffer(Site.a)"),
+    # the second seat's N2: universal-newline mode, the same text, a different seen-newline record — must STAY drift
+    ("stringio_universal_newline",
+     "import io\n\nclass Site:\n    def fire(self, value):\n        return self.s.newlines\n\n"
+     "Site.s = io.StringIO(newline=None)\nSite.s.write({arg})\nSite.s.seek(0)\n", "'x\\n'", "'x\\r\\n'"),
+]
+_R28_READER_CELLS = [(f"{label} through {route}", label, src, a, b, route) for label, src, a, b in _R28_READER_PAIRS
+                     for route in ("site_description", "_site_realized", "site_drift")]
+
+
+@pytest.mark.parametrize("cell,label,src,a,b,route", _R28_READER_CELLS, ids=[c[0] for c in _R28_READER_CELLS])
+def test_r28_equal_content_with_different_configuration_or_export_is_drift(cell, label, src, a, b, route):
+    """R27-2, every pair through all three routes: the description, the observer's digest and complete site_drift. The
+    decision is asserted to differ first, so a pair that stopped demonstrating anything fails as a fixture."""
+    un = _load("inv7_uninstrument_r28_readers", EVIDENCE / "inv7_uninstrument.py")
+    ma, mb = _r28_module(src.format(arg=a)), _r28_module(src.format(arg=b))
+    assert ma.Site().fire(0) != mb.Site().fire(0), (cell, "the pair does not change the decision")
+    ma, mb = _r28_module(src.format(arg=a)), _r28_module(src.format(arg=b))
+    if route == "site_description":
+        assert un.site_description(ma.Site) != un.site_description(mb.Site), f"{cell}: reads as no drift"
+    elif route == "_site_realized":
+        assert observer._site_realized(ma.Site)["digest"] != observer._site_realized(mb.Site)["digest"], f"{cell}: equal digests"
+    else:
+        assert un.site_drift(src.format(arg=b), src.format(arg=a)) != [], f"{cell}: site_drift returns []"
+        assert un.site_drift(src.format(arg=a), src.format(arg=a)) == [], (cell, "a census drifts from itself")
+
+
+def _r28_channels(obj):
+    """THE ORACLE (the second seat's F5): every state channel a reader type has, read a SEPARATE way from the describer —
+    here by ordinary attribute access, which is safe on the exact standard-library types the corpus holds. Its channels
+    are the pickle state the type itself says reconstructs it, every C getset and member along its MRO (derived, never
+    listed), and — for a type that exports its buffer — whether a resize would raise BufferError, found by trying one on
+    the real object and undoing it."""
+    import array, io, types as _types
+    tp = type(obj)
+    out = {}
+    try:
+        red = obj.__reduce_ex__(4)
+        out["pickle"] = repr(tuple(list(x) if hasattr(x, "__next__") else x for x in red))
+    except Exception as e:
+        out["pickle"] = type(e).__name__
+    for k in tp.__mro__:
+        for n, d in vars(k).items():
+            if isinstance(d, (_types.GetSetDescriptorType, _types.MemberDescriptorType)) and n not in ("__dict__", "__weakref__"):
+                try:
+                    out[f"{k.__name__}.{n}"] = repr(getattr(obj, n))
+                except Exception as e:
+                    out[f"{k.__name__}.{n}"] = type(e).__name__
+    if tp is array.array:
+        try:
+            obj.append(obj[0] if len(obj) else 0)
+            obj.pop()
+            out["export"] = False
+        except BufferError:
+            out["export"] = True
+    if tp is io.BytesIO:
+        try:
+            out["export"] = False if obj.truncate(None) is not None else None
+        except BufferError:
+            out["export"] = True
+        except ValueError:
+            out["export"] = "closed"
+    return out
+
+
+# channels that CANNOT vary within an exact reader type — each with the value every corpus instance must show (asserted,
+# so a declared constant that starts varying fails) and why. Nothing is exempted by the shape of its name.
+_R28_CONSTANT_CHANNELS = {
+    **{(n, "object.__class__"): (f"<class '{m}.{n}'>", "the corpus holds exact types only; the type itself is described")
+       for n, m in (("deque", "collections"), ("defaultdict", "collections"), ("array", "array"), ("StringIO", "_io"),
+                    ("BytesIO", "_io"))},
+    ("StringIO", "_TextIOBase.encoding"): ("None", "_io._TextIOBase's getter returns None: a StringIO holds text, not bytes"),
+    ("StringIO", "_TextIOBase.errors"): ("None", "_io._TextIOBase's getter returns None, as for encoding"),
+}
+
+
+def _r28_reader_corpus():
+    """Instances of every reader type, varying each channel the oracle names — built fresh per call, the exports held by the
+    returned list so they stay outstanding."""
+    import array, collections, io, pickle
+    keep = []
+
+    def exported_bytesio(v):
+        b = io.BytesIO(v)
+        keep.append(b.getbuffer())
+        return b
+
+    def exported_array(tc, v, how):
+        a = array.array(tc, v)
+        keep.append(memoryview(a) if how == "memoryview" else pickle.PickleBuffer(a) if how == "pickle" else memoryview(a)[1:])
+        return a
+
+    def closed(cls, *a):
+        s = cls(*a)
+        s.close()
+        return s
+
+    def at(s, pos):
+        s.seek(pos)
+        return s
+
+    def universal(text):
+        s = io.StringIO(newline=None)
+        s.write(text)
+        s.seek(0)
+        return s
+    corpus = {
+        collections.deque: [collections.deque([1, 2]), collections.deque([1, 3]), collections.deque([1, 2], maxlen=2),
+                            collections.deque([1, 2], maxlen=5), collections.deque()],
+        collections.defaultdict: [collections.defaultdict(int, {"a": 1}), collections.defaultdict(list, {"a": 1}),
+                                  collections.defaultdict(int, {"a": 2}), collections.defaultdict(None, {"a": 1})],
+        array.array: [array.array("i", [1, 2]), array.array("i", [1, 3]), array.array("l", [1, 2]),
+                      exported_array("i", [1, 2], "memoryview"), exported_array("i", [1, 2], "pickle"),
+                      exported_array("i", [1, 2], "slice")],
+        io.StringIO: [io.StringIO("seed"), io.StringIO("seef"), at(io.StringIO("seed"), 2), io.StringIO("seed", newline="\n"),
+                      io.StringIO("seed", newline="\r\n"), io.StringIO("seed", newline=""), io.StringIO("seed", newline="\r"),
+                      universal("x\n"), universal("x\r\n"), universal("x\r"), closed(io.StringIO, "seed")],
+        io.BytesIO: [io.BytesIO(b"xy"), io.BytesIO(b"xz"), at(io.BytesIO(b"xy"), 1), exported_bytesio(b"xy"),
+                     closed(io.BytesIO, b"xy")],
+    }
+    return corpus, keep
+
+
+def test_r28_every_reader_state_channel_is_drift():
+    """Data to data, not a hand list of cases: for every reader type, any two corpus instances the ORACLE tells apart on
+    ANY channel must describe differently. And every channel the oracle derives must actually VARY somewhere in the
+    corpus — a getset added to a type on a future interpreter, or a channel nobody exercised, fails here rather than
+    passing as covered."""
+    import itertools
+    un = _load("inv7_uninstrument_r28_oracle", EVIDENCE / "inv7_uninstrument.py")
+    corpus, keep = _r28_reader_corpus()
+    assert set(corpus) == set(un._READERS), ("the corpus must cover every reader, and only readers", set(un._READERS) ^ set(corpus))
+    unvaried, silent, used = [], [], set()
+    for tp, objs in corpus.items():
+        descs = [repr(un._normalise(o, {})) for o in objs]
+        chans = [_r28_channels(o) for o in objs]
+        for ch in chans[0]:
+            values = {c.get(ch) for c in chans}
+            declared = _R28_CONSTANT_CHANNELS.get((tp.__name__, ch))
+            if declared is not None:
+                used.add((tp.__name__, ch))
+                assert values == {declared[0]}, (tp.__name__, ch, "declared constant, observed", values)
+            elif len(values) < 2:
+                unvaried.append(f"{tp.__name__}: {ch}")
+        for (i, a), (j, b) in itertools.combinations(enumerate(chans), 2):
+            if a != b and descs[i] == descs[j]:
+                silent.append(f"{tp.__name__} #{i} vs #{j}: {[k for k in a if a.get(k) != b.get(k)]}")
+    assert not silent, f"instances whose state differs on a channel read as no drift: {silent}"
+    assert not unvaried, f"channels the corpus never varies (extend the corpus): {unvaried}"
+    assert used == set(_R28_CONSTANT_CHANNELS), ("a declared constant channel no reader type has", set(_R28_CONSTANT_CHANNELS) - used)
+    del keep
+
+
+_R28_GUARDED = ("CALLS = []\n\nclass Getter:\n    def __call__(self, obj):\n        return 1\n    @property\n"
+                "    def __isabstractmethod__(self):\n        CALLS.append('__isabstractmethod__')\n        return False\n\n"
+                "class Site:\n    value = property(Getter())\n    def fire(self, value):\n        return len(CALLS)\n")
+
+
+@pytest.mark.parametrize("route", ["site_description", "_site_realized"])
+def test_r28_a_c_getter_that_would_run_census_code_is_refused_before_it_runs(route):
+    """What no list of C getters can promise, the guard enforces: property's `__isabstractmethod__` getset looks the flag up
+    on its fget — here a Python property on a callable. The describer performs no lookup itself; the C getter does. The
+    Site is REFUSED, and the census code never ran (its first line was never reached), through both callers."""
+    un = _load("inv7_uninstrument_r28_guard", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r28_module(_R28_GUARDED)
+    assert mod.Site().fire(0) == 0
+    # the observer loads its own copy of the describer, so its SiteUndescribed is another class of the same name
+    refusal = un.SiteUndescribed if route == "site_description" else Exception
+    with pytest.raises(refusal, match="would run code the describer did not write"):
+        (un.site_description if route == "site_description" else observer._site_realized)(mod.Site)
+    assert mod.CALLS == [] and mod.Site().fire(0) == 0, mod.CALLS
+
+
+def test_r28_a_description_the_guard_did_not_watch_to_the_end_is_refused(monkeypatch):
+    """The guard proves it was alive: a description during which the tracer was unset — by a swallowed refusal, or by
+    census code replacing it — is refused, not returned."""
+    import sys as _sys
+    un = _load("inv7_uninstrument_r28_alive", EVIDENCE / "inv7_uninstrument.py")
+    real = un._site_description
+
+    def unset(cls):
+        _sys.settrace(None)
+        return real(cls)
+    monkeypatch.setattr(un, "_site_description", unset)
+
+    class Site:
+        def fire(self, value):
+            return value
+    with pytest.raises(un.SiteUndescribed, match="the guard was unset"):
+        un.site_description(Site)
+
+
+def test_r28_unrelated_garbage_cannot_land_inside_the_guarded_window():
+    """Collection is paused for the window: cyclic garbage whose __del__ is Python code, with the collector made to run on
+    every allocation, neither refuses the description nor runs inside it. Described twice, equal both times."""
+    import gc
+    un = _load("inv7_uninstrument_r28_gc", EVIDENCE / "inv7_uninstrument.py")
+    ran = []
+
+    class Cyclic:
+        def __del__(self):
+            ran.append(1)
+
+    class Site:
+        held = (1, "a", (2, 3))
+
+        def fire(self, value):
+            return value
+    old = gc.get_threshold()
+    try:
+        gc.set_threshold(1)
+        for _ in range(50):
+            c = Cyclic()
+            c.self = c
+            del c
+        first = un.site_description(Site)
+        for _ in range(50):
+            c = Cyclic()
+            c.self = c
+            del c
+        second = un.site_description(Site)
+    finally:
+        gc.set_threshold(*old)
+        gc.collect()
+    assert first == second
+
+
+def _r28_cell(fn, *args):
+    return lambda: fn(*args)
+
+
+_R28_MUTANTS = [
+    ("R27-1: the getattr default restored",
+     "        return (_module(v), _qualname(v)) if _immutable(v) else (\"mutable class\", _qualname(v))",
+     "        return (v.__module__, v.__qualname__) if _immutable(v) else (\"mutable class\", getattr(v, \"__qualname__\", repr(v)))",
+     _r28_cell(test_r28_describing_an_inherited_base_runs_no_display_code, "m", "display", _R28_INHERITED[0][1], "site_description")),
+    ("a C field read through getattr",
+     "            return d.__get__(obj, tp)\n", "            return getattr(obj, name)\n",
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[2][1], "site_description")),
+    ("a Python descriptor called",
+     "        return default\n    return _PYTHON_DESCRIPTOR\n", "        return default\n    return getattr(obj, name)\n",
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[0][1], "site_description")),
+    ("a class named through its metaclass",
+     "    return _TYPE_QUALNAME.__get__(tp)\n", "    return tp.__qualname__\n",
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[3][1], "site_description")),
+    ("a descriptor's qualname read through its getter",
+     "    return _qualname(target) + \".\" + name\n", "    return _read(obj, tp, \"__qualname__\")\n",
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[3][1], "site_description")),
+    ("the data-descriptor test through inspect",
+     "    return _has_static(tp, \"__set__\") or _has_static(tp, \"__delete__\")\n",
+     "    import inspect\n    return inspect.isdatadescriptor(d)\n",
+     _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[4][1], "site_description")),
+    ("the guard never installed",
+     "    sys.settrace(guard)\n", "    pass\n",
+     _r28_cell(test_r28_a_c_getter_that_would_run_census_code_is_refused_before_it_runs, "site_description")),
+    ("the guard's liveness not checked",
+     "        alive = sys.gettrace() is guard\n", "        alive = True\n",
+     None),
+    ("collection not paused",
+     "    gc.disable()\n    sys.settrace(guard)\n", "    sys.settrace(guard)\n",
+     test_r28_unrelated_garbage_cannot_land_inside_the_guarded_window),
+    ("StringIO's newline not read",
+     "        io.StringIO: stream(io.StringIO, lambda obj: (\"newline\", repr(io.StringIO.__getstate__(obj)[1]))),\n",
+     "        io.StringIO: stream(io.StringIO),\n",
+     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[0][:4], "site_description")),
+    ("the export bit dropped",
+     "        return (\"exported\", any(type(r) in by for r in gc.get_referrers(obj)))\n", "        return (\"exported\", False)\n",
+     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[2][:4], "site_description")),
+    ("PickleBuffer not counted as an exporter",
+     "(managed[0], pickle.PickleBuffer)", "(managed[0],)",
+     _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[3][:4], "site_description")),
+    ("the export bit dropped (the oracle alone)",
+     "        return (\"exported\", any(type(r) in by for r in gc.get_referrers(obj)))\n", "        return (\"exported\", False)\n",
+     test_r28_every_reader_state_channel_is_drift),
+    ("StringIO's newline not read (the oracle alone)",
+     "        io.StringIO: stream(io.StringIO, lambda obj: (\"newline\", repr(io.StringIO.__getstate__(obj)[1]))),\n",
+     "        io.StringIO: stream(io.StringIO),\n",
+     test_r28_every_reader_state_channel_is_drift),
+    ("a raising getter escapes as a crash",
+     "        except Exception as e:\n", "        except ZeroDivisionError as e:\n",
+     test_r28_every_reader_state_channel_is_drift),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell", _R28_MUTANTS, ids=[m[0] for m in _R28_MUTANTS])
+def test_r28_each_rule_is_load_bearing(mutant, anchor, replacement, cell, tmp_path, monkeypatch):
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r28m")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    if cell is None:   # the liveness check: a monkeypatch cell needs the mutated module's own attribute
+        cell = lambda: test_r28_a_description_the_guard_did_not_watch_to_the_end_is_refused(monkeypatch)
     with pytest.raises(BaseException):
         cell()
