@@ -4383,19 +4383,22 @@ def _r26_census(ctor, use, held, call, v):
 @pytest.mark.parametrize("cell,ctor,use,held,call", _R26_EAGER, ids=[c[0] for c in _R26_EAGER])
 def test_r26_a_changed_eager_value_behind_the_constant_evaluator_is_drift(cell, ctor, use, held, call):
     """The verdict's R25-1 fixture, both held kinds: the two censuses differ ONLY inside the held object; the Site source is
-    identical; its behaviour changes. Route B must describe them differently and site_drift must report it; the shape is
-    asserted first — the evaluator IS the constant evaluator, not a function — so the cell cannot pass on a lazy case."""
+    identical; its behaviour changes. Route B must describe them differently and site_drift must report it. The regime is
+    asserted FIRST from the interpreter alone — an evaluator that is present and not a function, so the cell cannot pass on
+    a lazy case — and the describer's own name for it LAST: at the round-25 pin, which has no such name, the cell must
+    fail on the undetected drift the verdict found, not on a missing attribute (the round-25 lesson, applied here)."""
     import types
     un = _load("inv7_uninstrument_r26_eager", EVIDENCE / "inv7_uninstrument.py")
     before, after = _r26_census(ctor, use, held, call, 1), _r26_census(ctor, use, held, call, 2)
     sb, sa = un._realized_site(before, "review_census"), un._realized_site(after, "review_census")
     ev = next(getattr(sb.param, n) for n in dir(type(sb.param)) if n.startswith("evaluate_") and getattr(sb.param, n) is not None)
-    assert type(ev) is un._CONST_EVALUATOR and not isinstance(ev, types.FunctionType), (cell, type(ev))
+    assert not isinstance(ev, types.FunctionType), (cell, "a lazy case: this cell cannot run the regime it is named for", type(ev))
     assert (sb().fire(0), sa().fire(0)) == (1, 2), cell
     db = un.site_description_digest(un.site_description(sb))["digest"]
     da = un.site_description_digest(un.site_description(sa))["digest"]
     assert db != da, f"{cell}: a changed held value reads as no drift"
     assert any("Site.param (realized)" in d for d in un.site_drift(after, before)), cell
+    assert type(ev) is un._CONST_EVALUATOR, (cell, type(ev))
 
 
 @pytest.mark.parametrize("cell,ctor,use,held,call", _R26_EAGER[::2], ids=[c[0] for c in _R26_EAGER[::2]])
