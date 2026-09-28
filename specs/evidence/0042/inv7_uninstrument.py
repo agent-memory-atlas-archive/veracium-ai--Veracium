@@ -210,21 +210,57 @@ def _is_class_namespace(m) -> bool:
 
 # ROUND 25 (the round-24 verdict's R24-2): B1 made the describer non-executing for ONE family of lazy evaluator, the
 # annotation, and PEP 695 brings others — a TypeVar's bound, constraints and default, a ParamSpec's or TypeVarTuple's
-# default, a type alias's value — each computed by a compiler-generated evaluator the first time its value is READ.
-# Measured on 3.14.7: each such type carries a data descriptor `evaluate_<x>` beside the value `__<x>__`; the
-# evaluator is a FUNCTION exactly when the value is lazy (None when it is plain), reading it runs nothing, and it stays
-# a function after the value is computed. So the pairing is DERIVED from the descriptors — any `evaluate_<x>` holding a
-# callable beside a `__<x>__` — never listed, and a later type following the pattern is covered; the value is never
-# read, and the evaluator is described by the recursive rule, by its code, never called: a changed lazy definition
-# still describes differently.
+# default, a type alias's value — each computed by a compiler-generated evaluator the first time its value is READ. Each
+# such type carries a data descriptor `evaluate_<x>` beside the value `__<x>__`, and the pairing is DERIVED from the
+# descriptors, never listed.
+# ROUND 26 (the round-25 verdict's R25-1): round 25 read "the evaluator is CALLABLE" as "the value is lazy", and that is
+# true of ONE of the two regimes that construct these objects. Measured on 3.14.7:
+#   the SYNTAX regime (`def f[T: X]`, `type A = X`): the evaluator is a Python FUNCTION the compiler generated, and the
+#     value is computed by calling it — lazy; it is never read, and the function is described by the recursive rule,
+#     by its code, never called, so a changed lazy definition still describes differently;
+#   the CONSTRUCTOR regime (`typing.TypeVar('T', bound=X)`, `ParamSpec`/`TypeVarTuple` defaults, `TypeAliasType('A', X)`):
+#     the evaluator is `_typing._ConstEvaluator` around a value ALREADY SUPPLIED — eager; reading it runs nothing, and
+#     it is READ and described like any other value (round 25 dropped it, and a held class changed with no drift, in
+#     all six forms); the evaluator itself has no data descriptors, so it cannot stand in for the value;
+#   None (a bare `[V]`): no evaluator, the value read as it is.
+# Any OTHER evaluator is refused by name (SiteUndescribed, never drift): the rule is TOTAL over what the slot can hold,
+# rather than a default branch that decides a regime it has never measured.
+def _const_evaluator_type():
+    """The constant evaluator's type, taken by IDENTITY from the running interpreter — never by name. Refuses at import
+    if it could be confused with the lazy branch: a future interpreter where it is a function, or carries data
+    descriptors, must fail loudly rather than silently pick a branch (the second seat's stage-1 addition)."""
+    import inspect, types, typing
+    tp = type(typing.TypeVar("_R26", bound=int).evaluate_bound)
+    if issubclass(tp, types.FunctionType) or any(inspect.isdatadescriptor(v) for k in tp.__mro__ for v in vars(k).values()
+                                                 if k is not object):
+        raise RuntimeError(f"the constant evaluator type {tp!r} is a function or carries data descriptors on this "
+                           f"interpreter: the eager/lazy rule (round 26) does not hold here")
+    return tp
+
+
+_CONST_EVALUATOR = _const_evaluator_type()
+
+
 def _lazy_values(obj, descriptors) -> dict:
-    """{value descriptor: its evaluator's name} for every lazily evaluated value `obj` carries."""
+    """{value descriptor: its evaluator's name} for every LAZY value `obj` carries — one whose evaluator is a Python
+    function. A constant evaluator marks an eager value, read as any other; None, no evaluator; anything else refuses."""
+    import types
     out = {}
     for n in descriptors:
         if n.startswith("evaluate_"):
             value = "__" + n[len("evaluate_"):] + "__"
-            if value in descriptors and callable(getattr(obj, n, None)):
+            if value not in descriptors:
+                continue
+            ev = getattr(obj, n, None)
+            if ev is None or type(ev) is _CONST_EVALUATOR:
+                continue
+            if isinstance(ev, types.FunctionType):
                 out[value] = n
+                continue
+            raise SiteUndescribed(f"{type(obj).__qualname__}.{value}: its evaluator `{n}` is a "
+                                  f"{type(ev).__module__}.{type(ev).__qualname__} — neither a function (a lazy value, "
+                                  f"described by its code) nor the constant evaluator (an eager value, read), so the "
+                                  f"value cannot be described faithfully without calling it")
     return out
 
 

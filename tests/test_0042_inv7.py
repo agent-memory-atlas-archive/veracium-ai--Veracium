@@ -4179,14 +4179,18 @@ def _r25_describe_counting(un, mod, label):
 
 @pytest.mark.parametrize("label,body,holder,evaluator", _R25_LAZY + _R25_CONTROLS, ids=[c[0] for c in _R25_LAZY + _R25_CONTROLS])
 def test_r25_describing_lazy_type_metadata_runs_no_census_code(label, body, holder, evaluator):
+    import types
     """The verdict's R24-2: describing a Site whose type parameters or class-held aliases carry LAZY values enters no
     code compiled from the census's source and runs none of its side effects — through the describer AND the observer's
-    runtime digest. The case must really be lazy (the evaluator present and callable, the value unevaluated), or the
+    runtime digest. The case must really be lazy (the evaluator present and a FUNCTION, the value unevaluated), or the
     cell fails by name; the lazy value is described as such, and the two routes agree."""
     un = _load("inv7_uninstrument_r25_lazy", EVIDENCE / "inv7_uninstrument.py")
     mod = _r25_site(label, body)
     if holder is not None:
-        assert callable(getattr(holder(mod), evaluator)), f"{label}: not the lazy shape — this cell cannot run its case"
+        # round 26: the LAZY shape is a compiler-generated FUNCTION, not merely a callable (round 25 read the two as one,
+        # and a constant evaluator around an eager value is callable too — the round-25 verdict's R25-1)
+        assert isinstance(getattr(holder(mod), evaluator), types.FunctionType), \
+            f"{label}: not the lazy shape — this cell cannot run its case"
     assert mod.CALLS == [], mod.CALLS
     digest, realized, entered = _r25_describe_counting(un, mod, label)
     assert mod.CALLS == [] and entered == [], (label, mod.CALLS, entered)
@@ -4348,3 +4352,149 @@ def test_r25_each_regime_rule_is_load_bearing(mutant, anchor, replacement, tmp_p
         except (AssertionError, pytest.fail.Exception, Exception) as e:
             failed.append((cell, type(e).__name__))
     assert failed, f"{mutant}: every matrix cell still passes"
+
+
+# ---- round 26: the round-25 verdict's R25-1 — an EAGER value behind the constant evaluator is read and compared -------
+# The constructor regime: `typing.TypeVar('T', bound=X)` and its five siblings hold X ALREADY SUPPLIED, behind CPython's
+# `_typing._ConstEvaluator`. Round 25 took any callable evaluator for a lazy one and dropped the value, so a held class or
+# function changed with the Site's behaviour and no drift read, in all six forms. (label, constructor, how fire uses it)
+_R26_FORMS = [
+    ("TypeVar bound",        "typing.TypeVar('T', bound=Held)",       "self.param.__bound__"),
+    ("TypeVar constraints",  "typing.TypeVar('T', Held, int)",        "self.param.__constraints__[0]"),
+    ("TypeVar default",      "typing.TypeVar('T', default=Held)",     "self.param.__default__"),
+    ("ParamSpec default",    "typing.ParamSpec('P', default=Held)",   "self.param.__default__"),
+    ("TypeVarTuple default", "typing.TypeVarTuple('Ts', default=Held)", "self.param.__default__"),
+    ("TypeAliasType value",  "typing.TypeAliasType('A', Held)",       "self.param.__value__"),
+]
+# the held object: a mutable CLASS, and a FUNCTION, each under the same name in both censuses, with different contents
+_R26_HELD = [
+    ("a class", "class Held:\n    def decision(self):\n        return {v}\n", "().decision()"),
+    ("a function", "def Held():\n    return {v}\n", "()"),
+]
+_R26_EAGER = [(f"{form} holding {what}", ctor, use, held, call)
+              for form, ctor, use in _R26_FORMS for what, held, call in _R26_HELD]
+
+
+def _r26_census(ctor, use, held, call, v):
+    return ("import typing\n\n" + held.format(v=v) +
+            f"\nclass Site:\n    param = {ctor}\n\n    def fire(self, value):\n        return {use}{call}\n")
+
+
+@pytest.mark.parametrize("cell,ctor,use,held,call", _R26_EAGER, ids=[c[0] for c in _R26_EAGER])
+def test_r26_a_changed_eager_value_behind_the_constant_evaluator_is_drift(cell, ctor, use, held, call):
+    """The verdict's R25-1 fixture, both held kinds: the two censuses differ ONLY inside the held object; the Site source is
+    identical; its behaviour changes. Route B must describe them differently and site_drift must report it; the shape is
+    asserted first — the evaluator IS the constant evaluator, not a function — so the cell cannot pass on a lazy case."""
+    import types
+    un = _load("inv7_uninstrument_r26_eager", EVIDENCE / "inv7_uninstrument.py")
+    before, after = _r26_census(ctor, use, held, call, 1), _r26_census(ctor, use, held, call, 2)
+    sb, sa = un._realized_site(before, "review_census"), un._realized_site(after, "review_census")
+    ev = next(getattr(sb.param, n) for n in dir(type(sb.param)) if n.startswith("evaluate_") and getattr(sb.param, n) is not None)
+    assert type(ev) is un._CONST_EVALUATOR and not isinstance(ev, types.FunctionType), (cell, type(ev))
+    assert (sb().fire(0), sa().fire(0)) == (1, 2), cell
+    db = un.site_description_digest(un.site_description(sb))["digest"]
+    da = un.site_description_digest(un.site_description(sa))["digest"]
+    assert db != da, f"{cell}: a changed held value reads as no drift"
+    assert any("Site.param (realized)" in d for d in un.site_drift(after, before)), cell
+
+
+@pytest.mark.parametrize("cell,ctor,use,held,call", _R26_EAGER[::2], ids=[c[0] for c in _R26_EAGER[::2]])
+def test_r26_reading_an_eager_value_runs_no_census_code(cell, ctor, use, held, call):
+    """The zero-evaluation control on the EAGER side: describing reads the supplied value and enters no code compiled from
+    the census's source — the held class's methods are described, never called."""
+    un = _load("inv7_uninstrument_r26_zero", EVIDENCE / "inv7_uninstrument.py")
+    mod = _r25_site(cell, _r26_census(ctor, use, held, call, 1))
+    _digest, _realized, entered = _r25_describe_counting(un, mod, cell)
+    assert entered == [], (cell, entered)
+
+
+def test_r26_the_constructor_regimes_evaluator_holds_the_supplied_value():
+    """The REGIME FACT the rule relies on, asserted HERE and never in the describer (which calls no evaluator): in the
+    constructor regime the evaluator is the constant evaluator and, called with the VALUE format, returns the very object
+    supplied; in the syntax regime it is a function. If a later interpreter changes either, this fails by name."""
+    import types, typing
+    un = _load("inv7_uninstrument_r26_regime", EVIDENCE / "inv7_uninstrument.py")
+
+    class Held:
+        pass
+    for obj, n in ((typing.TypeVar("T", bound=Held), "evaluate_bound"), (typing.TypeVar("T", Held, int), "evaluate_constraints"),
+                   (typing.TypeVar("T", default=Held), "evaluate_default"), (typing.ParamSpec("P", default=Held), "evaluate_default"),
+                   (typing.TypeVarTuple("Ts", default=Held), "evaluate_default"), (typing.TypeAliasType("A", Held), "evaluate_value")):
+        ev = getattr(obj, n)
+        assert type(ev) is un._CONST_EVALUATOR, (obj, n, type(ev))
+        assert ev(1) is getattr(obj, "__" + n[len("evaluate_"):] + "__"), (obj, n)
+    lazy = _r25_site("regime", "class Site:\n    def fire[T: side('X')](self, value):\n        return value\n")
+    assert isinstance(lazy.Site.fire.__type_params__[0].evaluate_bound, types.FunctionType)
+
+
+class _R26OtherEvaluator:
+    """A type pairing `evaluate_bound` with `__bound__` whose evaluator is NEITHER a function NOR the constant evaluator."""
+    evaluate_bound = property(lambda self: __import__("functools").partial(int))
+    __bound__ = property(lambda self: int)
+
+
+def test_r26_any_other_evaluator_is_refused_by_name_never_read_as_lazy_or_eager():
+    """D3, the totality the verdict asks for: a supported form that cannot be described faithfully is REFUSED, naming the
+    object, the field and the evaluator's type — never dropped as lazy, never read as eager."""
+    un = _load("inv7_uninstrument_r26_other", EVIDENCE / "inv7_uninstrument.py")
+
+    class Site:
+        param = _R26OtherEvaluator()
+
+        def fire(self, value):
+            return value
+    with pytest.raises(un.SiteUndescribed, match=r"_R26OtherEvaluator\.__bound__: its evaluator `evaluate_bound` is a functools\.partial"):
+        un.site_description(Site)
+
+
+def test_r26_the_constant_evaluator_type_refuses_an_interpreter_where_it_would_be_ambiguous(monkeypatch):
+    """The import-time assertion (the second seat's addition): if the derived constant-evaluator type were a function, or
+    carried data descriptors, the rule could not tell the regimes apart — it must refuse, not pick a branch."""
+    import typing
+    un = _load("inv7_uninstrument_r26_assert", EVIDENCE / "inv7_uninstrument.py")
+
+    class FunctionEvaluator:
+        def __init__(self, *a, **k):
+            self.evaluate_bound = lambda fmt: int
+    class DescriptorEvaluator:
+        def __init__(self, *a, **k):
+            class Ev:
+                held = property(lambda self: int)
+            self.evaluate_bound = Ev()
+    for fake in (FunctionEvaluator, DescriptorEvaluator):
+        monkeypatch.setattr(typing, "TypeVar", fake)
+        with pytest.raises(RuntimeError, match="does not hold here"):
+            un._const_evaluator_type()
+
+
+_R26_MUTANTS = [
+    ("round 25's rule: any callable evaluator is lazy",
+     "            if ev is None or type(ev) is _CONST_EVALUATOR:\n                continue\n            if isinstance(ev, types.FunctionType):\n",
+     "            if ev is None:\n                continue\n            if callable(ev):\n",
+     "eager"),
+    ("the constant-evaluator branch dropped",
+     "            if ev is None or type(ev) is _CONST_EVALUATOR:\n", "            if ev is None:\n", "eager"),
+    ("the function test widened to callable",
+     "            if isinstance(ev, types.FunctionType):\n", "            if callable(ev):\n", "other"),
+    ("the refusal branch dropped (another evaluator falls through to lazy)",
+     "            raise SiteUndescribed(f\"{type(obj).__qualname__}.{value}: its evaluator",
+     "            out[value] = n\n            continue\n            raise SiteUndescribed(f\"{type(obj).__qualname__}.{value}: its evaluator",
+     "other"),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,kind", _R26_MUTANTS, ids=[m[0] for m in _R26_MUTANTS])
+def test_r26_each_evaluator_rule_is_load_bearing(mutant, anchor, replacement, kind, tmp_path, monkeypatch):
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "evalm")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    if kind == "other":
+        with pytest.raises(BaseException):
+            test_r26_any_other_evaluator_is_refused_by_name_never_read_as_lazy_or_eager()
+        return
+    failed = 0
+    for cell in _R26_EAGER:
+        try:
+            test_r26_a_changed_eager_value_behind_the_constant_evaluator_is_drift(*cell)
+        except BaseException:
+            failed += 1
+    assert failed == len(_R26_EAGER), f"{mutant}: {len(_R26_EAGER) - failed} eager cell(s) still pass"
