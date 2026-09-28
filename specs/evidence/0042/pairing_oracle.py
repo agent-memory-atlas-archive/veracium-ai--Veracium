@@ -212,13 +212,13 @@ def _draw(rng, future: bool = False) -> tuple[str, list]:
 def truth(src: str) -> dict:
     """(line, column, name) -> the compiler resolved this read to the MODULE. Every load of a tagged name, in every
     code object, located by its instruction position (3.11+). A read with no instruction at its position is NOT judged
-    and is counted as unmapped. On the 3.14 floor there are two causes, each measured read by read (the corpus at seed
-    13 as the 3.14 floor draws it — PEP 649 and PEP 695 shapes included — every generator-tagged read of all 400
-    programs: 178 unmapped, every one attributed, 0 neither): 110 are reads FUSED into a STORE_FAST_LOAD_FAST
-    superinstruction (a local read immediately after its own store, e.g. a comprehension target read at the start of
-    the body — the instruction is a STORE and carries one position), and 68 are reads inside ANNOTATIONS. Derived by
-    unmapped313_attribution.py, shipped beside its output in a review package; the round-19 figures (3.13: 182 = 138
-    fused + 44 annotation) described the corpus before the floor. The gate bounds the unmapped share."""
+    and is counted as unmapped. On the 3.14 floor there are two causes, and EVERY unmapped read is one of them, measured
+    read by read over every generator-tagged read of all 400 programs at seed 13 (0 neither): reads FUSED into a
+    STORE_FAST_LOAD_FAST superinstruction (a local read immediately after its own store, e.g. a comprehension target
+    read at the start of the body — the instruction is a STORE and carries one position), and reads inside
+    ANNOTATIONS. The COUNTS are not written here: they move whenever the corpus does (round 25's N1 extension moved
+    them, and this sentence carried the old ones), so they live in the output of unmapped313_attribution.py, which each
+    review package ships beside the script, generated at its pin. The gate bounds the unmapped share."""
     out = {}
 
     def walk(co):
