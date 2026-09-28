@@ -360,7 +360,7 @@ def _normalise(obj, seen: dict) -> tuple:
     if it is immutable, else by this same rule; anything else by its TYPE's identity (by name if immutable, described
     in full if not), EVERY data descriptor along its type's MRO (read-only included — a read-only field can hold
     writable state), each normalised recursively, and — for a mutable subclass of a built-in — its content read through
-    the base's own methods. A leaf with no data descriptors keeps its address-free repr. An object met again is
+    the base's own methods. A leaf with no data descriptors is described without executing its display code (`_leaf`). An object met again is
     recorded by the position at which it was first described, so equal structures stay equal and cycles end; each
     described object is HELD in `seen` until the description ends, so a position never names a freed address."""
     tp = type(obj)
@@ -424,8 +424,59 @@ def _normalise(obj, seen: dict) -> tuple:
         fields.append((n, _normalise(v, seen)))
     content = None if _immutable(tp) else _base_content(obj, tp, seen)
     if not fields and content is None:
-        return (identity, _addressless(repr(obj)))
+        return _leaf(obj, tp, identity, seen)
     return (identity, tuple(fields), content)
+
+
+def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
+    """An object with no data descriptors and no base content — described WITHOUT EXECUTING ITS DISPLAY CODE (round 27,
+    the round-26 verdict's R26-1). This was `repr(obj)`, address-stripped, for every such leaf; and `repr` is code — CPython's
+    constant evaluator formats the value it holds with %R, so a held class's metaclass `__repr__` ran census code during
+    description (a decision 0 -> 1, through the describer and the observer alike), and a Python class with `__slots__ = ()`
+    ran its OWN `__repr__`. The leaf is now described by what the garbage collector says it holds — `gc.get_referents`,
+    which visits the object's references in C and executes nothing — with repr kept only where it cannot dispatch:
+      the CONSTANT EVALUATOR (by the round-26 identity): its one referent, the held value, described recursively — so an
+        evaluator reached on its own, outside any value/evaluator pair, keeps its value visible to drift;
+      an IMMUTABLE (interpreter-made) type whose referents, its own type aside, are all built-in scalars: its address-free
+        repr, as before — a lock's text carries its locked/unlocked state, and nothing it holds can run Python code;
+      a MUTABLE (Python-defined) type with no C base but `object`: every piece of its state is a Python object (a slot
+        would be a data descriptor, a dict a field), so its type's description with each referent's, its own type
+        aside, is complete — an empty `__slots__ = ()` instance reduces to its type — and its repr is never called;
+      a MUTABLE type WITH a C base (the second seat's `class S(itertools.count): __slots__ = ()`, where S(5) and S(7)
+        behave differently): the C base can hold state that is NOT a Python object — measured, `count` keeps its counter
+        as a C integer, and gc.get_referents(S(5)) and gc.get_referents(S(7)) are both [S, 1] — so referents cannot see
+        it. Its address-free repr is used only if the `__repr__` found STATICALLY (inspect.getattr_static, which runs no
+        descriptor) is a C repr SLOT of a type in its own MRO — never any other callable — and its referents are all scalars — `count`'s repr
+        reads S(5) against S(7); otherwise it is REFUSED;
+      anything else — an immutable type holding a referent that is not a scalar — is REFUSED by name, never drift.
+    NAMED LIMIT (the second seat's stage-1 read): this rests on the type's traverse being COMPLETE. A C type whose repr
+    formats a member its traverse does not visit, or state that is not a Python object, is not seen here."""
+    import gc
+    refs = [r for r in gc.get_referents(obj) if r is not tp]
+    if tp is _CONST_EVALUATOR:
+        if len(refs) != 1:
+            raise SiteUndescribed(f"a constant evaluator holding {len(refs)} referents where it holds exactly one, the value it "
+                                  f"evaluates to: it cannot be described faithfully without calling it")
+        return (identity, ("constant evaluator", _normalise(refs[0], seen)))
+    if _immutable(tp):
+        if all(_builtin(type(r), _SCALARS) for r in refs):
+            return (identity, _addressless(repr(obj)))
+        raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} holds {len(refs)} non-scalar referent(s) and has no field "
+                              f"to read them through: its only description is its repr, which may run the held objects' display "
+                              f"code, so it is refused rather than described")
+    if not [b for b in tp.__mro__ if b is not object and _immutable(b)]:
+        return (identity, ("referents", tuple(_normalise(r, seen) for r in refs)))
+    import inspect, types
+    found = inspect.getattr_static(tp, "__repr__")
+    # ONLY a C type's own repr SLOT, from a type this object IS — a slot wrapper whose __objclass__ is in its MRO. Not any C
+    # callable: a builtin or a partial or a methodcaller assigned as __repr__ can call back into Python, and another
+    # type's slot does not format this object's state (the second seat's stage-1 probe, tightened by dev before commit).
+    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, "__objclass__", None) in tp.__mro__
+    if c_slot and all(_builtin(type(r), _SCALARS) for r in refs):
+        return (identity, _addressless(repr(obj)))
+    raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from a C type that can hold state no referent shows, "
+                          f"and its repr is {'formatted from non-scalar referents' if c_slot else 'not its C base own repr slot'}: "
+                          f"it cannot be described faithfully without executing it, so it is refused")
 
 
 def _normal_code(co) -> tuple:

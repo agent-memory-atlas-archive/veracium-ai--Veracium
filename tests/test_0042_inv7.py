@@ -4403,8 +4403,10 @@ def test_r26_a_changed_eager_value_behind_the_constant_evaluator_is_drift(cell, 
 
 @pytest.mark.parametrize("cell,ctor,use,held,call", _R26_EAGER[::2], ids=[c[0] for c in _R26_EAGER[::2]])
 def test_r26_reading_an_eager_value_runs_no_census_code(cell, ctor, use, held, call):
-    """The zero-evaluation control on the EAGER side: describing reads the supplied value and enters no code compiled from
-    the census's source — the held class's methods are described, never called."""
+    """The zero-evaluation control on the EAGER side, for a held class and function with NO display code of their own:
+    describing reads the supplied value and enters no code compiled from the census's source. (Round 26 claimed more than
+    this — "reading an eager value runs no census code" — and the round-26 verdict showed a held class's metaclass __repr__
+    running during description; that case is round 27's, `test_r27_describing_runs_no_held_display_code`.)"""
     un = _load("inv7_uninstrument_r26_zero", EVIDENCE / "inv7_uninstrument.py")
     mod = _r25_site(cell, _r26_census(ctor, use, held, call, 1))
     _digest, _realized, entered = _r25_describe_counting(un, mod, cell)
@@ -4474,7 +4476,7 @@ _R26_MUTANTS = [
     ("round 25's rule: any callable evaluator is lazy",
      "            if ev is None or type(ev) is _CONST_EVALUATOR:\n                continue\n            if isinstance(ev, types.FunctionType):\n",
      "            if ev is None:\n                continue\n            if callable(ev):\n",
-     "eager"),
+     "value"),
     ("the constant-evaluator branch dropped",
      "            if ev is None or type(ev) is _CONST_EVALUATOR:\n", "            if ev is None:\n", "eager"),
     ("the function test widened to callable",
@@ -4494,6 +4496,12 @@ def test_r26_each_evaluator_rule_is_load_bearing(mutant, anchor, replacement, ki
         with pytest.raises(BaseException):
             test_r26_any_other_evaluator_is_refused_by_name_never_read_as_lazy_or_eager()
         return
+    if kind == "value":
+        # round 27: the constant evaluator's own description now carries the held value (E1), so round 25's rule no longer
+        # hides a CHANGE — drift reads through the evaluator — but it still marks the value lazy, which this cell refuses
+        with pytest.raises(BaseException):
+            test_r27_an_eager_value_is_described_as_a_value_not_marked_lazy()
+        return
     failed = 0
     for cell in _R26_EAGER:
         try:
@@ -4501,3 +4509,178 @@ def test_r26_each_evaluator_rule_is_load_bearing(mutant, anchor, replacement, ki
         except BaseException:
             failed += 1
     assert failed == len(_R26_EAGER), f"{mutant}: {len(_R26_EAGER) - failed} eager cell(s) still pass"
+
+
+# ---- round 27: the round-26 verdict's R26-1 — a leaf is described without executing its display code -----------------
+# The describer's leaf fallback was repr(obj). CPython's constant evaluator formats the value it holds with %R, so a held
+# class's metaclass __repr__ ran census code during description — a decision 0 -> 1 through the describer AND the observer.
+_R27_DISPLAY = ("import typing\n\nCALLS = []\n\nclass Display(type):\n    def __repr__(cls):\n        CALLS.append('display')\n"
+                "        return 'Bound'\n\nclass Bound(metaclass=Display):\n    pass\n\nclass Site:\n    param = {ctor}\n\n"
+                "    def fire(self, value):\n        return len(CALLS)\n")
+_R27_FORMS = [(f, c.replace("Held", "Bound")) for f, c, _u in _R26_FORMS] + [("direct control", "Bound")]
+_R27_CELLS = [(f"{form} through {route}", ctor, route) for form, ctor in _R27_FORMS for route in ("site_description", "_site_realized")]
+
+
+@pytest.mark.parametrize("cell,ctor,route", _R27_CELLS, ids=[c[0] for c in _R27_CELLS])
+def test_r27_describing_runs_no_held_display_code(cell, ctor, route):
+    """The verdict's fixture, every form, BOTH callers of the describer: the held class's display method is never entered
+    and the decision it feeds is unchanged. The cell fails on the display call itself, so at the round-26 pin it fails on
+    the finding, not on anything round 27 added."""
+    import types as _types
+    un = _load("inv7_uninstrument_r27_display", EVIDENCE / "inv7_uninstrument.py")
+    mod = _types.ModuleType("review_census")
+    exec(compile(_R27_DISPLAY.format(ctor=ctor), "<review_census>", "exec", dont_inherit=True), mod.__dict__)
+    assert mod.CALLS == [] and mod.Site().fire(0) == 0, cell
+    if route == "site_description":
+        un.site_description(mod.Site)
+    else:
+        observer._site_realized(mod.Site)
+    assert mod.CALLS == [] and mod.Site().fire(0) == 0, f"{cell}: describing ran the held class's display code {mod.CALLS}"
+
+
+def test_r27_an_eager_value_is_described_as_a_value_not_marked_lazy():
+    """Round 26's rule, asserted where it is visible: in the constructor regime the supplied value is DESCRIBED — its field
+    carries the value, never the lazy marker — for all six forms."""
+    import typing
+    un = _load("inv7_uninstrument_r27_value", EVIDENCE / "inv7_uninstrument.py")
+
+    class Held:
+        pass
+    for obj, field in ((typing.TypeVar("T", bound=Held), "__bound__"), (typing.TypeVar("T", Held, int), "__constraints__"),
+                       (typing.TypeVar("T", default=Held), "__default__"), (typing.ParamSpec("P", default=Held), "__default__"),
+                       (typing.TypeVarTuple("Ts", default=Held), "__default__"), (typing.TypeAliasType("A", Held), "__value__")):
+        fields = dict(un._normalise(obj, {})[1])
+        assert field in fields and "<lazy:" not in repr(fields[field]), (type(obj).__name__, field, fields.get(field))
+
+
+def test_r27_an_unpaired_constant_evaluator_keeps_its_value_visible_and_runs_nothing():
+    """The verdict: "including where an evaluator is reached outside an established value/evaluator pair". A Site holding
+    the evaluator ALONE: a changed held class still describes differently, and a held display method is never entered."""
+    import types as _types
+    un = _load("inv7_uninstrument_r27_unpaired", EVIDENCE / "inv7_uninstrument.py")
+
+    def site(v):
+        src = ("import typing\nCALLS = []\nclass Display(type):\n    def __repr__(cls):\n        CALLS.append('display')\n"
+               "        return 'H'\nclass Held(metaclass=Display):\n    def decision(self):\n        return " + str(v) + "\n"
+               "class Site:\n    ev = typing.TypeVar('T', bound=Held).evaluate_bound\n")
+        m = _types.ModuleType("unpaired")
+        exec(compile(src, "<unpaired>", "exec", dont_inherit=True), m.__dict__)
+        return m
+    a, b = site(1), site(2)
+    da, db = (un.site_description_digest(un.site_description(m.Site))["digest"] for m in (a, b))
+    assert da != db, "a changed class behind an unpaired evaluator reads as no drift"
+    assert a.CALLS == b.CALLS == [], (a.CALLS, b.CALLS)
+
+
+def test_r27_a_stateless_slotted_instance_is_described_by_its_type_never_its_repr():
+    """A Python class with __slots__ = () and no C base: no data descriptor, no state; its own __repr__ is never called."""
+    un = _load("inv7_uninstrument_r27_slotted", EVIDENCE / "inv7_uninstrument.py")
+
+    class Slotted:
+        __slots__ = ()
+
+        def __repr__(self):
+            raise AssertionError("the describer ran the leaf's own __repr__")
+    assert repr(un._normalise(Slotted(), {})) == repr(un._normalise(Slotted(), {}))
+
+
+def test_r27_a_python_subclass_of_a_stateful_c_type_is_read_by_its_c_repr_or_refused():
+    """The second seat's pair: `class S(itertools.count): __slots__ = ()` — S(5) and S(7) behave differently, and gc sees
+    the same referents for both ([S, 1]: the counter is a C integer, not a Python object). They must describe differently,
+    through count's own C repr; with a Python __repr__ the only description would execute it, so it is refused."""
+    import itertools
+    un = _load("inv7_uninstrument_r27_cbase", EVIDENCE / "inv7_uninstrument.py")
+
+    class S(itertools.count):
+        __slots__ = ()
+
+    class SR(itertools.count):
+        __slots__ = ()
+
+        def __repr__(self):
+            raise AssertionError("the describer ran a Python __repr__")
+    assert repr(un._normalise(S(5), {})) != repr(un._normalise(S(7), {})), "hidden C state read as no drift"
+    with pytest.raises(un.SiteUndescribed, match="derives from a C type that can hold state no referent shows"):
+        un._normalise(SR(5), {})
+
+
+def test_r27_an_interpreter_type_holding_a_non_scalar_is_refused_and_a_scalar_one_is_read():
+    """E2 and E4: an immutable type with no field is read by its repr only when everything it holds is a built-in scalar —
+    a lock's state still reads (locked against unlocked differ) — and refused when it holds anything else (a count whose
+    step is a Fraction, whose repr the count's repr would call)."""
+    import _thread, fractions, itertools
+    un = _load("inv7_uninstrument_r27_leafrule", EVIDENCE / "inv7_uninstrument.py")
+    free, held = _thread.allocate_lock(), _thread.allocate_lock()
+    held.acquire()
+    try:
+        assert repr(un._normalise(free, {})) != repr(un._normalise(held, {})), "a lock's state no longer reads"
+    finally:
+        held.release()
+    with pytest.raises(un.SiteUndescribed, match="non-scalar referent"):
+        un._normalise(itertools.count(0, fractions.Fraction(1, 2)), {})
+
+
+def test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf():
+    """What (b) trusts, all four ways it could be fooled: a Python function, a C callable that calls back into Python
+    (functools.partial, operator.methodcaller) and ANOTHER type's repr slot are each refused; count's own slot, even
+    assigned explicitly in the Python class, is read — it is C code formatting C state."""
+    import functools, itertools, operator
+    un = _load("inv7_uninstrument_r27_slot", EVIDENCE / "inv7_uninstrument.py")
+    calls = []
+
+    def py(self):
+        calls.append("python")
+        return "x"
+    for label, rep_ in (("a Python function", py), ("functools.partial of a Python function", functools.partial(py)),
+                        ("operator.methodcaller", operator.methodcaller("bit_length")), ("another type's slot", list.__repr__)):
+        C = type("C", (itertools.count,), {"__slots__": (), "__repr__": rep_})
+        with pytest.raises(un.SiteUndescribed, match="not its C base own repr slot"):
+            un._normalise(C(5), {})
+    assert calls == [], calls
+    Own = type("Own", (itertools.count,), {"__slots__": (), "__repr__": itertools.count.__repr__})
+    assert repr(un._normalise(Own(5), {})) != repr(un._normalise(Own(7), {}))
+
+
+_R27_MUTANTS = [
+    ("the constant evaluator read through repr (E1 dropped)",
+     "    if tp is _CONST_EVALUATOR:\n        if len(refs) != 1:",
+     "    if False:\n        if len(refs) != 1:",
+     test_r27_describing_runs_no_held_display_code),
+    ("any immutable leaf read through repr (E2's scalar test dropped)",
+     "        if all(_builtin(type(r), _SCALARS) for r in refs):\n            return (identity, _addressless(repr(obj)))",
+     "        if True:\n            return (identity, _addressless(repr(obj)))",
+     test_r27_an_interpreter_type_holding_a_non_scalar_is_refused_and_a_scalar_one_is_read),
+    ("a Python-type leaf read through its repr (E3)",
+     "    if not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, (\"referents\", tuple(_normalise(r, seen) for r in refs)))",
+     "    if not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, _addressless(repr(obj)))",
+     test_r27_a_stateless_slotted_instance_is_described_by_its_type_never_its_repr),
+    ("any C callable trusted as the repr slot",
+     "    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, \"__objclass__\", None) in tp.__mro__\n",
+     "    c_slot = callable(found)\n",
+     test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf),
+    ("a C-based leaf read by referents alone (the second seat's E3)",
+     "    if not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n",
+     "    if True:\n",
+     test_r27_a_python_subclass_of_a_stateful_c_type_is_read_by_its_c_repr_or_refused),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell", _R27_MUTANTS, ids=[m[0] for m in _R27_MUTANTS])
+def test_r27_each_leaf_rule_is_load_bearing(mutant, anchor, replacement, cell, tmp_path, monkeypatch):
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "leafm")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    if cell is test_r27_describing_runs_no_held_display_code:
+        # the OBSERVER route loads its own inv7_uninstrument from the evidence directory, never the mutated copy, so a
+        # mutant of the describer reaches the site_description cells alone: all six forms there must fail
+        failed = []
+        for c in _R27_CELLS:
+            if c[0].startswith("direct control") or c[2] != "site_description":
+                continue
+            try:
+                cell(*c)
+            except BaseException:
+                failed.append(c[0])
+        assert len(failed) == len(_R27_FORMS) - 1, f"{mutant}: only {failed} failed"
+        return
+    with pytest.raises(BaseException):
+        cell()
