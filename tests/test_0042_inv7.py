@@ -3990,8 +3990,25 @@ def test_r25_every_annotation_position_by_regime_is_preserved_or_refused_as_the_
             un.uninstrument_source(src, f"<{cell}>")
         return
     out, stats = un.uninstrument_source(src, f"<{cell}>")
+    # the TEXT first — what the round-24 verdict saw — so the cell fails on the rewrite itself wherever there is one
+    assert [l for l in body.splitlines() if _R25_ANN in l] == [l for l in out.splitlines() if _R25_ANN in l], (cell, out)
     assert un.annotations_in_order(out) == un.annotations_in_order(src), (cell, out)
-    assert _R25_ANN in out and stats["preserved_annotation_census_calls"] == [f"{_R25_ANN} at line {src.count(chr(10), 0, src.index(_R25_ANN)) + 1}"], (cell, stats)
+    assert stats["preserved_annotation_census_calls"] == [f"{_R25_ANN} at line {src.count(chr(10), 0, src.index(_R25_ANN)) + 1}"], (cell, stats)
+
+
+_R25_VERDICT_CASES = [
+    ("a function's annotation", "def f(x: S.fire(123)):\n    pass\n", "def f(x: S.fire(123)):"),
+    ("a module variable's annotation", "x: S.fire(123)\n", "x: S.fire(123)"),
+]
+
+
+@pytest.mark.parametrize("case,body,line", _R25_VERDICT_CASES, ids=[c[0] for c in _R25_VERDICT_CASES])
+def test_r25_the_verdicts_two_cases_keep_their_annotation_text(case, body, line):
+    """The round-24 verdict's R24-1, exactly as it was found: under `from __future__ import annotations` the transform
+    turned `def f(x: S.fire(123))` into `def f(x: 123)` and `x: S.fire(123)` into `x: 123`. Each is kept as written."""
+    un = _load("inv7_uninstrument_r25_verdict", EVIDENCE / "inv7_uninstrument.py")
+    out, _stats = un.uninstrument_source("from __future__ import annotations\n" + _R25_HEAD + body, f"<{case}>")
+    assert line in out.splitlines(), f"{case}: the annotation was rewritten — {[l for l in out.splitlines() if '123' in l]}"
 
 
 def test_r25_the_matrix_holds_both_outcomes_in_the_lazy_regime_and_only_data_under_the_future_import():
