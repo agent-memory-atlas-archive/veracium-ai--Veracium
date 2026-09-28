@@ -425,7 +425,46 @@ def _normalise(obj, seen: dict) -> tuple:
     content = None if _immutable(tp) else _base_content(obj, tp, seen)
     if not fields and content is None:
         return _leaf(obj, tp, identity, seen)
+    opaque = _opaque_c_bases(tp)
+    if opaque:
+        raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from {opaque[0].__module__}.{opaque[0].__qualname__}, "
+                              f"a C type whose instance state no field exposes: its fields cannot show it, so it cannot be "
+                              f"described faithfully and is refused (round 27, the second seat's stage-2 probe)")
     return (identity, tuple(fields), content)
+
+
+def _repr_reads(tp: type, opaque: list) -> bool:
+    """Whether `tp`'s C repr can show the state its stateful C bases hold: the repr slot found statically must belong to
+    the deepest such base, or a subclass of it — `object`'s slot, found on `class R(_random.Random): __slots__ = ()`,
+    prints a constant and would read R(5) and R(7) as equal. With no stateful base there is nothing hidden to show."""
+    if not opaque:
+        return True
+    import inspect, types
+    found = inspect.getattr_static(tp, "__repr__")
+    owner = getattr(found, "__objclass__", None) if isinstance(found, types.WrapperDescriptorType) else None
+    return owner is not None and isinstance(owner, type) and issubclass(owner, opaque[0])
+
+
+def _opaque_c_bases(tp: type) -> list:
+    """The types in `tp`'s MRO that ADD instance storage (their basicsize exceeds their own base's) and expose NONE of
+    it — no data descriptor in their own __dict__ — and are not a built-in the describer reads by value (a scalar or a
+    container, read through `_base_content`). A Python class never qualifies: whatever storage it adds comes with its own
+    descriptor (a slot is a member descriptor; __dict__ and __weakref__ are getset descriptors), and `__slots__ = ()` adds
+    none. What does: `_random.Random` (the Mersenne-Twister state, 2520 bytes, no field), `itertools.count`, a lock.
+    Round 27, from the second seat's stage-2 probe: `random.Random(5)` and `random.Random(7)` described EQUAL while they
+    behaved differently — the state is in the C struct — at every pin back to the accepted round 23. The real `Site`'s
+    types (code, function, type, member_descriptor) each expose their storage through descriptors, and do not qualify.
+    NAMED LIMIT: a C type exposing SOME of its storage through descriptors and hiding the rest is not caught here."""
+    import inspect
+    read = _SCALARS | _SEQUENCES | _SETS | _MAPPINGS
+    out = []
+    for b in tp.__mro__:
+        base = b.__base__
+        if b is object or base is None or _builtin(b, read) or b.__basicsize__ <= base.__basicsize__:
+            continue
+        if not any(inspect.isdatadescriptor(v) for v in vars(b).values()):
+            out.append(b)
+    return out
 
 
 def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
@@ -458,20 +497,22 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
             raise SiteUndescribed(f"a constant evaluator holding {len(refs)} referents where it holds exactly one, the value it "
                                   f"evaluates to: it cannot be described faithfully without calling it")
         return (identity, ("constant evaluator", _normalise(refs[0], seen)))
+    opaque = _opaque_c_bases(tp)
     if _immutable(tp):
-        if all(_builtin(type(r), _SCALARS) for r in refs):
+        if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, opaque):
             return (identity, _addressless(repr(obj)))
         raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} holds {len(refs)} non-scalar referent(s) and has no field "
                               f"to read them through: its only description is its repr, which may run the held objects' display "
                               f"code, so it is refused rather than described")
-    if not [b for b in tp.__mro__ if b is not object and _immutable(b)]:
+    if not opaque and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:
         return (identity, ("referents", tuple(_normalise(r, seen) for r in refs)))
     import inspect, types
     found = inspect.getattr_static(tp, "__repr__")
     # ONLY a C type's own repr SLOT, from a type this object IS — a slot wrapper whose __objclass__ is in its MRO. Not any C
     # callable: a builtin or a partial or a methodcaller assigned as __repr__ can call back into Python, and another
     # type's slot does not format this object's state (the second seat's stage-1 probe, tightened by dev before commit).
-    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, "__objclass__", None) in tp.__mro__
+    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, "__objclass__", None) in tp.__mro__ \
+        and _repr_reads(tp, opaque)
     if c_slot and all(_builtin(type(r), _SCALARS) for r in refs):
         return (identity, _addressless(repr(obj)))
     raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from a C type that can hold state no referent shows, "

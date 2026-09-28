@@ -4641,25 +4641,62 @@ def test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf():
     assert repr(un._normalise(Own(5), {})) != repr(un._normalise(Own(7), {}))
 
 
+def test_r27_state_a_c_base_holds_and_no_field_exposes_is_refused_never_read_as_equal():
+    """The second seat's stage-2 probe: a C base that ADDS instance storage and exposes none of it — `_random.Random`, the
+    Mersenne-Twister state — was invisible at every pin back to the accepted round 23: random.Random(5) and
+    random.Random(7) described EQUAL while they behaved differently. Now refused by name, as a field-bearing object
+    (random.Random) and as a leaf (a slotted subclass, whose only C repr is object's, which prints a constant)."""
+    import _random, random
+    un = _load("inv7_uninstrument_r27_opaque", EVIDENCE / "inv7_uninstrument.py")
+
+    class R(_random.Random):
+        __slots__ = ()
+    assert random.Random(5).random() != random.Random(7).random() and R(5).random() != R(7).random()
+    with pytest.raises(un.SiteUndescribed, match="a C type whose instance state no field exposes"):
+        un._normalise(random.Random(5), {})
+    with pytest.raises(un.SiteUndescribed, match="not its C base own repr slot"):
+        un._normalise(R(5), {})
+
+
+def test_r27_a_site_holding_hidden_c_state_is_refused_through_site_drift():
+    """The probe's own shape, end to end: two censuses whose Site definitions are IDENTICAL and differ only in a seed their
+    Site's generator holds — site_drift refuses (loudly, SiteUndescribed) rather than reporting no drift."""
+    un = _load("inv7_uninstrument_r27_opaque_drift", EVIDENCE / "inv7_uninstrument.py")
+
+    def census(seed):
+        return ("import random\n\nclass Site:\n    def fire(self, value):\n        return self._rng.random()\n\n"
+                f"SEED = {seed}\nSite._rng = random.Random(SEED)\n")
+    with pytest.raises(un.SiteUndescribed):
+        un.site_drift(census(7), census(5))
+
+
 _R27_MUTANTS = [
     ("the constant evaluator read through repr (E1 dropped)",
      "    if tp is _CONST_EVALUATOR:\n        if len(refs) != 1:",
      "    if False:\n        if len(refs) != 1:",
      test_r27_describing_runs_no_held_display_code),
     ("any immutable leaf read through repr (E2's scalar test dropped)",
-     "        if all(_builtin(type(r), _SCALARS) for r in refs):\n            return (identity, _addressless(repr(obj)))",
+     "        if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, opaque):\n            return (identity, _addressless(repr(obj)))",
      "        if True:\n            return (identity, _addressless(repr(obj)))",
      test_r27_an_interpreter_type_holding_a_non_scalar_is_refused_and_a_scalar_one_is_read),
     ("a Python-type leaf read through its repr (E3)",
-     "    if not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, (\"referents\", tuple(_normalise(r, seen) for r in refs)))",
-     "    if not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, _addressless(repr(obj)))",
+     "    if not opaque and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, (\"referents\", tuple(_normalise(r, seen) for r in refs)))",
+     "    if not opaque and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, _addressless(repr(obj)))",
      test_r27_a_stateless_slotted_instance_is_described_by_its_type_never_its_repr),
     ("any C callable trusted as the repr slot",
-     "    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, \"__objclass__\", None) in tp.__mro__\n",
+     "    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, \"__objclass__\", None) in tp.__mro__ \\\n        and _repr_reads(tp, opaque)\n",
      "    c_slot = callable(found)\n",
      test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf),
+    ("no C base found stateful (the hidden-state rule dropped)",
+     "        if not any(inspect.isdatadescriptor(v) for v in vars(b).values()):\n            out.append(b)\n",
+     "        pass\n",
+     test_r27_state_a_c_base_holds_and_no_field_exposes_is_refused_never_read_as_equal),
+    ("any C repr slot trusted to show a stateful base's state",
+     "    return owner is not None and isinstance(owner, type) and issubclass(owner, opaque[0])\n",
+     "    return True\n",
+     test_r27_state_a_c_base_holds_and_no_field_exposes_is_refused_never_read_as_equal),
     ("a C-based leaf read by referents alone (the second seat's E3)",
-     "    if not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n",
+     "    if not opaque and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n",
      "    if True:\n",
      test_r27_a_python_subclass_of_a_stateful_c_type_is_read_by_its_c_repr_or_refused),
 ]
