@@ -391,6 +391,21 @@ def _normalise(obj, seen: dict) -> tuple:
     fields = []
     is_class = issubclass(tp, type)
     descriptors = _data_descriptors(tp)
+    # ROUND 27, FAIL-CLOSED, DECIDED FROM THE TYPE BEFORE ANY READ (the second seat's stage-2 mark): an object whose C state
+    # the description is not shown to read is refused before one of its fields is touched — a module's `__annotate__`
+    # read WRITES into it (round 25's A5), and a refusal that came after the reads would already have done that.
+    reader = next((r for r in tp.__mro__ if r in _READERS), None)
+    base_read = None if (_immutable(tp) or reader is not None) else next(
+        (b for b in tp.__mro__[1:] if _builtin(b, _SCALARS | _SEQUENCES | _SETS | _MAPPINGS)), None)
+    leaf = not reader and base_read is None and not [n for n in descriptors if n not in _NAMESPACE_REFS]
+    if not leaf:
+        covered = set(_ALLOW_FIELDS) | (set(reader.__mro__) if reader else set()) | (set(base_read.__mro__) if base_read else set())
+        hidden = [b for b in _hidden_c_bases(tp) if b not in covered]
+        if hidden:
+            raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from {hidden[0].__module__}.{hidden[0].__qualname__}, "
+                                  f"a C type holding instance storage that neither its fields nor any reader the description "
+                                  f"trusts exposes in full: it cannot be described faithfully and is refused before any of it "
+                                  f"is read (round 27, fail-closed)")
     wrapper = not is_class and _WRAPPER <= set(descriptors)
     lazy = (not is_class and not wrapper and "__annotate__" in descriptors
             and getattr(obj, "__annotate__", None) is not None)
@@ -422,49 +437,105 @@ def _normalise(obj, seen: dict) -> tuple:
         if n == "__flags__" and isinstance(v, int):
             v = v & ~_CACHE_BIT
         fields.append((n, _normalise(v, seen)))
-    content = None if _immutable(tp) else _base_content(obj, tp, seen)
+    if reader is not None:
+        content = (reader.__qualname__, _READERS[reader](obj, seen))
+    else:
+        content = None if _immutable(tp) else _base_content(obj, tp, seen)
     if not fields and content is None:
         return _leaf(obj, tp, identity, seen)
-    opaque = _opaque_c_bases(tp)
-    if opaque:
-        raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from {opaque[0].__module__}.{opaque[0].__qualname__}, "
-                              f"a C type whose instance state no field exposes: its fields cannot show it, so it cannot be "
-                              f"described faithfully and is refused (round 27, the second seat's stage-2 probe)")
     return (identity, tuple(fields), content)
 
 
-def _repr_reads(tp: type, opaque: list) -> bool:
-    """Whether `tp`'s C repr can show the state its stateful C bases hold: the repr slot found statically must belong to
-    the deepest such base, or a subclass of it — `object`'s slot, found on `class R(_random.Random): __slots__ = ()`,
-    prints a constant and would read R(5) and R(7) as equal. With no stateful base there is nothing hidden to show."""
-    if not opaque:
+def _exposed(b: type) -> int:
+    """The bytes of instance storage `b` itself exposes through its own __dict__: 8 per member descriptor (a slot), and
+    8 each for a `__dict__` or `__weakref__` descriptor. Exact for every Python-defined class, measured on 3.14.7."""
+    import types
+    v = vars(b)
+    return (8 * sum(isinstance(x, types.MemberDescriptorType) for x in v.values())
+            + (8 if "__dict__" in v else 0) + (8 if "__weakref__" in v else 0))
+
+
+def _hidden_c_bases(tp: type) -> list:
+    """ROUND 27, FAIL-CLOSED (the owner's decision, on the second seat's stage-2 sweeps): the types in `tp`'s MRO that
+    ADD more instance storage than they EXPOSE (`_exposed`) — state kept in a C struct that no field shows. A Python class
+    never qualifies (its storage is exactly its slots, dict and weakref); a C type with state does, unless the
+    description is SHOWN to read it (`_ALLOW_FIELDS`, `_ALLOW_REPR`, `_READERS`, or a built-in read by value), and such
+    an object is refused rather than described. The sweeps it closes: random.Random(5) and random.Random(7) described
+    EQUAL (no field at all), and deque, defaultdict, array, StringIO, BytesIO and a sha256 hash (a field or two, the
+    state elsewhere) — each silent at every pin back to the accepted round 23."""
+    out = []
+    for b in tp.__mro__:
+        base = b.__base__
+        if b is object or base is None:
+            continue
+        if b.__basicsize__ - base.__basicsize__ > _exposed(b):
+            out.append(b)
+    return out
+
+
+def _repr_reads(tp: type, hidden: list) -> bool:
+    """Whether `tp`'s C repr can show the state its hidden C bases hold: the repr slot found statically must belong to the
+    deepest such base, or a subclass of it — `object`'s slot, found on `class R(_random.Random): __slots__ = ()`, prints a
+    constant. With no hidden base there is nothing hidden to show."""
+    if not hidden:
         return True
     import inspect, types
     found = inspect.getattr_static(tp, "__repr__")
     owner = getattr(found, "__objclass__", None) if isinstance(found, types.WrapperDescriptorType) else None
-    return owner is not None and isinstance(owner, type) and issubclass(owner, opaque[0])
+    return owner is not None and isinstance(owner, type) and issubclass(owner, hidden[0])
 
 
-def _opaque_c_bases(tp: type) -> list:
-    """The types in `tp`'s MRO that ADD instance storage (their basicsize exceeds their own base's) and expose NONE of
-    it — no data descriptor in their own __dict__ — and are not a built-in the describer reads by value (a scalar or a
-    container, read through `_base_content`). A Python class never qualifies: whatever storage it adds comes with its own
-    descriptor (a slot is a member descriptor; __dict__ and __weakref__ are getset descriptors), and `__slots__ = ()` adds
-    none. What does: `_random.Random` (the Mersenne-Twister state, 2520 bytes, no field), `itertools.count`, a lock.
-    Round 27, from the second seat's stage-2 probe: `random.Random(5)` and `random.Random(7)` described EQUAL while they
-    behaved differently — the state is in the C struct — at every pin back to the accepted round 23. The real `Site`'s
-    types (code, function, type, member_descriptor) each expose their storage through descriptors, and do not qualify.
-    NAMED LIMIT: a C type exposing SOME of its storage through descriptors and hiding the rest is not caught here."""
-    import inspect
-    read = _SCALARS | _SEQUENCES | _SETS | _MAPPINGS
-    out = []
-    for b in tp.__mro__:
-        base = b.__base__
-        if b is object or base is None or _builtin(b, read) or b.__basicsize__ <= base.__basicsize__:
-            continue
-        if not any(inspect.isdatadescriptor(v) for v in vars(b).values()):
-            out.append(b)
-    return out
+def _allowlists():
+    """The types the description is SHOWN to read in full, each with its reason and its cell — the only C state that is
+    described rather than refused.
+      _ALLOW_FIELDS — types whose state the recursive rule reads through their descriptors (the second seat's marks):
+        (i) the DESCRIPTOR family — getset, member, wrapper, method and classmethod descriptors, method-wrapper,
+          builtin_function_or_method: their hidden bytes point into the interpreter's own static definitions, fixed by the
+          visible (__objclass__ or __self__, __name__) — for a member descriptor Python code makes (__slots__), the offset
+          differs only across classes, which __objclass__ tells apart;
+        (ii) property, bound method, cell, and the real Site's function, type and code (rounds 17 to 19; their hidden
+          bytes are caches, vectorcall pointers and version tags);
+        (iii) TypeVar, TypeVarTuple, TypeAliasType, types.GenericAlias, types.UnionType: all state through getsets, the
+          lazy ones decided by round 26's evaluator rule, never read by coverage (a type-level fact).
+        NOT listed, so refused: a module (round 25's A5 closes — refused before it is touched), and so a Site holding a
+        module-level builtin such as `len`, whose __self__ IS its module.
+      _ALLOW_REPR — leaves whose C repr carries their whole state: a lock (locked or not), itertools.count (counter and
+        step); `test_r27_an_interpreter_type_holding_a_non_scalar_is_refused_and_a_scalar_one_is_read`,
+        `test_r27_a_python_subclass_of_a_stateful_c_type_is_read_by_its_c_repr_or_refused`.
+      _READERS — read through the base type's OWN C methods, never an override, dispatching no Python code
+        (`test_r27_a_reader_type_s_state_change_is_drift`): deque (its items), defaultdict (dict.items; default_factory is
+        a field), array (tolist; typecode is a field), StringIO and BytesIO (getvalue and tell, or closed)."""
+    import _thread, array, collections, io, itertools, types
+    import typing
+    fields = frozenset({
+        types.GetSetDescriptorType, types.MemberDescriptorType, types.WrapperDescriptorType, types.MethodDescriptorType,
+        types.ClassMethodDescriptorType, types.MethodWrapperType, types.BuiltinFunctionType,
+        property, types.MethodType, types.CellType, types.FunctionType, type, types.CodeType,
+        typing.TypeVar, typing.TypeVarTuple, typing.TypeAliasType, types.GenericAlias, types.UnionType})
+    assert all(isinstance(x, type) for x in fields) and len(fields) == 18, "an allowlist member is not a type on this interpreter"
+    by_repr = frozenset({type(_thread.allocate_lock()), itertools.count})
+
+    def items(it, seen):
+        return tuple(_normalise(x, seen) for x in it)
+
+    def stream(cls):
+        def read(obj, seen):
+            try:
+                return (_normalise(cls.getvalue(obj), seen), _normalise(cls.tell(obj), seen))
+            except ValueError:
+                return ("<closed>",)
+        return read
+    readers = {
+        collections.deque: lambda obj, seen: items(collections.deque.__iter__(obj), seen),
+        collections.defaultdict: lambda obj, seen: tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in dict.items(obj)),
+        array.array: lambda obj, seen: items(array.array.tolist(obj), seen),
+        io.StringIO: stream(io.StringIO),
+        io.BytesIO: stream(io.BytesIO),
+    }
+    return fields, by_repr, readers
+
+
+_ALLOW_FIELDS, _ALLOW_REPR, _READERS = _allowlists()
 
 
 def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
@@ -497,14 +568,19 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
             raise SiteUndescribed(f"a constant evaluator holding {len(refs)} referents where it holds exactly one, the value it "
                                   f"evaluates to: it cannot be described faithfully without calling it")
         return (identity, ("constant evaluator", _normalise(refs[0], seen)))
-    opaque = _opaque_c_bases(tp)
+    hidden = _hidden_c_bases(tp)
+    unread = [b for b in hidden if b not in _ALLOW_REPR]
+    if unread:
+        raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from {unread[0].__module__}.{unread[0].__qualname__}, "
+                              f"a C type holding instance storage no field exposes and whose repr the description does not "
+                              f"trust to show it: it cannot be described faithfully and is refused (round 27, fail-closed)")
     if _immutable(tp):
-        if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, opaque):
+        if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, hidden):
             return (identity, _addressless(repr(obj)))
         raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} holds {len(refs)} non-scalar referent(s) and has no field "
                               f"to read them through: its only description is its repr, which may run the held objects' display "
                               f"code, so it is refused rather than described")
-    if not opaque and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:
+    if not hidden and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:
         return (identity, ("referents", tuple(_normalise(r, seen) for r in refs)))
     import inspect, types
     found = inspect.getattr_static(tp, "__repr__")
@@ -512,7 +588,7 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
     # callable: a builtin or a partial or a methodcaller assigned as __repr__ can call back into Python, and another
     # type's slot does not format this object's state (the second seat's stage-1 probe, tightened by dev before commit).
     c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, "__objclass__", None) in tp.__mro__ \
-        and _repr_reads(tp, opaque)
+        and _repr_reads(tp, hidden)
     if c_slot and all(_builtin(type(r), _SCALARS) for r in refs):
         return (identity, _addressless(repr(obj)))
     raise SiteUndescribed(f"a {tp.__module__}.{tp.__qualname__} derives from a C type that can hold state no referent shows, "

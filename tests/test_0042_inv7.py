@@ -3670,8 +3670,14 @@ def test_py314_a_census_dict_carrying_an_annotation_key_is_still_compared():
     # not — and only this comparison drops BOTH sides under an unscoped normalisation (the scoping mutant survived the
     # pairs above once F1 made the cache conditional)
     for form in ({"__annotations_cache__": {}}, {"__annotate_func__": None}, {"__annotations__": {}},
-                 {"__annotate_func__": len, "__annotations_cache__": {"x": 1}}):
-        assert un._normalise(form, {}) != un._normalise({k: v for k, v in form.items() if k == "__annotate_func__" and v is len}, {}), form
+                 {"__annotate_func__": _R27_ANNOTATE, "__annotations_cache__": {"x": 1}}):
+        # round 27: this was `len`, an incidental callable; a module-level builtin is refused now (its __self__ is the
+        # builtins module, which fail-closed refuses), so a Python function stands in — the cell's subject is unchanged
+        assert un._normalise(form, {}) != un._normalise({k: v for k, v in form.items() if k == "__annotate_func__" and v is _R27_ANNOTATE}, {}), form
+
+
+def _R27_ANNOTATE():
+    """A plain callable standing in as an annotate function (round 27: `len` is refused as a held builtin)."""
 
 
 _B1_MUTANTS = [
@@ -4631,10 +4637,15 @@ def test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf():
     def py(self):
         calls.append("python")
         return "x"
-    for label, rep_ in (("a Python function", py), ("functools.partial of a Python function", functools.partial(py)),
-                        ("operator.methodcaller", operator.methodcaller("bit_length")), ("another type's slot", list.__repr__)):
+    # a Python function or another type's slot reaches the leaf's repr test; a partial or a methodcaller is itself C state
+    # the description is not shown to read, and is refused while the CLASS holding it is described (round 27, fail-closed)
+    for label, rep_, expect in (("a Python function", py, "not its C base own repr slot"),
+                                ("functools.partial of a Python function", functools.partial(py), "a C type holding instance storage"),
+                                ("operator.methodcaller", operator.methodcaller("bit_length"), "a C type holding instance storage"),
+                                ("another type's slot", list.__repr__, "not its C base own repr slot"),
+                                ("object's slot, which prints a constant", object.__repr__, "not its C base own repr slot")):
         C = type("C", (itertools.count,), {"__slots__": (), "__repr__": rep_})
-        with pytest.raises(un.SiteUndescribed, match="not its C base own repr slot"):
+        with pytest.raises(un.SiteUndescribed, match=expect):
             un._normalise(C(5), {})
     assert calls == [], calls
     Own = type("Own", (itertools.count,), {"__slots__": (), "__repr__": itertools.count.__repr__})
@@ -4652,9 +4663,9 @@ def test_r27_state_a_c_base_holds_and_no_field_exposes_is_refused_never_read_as_
     class R(_random.Random):
         __slots__ = ()
     assert random.Random(5).random() != random.Random(7).random() and R(5).random() != R(7).random()
-    with pytest.raises(un.SiteUndescribed, match="a C type whose instance state no field exposes"):
+    with pytest.raises(un.SiteUndescribed, match="derives from _random.Random, a C type holding instance storage"):
         un._normalise(random.Random(5), {})
-    with pytest.raises(un.SiteUndescribed, match="not its C base own repr slot"):
+    with pytest.raises(un.SiteUndescribed, match="derives from _random.Random, a C type holding instance storage no field exposes"):
         un._normalise(R(5), {})
 
 
@@ -4670,33 +4681,139 @@ def test_r27_a_site_holding_hidden_c_state_is_refused_through_site_drift():
         un.site_drift(census(7), census(5))
 
 
+def test_r27_a_reader_types_state_change_is_drift_and_no_override_is_called():
+    """Each reader: two instances that differ ONLY in their C state describe differently, and a Python subclass overriding
+    the method the reader could have called is never called — the reader goes through the BASE type's own C method."""
+    import array, collections, io
+    un = _load("inv7_uninstrument_r27_readers", EVIDENCE / "inv7_uninstrument.py")
+    d = lambda o: repr(un._normalise(o, {}))
+    calls = []
+
+    def spy(name):
+        def f(self, *a, **k):
+            calls.append(name)
+            raise AssertionError(f"the describer called an override: {name}")
+        return f
+    Dq = type("Dq", (collections.deque,), {"__iter__": spy("deque.__iter__")})
+    Dd = type("Dd", (collections.defaultdict,), {"items": spy("defaultdict.items"), "__iter__": spy("defaultdict.__iter__")})
+    Ar = type("Ar", (array.array,), {"tolist": spy("array.tolist")})
+    Si = type("Si", (io.StringIO,), {"getvalue": spy("StringIO.getvalue"), "tell": spy("StringIO.tell")})
+    Bi = type("Bi", (io.BytesIO,), {"getvalue": spy("BytesIO.getvalue"), "tell": spy("BytesIO.tell")})
+    pairs = [
+        ("deque", collections.deque([1, 2]), collections.deque([1, 3])),
+        ("deque subclass", Dq([1, 2]), Dq([1, 3])),
+        ("defaultdict", collections.defaultdict(int, {"a": 1}), collections.defaultdict(int, {"a": 2})),
+        ("defaultdict subclass", Dd(int, {"a": 1}), Dd(int, {"a": 2})),
+        ("array", array.array("i", [1]), array.array("i", [2])),
+        ("array subclass", Ar("i", [1]), Ar("i", [2])),
+        ("StringIO content", io.StringIO("x"), io.StringIO("y")),
+        ("StringIO subclass", Si("x"), Si("y")),
+        ("BytesIO content", io.BytesIO(b"x"), io.BytesIO(b"y")),
+        ("BytesIO subclass", Bi(b"x"), Bi(b"y")),
+    ]
+    moved = io.StringIO("xy")
+    moved.seek(1)
+    pairs.append(("StringIO position", io.StringIO("xy"), moved))
+    for label, a, b in pairs:
+        assert d(a) != d(b), f"{label}: a change of state reads as no drift"
+    assert calls == [], calls
+
+
+def test_r27_a_module_is_refused_before_it_is_touched():
+    """Fail-closed decides from the TYPE before any read, so a refused object is never touched: a module reached by the
+    description is refused, and its namespace is the same before and after (reading its annotations WRITES into it —
+    round 25's A5, which this closes)."""
+    import types as _types
+    un = _load("inv7_uninstrument_r27_module", EVIDENCE / "inv7_uninstrument.py")
+    m = _types.ModuleType("held")
+    exec("x = 1\n", m.__dict__)
+    before = dict(vars(m))
+
+    class Site:
+        mod = m
+
+        def fire(self, value):
+            return value
+    with pytest.raises(un.SiteUndescribed, match="derives from builtins.module"):
+        un.site_description(Site)
+    assert dict(vars(m)) == before, sorted(set(vars(m)) ^ set(before))
+
+
+def test_r27_a_held_module_level_builtin_is_refused_by_name():
+    """The decided consequence (the second seat's stage-2 mark): a module-level builtin's __self__ IS its module, so a Site
+    holding `len` is refused by name — loudly — rather than described through a module it cannot read."""
+    un = _load("inv7_uninstrument_r27_len", EVIDENCE / "inv7_uninstrument.py")
+
+    class Site:
+        size = len
+
+        def fire(self, value):
+            return value
+    with pytest.raises(un.SiteUndescribed, match="derives from builtins.module"):
+        un.site_description(Site)
+
+
+def test_r27_the_real_site_describes_with_zero_refusals():
+    """Completeness of the allowlist for what the product needs: the reference census's Site and HEAD's describe without a
+    refusal, and site_drift between them reports none — fail-closed refuses nothing the real Site holds."""
+    un = _load("inv7_uninstrument_r27_real", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text(encoding="utf-8")
+    head = (ROOT / "src" / "veracium" / "census.py").read_text(encoding="utf-8")
+    for label, text in (("reference", ref), ("head", head)):
+        un.site_description(un._realized_site(text, "real_" + label))
+    assert un.site_drift(head, ref) == []
+
+
+def test_r27_getsets_do_not_count_as_exposure_a_hash_is_refused():
+    """The negative control: a sha256 hash exposes three getsets (name, digest_size, block_size) — 24 bytes by count, more
+    than its +16 of hash state — and none of them is the state. It is refused, never read as equal."""
+    import hashlib
+    un = _load("inv7_uninstrument_r27_hash", EVIDENCE / "inv7_uninstrument.py")
+    a, b = hashlib.sha256(b"x"), hashlib.sha256(b"y")
+    assert a.digest() != b.digest()
+    with pytest.raises(un.SiteUndescribed, match="a C type holding instance storage"):
+        un._normalise(a, {})
+
+
 _R27_MUTANTS = [
     ("the constant evaluator read through repr (E1 dropped)",
      "    if tp is _CONST_EVALUATOR:\n        if len(refs) != 1:",
      "    if False:\n        if len(refs) != 1:",
      test_r27_describing_runs_no_held_display_code),
     ("any immutable leaf read through repr (E2's scalar test dropped)",
-     "        if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, opaque):\n            return (identity, _addressless(repr(obj)))",
+     "        if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, hidden):\n            return (identity, _addressless(repr(obj)))",
      "        if True:\n            return (identity, _addressless(repr(obj)))",
      test_r27_an_interpreter_type_holding_a_non_scalar_is_refused_and_a_scalar_one_is_read),
     ("a Python-type leaf read through its repr (E3)",
-     "    if not opaque and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, (\"referents\", tuple(_normalise(r, seen) for r in refs)))",
-     "    if not opaque and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, _addressless(repr(obj)))",
+     "    if not hidden and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, (\"referents\", tuple(_normalise(r, seen) for r in refs)))",
+     "    if not hidden and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n        return (identity, _addressless(repr(obj)))",
      test_r27_a_stateless_slotted_instance_is_described_by_its_type_never_its_repr),
     ("any C callable trusted as the repr slot",
-     "    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, \"__objclass__\", None) in tp.__mro__ \\\n        and _repr_reads(tp, opaque)\n",
+     "    c_slot = isinstance(found, types.WrapperDescriptorType) and getattr(found, \"__objclass__\", None) in tp.__mro__ \\\n        and _repr_reads(tp, hidden)\n",
      "    c_slot = callable(found)\n",
      test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf),
     ("no C base found stateful (the hidden-state rule dropped)",
-     "        if not any(inspect.isdatadescriptor(v) for v in vars(b).values()):\n            out.append(b)\n",
+     "        if b.__basicsize__ - base.__basicsize__ > _exposed(b):\n            out.append(b)\n",
      "        pass\n",
      test_r27_state_a_c_base_holds_and_no_field_exposes_is_refused_never_read_as_equal),
     ("any C repr slot trusted to show a stateful base's state",
-     "    return owner is not None and isinstance(owner, type) and issubclass(owner, opaque[0])\n",
+     "    return owner is not None and isinstance(owner, type) and issubclass(owner, hidden[0])\n",
      "    return True\n",
-     test_r27_state_a_c_base_holds_and_no_field_exposes_is_refused_never_read_as_equal),
+     test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf),
+    ("getsets credited as exposure",
+     "            + (8 if \"__dict__\" in v else 0) + (8 if \"__weakref__\" in v else 0))\n",
+     "            + (8 if \"__dict__\" in v else 0) + (8 if \"__weakref__\" in v else 0)\n            + 8 * sum(type(x).__name__ == \"getset_descriptor\" for x in v.values()))\n",
+     test_r27_getsets_do_not_count_as_exposure_a_hash_is_refused),
+    ("the fail-closed check dropped (a refused object read first)",
+     "        if hidden:\n            raise SiteUndescribed(f\"a {tp.__module__}.{tp.__qualname__} derives from {hidden[0].__module__}.{hidden[0].__qualname__}, \"\n                                  f\"a C type holding instance storage that neither its fields nor any reader",
+     "        if False:\n            raise SiteUndescribed(f\"a {tp.__module__}.{tp.__qualname__} derives from {hidden[0].__module__}.{hidden[0].__qualname__}, \"\n                                  f\"a C type holding instance storage that neither its fields nor any reader",
+     test_r27_a_module_is_refused_before_it_is_touched),
+    ("a reader calls the object's own method",
+     "        collections.deque: lambda obj, seen: items(collections.deque.__iter__(obj), seen),\n",
+     "        collections.deque: lambda obj, seen: items(iter(obj), seen),\n",
+     test_r27_a_reader_types_state_change_is_drift_and_no_override_is_called),
     ("a C-based leaf read by referents alone (the second seat's E3)",
-     "    if not opaque and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n",
+     "    if not hidden and not [b for b in tp.__mro__ if b is not object and _immutable(b)]:\n",
      "    if True:\n",
      test_r27_a_python_subclass_of_a_stateful_c_type_is_read_by_its_c_repr_or_refused),
 ]
