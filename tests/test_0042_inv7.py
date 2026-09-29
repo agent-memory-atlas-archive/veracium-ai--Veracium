@@ -5493,6 +5493,57 @@ def test_r29_a_typing_object_without_extra_attributes_is_still_described(label, 
     assert un.site_drift(src, src) == []
 
 
+_R29_RESIDUE = [
+    # (label, constructor, setup a, setup b, expected) — the second seat's stage-2 rows B4 and B5
+    ("an extra None against none", "typing.TypeVar('T')", "Site.held.extra = None\n", "", "refused"),
+    ("an extra () against none", "typing.TypeVar('T')", "Site.held.extra = ()\n", "", "refused"),
+    ("a ParamSpec's extra None against none", "typing.ParamSpec('P')", "Site.held.extra = None\n", "", "refused"),
+    ("__module__ changed", "typing.TypeVar('T')", "Site.held.__module__ = 'm1'\n", "Site.held.__module__ = 'm2'\n", "drift"),
+]
+_R29_RESIDUE_SRC = ("import typing\n\nCALLS = []\n\nclass Site:\n    held = {ctor}\n    def fire(self, value):\n"
+                    "        return repr((getattr(self.held, 'extra', 'absent'), self.held.__module__))\n\n{setup}")
+_R29_RESIDUE_CELLS = [(f"{label} through {route}", ctor, sa, sb, want, route) for label, ctor, sa, sb, want in _R29_RESIDUE
+                      for route in ("site_description", "_site_realized", "site_drift")]
+
+
+@pytest.mark.parametrize("cell,ctor,sa,sb,want,route", _R29_RESIDUE_CELLS, ids=[c[0] for c in _R29_RESIDUE_CELLS])
+def test_r29_a_made_up_value_absorbs_nothing_and_the_module_is_described(cell, ctor, sa, sb, want, route):
+    """The residue rule's own gaps (the second seat's stage 2): a getter makes up None or () for an absent C field, and
+    pooled, such a value absorbed an extra attribute holding None or () — described EQUAL. Only a field that STORES its
+    value pools it (derived per type from a canonical instance). And `__module__`, the instance dict's one known entry,
+    was counted but never described: a changed module read as no drift. Both through all three routes."""
+    un = _load("inv7_uninstrument_r29_residue", EVIDENCE / "inv7_uninstrument.py")
+    src_a, src_b = _R29_RESIDUE_SRC.format(ctor=ctor, setup=sa), _R29_RESIDUE_SRC.format(ctor=ctor, setup=sb)
+    ma, mb = _r28_module(src_a), _r28_module(src_b)
+    assert ma.Site().fire(0) != mb.Site().fire(0), (cell, "the pair does not change the decision")
+    if want == "refused":
+        refusal = un.SiteUndescribed if route != "_site_realized" else Exception
+        with pytest.raises(refusal, match=_R29_MANAGED_REFUSAL):
+            if route == "site_description":
+                un.site_description(ma.Site)
+            elif route == "_site_realized":
+                observer._site_realized(ma.Site)
+            else:
+                un.site_drift(src_a, src_b)
+    elif route == "site_description":
+        assert un.site_description(ma.Site) != un.site_description(mb.Site), f"{cell}: reads as no drift"
+    elif route == "_site_realized":
+        assert observer._site_realized(ma.Site)["digest"] != observer._site_realized(mb.Site)["digest"], f"{cell}: equal digests"
+    else:
+        assert un.site_drift(src_b, src_a) != [], f"{cell}: site_drift returns []"
+
+
+@pytest.mark.parametrize("label,ctor", [("TypeVar(default=None)", "typing.TypeVar('T', default=None)"),
+                                        ("ParamSpec(default=None)", "typing.ParamSpec('P', default=None)")],
+                         ids=["TypeVar(default=None)", "ParamSpec(default=None)"])
+def test_r29_a_stored_none_is_accounted_for_not_refused(label, ctor):
+    """The acceptance half of B4, measured: `default=None` STORES None in a C field (a referent), so its read stays in
+    the pool — an object with nothing extra is described, not over-refused."""
+    un = _load("inv7_uninstrument_r29_stored_none", EVIDENCE / "inv7_uninstrument.py")
+    src = _R29_RESIDUE_SRC.format(ctor=ctor, setup="")
+    assert un.site_description(_r28_module(src).Site) == un.site_description(_r28_module(src).Site)
+
+
 _R29_BY_LABEL = {label: (src, a, b, want) for label, src, a, b, want in _R29_FORMS}
 
 
@@ -5519,13 +5570,25 @@ _R29_MUTANTS = [
      "    if not is_class and _dict_unreachable(tp):\n", "    if False:\n",
      _r29_cell("V2 instance dict shadowed by a property"), (pytest.fail.Exception, "DID NOT RAISE")),
     ("the managed-dict residue check dropped (the second seat's mark B)",
-     "    if _managed_dict_unexposed(tp):\n        _refuse_unread_managed_dict(obj, tp, read)\n", "",
+     "    if _managed_dict_unexposed(tp):\n", "    if False:\n",
      lambda: test_r29_a_typing_objects_hidden_dict_contents_are_refused("m", "typing.TypeVar('T')", "site_description"),
      (pytest.fail.Exception, "DID NOT RAISE")),
     ("__module__ not accounted for (an empty TypeVar over-refused)",
-     "        pool.append(object.__getattribute__(obj, \"__module__\"))\n", "        pass\n",
+     "        pool.append(module)\n", "        pass\n",
      lambda: test_r29_a_typing_object_without_extra_attributes_is_still_described("m", "typing.TypeVar('T')"),
      (Exception, "no accessor exposes that dictionary")),
+    ("getter-made values pooled (the second seat's B4)",
+     "    pool = [v for n, v in read if not (n in fab and (v is None or (type(v) is tuple and not v)))]\n",
+     "    pool = [v for n, v in read]\n",
+     lambda: test_r29_a_made_up_value_absorbs_nothing_and_the_module_is_described(
+         "m", "typing.TypeVar('T')", "Site.held.extra = None\n", "", "refused", "site_description"),
+     (pytest.fail.Exception, "DID NOT RAISE")),
+    ("__module__ counted but not described (the second seat's B5)",
+     "        fields.append((\"__module__ (instance dict)\", _normalise(_refuse_unread_managed_dict(obj, tp, read), seen)))\n",
+     "        _refuse_unread_managed_dict(obj, tp, read)\n",
+     lambda: test_r29_a_made_up_value_absorbs_nothing_and_the_module_is_described(
+         "m", "typing.TypeVar('T')", "Site.held.__module__ = 'm1'\n", "Site.held.__module__ = 'm2'\n", "drift", "site_description"),
+     (AssertionError, "reads as no drift")),
 ]
 
 

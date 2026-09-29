@@ -559,12 +559,13 @@ def _normalise(obj, seen: dict) -> tuple:
         if v is _PYTHON_DESCRIPTOR:
             fields.append((n, _PYTHON_DESCRIPTOR))
             continue
-        read.append(v)
+        read.append((n, v))
         if n == "__flags__" and issubclass(type(v), int):
             v = v & ~_CACHE_BIT
         fields.append((n, _normalise(v, seen)))
     if _managed_dict_unexposed(tp):
-        _refuse_unread_managed_dict(obj, tp, read)
+        # ROUND 29 (the second seat's stage-2 B5): the dict's one known entry is state, and is DESCRIBED, not only counted
+        fields.append(("__module__ (instance dict)", _normalise(_refuse_unread_managed_dict(obj, tp, read), seen)))
     fields += _shadowed_storage(obj, tp, is_class or wrapper, seen)
     if reader is not None:
         content = (_qualname(reader), _READERS[reader](obj, seen))
@@ -624,9 +625,17 @@ def _refuse_unread_managed_dict(obj, tp: type, read: list) -> None:
     # holds it), read by the generic lookup, which cannot reach Python code on a type whose whole MRO is interpreter-made
     # (asserted by _managed_dict_unexposed); the rest are matched as a MULTISET by identity, so an extra key holding a
     # value equal to — even identical to — one already read is still counted
-    pool = list(read)
+    # ROUND 29 (the second seat's stage-2 B4): a getter MAKES UP None or () for a C field that is NULL, and such a value
+    # is not a stored referent — pooled, it absorbed an extra attribute holding None or (). A field is FABRICATING if, on
+    # a canonical instance of the type, its None/() read is not among the referents (derived per type, `_fabricating`);
+    # its None/() reads stay out of the pool. A field that STORES None (TypeVar(default=None)'s `__default__`, measured)
+    # keeps its read in the pool.
+    fab = _fabricating(tp)
+    pool = [v for n, v in read if not (n in fab and (v is None or (type(v) is tuple and not v)))]
+    module = _NO_MODULE
     try:
-        pool.append(object.__getattribute__(obj, "__module__"))
+        module = object.__getattribute__(obj, "__module__")
+        pool.append(module)
     except AttributeError:
         pass
     extra = []
@@ -642,6 +651,39 @@ def _refuse_unread_managed_dict(obj, tp: type, read: list) -> None:
         raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} holds {len(extra)} value(s) no field of its description "
                               f"reads — its instance dictionary has contents, and no accessor exposes that dictionary's "
                               f"keys, so it cannot be described faithfully and is refused (round 29, R28-1)")
+    return module
+
+
+_NO_MODULE = ("<no __module__ in the instance dict>",)
+_FABRICATING = {}
+
+
+def _fabricating(tp: type) -> frozenset:
+    """The fields of `tp` whose getter RETURNS None or () for an absent (NULL) C field rather than a stored object —
+    derived once per type from a canonical instance `tp("_")` (TypeVar, TypeVarTuple and ParamSpec all take a name):
+    a None/() read there that is not among the instance's referents was made up by its getter. If the type cannot be
+    built that way, every None/() read is treated as made up — over-refusal, loud, never silence."""
+    import gc
+    got = _FABRICATING.get(tp)
+    if got is not None:
+        return got
+    try:
+        probe = tp("_")
+    except Exception:
+        got = frozenset(n for n in _data_descriptors(tp))
+    else:
+        refs = [r for r in gc.get_referents(probe) if r is not tp]
+        names = []
+        for n in _data_descriptors(tp):
+            try:
+                v = _read(probe, tp, n)
+            except Exception:
+                continue
+            if (v is None or (type(v) is tuple and not v)) and not any(v is r for r in refs):
+                names.append(n)
+        got = frozenset(names)
+    _FABRICATING[tp] = got
+    return got
 
 
 def _managed_dict_unexposed(tp: type) -> bool:
