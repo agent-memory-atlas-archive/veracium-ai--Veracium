@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Fixed: opening a store no longer leaves an SQLite connection open.** `runtime_identity()` opened an in-memory
+  connection to read `sqlite_source_id()` and never closed it, so every store open left one behind, reported on
+  Python 3.13 and newer as `ResourceWarning: unclosed database` once the store was closed and collected (found by
+  the workflow platform, 2026-09-29). The three other in-memory probe connections in `store/schema_version.py`
+  closed only on success; all four are now closed on every path. Nothing a store records or refuses changes. Because
+  this is the first change to `src/` since specs/0042's round-8 pin, the INV-7 four-arm run was re-made on the new
+  tree (`specs/evidence/0042/inv7_transcript.txt`): the four arms read identical over 860 tests with every gate
+  true, and the twin's digest moved with the one file of its sixty that changed.
+
 - **BREAKING: Veracium requires Python 3.14 or newer, and pydantic 2.12 or newer.** `requires-python` moves from
   `>=3.10` to `>=3.14` (the owner's decision, 2026-09-27), and CI tests 3.14 alone. pydantic's floor moves from 2.7 to
   2.12 because no `pydantic-core` wheel exists for CPython 3.14 below 2.12; the 2.7 floor's original reason, specs/0016
