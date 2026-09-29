@@ -4819,8 +4819,8 @@ _R27_MUTANTS = [
      "    return True\n",
      test_r27_only_a_c_types_own_repr_slot_is_trusted_on_a_c_based_leaf),
     ("getsets credited as exposure",
-     "            + (8 if \"__dict__\" in v else 0) + (8 if \"__weakref__\" in v else 0))\n",
-     "            + (8 if \"__dict__\" in v else 0) + (8 if \"__weakref__\" in v else 0)\n            + 8 * sum(type(x).__name__ == \"getset_descriptor\" for x in v.values()))\n",
+     "            + (8 if type(own.get(\"__weakref__\")) is types.GetSetDescriptorType else 0))\n",
+     "            + (8 if type(own.get(\"__weakref__\")) is types.GetSetDescriptorType else 0)\n            + 8 * sum(type(x).__name__ == \"getset_descriptor\" for x in own.values()))\n",
      test_r27_getsets_do_not_count_as_exposure_a_hash_is_refused),
     ("the fail-closed check dropped (a refused object read first)",
      "        if hidden:\n            raise SiteUndescribed(f\"a {_module(tp)}.{_qualname(tp)} derives from {_module(hidden[0])}.{_qualname(hidden[0])}, \"\n                                  f\"a C type holding instance storage that neither its fields nor any reader",
@@ -5334,7 +5334,7 @@ _R28_MUTANTS = [
      "        io.StringIO: stream(io.StringIO),\n",
      test_r28_every_reader_state_channel_is_drift, (AssertionError, "read as no drift")),
     ("a raising getter escapes as a crash",
-     "        except Exception as e:\n", "        except ZeroDivisionError as e:\n",
+     "        except Exception as e:\n            # ROUND 28: a C getter that RAISES", "        except ZeroDivisionError as e:\n            # ROUND 28: a C getter that RAISES",
      test_r28_every_reader_state_channel_is_drift, (ValueError, "closed file")),
 ]
 
@@ -5352,5 +5352,188 @@ def test_r28_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expect
     if cell is None:   # the liveness check: a monkeypatch cell needs the mutated module's own attribute
         cell = lambda: test_r28_a_description_the_guard_did_not_watch_to_the_end_is_refused(monkeypatch)
     exc, pattern = (mut.SiteUndescribed, _R28_GUARD_REFUSAL) if expected == "refused" else expected
+    with pytest.raises(exc, match=re.escape(pattern)):
+        cell()
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ROUND 29 — the round-28 verdict's R28-1: a subclass SHADOWING the descriptor that exposes instance storage hid that
+# storage. The fields are read by the name the MRO resolves; a base's slot, a `__dict__`, or a C getset whose name a
+# subclass reuses was never read. Widened by the second seat's stage 1: a duplicate slot (N-a) and a reader type's C getset
+# (N-b). Every form, both callers and site_drift: changed description, or the named refusal — never a fixture call.
+
+_R29_HEAD = "CALLS = []\n\n"
+_R29_FORMS = [
+    # (label, source, value a, value b, expected: "drift" or "refused")
+    ("V1 base slot shadowed by a property",
+     "class Base:\n    __slots__ = ('value',)\n\nclass Held(Base):\n    __slots__ = ()\n    @property\n    def value(self):\n"
+     "        CALLS.append('property')\n        return Base.value.__get__(self)\n\nclass Site:\n    held = Held()\n"
+     "    def fire(self, value):\n        return Base.value.__get__(self.held)\n\nBase.value.__set__(Site.held, {v})\n",
+     "1", "2", "drift"),
+    ("V2 instance dict shadowed by a property",
+     "class Held:\n    @property\n    def __dict__(self):\n        CALLS.append('property')\n        return {{}}\n\n"
+     "class Site:\n    held = Held()\n    def fire(self, value):\n        return self.held.value\n\n"
+     "object.__setattr__(Site.held, 'value', {v})\n",
+     "1", "2", "refused"),
+    ("V3 base slot shadowed by a class attribute",
+     "class Base:\n    __slots__ = ('value',)\n\nclass Held(Base):\n    __slots__ = ()\n    value = 0\n\nclass Site:\n"
+     "    held = Held()\n    def fire(self, value):\n        return Base.value.__get__(self.held)\n\n"
+     "Base.value.__set__(Site.held, {v})\n",
+     "1", "2", "drift"),
+    ("N-a a slot declared again by the subclass",
+     "class Base:\n    __slots__ = ('value',)\n\nclass Held(Base):\n    __slots__ = ('value',)\n\nclass Site:\n    held = Held()\n"
+     "    def fire(self, value):\n        return Base.value.__get__(self.held)\n\nBase.value.__set__(Site.held, {v})\n",
+     "1", "2", "drift"),
+    ("N-b a reader's C getset shadowed by a property",
+     "import io\n\nclass Held(io.StringIO):\n    @property\n    def newlines(self):\n        CALLS.append('property')\n"
+     "        return None\n\nclass Site:\n    held = Held(newline=None)\n    def fire(self, value):\n"
+     "        return io.StringIO.newlines.__get__(self.held)\n\nSite.held.write({v})\nSite.held.seek(0)\n",
+     "'x\\n'", "'x\\r\\n'", "drift"),
+]
+_R29_CONTROLS = [
+    ("control: an unshadowed slot",
+     "class Held:\n    __slots__ = ('value',)\n\nclass Site:\n    held = Held()\n    def fire(self, value):\n"
+     "        return self.held.value\n\nSite.held.value = {v}\n", "1", "2", "drift"),
+    ("control: an unshadowed dict",
+     "class Held:\n    pass\n\nclass Site:\n    held = Held()\n    def fire(self, value):\n        return self.held.value\n\n"
+     "Site.held.value = {v}\n", "1", "2", "drift"),
+]
+_R29_CELLS = [(f"{label} through {route}", label, src, a, b, want, route)
+              for label, src, a, b, want in _R29_FORMS + _R29_CONTROLS
+              for route in ("site_description", "_site_realized", "site_drift")]
+# matched on the message's TAIL: route B's child reports stderr truncated from the front
+_R29_REFUSAL = "carries the getset that exposes the dictionary"
+
+
+@pytest.mark.parametrize("cell,label,src,a,b,want,route", _R29_CELLS, ids=[c[0] for c in _R29_CELLS])
+def test_r29_shadowed_storage_is_read_through_its_owner_or_refused(cell, label, src, a, b, want, route):
+    """R28-1 and the second seat's two further forms, through all three routes: two censuses whose Site definitions are
+    identical and whose held object differs only in storage a subclass shadows must describe differently — or, where no
+    C accessor reaches the storage at all (V2), be REFUSED by name. The decision is asserted to differ first, and no
+    fixture code runs in either case."""
+    un = _load("inv7_uninstrument_r29_shadow", EVIDENCE / "inv7_uninstrument.py")
+    ma, mb = _r28_module(_R29_HEAD + src.format(v=a)), _r28_module(_R29_HEAD + src.format(v=b))
+    assert ma.Site().fire(0) != mb.Site().fire(0), (cell, "the pair does not change the decision")
+    ma.CALLS.clear(); mb.CALLS.clear()
+    sa, sb = _R29_HEAD + src.format(v=a), _R29_HEAD + src.format(v=b)
+    if want == "refused":
+        refusal = un.SiteUndescribed if route != "_site_realized" else Exception
+        with pytest.raises(refusal, match=_R29_REFUSAL):
+            if route == "site_description":
+                un.site_description(ma.Site)
+            elif route == "_site_realized":
+                observer._site_realized(ma.Site)
+            else:
+                un.site_drift(sb, sa)
+    elif route == "site_description":
+        assert un.site_description(ma.Site) != un.site_description(mb.Site), f"{cell}: reads as no drift"
+    elif route == "_site_realized":
+        assert observer._site_realized(ma.Site)["digest"] != observer._site_realized(mb.Site)["digest"], f"{cell}: equal digests"
+    else:
+        assert un.site_drift(sb, sa) != [], f"{cell}: site_drift returns []"
+        assert un.site_drift(sa, sa) == [], (cell, "a census drifts from itself")
+    assert ma.CALLS == [] and mb.CALLS == [], f"{cell}: describing ran fixture code {ma.CALLS + mb.CALLS}"
+
+
+def test_r29_an_unshadowed_object_describes_exactly_as_before():
+    """The shadowed-storage entries are added ONLY where a name resolves to something other than the descriptor that owns
+    the storage: an object with nothing shadowed carries no `storage.` entry, so the real Site's description — and the
+    carried INV-7 run's digest — cannot move."""
+    un = _load("inv7_uninstrument_r29_unshadowed", EVIDENCE / "inv7_uninstrument.py")
+    for label, src, a, _b, _w in _R29_CONTROLS:
+        d = repr(un.site_description(_r28_module(_R29_HEAD + src.format(v=a)).Site))
+        assert "storage." not in d, (label, "an unshadowed object gained a storage entry")
+    shadowed = repr(un.site_description(_r28_module(_R29_HEAD + _R29_FORMS[0][1].format(v="1")).Site))
+    assert "storage." in shadowed and "Base.value" in shadowed, "the shadowed slot is not keyed by its owner"
+
+
+_R29_MANAGED = [
+    ("TypeVar", "typing.TypeVar('T')"),
+    ("TypeVar with a bound", "typing.TypeVar('T', bound=int)"),
+    ("TypeVarTuple", "typing.TypeVarTuple('Ts')"),
+    ("ParamSpec", "typing.ParamSpec('P')"),
+]
+_R29_MANAGED_SRC = ("import typing\n\nCALLS = []\n\nclass Site:\n    held = {ctor}\n    def fire(self, value):\n"
+                    "        return getattr(self.held, 'extra', None)\n\n{setup}")
+_R29_MANAGED_CELLS = [(f"{label} with an attribute through {route}", ctor, route) for label, ctor in _R29_MANAGED
+                      for route in ("site_description", "_site_realized", "site_drift")]
+_R29_MANAGED_REFUSAL = "no accessor exposes that dictionary"
+
+
+@pytest.mark.parametrize("cell,ctor,route", _R29_MANAGED_CELLS, ids=[c[0] for c in _R29_MANAGED_CELLS])
+def test_r29_a_typing_objects_hidden_dict_contents_are_refused(cell, ctor, route):
+    """Inside R28-1, found building its fix (the second seat's stage-1 mark B): TypeVar, TypeVarTuple and ParamSpec carry a
+    managed dict that no descriptor exposes — `T.extra = 1` against `= 2` described EQUAL at the round-28 pin. The dict's
+    values are visible to the collector, its keys are not, so contents beyond what the fields read are REFUSED by name,
+    through all three routes."""
+    un = _load("inv7_uninstrument_r29_managed", EVIDENCE / "inv7_uninstrument.py")
+    sa = _R29_MANAGED_SRC.format(ctor=ctor, setup="Site.held.extra = 1\n")
+    sb = _R29_MANAGED_SRC.format(ctor=ctor, setup="Site.held.extra = 2\n")
+    ma, mb = _r28_module(sa), _r28_module(sb)
+    assert ma.Site().fire(0) != mb.Site().fire(0), (cell, "the pair does not change the decision")
+    refusal = un.SiteUndescribed if route != "_site_realized" else Exception
+    with pytest.raises(refusal, match=_R29_MANAGED_REFUSAL):
+        if route == "site_description":
+            un.site_description(ma.Site)
+        elif route == "_site_realized":
+            observer._site_realized(ma.Site)
+        else:
+            un.site_drift(sb, sa)
+
+
+@pytest.mark.parametrize("label,ctor", _R29_MANAGED, ids=[m[0] for m in _R29_MANAGED])
+def test_r29_a_typing_object_without_extra_attributes_is_still_described(label, ctor):
+    """The acceptance half: the dict these types always carry (`__module__`, stored at construction) is accounted for, so
+    an object with nothing more describes — stably, and a changed module still reads as drift."""
+    un = _load("inv7_uninstrument_r29_managed_ok", EVIDENCE / "inv7_uninstrument.py")
+    src = _R29_MANAGED_SRC.format(ctor=ctor, setup="")
+    d1 = un.site_description(_r28_module(src).Site)
+    d2 = un.site_description(_r28_module(src).Site)
+    assert d1 == d2, (label, "an unchanged object describes differently")
+    assert un.site_drift(src, src) == []
+
+
+_R29_BY_LABEL = {label: (src, a, b, want) for label, src, a, b, want in _R29_FORMS}
+
+
+def _r29_cell(label, route="site_description"):
+    src, a, b, want = _R29_BY_LABEL[label]
+    return lambda: test_r29_shadowed_storage_is_read_through_its_owner_or_refused("m", label, src, a, b, want, route)
+
+
+_R29_MUTANTS = [
+    ("storage read by name only (round 28's code)",
+     "    fields += _shadowed_storage(obj, tp, is_class or wrapper, seen)\n", "",
+     _r29_cell("V1 base slot shadowed by a property"), (AssertionError, "reads as no drift")),
+    ("storage read by name only — the class-attribute form",
+     "    fields += _shadowed_storage(obj, tp, is_class or wrapper, seen)\n", "",
+     _r29_cell("V3 base slot shadowed by a class attribute"), (AssertionError, "reads as no drift")),
+    ("storage read by name only — the duplicate slot",
+     "    fields += _shadowed_storage(obj, tp, is_class or wrapper, seen)\n", "",
+     _r29_cell("N-a a slot declared again by the subclass"), (AssertionError, "reads as no drift")),
+    ("getsets excluded from the shadowed-storage read (the second seat's N-b)",
+     "        for n, d in _owned(k):\n            if n == \"__weakref__\"",
+     "        for n, d in [x for x in _owned(k) if type(x[1]) is not __import__(\"types\").GetSetDescriptorType]:\n            if n == \"__weakref__\"",
+     _r29_cell("N-b a reader's C getset shadowed by a property"), (AssertionError, "reads as no drift")),
+    ("the unreachable-dict refusal dropped",
+     "    if not is_class and _dict_unreachable(tp):\n", "    if False:\n",
+     _r29_cell("V2 instance dict shadowed by a property"), (pytest.fail.Exception, "DID NOT RAISE")),
+    ("the managed-dict residue check dropped (the second seat's mark B)",
+     "    if _managed_dict_unexposed(tp):\n        _refuse_unread_managed_dict(obj, tp, read)\n", "",
+     lambda: test_r29_a_typing_objects_hidden_dict_contents_are_refused("m", "typing.TypeVar('T')", "site_description"),
+     (pytest.fail.Exception, "DID NOT RAISE")),
+    ("__module__ not accounted for (an empty TypeVar over-refused)",
+     "        pool.append(object.__getattribute__(obj, \"__module__\"))\n", "        pass\n",
+     lambda: test_r29_a_typing_object_without_extra_attributes_is_still_described("m", "typing.TypeVar('T')"),
+     (Exception, "no accessor exposes that dictionary")),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell,expected", _R29_MUTANTS, ids=[m[0] for m in _R29_MUTANTS])
+def test_r29_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
+    """Each round-29 rule fails its own cell FOR THE REASON IT IS NAMED FOR (round 28's B2 discipline)."""
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r29m")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    exc, pattern = expected
     with pytest.raises(exc, match=re.escape(pattern)):
         cell()

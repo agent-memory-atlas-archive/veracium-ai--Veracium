@@ -331,6 +331,9 @@ _TYPE_NAME = type.__dict__["__name__"]
 _TYPE_MODULE = type.__dict__["__module__"]
 _TYPE_BASE = type.__dict__["__base__"]
 _TYPE_BASICSIZE = type.__dict__["__basicsize__"]
+_TYPE_DICTOFFSET = type.__dict__["__dictoffset__"]
+_TYPE_FLAGS = type.__dict__["__flags__"]
+_MANAGED_DICT = 1 << 4   # Py_TPFLAGS_MANAGED_DICT: the instance dict lives before the object, and __dictoffset__ reads -1
 _PYTHON_DESCRIPTOR = ("<python descriptor: never called; described with its type>",)
 
 
@@ -505,6 +508,11 @@ def _normalise(obj, seen: dict) -> tuple:
     base_read = None if (_immutable(tp) or reader is not None) else next(
         (b for b in _mro(tp)[1:] if _builtin(b, _SCALARS | _SEQUENCES | _SETS | _MAPPINGS)), None)
     leaf = not reader and base_read is None and not [n for n in descriptors if n not in _NAMESPACE_REFS]
+    if not is_class and _dict_unreachable(tp):
+        raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} holds an instance dictionary that no C accessor reaches: its "
+                              f"`__dict__` name is taken by something else and no class in its MRO carries the getset that "
+                              f"exposes the dictionary, so its state cannot be read without running the override, and it is "
+                              f"refused (round 29, R28-1)")
     if not leaf:
         covered = set(_ALLOW_FIELDS) | (set(_mro(reader)) if reader else set()) | (set(_mro(base_read)) if base_read else set())
         hidden = [b for b in _hidden_c_bases(tp) if b not in covered]
@@ -517,6 +525,7 @@ def _normalise(obj, seen: dict) -> tuple:
     lazy = (not is_class and not wrapper and "__annotate__" in descriptors
             and _read(obj, tp, "__annotate__", None) is not None)
     lazy_values = _lazy_values(obj, descriptors)
+    read = []                                             # every raw value a field read returned — held, for identity
     for n in descriptors:
         if n in _NAMESPACE_REFS:
             continue
@@ -550,9 +559,13 @@ def _normalise(obj, seen: dict) -> tuple:
         if v is _PYTHON_DESCRIPTOR:
             fields.append((n, _PYTHON_DESCRIPTOR))
             continue
+        read.append(v)
         if n == "__flags__" and issubclass(type(v), int):
             v = v & ~_CACHE_BIT
         fields.append((n, _normalise(v, seen)))
+    if _managed_dict_unexposed(tp):
+        _refuse_unread_managed_dict(obj, tp, read)
+    fields += _shadowed_storage(obj, tp, is_class or wrapper, seen)
     if reader is not None:
         content = (_qualname(reader), _READERS[reader](obj, seen))
     else:
@@ -562,13 +575,115 @@ def _normalise(obj, seen: dict) -> tuple:
     return (identity, tuple(fields), content)
 
 
+def _owned(k: type) -> list:
+    """(name, descriptor) for every member or getset descriptor `k` itself DEFINES — found by identity (`__objclass__` is
+    `k`), never by the name the MRO resolves. These are the carriers of instance storage `k` adds."""
+    import types
+    out = []
+    for n, d in _tdict(k).items():
+        if (type(d) is types.MemberDescriptorType or type(d) is types.GetSetDescriptorType) and _read(d, type(d), "__objclass__") is k:
+            out.append((n, d))
+    return out
+
+
+def _shadowed_storage(obj, tp: type, skip_dict: bool, seen: dict) -> list:
+    """ROUND 29, R28-1 (the round-28 verdict; the second seat's stage-1 widening to getsets): storage a subclass SHADOWS.
+    The fields above are read by NAME, the name the MRO resolves — so a slot, a `__dict__` or a C getset whose name a
+    subclass reuses (a property, a plain class attribute, a second slot of the same name) was never read, and two objects
+    differing only there described EQUAL. Each descriptor a class in the MRO defines is found here by IDENTITY and, only
+    where the name resolves to something else, read directly through its own `__get__` as an extra entry keyed by its
+    owner — so every unshadowed object describes exactly as before. `__weakref__` is not state. For a class or a wrapper
+    `__dict__` is read by its own rule above."""
+    out = []
+    for k in _mro(tp):
+        for n, d in _owned(k):
+            if n == "__weakref__" or (skip_dict and n == "__dict__") or _static(tp, n) is d:
+                continue
+            key = f"storage.{_module(k)}.{_qualname(k)}.{n}"
+            try:
+                v = d.__get__(obj, k)
+            except AttributeError:
+                out.append((key, ("<unset>",)))
+                continue
+            except Exception as e:
+                out.append((key, ("<raises>", _module(type(e)), _qualname(type(e)))))
+                continue
+            out.append((key, _normalise(v, seen)))
+    return out
+
+
+def _refuse_unread_managed_dict(obj, tp: type, read: list) -> None:
+    """ROUND 29, inside R28-1 (the second seat's stage-1 mark B): an allowlisted C type carrying a MANAGED dict with no
+    accessor — TypeVar, TypeVarTuple, ParamSpec on 3.14.7 — can hold attributes no field shows (`T.extra = 1` against
+    `= 2` described EQUAL). The collector visits the dict's VALUES (not its keys, which live in the shared keys), so every
+    referent but the type must be, by identity, a value a field of this description read; any other is instance-dict
+    content that cannot be described faithfully (a renamed key with an equal value would be missed), and is refused.
+    An empty dict leaves nothing over, so such an object describes exactly as before."""
+    import gc
+    # the dict's one KNOWN key: these types store `__module__` in it at construction (measured — an "empty" TypeVar's dict
+    # holds it), read by the generic lookup, which cannot reach Python code on a type whose whole MRO is interpreter-made
+    # (asserted by _managed_dict_unexposed); the rest are matched as a MULTISET by identity, so an extra key holding a
+    # value equal to — even identical to — one already read is still counted
+    pool = list(read)
+    try:
+        pool.append(object.__getattribute__(obj, "__module__"))
+    except AttributeError:
+        pass
+    extra = []
+    for r in gc.get_referents(obj):
+        if r is tp:
+            continue
+        hit = next((i for i, v in enumerate(pool) if v is r), None)
+        if hit is None:
+            extra.append(r)
+        else:
+            del pool[hit]
+    if extra:
+        raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} holds {len(extra)} value(s) no field of its description "
+                              f"reads — its instance dictionary has contents, and no accessor exposes that dictionary's "
+                              f"keys, so it cannot be described faithfully and is refused (round 29, R28-1)")
+
+
+def _managed_dict_unexposed(tp: type) -> bool:
+    """An interpreter-made type whose instances carry a MANAGED dict that nothing exposes — no `__dict__` descriptor owned
+    anywhere in its MRO. DERIVED by property, never listed: on 3.14.7 TypeVar, TypeVarTuple and ParamSpec (the last not
+    even allowlisted, and described through its fields). Every class in the MRO must be interpreter-made, so the generic
+    lookup `_refuse_unread_managed_dict` uses cannot reach Python code."""
+    return (_immutable(tp) and bool(_TYPE_FLAGS.__get__(tp) & _MANAGED_DICT)
+            and all(_immutable(k) for k in _mro(tp))
+            and not any(n == "__dict__" for k in _mro(tp) for n, _d in _owned(k)))
+
+
+def _dict_unreachable(tp: type) -> bool:
+    """Whether `tp`'s instances carry a dictionary that NO getset along the MRO exposes — `__dict__` defined as a property in
+    the class that added the dictionary, so the interpreter never created the getset (the round-28 verdict's second
+    form). No public C accessor bypasses the name lookup, and the collector cannot tell an instance dict from a dict held
+    in a slot: refused (the second seat's stage 1). THIS REFUSAL IS THE ONLY GUARD for such a dictionary on 3.14: a
+    managed dict (and weakref) lives BEFORE the object, outside `__basicsize__`, so `_hidden_c_bases`' storage accounting
+    never sees it — measured: the verdict's V2 class has the basicsize of `object`, 16 — and `_exposed`'s dict credit
+    (round 29: by ownership, not name) cannot act as a second line there."""
+    if not (_TYPE_DICTOFFSET.__get__(tp) or (_TYPE_FLAGS.__get__(tp) & _MANAGED_DICT)):
+        return False
+    # the NAME must be taken by something that is not the dictionary's own descriptor: a C type such as TypeVar carries
+    # a managed dict with no `__dict__` name at all (measured), which is not this shape; and a module or SimpleNamespace
+    # exposes its dict through a MEMBER descriptor, not a getset — both kinds count as the dict's own
+    if _static(tp, "__dict__") is None:
+        return False
+    return not any(n == "__dict__" for k in _mro(tp) for n, _d in _owned(k))
+
+
 def _exposed(b: type) -> int:
     """The bytes of instance storage `b` itself exposes through its own __dict__: 8 per member descriptor (a slot), and
-    8 each for a `__dict__` or `__weakref__` descriptor. Exact for every Python-defined class, measured on 3.14.7."""
+    8 each for a `__dict__` or `__weakref__` descriptor. Exact for every Python-defined class, measured on 3.14.7.
+    ROUND 29 (R28-1): credited only for a descriptor `b` itself OWNS (`_owned`), each of which the description reads —
+    by name, or through `_shadowed_storage` — never for the mere presence of the name (a property called `__dict__`). On
+    3.14 a managed dict and weakref are outside `__basicsize__`, so their credit does not decide any refusal there; the
+    slots' credit does."""
     import types
-    v = _tdict(b)
-    return (8 * sum(issubclass(type(x), types.MemberDescriptorType) for x in v.values())
-            + (8 if "__dict__" in v else 0) + (8 if "__weakref__" in v else 0))
+    own = dict(_owned(b))
+    return (8 * sum(type(x) is types.MemberDescriptorType for x in own.values())
+            + (8 if type(own.get("__dict__")) is types.GetSetDescriptorType else 0)
+            + (8 if type(own.get("__weakref__")) is types.GetSetDescriptorType else 0))
 
 
 def _hidden_c_bases(tp: type) -> list:
