@@ -555,3 +555,51 @@ def test_s7_export_format_version_is_independent():
     assert FORMAT_VERSION == 13     # specs/0026 bumped 9->10, 0037 10->11, 0037 v23 11->12, 0041 4b 12->13, all conditional
                                     # stamp (0001: 8->9; 0025: 7->8)
     assert FORMAT_VERSION != SCHEMA_VERSION
+
+
+# --- the probe connections: closed on every path -----------------------------------------------------------------
+
+def test_opening_a_store_leaves_no_probe_connection_open(tmp_path):
+    """The runtime-identity probes open in-memory SQLite connections; each must be closed, a raising probe included.
+    Reported by the workflow platform (2026-09-29): `runtime_identity()` left one open per store open, which Python
+    >= 3.13 reports as `ResourceWarning: unclosed database` once the store is closed and collected."""
+    import gc
+    import warnings
+    gc.collect()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", ResourceWarning)
+        sv.runtime_identity()
+        SqliteStore(str(tmp_path / "s.db")).close()
+        gc.collect()
+    leaked = [str(w.message) for w in caught if issubclass(w.category, ResourceWarning) and "database" in str(w.message)]
+    assert leaked == [], leaked
+
+
+def test_a_raising_feature_probe_still_closes_its_connection(monkeypatch):
+    """The `closing` block covers the probes that do NOT catch their own error: a failure in the DDL-body probe must
+    still close the connection it opened."""
+    import gc
+    import warnings
+    real = sqlite3.connect
+    opened = []
+
+    class Boom(sqlite3.Connection):
+        def execute(self, sql, *a):
+            if "verbatim_probe" in sql and sql.startswith("CREATE"):
+                raise RuntimeError("probe failure")
+            return super().execute(sql, *a)
+
+    def connect(*a, **k):
+        c = real(*a, factory=Boom, **k)
+        opened.append(c)
+        return c
+    monkeypatch.setattr(sv.sqlite3, "connect", connect)
+    gc.collect()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", ResourceWarning)
+        with pytest.raises(RuntimeError, match="probe failure"):
+            sv._feature_probes()
+        del opened[:]
+        gc.collect()
+    leaked = [str(w.message) for w in caught if issubclass(w.category, ResourceWarning) and "database" in str(w.message)]
+    assert leaked == [], leaked

@@ -19,6 +19,7 @@ shape decision.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -731,56 +732,59 @@ def _feature_probes() -> dict:
     A version number names a release, not a build. Two builds of `3.45.1` can
     differ in compile options, authorizer availability and DDL support — all of
     which the exact-match model leans on (round 5, finding 6)."""
-    c = sqlite3.connect(":memory:")
-    out = {}
-    try:
-        c.execute("CREATE TABLE t (a TEXT, b TEXT GENERATED ALWAYS AS (a) VIRTUAL)")
-        out["generated_columns"] = True
-    except sqlite3.DatabaseError:
-        out["generated_columns"] = False
-    # No authorizer probe: with migrations out of 0007's scope (v10) nothing
-    # here installs one. `specs/0013` owns migration confinement and should
-    # probe it where it is used.
-    # Round 7, finding 5: this probe used `CREATE TABLE s (a) STRICT`, which is
-    # invalid -- a strict table's column must declare a datatype. It therefore
-    # recorded `strict_tables: False` on a runtime that fully supports them.
-    # Measured on 3.46.1. A probe that fails for the wrong reason is worse than
-    # no probe: it records a false property as evidence.
-    try:
-        c.execute("CREATE TABLE s (a TEXT) STRICT")
-        out["strict_tables"] = True
-    except sqlite3.DatabaseError:
-        # Recorded as part of runtime identity, but NOT required: nothing in
-        # `0007`'s schema matching uses strict tables (round 11). Being explicit
-        # beats listing it among required behaviours and not enforcing it.
-        out["strict_tables"] = False
-    # ...and this one only checked that a row existed, which cannot establish
-    # that DDL is stored verbatim. Submit distinctive text and compare it.
-    # Writing this probe found that "verbatim" was too strong a word for what
-    # the manifest actually needs. SQLite normalises the whitespace *before* the
-    # object name -- `CREATE TABLE  vp` is stored as `CREATE TABLE vp` -- while
-    # preserving the body exactly. The property §4a depends on is body
-    # preservation, which is why two-space and one-space CHECK literals produce
-    # different digests. Probe the property, not the slogan.
-    marker = ("CREATE TABLE verbatim_probe ( a   TEXT ,\n"
-              "  b TEXT DEFAULT 'x  y' , c TEXT CHECK(c <> 'p  q') )")
-    c.execute(marker)
-    stored = c.execute(
-        "SELECT sql FROM sqlite_master WHERE name='verbatim_probe'").fetchone()[0]
-    out["preserves_ddl_body"] = stored[stored.index("("):] == marker[marker.index("("):]
-    # `table_xinfo` must expose a generated column with a nonzero hidden flag --
-    # the property §4a-ii depends on.
-    out["xinfo_exposes_generated"] = any(
-        r[1] == "b" and int(r[6]) != 0
-        for r in c.execute("SELECT * FROM pragma_table_xinfo('t')"))
-    c.close()
+    # Closed on every path, a raising probe included: an unclosed connection
+    # surfaces as a ResourceWarning on Python >= 3.13 at every store open
+    # (reported by the workflow platform, 2026-09-29).
+    with contextlib.closing(sqlite3.connect(":memory:")) as c:
+        out = {}
+        try:
+            c.execute("CREATE TABLE t (a TEXT, b TEXT GENERATED ALWAYS AS (a) VIRTUAL)")
+            out["generated_columns"] = True
+        except sqlite3.DatabaseError:
+            out["generated_columns"] = False
+        # No authorizer probe: with migrations out of 0007's scope (v10) nothing
+        # here installs one. `specs/0013` owns migration confinement and should
+        # probe it where it is used.
+        # Round 7, finding 5: this probe used `CREATE TABLE s (a) STRICT`, which is
+        # invalid -- a strict table's column must declare a datatype. It therefore
+        # recorded `strict_tables: False` on a runtime that fully supports them.
+        # Measured on 3.46.1. A probe that fails for the wrong reason is worse than
+        # no probe: it records a false property as evidence.
+        try:
+            c.execute("CREATE TABLE s (a TEXT) STRICT")
+            out["strict_tables"] = True
+        except sqlite3.DatabaseError:
+            # Recorded as part of runtime identity, but NOT required: nothing in
+            # `0007`'s schema matching uses strict tables (round 11). Being explicit
+            # beats listing it among required behaviours and not enforcing it.
+            out["strict_tables"] = False
+        # ...and this one only checked that a row existed, which cannot establish
+        # that DDL is stored verbatim. Submit distinctive text and compare it.
+        # Writing this probe found that "verbatim" was too strong a word for what
+        # the manifest actually needs. SQLite normalises the whitespace *before* the
+        # object name -- `CREATE TABLE  vp` is stored as `CREATE TABLE vp` -- while
+        # preserving the body exactly. The property §4a depends on is body
+        # preservation, which is why two-space and one-space CHECK literals produce
+        # different digests. Probe the property, not the slogan.
+        marker = ("CREATE TABLE verbatim_probe ( a   TEXT ,\n"
+                  "  b TEXT DEFAULT 'x  y' , c TEXT CHECK(c <> 'p  q') )")
+        c.execute(marker)
+        stored = c.execute(
+            "SELECT sql FROM sqlite_master WHERE name='verbatim_probe'").fetchone()[0]
+        out["preserves_ddl_body"] = stored[stored.index("("):] == marker[marker.index("("):]
+        # `table_xinfo` must expose a generated column with a nonzero hidden flag --
+        # the property §4a-ii depends on.
+        out["xinfo_exposes_generated"] = any(
+            r[1] == "b" and int(r[6]) != 0
+            for r in c.execute("SELECT * FROM pragma_table_xinfo('t')"))
     return out
 
 
 def runtime_identity() -> dict:
+    with contextlib.closing(sqlite3.connect(":memory:")) as c:
+        source_id = c.execute("SELECT sqlite_source_id()").fetchone()[0]
     return {"sqlite_version": sqlite3.sqlite_version,
-            "source_id": sqlite3.connect(":memory:").execute(
-                "SELECT sqlite_source_id()").fetchone()[0],
+            "source_id": source_id,
             "features": _feature_probes()}
 
 
@@ -1361,19 +1365,15 @@ def _digest_of_identity(objs: dict, version: int) -> str:
 
 
 def _constructor_objects(version: int) -> dict:
-    c = sqlite3.connect(":memory:")
-    create(c, version)
-    o = identity(manifest(c))
-    c.close()
-    return o
+    with contextlib.closing(sqlite3.connect(":memory:")) as c:
+        create(c, version)
+        return identity(manifest(c))
 
 
 def _constructor_digest(version: int) -> str:
-    c = sqlite3.connect(":memory:")
-    create(c, version)
-    d = digest(manifest(c), version)
-    c.close()
-    return d
+    with contextlib.closing(sqlite3.connect(":memory:")) as c:
+        create(c, version)
+        return digest(manifest(c), version)
 
 
 def legacy_base_versions() -> frozenset:
