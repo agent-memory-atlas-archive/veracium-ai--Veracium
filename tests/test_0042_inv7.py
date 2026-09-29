@@ -5580,9 +5580,8 @@ _R29_MUTANTS = [
     ("getter-made values pooled (the second seat's B4)",
      "    pool = [v for n, v in read if not (n in fab and (v is None or (type(v) is tuple and not v)))]\n",
      "    pool = [v for n, v in read]\n",
-     lambda: test_r29_a_made_up_value_absorbs_nothing_and_the_module_is_described(
-         "m", "typing.TypeVar('T')", "Site.held.extra = None\n", "", "refused", "site_description"),
-     (pytest.fail.Exception, "DID NOT RAISE")),
+     lambda: test_r30_in_a_fresh_interpreter_a_made_up_value_absorbs_no_stored_one("m", "None"),
+     (AssertionError, "a made-up value absorbed an extra attribute holding the same value")),
     ("__module__ counted but not described (the second seat's B5)",
      "        fields.append((\"__module__ (instance dict)\", _normalise(_refuse_unread_managed_dict(obj, tp, read), seen)))\n",
      "        _refuse_unread_managed_dict(obj, tp, read)\n",
@@ -5766,6 +5765,40 @@ def test_r30_in_a_fresh_interpreter_both_own_type_occurrences_are_seen_and_refus
     assert out.returncode == 0 and "own-type-referents" in lines, (label, out.stderr[-400:])
     assert lines[lines.index("own-type-referents") + 1] == "2", (label, "the fresh interpreter did not show both occurrences", lines)
     assert lines[-1] == "refused", f"{label}: an attribute holding the object's own type reads as no drift in a fresh interpreter"
+
+
+_R30_FRESH_MADE_UP_PROBE = r"""
+import gc, importlib.util, sys, types
+spec = importlib.util.spec_from_file_location("un_fresh", sys.argv[1]); un = importlib.util.module_from_spec(spec)
+sys.modules["un_fresh"] = un; spec.loader.exec_module(un)
+m = types.ModuleType("review_census"); exec(compile(sys.argv[2], "<review_census>", "exec"), m.__dict__)
+held = m.Site.held
+refs = gc.get_referents(held)
+print("dict-referents", sum(1 for r in refs if type(r) is dict), "stored-value-referents", sum(1 for r in refs if r is m.EXTRA))
+try:
+    un.site_description(m.Site)
+    print("described")
+except un.SiteUndescribed:
+    print("refused")
+"""
+
+
+@pytest.mark.parametrize("label,value", [("None", "None"), ("()", "()")], ids=["None", "()"])
+def test_r30_in_a_fresh_interpreter_a_made_up_value_absorbs_no_stored_one(label, value):
+    """Round 29's B4 with its PRECONDITION asserted (found on CI's floor lane, whose shuffle drew the materialised mode):
+    a getter's made-up `None` or `()` must not absorb an EXTRA attribute holding the same value. That is only the
+    residue rule's decision while the collector reports the dictionary as its VALUES — materialised, the object is
+    refused by the one dict referent instead, and the rule's mutant survives — so the cell runs in a FRESH interpreter
+    and first asserts values mode: no dict referent, and the stored value visible once."""
+    un = _load("inv7_uninstrument_r30_fresh_made_up", EVIDENCE / "inv7_uninstrument.py")
+    src = f"import typing\nEXTRA = {value}\n\nclass Site:\n    held = typing.TypeVar('T')\n\nSite.held.extra = EXTRA\n"
+    out = subprocess.run([sys.executable, "-I", "-c", _R30_FRESH_MADE_UP_PROBE, un.__file__, src], capture_output=True,
+                         text=True, env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+    words = out.stdout.split()
+    assert out.returncode == 0 and "dict-referents" in words, (label, out.stderr[-400:])
+    assert words[words.index("dict-referents") + 1] == "0", (label, "the fresh interpreter materialised the dictionary", words)
+    assert words[words.index("stored-value-referents") + 1] == "1", (label, "the stored value is not a referent", words)
+    assert words[-1] == "refused", f"{label}: a made-up value absorbed an extra attribute holding the same value"
 
 
 def _r30_cell(fn, *args):
