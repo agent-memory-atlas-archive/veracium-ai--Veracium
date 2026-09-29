@@ -5292,7 +5292,7 @@ _R28_MUTANTS = [
      "            return d.__get__(obj, tp)\n", "            return getattr(obj, name)\n",
      _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[2][1], "site_description"), "refused"),
     ("a Python descriptor called",
-     "        return default\n    return _PYTHON_DESCRIPTOR\n", "        return default\n    return getattr(obj, name)\n",
+     "        return default\n    return _PYTHON_DESCRIPTOR     # a Python descriptor, or any other value a class stores under the name — None included\n", "        return default\n    return getattr(obj, name)\n",
      _r28_cell(test_r28_describing_performs_no_attribute_lookup_on_what_it_describes, "m", _R28_LOOKUP[0][1], "site_description"), "refused"),
     ("a class named through its metaclass",
      "    return _TYPE_QUALNAME.__get__(tp)\n", "    return tp.__qualname__\n",
@@ -5570,7 +5570,7 @@ _R29_MUTANTS = [
      "    if not is_class and _dict_unreachable(tp):\n", "    if False:\n",
      _r29_cell("V2 instance dict shadowed by a property"), (pytest.fail.Exception, "DID NOT RAISE")),
     ("the managed-dict residue check dropped (the second seat's mark B)",
-     "    if _managed_dict_unexposed(tp):\n", "    if False:\n",
+     "    if _managed_dict_unexposed(tp):\n        # ROUND 29 (the second seat's stage-2 B5)", "    if False:\n        # ROUND 29 (the second seat's stage-2 B5)",
      lambda: test_r29_a_typing_objects_hidden_dict_contents_are_refused("m", "typing.TypeVar('T')", "site_description"),
      (pytest.fail.Exception, "DID NOT RAISE")),
     ("__module__ not accounted for (an empty TypeVar over-refused)",
@@ -5596,6 +5596,214 @@ _R29_MUTANTS = [
 def test_r29_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
     """Each round-29 rule fails its own cell FOR THE REASON IT IS NAMED FOR (round 28's B2 discipline)."""
     mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r29m")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    exc, pattern = expected
+    with pytest.raises(exc, match=re.escape(pattern)):
+        cell()
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ROUND 30 — the round-29 verdict's R29-1 (an explicit `__dict__ = None` read as an absent name, bypassing the
+# unreachable-dictionary refusal) and R29-2 (the residue check dropped EVERY referent that is the object's own type).
+# Both are round 29's own new state: a sentinel ambiguity in `_static`, and a filter wider than the one structural fact.
+
+_R30_NONE_DICT = [
+    # (label, class body, setup a, setup b) — two held objects whose dictionary no accessor reaches
+    ("__dict__ = None, a key changed (the leaf form)", "    __dict__ = None\n",
+     "Site.held.alpha = 1\n", "Site.held.beta = 1\n"),
+    ("__dict__ = None beside a property, a value changed (the field form)",
+     "    __dict__ = None\n    @property\n    def marker(self):\n        CALLS.append('marker')\n        return 0\n",
+     "object.__setattr__(Site.held, 'value', 1)\n", "object.__setattr__(Site.held, 'value', 2)\n"),
+    ("__dict__ = 0", "    __dict__ = 0\n", "Site.held.alpha = 1\n", "Site.held.beta = 1\n"),
+]
+_R30_NONE_SRC = ("CALLS = []\n\ndef _has(o, n):\n    try:\n        object.__getattribute__(o, n)\n        return True\n"
+                 "    except AttributeError:\n        return False\n\nclass Held:\n{body}\nclass Site:\n    held = Held()\n"
+                 "    def fire(self, value):\n        names = tuple(n for n in ('alpha', 'beta') if _has(self.held, n))\n"
+                 "        return names + ((object.__getattribute__(self.held, 'value'),) if _has(self.held, 'value') else ())\n\n"
+                 "{setup}")
+_R30_NONE_CELLS = [(f"{label} through {route}", body, sa, sb, route) for label, body, sa, sb in _R30_NONE_DICT
+                   for route in ("site_description", "_site_realized", "site_drift")]
+
+
+@pytest.mark.parametrize("cell,body,sa,sb,route", _R30_NONE_CELLS, ids=[c[0] for c in _R30_NONE_CELLS])
+def test_r30_a_dictionary_no_accessor_reaches_is_refused_whatever_its_name_holds(cell, body, sa, sb, route):
+    """R29-1: the refusal is decided from STORAGE and OWNED accessors, never the name — `None`, `0` and a property in the
+    `__dict__` name all refuse the same way, through all three routes, running no fixture code."""
+    un = _load("inv7_uninstrument_r30_none", EVIDENCE / "inv7_uninstrument.py")
+    src_a, src_b = _R30_NONE_SRC.format(body=body, setup=sa), _R30_NONE_SRC.format(body=body, setup=sb)
+    ma, mb = _r28_module(src_a), _r28_module(src_b)
+    assert ma.Site().fire(0) != mb.Site().fire(0), (cell, "the pair does not change the decision")
+    ma.CALLS.clear()
+    refusal = un.SiteUndescribed if route != "_site_realized" else Exception
+    with pytest.raises(refusal, match=_R29_REFUSAL):
+        if route == "site_description":
+            un.site_description(ma.Site)
+        elif route == "_site_realized":
+            observer._site_realized(ma.Site)
+        else:
+            un.site_drift(src_b, src_a)
+    assert ma.CALLS == [], ma.CALLS
+
+
+def test_r30_a_dictionary_under_an_inherited_accessor_is_read_not_refused():
+    """The control: `__dict__ = None` on a subclass whose BASE owns the real accessor — the dictionary is read through the
+    base's getset, and a change in it is drift."""
+    un = _load("inv7_uninstrument_r30_inherited", EVIDENCE / "inv7_uninstrument.py")
+    src = ("CALLS = []\n\nclass Base:\n    pass\n\nclass Held(Base):\n    __dict__ = None\n\nclass Site:\n    held = Held()\n"
+           "    def fire(self, value):\n        return Base.__dict__['__dict__'].__get__(self.held).get('value')\n\n"
+           "Base.__dict__['__dict__'].__get__(Site.held)['value'] = {v}\n")
+    a, b = src.format(v=1), src.format(v=2)
+    assert un.site_description(_r28_module(a).Site) != un.site_description(_r28_module(b).Site)
+    assert un.site_drift(b, a) != [] and un.site_drift(a, a) == []
+
+
+def test_r30_the_leaf_refuses_an_object_with_an_instance_dictionary():
+    """The belt (the second seat's stage-1 mark 1): the leaf fallback reads VALUES, never keys, so it refuses any object
+    carrying instance-dictionary storage rather than describe it by its referents."""
+    un = _load("inv7_uninstrument_r30_belt", EVIDENCE / "inv7_uninstrument.py")
+
+    class Held:
+        pass
+    h = Held()
+    h.alpha = 1
+    with pytest.raises(un.SiteUndescribed, match="reached the leaf fallback"):
+        un._leaf(h, Held, ("class",), {})
+
+
+def test_r30_absent_is_not_a_stored_none():
+    """The sentinel (R29-1's cause): a name no class defines and a name a class STORES None under are different answers."""
+    un = _load("inv7_uninstrument_r30_sentinel", EVIDENCE / "inv7_uninstrument.py")
+
+    class Stored:
+        __dict__ = None
+    assert un._static(Stored, "__dict__") is None
+    assert un._static(Stored, "no_such_name") is un._ABSENT, "an absent name read as a stored None"
+
+
+_R30_OWN_TYPE = [("TypeVar", "typing.TypeVar('T')"), ("TypeVarTuple", "typing.TypeVarTuple('Ts')"),
+                 ("ParamSpec", "typing.ParamSpec('P')")]
+_R30_OWN_SRC = ("import typing\n\nCALLS = []\n\nclass Site:\n    held = {ctor}\n    def fire(self, value):\n"
+                "        return hasattr(self.held, 'alpha')\n\n{setup}")
+_R30_OWN_CELLS = [(f"{label} through {route}", ctor, route) for label, ctor in _R30_OWN_TYPE
+                  for route in ("site_description", "_site_realized", "site_drift")]
+
+
+@pytest.mark.parametrize("cell,ctor,route", _R30_OWN_CELLS, ids=[c[0] for c in _R30_OWN_CELLS])
+def test_r30_an_attribute_holding_the_objects_own_type_is_refused(cell, ctor, route):
+    """R29-2: the structural reference to the object's own type is consumed ONCE — its derived count — and a further
+    occurrence (an attribute holding the type) is an ordinary value the description did not read, so it is refused."""
+    un = _load("inv7_uninstrument_r30_own", EVIDENCE / "inv7_uninstrument.py")
+    sa = _R30_OWN_SRC.format(ctor=ctor, setup="")
+    sb = _R30_OWN_SRC.format(ctor=ctor, setup="Site.held.alpha = type(Site.held)\n")
+    ma, mb = _r28_module(sa), _r28_module(sb)
+    assert ma.Site().fire(0) != mb.Site().fire(0), (cell, "the pair does not change the decision")
+    refusal = un.SiteUndescribed if route != "_site_realized" else Exception
+    with pytest.raises(refusal, match=_R29_MANAGED_REFUSAL):
+        if route == "site_description":
+            un.site_description(mb.Site)
+        elif route == "_site_realized":
+            observer._site_realized(mb.Site)
+        else:
+            un.site_drift(sb, sa)
+
+
+def test_r30_a_field_holding_the_objects_own_type_is_described_not_refused():
+    """The verdict's acceptance half: a LEGITIMATE field holding the type — `TypeVar(bound=TypeVar)` — is a value the
+    description read, so it accounts for the second occurrence; the object is described, stably, and a changed bound is
+    drift."""
+    un = _load("inv7_uninstrument_r30_field", EVIDENCE / "inv7_uninstrument.py")
+    src = "import typing\n\nclass Site:\n    held = typing.TypeVar('T', bound={b})\n"
+    own, other = src.format(b="typing.TypeVar"), src.format(b="int")
+    d1, d2 = un.site_description(_r28_module(own).Site), un.site_description(_r28_module(own).Site)
+    assert d1 == d2
+    assert un.site_drift(other, own) != []
+
+
+def test_r30_a_leaf_holding_its_own_type_is_described():
+    """The leaf is the third site that filtered EVERY own-type referent (the second seat's stage-1 widening). The constant
+    evaluator's traverse visits only the value it holds — its MEASURED structural count is 0, although it is a heap type
+    — so an evaluator whose value is its own class is described, and differs from one holding `int`."""
+    import typing
+    un = _load("inv7_uninstrument_r30_leaf", EVIDENCE / "inv7_uninstrument.py")
+    ce = un._CONST_EVALUATOR
+    assert un._CONST_EVALUATOR_STRUCTURAL == 0
+
+    def site(bound):
+        class Site:
+            ev = typing.TypeVar("T", bound=bound).evaluate_bound
+        return Site
+    assert un.site_description(site(ce)) != un.site_description(site(int))
+
+
+_R30_FRESH_PROBE = r"""
+import gc, importlib.util, sys, types
+spec = importlib.util.spec_from_file_location("un_fresh", sys.argv[1]); un = importlib.util.module_from_spec(spec)
+sys.modules["un_fresh"] = un; spec.loader.exec_module(un)
+m = types.ModuleType("review_census"); exec(compile(sys.argv[2], "<review_census>", "exec"), m.__dict__)
+held = m.Site.held
+print("own-type-referents", sum(1 for r in gc.get_referents(held) if r is type(held)))
+try:
+    un.site_description(m.Site)
+    print("described")
+except un.SiteUndescribed:
+    print("refused")
+"""
+
+
+@pytest.mark.parametrize("label,ctor", _R30_OWN_TYPE, ids=[m[0] for m in _R30_OWN_TYPE])
+def test_r30_in_a_fresh_interpreter_both_own_type_occurrences_are_seen_and_refused(label, ctor):
+    """R29-2 with its PRECONDITION asserted. The collector reports a managed dictionary as its VALUES only while the
+    object's keys follow the order its type's shared keys expect; an earlier object of the same type that took other
+    attribute names in another order makes CPython MATERIALISE this one's dictionary, and the collector then reports one
+    dict instead — refused either way, but the multiplicity rule is no longer what refuses it (found running the 0042
+    files in definition order: the rule's own mutant survived there and died alone). So the cell runs in a FRESH
+    interpreter and first asserts that both occurrences of the type are visible, then that the object is refused."""
+    un = _load("inv7_uninstrument_r30_fresh", EVIDENCE / "inv7_uninstrument.py")
+    src = _R30_OWN_SRC.format(ctor=ctor, setup="Site.held.alpha = type(Site.held)\n")
+    out = subprocess.run([sys.executable, "-I", "-c", _R30_FRESH_PROBE, un.__file__, src], capture_output=True, text=True,
+                         env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+    lines = out.stdout.split()
+    assert out.returncode == 0 and "own-type-referents" in lines, (label, out.stderr[-400:])
+    assert lines[lines.index("own-type-referents") + 1] == "2", (label, "the fresh interpreter did not show both occurrences", lines)
+    assert lines[-1] == "refused", f"{label}: an attribute holding the object's own type reads as no drift in a fresh interpreter"
+
+
+def _r30_cell(fn, *args):
+    return lambda: fn(*args)
+
+
+_R30_MUTANTS = [
+    ("the dictionary refusal decided by the name again (R29-1)",
+     "    return (_has_instance_dict(tp)\n            and not any(",
+     "    return (_has_instance_dict(tp) and _static(tp, \"__dict__\") not in (None, _ABSENT)\n            and not any(",
+     _r30_cell(test_r30_a_dictionary_no_accessor_reaches_is_refused_whatever_its_name_holds, "m",
+               _R30_NONE_DICT[1][1], _R30_NONE_DICT[1][2], _R30_NONE_DICT[1][3], "site_description"),
+     (pytest.fail.Exception, "DID NOT RAISE")),
+    ("the leaf belt dropped",
+     "    if _has_instance_dict(tp):\n        raise SiteUndescribed(f\"a {_module(tp)}.{_qualname(tp)} carries an instance dictionary and reached",
+     "    if False:\n        raise SiteUndescribed(f\"a {_module(tp)}.{_qualname(tp)} carries an instance dictionary and reached",
+     test_r30_the_leaf_refuses_an_object_with_an_instance_dictionary, (pytest.fail.Exception, "DID NOT RAISE")),
+    ("_static without its sentinel",
+     "            return d[name]\n    return _ABSENT\n", "            return d[name]\n    return None\n",
+     test_r30_absent_is_not_a_stored_none, (AssertionError, "an absent name read as a stored None")),
+    ("every occurrence of the type filtered (R29-2)",
+     "        if r is tp and left:\n", "        if r is tp:\n",
+     _r30_cell(test_r30_in_a_fresh_interpreter_both_own_type_occurrences_are_seen_and_refused, "m", "typing.TypeVar('T')"),
+     (AssertionError, "reads as no drift in a fresh interpreter")),
+    ("no structural reference consumed (an empty instance over-refused)",
+     "    left = _structural_count(tp)\n", "    left = 0\n",
+     _r30_cell(test_r29_a_typing_object_without_extra_attributes_is_still_described, "m", "typing.TypeVar('T')"),
+     (Exception, "no accessor exposes that dictionary")),
+    ("the constant evaluator's count taken from the heap flag",
+     "        return _CONST_EVALUATOR_STRUCTURAL\n", "        return 1\n",
+     test_r30_a_leaf_holding_its_own_type_is_described, (Exception, "holding 0 referents")),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell,expected", _R30_MUTANTS, ids=[m[0] for m in _R30_MUTANTS])
+def test_r30_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
+    """Each round-30 rule fails its own cell FOR THE REASON IT IS NAMED FOR."""
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r30m")
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
     exc, pattern = expected
     with pytest.raises(exc, match=re.escape(pattern)):

@@ -239,6 +239,8 @@ def _const_evaluator_type():
 
 
 _CONST_EVALUATOR = _const_evaluator_type()
+_CONST_EVALUATOR_STRUCTURAL = sum(1 for _r in __import__("gc").get_referents(
+    __import__("typing").TypeVar("_", bound=int).evaluate_bound) if _r is _CONST_EVALUATOR)   # 0 on 3.14.7 (round 30)
 
 
 def _lazy_values(obj, descriptors) -> dict:
@@ -353,13 +355,18 @@ def _module(tp: type) -> str:
     return _TYPE_MODULE.__get__(tp)
 
 
+_ABSENT = type("_Absent", (), {"__repr__": lambda self: "<absent>"})()   # distinct from a STORED None (round 30, R29-1)
+
+
 def _static(tp: type, name: str):
-    """The attribute `name` as `tp`'s MRO defines it, found without dispatch; None when absent."""
+    """The attribute `name` as `tp`'s MRO defines it, found without dispatch; `_ABSENT` when no class defines it. ROUND 30
+    (R29-1): this returned None for both "absent" and a class that STORES None under the name (`__dict__ = None`), and the
+    dictionary refusal read the second as the first."""
     for k in _mro(tp):
         d = _tdict(k)
         if name in d:
             return d[name]
-    return None
+    return _ABSENT
 
 
 def _derived_qualname(obj, tp: type):
@@ -395,11 +402,11 @@ def _read(obj, tp: type, name: str, default=AttributeError):
             if default is AttributeError:
                 raise
             return default
-    if d is None:
+    if d is _ABSENT:
         if default is AttributeError:
             raise AttributeError(name)
         return default
-    return _PYTHON_DESCRIPTOR
+    return _PYTHON_DESCRIPTOR     # a Python descriptor, or any other value a class stores under the name — None included
 
 
 def _has_static(tp: type, name: str) -> bool:
@@ -639,9 +646,7 @@ def _refuse_unread_managed_dict(obj, tp: type, read: list) -> None:
     except AttributeError:
         pass
     extra = []
-    for r in gc.get_referents(obj):
-        if r is tp:
-            continue
+    for r in _referents_but_type(obj, tp):
         hit = next((i for i, v in enumerate(pool) if v is r), None)
         if hit is None:
             extra.append(r)
@@ -672,7 +677,7 @@ def _fabricating(tp: type) -> frozenset:
     except Exception:
         got = frozenset(n for n in _data_descriptors(tp))
     else:
-        refs = [r for r in gc.get_referents(probe) if r is not tp]
+        refs = _referents_but_type(probe, tp)
         names = []
         for n in _data_descriptors(tp):
             try:
@@ -696,22 +701,82 @@ def _managed_dict_unexposed(tp: type) -> bool:
             and not any(n == "__dict__" for k in _mro(tp) for n, _d in _owned(k)))
 
 
+_HEAPTYPE = 1 << 9       # Py_TPFLAGS_HEAPTYPE
+
+
+def _referents_but_type(obj, tp: type) -> list:
+    """`obj`'s collector referents with its STRUCTURAL reference to its own type consumed — exactly as many occurrences as
+    the type contributes, never every one (ROUND 30, R29-2; the second seat's stage-1 mark 3, one rule for all three
+    sites). A heap type's traverse visits its type once — measured on 3.14.7 for Python classes and for the C heap types
+    (TypeVar, deque, itertools.count, a lock); a static type's, never. So the count is DERIVED from the type's own
+    flag, and every further occurrence of the type is an ordinary value, accounted for like any other: an attribute
+    holding the type (`T.alpha = type(T)`) is no longer dropped with the structural reference. NAMED LIMIT: a C heap
+    type whose traverse does not visit its type would read one own-type value as structural — which is why the count is
+    MEASURED wherever a canonical instance can be built (`_structural_count`): the constant evaluator is such a type."""
+    import gc
+    left = _structural_count(tp)
+    out = []
+    for r in gc.get_referents(obj):
+        if r is tp and left:
+            left -= 1
+            continue
+        out.append(r)
+    return out
+
+
+_STRUCTURAL = {}
+
+
+def _structural_count(tp: type) -> int:
+    """How many times the collector reports `tp` itself among a `tp` instance's referents when no field or attribute holds
+    it — MEASURED on a canonical instance wherever one can be built without running Python code (the second seat's
+    stage-1 mark 3: a derived count, never "every occurrence"), else read from the heap-type flag. Measured on 3.14.7:
+    the three interpreter types with a hidden dictionary report 1 (`tp("_")`); the constant evaluator reports 0 although
+    it IS a heap type — its traverse visits only the value it holds (a TypeVar bound to `int`), so the flag alone would
+    have consumed a held value that happens to be the evaluator's own type (found building round 30's leaf cell)."""
+    import gc
+    got = _STRUCTURAL.get(tp)
+    if got is not None:
+        return got
+    probe = None
+    if tp is _CONST_EVALUATOR:
+        # measured at IMPORT, outside every guarded window: building one needs a bound, and TypeVar's constructor checks a
+        # bound with typing's own Python code, which the guard would refuse inside a description
+        return _CONST_EVALUATOR_STRUCTURAL
+    if _managed_dict_unexposed(tp):
+        try:
+            probe = tp("_")
+        except Exception:
+            probe = None
+    if probe is not None and type(probe) is tp:
+        got = sum(1 for r in gc.get_referents(probe) if r is tp)
+    else:
+        got = 1 if (_TYPE_FLAGS.__get__(tp) & _HEAPTYPE) else 0
+    _STRUCTURAL[tp] = got
+    return got
+
+
 def _dict_unreachable(tp: type) -> bool:
-    """Whether `tp`'s instances carry a dictionary that NO getset along the MRO exposes — `__dict__` defined as a property in
-    the class that added the dictionary, so the interpreter never created the getset (the round-28 verdict's second
-    form). No public C accessor bypasses the name lookup, and the collector cannot tell an instance dict from a dict held
+    """Whether `tp`'s instances carry a dictionary that NO getset along the MRO exposes — `__dict__` taken by a property, by None or by
+    any other value in the class that added the dictionary, so the interpreter never created the getset (the round-28
+    verdict's second form; the round-29 verdict's `__dict__ = None`). No public C accessor bypasses the name lookup, and the collector cannot tell an instance dict from a dict held
     in a slot: refused (the second seat's stage 1). THIS REFUSAL IS THE ONLY GUARD for such a dictionary on 3.14: a
     managed dict (and weakref) lives BEFORE the object, outside `__basicsize__`, so `_hidden_c_bases`' storage accounting
     never sees it — measured: the verdict's V2 class has the basicsize of `object`, 16 — and `_exposed`'s dict credit
     (round 29: by ownership, not name) cannot act as a second line there."""
-    if not (_TYPE_DICTOFFSET.__get__(tp) or (_TYPE_FLAGS.__get__(tp) & _MANAGED_DICT)):
-        return False
-    # the NAME must be taken by something that is not the dictionary's own descriptor: a C type such as TypeVar carries
-    # a managed dict with no `__dict__` name at all (measured), which is not this shape; and a module or SimpleNamespace
-    # exposes its dict through a MEMBER descriptor, not a getset — both kinds count as the dict's own
-    if _static(tp, "__dict__") is None:
-        return False
-    return not any(n == "__dict__" for k in _mro(tp) for n, _d in _owned(k))
+    # ROUND 30 (R29-1; the second seat's stage-1 mark 1): decided from STORAGE and OWNED accessors, never from the name.
+    # Round 29 required the `__dict__` name to resolve to something, and read a class storing `__dict__ = None` as having
+    # no name — a dictionary no accessor reaches, described by its values alone or not at all. Now: an instance
+    # dictionary, no `__dict__` descriptor (getset, or the member a module or SimpleNamespace uses) owned anywhere in the
+    # MRO, and an MRO that is not all interpreter-made (those — TypeVar, TypeVarTuple, ParamSpec — carry the managed
+    # dictionary `_refuse_unread_managed_dict` accounts for) is refused, whatever the name holds.
+    return (_has_instance_dict(tp)
+            and not any(n == "__dict__" for k in _mro(tp) for n, _d in _owned(k))
+            and not all(_immutable(k) for k in _mro(tp)))
+
+
+def _has_instance_dict(tp: type) -> bool:
+    return bool(_TYPE_DICTOFFSET.__get__(tp) or (_TYPE_FLAGS.__get__(tp) & _MANAGED_DICT))
 
 
 def _exposed(b: type) -> int:
@@ -871,8 +936,13 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
       anything else — an immutable type holding a referent that is not a scalar — is REFUSED by name, never drift.
     NAMED LIMIT (the second seat's stage-1 read): this rests on the type's traverse being COMPLETE. A C type whose repr
     formats a member its traverse does not visit, or state that is not a Python object, is not seen here."""
-    import gc
-    refs = [r for r in gc.get_referents(obj) if r is not tp]
+    # ROUND 30, THE BELT (the second seat's stage-1 mark 1): a value-only traversal can never stand in for a dictionary's
+    # KEYS, so an object with instance-dictionary storage is refused here rather than described by its referents — this
+    # function is not reached for one unless the rules above it failed
+    if _has_instance_dict(tp):
+        raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} carries an instance dictionary and reached the leaf fallback, "
+                              f"which reads values and not keys: it cannot be described faithfully and is refused (round 30)")
+    refs = _referents_but_type(obj, tp)
     if tp is _CONST_EVALUATOR:
         if len(refs) != 1:
             raise SiteUndescribed(f"a constant evaluator holding {len(refs)} referents where it holds exactly one, the value it "
