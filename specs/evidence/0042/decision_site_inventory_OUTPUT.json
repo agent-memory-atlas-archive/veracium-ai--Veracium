@@ -3961,73 +3961,67 @@
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 609,
+   "line": 610,
    "module": "store/schema_version.py",
    "qualname": "rebuildable_keys"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 682,
+   "line": 683,
    "module": "store/schema_version.py",
    "qualname": "identity"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 701,
+   "line": 702,
    "module": "store/schema_version.py",
    "qualname": "drift"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 811,
+   "line": 815,
    "module": "store/schema_version.py",
    "qualname": "active_records"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 837,
+   "line": 841,
    "module": "store/schema_version.py",
    "qualname": "artifact_problems._current"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 982,
+   "line": 986,
    "module": "store/schema_version.py",
    "qualname": "manifestation_problems"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1110,
+   "line": 1114,
    "module": "store/schema_version.py",
    "qualname": "_keyable_runtime"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1125,
+   "line": 1129,
    "module": "store/schema_version.py",
    "qualname": "active_records"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1151,
+   "line": 1155,
    "module": "store/schema_version.py",
    "qualname": "artifact_problems._current"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1296,
+   "line": 1300,
    "module": "store/schema_version.py",
    "qualname": "manifestation_problems"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1323,
-   "module": "store/schema_version.py",
-   "qualname": "runtime_supported"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 1339,
+   "line": 1327,
    "module": "store/schema_version.py",
    "qualname": "runtime_supported"
   },
@@ -4039,7 +4033,13 @@
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1345,
+   "line": 1347,
+   "module": "store/schema_version.py",
+   "qualname": "runtime_supported"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 1349,
    "module": "store/schema_version.py",
    "qualname": "runtime_supported"
   },
