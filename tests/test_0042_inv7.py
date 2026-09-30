@@ -2932,6 +2932,9 @@ def _r21_text_io_violations(source: str) -> list:
 # the source declares for itself, and a gate that only asks for SOME encoding blesses it).
 _R21_BOUNDARY_FUNCTIONS = {"_source_encoding", "_source_text", "_read_source", "_write_source", "_read_data", "_write_data",
                            "_described_in_isolation",
+                           # round 31: the backed-field probe child's channel, route B's rules — bytes in and out, its
+                           # ASCII JSON answer decoded strictly, stderr decoded only to NAME a failure
+                           "_prime_in_child",
                            # encodes its OWN repr to hash it: an in-memory digest, never I/O, and str.encode() is UTF-8
                            # whatever the locale
                            "site_description_digest"}
@@ -5578,8 +5581,8 @@ _R29_MUTANTS = [
      lambda: test_r29_a_typing_object_without_extra_attributes_is_still_described("m", "typing.TypeVar('T')"),
      (Exception, "no accessor exposes that dictionary")),
     ("getter-made values pooled (the second seat's B4)",
-     "    pool = [v for n, v in read if not (n in fab and (v is None or (type(v) is tuple and not v)))]\n",
-     "    pool = [v for n, v in read]\n",
+     "    pool = [v for n, v in read if n in backed and not (n in fab and (v is None or (type(v) is tuple and not v)))]\n",
+     "    pool = [v for n, v in read if n in backed]\n",
      lambda: test_r30_in_a_fresh_interpreter_a_made_up_value_absorbs_no_stored_one("m", "None"),
      (AssertionError, "a made-up value absorbed an extra attribute holding the same value")),
     ("__module__ counted but not described (the second seat's B5)",
@@ -5837,6 +5840,272 @@ _R30_MUTANTS = [
 def test_r30_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
     """Each round-30 rule fails its own cell FOR THE REASON IT IS NAMED FOR."""
     mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r30m")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    exc, pattern = expected
+    with pytest.raises(exc, match=re.escape(pattern)):
+        cell()
+
+
+# ROUND 31 — the round-30 verdict's R30-1 and R30-2.
+# R30-1: TypeVar's and ParamSpec's variance flags are C ints; their reads are the `True`/`False` singletons, stored
+# nowhere, and pooled they absorbed a hidden attribute holding the same singleton. Only a field PROVEN to return a stored
+# object is credited — the differential probe `_derive_backed`, primed at import. The cells run in a FRESH interpreter
+# and assert values mode first (round 30's lesson: the residue rule decides only while the collector reports values).
+_R31_FRESH_PROBE = r"""
+import gc, importlib.util, json, sys, types
+def mod(src):
+    m = types.ModuleType("review_census"); exec(compile(src, "<review_census>", "exec", dont_inherit=True), m.__dict__); return m
+# EVERY fixture is built BEFORE the describer is imported: the describer's import-time priming builds typing objects,
+# and that history can switch LATER typing objects into materialised mode (measured, round 31) — an object built first
+# keeps values mode, so the cell judges the residue rule, not the mode
+a, b = sys.argv[3], sys.argv[4]
+ma1, mb1, ma, mb = mod(a), mod(b), mod(a), mod(b)
+def load(n, p):
+    s = importlib.util.spec_from_file_location(n, p); m = importlib.util.module_from_spec(s); sys.modules[n] = m
+    s.loader.exec_module(m); return m
+un = load("un_fresh", sys.argv[1]); ob = load("ob_fresh", sys.argv[2])
+if len(sys.argv) > 5 and sys.argv[5] == "unprime":
+    import typing
+    un._BACKED.pop(typing.TypeVar)
+out = {"decisions": [repr(ma1.Site().fire(0)), repr(mb1.Site().fire(0))],
+       "dict_referents": sum(1 for r in gc.get_referents(mb.Site.held) if type(r) is dict)}
+def route(f):
+    # the observer executes its OWN copy of the describer, so its refusal is another module's SiteUndescribed
+    try:
+        return f()
+    except Exception as e:
+        if type(e).__name__ != "SiteUndescribed":
+            raise
+        return "REFUSED"
+da, db = route(lambda: un.site_description(ma.Site)), route(lambda: un.site_description(mb.Site))
+out["site_description"] = "REFUSED" if "REFUSED" in (da, db) else ("DIFFER" if da != db else "EQUAL")
+ra = route(lambda: ob._site_realized(ma.Site)["digest"]); rb = route(lambda: ob._site_realized(mb.Site)["digest"])
+out["_site_realized"] = "REFUSED" if "REFUSED" in (ra, rb) else ("DIFFER" if ra != rb else "EQUAL")
+try:
+    d = un.site_drift(b, a)
+    out["site_drift"] = "DRIFT" if d else "[]"
+except un.SiteUndescribed:
+    out["site_drift"] = "REFUSED"
+print("R31", json.dumps(out))
+"""
+_R31_HELD = "import typing\n\nclass Site:\n    held = typing.{ctor}\n\n    def fire(self, value):\n        return {decision}\n"
+
+
+def _r31_fresh(src_a, src_b, unprime=False):
+    un = _load("inv7_uninstrument_r31_fresh", EVIDENCE / "inv7_uninstrument.py")
+    out = subprocess.run([sys.executable, "-I", "-c", _R31_FRESH_PROBE, un.__file__, str(EVIDENCE / "inv7_observer.py"),
+                          src_a, src_b] + (["unprime"] if unprime else []),
+                         capture_output=True, text=True, env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+    line = next((ln for ln in out.stdout.splitlines() if ln.startswith("R31 ")), None)
+    assert out.returncode == 0 and line, out.stderr[-600:]
+    return json.loads(line[4:])
+
+
+# the verdict's matrix: constructor x variance flag x hidden value x multiplicity. Every hidden value equals a flag's read.
+_R31_SYNTH = [
+    ("TypeVar, flags false, one False", 'TypeVar("T")', ["alpha = False"]),
+    ("TypeVar, flags false, two False", 'TypeVar("T")', ["alpha = False", "beta = False"]),
+    ("TypeVar, flags false, three False", 'TypeVar("T")', ["alpha = False", "beta = False", "gamma = False"]),
+    ("TypeVar covariant, one True", 'TypeVar("T", covariant=True)', ["alpha = True"]),
+    ("TypeVar contravariant, one True", 'TypeVar("T", contravariant=True)', ["alpha = True"]),
+    ("TypeVar infer_variance, one True", 'TypeVar("T", infer_variance=True)', ["alpha = True"]),
+    ("ParamSpec, flags false, one False", 'ParamSpec("P")', ["alpha = False"]),
+    ("ParamSpec, flags false, three False", 'ParamSpec("P")', ["alpha = False", "beta = False", "gamma = False"]),
+    ("ParamSpec covariant, one True", 'ParamSpec("P", covariant=True)', ["alpha = True"]),
+    ("ParamSpec infer_variance, one True", 'ParamSpec("P", infer_variance=True)', ["alpha = True"]),
+    # a STORED False beside a hidden one: the default is credited once, the hidden one is left over
+    ("TypeVar default=False, one False", 'TypeVar("T", default=False)', ["alpha = False"]),
+]
+
+
+@pytest.mark.parametrize("label,ctor,setup", _R31_SYNTH, ids=[m[0] for m in _R31_SYNTH])
+def test_r31_a_synthesized_boolean_read_absorbs_no_hidden_value(label, ctor, setup):
+    """R30-1 through all three routes, in a fresh interpreter, values mode asserted first: a hidden attribute holding the
+    Boolean a variance flag returns changes the decision, and is REFUSED, never absorbed by the flag's read."""
+    a = _R31_HELD.format(ctor=ctor, decision='hasattr(self.held, "alpha")')
+    b = a + "".join(f"Site.held.{s}\n" for s in setup)
+    got = _r31_fresh(a, b)
+    assert got["decisions"][0] != got["decisions"][1], (label, "the pair does not change the decision")
+    assert got["dict_referents"] == 0, (label, "the fresh interpreter materialised the dictionary", got)
+    for route in ("site_description", "_site_realized", "site_drift"):
+        assert got[route] == "REFUSED", f"{label}: {route} reads {got[route]} — a synthesized read absorbed a hidden value"
+
+
+_R31_STORED = [
+    ("TypeVar default False/True", 'TypeVar("T", default={v})', "self.held.__default__", "False", "True"),
+    ("ParamSpec default False/True", 'ParamSpec("P", default={v})', "self.held.__default__", "False", "True"),
+    ("TypeVarTuple default False/True", 'TypeVarTuple("Ts", default={v})', "self.held.__default__", "False", "True"),
+    ("TypeVar bound int/str", 'TypeVar("T", bound={v})', "self.held.__bound__", "int", "str"),
+    ("TypeVar constraints", 'TypeVar("T", int, {v})', "self.held.__constraints__", "str", "bytes"),
+]
+
+
+@pytest.mark.parametrize("label,ctor,decision,va,vb", _R31_STORED, ids=[m[0] for m in _R31_STORED])
+def test_r31_a_stored_default_bound_or_constraint_is_described_not_refused(label, ctor, decision, va, vb):
+    """The ACCEPTANCE half: a field that STORES its value — a Boolean default, a bound, constraints — is credited, so the
+    object is described and a change is drift on all three routes. Dropping every Boolean, or crediting nothing the
+    guard could not prove, would refuse these."""
+    a = _R31_HELD.format(ctor=ctor.format(v=va), decision=decision)
+    b = _R31_HELD.format(ctor=ctor.format(v=vb), decision=decision)
+    got = _r31_fresh(a, b)
+    assert got["decisions"][0] != got["decisions"][1], (label, "the pair does not change the decision")
+    for route in ("site_description", "_site_realized", "site_drift"):
+        assert got[route] in ("DIFFER", "DRIFT"), f"{label}: {route} reads {got[route]} — a stored value is refused"
+
+
+def test_r31_backed_fields_are_derived_and_primed_at_import():
+    """The derivation's output on this interpreter, and its candidates found by the residue rule's own property over the
+    loaded classes: the variance flags are backed nowhere; bound, constraints, default and name are, and each lazy
+    evaluator (a PEP 695 type parameter stores the function its syntax compiles)."""
+    import typing
+    un = _load("inv7_uninstrument_r31_backed", EVIDENCE / "inv7_uninstrument.py")
+    assert set(un._BACKED) == {tp for tp in un._loaded_types() if un._managed_dict_unexposed(tp)}
+    assert un._BACKED[typing.TypeVar] == {"__name__", "__bound__", "__constraints__", "__default__",
+                                          "evaluate_bound", "evaluate_constraints", "evaluate_default"}
+    assert un._BACKED[typing.ParamSpec] == {"__name__", "__bound__", "__default__", "evaluate_default"}
+    assert un._BACKED[typing.TypeVarTuple] == {"__name__", "__default__", "evaluate_default"}
+
+
+def test_r31_the_sentinel_condition_rejects_a_coincident_singleton():
+    """The derivation is DIFFERENTIAL, never membership: on a build that stores `False` as its default (the second seat's
+    witness), every variance read is that same `False`, among the referents by coincidence. The probe credits a field
+    only if it returns the build's own sentinel — so the flags stay unbacked even on that build."""
+    import typing
+    un = _load("inv7_uninstrument_r31_sentinel", EVIDENCE / "inv7_uninstrument.py")
+    coincident = ((("_",), {"default": False}),)
+    probe = typing.TypeVar("_", default=False)
+    assert any(r is False for r in un._referents_but_type(probe, typing.TypeVar)), "the coincidence build stores no False"
+    got = un._derive_backed(typing.TypeVar, coincident)
+    assert not ({"__covariant__", "__contravariant__", "__infer_variance__"} & got), \
+        f"a coincident stored singleton credited a synthesized field: {sorted(got)}"
+
+
+_R31_IMPORT_PROBE = r"""
+import gc, importlib.util, sys, typing
+s = importlib.util.spec_from_file_location("un_fresh", sys.argv[1]); un = importlib.util.module_from_spec(s)
+sys.modules["un_fresh"] = un; s.loader.exec_module(un)
+assert un._BACKED, "nothing primed"
+T = typing.TypeVar("T"); T.alpha = False; T.beta = False
+print("dict-referents", sum(1 for r in gc.get_referents(T) if type(r) is dict))
+"""
+
+
+def test_r31_importing_the_describer_leaves_the_process_as_it_found_it():
+    """The priming's BUILDS run in a child of the same executable: built in the described process they switched a LATER
+    TypeVar with two attributes into materialised mode (measured, round 31, through a mechanism no single build
+    reproduced). After the import, in a fresh interpreter, such an object still reports its dictionary as values."""
+    un = _load("inv7_uninstrument_r31_import", EVIDENCE / "inv7_uninstrument.py")
+    out = subprocess.run([sys.executable, "-I", "-c", _R31_IMPORT_PROBE, un.__file__], capture_output=True, text=True,
+                         env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+    words = out.stdout.split()
+    assert out.returncode == 0 and "dict-referents" in words, out.stderr[-400:]
+    assert words[words.index("dict-referents") + 1] == "0", \
+        "the describer's import changed how the collector sees a later object (its dictionary is materialised)"
+
+
+def test_r31_an_unprimed_type_credits_nothing_and_is_refused():
+    """The FALLBACK: a type the import did not prime credits no field, so even an empty instance is refused — loud,
+    never a silent credit. The primed control, in the same fresh interpreter recipe, is described."""
+    src = _R31_HELD.format(ctor='TypeVar("T")', decision="1")
+    assert _r31_fresh(src, src)["site_description"] == "EQUAL", "an empty primed TypeVar is not described"
+    assert _r31_fresh(src, src, unprime=True)["site_description"] == "REFUSED", \
+        "an unprimed type credited its fields — the fallback is not fail-closed"
+
+
+# R30-2: ONE reference map across the whole description, recording identity only where identity is state.
+_R31_SHARED = [
+    ("shared lists, compared by identity",
+     "class Site:\n    left = []\n    right = []\n\n    def fire(self, value):\n        return self.left is self.right\n",
+     "Site.right = Site.left\n"),
+    ("shared lists, mutated through one",
+     "class Site:\n    left = []\n    right = []\n\n    def fire(self, value):\n        self.left.append(value)\n"
+     "        return len(self.right)\n", "Site.right = Site.left\n"),
+    ("shared dictionaries",
+     "class Site:\n    left = {}\n    right = {}\n\n    def fire(self, value):\n        return self.left is self.right\n",
+     "Site.right = Site.left\n"),
+    ("a method default shared with a field",
+     "class Site:\n    shared = []\n\n    def fire(self, value, box=None):\n"
+     "        return self.shared is Site.fire.__defaults__[0]\n", "Site.fire.__defaults__ = (Site.shared,)\n"),
+]
+_R31_SHARED_CELLS = [(f"{label} through {route}", label, src, setup, route) for label, src, setup in _R31_SHARED
+                     for route in ("site_description", "_site_realized", "site_drift")]
+
+
+@pytest.mark.parametrize("cell,label,src,setup,route", _R31_SHARED_CELLS, ids=[c[0] for c in _R31_SHARED_CELLS])
+def test_r31_sharing_between_members_is_drift(cell, label, src, setup, route):
+    """R30-2 through all three routes: the class statement is identical and a post-definition assignment makes two
+    members share one object; the decision changes, and so must the description. The decisions are taken on objects
+    built apart from the ones described, and again after description, so no mutation precedes the measurement."""
+    un = _load("inv7_uninstrument_r31_shared", EVIDENCE / "inv7_uninstrument.py")
+    a, b = src, src + setup
+    first = (_r28_module(a).Site().fire(0), _r28_module(b).Site().fire(0))
+    assert first[0] != first[1], (cell, "the pair does not change the decision")
+    ma, mb = _r28_module(a), _r28_module(b)
+    if route == "site_description":
+        assert un.site_description(ma.Site) != un.site_description(mb.Site), f"{cell}: reads as no drift"
+    elif route == "_site_realized":
+        assert observer._site_realized(ma.Site)["digest"] != observer._site_realized(mb.Site)["digest"], f"{cell}: equal digests"
+    else:
+        assert un.site_drift(b, a) != [], f"{cell}: site_drift returns []"
+    assert (ma.Site().fire(0), mb.Site().fire(0)) == first, (cell, "the description changed a decision")
+
+
+def test_r31_sharing_controls():
+    """The ACCEPTANCE halves: sharing inside ONE member was already seen and still is; two graphs built apart with the
+    same sharing describe EQUAL; a content change is drift; and a VALUE is never state — a constant-folded `(1, 2)` both
+    members share describes EQUAL to an equal tuple built apart (identity by folding, not by the census)."""
+    un = _load("inv7_uninstrument_r31_controls", EVIDENCE / "inv7_uninstrument.py")
+    d = lambda s: un.site_description(_r28_module(s).Site)
+    inner = "class Site:\n    both = [[], []]\n"
+    assert d(inner) != d(inner + "Site.both[1] = Site.both[0]\n"), "sharing inside one member is no longer seen"
+    graph = "class Site:\n    left = []\n    right = left\n"
+    assert d(graph) == d(graph), "two equally shared graphs built apart describe differently"
+    assert d("class Site:\n    left = [1]\n") != d("class Site:\n    left = [2]\n"), "a content change is not drift"
+    folded = "class Site:\n    a = (1, 2)\n    b = (1, 2)\n"
+    m = _r28_module(folded)
+    assert m.Site.a is m.Site.b, "the precondition: the class body shares the folded constant"
+    assert d(folded) == d(folded + "Site.b = tuple([1, 2])\n"), "a shared VALUE read as census state"
+    assert un.site_drift(folded + "Site.b = tuple([1, 2])\n", folded) == [], "site_drift reads a shared value as drift"
+
+
+_R31_MUTANTS = [
+    ("the variance flags credited again (R30-1)",
+     "    pool = [v for n, v in read if n in backed and not (n in fab",
+     "    pool = [v for n, v in read if not (n in fab",
+     _r30_cell(test_r31_a_synthesized_boolean_read_absorbs_no_hidden_value, *_R31_SYNTH[0]),
+     (AssertionError, "a synthesized read absorbed a hidden value")),
+    ("priming by plain membership",
+     "            if ours(v) and any(v is r for r in refs):\n",
+     "            if any(v is r for r in refs):\n",
+     test_r31_the_sentinel_condition_rejects_a_coincident_singleton,
+     (AssertionError, "a coincident stored singleton credited a synthesized field")),
+    ("the priming dropped",
+     "_BACKED = _prime_in_child([tp for tp in _loaded_types() if _managed_dict_unexposed(tp)])\n",
+     "_BACKED = {}\n",
+     _r30_cell(test_r31_a_stored_default_bound_or_constraint_is_described_not_refused, *_R31_STORED[3]),
+     (AssertionError, "a stored value is refused")),
+    ("the probe builds run in the described process",
+     "_BACKED = _prime_in_child([tp for tp in _loaded_types() if _managed_dict_unexposed(tp)])\n",
+     "_BACKED = {tp: _derive_backed(tp) for tp in _loaded_types() if _managed_dict_unexposed(tp)}\n",
+     test_r31_importing_the_describer_leaves_the_process_as_it_found_it,
+     (AssertionError, "the describer's import changed how the collector sees a later object")),
+    ("a fresh map per member again (R30-2)",
+     "    out += [(f\"vars.{k}\", _normal_value(x, seen)) for k, x in v.items()]\n",
+     "    out += [(f\"vars.{k}\", _normal_value(x, {id(cls): 0})) for k, x in v.items()]\n",
+     _r30_cell(test_r31_sharing_between_members_is_drift, *_R31_SHARED_CELLS[0]),
+     (AssertionError, "reads as no drift")),
+    ("a value recorded as a back-reference (two rules for one thing)",
+     "    if _builtin(tp, _VALUE_CONTAINERS):\n",
+     "    if False and _builtin(tp, _VALUE_CONTAINERS):\n",
+     test_r31_sharing_controls,
+     (AssertionError, "a shared VALUE read as census state")),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell,expected", _R31_MUTANTS, ids=[m[0] for m in _R31_MUTANTS])
+def test_r31_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
+    """Each round-31 rule fails its own cell FOR THE REASON IT IS NAMED FOR."""
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r31m")
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
     exc, pattern = expected
     with pytest.raises(exc, match=re.escape(pattern)):

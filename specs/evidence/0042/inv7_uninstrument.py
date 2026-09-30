@@ -444,6 +444,7 @@ _IMMUTABLE_TYPE = 1 << 8
 _SCALARS = frozenset({"str", "bytes", "int", "float", "complex", "bool", "NoneType", "ellipsis"})
 _SEQUENCES = frozenset({"tuple", "list"})
 _SETS = frozenset({"set", "frozenset"})
+_VALUE_CONTAINERS = frozenset({"tuple", "frozenset"})   # round 31: values, never recorded in the shared map
 _MAPPINGS = frozenset({"dict", "mappingproxy"})
 
 
@@ -479,10 +480,26 @@ def _normalise(obj, seen: dict) -> tuple:
     writable state), each normalised recursively, and — for a mutable subclass of a built-in — its content read through
     the base's own methods. A leaf with no data descriptors is described without executing its display code (`_leaf`). An object met again is
     recorded by the position at which it was first described, so equal structures stay equal and cycles end; each
-    described object is HELD in `seen` until the description ends, so a position never names a freed address."""
+    described object is HELD in `seen` until the description ends, so a position never names a freed address. A VALUE
+    (a scalar, an exact tuple, frozenset or code object, an immutable class) is never recorded: its identity is interning
+    or constant folding, not state (round 31). One `seen` spans the whole description of a Site (`_site_description`)."""
     tp = type(obj)
     if _builtin(tp, _SCALARS):
         return (_qualname(tp), repr(obj))
+    # ROUND 31 (R30-2): the map is shared across the WHOLE description, so it records identity only where identity is
+    # STATE. A VALUE — an exact built-in tuple, frozenset or code object, or an immutable class — is described by what it
+    # is and never recorded: two members holding `()` share it by interning, not by census state, and a shared-map
+    # back-reference to it would read constant folding as structure. Its ELEMENTS recurse with the shared map, so a list
+    # inside a tuple is still recorded; a cycle needs a mutable link, and every mutable is recorded, so cycles still end.
+    if _builtin(tp, _VALUE_CONTAINERS):
+        if _qualname(tp) == "frozenset":
+            return (_qualname(tp), tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
+        return (_qualname(tp), tuple(_normalise(x, seen) for x in obj))
+    if _builtin(tp, frozenset({"code"})):
+        fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
+        return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
+    if issubclass(tp, type) and _immutable(obj):
+        return ("immutable-type", _module(obj), _qualname(obj))
     if id(obj) in seen:
         ref = seen[id(obj)]
         return ("<ref>", ref[0] if type(ref) is tuple else ref)
@@ -491,8 +508,6 @@ def _normalise(obj, seen: dict) -> tuple:
     # described, and a later object given the same address read as a `<ref>` to it: allocation-dependent, found as a
     # generic Site describing differently the second time (round 25's R24-2 cell). Positions are unchanged.
     seen[id(obj)] = (len(seen), obj)
-    if issubclass(tp, type) and _immutable(obj):
-        return ("immutable-type", _module(obj), _qualname(obj))
     if _builtin(tp, _SEQUENCES):
         return (_qualname(tp), tuple(_normalise(x, seen) for x in obj))
     if _builtin(tp, _SETS):
@@ -501,9 +516,6 @@ def _normalise(obj, seen: dict) -> tuple:
         ns = any(_read_created(k, v, obj) for k, v in obj.items()) and _is_class_namespace(obj)
         return (_qualname(tp), tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()
                                        if not (ns and _read_created(k, v, obj))))
-    if _builtin(tp, frozenset({"code"})):
-        fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
-        return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
     identity = ("immutable-type", _module(tp), _qualname(tp)) if _immutable(tp) else ("class", _normalise(tp, seen))
     fields = []
     is_class = issubclass(tp, type)
@@ -624,7 +636,8 @@ def _refuse_unread_managed_dict(obj, tp: type, read: list) -> None:
     """ROUND 29, inside R28-1 (the second seat's stage-1 mark B): an allowlisted C type carrying a MANAGED dict with no
     accessor — TypeVar, TypeVarTuple, ParamSpec on 3.14.7 — can hold attributes no field shows (`T.extra = 1` against
     `= 2` described EQUAL). The collector visits the dict's VALUES (not its keys, which live in the shared keys), so every
-    referent but the type must be, by identity, a value a field of this description read; any other is instance-dict
+    referent but the type must be, by identity, a value a BACKED field of this description read (round 31: a field
+    proven to return a stored object, `_derive_backed`; a synthesised read such as a variance flag credits nothing); any other is instance-dict
     content that cannot be described faithfully (a renamed key with an equal value would be missed), and is refused.
     An empty dict leaves nothing over, so such an object describes exactly as before."""
     import gc
@@ -638,7 +651,10 @@ def _refuse_unread_managed_dict(obj, tp: type, read: list) -> None:
     # its None/() reads stay out of the pool. A field that STORES None (TypeVar(default=None)'s `__default__`, measured)
     # keeps its read in the pool.
     fab = _fabricating(tp)
-    pool = [v for n, v in read if not (n in fab and (v is None or (type(v) is tuple and not v)))]
+    # ROUND 31 (R30-1): only a field PROVEN to return a stored object is credited (`_derive_backed`, primed at import); an
+    # unprimed type credits nothing and is refused whenever it holds anything but its `__module__`
+    backed = _BACKED.get(tp, frozenset())
+    pool = [v for n, v in read if n in backed and not (n in fab and (v is None or (type(v) is tuple and not v)))]
     module = _NO_MODULE
     try:
         module = object.__getattribute__(obj, "__module__")
@@ -754,6 +770,140 @@ def _structural_count(tp: type) -> int:
         got = 1 if (_TYPE_FLAGS.__get__(tp) & _HEAPTYPE) else 0
     _STRUCTURAL[tp] = got
     return got
+
+
+def _derive_backed(tp: type, extra_builds: tuple = ()) -> frozenset:
+    """ROUND 31 (R30-1; the second seat's stage-1 mark 4, the differential probe dev's measurement required): the fields
+    of `tp` whose read returns an object the instance STORES — so that, among the collector's referents, it accounts for a
+    stored reference. A field whose getter SYNTHESISES its value (TypeVar's variance flags are C ints; their reads are the
+    `True`/`False` singletons, stored nowhere) is never credited: pooled, it absorbed a hidden attribute holding the same
+    singleton (the round-30 verdict). DIFFERENTIAL, never membership: `TypeVar("_", default=False)` stores the `False`
+    that every variance read returns, so "the read is among the referents" passes by coincidence (measured). A field is
+    backed only if, on a build that sets it to a FRESH sentinel — each keyword derived from the type's own descriptor
+    names (`__x__` → `x`), and once positionally for types that take extra arguments — the field reads that very
+    sentinel (or a tuple of the sentinels) AND that object is among the build's referents. Builds that fail set nothing.
+    A LAZY field (PEP 695 syntax, `def f[T: X]`) stores its evaluator function, which no keyword can set; the language's
+    own syntax builds those, compiled under a probe-only filename, and an evaluator compiled from THAT source counts as
+    the build's own object the way a sentinel does (found by the rounds 25-27 lazy cells: without it, every lazily
+    bound or defaulted type parameter was refused).
+    `extra_builds` exists for the cell that proves the SENTINEL condition load-bearing: on 3.14.7's three types none of
+    the derived builds stores a singleton a synthesising getter also returns, so only a build that does — the second
+    seat's `default=False` — can show that membership alone would credit the variance flags."""
+    import sys as _sys
+    name = "".join(["_r31_", "probe_", "name"])       # a fresh str object, never an interned constant
+    s1, s2 = type("_R31Probe1", (), {}), type("_R31Probe2", (), {})
+    marks = (name, s1, s2)
+    builds = [((name,), {})]
+    builds += [((name,), {n[2:-2] if n[:2] == n[-2:] == "__" else n: s1}) for n in _data_descriptors(tp)]
+    builds.append(((name, s1, s2), {}))
+    builds += list(extra_builds)
+    probes = []
+    for args, kwargs in builds:
+        try:
+            probes.append(tp(*args, **kwargs))
+        except Exception:
+            continue
+    lazy_ns = {"_S1": s1, "_S2": s2}
+    try:
+        exec(compile(_LAZY_PROBE_SOURCE, _LAZY_PROBE_FILE, "exec", dont_inherit=True), lazy_ns)
+        probes += [x for f in ("_r31_f", "_r31_g") for x in lazy_ns[f].__type_params__]
+    except SyntaxError:
+        pass                                              # no type-parameter syntax: no lazy field to prove
+
+    def ours(v):
+        if any(v is m for m in marks):
+            return True
+        if type(v) is tuple and len(v) > 0 and all(any(x is m for m in marks) for x in v):
+            return True
+        return type(v) is _FUNC_CODE.__objclass__ and _FUNC_CODE.__get__(v).co_filename == _LAZY_PROBE_FILE
+
+    backed = set()
+    for probe in probes:
+        if type(probe) is not tp:
+            continue
+        refs = _referents_but_type(probe, tp)
+        for n in _data_descriptors(tp):
+            try:
+                v = _read(probe, tp, n)
+            except Exception:
+                continue
+            if ours(v) and any(v is r for r in refs):
+                backed.add(n)
+    return frozenset(backed)
+
+
+_LAZY_PROBE_FILE = "<inv7-backed-field-probe>"
+_LAZY_PROBE_SOURCE = "def _r31_f[T: _S1 = _S2, *Ts = _S2, **P = _S2](): pass\ndef _r31_g[C: (_S1, _S2)](): pass\n"
+_FUNC_CODE = __import__("types").FunctionType.__dict__["__code__"]
+
+
+def _loaded_types(root: type = object) -> list:
+    """Every class reachable from `root` by `type.__subclasses__`, called through `type`'s own method (no lookup on the
+    class) — the loaded classes, enumerated rather than listed."""
+    out, stack, seen = [], [root], set()
+    while stack:
+        k = stack.pop()
+        if id(k) in seen:
+            continue
+        seen.add(id(k))
+        out.append(k)
+        try:
+            stack.extend(type.__subclasses__(k))
+        except TypeError:
+            pass
+    return out
+
+
+# ROUND 31: backed fields PRIMED AT IMPORT, outside every guarded window — building a TypeVar with a bound runs typing's
+# own Python code (`_type_check`), which the guard refuses inside a description, and `__constraints__` is set only
+# positionally. The candidates are DERIVED by the property the residue rule applies (`_managed_dict_unexposed`) over the
+# loaded classes, never listed: on 3.14.7, TypeVar, TypeVarTuple and ParamSpec (measured by both seats). A type met at
+# describe time that was not primed here credits NO field, and is refused (fail-closed, loud).
+# THE BUILDS RUN IN A CHILD of the same executable (`_prime_in_child`), never in this process: built here, they changed
+# the collector's view of LATER TypeVars — one given two or more attributes had its managed dict materialised, through a
+# mechanism no single build reproduced (measured, round 31; the second seat's mark: the describer's import must leave
+# the process it describes as it found it). Only the candidates' names go out and only field-name strings come back;
+# a candidate is resolved in the child by module and qualname, which an immutable type cannot fake.
+# NAMED LIMITS: in the observer, a fresh describer is executed AFTER the census is imported, so a census that rewrote
+# typing's constructors could bias the child's builds only if it could reach the child (it cannot: a fresh -I process);
+# a lazy evaluator is recognised as the probe's own by its code's FILE NAME, so code compiled under that name would be
+# credited — an attack on the measurement, outside the round-19 scope, the same class as the guard's file-name limit.
+_BACKED_CHILD = "--inv7-derive-backed"
+
+
+def _prime_in_child(candidates: list) -> dict:
+    """{type: frozenset(backed field names)} for `candidates`, derived by `_derive_backed` in a fresh `-I` child of this
+    executable. A candidate the child cannot resolve to the same immutable, managed-dict type is left unprimed."""
+    import json, os, subprocess
+    want = [(_module(tp), _qualname(tp)) for tp in candidates]
+    if not want or os.environ.get("INV7_BACKED_CHILD") == "1":
+        return {}
+    # bytes both ways and `-B` (route B's child's rules: `-I` ignores PYTHONDONTWRITEBYTECODE, and the round-21 gate
+    # keeps text I/O at the transform's named boundaries); the answer is ASCII JSON, decoded strictly, duplicates refused
+    out = subprocess.run([sys.executable, "-I", "-B", __file__, _BACKED_CHILD, json.dumps(want)], capture_output=True,
+                         env={**os.environ, "INV7_BACKED_CHILD": "1"})
+    if out.returncode != 0:
+        raise RuntimeError("the backed-field probe child failed: "
+                           + out.stderr.decode("utf-8", errors="backslashreplace")[-400:])
+    got = json.loads(out.stdout.decode("ascii"), object_pairs_hook=_strict_pairs)
+    return {tp: frozenset(got[f"{m}:{q}"]) for tp, (m, q) in zip(candidates, want) if f"{m}:{q}" in got}
+
+
+def _derive_backed_by_name(want: list) -> dict:
+    """The child's half: each (module, qualname) resolved, kept only if it is the same kind of type, and derived."""
+    import importlib
+    got = {}
+    for m, q in want:
+        try:
+            obj = importlib.import_module(m)
+            for part in q.split("."):
+                obj = getattr(obj, part)
+        except Exception:
+            continue
+        if issubclass(type(obj), type) and _managed_dict_unexposed(obj) and (_module(obj), _qualname(obj)) == (m, q):
+            got[f"{m}:{q}"] = sorted(_derive_backed(obj))
+    return got
+
 
 
 def _dict_unreachable(tp: type) -> bool:
@@ -1009,7 +1159,7 @@ def _type_level_fields(meta: type) -> list:
     return names
 
 
-def _type_level_value(cls, name):
+def _type_level_value(cls, name, seen: dict):
     # ROUND 28: read through the metaclass's own C descriptor, never getattr — a metaclass's __getattribute__ or @property
     # is census code; and a class is named through type's getsets, never a getattr DEFAULT (R27-1: `repr(v)` as a default
     # ran a base's metaclass __repr__ even when the name was there)
@@ -1030,7 +1180,7 @@ def _type_level_value(cls, name):
     if name == "__flags__":
         # the attribute-cache bit masked (_CACHE_BIT above); found by dev building round 18's cells, 2026-09-25
         return ("int", v & ~_CACHE_BIT)
-    return _normalise(v, {id(cls): 0})
+    return _normalise(v, seen)
 
 
 def _site_description(cls) -> list:
@@ -1039,18 +1189,24 @@ def _site_description(cls) -> list:
     each arm, round 18's N-6) read, so the two cannot disagree about what "the same class" means: its MRO by name, the
     names of vars(Site) in order, each vars value normalised (functions by code, defaults, keyword defaults, annotations,
     doc, attributes and closure; slots by name; anything else by type and address-free repr), every TYPE-LEVEL field its
-    metaclass defines (derived, not listed; the attribute-cache bit masked), and the metaclass. A class's annotations
+    metaclass defines (derived, not listed; the attribute-cache bit masked), and the metaclass — all under ONE reference
+    map, so an object two of them share is described as shared (round 31, R30-2). A class's annotations
     are never READ — a read runs census code on 3.14 and writes into vars on every version — so their content is
     vars(), normalised by _class_vars."""
     v = _class_vars(cls)
+    # ROUND 31 (R30-2): ONE reference map for the whole description — members, bases, type-level fields, metaclass — so
+    # `Site.right = Site.left` is a back-reference, not two equal lists. A fresh map per member remembered sharing inside
+    # one member's graph and forgot it between members (the round-30 verdict's witnesses: `left is right`, a list both
+    # members mutate, a method default shared with a field).
+    seen = {id(cls): 0}
     out = [("mro", tuple(_TYPE_NAME.__get__(c) for c in _mro(cls))), ("vars.order", tuple(v))]
-    out += [(f"vars.{k}", _normal_value(x, {id(cls): 0})) for k, x in v.items()]
+    out += [(f"vars.{k}", _normal_value(x, seen)) for k, x in v.items()]
     # every NON-built-in base, described by the same rule (a base's content is inherited behaviour; route A does not see
     # a base class defined outside Site's own ClassDef)
-    out += [(f"base.{i}", _normalise(b, {id(cls): 0})) for i, b in enumerate(_mro(cls)[1:], 1) if not _immutable(b)]
-    out += [(f"type.{n}", _type_level_value(cls, n)) for n in _type_level_fields(type(cls))]
+    out += [(f"base.{i}", _normalise(b, seen)) for i, b in enumerate(_mro(cls)[1:], 1) if not _immutable(b)]
+    out += [(f"type.{n}", _type_level_value(cls, n, seen)) for n in _type_level_fields(type(cls))]
     meta = type(cls)
-    out.append(("metaclass", (_module(meta), _qualname(meta)) if _immutable(meta) else _normalise(meta, {id(cls): 0})))
+    out.append(("metaclass", (_module(meta), _qualname(meta)) if _immutable(meta) else _normalise(meta, seen)))
     return out
 
 
@@ -2370,6 +2526,14 @@ def verify(out: pathlib.Path, src: pathlib.Path | None = None, manifest: pathlib
                                 f"the manifest describes a different source than the one verified against")
     return problems
 
+
+# ROUND 31: primed HERE, after every helper it uses (`_strict_pairs` among them) is defined — see `_prime_in_child`
+_BACKED = _prime_in_child([tp for tp in _loaded_types() if _managed_dict_unexposed(tp)])
+
+
+if __name__ == "__main__" and sys.argv[1:2] == [_BACKED_CHILD]:
+    print(json.dumps(_derive_backed_by_name(json.loads(sys.argv[2], object_pairs_hook=_strict_pairs))))
+    sys.exit(0)
 
 if __name__ == "__main__":
     src, out = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
