@@ -4802,8 +4802,8 @@ _R27_MUTANTS = [
      "    if False:\n        if len(refs) != 1:",
      test_r27_describing_runs_no_held_display_code),
     ("any immutable leaf read through repr (E2's scalar test dropped)",
-     "        if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, hidden):\n            return (identity, _addressless(repr(obj)))",
-     "        if True:\n            return (identity, _addressless(repr(obj)))",
+     "        if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, hidden):\n",
+     "        if True:\n",   # round 32 retarget: the branch's return now also passes the referents through the map
      test_r27_an_interpreter_type_holding_a_non_scalar_is_refused_and_a_scalar_one_is_read),
     ("a Python-type leaf read through its repr (E3)",
      "    if not hidden and not [b for b in _mro(tp) if b is not object and _immutable(b)]:\n        return (identity, (\"referents\", tuple(_normalise(r, seen) for r in refs)))",
@@ -5320,7 +5320,7 @@ _R28_MUTANTS = [
      "    gc.disable()\n    sys.settrace(guard)\n", "    sys.settrace(guard)\n",
      test_r28_collection_is_paused_inside_the_guarded_window, (AssertionError, "collection inside the window")),
     ("StringIO's newline not read",
-     "        io.StringIO: stream(io.StringIO, lambda obj: (\"newline\", repr(io.StringIO.__getstate__(obj)[1]))),\n",
+     "        io.StringIO: stream(io.StringIO, lambda obj, seen: (\"newline\", _normalise(io.StringIO.__getstate__(obj)[1], seen))),\n",
      "        io.StringIO: stream(io.StringIO),\n",
      _r28_cell(test_r28_equal_content_with_different_configuration_or_export_is_drift, "m", *_R28_READER_PAIRS[0][:4], "site_description"), (AssertionError, "reads as no drift")),
     ("the export bit dropped",
@@ -5333,7 +5333,7 @@ _R28_MUTANTS = [
      "        return (\"exported\", any(type(r) in by for r in gc.get_referrers(obj)))\n", "        return (\"exported\", False)\n",
      test_r28_every_reader_state_channel_is_drift, (AssertionError, "read as no drift")),
     ("StringIO's newline not read (the oracle alone)",
-     "        io.StringIO: stream(io.StringIO, lambda obj: (\"newline\", repr(io.StringIO.__getstate__(obj)[1]))),\n",
+     "        io.StringIO: stream(io.StringIO, lambda obj, seen: (\"newline\", _normalise(io.StringIO.__getstate__(obj)[1], seen))),\n",
      "        io.StringIO: stream(io.StringIO),\n",
      test_r28_every_reader_state_channel_is_drift, (AssertionError, "read as no drift")),
     ("a raising getter escapes as a crash",
@@ -6071,7 +6071,8 @@ def test_r31_sharing_between_members_is_drift(cell, label, src, setup, content, 
 def test_r31_sharing_controls():
     """The ACCEPTANCE halves: sharing inside ONE member was already seen and still is; two graphs built apart with the
     same sharing describe EQUAL; a content change is drift; and a VALUE is never state — a constant-folded `(1, 2)` both
-    members share describes EQUAL to an equal tuple built apart (identity by folding, not by the census)."""
+    members share now describes DIFFERENTLY from an equal tuple built apart — round 31 asserted EQUAL here, the premise
+    the round-31 verdict found wrong (R31-1): `a is b` tells them apart, so the sharing is state."""
     un = _load("inv7_uninstrument_r31_controls", EVIDENCE / "inv7_uninstrument.py")
     d = lambda s: un.site_description(_r28_module(s).Site)
     inner = "class Site:\n    both = [[], []]\n"
@@ -6079,11 +6080,11 @@ def test_r31_sharing_controls():
     graph = "class Site:\n    left = []\n    right = left\n"
     assert d(graph) == d(graph), "two equally shared graphs built apart describe differently"
     assert d("class Site:\n    left = [1]\n") != d("class Site:\n    left = [2]\n"), "a content change is not drift"
-    folded = "class Site:\n    a = (1, 2)\n    b = (1, 2)\n"
-    m = _r28_module(folded)
+    folded = "class Site:\n    a = (1, 2)\n    b = (1, 2)\n\n    def fire(self, value):\n        return self.a is self.b\n"
+    m, apart = _r28_module(folded), _r28_module(folded + "Site.b = tuple([1, 2])\n")
     assert m.Site.a is m.Site.b, "the precondition: the class body shares the folded constant"
-    assert d(folded) == d(folded + "Site.b = tuple([1, 2])\n"), "a shared VALUE read as census state"
-    assert un.site_drift(folded + "Site.b = tuple([1, 2])\n", folded) == [], "site_drift reads a shared value as drift"
+    assert (m.Site().fire(0), apart.Site().fire(0)) == (True, False), "the pair does not change the decision"
+    assert d(folded) != d(folded + "Site.b = tuple([1, 2])\n"), "a folded tuple's sharing reads as no drift"
 
 
 def _r31_shared_cell(name):
@@ -6135,11 +6136,8 @@ _R31_MUTANTS = [
      "    out.append((\"metaclass\", (_module(meta), _qualname(meta)) if _immutable(meta) else _normalise(meta, {id(cls): 0})))\n",
      _r30_cell(test_r31_sharing_between_members_is_drift, *_r31_shared_cell("a member shared with a metaclass's attribute through site_description")),
      (AssertionError, "reads as no drift")),
-    ("a value recorded as a back-reference (two rules for one thing)",
-     "    if _builtin(tp, _VALUE_CONTAINERS):\n",
-     "    if False and _builtin(tp, _VALUE_CONTAINERS):\n",
-     test_r31_sharing_controls,
-     (AssertionError, "a shared VALUE read as census state")),
+    # round 31's sixth row mutated `_VALUE_CONTAINERS`, the value exemption the round-31 verdict found wrong (R31-1);
+    # round 32 deleted the exemption, and its mutants are round 32's (`test_r32_each_rule_is_load_bearing`)
 ]
 
 
@@ -6147,6 +6145,239 @@ _R31_MUTANTS = [
 def test_r31_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
     """Each round-31 rule fails its own cell FOR THE REASON IT IS NAMED FOR."""
     mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r31m")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    exc, pattern = expected
+    with pytest.raises(exc, match=re.escape(pattern)):
+        cell()
+
+
+# ROUND 32 — the round-31 verdict's R31-1: the value exemption erased observable sharing. Every object is recorded now,
+# scalars included, and a set's elements are registered in an order their descriptions decide.
+# Each row: label, source, the post-definition line that makes two references one object, and a CONTENT expression that
+# must be EQUAL in both sources (the pair differs by identity alone). The decision is `is`, so it changes in every row.
+_R32_SHARING = [
+    ("runtime tuples within one member",
+     "class Site:\n    pair = [tuple([1, 2]), tuple([1, 2])]\n\n    def fire(self, value):\n        return self.pair[0] is self.pair[1]\n",
+     "Site.pair[1] = Site.pair[0]\n", "Site.pair"),
+    ("runtime frozensets within one member",
+     "class Site:\n    pair = [frozenset([1, 2]), frozenset([1, 2])]\n\n    def fire(self, value):\n        return self.pair[0] is self.pair[1]\n",
+     "Site.pair[1] = Site.pair[0]\n", "Site.pair"),
+    ("code objects within one member",
+     "class Site:\n    pair = [compile('1', 'ordinary-held-code.py', 'eval'), compile('1', 'ordinary-held-code.py', 'eval')]\n\n"
+     "    def fire(self, value):\n        return self.pair[0] is self.pair[1]\n",
+     "Site.pair[1] = Site.pair[0]\n", "[eval(c) for c in Site.pair]"),
+    ("runtime tuples in two members",
+     "class Site:\n    a = tuple([1, 2])\n    b = tuple([1, 2])\n\n    def fire(self, value):\n        return self.a is self.b\n",
+     "Site.b = Site.a\n", "(Site.a, Site.b)"),
+    ("runtime frozensets in two members",
+     "class Site:\n    a = frozenset([1, 2])\n    b = frozenset([1, 2])\n\n    def fire(self, value):\n        return self.a is self.b\n",
+     "Site.b = Site.a\n", "(Site.a, Site.b)"),
+    ("code objects in two members",
+     "class Site:\n    a = compile('1', 'ordinary-held-code.py', 'eval')\n    b = compile('1', 'ordinary-held-code.py', 'eval')\n\n"
+     "    def fire(self, value):\n        return self.a is self.b\n",
+     "Site.b = Site.a\n", "(eval(Site.a), eval(Site.b))"),
+    ("tuple wrappers around one mutable child",
+     "_child = []\n\nclass Site:\n    pair = [tuple([_child]), tuple([_child])]\n\n    def fire(self, value):\n"
+     "        return self.pair[0] is self.pair[1]\n", "Site.pair[1] = Site.pair[0]\n", "Site.pair"),
+    # the SCALAR siblings (dev's extension of the class, stage 1): round 18's scalar exemption rested on the same premise
+    ("runtime ints within one member",
+     "class Site:\n    pair = [int('1' * 25), int('1' * 25)]\n\n    def fire(self, value):\n        return self.pair[0] is self.pair[1]\n",
+     "Site.pair[1] = Site.pair[0]\n", "Site.pair"),
+    ("runtime strings within one member",
+     "class Site:\n    pair = [''.join(['ab', 'c']), ''.join(['ab', 'c'])]\n\n    def fire(self, value):\n        return self.pair[0] is self.pair[1]\n",
+     "Site.pair[1] = Site.pair[0]\n", "Site.pair"),
+    ("runtime bytes within one member",
+     "class Site:\n    pair = [bytes([97, 98]), bytes([97, 98])]\n\n    def fire(self, value):\n        return self.pair[0] is self.pair[1]\n",
+     "Site.pair[1] = Site.pair[0]\n", "Site.pair"),
+    ("runtime floats within one member",
+     "class Site:\n    pair = [float('1.5'), float('1.5')]\n\n    def fire(self, value):\n        return self.pair[0] is self.pair[1]\n",
+     "Site.pair[1] = Site.pair[0]\n", "Site.pair"),
+]
+_R32_SHARING_CELLS = [(f"{label} through {route}", src, setup, content, route) for label, src, setup, content in _R32_SHARING
+                      for route in ("site_description", "_site_realized", "site_drift")]
+
+
+@pytest.mark.parametrize("cell,src,setup,content,route", _R32_SHARING_CELLS, ids=[c[0] for c in _R32_SHARING_CELLS])
+def test_r32_sharing_of_an_immutable_object_is_drift(cell, src, setup, content, route):
+    """R31-1 and its scalar siblings through all three routes: two equal objects built apart against one object held
+    twice — equal contents, an identical class statement, a decision that turns on `is`."""
+    un = _load("inv7_uninstrument_r32_sharing", EVIDENCE / "inv7_uninstrument.py")
+    a, b = src, src + setup
+    first = (_r28_module(a).Site().fire(0), _r28_module(b).Site().fire(0))
+    assert first == (False, True), (cell, "the pair does not change the decision", first)
+    ca, cb = (eval(content, _r28_module(s).__dict__) for s in (a, b))
+    assert ca == cb, (cell, "the pair differs in CONTENT, not only in identity", ca, cb)
+    ma, mb = _r28_module(a), _r28_module(b)
+    if route == "site_description":
+        assert un.site_description(ma.Site) != un.site_description(mb.Site), f"{cell}: reads as no drift"
+    elif route == "_site_realized":
+        assert observer._site_realized(ma.Site)["digest"] != observer._site_realized(mb.Site)["digest"], f"{cell}: equal digests"
+    else:
+        assert un.site_drift(b, a) != [], f"{cell}: site_drift returns []"
+    assert (ma.Site().fire(0), mb.Site().fire(0)) == first, (cell, "the description changed a decision")
+
+
+# the CANONICAL controls (the second seat's K1/K2): a small int, `()` and an interned name are ONE object whichever way
+# the source reaches them, so "sharing" them changes nothing — equal on every route, although every object is recorded
+_R32_CANONICAL = [
+    ("a small int in two members", "class Site:\n    a = 5\n    b = int('5')\n\n    def fire(self, value):\n        return self.a is self.b\n"),
+    ("the empty tuple in two members", "class Site:\n    a = ()\n    b = tuple([])\n\n    def fire(self, value):\n        return self.a is self.b\n"),
+    ("an interned name in two members", "class Site:\n    a = 'name'\n    b = 'name'\n\n    def fire(self, value):\n        return self.a is self.b\n"),
+]
+
+
+@pytest.mark.parametrize("label,src", _R32_CANONICAL, ids=[c[0] for c in _R32_CANONICAL])
+def test_r32_a_canonical_object_reads_the_same_shared_or_not(label, src):
+    un = _load("inv7_uninstrument_r32_canonical", EVIDENCE / "inv7_uninstrument.py")
+    b = src + "Site.b = Site.a\n"
+    assert _r28_module(src).Site().fire(0) is True and _r28_module(b).Site().fire(0) is True, (label, "not canonical here")
+    assert un.site_description(_r28_module(src).Site) == un.site_description(_r28_module(b).Site), f"{label}: false drift"
+    assert observer._site_realized(_r28_module(src).Site)["digest"] == observer._site_realized(_r28_module(b).Site)["digest"]
+    assert un.site_drift(b, src) == [], f"{label}: site_drift reports a canonical object's 'sharing'"
+
+
+# THE SET'S REGISTRATION ORDER (the second seat's M2). K instances hash by address, so their set's iteration order follows
+# the order they were ALLOCATED, outside the class; the Site is otherwise identical.
+_R32_K = ("class K:\n    def __init__(self, name, box=None):\n        self.name = name\n        self.box = box\n\n"
+          "    def __hash__(self):\n        return 1\n\n")   # one colliding hash: a set iterates in INSERTION order
+
+
+def test_r32_a_sets_elements_are_registered_in_an_order_their_descriptions_decide():
+    """The allocation order of a frozenset's elements, and so its iteration order, differs; the Site does not — equal.
+    With a later back-reference to one element (`t`), iteration-order registration gave it a different position."""
+    un = _load("inv7_uninstrument_r32_setorder", EVIDENCE / "inv7_uninstrument.py")
+    tail = "class Site:\n    s = _s\n    t = _x\n\n    def fire(self, value):\n        return self.t in self.s\n"
+    head = _R32_K + "_x = K('x')\n_y = K('y')\n"
+    xy, yx = head + "_s = frozenset([_x, _y])\n" + tail, head + "_s = frozenset([_y, _x])\n" + tail
+    ma, mb = _r28_module(xy), _r28_module(yx)
+    assert [e.name for e in ma.Site.s] != [e.name for e in mb.Site.s], "the fixture did not produce two iteration orders"
+    assert un.site_description(ma.Site) == un.site_description(mb.Site), "a set's iteration order reached the description"
+
+
+def test_r32_each_set_element_is_ordered_against_its_own_copy_of_the_map():
+    """Two elements that share a mutable child: described against ONE shared throwaway copy, the second would see the
+    child as a back-reference and its sort key would follow iteration order (the second seat's objection 1)."""
+    un = _load("inv7_uninstrument_r32_setcopy", EVIDENCE / "inv7_uninstrument.py")
+    tail = "class Site:\n    s = _s\n\n    def fire(self, value):\n        return len(self.s)\n"
+    head = _R32_K + "_box = []\n_a = K('a', _box)\n_b = K('b', _box)\n"
+    ab, ba = head + "_s = frozenset([_a, _b])\n" + tail, head + "_s = frozenset([_b, _a])\n" + tail
+    ma, mb = _r28_module(ab), _r28_module(ba)
+    assert [e.name for e in ma.Site.s] != [e.name for e in mb.Site.s], "the fixture did not produce two iteration orders"
+    assert un.site_description(ma.Site) == un.site_description(mb.Site), "a sort key followed the iteration order"
+
+
+def test_r32_which_set_element_is_shared_is_still_drift():
+    """The ACCEPTANCE half of the ordering: `t` is the set's own element, or an equal object built apart."""
+    un = _load("inv7_uninstrument_r32_setwhich", EVIDENCE / "inv7_uninstrument.py")
+    tail = "class Site:\n    s = frozenset([_x, _y])\n    t = @T@\n\n    def fire(self, value):\n        return any(e is self.t for e in self.s)\n"
+    inside = _R32_K + "_x = K('x')\n_y = K('y')\n" + tail.replace("@T@", "_x")
+    apart = _R32_K + "_x = K('x')\n_y = K('y')\n" + tail.replace("@T@", "K('x')")
+    assert (_r28_module(inside).Site().fire(0), _r28_module(apart).Site().fire(0)) == (True, False)
+    assert un.site_description(_r28_module(inside).Site) != un.site_description(_r28_module(apart).Site), \
+        "which element is shared reads as no drift"
+
+
+def test_r32_a_set_whose_elements_cannot_be_told_apart_is_refused():
+    """Two elements with equal descriptions: which is registered first, and so any later reference to either, would
+    follow address order — refused (named over-refusal)."""
+    un = _load("inv7_uninstrument_r32_settie", EVIDENCE / "inv7_uninstrument.py")
+    src = _R32_K + "class Site:\n    s = frozenset({K('x'), K('x')})\n"
+    with pytest.raises(un.SiteUndescribed, match="cannot tell apart"):
+        un.site_description(_r28_module(src).Site)
+
+
+_R32_SEED_PROBE = r"""
+import hashlib, importlib.util, sys, types
+s = importlib.util.spec_from_file_location("un_seed", sys.argv[1]); un = importlib.util.module_from_spec(s)
+sys.modules["un_seed"] = un; s.loader.exec_module(un)
+m = types.ModuleType("review_census"); exec(compile(sys.argv[2], "<review_census>", "exec"), m.__dict__)
+print("ORDER", ",".join(e for e in m.Site.s))
+print("DIGEST", hashlib.sha256(repr(un.site_description(m.Site)).encode()).hexdigest())
+"""
+_R32_SEED_SRC = ("_names = [''.join(['n', str(i)]) for i in range(8)]\n"
+                 "class Site:\n    s = frozenset(_names)\n    t = _names[3]\n\n"
+                 "    def fire(self, value):\n        return any(e is self.t for e in self.s)\n")
+
+
+def test_r32_a_set_of_runtime_strings_describes_the_same_under_every_hash_seed():
+    """Recording every object puts strings in the map, and a string set's iteration order is HASH-SEEDED; route B's
+    children run `-I`, each with a random seed. Six fresh children must describe identically, and must actually have
+    drawn at least two iteration orders (else the cell proves nothing)."""
+    un = _load("inv7_uninstrument_r32_seed", EVIDENCE / "inv7_uninstrument.py")
+    seen_orders, digests = set(), set()
+    for _ in range(6):
+        out = subprocess.run([sys.executable, "-I", "-c", _R32_SEED_PROBE, un.__file__, _R32_SEED_SRC], capture_output=True,
+                             text=True, env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+        assert out.returncode == 0, out.stderr[-400:]
+        lines = dict(line.split(" ", 1) for line in out.stdout.splitlines() if " " in line)
+        seen_orders.add(lines["ORDER"]); digests.add(lines["DIGEST"])
+    assert len(seen_orders) >= 2, ("six children drew one iteration order; the cell exercised nothing", seen_orders)
+    assert len(digests) == 1, ("the description followed the hash seed", len(digests))
+    for _ in range(3):
+        assert un.site_drift(_R32_SEED_SRC, _R32_SEED_SRC) == [], "site_drift between identical sources"
+
+
+def test_r32_a_leafs_scalar_referents_go_through_the_map():
+    """The last value path outside the map (the second seat's mark 2): a C object described by its own repr — here
+    itertools.count — also passes its scalar referents through the map, so one runtime int held as start and step
+    differs from two equal ones. No Python API shows that relation for `count` on 3.14 (it does not pickle): recorded
+    anyway, an over-detection that cannot be a false silence."""
+    import itertools
+    un = _load("inv7_uninstrument_r32_leaf", EVIDENCE / "inv7_uninstrument.py")
+
+    def site(shared):
+        x = int("1" * 25)
+        y = x if shared else int("1" * 25)
+
+        class Site:
+            c = itertools.count(x, y)
+        return Site
+    assert un.site_description(site(True)) != un.site_description(site(False)), "a leaf's referents bypassed the map"
+
+
+def _r32_cell(name):
+    return next(c for c in _R32_SHARING_CELLS if c[0] == name)
+
+
+_R32_MUTANTS = [
+    ("the per-type exemption restored (round 31's rule)",
+     "    if id(obj) in seen:\n        ref = seen[id(obj)]\n",
+     "    if _builtin(tp, frozenset({\"tuple\", \"frozenset\"})):\n        return (_qualname(tp), tuple(_normalise(x, seen) for x in obj))\n"
+     "    if id(obj) in seen:\n        ref = seen[id(obj)]\n",
+     _r30_cell(test_r32_sharing_of_an_immutable_object_is_drift, *_r32_cell("runtime tuples within one member through site_description")),
+     (AssertionError, "reads as no drift")),
+    ("scalars exempted again (round 18's rule)",
+     "    if id(obj) in seen:\n        ref = seen[id(obj)]\n",
+     "    if _builtin(tp, _SCALARS):\n        return (_qualname(tp), repr(obj))\n    if id(obj) in seen:\n        ref = seen[id(obj)]\n",
+     _r30_cell(test_r32_sharing_of_an_immutable_object_is_drift, *_r32_cell("runtime ints within one member through site_description")),
+     (AssertionError, "reads as no drift")),
+    ("set elements registered in iteration order",
+     "    ordered = [x for _p, x in sorted(zip(provisional, items), key=lambda pair: pair[0])]\n",
+     "    ordered = items\n",
+     test_r32_a_sets_elements_are_registered_in_an_order_their_descriptions_decide,
+     (AssertionError, "a set's iteration order reached the description")),
+    ("one throwaway copy shared by every element",
+     "    provisional = [repr(_normalise(x, dict(seen))) for x in items]\n",
+     "    _copy = dict(seen)\n    provisional = [repr(_normalise(x, _copy)) for x in items]\n",
+     test_r32_each_set_element_is_ordered_against_its_own_copy_of_the_map,
+     (AssertionError, "a sort key followed the iteration order")),
+    ("the tie refusal dropped",
+     "    if len(set(provisional)) != len(provisional):\n",
+     "    if False:\n",
+     test_r32_a_set_whose_elements_cannot_be_told_apart_is_refused,
+     (pytest.fail.Exception, "DID NOT RAISE")),
+    ("a leaf's scalar referents outside the map",
+     "            return (identity, _addressless(repr(obj)), tuple(_normalise(r, seen) for r in refs))\n",
+     "            return (identity, _addressless(repr(obj)))\n",
+     test_r32_a_leafs_scalar_referents_go_through_the_map,
+     (AssertionError, "a leaf's referents bypassed the map")),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell,expected", _R32_MUTANTS, ids=[m[0] for m in _R32_MUTANTS])
+def test_r32_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
+    """Each round-32 rule fails its own cell FOR THE REASON IT IS NAMED FOR."""
+    mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r32m")
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
     exc, pattern = expected
     with pytest.raises(exc, match=re.escape(pattern)):

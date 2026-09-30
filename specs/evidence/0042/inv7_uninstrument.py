@@ -444,7 +444,6 @@ _IMMUTABLE_TYPE = 1 << 8
 _SCALARS = frozenset({"str", "bytes", "int", "float", "complex", "bool", "NoneType", "ellipsis"})
 _SEQUENCES = frozenset({"tuple", "list"})
 _SETS = frozenset({"set", "frozenset"})
-_VALUE_CONTAINERS = frozenset({"tuple", "frozenset"})   # round 31: values, never recorded in the shared map
 _MAPPINGS = frozenset({"dict", "mappingproxy"})
 
 
@@ -464,12 +463,32 @@ def _base_content(obj, tp: type, seen: dict):
         if _builtin(b, _SEQUENCES):
             return (_qualname(b), tuple(_normalise(x, seen) for x in b.__iter__(obj)))
         if _builtin(b, _SETS):
-            return (_qualname(b), tuple(sorted(repr(_normalise(x, seen)) for x in b.__iter__(obj))))
+            return (_qualname(b), _set_elements(b.__iter__(obj), seen))
         if _builtin(b, _MAPPINGS):
             return (_qualname(b), tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in b.items(obj)))
         if _builtin(b, _SCALARS):
             return (_qualname(b), b.__repr__(obj))
     return None
+
+
+def _set_elements(elements, seen: dict) -> tuple:
+    """A set's elements, REGISTERED in an order their descriptions decide — never the set's iteration order, which follows
+    hashes and addresses (ROUND 32, the second seat's stage-1 mark M2: sorted descriptions were emitted, but the elements
+    entered the map in iteration order, so an identical Site whose set elements were merely ALLOCATED in another order
+    described differently — loud, and pre-existing; recording every object would have made it hash-seeded for strings,
+    and route B's `-I` children each draw a random seed). Each element is first described against a THROWAWAY copy of
+    the map (same length, so the same positions; nothing registered), the elements are ordered by those descriptions,
+    and only then registered through the real map in that order. Two elements the description cannot tell apart are
+    REFUSED: which is registered first — and so any later reference to either — would follow hash or address order
+    (named over-refusal)."""
+    items = list(elements)
+    provisional = [repr(_normalise(x, dict(seen))) for x in items]
+    if len(set(provisional)) != len(provisional):
+        raise SiteUndescribed("a set holds two elements the description cannot tell apart, so the order they are "
+                              "registered in — and any later reference to either — would follow hash or address order: "
+                              "it cannot be described faithfully and is refused (round 32)")
+    ordered = [x for _p, x in sorted(zip(provisional, items), key=lambda pair: pair[0])]
+    return tuple(repr(_normalise(x, seen)) for x in ordered)
 
 
 def _normalise(obj, seen: dict) -> tuple:
@@ -480,26 +499,16 @@ def _normalise(obj, seen: dict) -> tuple:
     writable state), each normalised recursively, and — for a mutable subclass of a built-in — its content read through
     the base's own methods. A leaf with no data descriptors is described without executing its display code (`_leaf`). An object met again is
     recorded by the position at which it was first described, so equal structures stay equal and cycles end; each
-    described object is HELD in `seen` until the description ends, so a position never names a freed address. A VALUE
-    (a scalar, an exact tuple, frozenset or code object, an immutable class) is never recorded: its identity is interning
-    or constant folding, not state (round 31). One `seen` spans the whole description of a Site (`_site_description`)."""
+    described object is HELD in `seen` until the description ends, so a position never names a freed address. EVERY
+    object is recorded — a scalar, a tuple, a frozenset, a code object and an immutable class included (round 32) — and
+    one `seen` spans the whole description of a Site (`_site_description`)."""
     tp = type(obj)
-    if _builtin(tp, _SCALARS):
-        return (_qualname(tp), repr(obj))
-    # ROUND 31 (R30-2): the map is shared across the WHOLE description, so it records identity only where identity is
-    # STATE. A VALUE — an exact built-in tuple, frozenset or code object, or an immutable class — is described by what it
-    # is and never recorded: two members holding `()` share it by interning, not by census state, and a shared-map
-    # back-reference to it would read constant folding as structure. Its ELEMENTS recurse with the shared map, so a list
-    # inside a tuple is still recorded; a cycle needs a mutable link, and every mutable is recorded, so cycles still end.
-    if _builtin(tp, _VALUE_CONTAINERS):
-        if _qualname(tp) == "frozenset":
-            return (_qualname(tp), tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
-        return (_qualname(tp), tuple(_normalise(x, seen) for x in obj))
-    if _builtin(tp, frozenset({"code"})):
-        fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
-        return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
-    if issubclass(tp, type) and _immutable(obj):
-        return ("immutable-type", _module(obj), _qualname(obj))
+    # ROUND 32 (R31-1; the second seat's stage-1 mark M1): identity is recorded for EVERY object. Round 31 exempted exact
+    # tuples, frozensets and code objects, and round 18 had exempted scalars, as values whose identity could not be
+    # state — false: `pair[0] is pair[1]` tells two equal runtime-built tuples, ints or strings from one object held
+    # twice, and the decision can turn on it. A genuinely canonical object (None, a small int, `()`, an interned name) is
+    # shared in BOTH sources by construction, so its back-references cannot make a false drift; exempting it bought only
+    # a shorter description. A scalar still renders its value on first sight.
     if id(obj) in seen:
         ref = seen[id(obj)]
         return ("<ref>", ref[0] if type(ref) is tuple else ref)
@@ -508,10 +517,17 @@ def _normalise(obj, seen: dict) -> tuple:
     # described, and a later object given the same address read as a `<ref>` to it: allocation-dependent, found as a
     # generic Site describing differently the second time (round 25's R24-2 cell). Positions are unchanged.
     seen[id(obj)] = (len(seen), obj)
+    if _builtin(tp, _SCALARS):
+        return (_qualname(tp), repr(obj))
+    if issubclass(tp, type) and _immutable(obj):
+        return ("immutable-type", _module(obj), _qualname(obj))
     if _builtin(tp, _SEQUENCES):
         return (_qualname(tp), tuple(_normalise(x, seen) for x in obj))
     if _builtin(tp, _SETS):
-        return (_qualname(tp), tuple(sorted(repr(_normalise(x, seen)) for x in obj)))
+        return (_qualname(tp), _set_elements(obj, seen))
+    if _builtin(tp, frozenset({"code"})):
+        fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
+        return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
     if _builtin(tp, _MAPPINGS):
         ns = any(_read_created(k, v, obj) for k, v in obj.items()) and _is_class_namespace(obj)
         return (_qualname(tp), tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in obj.items()
@@ -1039,7 +1055,7 @@ def _allowlists():
     def stream(cls, *extra):
         def read(obj, seen):
             try:
-                return (_normalise(cls.getvalue(obj), seen), _normalise(cls.tell(obj), seen)) + tuple(f(obj) for f in extra)
+                return (_normalise(cls.getvalue(obj), seen), _normalise(cls.tell(obj), seen)) + tuple(f(obj, seen) for f in extra)
             except ValueError:
                 return ("<closed>",)
         return read
@@ -1047,8 +1063,10 @@ def _allowlists():
         collections.deque: lambda obj, seen: items(collections.deque.__iter__(obj), seen),
         collections.defaultdict: lambda obj, seen: tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in dict.items(obj)),
         array.array: lambda obj, seen: (items(array.array.tolist(obj), seen), exported(obj, exporters[array.array])),
-        io.StringIO: stream(io.StringIO, lambda obj: ("newline", repr(io.StringIO.__getstate__(obj)[1]))),
-        io.BytesIO: stream(io.BytesIO, lambda obj: exported(obj, exporters[io.BytesIO])),
+        # ROUND 32 (the second seat's mark 2): the newline setting is the STORED object, so it goes through the map like any
+        # other — its sharing with another root is observable through __getstate__
+        io.StringIO: stream(io.StringIO, lambda obj, seen: ("newline", _normalise(io.StringIO.__getstate__(obj)[1], seen))),
+        io.BytesIO: stream(io.BytesIO, lambda obj, seen: exported(obj, exporters[io.BytesIO])),
     }
     return fields, by_repr, readers
 
@@ -1106,7 +1124,9 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
                               f"trust to show it: it cannot be described faithfully and is refused (round 27, fail-closed)")
     if _immutable(tp):
         if all(_builtin(type(r), _SCALARS) for r in refs) and _repr_reads(tp, hidden):
-            return (identity, _addressless(repr(obj)))
+            # ROUND 32: the scalar referents go through the map as well as into the repr — two such objects holding one
+            # runtime int, or two equal ones, are told apart (the second seat's mark 2: no value rendered outside it)
+            return (identity, _addressless(repr(obj)), tuple(_normalise(r, seen) for r in refs))
         raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} holds {len(refs)} non-scalar referent(s) and has no field "
                               f"to read them through: its only description is its repr, which may run the held objects' display "
                               f"code, so it is refused rather than described")
@@ -1120,7 +1140,7 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
     c_slot = issubclass(type(found), types.WrapperDescriptorType) and getattr(found, "__objclass__", None) in _mro(tp) \
         and _repr_reads(tp, hidden)
     if c_slot and all(_builtin(type(r), _SCALARS) for r in refs):
-        return (identity, _addressless(repr(obj)))
+        return (identity, _addressless(repr(obj)), tuple(_normalise(r, seen) for r in refs))   # round 32, as above
     raise SiteUndescribed(f"a {_module(tp)}.{_qualname(tp)} derives from a C type that can hold state no referent shows, "
                           f"and its repr is {'formatted from non-scalar referents' if c_slot else 'not its C base own repr slot'}: "
                           f"it cannot be described faithfully without executing it, so it is refused")
