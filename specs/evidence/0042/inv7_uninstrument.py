@@ -1063,8 +1063,8 @@ def _allowlists():
         collections.deque: lambda obj, seen: items(collections.deque.__iter__(obj), seen),
         collections.defaultdict: lambda obj, seen: tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in dict.items(obj)),
         array.array: lambda obj, seen: (items(array.array.tolist(obj), seen), exported(obj, exporters[array.array])),
-        # ROUND 32 (the second seat's mark 2): the newline setting is the STORED object, so it goes through the map like any
-        # other — its sharing with another root is observable through __getstate__
+        # ROUND 32: the newline setting is recorded through the map like any stored object; no API lets two roots share it —
+        # the stored value is a per-instance copy, through the constructor or __setstate__ (the second seat, measured)
         io.StringIO: stream(io.StringIO, lambda obj, seen: ("newline", _normalise(io.StringIO.__getstate__(obj)[1], seen))),
         io.BytesIO: stream(io.BytesIO, lambda obj, seen: exported(obj, exporters[io.BytesIO])),
     }

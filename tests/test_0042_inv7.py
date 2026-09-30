@@ -6320,8 +6320,11 @@ def test_r32_a_set_of_runtime_strings_describes_the_same_under_every_hash_seed()
 def test_r32_a_leafs_scalar_referents_go_through_the_map():
     """The last value path outside the map (the second seat's mark 2): a C object described by its own repr — here
     itertools.count — also passes its scalar referents through the map, so one runtime int held as start and step
-    differs from two equal ones. No Python API shows that relation for `count` on 3.14 (it does not pickle): recorded
-    anyway, an over-detection that cannot be a false silence."""
+    differs from two equal ones. Measured on 3.14: `count` does not pickle, and `next()` returns the stored START but
+    then a fresh sum, never the step, so whether start and step are one object is not shown by `count`'s own API —
+    recorded anyway, an over-detection that cannot be a false silence. This cell reaches the immutable-type branch;
+    the C-repr-SLOT branch takes the same rule and NO cell reaches it — subclasses of itertools.count and
+    itertools.repeat holding runtime ints are refused before it (the second seat's stage 2, measured)."""
     import itertools
     un = _load("inv7_uninstrument_r32_leaf", EVIDENCE / "inv7_uninstrument.py")
 
@@ -6333,6 +6336,29 @@ def test_r32_a_leafs_scalar_referents_go_through_the_map():
             c = itertools.count(x, y)
         return Site
     assert un.site_description(site(True)) != un.site_description(site(False)), "a leaf's referents bypassed the map"
+
+
+def test_r32_a_set_whose_elements_differ_only_by_a_back_reference_is_described():
+    """The ACCEPTANCE half of the per-element copy (the second seat's stage-2 A1): each element's provisional description
+    is taken against a copy of the map AS IT STANDS, so one element holding an object met earlier (a back-reference)
+    and one holding an equal fresh object are told apart and described. Against an EMPTY map they would tie and be
+    refused."""
+    un = _load("inv7_uninstrument_r32_backref", EVIDENCE / "inv7_uninstrument.py")
+    src = (_R32_K + "_first = []\n_other = []\n"
+           "class Site:\n    first = _first\n    s = frozenset([K('k', _first), K('k', _other)])\n")
+    un.site_description(_r28_module(src).Site)
+
+
+def test_r32_a_set_subclass_is_registered_in_an_order_its_descriptions_decide():
+    """The second set site, `_base_content`'s set-SUBCLASS branch (the second seat's stage-2 A5): a frozenset subclass
+    whose elements were merely inserted in another order describes the same."""
+    un = _load("inv7_uninstrument_r32_setsub", EVIDENCE / "inv7_uninstrument.py")
+    head = _R32_K + "class FS(frozenset):\n    pass\n\n_x = K('x')\n_y = K('y')\n"
+    tail = "class Site:\n    s = _s\n    t = _x\n"
+    xy, yx = head + "_s = FS([_x, _y])\n" + tail, head + "_s = FS([_y, _x])\n" + tail
+    ma, mb = _r28_module(xy), _r28_module(yx)
+    assert [e.name for e in ma.Site.s] != [e.name for e in mb.Site.s], "the fixture did not produce two iteration orders"
+    assert un.site_description(ma.Site) == un.site_description(mb.Site), "a set subclass's iteration order reached the description"
 
 
 def _r32_cell(name):
@@ -6361,6 +6387,16 @@ _R32_MUTANTS = [
      "    _copy = dict(seen)\n    provisional = [repr(_normalise(x, _copy)) for x in items]\n",
      test_r32_each_set_element_is_ordered_against_its_own_copy_of_the_map,
      (AssertionError, "a sort key followed the iteration order")),
+    ("provisional descriptions against an EMPTY map (the second seat's A1)",
+     "    provisional = [repr(_normalise(x, dict(seen))) for x in items]\n",
+     "    provisional = [repr(_normalise(x, {})) for x in items]\n",
+     test_r32_a_set_whose_elements_differ_only_by_a_back_reference_is_described,
+     (Exception, "cannot tell apart")),
+    ("a set subclass registered in iteration order (the second seat's A5)",
+     "            return (_qualname(b), _set_elements(b.__iter__(obj), seen))\n",
+     "            return (_qualname(b), tuple(sorted(repr(_normalise(x, seen)) for x in b.__iter__(obj))))\n",
+     test_r32_a_set_subclass_is_registered_in_an_order_its_descriptions_decide,
+     (AssertionError, "a set subclass's iteration order reached the description")),
     ("the tie refusal dropped",
      "    if len(set(provisional)) != len(provisional):\n",
      "    if False:\n",
@@ -6382,3 +6418,35 @@ def test_r32_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expect
     exc, pattern = expected
     with pytest.raises(exc, match=re.escape(pattern)):
         cell()
+
+
+_R32_REAL_SEED_PROBE = r"""
+import hashlib, importlib.util, sys
+sys.path.insert(0, sys.argv[2])
+s = importlib.util.spec_from_file_location("un_real_seed", sys.argv[1]); un = importlib.util.module_from_spec(s)
+sys.modules["un_real_seed"] = un; s.loader.exec_module(un)
+from veracium.census import Site
+print("SEEDPROBE", hash("a"))
+print("DIGEST", un.site_description_digest(un.site_description(Site))["digest"])   # site_realized's own definition
+"""
+
+
+def test_r32_the_real_site_describes_the_same_under_every_hash_seed():
+    """The INV-7 run cannot show this: its harness pins PYTHONHASHSEED=0 for every arm, while route B's `-I` children each
+    draw a random seed (the second seat's stage-2 mark). The REAL census's Site, described under six distinct hash seeds
+    — asserted distinct by each process's own hash("a") — reads identically; and route B's own path, its isolated child,
+    finds no drift between the census and itself, three times."""
+    un = _load("inv7_uninstrument_r32_realseed", EVIDENCE / "inv7_uninstrument.py")
+    src = pathlib.Path(un.__file__).resolve().parents[3] / "src"
+    probes, digests = set(), set()
+    for seed in range(1, 7):
+        out = subprocess.run([sys.executable, "-c", _R32_REAL_SEED_PROBE, un.__file__, str(src)], capture_output=True,
+                             text=True, env={**os.environ, "PYTHONHASHSEED": str(seed), "PYTHONDONTWRITEBYTECODE": "1"})
+        assert out.returncode == 0, out.stderr[-400:]
+        lines = dict(line.split(" ", 1) for line in out.stdout.splitlines() if " " in line)
+        probes.add(lines["SEEDPROBE"]); digests.add(lines["DIGEST"])
+    assert len(probes) == 6, ("the six processes did not run under six hash seeds", probes)
+    assert len(digests) == 1, ("the real Site's description followed the hash seed", len(digests))
+    census = (src / "veracium" / "census.py").read_text(encoding="utf-8")
+    for _ in range(3):
+        assert un.site_drift(census, census) == [], "route B finds drift between the real census and itself"
