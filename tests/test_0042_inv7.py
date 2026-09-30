@@ -6026,6 +6026,17 @@ _R31_SHARED = [
     ("a method default shared with a field",
      "class Site:\n    shared = []\n\n    def fire(self, value, box=None):\n"
      "        return self.shared is Site.fire.__defaults__[0]\n", "Site.fire.__defaults__ = (Site.shared,)\n"),
+    # the second seat's stage-2 cross-ROOT cases (research probe r30v_probe.py): the one map spans the roots, not only
+    # the members — a base's attribute, a method's closure cell, a metaclass's attribute
+    ("a member shared with a base's attribute",
+     "class Base:\n    shared = []\n\nclass Site(Base):\n    left = []\n\n    def fire(self, value):\n"
+     "        return self.left is Base.shared\n", "Site.left = Base.shared\n"),
+    ("a member shared with a method's closure cell",
+     "def make():\n    box = []\n\n    def fire(self, value):\n        return box is self.left\n    return fire, box\n\n"
+     "_f, _box = make()\n\nclass Site:\n    left = []\n    fire = _f\n", "Site.left = _box\n"),
+    ("a member shared with a metaclass's attribute",
+     "class M(type):\n    cfg = []\n\nclass Site(metaclass=M):\n    left = []\n\n    def fire(self, value):\n"
+     "        return self.left is M.cfg\n", "Site.left = M.cfg\n"),
 ]
 _R31_SHARED_CELLS = [(f"{label} through {route}", label, src, setup, route) for label, src, setup in _R31_SHARED
                      for route in ("site_description", "_site_realized", "site_drift")]
@@ -6068,6 +6079,11 @@ def test_r31_sharing_controls():
     assert un.site_drift(folded + "Site.b = tuple([1, 2])\n", folded) == [], "site_drift reads a shared value as drift"
 
 
+def _r31_shared_cell(name):
+    """A sharing cell by its NAME, never by position (a row inserted above would move a bare index silently)."""
+    return next(c for c in _R31_SHARED_CELLS if c[0] == name)
+
+
 _R31_MUTANTS = [
     ("the variance flags credited again (R30-1)",
      "    pool = [v for n, v in read if n in backed and not (n in fab",
@@ -6092,7 +6108,25 @@ _R31_MUTANTS = [
     ("a fresh map per member again (R30-2)",
      "    out += [(f\"vars.{k}\", _normal_value(x, seen)) for k, x in v.items()]\n",
      "    out += [(f\"vars.{k}\", _normal_value(x, {id(cls): 0})) for k, x in v.items()]\n",
-     _r30_cell(test_r31_sharing_between_members_is_drift, *_R31_SHARED_CELLS[0]),
+     _r30_cell(test_r31_sharing_between_members_is_drift, *_r31_shared_cell("shared lists, compared by identity through site_description")),
+     (AssertionError, "reads as no drift")),
+    ("a fresh map for the bases",
+     "    out += [(f\"base.{i}\", _normalise(b, seen)) for i, b in enumerate(_mro(cls)[1:], 1) if not _immutable(b)]\n",
+     "    out += [(f\"base.{i}\", _normalise(b, {id(cls): 0})) for i, b in enumerate(_mro(cls)[1:], 1) if not _immutable(b)]\n",
+     _r30_cell(test_r31_sharing_between_members_is_drift, *_r31_shared_cell("a member shared with a base's attribute through site_description")),
+     (AssertionError, "reads as no drift")),
+    # a metaclass is described through BOTH the type-level field `type.__class__` (object's getset, so every class has
+    # it) and the `metaclass` entry, and each on the shared map is enough to show the sharing: a fresh map on either
+    # alone survived (found writing this row, both ways round). The two are a load-bearing PAIR — neither is a
+    # duplicate to be tidied away — so the mutant breaks both
+    ("a fresh map for the metaclass's two roots (type.__class__ and the metaclass entry)",
+     "    out += [(f\"type.{n}\", _type_level_value(cls, n, seen)) for n in _type_level_fields(type(cls))]\n"
+     "    meta = type(cls)\n"
+     "    out.append((\"metaclass\", (_module(meta), _qualname(meta)) if _immutable(meta) else _normalise(meta, seen)))\n",
+     "    out += [(f\"type.{n}\", _type_level_value(cls, n, {id(cls): 0})) for n in _type_level_fields(type(cls))]\n"
+     "    meta = type(cls)\n"
+     "    out.append((\"metaclass\", (_module(meta), _qualname(meta)) if _immutable(meta) else _normalise(meta, {id(cls): 0})))\n",
+     _r30_cell(test_r31_sharing_between_members_is_drift, *_r31_shared_cell("a member shared with a metaclass's attribute through site_description")),
      (AssertionError, "reads as no drift")),
     ("a value recorded as a back-reference (two rules for one thing)",
      "    if _builtin(tp, _VALUE_CONTAINERS):\n",
