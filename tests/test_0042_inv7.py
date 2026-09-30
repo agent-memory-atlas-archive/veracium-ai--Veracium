@@ -6013,37 +6013,42 @@ def test_r31_an_unprimed_type_credits_nothing_and_is_refused():
 
 
 # R30-2: ONE reference map across the whole description, recording identity only where identity is state.
+# Each row: label, source, the post-definition line that makes two roots share one object, and a CONTENT expression that
+# must be EQUAL in both sources — the pair must differ by sharing ALONE. Round 31's first method-default row set
+# `__defaults__` from (None,) to a list: a content change any describer sees, so its three cells passed at the round-30
+# pin and proved nothing about sharing (found by the red/green transcript's per-cell states); the precondition refuses it.
 _R31_SHARED = [
     ("shared lists, compared by identity",
      "class Site:\n    left = []\n    right = []\n\n    def fire(self, value):\n        return self.left is self.right\n",
-     "Site.right = Site.left\n"),
+     "Site.right = Site.left\n", "(Site.left, Site.right)"),
     ("shared lists, mutated through one",
      "class Site:\n    left = []\n    right = []\n\n    def fire(self, value):\n        self.left.append(value)\n"
-     "        return len(self.right)\n", "Site.right = Site.left\n"),
+     "        return len(self.right)\n", "Site.right = Site.left\n", "(Site.left, Site.right)"),
     ("shared dictionaries",
      "class Site:\n    left = {}\n    right = {}\n\n    def fire(self, value):\n        return self.left is self.right\n",
-     "Site.right = Site.left\n"),
+     "Site.right = Site.left\n", "(Site.left, Site.right)"),
     ("a method default shared with a field",
-     "class Site:\n    shared = []\n\n    def fire(self, value, box=None):\n"
-     "        return self.shared is Site.fire.__defaults__[0]\n", "Site.fire.__defaults__ = (Site.shared,)\n"),
+     "class Site:\n    shared = []\n\n    def fire(self, value, box=[]):\n        return self.shared is box\n",
+     "Site.shared = Site.fire.__defaults__[0]\n", "(Site.shared, Site.fire.__defaults__)"),
     # the second seat's stage-2 cross-ROOT cases (research probe r30v_probe.py): the one map spans the roots, not only
     # the members — a base's attribute, a method's closure cell, a metaclass's attribute
     ("a member shared with a base's attribute",
      "class Base:\n    shared = []\n\nclass Site(Base):\n    left = []\n\n    def fire(self, value):\n"
-     "        return self.left is Base.shared\n", "Site.left = Base.shared\n"),
+     "        return self.left is Base.shared\n", "Site.left = Base.shared\n", "(Site.left, Base.shared)"),
     ("a member shared with a method's closure cell",
      "def make():\n    box = []\n\n    def fire(self, value):\n        return box is self.left\n    return fire, box\n\n"
-     "_f, _box = make()\n\nclass Site:\n    left = []\n    fire = _f\n", "Site.left = _box\n"),
+     "_f, _box = make()\n\nclass Site:\n    left = []\n    fire = _f\n", "Site.left = _box\n", "(Site.left, _box)"),
     ("a member shared with a metaclass's attribute",
      "class M(type):\n    cfg = []\n\nclass Site(metaclass=M):\n    left = []\n\n    def fire(self, value):\n"
-     "        return self.left is M.cfg\n", "Site.left = M.cfg\n"),
+     "        return self.left is M.cfg\n", "Site.left = M.cfg\n", "(Site.left, M.cfg)"),
 ]
-_R31_SHARED_CELLS = [(f"{label} through {route}", label, src, setup, route) for label, src, setup in _R31_SHARED
+_R31_SHARED_CELLS = [(f"{label} through {route}", label, src, setup, content, route)
+                     for label, src, setup, content in _R31_SHARED
                      for route in ("site_description", "_site_realized", "site_drift")]
 
 
-@pytest.mark.parametrize("cell,label,src,setup,route", _R31_SHARED_CELLS, ids=[c[0] for c in _R31_SHARED_CELLS])
-def test_r31_sharing_between_members_is_drift(cell, label, src, setup, route):
+@pytest.mark.parametrize("cell,label,src,setup,content,route", _R31_SHARED_CELLS, ids=[c[0] for c in _R31_SHARED_CELLS])
+def test_r31_sharing_between_members_is_drift(cell, label, src, setup, content, route):
     """R30-2 through all three routes: the class statement is identical and a post-definition assignment makes two
     members share one object; the decision changes, and so must the description. The decisions are taken on objects
     built apart from the ones described, and again after description, so no mutation precedes the measurement."""
@@ -6051,6 +6056,8 @@ def test_r31_sharing_between_members_is_drift(cell, label, src, setup, route):
     a, b = src, src + setup
     first = (_r28_module(a).Site().fire(0), _r28_module(b).Site().fire(0))
     assert first[0] != first[1], (cell, "the pair does not change the decision")
+    ca, cb = (eval(content, _r28_module(s).__dict__) for s in (a, b))
+    assert ca == cb, (cell, "the pair differs in CONTENT, not only in sharing — any describer would see it", ca, cb)
     ma, mb = _r28_module(a), _r28_module(b)
     if route == "site_description":
         assert un.site_description(ma.Site) != un.site_description(mb.Site), f"{cell}: reads as no drift"
