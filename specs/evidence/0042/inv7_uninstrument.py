@@ -541,8 +541,9 @@ def _set_reader_check():
     pointer against the embedded small table, and the mask against `set.__sizeof__`; then the keys against the elements'
     ids; then fill, used and the dummy against three known discards; then the finger against one pop of {0, 1, 2, 3}.
     Each test but the dummy's is reached FIRST by some wrong offset in the cell
-    `test_r33_the_set_reader_check_refuses_a_wrong_layout`, so dropping it fails a named cell; the dummy's is the one
-    check of the dummy's identity and no wrong offset reaches it first — kept, and named as not mutation-covered."""
+    `test_r33_the_set_reader_check_refuses_a_wrong_layout`, so dropping it fails a named cell. The dummy's test is
+    unreachable by any layout that passes the earlier tests (they pin every offset it reads), so it guards a SEMANTIC
+    change in CPython — deletions no longer sharing one dummy key — not a layout error (the second seat's stage 2b)."""
     import sysconfig
     if ctypes.sizeof(ctypes.c_void_p) != 8:
         return None, "pointers are not 64-bit"

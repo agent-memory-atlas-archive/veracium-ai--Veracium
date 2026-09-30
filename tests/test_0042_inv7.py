@@ -6471,6 +6471,11 @@ _R33_TABLE = [
     # (made by one merge) — the next two adds land in another order
     ("W4 a table grown by adds against one made by merge", "_s = set([0, 1, 2, 3, 4])\n", "_s = set({0, 1, 2, 3, 4})\n",
      "        self.s.add(21)\n        self.s.add(16)\n        return list(self.s)[5]\n", True),
+    # the second seat's stage 2b, for the dummies alone: equal mask, fill, used, finger and live slot, dummies at (0, 6)
+    # against (1, 2) under seed-free int hashes — one add lands before the live element in one and after it in the other
+    ("W5 dummies at other slots", "_s = set()\nfor _x in (4, 14, 32):\n    _s.add(_x)\n_s.discard(14)\n_s.discard(32)\n",
+     "_s = set()\nfor _x in (57, 4, 58):\n    _s.add(_x)\n_s.discard(57)\n_s.discard(58)\n",
+     "        self.s.add(38)\n        return next(iter(self.s))\n", True),
     ("K1 two equal fresh sets", "_s = {0, 1, 2, 3}\n", "_s = {0, 1, 2, 3}\n", "        return self.s.pop()\n", False),
 ]
 _R33_TABLE_CELLS = [(f"{label} through {route}", a, b, decide, differ, route)
@@ -6542,6 +6547,41 @@ def test_r33_a_frozensets_slots_are_what_differs():
     db = un._set_elements(b, frozenset, {})
     assert da != db and da[:4] == db[:4], ("the description differs by the slots alone", da, db)
 
+
+
+def test_r33_a_sets_dummies_are_what_differs():
+    """W5's REASON, field by field: the two sets agree in mask, fill, used, finger and every live slot, and differ in
+    where their dummies sit — the one table field no other witness isolates (W1 the finger, W3 the live slots, W4 the
+    mask)."""
+    un = _load("inv7_uninstrument_r33_dummies", EVIDENCE / "inv7_uninstrument.py")
+    row = next(r for r in _R33_TABLE if r[0].startswith("W5"))
+    a, b = (_r28_module(_r33_table_source(pre, row[3])).Site.s for pre in row[1:3])
+    ta, tb = un._set_table(a, list(a)), un._set_table(b, list(b))
+    assert ta[:4] == tb[:4], ("the precondition: equal fill, used, mask and finger", ta[:4], tb[:4])
+    live = lambda tab: [i for i, k in tab[4] if k != un._SET_DUMMY]
+    dead = lambda tab: [i for i, k in tab[4] if k == un._SET_DUMMY]
+    assert live(ta) == live(tb), "the precondition: equal live slots"
+    assert dead(ta) and dead(tb) and dead(ta) != dead(tb), ("the dummies' slots do not differ", dead(ta), dead(tb))
+    assert un._set_elements(a, set, {}) != un._set_elements(b, set, {}), "the dummies' slots were not described"
+
+
+def test_r33_a_dummy_read_as_empty_is_refused():
+    """The second seat's stage-2b C3: a dummy slot misread as EMPTY leaves the live keys and the used count right, and
+    only the occupied-slot count against fill catches it — so the reader refuses rather than describe a table with a
+    slot missing."""
+    un = _load("inv7_uninstrument_r33_lostdummy", EVIDENCE / "inv7_uninstrument.py")
+    s = {4, 14, 32}
+    s.discard(14)
+    real = un._set_keys
+
+    def lossy(table, mask):
+        keys = list(real(table, mask))
+        keys[next(i for i, k in enumerate(keys) if k == un._SET_DUMMY)] = 0
+        return tuple(keys)
+    with pytest.MonkeyPatch.context() as monkeypatch:   # a context, not the fixture: the mutant table calls this cell
+        monkeypatch.setattr(un, "_set_keys", lossy)
+        with pytest.raises(un.SiteUndescribed, match="did not read consistently"):
+            un._set_table(s, list(s))
 
 def test_r33_a_dummy_left_by_an_address_hashed_element_is_described():
     """The named residual: an EMPTY set whose dummies were left by discarding default-hash instances holds no element to
@@ -6760,6 +6800,16 @@ _R33_MUTANTS = [
      "    return tuple(repr(_normalise(by_id[k], seen)) for i, k in slots if k != _SET_DUMMY)\n",
      _r33_cell(_R33_TABLE_CELLS, "W3 a frozenset's layout through site_description", test_r33_a_sets_table_is_state),
      (AssertionError, "reads as no drift")),
+    ("the dummies' slots dropped (the second seat's stage-2b C1)",
+     "            tuple((i, \"<dummy>\" if k == _SET_DUMMY else repr(_normalise(by_id[k], seen))) for i, k in slots))\n",
+     "            tuple((i, repr(_normalise(by_id[k], seen))) for i, k in slots if k != _SET_DUMMY))\n",
+     _r33_cell(_R33_TABLE_CELLS, "W5 dummies at other slots through site_description", test_r33_a_sets_table_is_state),
+     (AssertionError, "reads as no drift")),
+    ("the occupied-slot count against fill dropped (the second seat's stage-2b C3)",
+     "            or {k for _, k in slots if k != _SET_DUMMY} != live or len(slots) != fill):\n",
+     "            or {k for _, k in slots if k != _SET_DUMMY} != live):\n",
+     test_r33_a_dummy_read_as_empty_is_refused,
+     (pytest.fail.Exception, "DID NOT RAISE")),
     ("the finger dropped",
      "(\"finger\", finger),\n", "\n",
      _r33_cell(_R33_TABLE_CELLS, "W1 a set popped and refilled through site_description", test_r33_a_sets_table_is_state),
