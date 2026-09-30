@@ -253,6 +253,12 @@ CITATION_DEBT: dict = {
         "test_silent_coercion_residual_is_reported": "unclassified_at_generation",
         "test_third_party_claim_receipt_is_exempt": "unclassified_at_generation",
         "test_user_disposition_on_a_third_party_event_is_refused": "unclassified_at_generation"
+    },
+    "0042": {
+        "test_r32_a_sets_elements_are_registered_in_an_order_their_descriptions_decide": "stale_version: 0042 v12.13's round-32 set-order paragraph, WITHDRAWN IN PLACE at v12.14 (R32-1); the name asserts the superseded sorted-order design; the live node is test_r33_a_set_of_address_hashed_elements_is_refused",
+        "test_r32_each_set_element_is_ordered_against_its_own_copy_of_the_map": "stale_version: 0042 v12.13's round-32 set-order paragraph, WITHDRAWN IN PLACE at v12.14 (R32-1); the name asserts the superseded sorted-order design; the live node is test_r33_a_set_of_value_hashed_elements_is_described_in_iteration_order",
+        "test_r32_a_set_subclass_is_registered_in_an_order_its_descriptions_decide": "stale_version: 0042 v12.13's round-32 set-order paragraph, WITHDRAWN IN PLACE at v12.14 (R32-1); the name asserts the superseded sorted-order design; the live node is test_r33_a_set_subclass_follows_its_iteration_order",
+        "test_r32_a_set_of_runtime_strings_describes_the_same_under_every_hash_seed": "stale_version: 0042 v12.13's round-32 set-order paragraph, WITHDRAWN IN PLACE at v12.14 (R32-1); the name asserts the superseded sorted-order design; the live node is test_r33_a_set_of_colliding_strings_is_described_in_iteration_order"
     }
 }
 

@@ -366,7 +366,21 @@ def _site_realized(site_cls) -> dict:
     return un.site_description_digest(un.site_description(site_cls))
 
 
+def _assert_seed_pinned() -> None:
+    """ROUND 33 (R32-1; the second seat's stage-1 condition): the eight runs' site_realized digests are compared ACROSS
+    processes and across SOURCES — the uninstrumented arm and its control import the twin's Site (the reference census),
+    the other six HEAD's — and a set of strings is described in the order it iterates, which follows the hash seed. Two
+    different Sites described under two different seeds could coincide by accident: a false EQUAL. The harness pins
+    PYTHONHASHSEED=0 for every arm; this asserts it in the arm's own process, before the description is made, rather
+    than trusting the caller. It is NOT asserted in `_site_realized`, which test cells call in one process, where every
+    description they compare shares one seed."""
+    if sys.flags.hash_randomization != 0:
+        raise RuntimeError("the arm's hash seed is not pinned to 0 (sys.flags.hash_randomization is set): its Site's "
+                           "description may follow the seed, and it is compared with other processes' — refused (round 33)")
+
+
 def _arm_setup() -> None:
+    _assert_seed_pinned()
     import veracium
     import veracium.census as C
     _SITE_REALIZED.update(_site_realized(C.Site))

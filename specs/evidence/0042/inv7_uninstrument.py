@@ -472,23 +472,46 @@ def _base_content(obj, tp: type, seen: dict):
 
 
 def _set_elements(elements, seen: dict) -> tuple:
-    """A set's elements, REGISTERED in an order their descriptions decide — never the set's iteration order, which follows
-    hashes and addresses (ROUND 32, the second seat's stage-1 mark M2: sorted descriptions were emitted, but the elements
-    entered the map in iteration order, so an identical Site whose set elements were merely ALLOCATED in another order
-    described differently — loud, and pre-existing; recording every object would have made it hash-seeded for strings,
-    and route B's `-I` children each draw a random seed). Each element is first described against a THROWAWAY copy of
-    the map (same length, so the same positions; nothing registered), the elements are ordered by those descriptions,
-    and only then registered through the real map in that order. Two elements the description cannot tell apart are
-    REFUSED: which is registered first — and so any later reference to either — would follow hash or address order
-    (named over-refusal)."""
+    """A set's elements in ITERATION order, emitted and registered in that order — the order code observes
+    (`next(iter(s))`). ROUND 33 (R32-1): round 32 sorted the elements by their descriptions, so a set whose elements were
+    only INSERTED in another order described the same while `next(iter(s))` changed the decision — a normalization read
+    as equivalence, the premise the second seat's stage-1 mark M2 stated and dev's controls (membership, length) could
+    not observe. Iteration order is state; it is described faithfully where ONE description can hold it, and refused
+    where it cannot: for two or more elements the order is a function of the elements' values (and the insertion
+    history) only when every element is VALUE-hashed by exact type — an int, a bool, None, a float that is not NaN, a
+    str or bytes (whose hash also follows the seed: see `_value_hashed`), or an exact tuple of these, recursively. Any
+    other element's order follows addresses (the default hash) or a hash the census defines, which differs between
+    processes or runs census code; such a set of two or more elements is REFUSED (named over-refusal)."""
     items = list(elements)
-    provisional = [repr(_normalise(x, dict(seen))) for x in items]
-    if len(set(provisional)) != len(provisional):
-        raise SiteUndescribed("a set holds two elements the description cannot tell apart, so the order they are "
-                              "registered in — and any later reference to either — would follow hash or address order: "
-                              "it cannot be described faithfully and is refused (round 32)")
-    ordered = [x for _p, x in sorted(zip(provisional, items), key=lambda pair: pair[0])]
-    return tuple(repr(_normalise(x, seen)) for x in ordered)
+    if len(items) >= 2 and not all(_value_hashed(x) for x in items):
+        raise SiteUndescribed("a set holds two or more elements whose iteration order does not follow their values alone "
+                              "(an address, or a hash the census defines, decides it), so one description cannot hold "
+                              "that order faithfully: it is refused (round 33, R32-1)")
+    return tuple(repr(_normalise(x, seen)) for x in items)
+
+
+_VALUE_HASHED_SCALARS = frozenset({"int", "bool", "NoneType", "float"})
+
+
+_SEED_HASHED_SCALARS = frozenset({"str", "bytes"})
+
+
+def _value_hashed(x) -> bool:
+    """Whether `x`'s hash — and so its place in a set — is a function of its value alone, by EXACT built-in type (a
+    subclass may define `__hash__`): an int, a bool, None, a float that is not NaN (NaN hashes by identity), a str or
+    bytes, or an exact tuple of these. A str's and a bytes' hash is ALSO a function of the process's hash seed, so a set
+    of them is described as it iterates under THAT seed; the comparisons that cross processes each run under a seed
+    PINNED to 0 and assert it in the process that describes — route B's child (`_isolated_env`, checked inside the
+    child) and the INV-7 arms (`inv7_observer._assert_seed_pinned`); a comparison inside one process shares its seed
+    (ROUND 33, the second seat's mark B-a as revised: enforced at the cross-process channels, not per description)."""
+    tp = type(x)
+    if _builtin(tp, _VALUE_HASHED_SCALARS):
+        return not (tp is float and x != x)
+    if _builtin(tp, _SEED_HASHED_SCALARS):
+        return True
+    if _builtin(tp, frozenset({"tuple"})):
+        return all(_value_hashed(e) for e in x)
+    return False
 
 
 def _normalise(obj, seen: dict) -> tuple:
@@ -1290,6 +1313,17 @@ import builtins, importlib.util, json, os, sys
 spec = importlib.util.spec_from_file_location("_inv7_uninstrument_isolated", sys.argv[1])
 un = importlib.util.module_from_spec(spec); spec.loader.exec_module(un)
 response, dumps, open_, exit_ = sys.argv[2], json.dumps, open, os._exit     # bound BEFORE the census runs
+# ROUND 33 (the second seat's mark B-b): the isolation `-I` gave, asserted here rather than assumed: no script directory
+# or user site on the path, no PYTHON* variable but the pinned seed, and hash randomization off
+_bad = [n for n, ok in (("safe_path", sys.flags.safe_path), ("no_user_site", sys.flags.no_user_site),
+                        ("hash_randomization == 0", sys.flags.hash_randomization == 0),
+                        ("PYTHON* is PYTHONHASHSEED=0 alone",
+                         {k: v for k, v in os.environ.items() if k.startswith("PYTHON")} == {"PYTHONHASHSEED": "0"}))
+        if not ok]
+if _bad:
+    with open_(response, "w", encoding="ascii") as f:
+        f.write(dumps("route B's interpreter is not isolated as it must be: " + ", ".join(_bad))); f.flush()
+    exit_(0)
 census = sys.stdin.buffer.read().decode("utf-8")   # bytes: never the locale's encoding
 bdict = vars(builtins); saved = dict(bdict)          # a census may rebind a built-in; the DESCRIBER must not see it
 site = un._realized_site(census, "_inv7_head_census")
@@ -1301,22 +1335,33 @@ with open_(response, "w", encoding="ascii") as f:
 exit_(0)                                             # neither the census's atexit hooks nor its threads outlive this
 """
 
+def _isolated_env() -> dict:
+    """Route B's child environment (ROUND 33, R32-1; the second seat's mark B-b): the caller's environment with EVERY
+    PYTHON* variable removed — what `-E` did — and the hash seed pinned to 0, which `-E` would have ignored. The flags
+    `-P -s -B` are `-I`'s other two parts and no bytecode; the child asserts all four conditions before it describes."""
+    import os
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PYTHON")}
+    env["PYTHONHASHSEED"] = "0"
+    return env
+
+
 # The child's wall-clock budget; a module constant so a test can lower it (a census whose import never ends).
 _ISOLATION_TIMEOUT = 300
 
 
 def _described_in_isolation(census_text: str):
-    """ROUTE B's reading of the Site a census builds, made in a FRESH interpreter (`python -I`, no user site, no
-    PYTHONPATH) and returned as data — [(entry, repr of its normalised value)], or a string saying why it could not be
+    """ROUTE B's reading of the Site a census builds, made in a FRESH interpreter (`python -P -s -B` under `_isolated_env`: no script directory,
+    no user site, no PYTHON* variable but the pinned hash seed — round 33; `-I` until then) and returned as data — [(entry, repr of its normalised value)], or a string saying why it could not be
     made. The transform process never executes census code: a census that rebinds a built-in (`import builtins;
     builtins.tuple = …`) changes only the child (round 19, the second seat's stage-1 read: a __builtins__ copy does not
     isolate, because `import builtins` returns the real module), and inside the child the builtins module is restored
     after the census runs, so the describer reads with the real built-ins. The child never writes bytecode (`-B`,
-    always): `-I` drops every PYTHON* variable, PYTHONDONTWRITEBYTECODE and PYTHONPYCACHEPREFIX among them, and a child
+    always): the child's environment drops every PYTHON* variable (as `-I` did), PYTHONDONTWRITEBYTECODE and
+    PYTHONPYCACHEPREFIX among them, and a child
     does not inherit `-B`, so without it a transform run with bytecode off, or with its caches redirected, wrote caches
     into the evidence directory it was loaded from (found by the round-19 stage's untouched-tree check; passing on only
-    the caller's `-B` missed the redirected caller, the second seat's stage-1 read). The description does not depend on
-    the child's hash seed.
+    the caller's `-B` missed the redirected caller, the second seat's stage-1 read). The child's hash seed is PINNED to
+    0 (round 33): a set of strings is described in the order it iterates, and that order follows the seed.
     THE RESPONSE TRAVELS ON A CHANNEL THE CHILD OWNS (round 20, the round-19 verdict's F1): a file at an absolute path in
     a temporary directory outside the evidence tree, removed afterwards — never stdout, which the census shares, so
     a census that prints is not a census that cannot be described. The census keeps its stdout and stderr; they are
@@ -1343,9 +1388,9 @@ def _described_in_isolation(census_text: str):
     with tempfile.TemporaryDirectory(prefix="inv7_route_b_") as d:
         response = pathlib.Path(d).resolve() / "description.json"
         try:
-            r = subprocess.run([sys.executable, "-I", "-B", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve()),
+            r = subprocess.run([sys.executable, "-P", "-s", "-B", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve()),
                                 str(response)], input=census_text.encode("utf-8"), capture_output=True,
-                               timeout=_ISOLATION_TIMEOUT)
+                               timeout=_ISOLATION_TIMEOUT, env=_isolated_env())
         except subprocess.TimeoutExpired:
             return f"the isolated interpreter did not finish within {_ISOLATION_TIMEOUT}s"
         try:

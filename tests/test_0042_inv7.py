@@ -2556,12 +2556,12 @@ def test_r19_a_census_rebinding_a_builtin_cannot_reach_the_transform(tmp_path):
         builtins.tuple = real
 
 
-_R19_SHIPPED_FLAGS = '[sys.executable, "-I", "-B", "-c",'
+_R19_SHIPPED_FLAGS = '[sys.executable, "-P", "-s", "-B", "-c",'   # round 33: `-I` became `-P -s` under `_isolated_env`
 # the two superseded forms, each the mutant of one caller: `-I` alone (the round-19 fix as first committed to the
 # working tree), and the caller's `-B` passed on conditionally (the first fix, which the second seat's stage-1 read
 # showed misses a caller whose caches are redirected)
-_R19_BARE = '[sys.executable, "-I", "-c",'
-_R19_CONDITIONAL = '[sys.executable, "-I", *(["-B"] if sys.flags.dont_write_bytecode else []), "-c",'
+_R19_BARE = '[sys.executable, "-P", "-s", "-c",'
+_R19_CONDITIONAL = '[sys.executable, "-P", "-s", *(["-B"] if sys.flags.dont_write_bytecode else []), "-c",'
 
 
 @pytest.mark.parametrize("caller,form,expect_written", [
@@ -6242,79 +6242,229 @@ _R32_K = ("class K:\n    def __init__(self, name, box=None):\n        self.name 
           "    def __hash__(self):\n        return 1\n\n")   # one colliding hash: a set iterates in INSERTION order
 
 
-def test_r32_a_sets_elements_are_registered_in_an_order_their_descriptions_decide():
-    """The allocation order of a frozenset's elements, and so its iteration order, differs; the Site does not — equal.
-    With a later back-reference to one element (`t`), iteration-order registration gave it a different position."""
-    un = _load("inv7_uninstrument_r32_setorder", EVIDENCE / "inv7_uninstrument.py")
-    tail = "class Site:\n    s = _s\n    t = _x\n\n    def fire(self, value):\n        return self.t in self.s\n"
-    head = _R32_K + "_x = K('x')\n_y = K('y')\n"
-    xy, yx = head + "_s = frozenset([_x, _y])\n" + tail, head + "_s = frozenset([_y, _x])\n" + tail
-    ma, mb = _r28_module(xy), _r28_module(yx)
-    assert [e.name for e in ma.Site.s] != [e.name for e in mb.Site.s], "the fixture did not produce two iteration orders"
-    assert un.site_description(ma.Site) == un.site_description(mb.Site), "a set's iteration order reached the description"
+# ROUND 33 — the round-32 verdict's R32-1: round 32 SORTED a set's elements, so an order that only insertion decided,
+# which `next(iter(s))` observes, read as no drift. A set is now described in ITERATION order where one description can
+# hold that order (every element value-hashed by exact type), and REFUSED where it cannot.
+_R33_ORDER_TAIL = "\nclass Site:\n    s = _s\n    t = _x\n\n    def fire(self, value):\n        return next(iter(self.s)) is self.t\n"
+_R33_REFUSED = [
+    # the verdict's four shapes: K's hash is a Python method (census code), so its order is not a function of values
+    ("the verdict's exact frozenset", _R32_K + "_x, _y = K('x'), K('y')\n", "_s = frozenset([_x, _y])\n", "_s = frozenset([_y, _x])\n"),
+    ("the verdict's exact set", _R32_K + "_x, _y = K('x'), K('y')\n", "_s = set([_x, _y])\n", "_s = set([_y, _x])\n"),
+    ("the verdict's frozenset subclass", _R32_K + "class FS(frozenset):\n    pass\n\n_x, _y = K('x'), K('y')\n",
+     "_s = FS([_x, _y])\n", "_s = FS([_y, _x])\n"),
+    ("the verdict's set subclass", _R32_K + "class SS(set):\n    pass\n\n_x, _y = K('x'), K('y')\n",
+     "_s = SS([_x, _y])\n", "_s = SS([_y, _x])\n"),
+    # the second seat's B4: default-hash instances (address-ordered), Ellipsis (identity-hashed); strings are described
+    # (their order follows the seed, pinned in every cross-process comparison — test_r33_a_set_of_colliding_strings_...)
+    ("default-hash instances", "class D:\n    pass\n\n_x, _y = D(), D()\n", "_s = frozenset([_x, _y])\n", "_s = frozenset([_y, _x])\n"),
+    ("Ellipsis beside an int", "_x, _y = ..., 1\n", "_s = frozenset([_x, _y])\n", "_s = frozenset([_y, _x])\n"),
+]
+_R33_REFUSED_CELLS = [(f"{label} through {route}", head, a, b, route) for label, head, a, b in _R33_REFUSED
+                      for route in ("site_description", "_site_realized", "site_drift")]
 
 
-def test_r32_each_set_element_is_ordered_against_its_own_copy_of_the_map():
-    """Two elements that share a mutable child: described against ONE shared throwaway copy, the second would see the
-    child as a back-reference and its sort key would follow iteration order (the second seat's objection 1)."""
-    un = _load("inv7_uninstrument_r32_setcopy", EVIDENCE / "inv7_uninstrument.py")
-    tail = "class Site:\n    s = _s\n\n    def fire(self, value):\n        return len(self.s)\n"
-    head = _R32_K + "_box = []\n_a = K('a', _box)\n_b = K('b', _box)\n"
-    ab, ba = head + "_s = frozenset([_a, _b])\n" + tail, head + "_s = frozenset([_b, _a])\n" + tail
-    ma, mb = _r28_module(ab), _r28_module(ba)
-    assert [e.name for e in ma.Site.s] != [e.name for e in mb.Site.s], "the fixture did not produce two iteration orders"
-    assert un.site_description(ma.Site) == un.site_description(mb.Site), "a sort key followed the iteration order"
+@pytest.mark.parametrize("cell,head,a,b,route", _R33_REFUSED_CELLS, ids=[c[0] for c in _R33_REFUSED_CELLS])
+def test_r33_a_set_whose_order_is_not_its_values_is_refused(cell, head, a, b, route):
+    """R32-1 through all three routes: a set of two or more elements whose iteration order an address, the hash seed or
+    a census-defined hash decides is REFUSED — never described in a sorted order that erases what `next(iter(s))` sees."""
+    un = _load("inv7_uninstrument_r33_refused", EVIDENCE / "inv7_uninstrument.py")
+    sa, sb = head + a + _R33_ORDER_TAIL, head + b + _R33_ORDER_TAIL
+    ma = _r28_module(sa)
+    assert len(ma.Site.s) == 2, (cell, "the fixture's set does not hold two elements")
+    with pytest.raises(Exception, match="refused") as got:
+        if route == "site_description":
+            un.site_description(ma.Site)
+        elif route == "_site_realized":
+            observer._site_realized(ma.Site)
+        else:
+            un.site_drift(sb, sa)
+    assert type(got.value).__name__ == "SiteUndescribed", (cell, type(got.value))
+
+
+_R33_VALUE_ORDER = "_s = {ctor}([{a}, {b}])\n\nclass Site:\n    s = _s\n\n    def fire(self, value):\n        return next(iter(self.s)) == 8\n"
+_R33_DESCRIBED = [
+    ("ints 8/16 against 16/8", "", "frozenset"),
+    ("ints in a frozenset subclass", "class FS(frozenset):\n    pass\n\n", "FS"),
+    ("ints in a set", "", "set"),
+]
+_R33_DESCRIBED_CELLS = [(f"{label} through {route}", head, ctor, route) for label, head, ctor in _R33_DESCRIBED
+                        for route in ("site_description", "_site_realized", "site_drift")]
+
+
+@pytest.mark.parametrize("cell,head,ctor,route", _R33_DESCRIBED_CELLS, ids=[c[0] for c in _R33_DESCRIBED_CELLS])
+def test_r33_a_set_of_value_hashed_elements_is_described_in_iteration_order(cell, head, ctor, route):
+    """The POSITIVE half (the second seat's B2): a set of ints — value-hashed, so their order is a function of the values
+    and the insertion history — is described in ITERATION order, so two insertion orders that `next(iter(s))` tells apart
+    are drift through all three routes; the same source is not."""
+    un = _load("inv7_uninstrument_r33_described", EVIDENCE / "inv7_uninstrument.py")
+    sa = head + _R33_VALUE_ORDER.format(ctor=ctor, a=8, b=16)
+    sb = head + _R33_VALUE_ORDER.format(ctor=ctor, a=16, b=8)
+    ma, mb = _r28_module(sa), _r28_module(sb)
+    assert list(ma.Site.s) != list(mb.Site.s), (cell, "the fixture did not produce two iteration orders")
+    assert (ma.Site().fire(0), mb.Site().fire(0)) == (True, False), (cell, "the pair does not change the decision")
+    if route == "site_description":
+        assert un.site_description(ma.Site) != un.site_description(mb.Site), f"{cell}: reads as no drift"
+        assert un.site_description(ma.Site) == un.site_description(_r28_module(sa).Site), (cell, "the same source differs")
+    elif route == "_site_realized":
+        assert observer._site_realized(ma.Site)["digest"] != observer._site_realized(mb.Site)["digest"], f"{cell}: equal digests"
+    else:
+        assert un.site_drift(sb, sa) != [], f"{cell}: site_drift returns []"
+        for _ in range(3):
+            assert un.site_drift(sa, sa) == [], (cell, "site_drift between identical sources")
+
+
+def test_r33_a_set_of_address_hashed_elements_is_refused():
+    """The successor of round 32's `..._are_registered_in_an_order_their_descriptions_decide`: instances with the
+    default hash iterate by ADDRESS, which one description cannot hold across processes — refused."""
+    un = _load("inv7_uninstrument_r33_address", EVIDENCE / "inv7_uninstrument.py")
+    src = "class D:\n    pass\n\nclass Site:\n    s = frozenset([D(), D()])\n"
+    with pytest.raises(un.SiteUndescribed, match="does not follow their values"):
+        un.site_description(_r28_module(src).Site)
+
+
+def test_r33_a_set_subclass_follows_its_iteration_order():
+    """The successor of round 32's set-subclass ordering cell: `_base_content`'s set-subclass branch describes a subclass
+    of ints in ITERATION order too — two insertion orders differ."""
+    un = _load("inv7_uninstrument_r33_subclass", EVIDENCE / "inv7_uninstrument.py")
+    head = "class FS(frozenset):\n    pass\n\n"
+    ma = _r28_module(head + _R33_VALUE_ORDER.format(ctor="FS", a=8, b=16))
+    mb = _r28_module(head + _R33_VALUE_ORDER.format(ctor="FS", a=16, b=8))
+    assert list(ma.Site.s) != list(mb.Site.s), "the fixture did not produce two iteration orders"
+    assert un.site_description(ma.Site) != un.site_description(mb.Site), "a set subclass's iteration order was erased"
+
+
+def _r33_colliding_strings():
+    """Two runtime strings that share a slot in a two-element set's table UNDER THIS PROCESS'S SEED, so their iteration
+    order follows insertion (without a collision it follows the hashes alone) — found by measurement, and asserted."""
+    for i in range(2, 4000):
+        a, b = "".join(["s", "1"]), "".join(["s", str(i)])
+        if (hash(a) & 7) == (hash(b) & 7) and list(frozenset([a, b])) != list(frozenset([b, a])):
+            return "s1", f"s{i}"
+    raise AssertionError("no colliding pair found")
+
+
+_R33_STRINGS = ("_s = frozenset([''.join(['s', '{a}']), ''.join(['s', '{b}'])])\n\nclass Site:\n    s = _s\n\n"
+                "    def fire(self, value):\n        return next(iter(self.s)) == 's{a}'\n")
+
+
+def test_r33_a_set_of_colliding_strings_is_described_in_iteration_order():
+    """R32-1 for strings, in one process (one seed): two insertion orders of a colliding pair iterate differently, and
+    `next(iter(s))` sees it, so the description and the observer's digest differ; the same source does not."""
+    un = _load("inv7_uninstrument_r33_strings", EVIDENCE / "inv7_uninstrument.py")
+    a, b = _r33_colliding_strings()
+    src_ab = _R33_STRINGS.format(a=a[1:], b=b[1:])
+    src_ba = src_ab.replace(f"[''.join(['s', '{a[1:]}']), ''.join(['s', '{b[1:]}'])]", f"[''.join(['s', '{b[1:]}']), ''.join(['s', '{a[1:]}'])]")
+    assert src_ab != src_ba
+    ma, mb = _r28_module(src_ab), _r28_module(src_ba)
+    assert list(ma.Site.s) != list(mb.Site.s), "the precondition: the two insertion orders iterate differently"
+    # WHICH order decides True follows this process's seed (it failed one suite run hard-coded as (True, False)); the
+    # property is that the two decisions DIFFER
+    assert ma.Site().fire(0) != mb.Site().fire(0), "the pair does not change the decision"
+    assert un.site_description(ma.Site) != un.site_description(mb.Site), "a string set's iteration order was erased"
+    assert observer._site_realized(ma.Site)["digest"] != observer._site_realized(mb.Site)["digest"]
+    assert un.site_description(ma.Site) == un.site_description(_r28_module(src_ab).Site), "the same source differs"
+
+
+_R33_SEED0_PAIR = (
+    "for i in range(2, 4000):\n"
+    "    a, b = ''.join(['s', '1']), ''.join(['s', str(i)])\n"
+    "    if (hash(a) & 7) == (hash(b) & 7) and list(frozenset([a, b])) != list(frozenset([b, a])):\n"
+    "        print(i); break\n")
+
+
+def test_r33_route_b_describes_colliding_strings_in_seed_zero_order():
+    """Through route B, whose children run under PYTHONHASHSEED=0 and assert it: a pair colliding UNDER SEED 0, in two
+    insertion orders, is drift; the same source through two children, three times, is not."""
+    un = _load("inv7_uninstrument_r33_routeb", EVIDENCE / "inv7_uninstrument.py")
+    out = subprocess.run([sys.executable, "-c", _R33_SEED0_PAIR], capture_output=True, text=True,
+                         env={**os.environ, "PYTHONHASHSEED": "0"})
+    i = out.stdout.strip()
+    assert out.returncode == 0 and i.isdigit(), out.stderr[-300:]
+    src_ab = _R33_STRINGS.format(a="1", b=i)
+    src_ba = src_ab.replace(f"[''.join(['s', '1']), ''.join(['s', '{i}'])]", f"[''.join(['s', '{i}']), ''.join(['s', '1'])]")
+    assert src_ab != src_ba
+    assert un.site_drift(src_ba, src_ab) != [], "route B erased a string set's seed-0 iteration order"
+    for _ in range(3):
+        assert un.site_drift(src_ab, src_ab) == [], "route B finds drift between identical sources"
+
+
+def test_r33_route_b_refuses_a_child_that_is_not_isolated():
+    """The second seat's B-b: route B's child asserts its own isolation — no script directory or user site on the path,
+    no PYTHON* variable but the pinned seed, hash randomization off — before it describes. Run as `-I` (which ignores
+    PYTHONHASHSEED), the child refuses and says which condition failed."""
+    import tempfile
+    un = _load("inv7_uninstrument_r33_isolation", EVIDENCE / "inv7_uninstrument.py")
+    with tempfile.TemporaryDirectory() as d:
+        resp = pathlib.Path(d) / "r.json"
+        subprocess.run([sys.executable, "-I", "-B", "-c", un._ISOLATED_CHILD, str(pathlib.Path(un.__file__).resolve()),
+                        str(resp)], input=b"class Site:\n    pass\n", capture_output=True, timeout=120)
+        body = json.loads(resp.read_text(encoding="ascii"))
+    assert isinstance(body, str) and "not isolated" in body and "hash_randomization == 0" in body, body
+
+
+_R33_ARM_PROBE = (
+    "import importlib.util, sys\n"
+    "s = importlib.util.spec_from_file_location('inv7_observer_probe', sys.argv[1]); o = importlib.util.module_from_spec(s)\n"
+    "sys.modules['inv7_observer_probe'] = o; s.loader.exec_module(o)\n"
+    "o._arm_setup()\nprint('SET UP')\n")
+
+
+def test_r33_an_arm_refuses_an_unpinned_seed():
+    """The INV-7 arms compare Sites across processes AND sources (the uninstrumented pair imports the twin's), so an arm
+    asserts its own pinned seed before it describes: unpinned, `_arm_setup` refuses; under seed 0 it sets up."""
+    un = _load("inv7_uninstrument_r33_arm", EVIDENCE / "inv7_uninstrument.py")
+    obs = pathlib.Path(un.__file__).resolve().parent / "inv7_observer.py"
+    base = {k: v for k, v in os.environ.items() if k != "PYTHONHASHSEED"}
+    base.update({"INV7_ARM": "off", "PYTHONPATH": str(ROOT / "src"), "PYTHONDONTWRITEBYTECODE": "1"})
+    unpinned = subprocess.run([sys.executable, "-c", _R33_ARM_PROBE, str(obs)], capture_output=True, text=True, env=base)
+    assert unpinned.returncode != 0 and "not pinned to 0" in unpinned.stderr, \
+        ("an unpinned arm was set up", unpinned.stdout[-200:], unpinned.stderr[-300:])
+    pinned = subprocess.run([sys.executable, "-c", _R33_ARM_PROBE, str(obs)], capture_output=True, text=True,
+                            env={**base, "PYTHONHASHSEED": "0"})
+    assert pinned.returncode == 0 and "SET UP" in pinned.stdout, pinned.stderr[-300:]
+
+
+def test_r33_a_set_holding_nan_is_refused():
+    """The second seat's B1: NaN hashes by IDENTITY, so a set holding NaN — even inside a tuple — is refused."""
+    un = _load("inv7_uninstrument_r33_nan", EVIDENCE / "inv7_uninstrument.py")
+    for s in ("frozenset([float('nan'), float('nan')])", "frozenset([(1, float('nan')), (2, 3)])"):
+        with pytest.raises(un.SiteUndescribed, match="does not follow their values"):
+            un.site_description(_r28_module(f"class Site:\n    s = {s}\n").Site)
+
+
+def test_r33_an_int_subclass_with_its_own_hash_is_refused():
+    """The second seat's B3: the type test is EXACT — an int subclass may define `__hash__`, census code."""
+    un = _load("inv7_uninstrument_r33_intsub", EVIDENCE / "inv7_uninstrument.py")
+    src = "class I(int):\n    def __hash__(self):\n        return 1\n\nclass Site:\n    s = frozenset([I(1), I(2)])\n"
+    with pytest.raises(un.SiteUndescribed, match="does not follow their values"):
+        un.site_description(_r28_module(src).Site)
+
+
+def test_r33_a_set_of_one_element_is_described():
+    """The ACCEPTANCE half of the refusal: a set of fewer than two elements has one order, whatever its element."""
+    un = _load("inv7_uninstrument_r33_one", EVIDENCE / "inv7_uninstrument.py")
+    un.site_description(_r28_module("class D:\n    pass\n\nclass Site:\n    s = frozenset([D()])\n    t = {'x'}\n").Site)
 
 
 def test_r32_which_set_element_is_shared_is_still_drift():
-    """The ACCEPTANCE half of the ordering: `t` is the set's own element, or an equal object built apart."""
+    """`t` is the set's own element, or an equal object built apart (round 33: large ints, value-hashed, so the set is
+    described and the identity of the shared element is recorded)."""
     un = _load("inv7_uninstrument_r32_setwhich", EVIDENCE / "inv7_uninstrument.py")
+    head = "_x, _y = int('1' * 25), int('2' * 25)\n"
     tail = "class Site:\n    s = frozenset([_x, _y])\n    t = @T@\n\n    def fire(self, value):\n        return any(e is self.t for e in self.s)\n"
-    inside = _R32_K + "_x = K('x')\n_y = K('y')\n" + tail.replace("@T@", "_x")
-    apart = _R32_K + "_x = K('x')\n_y = K('y')\n" + tail.replace("@T@", "K('x')")
+    inside, apart = head + tail.replace("@T@", "_x"), head + tail.replace("@T@", "int('1' * 25)")
     assert (_r28_module(inside).Site().fire(0), _r28_module(apart).Site().fire(0)) == (True, False)
     assert un.site_description(_r28_module(inside).Site) != un.site_description(_r28_module(apart).Site), \
         "which element is shared reads as no drift"
 
 
 def test_r32_a_set_whose_elements_cannot_be_told_apart_is_refused():
-    """Two elements with equal descriptions: which is registered first, and so any later reference to either, would
-    follow address order — refused (named over-refusal)."""
+    """Two instances with equal state: their order follows their (census-defined, here colliding) hash and insertion,
+    not their values — refused (round 33's rule; round 32 refused it as a tie)."""
     un = _load("inv7_uninstrument_r32_settie", EVIDENCE / "inv7_uninstrument.py")
     src = _R32_K + "class Site:\n    s = frozenset({K('x'), K('x')})\n"
-    with pytest.raises(un.SiteUndescribed, match="cannot tell apart"):
+    with pytest.raises(un.SiteUndescribed, match="does not follow their values"):
         un.site_description(_r28_module(src).Site)
-
-
-_R32_SEED_PROBE = r"""
-import hashlib, importlib.util, sys, types
-s = importlib.util.spec_from_file_location("un_seed", sys.argv[1]); un = importlib.util.module_from_spec(s)
-sys.modules["un_seed"] = un; s.loader.exec_module(un)
-m = types.ModuleType("review_census"); exec(compile(sys.argv[2], "<review_census>", "exec"), m.__dict__)
-print("ORDER", ",".join(e for e in m.Site.s))
-print("DIGEST", hashlib.sha256(repr(un.site_description(m.Site)).encode()).hexdigest())
-"""
-_R32_SEED_SRC = ("_names = [''.join(['n', str(i)]) for i in range(8)]\n"
-                 "class Site:\n    s = frozenset(_names)\n    t = _names[3]\n\n"
-                 "    def fire(self, value):\n        return any(e is self.t for e in self.s)\n")
-
-
-def test_r32_a_set_of_runtime_strings_describes_the_same_under_every_hash_seed():
-    """Recording every object puts strings in the map, and a string set's iteration order is HASH-SEEDED; route B's
-    children run `-I`, each with a random seed. Six fresh children must describe identically, and must actually have
-    drawn at least two iteration orders (else the cell proves nothing)."""
-    un = _load("inv7_uninstrument_r32_seed", EVIDENCE / "inv7_uninstrument.py")
-    seen_orders, digests = set(), set()
-    for _ in range(6):
-        out = subprocess.run([sys.executable, "-I", "-c", _R32_SEED_PROBE, un.__file__, _R32_SEED_SRC], capture_output=True,
-                             text=True, env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
-        assert out.returncode == 0, out.stderr[-400:]
-        lines = dict(line.split(" ", 1) for line in out.stdout.splitlines() if " " in line)
-        seen_orders.add(lines["ORDER"]); digests.add(lines["DIGEST"])
-    assert len(seen_orders) >= 2, ("six children drew one iteration order; the cell exercised nothing", seen_orders)
-    assert len(digests) == 1, ("the description followed the hash seed", len(digests))
-    for _ in range(3):
-        assert un.site_drift(_R32_SEED_SRC, _R32_SEED_SRC) == [], "site_drift between identical sources"
 
 
 def test_r32_a_leafs_scalar_referents_go_through_the_map():
@@ -6339,26 +6489,12 @@ def test_r32_a_leafs_scalar_referents_go_through_the_map():
 
 
 def test_r32_a_set_whose_elements_differ_only_by_a_back_reference_is_described():
-    """The ACCEPTANCE half of the per-element copy (the second seat's stage-2 A1): each element's provisional description
-    is taken against a copy of the map AS IT STANDS, so one element holding an object met earlier (a back-reference)
-    and one holding an equal fresh object are told apart and described. Against an EMPTY map they would tie and be
-    refused."""
+    """A set whose elements are equal except that one holds an object met earlier (a back-reference) is described
+    (round 33: value-hashed tuples of large ints; the set is described in iteration order)."""
     un = _load("inv7_uninstrument_r32_backref", EVIDENCE / "inv7_uninstrument.py")
-    src = (_R32_K + "_first = []\n_other = []\n"
-           "class Site:\n    first = _first\n    s = frozenset([K('k', _first), K('k', _other)])\n")
+    src = ("_first = int('9' * 25)\n_other = int('9' * 25)\n"
+           "class Site:\n    first = _first\n    s = frozenset([(1, _first), (2, _other)])\n")
     un.site_description(_r28_module(src).Site)
-
-
-def test_r32_a_set_subclass_is_registered_in_an_order_its_descriptions_decide():
-    """The second set site, `_base_content`'s set-SUBCLASS branch (the second seat's stage-2 A5): a frozenset subclass
-    whose elements were merely inserted in another order describes the same."""
-    un = _load("inv7_uninstrument_r32_setsub", EVIDENCE / "inv7_uninstrument.py")
-    head = _R32_K + "class FS(frozenset):\n    pass\n\n_x = K('x')\n_y = K('y')\n"
-    tail = "class Site:\n    s = _s\n    t = _x\n"
-    xy, yx = head + "_s = FS([_x, _y])\n" + tail, head + "_s = FS([_y, _x])\n" + tail
-    ma, mb = _r28_module(xy), _r28_module(yx)
-    assert [e.name for e in ma.Site.s] != [e.name for e in mb.Site.s], "the fixture did not produce two iteration orders"
-    assert un.site_description(ma.Site) == un.site_description(mb.Site), "a set subclass's iteration order reached the description"
 
 
 def _r32_cell(name):
@@ -6377,36 +6513,14 @@ _R32_MUTANTS = [
      "    if _builtin(tp, _SCALARS):\n        return (_qualname(tp), repr(obj))\n    if id(obj) in seen:\n        ref = seen[id(obj)]\n",
      _r30_cell(test_r32_sharing_of_an_immutable_object_is_drift, *_r32_cell("runtime ints within one member through site_description")),
      (AssertionError, "reads as no drift")),
-    ("set elements registered in iteration order",
-     "    ordered = [x for _p, x in sorted(zip(provisional, items), key=lambda pair: pair[0])]\n",
-     "    ordered = items\n",
-     test_r32_a_sets_elements_are_registered_in_an_order_their_descriptions_decide,
-     (AssertionError, "a set's iteration order reached the description")),
-    ("one throwaway copy shared by every element",
-     "    provisional = [repr(_normalise(x, dict(seen))) for x in items]\n",
-     "    _copy = dict(seen)\n    provisional = [repr(_normalise(x, _copy)) for x in items]\n",
-     test_r32_each_set_element_is_ordered_against_its_own_copy_of_the_map,
-     (AssertionError, "a sort key followed the iteration order")),
-    ("provisional descriptions against an EMPTY map (the second seat's A1)",
-     "    provisional = [repr(_normalise(x, dict(seen))) for x in items]\n",
-     "    provisional = [repr(_normalise(x, {})) for x in items]\n",
-     test_r32_a_set_whose_elements_differ_only_by_a_back_reference_is_described,
-     (Exception, "cannot tell apart")),
-    ("a set subclass registered in iteration order (the second seat's A5)",
-     "            return (_qualname(b), _set_elements(b.__iter__(obj), seen))\n",
-     "            return (_qualname(b), tuple(sorted(repr(_normalise(x, seen)) for x in b.__iter__(obj))))\n",
-     test_r32_a_set_subclass_is_registered_in_an_order_its_descriptions_decide,
-     (AssertionError, "a set subclass's iteration order reached the description")),
-    ("the tie refusal dropped",
-     "    if len(set(provisional)) != len(provisional):\n",
-     "    if False:\n",
-     test_r32_a_set_whose_elements_cannot_be_told_apart_is_refused,
-     (pytest.fail.Exception, "DID NOT RAISE")),
     ("a leaf's scalar referents outside the map",
      "            return (identity, _addressless(repr(obj)), tuple(_normalise(r, seen) for r in refs))\n",
      "            return (identity, _addressless(repr(obj)))\n",
      test_r32_a_leafs_scalar_referents_go_through_the_map,
      (AssertionError, "a leaf's referents bypassed the map")),
+
+    # round 32's five set-order rows mutated the sorted registration, its provisional copies and its tie refusal —
+    # removed with the mechanism in round 33 (R32-1); round 33's rows are in `_R33_MUTANTS`
 ]
 
 
@@ -6414,6 +6528,61 @@ _R32_MUTANTS = [
 def test_r32_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
     """Each round-32 rule fails its own cell FOR THE REASON IT IS NAMED FOR."""
     mut = _r25_mutant(tmp_path, "inv7_uninstrument.py", anchor, replacement, "r32m")
+    monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
+    exc, pattern = expected
+    with pytest.raises(exc, match=re.escape(pattern)):
+        cell()
+
+
+def _r33_cell(table, name, fn):
+    return _r30_cell(fn, *next(c for c in table if c[0] == name))
+
+
+_R33_MUTANTS = [
+    ("the elements sorted again (round 32's rule)",
+     "    return tuple(repr(_normalise(x, seen)) for x in items)\n",
+     # round 32's rule in full: registered AND emitted in the order of each element's provisional description (sorting
+     # only the emitted reprs is not round 32's rule — registration positions still follow iteration order)
+     "    return tuple(repr(_normalise(x, seen)) for x in sorted(items, key=lambda x: repr(_normalise(x, dict(seen)))))\n",
+     _r33_cell(_R33_DESCRIBED_CELLS, "ints 8/16 against 16/8 through site_description",
+               test_r33_a_set_of_value_hashed_elements_is_described_in_iteration_order),
+     (AssertionError, "reads as no drift")),
+    ("the refusal dropped",
+     "    if len(items) >= 2 and not all(_value_hashed(x) for x in items):\n",
+     "    if False:\n",
+     _r33_cell(_R33_REFUSED_CELLS, "the verdict's exact frozenset through site_description",
+               test_r33_a_set_whose_order_is_not_its_values_is_refused),
+     (pytest.fail.Exception, "DID NOT RAISE")),
+    ("the NaN test dropped (the second seat's B1)",
+     "        return not (tp is float and x != x)\n",
+     "        return True\n",
+     test_r33_a_set_holding_nan_is_refused,
+     (pytest.fail.Exception, "DID NOT RAISE")),
+    ("a subclass admitted (isinstance for the exact type; the second seat's B3)",
+     "    if _builtin(tp, _VALUE_HASHED_SCALARS):\n",
+     "    if isinstance(x, int) or _builtin(tp, _VALUE_HASHED_SCALARS):\n",
+     test_r33_an_int_subclass_with_its_own_hash_is_refused,
+     (pytest.fail.Exception, "DID NOT RAISE")),
+    ("route B's child isolation check dropped (the second seat's B-b)",
+     "if _bad:\n", "if False:\n",
+     test_r33_route_b_refuses_a_child_that_is_not_isolated,
+     (AssertionError, "'mro'")),   # the child then DESCRIBES: its response is the description, which starts with mro
+    ("the arm's seed assertion dropped",
+     "    _assert_seed_pinned()\n    import veracium\n", "    import veracium\n",
+     test_r33_an_arm_refuses_an_unpinned_seed,
+     (AssertionError, "an unpinned arm was set up")),
+]
+
+
+@pytest.mark.parametrize("mutant,anchor,replacement,cell,expected", _R33_MUTANTS, ids=[m[0] for m in _R33_MUTANTS])
+def test_r33_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expected, tmp_path, monkeypatch):
+    """Each round-33 rule fails its own cell FOR THE REASON IT IS NAMED FOR."""
+    # the file to mutate is the ONE evidence file whose text holds the anchor exactly once (by property, never by the
+    # row's name): the arm's seed assertion lives in the observer, every other round-33 rule in the describer
+    holders = [f for f in ("inv7_uninstrument.py", "inv7_observer.py")
+               if (EVIDENCE / f).read_text(encoding="utf-8").count(anchor) == 1]
+    assert len(holders) == 1, (mutant, holders)
+    mut = _r25_mutant(tmp_path, holders[0], anchor, replacement, "r33m")
     monkeypatch.setattr(sys.modules[__name__], "_load", lambda *_a, **_k: mut)
     exc, pattern = expected
     with pytest.raises(exc, match=re.escape(pattern)):
