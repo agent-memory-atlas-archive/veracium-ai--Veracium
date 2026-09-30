@@ -6243,8 +6243,9 @@ _R32_K = ("class K:\n    def __init__(self, name, box=None):\n        self.name 
 
 
 # ROUND 33 — the round-32 verdict's R32-1: round 32 SORTED a set's elements, so an order that only insertion decided,
-# which `next(iter(s))` observes, read as no drift. A set is now described in ITERATION order where one description can
-# hold that order (every element value-hashed by exact type), and REFUSED where it cannot.
+# which `next(iter(s))` observes, read as no drift. A set is now described by its WHOLE TABLE — slots in iteration order,
+# and (the second seat's stage 2a) the mask, fill, used count, pop finger and dummies — where its slots follow values
+# (every element value-hashed by exact type), and REFUSED where they cannot.
 _R33_ORDER_TAIL = "\nclass Site:\n    s = _s\n    t = _x\n\n    def fire(self, value):\n        return next(iter(self.s)) is self.t\n"
 _R33_REFUSED = [
     # the verdict's four shapes: K's hash is a Python method (census code), so its order is not a function of values
@@ -6264,7 +6265,7 @@ _R33_REFUSED_CELLS = [(f"{label} through {route}", head, a, b, route) for label,
 
 
 @pytest.mark.parametrize("cell,head,a,b,route", _R33_REFUSED_CELLS, ids=[c[0] for c in _R33_REFUSED_CELLS])
-def test_r33_a_set_whose_order_is_not_its_values_is_refused(cell, head, a, b, route):
+def test_r33_a_set_whose_slots_are_not_its_values_is_refused(cell, head, a, b, route):
     """R32-1 through all three routes: a set of two or more elements whose iteration order an address, the hash seed or
     a census-defined hash decides is REFUSED — never described in a sorted order that erases what `next(iter(s))` sees."""
     un = _load("inv7_uninstrument_r33_refused", EVIDENCE / "inv7_uninstrument.py")
@@ -6292,7 +6293,7 @@ _R33_DESCRIBED_CELLS = [(f"{label} through {route}", head, ctor, route) for labe
 
 
 @pytest.mark.parametrize("cell,head,ctor,route", _R33_DESCRIBED_CELLS, ids=[c[0] for c in _R33_DESCRIBED_CELLS])
-def test_r33_a_set_of_value_hashed_elements_is_described_in_iteration_order(cell, head, ctor, route):
+def test_r33_a_set_of_value_hashed_elements_is_described_by_its_table(cell, head, ctor, route):
     """The POSITIVE half (the second seat's B2): a set of ints — value-hashed, so their order is a function of the values
     and the insertion history — is described in ITERATION order, so two insertion orders that `next(iter(s))` tells apart
     are drift through all three routes; the same source is not."""
@@ -6318,11 +6319,11 @@ def test_r33_a_set_of_address_hashed_elements_is_refused():
     default hash iterate by ADDRESS, which one description cannot hold across processes — refused."""
     un = _load("inv7_uninstrument_r33_address", EVIDENCE / "inv7_uninstrument.py")
     src = "class D:\n    pass\n\nclass Site:\n    s = frozenset([D(), D()])\n"
-    with pytest.raises(un.SiteUndescribed, match="does not follow their values"):
+    with pytest.raises(un.SiteUndescribed, match="does not follow its value alone"):
         un.site_description(_r28_module(src).Site)
 
 
-def test_r33_a_set_subclass_follows_its_iteration_order():
+def test_r33_a_set_subclass_is_described_by_its_table():
     """The successor of round 32's set-subclass ordering cell: `_base_content`'s set-subclass branch describes a subclass
     of ints in ITERATION order too — two insertion orders differ."""
     un = _load("inv7_uninstrument_r33_subclass", EVIDENCE / "inv7_uninstrument.py")
@@ -6347,7 +6348,7 @@ _R33_STRINGS = ("_s = frozenset([''.join(['s', '{a}']), ''.join(['s', '{b}'])])\
                 "    def fire(self, value):\n        return next(iter(self.s)) == 's{a}'\n")
 
 
-def test_r33_a_set_of_colliding_strings_is_described_in_iteration_order():
+def test_r33_a_set_of_colliding_strings_is_described_by_its_table():
     """R32-1 for strings, in one process (one seed): two insertion orders of a colliding pair iterate differently, and
     `next(iter(s))` sees it, so the description and the observer's digest differ; the same source does not."""
     un = _load("inv7_uninstrument_r33_strings", EVIDENCE / "inv7_uninstrument.py")
@@ -6428,7 +6429,7 @@ def test_r33_a_set_holding_nan_is_refused():
     """The second seat's B1: NaN hashes by IDENTITY, so a set holding NaN — even inside a tuple — is refused."""
     un = _load("inv7_uninstrument_r33_nan", EVIDENCE / "inv7_uninstrument.py")
     for s in ("frozenset([float('nan'), float('nan')])", "frozenset([(1, float('nan')), (2, 3)])"):
-        with pytest.raises(un.SiteUndescribed, match="does not follow their values"):
+        with pytest.raises(un.SiteUndescribed, match="does not follow its value alone"):
             un.site_description(_r28_module(f"class Site:\n    s = {s}\n").Site)
 
 
@@ -6436,15 +6437,201 @@ def test_r33_an_int_subclass_with_its_own_hash_is_refused():
     """The second seat's B3: the type test is EXACT — an int subclass may define `__hash__`, census code."""
     un = _load("inv7_uninstrument_r33_intsub", EVIDENCE / "inv7_uninstrument.py")
     src = "class I(int):\n    def __hash__(self):\n        return 1\n\nclass Site:\n    s = frozenset([I(1), I(2)])\n"
-    with pytest.raises(un.SiteUndescribed, match="does not follow their values"):
+    with pytest.raises(un.SiteUndescribed, match="does not follow its value alone"):
         un.site_description(_r28_module(src).Site)
 
 
-def test_r33_a_set_of_one_element_is_described():
-    """The ACCEPTANCE half of the refusal: a set of fewer than two elements has one order, whatever its element."""
+def test_r33_a_set_of_one_address_hashed_element_is_refused():
+    """The second seat's stage-2a R3: ONE element's slot is its hash masked by the table, and a default hash is an
+    address, so a set of one instance is refused too (round 33 had described it, as a set with a single order)."""
     un = _load("inv7_uninstrument_r33_one", EVIDENCE / "inv7_uninstrument.py")
-    un.site_description(_r28_module("class D:\n    pass\n\nclass Site:\n    s = frozenset([D()])\n    t = {'x'}\n").Site)
+    with pytest.raises(un.SiteUndescribed, match="does not follow its value alone"):
+        un.site_description(_r28_module("class D:\n    pass\n\nclass Site:\n    s = frozenset([D()])\n").Site)
 
+
+def test_r33_an_empty_set_and_a_set_of_one_value_are_described():
+    """The ACCEPTANCE half of the refusal: an empty set, and a set of one value-hashed element, are described."""
+    un = _load("inv7_uninstrument_r33_one_ok", EVIDENCE / "inv7_uninstrument.py")
+    un.site_description(_r28_module("class Site:\n    s = set()\n    f = frozenset()\n    t = {'x'}\n    u = frozenset([1])\n").Site)
+
+
+
+# ROUND 33, the second seat's stage 2a (on the R32-1 fix 4580f33f): a set's TABLE is state beyond its elements and their
+# iteration order. Each pair holds equal elements in EQUAL iteration order (asserted) and differs in the table alone.
+_R33_TABLE = [
+    # (label, the pair's two constructions of _s, the decision, whether the pair must differ)
+    ("W1 a set popped and refilled", "_s = {0, 1, 2, 3}\n", "_s = {0, 1, 2, 3}\n_s.pop()\n_s.add(0)\n",
+     "        return self.s.pop()\n", True),
+    ("W2 an emptied set that once held forty", "_s = set()\n",
+     "_s = set(range(40))\nfor _x in range(40):\n    _s.discard(_x)\n",
+     "        self.s.add(16)\n        self.s.add(8)\n        return next(iter(self.s))\n", True),
+    ("W3 a frozenset's layout", "_s = frozenset([16, 14, 38])\n", "_s = frozenset([16, 38, 14])\n",
+     "        t = set(self.s)\n        t.add(0)\n        return list(t)[1]\n", True),
+    # dev's, for the mask alone: the same five slots, fill, used and finger, in a table of 32 (grown by adds) against 16
+    # (made by one merge) — the next two adds land in another order
+    ("W4 a table grown by adds against one made by merge", "_s = set([0, 1, 2, 3, 4])\n", "_s = set({0, 1, 2, 3, 4})\n",
+     "        self.s.add(21)\n        self.s.add(16)\n        return list(self.s)[5]\n", True),
+    ("K1 two equal fresh sets", "_s = {0, 1, 2, 3}\n", "_s = {0, 1, 2, 3}\n", "        return self.s.pop()\n", False),
+]
+_R33_TABLE_CELLS = [(f"{label} through {route}", a, b, decide, differ, route)
+                    for label, a, b, decide, differ in _R33_TABLE for route in ("site_description", "_site_realized", "site_drift")]
+
+
+def _r33_table_source(pre, decide):
+    return pre + "\nclass Site:\n    s = _s\n\n    def fire(self, value):\n" + decide
+
+
+@pytest.mark.parametrize("cell,a,b,decide,differ,route", _R33_TABLE_CELLS, ids=[c[0] for c in _R33_TABLE_CELLS])
+def test_r33_a_sets_table_is_state(cell, a, b, decide, differ, route):
+    """The second seat's W1–W3 and K1 through all three routes: equal elements in equal iteration order, and a table
+    that differs — the slot `pop()` resumes from, a grown table kept after its elements were discarded, a frozenset's
+    slots (which `set(fs)` copies) — changes the decision and is drift; two equal fresh sets decide alike and are not."""
+    un = _load("inv7_uninstrument_r33_table", EVIDENCE / "inv7_uninstrument.py")
+    sa, sb = _r33_table_source(a, decide), _r33_table_source(b, decide)
+    ma, mb = _r28_module(sa), _r28_module(sb)
+    assert list(ma.Site.s) == list(mb.Site.s), (cell, "the precondition: equal iteration order")
+    assert set(ma.Site.s) == set(mb.Site.s), (cell, "the precondition: equal elements")
+    decisions = (_r28_module(sa).Site().fire(0), _r28_module(sb).Site().fire(0))   # fresh modules: fire mutates the set
+    assert (decisions[0] != decisions[1]) == differ, (cell, "the pair's decisions", decisions)
+    if route == "site_description":
+        got = un.site_description(ma.Site) != un.site_description(mb.Site)
+    elif route == "_site_realized":
+        got = observer._site_realized(ma.Site)["digest"] != observer._site_realized(mb.Site)["digest"]
+    else:
+        got = un.site_drift(sb, sa) != []
+    assert got == differ, f"{cell}: " + ("reads as no drift" if differ else "equal sets read as drift")
+
+
+
+_R33_DICT_HISTORIES = [
+    "_d = {}\n",
+    "_d = {i: i for i in range(40)}\nfor _i in range(40):\n    del _d[_i]\n",
+    "_d = {0: 0, 1: 1}\ndel _d[0]\n_d.popitem()\n",
+    "_d = {i: i for i in range(40)}\n_d.clear()\n",
+]
+_R33_DICT_DECIDE = ("\nclass Site:\n    d = _d\n\n    def fire(self, value):\n        d, out = self.d, [list(self.d)]\n"
+                    "        d['c'] = 3\n        d[16] = 0\n        d[8] = 0\n        out.append(list(d))\n"
+                    "        out.append(d.popitem())\n        d['z'] = 0\n        out.append(list(d))\n"
+                    "        del d['a']\n        d['a'] = 9\n        out.append(list(d.items()))\n        return out\n")
+
+
+def test_r33_a_dicts_table_history_is_not_order_state():
+    """The second seat's N3, measured and asserted: a dict's table (grown and emptied, popped, cleared) changes NO order
+    a decision sees — iteration, adds after it, popitem, delete-and-reinsert all follow insertion order, which the
+    description holds — so equal insertion histories of the live keys decide alike AND describe alike. Only
+    `sys.getsizeof` tells them apart: the allocation surface, named, not described (like `id()`)."""
+    un = _load("inv7_uninstrument_r33_dict", EVIDENCE / "inv7_uninstrument.py")
+    srcs = [h + "_d['a'] = 1\n_d['b'] = 2\n" + _R33_DICT_DECIDE for h in _R33_DICT_HISTORIES]
+    decisions = [_r28_module(s).Site().fire(0) for s in srcs]
+    assert all(d == decisions[0] for d in decisions), ("a dict's table history changed a decision", decisions)
+    assert len({sys.getsizeof(_r28_module(s).Site.d) for s in srcs}) > 1, "the precondition: the tables differ"
+    descs = [un.site_description(_r28_module(s).Site) for s in srcs]
+    assert all(d == descs[0] for d in descs), "equal dicts with different table histories read as drift"
+
+def test_r33_a_frozensets_slots_are_what_differs():
+    """W3's REASON, at slot level: the two frozensets iterate alike, and their slots differ — the description names the
+    slot each element holds, which iteration order alone does not."""
+    un = _load("inv7_uninstrument_r33_slots", EVIDENCE / "inv7_uninstrument.py")
+    a, b = frozenset([16, 14, 38]), frozenset([16, 38, 14])
+    assert list(a) == list(b), "the precondition: equal iteration order"
+    sa, sb = un._set_table(a, list(a))[4], un._set_table(b, list(b))[4]
+    ids = {id(x): x for x in a}
+    assert [ids[k] for _, k in sa] == [ids[k] for _, k in sb] == list(a), "slots in slot order are the iteration order"
+    assert [i for i, _ in sa] != [i for i, _ in sb], "the two frozensets' slots do not differ"
+    da = un._set_elements(a, frozenset, {})
+    db = un._set_elements(b, frozenset, {})
+    assert da != db and da[:4] == db[:4], ("the description differs by the slots alone", da, db)
+
+
+def test_r33_a_dummy_left_by_an_address_hashed_element_is_described():
+    """The named residual: an EMPTY set whose dummies were left by discarding default-hash instances holds no element to
+    refuse; its dummies' slots are recorded as they are (so the description is faithful in one process). Their slots
+    follow those instances' addresses, so across processes the description may vary — reported by the 8-run gate as
+    instability, never as silence (measured stable over 12 processes on 3.14.7; not asserted)."""
+    un = _load("inv7_uninstrument_r33_dummy", EVIDENCE / "inv7_uninstrument.py")
+    src = ("class D:\n    pass\n\n_s = set()\n_xs = [D() for _ in range(3)]\nfor _x in _xs:\n    _s.add(_x)\n"
+           "for _x in _xs:\n    _s.discard(_x)\n\nclass Site:\n    s = _s\n")
+    site = _r28_module(src).Site
+    got = un._set_elements(site.s, set, {})
+    assert got[2] == ("used", 0) and got[4] and all(v == "<dummy>" for _, v in got[4]), got
+    assert un.site_description(site) != un.site_description(_r28_module("class Site:\n    s = set()\n").Site), \
+        "the dummies were not described"
+
+
+def test_r33_a_table_that_changes_while_read_is_refused():
+    """The second seat's N1 (a torn read): a census thread mutating the set between the reader's two reads. The reader
+    reads header and slots twice; a change between them refuses."""
+    un = _load("inv7_uninstrument_r33_torn", EVIDENCE / "inv7_uninstrument.py")
+    real, calls = un._set_header, []
+
+    def moving(obj):
+        calls.append(obj)
+        h = real(obj)
+        return h if len(calls) == 1 else (h[0], h[1], h[2], h[3], h[4] + 1)
+    with pytest.MonkeyPatch.context() as monkeypatch:   # a context, not the fixture: the mutant table calls this cell
+        monkeypatch.setattr(un, "_set_header", moving)
+        with pytest.raises(un.SiteUndescribed, match="did not read consistently"):
+            un._set_table({1, 2}, [1, 2])
+
+
+def test_r33_an_unproven_reader_refuses_every_set(monkeypatch):
+    """Fail-closed: when the import-time check did not prove the layout, a set is refused and the check's reason named."""
+    un = _load("inv7_uninstrument_r33_unproven", EVIDENCE / "inv7_uninstrument.py")
+    monkeypatch.setattr(un, "_SET_DUMMY", None)
+    monkeypatch.setattr(un, "_SET_READER_BROKEN", "a stand-in reason")
+    with pytest.raises(un.SiteUndescribed, match="not proven on this interpreter \\(a stand-in reason\\)"):
+        un.site_description(_r28_module("class Site:\n    s = set()\n").Site)
+
+
+# each field the reader trusts, set to a WRONG offset that still lies inside the set object: the check must refuse and
+# name THAT field (so dropping any one check fails its own row, not a neighbour's)
+_R33_WRONG_OFFSETS = [
+    ("_SET_FILL", 40, "fill/used: a fresh"),          # the table pointer
+    ("_SET_FILL", 24, "fill/used: three discards"),   # fill read as used: equal in a fresh set, told apart by discards
+    ("_SET_USED", 16, "fill/used: three discards"),
+    ("_SET_FINGER", 48, "finger: a fresh"),            # the hash field, -1 in a set
+    ("_SET_FINGER", 192, "finger: one pop"),           # the weakref list, 0 in a fresh set and after a pop
+    # the type pointer: static, readable memory, so with the table test dropped the keys test refuses by name (a wrong
+    # offset that reads as an unmapped address — the hash field, -1 — would crash the reader, not fail it)
+    ("_SET_TABLE", 8, "table: a fresh"),
+    ("_SET_SMALL", 72, "table: a fresh"),
+    ("_SET_MASK", 56, "mask: the mask"),               # the finger, 0 in a fresh set
+    ("_SET_ENTRY", 8, "keys: a fresh"),
+]
+
+
+@pytest.mark.parametrize("field,offset,reason", _R33_WRONG_OFFSETS, ids=[r[0] for r in _R33_WRONG_OFFSETS])
+def test_r33_the_set_reader_check_refuses_a_wrong_layout(field, offset, reason):
+    """The second seat's R2: every field is proven against an independent observable, and a wrong offset for any one of
+    them leaves the reader unproven, with that field named."""
+    un = _load("inv7_uninstrument_r33_layout", EVIDENCE / "inv7_uninstrument.py")
+    assert un._set_reader_check()[1] is None, "the precondition: the true layout is proven"
+    with pytest.MonkeyPatch.context() as monkeypatch:   # a context, not the fixture: the mutant table calls this cell
+        monkeypatch.setattr(un, field, offset)
+        dummy, why = un._set_reader_check()
+    assert dummy is None and why is not None and why.startswith(reason), (field, why)
+
+
+@pytest.mark.parametrize("build,patch", [
+    ("a debug build", lambda m, un: m.setattr(sys, "gettotalrefcount", lambda: 0, raising=False)),
+    ("a free-threaded build", lambda m, un: m.setattr(__import__("sysconfig"), "get_config_var",
+                                                      lambda n: 1 if n == "Py_GIL_DISABLED" else None)),
+    ("pointers are not 64-bit", lambda m, un: m.setattr(un.ctypes, "sizeof", lambda _t: 4)),
+])
+def test_r33_the_set_reader_check_refuses_an_unsupported_build(build, patch, monkeypatch):
+    """The layout is trusted only on the builds it was measured for; any other is refused before a read."""
+    un = _load("inv7_uninstrument_r33_build", EVIDENCE / "inv7_uninstrument.py")
+    patch(monkeypatch, un)
+    assert un._set_reader_check() == (None, build)
+
+
+def test_r33_the_set_reader_runs_under_the_guard():
+    """The second seat's R1: the reads go through ctypes' C-level accessors only, so describing W1–W3 under the round-28
+    guard enters no foreign frame (a Python-level ctypes helper would be refused: `_R33_MUTANTS`)."""
+    un = _load("inv7_uninstrument_r33_guard", EVIDENCE / "inv7_uninstrument.py")
+    for label, a, b, decide, _ in _R33_TABLE[:3]:
+        for pre in (a, b):
+            un.site_description(_r28_module(_r33_table_source(pre, decide)).Site)
 
 def test_r32_which_set_element_is_shared_is_still_drift():
     """`t` is the set's own element, or an equal object built apart (round 33: large ints, value-hashed, so the set is
@@ -6463,7 +6650,7 @@ def test_r32_a_set_whose_elements_cannot_be_told_apart_is_refused():
     not their values — refused (round 33's rule; round 32 refused it as a tie)."""
     un = _load("inv7_uninstrument_r32_settie", EVIDENCE / "inv7_uninstrument.py")
     src = _R32_K + "class Site:\n    s = frozenset({K('x'), K('x')})\n"
-    with pytest.raises(un.SiteUndescribed, match="does not follow their values"):
+    with pytest.raises(un.SiteUndescribed, match="does not follow its value alone"):
         un.site_description(_r28_module(src).Site)
 
 
@@ -6540,18 +6727,18 @@ def _r33_cell(table, name, fn):
 
 _R33_MUTANTS = [
     ("the elements sorted again (round 32's rule)",
-     "    return tuple(repr(_normalise(x, seen)) for x in items)\n",
+     "    fill, used, mask, finger, slots = _set_table(obj, items)\n",
      # round 32's rule in full: registered AND emitted in the order of each element's provisional description (sorting
      # only the emitted reprs is not round 32's rule — registration positions still follow iteration order)
      "    return tuple(repr(_normalise(x, seen)) for x in sorted(items, key=lambda x: repr(_normalise(x, dict(seen)))))\n",
      _r33_cell(_R33_DESCRIBED_CELLS, "ints 8/16 against 16/8 through site_description",
-               test_r33_a_set_of_value_hashed_elements_is_described_in_iteration_order),
+               test_r33_a_set_of_value_hashed_elements_is_described_by_its_table),
      (AssertionError, "reads as no drift")),
     ("the refusal dropped",
-     "    if len(items) >= 2 and not all(_value_hashed(x) for x in items):\n",
+     "    if not all(_value_hashed(x) for x in items):\n",
      "    if False:\n",
      _r33_cell(_R33_REFUSED_CELLS, "the verdict's exact frozenset through site_description",
-               test_r33_a_set_whose_order_is_not_its_values_is_refused),
+               test_r33_a_set_whose_slots_are_not_its_values_is_refused),
      (pytest.fail.Exception, "DID NOT RAISE")),
     ("the NaN test dropped (the second seat's B1)",
      "        return not (tp is float and x != x)\n",
@@ -6567,6 +6754,63 @@ _R33_MUTANTS = [
      "if _bad:\n", "if False:\n",
      test_r33_route_b_refuses_a_child_that_is_not_isolated,
      (AssertionError, "'mro'")),   # the child then DESCRIBES: its response is the description, which starts with mro
+    ("the table read as its order alone (round 33's first rule)",
+     "    return ((\"mask\", mask), (\"fill\", fill), (\"used\", used), (\"finger\", finger),\n"
+     "            tuple((i, \"<dummy>\" if k == _SET_DUMMY else repr(_normalise(by_id[k], seen))) for i, k in slots))\n",
+     "    return tuple(repr(_normalise(by_id[k], seen)) for i, k in slots if k != _SET_DUMMY)\n",
+     _r33_cell(_R33_TABLE_CELLS, "W3 a frozenset's layout through site_description", test_r33_a_sets_table_is_state),
+     (AssertionError, "reads as no drift")),
+    ("the finger dropped",
+     "(\"finger\", finger),\n", "\n",
+     _r33_cell(_R33_TABLE_CELLS, "W1 a set popped and refilled through site_description", test_r33_a_sets_table_is_state),
+     (AssertionError, "reads as no drift")),
+    ("the mask dropped",
+     "    return ((\"mask\", mask), (\"fill\", fill)", "    return ((\"fill\", fill)",
+     _r33_cell(_R33_TABLE_CELLS, "W4 a table grown by adds against one made by merge through site_description", test_r33_a_sets_table_is_state),
+     (AssertionError, "reads as no drift")),
+    ("the reader through a Python-level ctypes helper (the second seat's R1)",
+     "    return tuple(ptr(table + _SET_ENTRY * i).value or 0 for i in range(mask + 1))\n",
+     "    return tuple(int.from_bytes(ctypes.string_at(table + _SET_ENTRY * i, 8), 'little') for i in range(mask + 1))\n",
+     test_r33_the_set_reader_runs_under_the_guard,
+     (Exception, "would run code the describer did not write")),
+    ("the reader's check forced to pass",
+     "_SET_DUMMY, _SET_READER_BROKEN = _set_reader_check()\n",
+     "_SET_DUMMY, _SET_READER_BROKEN = _set_reader_check()\n_set_reader_check = lambda: (_SET_DUMMY, None)\n",
+     _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *_R33_WRONG_OFFSETS[0]),
+     (AssertionError, "_SET_FILL")),
+    ("the torn-read re-read dropped (the second seat's N1)",
+     "    if (_set_header(obj) != first or _set_keys(table, mask) != keys or used != len(items)\n",
+     "    if (used != len(items)\n",
+     test_r33_a_table_that_changes_while_read_is_refused,
+     (pytest.fail.Exception, "DID NOT RAISE")),
+    ("the reader check's fresh fill/used test dropped",
+     '        if (fill, used) != (n, n):\n', '        if False:\n',
+     _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *next(r for r in _R33_WRONG_OFFSETS if 'a fresh' in r[2])),
+     (AssertionError, "_SET_")),
+    ("the reader check's fresh finger test dropped",
+     '        if finger != 0:\n', '        if False:\n',
+     _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *next(r for r in _R33_WRONG_OFFSETS if 'finger: a fresh' in r[2])),
+     (AssertionError, "_SET_")),
+    ("the reader check's table pointer test dropped",
+     '        if (table == id(s) + _SET_SMALL) != (n <= 4):\n', '        if False:\n',
+     _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *next(r for r in _R33_WRONG_OFFSETS if 'table' in r[2])),
+     (AssertionError, "_SET_")),
+    ("the reader check's mask test dropped",
+     '        if set.__sizeof__(s) != set.__basicsize__ + (0 if n <= 4 else (mask + 1) * _SET_ENTRY) or (n <= 4) != (mask == 7):\n', '        if False:\n',
+     _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *next(r for r in _R33_WRONG_OFFSETS if 'mask' in r[2])),
+     (AssertionError, "_SET_")),
+    ("the reader check's keys test dropped",
+     '        if sorted(k for k in _set_keys(table, mask) if k) != sorted(id(x) for x in s):\n', '        if False:\n',
+     _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *next(r for r in _R33_WRONG_OFFSETS if 'keys' in r[2])),
+     (AssertionError, "_SET_")),
+    ("the reader check's discard fill/used test dropped",
+     '    if (fill, used) != (10, 7):\n', '    if False:\n',
+     _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *next(r for r in _R33_WRONG_OFFSETS if 'three discards' in r[2])),
+     (AssertionError, "_SET_")),
+    ("the reader check's pop finger test dropped",
+     '    if s.pop() != 0 or _set_header(s)[4] != 1:\n', '    if False:\n',
+     _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *next(r for r in _R33_WRONG_OFFSETS if 'one pop' in r[2])),
+     (AssertionError, "_SET_")),
     ("the arm's seed assertion dropped",
      "    _assert_seed_pinned()\n    import veracium\n", "    import veracium\n",
      test_r33_an_arm_refuses_an_unpinned_seed,

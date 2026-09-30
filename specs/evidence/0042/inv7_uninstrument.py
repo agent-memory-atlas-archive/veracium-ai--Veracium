@@ -48,6 +48,7 @@ statement of HEAD is still present in the twin (the transform removes and rewrit
 from __future__ import annotations
 
 import ast
+import ctypes
 import hashlib
 import json
 import pathlib
@@ -463,7 +464,7 @@ def _base_content(obj, tp: type, seen: dict):
         if _builtin(b, _SEQUENCES):
             return (_qualname(b), tuple(_normalise(x, seen) for x in b.__iter__(obj)))
         if _builtin(b, _SETS):
-            return (_qualname(b), _set_elements(b.__iter__(obj), seen))
+            return (_qualname(b), _set_elements(obj, b, seen))
         if _builtin(b, _MAPPINGS):
             return (_qualname(b), tuple((repr(_normalise(k, seen)), _normalise(v, seen)) for k, v in b.items(obj)))
         if _builtin(b, _SCALARS):
@@ -471,23 +472,113 @@ def _base_content(obj, tp: type, seen: dict):
     return None
 
 
-def _set_elements(elements, seen: dict) -> tuple:
-    """A set's elements in ITERATION order, emitted and registered in that order — the order code observes
-    (`next(iter(s))`). ROUND 33 (R32-1): round 32 sorted the elements by their descriptions, so a set whose elements were
-    only INSERTED in another order described the same while `next(iter(s))` changed the decision — a normalization read
-    as equivalence, the premise the second seat's stage-1 mark M2 stated and dev's controls (membership, length) could
-    not observe. Iteration order is state; it is described faithfully where ONE description can hold it, and refused
-    where it cannot: for two or more elements the order is a function of the elements' values (and the insertion
-    history) only when every element is VALUE-hashed by exact type — an int, a bool, None, a float that is not NaN, a
-    str or bytes (whose hash also follows the seed: see `_value_hashed`), or an exact tuple of these, recursively. Any
-    other element's order follows addresses (the default hash) or a hash the census defines, which differs between
-    processes or runs census code; such a set of two or more elements is REFUSED (named over-refusal)."""
-    items = list(elements)
-    if len(items) >= 2 and not all(_value_hashed(x) for x in items):
-        raise SiteUndescribed("a set holds two or more elements whose iteration order does not follow their values alone "
-                              "(an address, or a hash the census defines, decides it), so one description cannot hold "
-                              "that order faithfully: it is refused (round 33, R32-1)")
-    return tuple(repr(_normalise(x, seen)) for x in items)
+def _set_elements(obj, base: type, seen: dict) -> tuple:
+    """A set's WHOLE C state, read from its table (`_set_table`): the table's size, its fill, its used count, the slot
+    `pop()` resumes from, and every occupied slot by position — a dummy left by a deletion, or the element held there,
+    each element registered in slot order, which is the order it iterates. ROUND 33 (the second seat's stage 2a, on the
+    R32-1 fix): iteration order is NOT all of a set's state. A set popped and refilled pops another element than a
+    fresh one; an emptied set that once held forty keeps its grown table, so two adds iterate in another order than
+    in `set()`; and `frozenset([16, 14, 38])` and `frozenset([16, 38, 14])` iterate alike and sit at different slots,
+    which `set(fs)` copies — all with equal elements in equal order. So the table is DESCRIBED, not argued canonical.
+    A slot is a function of the element's hash, so a set holding any element that is not VALUE-hashed by exact type
+    (`_value_hashed`) — one element included, whose slot is its address masked — is REFUSED (named over-refusal). A
+    dummy's slot is its deleted element's; one left by an address-hashed element makes the description vary between
+    processes, which the 8-run gate reports as instability, never silence (named residual)."""
+    items = list(base.__iter__(obj))
+    if not all(_value_hashed(x) for x in items):
+        raise SiteUndescribed("a set holds an element whose slot in the table does not follow its value alone (an "
+                              "address, or a hash the census defines, decides it), so one description cannot hold the "
+                              "table faithfully: it is refused (round 33)")
+    fill, used, mask, finger, slots = _set_table(obj, items)
+    by_id = {id(x): x for x in items}
+    return (("mask", mask), ("fill", fill), ("used", used), ("finger", finger),
+            tuple((i, "<dummy>" if k == _SET_DUMMY else repr(_normalise(by_id[k], seen))) for i, k in slots))
+
+
+# ROUND 33: the set reader. A set's table is C state no Python-level reader exposes, so it is read in place through
+# ctypes' C-level accessors (`from_address` and `.value` run no Python frame, so the round-28 guard passes them), at the
+# PySetObject offsets of a 64-bit build without free threading or debug refcounts: fill, used, mask, the table pointer,
+# the finger, the embedded small table, 16-byte entries. The layout is TRUSTED only after `_set_reader_check` proves each
+# field against an independent observable at import; any mismatch leaves the reader refusing every set.
+_SET_FILL, _SET_USED, _SET_MASK, _SET_TABLE, _SET_FINGER, _SET_SMALL, _SET_ENTRY = 16, 24, 32, 40, 56, 64, 16
+
+
+def _set_header(obj) -> tuple:
+    """(fill, used, mask, table address, finger) — raw reads inside the object itself, no check."""
+    ssize, a = ctypes.c_ssize_t.from_address, id(obj)
+    return tuple(ssize(a + o).value for o in (_SET_FILL, _SET_USED, _SET_MASK, _SET_TABLE, _SET_FINGER))
+
+
+def _set_keys(table: int, mask: int) -> tuple:
+    """Every slot's key address, or 0 for an empty slot — raw reads of a table whose header was already checked."""
+    ptr = ctypes.c_void_p.from_address
+    return tuple(ptr(table + _SET_ENTRY * i).value or 0 for i in range(mask + 1))
+
+
+def _set_table(obj, items: list) -> tuple:
+    """(fill, used, mask, finger, ((slot, key address), ...) for each occupied slot) — refused unless the reader was
+    proven at import, and unless the read is CONSISTENT: the header and slots read twice (a census thread mutating the
+    set mid-read), the live keys exactly the elements iterated, every other occupied slot the dummy."""
+    if _SET_DUMMY is None:
+        raise SiteUndescribed(f"a set cannot be described: the set reader was not proven on this interpreter "
+                              f"({_SET_READER_BROKEN}), so the table is not read and the set is refused (round 33)")
+    first = _set_header(obj)
+    fill, used, mask, table, finger = first
+    keys = _set_keys(table, mask)
+    live = {id(x) for x in items}
+    slots = tuple((i, k) for i, k in enumerate(keys) if k)
+    if (_set_header(obj) != first or _set_keys(table, mask) != keys or used != len(items)
+            or {k for _, k in slots if k != _SET_DUMMY} != live or len(slots) != fill):
+        raise SiteUndescribed("a set's table did not read consistently (it changed during the read, or its keys are not "
+                              "the elements it iterates), so it is refused (round 33)")
+    return fill, used, mask, finger, slots
+
+
+def _set_reader_check():
+    """(the dummy key's address, None) once EVERY field the reader uses agrees with an independent observable, else (None,
+    the first disagreement): the build (64-bit pointers, no free threading, no debug refcounts); then, for fresh sets on
+    both sides of the first resize and BEFORE any slot is read, fill, used and the finger against the length, the table
+    pointer against the embedded small table, and the mask against `set.__sizeof__`; then the keys against the elements'
+    ids; then fill, used and the dummy against three known discards; then the finger against one pop of {0, 1, 2, 3}.
+    Each test but the dummy's is reached FIRST by some wrong offset in the cell
+    `test_r33_the_set_reader_check_refuses_a_wrong_layout`, so dropping it fails a named cell; the dummy's is the one
+    check of the dummy's identity and no wrong offset reaches it first — kept, and named as not mutation-covered."""
+    import sysconfig
+    if ctypes.sizeof(ctypes.c_void_p) != 8:
+        return None, "pointers are not 64-bit"
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
+        return None, "a free-threaded build"
+    if hasattr(sys, "gettotalrefcount"):
+        return None, "a debug build"
+    for n in (0, 1, 4, 5, 9, 40):
+        s = set(range(n))
+        fill, used, mask, table, finger = _set_header(s)
+        if (fill, used) != (n, n):
+            return None, f"fill/used: a fresh {n}-element set read fill {fill}, used {used}"
+        if finger != 0:
+            return None, f"finger: a fresh {n}-element set read finger {finger}"
+        if (table == id(s) + _SET_SMALL) != (n <= 4):
+            return None, f"table: a fresh {n}-element set's table pointer is not where its size puts it"
+        if set.__sizeof__(s) != set.__basicsize__ + (0 if n <= 4 else (mask + 1) * _SET_ENTRY) or (n <= 4) != (mask == 7):
+            return None, f"mask: the mask {mask} of a fresh {n}-element set disagrees with set.__sizeof__"
+        if sorted(k for k in _set_keys(table, mask) if k) != sorted(id(x) for x in s):
+            return None, f"keys: a fresh {n}-element set's slots do not hold its elements"
+    s = set(range(10))
+    for x in range(3):
+        s.discard(x)
+    fill, used, mask, table, finger = _set_header(s)
+    dead = [k for k in _set_keys(table, mask) if k and k not in {id(x) for x in s}]
+    if (fill, used) != (10, 7):
+        return None, f"fill/used: three discards from a 10-element set read fill {fill}, used {used}"
+    if len(dead) != 3 or len(set(dead)) != 1:
+        return None, f"dummy: three discards from a 10-element set left {len(dead)} dead slots, {len(set(dead))} keys"
+    s = {0, 1, 2, 3}
+    if s.pop() != 0 or _set_header(s)[4] != 1:
+        return None, "finger: one pop of {0, 1, 2, 3} did not leave the finger at 1"
+    return dead[0], None
+
+
+_SET_DUMMY, _SET_READER_BROKEN = _set_reader_check()
 
 
 _VALUE_HASHED_SCALARS = frozenset({"int", "bool", "NoneType", "float"})
@@ -547,7 +638,7 @@ def _normalise(obj, seen: dict) -> tuple:
     if _builtin(tp, _SEQUENCES):
         return (_qualname(tp), tuple(_normalise(x, seen) for x in obj))
     if _builtin(tp, _SETS):
-        return (_qualname(tp), _set_elements(obj, seen))
+        return (_qualname(tp), _set_elements(obj, tp, seen))
     if _builtin(tp, frozenset({"code"})):
         fields = [f for f in dir(obj) if f.startswith("co_") and f not in _CODE_LOCATION and not callable(getattr(obj, f))]
         return ("code", tuple((f, _normalise(getattr(obj, f), seen)) for f in fields))
