@@ -1,0 +1,55 @@
+{
+  "build": {
+    "debug_refcounts": false,
+    "free_threaded": false,
+    "implementation": "CPython",
+    "pointer_bytes": 8,
+    "version": "3.14.7"
+  },
+  "identity": {
+    "commit": "0b82b76a57d95650ed77d9f871dd017f4f341e41",
+    "commit_unavailable": null,
+    "executable": "/home/ubuntu/.local/opt/python-3.14.7-gh/bin/python3.14",
+    "executable_sha256": "e0325ba6d25d56748de2cba7929290f0d2ea3700f120dcad4298a7fde897952d",
+    "sys_version": "3.14.7 (main, Aug  6 2026, 02:19:46) [GCC 13.3.0]"
+  },
+  "process": "a separate process launched with an arm's executable and seed environment: a proxy for the arm, not the arm's own state",
+  "route_b_child": {
+    "PYTHONHASHSEED": "0",
+    "agree": true,
+    "dont_write_bytecode": true,
+    "hash_randomization": 0,
+    "no_user_site": true,
+    "proven_at_import": true,
+    "proven_fresh": true,
+    "python_env": [
+      "PYTHONHASHSEED"
+    ],
+    "ran": true,
+    "reason_at_import": null,
+    "reason_fresh": null,
+    "safe_path": true
+  },
+  "seed": {
+    "PYTHONHASHSEED": "0",
+    "hash_of_probe_string": -6313325808342570438,
+    "hash_randomization": 0,
+    "pinned_to_zero": true
+  },
+  "set_reader": {
+    "agree": true,
+    "offsets": {
+      "entry_bytes": 16,
+      "fill": 16,
+      "finger": 56,
+      "mask": 32,
+      "small_table": 64,
+      "table": 40,
+      "used": 24
+    },
+    "proven_at_import": true,
+    "proven_fresh": true,
+    "reason_at_import": null,
+    "reason_fresh": null
+  }
+}
