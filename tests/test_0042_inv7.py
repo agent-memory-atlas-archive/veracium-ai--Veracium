@@ -6913,3 +6913,75 @@ def test_r32_the_real_site_describes_the_same_under_every_hash_seed():
     census = (src / "veracium" / "census.py").read_text(encoding="utf-8")
     for _ in range(3):
         assert un.site_drift(census, census) == [], "route B finds drift between the real census and itself"
+
+
+# THE READER/SEED RECEIPT (the round-33 verdict's suggestion, on the owner's word): what the trusted channel rests on,
+# reported by the interpreter it rests on. Both halves are cells (the second seat's mark 4): a receipt that could only
+# print "proven" would be a control that cannot fail.
+def _receipt_run(env):
+    out = subprocess.run([sys.executable, str(EVIDENCE / "reader_seed_receipt.py")], capture_output=True, text=True,
+                         env=env, timeout=600)
+    return out.returncode, json.loads(out.stdout), out.stderr
+
+
+def test_receipt_reports_a_pinned_seed_and_a_proven_reader_in_both_processes():
+    """Under PYTHONHASHSEED=0, as an arm runs: the seed reads pinned and the reader proven, at import and fresh, in this
+    process AND in route B's child, launched as route B launches it; the receipt says it is a proxy for the arm."""
+    env = {**{k: v for k, v in os.environ.items() if k != "PYTHONHASHSEED"}, "PYTHONHASHSEED": "0",
+           "PYTHONDONTWRITEBYTECODE": "1"}
+    rc, r, err = _receipt_run(env)
+    assert rc == 0, (r, err[-300:])
+    assert "proxy for the arm" in r["process"], r["process"]
+    assert r["seed"] == {**r["seed"], "hash_randomization": 0, "PYTHONHASHSEED": "0", "pinned_to_zero": True}
+    sr = r["set_reader"]
+    assert (sr["proven_at_import"], sr["proven_fresh"], sr["agree"], sr["reason_at_import"], sr["reason_fresh"]) == \
+        (True, True, True, None, None), sr
+    b = r["route_b_child"]
+    assert b["ran"] and b["safe_path"] and b["no_user_site"] and b["hash_randomization"] == 0, b
+    assert b["python_env"] == ["PYTHONHASHSEED"] and b["proven_at_import"] and b["proven_fresh"], b
+    assert len(r["identity"]["executable_sha256"]) == 64 and r["identity"]["sys_version"] == sys.version, r["identity"]
+
+
+def test_receipt_reports_an_unpinned_seed_and_refuses():
+    """Without PYTHONHASHSEED the seed is random: the receipt says so and exits 1 — the condition the INV-7 result was
+    accepted under does not hold, and the receipt records it rather than staying silent."""
+    env = {**{k: v for k, v in os.environ.items() if k != "PYTHONHASHSEED"}, "PYTHONDONTWRITEBYTECODE": "1"}
+    rc, r, err = _receipt_run(env)
+    assert rc == 1, (r, err[-300:])
+    assert r["seed"]["pinned_to_zero"] is False and r["seed"]["hash_randomization"] == 1 and r["seed"]["PYTHONHASHSEED"] is None
+
+
+@pytest.mark.parametrize("how", ["a wrong offset found fresh", "unproven at import"])
+def test_receipt_reports_an_unproven_reader_with_its_reason(how):
+    """The reader's check FAILING: the receipt reports unproven with the check's own reason, and the acceptance
+    condition reads false — never a crash, never "proven"."""
+    rec = _load("reader_seed_receipt_cell", EVIDENCE / "reader_seed_receipt.py")
+    un = _load("inv7_uninstrument_receipt_cell", EVIDENCE / "inv7_uninstrument.py")
+    with pytest.MonkeyPatch.context() as m:
+        if how == "a wrong offset found fresh":
+            m.setattr(un, "_SET_FILL", 40)
+            r = rec.receipt(un, route_b=False)
+            sr = r["set_reader"]
+            assert sr["proven_fresh"] is False and sr["reason_fresh"].startswith("fill/used: a fresh"), sr
+            assert sr["agree"] is False, sr
+        else:
+            m.setattr(un, "_SET_DUMMY", None)
+            m.setattr(un, "_SET_READER_BROKEN", "a stand-in reason")
+            r = rec.receipt(un, route_b=False)
+            sr = r["set_reader"]
+            assert sr["proven_at_import"] is False and sr["reason_at_import"] == "a stand-in reason", sr
+    assert rec.accepted(r) is False, r
+
+
+def test_receipt_acceptance_fails_on_a_route_b_child_that_did_not_hold():
+    """The acceptance condition reads route B's child too: a child that did not run, or ran unisolated, fails it."""
+    rec = _load("reader_seed_receipt_child_cell", EVIDENCE / "reader_seed_receipt.py")
+    good = {"seed": {"pinned_to_zero": True},
+            "set_reader": {"proven_at_import": True, "proven_fresh": True, "agree": True},
+            "route_b_child": {"ran": True, "safe_path": True, "no_user_site": True, "hash_randomization": 0,
+                              "proven_at_import": True, "proven_fresh": True, "agree": True}}
+    assert rec.accepted(good) is True
+    for field, bad in [("ran", False), ("safe_path", False), ("no_user_site", False), ("hash_randomization", 1),
+                       ("proven_fresh", False)]:
+        r = json.loads(json.dumps(good)); r["route_b_child"][field] = bad
+        assert rec.accepted(r) is False, (field, bad)
