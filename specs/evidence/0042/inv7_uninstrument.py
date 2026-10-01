@@ -1427,6 +1427,13 @@ with open_(response, "w", encoding="ascii") as f:
 exit_(0)                                             # neither the census's atexit hooks nor its threads outlive this
 """
 
+# Route B's interpreter flags, defined ONCE: _described_in_isolation launches its child with them, and the reader/seed
+# receipt audits route B by launching with the same tuple (the second seat's stage 2 on the receipt: a receipt that
+# wrote its own copy of these flags described a launch route B no longer made when the real one changed).
+# -P: no script directory on the path; -s: no user site; -B: no bytecode written into the evidence directory.
+_ROUTE_B_FLAGS = ("-P", "-s", "-B")
+
+
 def _isolated_env() -> dict:
     """Route B's child environment (ROUND 33, R32-1; the second seat's mark B-b): the caller's environment with EVERY
     PYTHON* variable removed — what `-E` did — and the hash seed pinned to 0, which `-E` would have ignored. The flags
@@ -1480,7 +1487,7 @@ def _described_in_isolation(census_text: str):
     with tempfile.TemporaryDirectory(prefix="inv7_route_b_") as d:
         response = pathlib.Path(d).resolve() / "description.json"
         try:
-            r = subprocess.run([sys.executable, "-P", "-s", "-B", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve()),
+            r = subprocess.run([sys.executable, *_ROUTE_B_FLAGS, "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve()),
                                 str(response)], input=census_text.encode("utf-8"), capture_output=True,
                                timeout=_ISOLATION_TIMEOUT, env=_isolated_env())
         except subprocess.TimeoutExpired:

@@ -14,8 +14,9 @@ hash. This script reports, for the interpreter that runs it:
     it, and one string's hash, which under seed 0 is a constant of the build;
   - the set reader's check: proven or not, with the first field that disagreed if not — the describer's own
     import-time result AND a fresh run of the same check, which must agree;
-  - ROUTE B: the same seed and reader facts from a child started by route B's own launch (`_isolated_env()` and
-    `-P -s -B`), with the child's safe_path and no_user_site flags.
+  - ROUTE B: the same seed and reader facts from a child started by route B's own launch (the describer's
+    `_ROUTE_B_FLAGS` and `_isolated_env()`), with the child's safe_path, no_user_site and dont_write_bytecode flags
+    and its PYTHON* variables.
 
 WHAT PROCESS THIS IS, stated plainly (the second seat's mark): the receipt is written by a SEPARATE PROCESS launched with
 an arm's executable and an arm's seed environment — a proxy for the arm, not the arm's own state. It shows what that
@@ -85,8 +86,10 @@ def _reader(un) -> dict:
 
 
 def _route_b(un) -> dict:
-    """Route B's launch, as _described_in_isolation makes it: the same executable, `-P -s -B`, `_isolated_env()`."""
-    r = subprocess.run([sys.executable, "-P", "-s", "-B", "-c", _ROUTE_B_PROBE, str(HERE / "inv7_uninstrument.py")],
+    """Route B's launch, as _described_in_isolation makes it: the same executable, the describer's own `_ROUTE_B_FLAGS`
+    and `_isolated_env()` — read from the describer, never restated here, so a change to route B's launch is a change
+    to what this audits."""
+    r = subprocess.run([sys.executable, *un._ROUTE_B_FLAGS, "-c", _ROUTE_B_PROBE, str(HERE / "inv7_uninstrument.py")],
                        env=un._isolated_env(), capture_output=True, timeout=300)
     if r.returncode != 0:
         return {"ran": False, "exit": r.returncode, "stderr_tail": r.stderr.decode("ascii", "replace")[-400:]}
@@ -129,7 +132,8 @@ def accepted(r: dict) -> bool:
     ok = r["seed"]["pinned_to_zero"] and sr["proven_at_import"] and sr["proven_fresh"] and sr["agree"]
     b = r.get("route_b_child")
     if b is not None:
-        ok = ok and b.get("ran", False) and b["safe_path"] and b["no_user_site"] and b["hash_randomization"] == 0 \
+        ok = ok and b.get("ran", False) and b["safe_path"] and b["no_user_site"] and b["dont_write_bytecode"] \
+            and b["hash_randomization"] == 0 and b["python_env"] == ["PYTHONHASHSEED"] \
             and b["proven_at_import"] and b["proven_fresh"] and b["agree"]
     return bool(ok)
 

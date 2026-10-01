@@ -2556,12 +2556,12 @@ def test_r19_a_census_rebinding_a_builtin_cannot_reach_the_transform(tmp_path):
         builtins.tuple = real
 
 
-_R19_SHIPPED_FLAGS = '[sys.executable, "-P", "-s", "-B", "-c",'   # round 33: `-I` became `-P -s` under `_isolated_env`
+_R19_SHIPPED_FLAGS = '_ROUTE_B_FLAGS = ("-P", "-s", "-B")'   # round 33: `-I` became `-P -s` under `_isolated_env`; then one constant
 # the two superseded forms, each the mutant of one caller: `-I` alone (the round-19 fix as first committed to the
 # working tree), and the caller's `-B` passed on conditionally (the first fix, which the second seat's stage-1 read
 # showed misses a caller whose caches are redirected)
-_R19_BARE = '[sys.executable, "-P", "-s", "-c",'
-_R19_CONDITIONAL = '[sys.executable, "-P", "-s", *(["-B"] if sys.flags.dont_write_bytecode else []), "-c",'
+_R19_BARE = '_ROUTE_B_FLAGS = ("-P", "-s")'
+_R19_CONDITIONAL = '_ROUTE_B_FLAGS = ("-P", "-s", *(["-B"] if sys.flags.dont_write_bytecode else []))'
 
 
 @pytest.mark.parametrize("caller,form,expect_written", [
@@ -6761,6 +6761,46 @@ def test_r32_each_rule_is_load_bearing(mutant, anchor, replacement, cell, expect
         cell()
 
 
+# ONE DEFINITION OF ROUTE B'S LAUNCH, tested in both directions (the second seat's stage 2 on the receipt): the receipt
+# follows the constant, and route B itself reads it.
+def test_receipt_follows_route_bs_flags_when_they_change():
+    """Route B's flags without -B: the receipt's route-B child reports bytecode writable, and the acceptance condition
+    reads false — the receipt audits the launch route B actually makes."""
+    rec = _load("reader_seed_receipt_flags_cell", EVIDENCE / "reader_seed_receipt.py")
+    un = _load("inv7_uninstrument_flags_cell", EVIDENCE / "inv7_uninstrument.py")
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(un, "_ROUTE_B_FLAGS", ("-P", "-s"))
+        r = rec.receipt(un)
+    assert r["route_b_child"]["ran"] and r["route_b_child"]["dont_write_bytecode"] is False, r["route_b_child"]
+    assert rec.accepted(r) is False
+
+
+def test_receipt_refuses_a_route_b_environment_that_leaks_a_variable():
+    """Route B's environment leaking a PYTHON* variable: the receipt records it and the acceptance condition reads
+    false — recorded is not enough, the receipt requires PYTHONHASHSEED alone."""
+    rec = _load("reader_seed_receipt_env_cell", EVIDENCE / "reader_seed_receipt.py")
+    un = _load("inv7_uninstrument_env_cell", EVIDENCE / "inv7_uninstrument.py")
+    real = un._isolated_env
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(un, "_isolated_env", lambda: {**real(), "PYTHONWARNINGS": "ignore"})
+        r = rec.receipt(un)
+    assert r["route_b_child"]["python_env"] == ["PYTHONHASHSEED", "PYTHONWARNINGS"], r["route_b_child"]
+    assert rec.accepted(r) is False
+
+
+def test_route_b_reads_its_flags_from_the_one_definition():
+    """The other direction: route B's launch READS `_ROUTE_B_FLAGS`. Without -s, route B's own child refuses and names the
+    condition (no_user_site); route B re-inlining its own literals would launch with -s regardless and describe — the
+    mutant in `_R33_MUTANTS` that fails this cell."""
+    un = _load("inv7_uninstrument_routeb_flags", EVIDENCE / "inv7_uninstrument.py")
+    ref = un.REFERENCE_CENSUS.read_text(encoding="utf-8")
+    assert un.site_drift(ref, ref) == [], "the precondition: route B describes the reference census under its flags"
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(un, "_ROUTE_B_FLAGS", ("-P", "-B"))
+        with pytest.raises(un.SiteUndescribed, match="not isolated as it must be: no_user_site"):
+            un.site_drift(ref, ref)
+
+
 def _r33_cell(table, name, fn):
     return _r30_cell(fn, *next(c for c in table if c[0] == name))
 
@@ -6861,6 +6901,11 @@ _R33_MUTANTS = [
      '    if s.pop() != 0 or _set_header(s)[4] != 1:\n', '    if False:\n',
      _r30_cell(test_r33_the_set_reader_check_refuses_a_wrong_layout, *next(r for r in _R33_WRONG_OFFSETS if 'one pop' in r[2])),
      (AssertionError, "_SET_")),
+    ("route B's launch with its flags re-inlined (the second seat's stage 2 on the receipt)",
+     '            r = subprocess.run([sys.executable, *_ROUTE_B_FLAGS, "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve()),\n',
+     '            r = subprocess.run([sys.executable, "-P", "-s", "-B", "-c", _ISOLATED_CHILD, str(pathlib.Path(__file__).resolve()),\n',
+     test_route_b_reads_its_flags_from_the_one_definition,
+     (pytest.fail.Exception, "DID NOT RAISE")),
     ("the arm's seed assertion dropped",
      "    _assert_seed_pinned()\n    import veracium\n", "    import veracium\n",
      test_r33_an_arm_refuses_an_unpinned_seed,
@@ -6978,10 +7023,13 @@ def test_receipt_acceptance_fails_on_a_route_b_child_that_did_not_hold():
     rec = _load("reader_seed_receipt_child_cell", EVIDENCE / "reader_seed_receipt.py")
     good = {"seed": {"pinned_to_zero": True},
             "set_reader": {"proven_at_import": True, "proven_fresh": True, "agree": True},
-            "route_b_child": {"ran": True, "safe_path": True, "no_user_site": True, "hash_randomization": 0,
+            "route_b_child": {"ran": True, "safe_path": True, "no_user_site": True, "dont_write_bytecode": True,
+                              "hash_randomization": 0, "python_env": ["PYTHONHASHSEED"],
                               "proven_at_import": True, "proven_fresh": True, "agree": True}}
     assert rec.accepted(good) is True
-    for field, bad in [("ran", False), ("safe_path", False), ("no_user_site", False), ("hash_randomization", 1),
+    for field, bad in [("ran", False), ("safe_path", False), ("no_user_site", False), ("dont_write_bytecode", False),
+                       ("hash_randomization", 1), ("python_env", ["PYTHONHASHSEED", "PYTHONWARNINGS"]),
                        ("proven_fresh", False)]:
         r = json.loads(json.dumps(good)); r["route_b_child"][field] = bad
         assert rec.accepted(r) is False, (field, bad)
+
