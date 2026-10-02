@@ -668,14 +668,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 2026-10-02, 0041 round 10 (the lift vocabulary at revoke_source; the one admitted updater of source_revocations and its call from the redaction): moved dotted/dataflow 6,876 -> 6,887, the rest unchanged.
 #: 2026-10-02, 0041 round 10 (store.atomic() and the re-entrant instance lock; dispute, record_outcome and correct inside one write transaction with the attested refusal; the outcome CAS under _write_txn): moved dotted/dataflow 6,887 -> 6,901, dotted/module-plain 351 -> 353, the rest unchanged.
 #: 2026-10-02, 0041 round 10 (§11.5(3) widened by the owner: the receipt names records by an identifier join in either direction, and the dispute/correct quoting domain): moved dotted/dataflow 6,901 -> 6,932, dotted/module-plain 353 -> 358, the rest unchanged.
+#: 2026-10-02, 0041 round 10 (only a redaction writes `redacted`: the refusal at every other writer and at unattested import): moved dotted/dataflow 6,932 -> 6,955, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 6932,
+    "dotted/dataflow": 6955,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 358,
     "dotted/module-protected": 50,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 7392
+SRC_ATTRIBUTE_TOTAL = 7415
 SRC_DATA_DUNDERS_IN_DATAFLOW = 133   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 #   2026-09-20 0042 round 7: +1 — `type(exc).__name__` in `census.Site._measurement_failed` (the failure KIND recorded as a type name, R6-1)

@@ -237,6 +237,21 @@ def mem_facts_ids(tmp_path, store, T):
     return [f.edge.id for f in _mem(tmp_path, store).facts_valid_at(U, "user", "located_at", T)]
 
 
+def _retire_with(store, user_id, edge_id, at, reason):
+    """Retire an edge with `reason`. 0041 round 10: `redacted` is written ONLY by a redaction (§11.2) — no writer
+    can set it — so that state is produced the one way it now arises: a LEGACY prose invalidation (planted as the
+    pre-closure row a legacy store holds), then the REAL redaction, whose three-case rule writes `redacted`."""
+    if reason != "redacted":
+        store.invalidate_edge(edge_id, at, reason)
+        return
+    import json as _j
+    row = _j.loads(store._conn.execute("SELECT json FROM edges WHERE id=?", (edge_id,)).fetchone()[0])
+    row["invalidated_at"] = at.isoformat(); row["invalidation_reason"] = "legacy prose, pre-closure"
+    store._conn.execute("UPDATE edges SET json=?, active=0 WHERE id=?", (_j.dumps(row), edge_id))
+    store._conn.commit()
+    store.redact(user_id, edge_id=edge_id, reason="subject_request")
+
+
 # ----------------------------------------------- V-NO-UPGRADE / V-NEVER-BYPASS
 @pytest.mark.parametrize("reason", sorted(DISPOSITIONED_REASONS))
 def test_v_no_upgrade_no_row_outranks_the_0030_verdict(tmp_path, reason):
@@ -246,7 +261,7 @@ def test_v_no_upgrade_no_row_outranks_the_0030_verdict(tmp_path, reason):
     from veracium.store.base import RawEdgeState
     store = _store(tmp_path)
     e = _edge(); store.add_edge(e)
-    store.invalidate_edge(e.id, T0 + 10 * D, reason)
+    _retire_with(store, U, e.id, T0 + 10 * D, reason)
     T = T0 + 5 * D
     r = _resolution_of(store, e.id, T)
     cs = store.current_state(U, e.id)
@@ -276,7 +291,7 @@ def test_v_never_bypass_fenced_reasons_yield_no_assertable_value_at_any_t(tmp_pa
     store = _store(tmp_path)
     e = _edge(); store.add_edge(e)
     vf, ia = T0, T0 + 10 * D
-    store.invalidate_edge(e.id, ia, reason)
+    _retire_with(store, U, e.id, ia, reason)
     for T in (vf, vf + US, vf + 5 * D, ia - US, ia, ia + D):
         facts = _facts(store, T)
         r = facts.get(e.id)

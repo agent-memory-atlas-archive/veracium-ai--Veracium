@@ -154,6 +154,7 @@ DECLARATION = (
     ("store.redact.input-claimed", "0041/0010", "X21", "store/sqlite.py:SqliteStore.redact", "refuse"),
     ("store.redact.reason-not-registered", "0041", "§11.2", "store/sqlite.py:SqliteStore.redact", "refuse"),
     ("store.redact.target", "0041", "§4a/INV-5", "store/sqlite.py:SqliteStore.redact", "refuse"),
+    ("store.redacted-reason.not-a-redaction", "0041", "§11.2 (only a redaction writes `redacted`)", "store/sqlite.py:SqliteStore._refuse_redacted_reason", "refuse"),
     ("store.revocation.integrity", "0022", "§4c", "store/revocation.py:revocation_operation", "refuse"),
     ("store.revocation.ordinal-collision", "0022", "§4c", "store/revocation.py:revocation_operation", "refuse"),
     ("store.revocation.revoke-reason-not-registered", "0041", "§11.2 D1 (revoke)", "store/revocation.py:revoke_source", "refuse"),

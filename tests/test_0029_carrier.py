@@ -514,10 +514,15 @@ def test_event_kinds_closed_and_reasons_authoritative(store):
     # from the mutator surface, and redact() is a mutator (0041 §11.4 amends this contract)
     assert set(EVENT_KINDS) == {"created", "mutated", "invalidated", "reinstated", "baseline", "redacted"}
     e = _edge(); store.add_edge(e)
-    for reason in DISPOSITIONED_REASONS:
+    # 0041 round 10 (§11.2): `redacted` is written ONLY by a redaction, which journals a `redacted` event — never an
+    # `invalidated` one. So every OTHER registered reason journals as itself, and invalidate_edge REFUSES `redacted`.
+    for reason in sorted(set(DISPOSITIONED_REASONS) - {"redacted"}):
         f = _edge(reason); store.add_edge(f)
         store.invalidate_edge(f.id, datetime.now(timezone.utc), reason)
         assert _events(store, edge_id=f.id)[-1].reason == reason
+    r = _edge("redacted-by-an-ordinary-write"); store.add_edge(r)
+    with pytest.raises(ValueError, match="only a redaction writes"):
+        store.invalidate_edge(r.id, datetime.now(timezone.utc), "redacted")
     g = _edge("bad"); store.add_edge(g)
     before = _raw(store, g.id)
     with pytest.raises(ValueError):

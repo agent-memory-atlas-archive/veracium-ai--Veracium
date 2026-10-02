@@ -121,6 +121,21 @@ def test_invalidation_reason_registry_is_total():
             f"passes it — the enumeration has drifted from the code")
 
 
+def _retire_with(store, user_id, edge_id, at, reason):
+    """Retire an edge with `reason`. 0041 round 10: `redacted` is written ONLY by a redaction (§11.2) — no writer
+    can set it — so that state is produced the one way it now arises: a LEGACY prose invalidation (planted as the
+    pre-closure row a legacy store holds), then the REAL redaction, whose three-case rule writes `redacted`."""
+    if reason != "redacted":
+        store.invalidate_edge(edge_id, at, reason)
+        return
+    import json as _j
+    row = _j.loads(store._conn.execute("SELECT json FROM edges WHERE id=?", (edge_id,)).fetchone()[0])
+    row["invalidated_at"] = at.isoformat(); row["invalidation_reason"] = "legacy prose, pre-closure"
+    store._conn.execute("UPDATE edges SET json=?, active=0 WHERE id=?", (_j.dumps(row), edge_id))
+    store._conn.commit()
+    store.redact(user_id, edge_id=edge_id, reason="subject_request")
+
+
 def test_runtime_consults_only_the_retain_set(tmp_path):
     """The runtime branches on retain-set membership, never on a drop-list
     (internal R1's polarity): EVERY registered reason outside the retain set
@@ -141,7 +156,7 @@ def test_runtime_consults_only_the_retain_set(tmp_path):
     for reason in non_retaining:
         d = tmp_path / reason; d.mkdir()
         s2, e2 = _store_with_wiki(d)
-        s2.invalidate_edge(e2.id, utcnow(), reason)
+        _retire_with(s2, U, e2.id, utcnow(), reason)
         assert s2.get_wiki(U) is None, f"registered non-retaining reason {reason!r} did not drop"
 
 

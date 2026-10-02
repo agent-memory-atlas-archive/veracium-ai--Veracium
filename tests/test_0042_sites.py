@@ -1240,7 +1240,18 @@ DECLINES.update({
     "store.episode.retired-reason-not-registered": lambda mp: _prose_retirement(),
     "store.import.reason-not-registered": lambda mp: _import_prose_reason(),
     "store.revocation.revoke-reason-not-registered": lambda mp: _prose_revoke(),
+    "store.redacted-reason.not-a-redaction": lambda mp: _redacted_reason_by_an_ordinary_write(),
 })
+
+
+def _redacted_reason_by_an_ordinary_write():
+    import datetime as _dt
+    e = _edge("rr1").model_copy(update={"invalidated_at": _dt.datetime(2026, 9, 1, tzinfo=_dt.timezone.utc),
+                                        "invalidation_reason": "redacted"})
+    s = _store()
+    with pytest.raises(ValueError):
+        s.add_edge(e)
+    s.close()
 
 
 # specs/0041 §4e (tranche 5): the embedding upsert's read-and-publish lock — a second connection holds the write

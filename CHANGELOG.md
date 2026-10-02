@@ -46,6 +46,9 @@
     the whole import. A re-export passes the original notice on unchanged, so an honest relay is not mistaken for
     corruption. Notice field names must be the redacted record's real fields. An episode whose kind field holds
     the redaction marker can now be imported when the same import attests that the kind was redacted.
+  - **Only a redaction writes the reason `redacted`.** Every other writer refuses it, and an import admits it only
+    when a notice in the same import, or one already held, covers that record. Before, an ordinary write could
+    make a record no redaction had touched show as redacted.
   - **Free text already stored in a revocation's reason** is replaced at redaction. This goes through the one
     function specs/0022's append-only rule now admits; it changes only that column, so which sources are revoked
     cannot change.

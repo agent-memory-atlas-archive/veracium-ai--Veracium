@@ -61,6 +61,7 @@ _SITE_IMPORT_NOTICE_CONFLICT = declare_site("store.import.notice-body-conflict")
 _SITE_UPSERT_INVALIDATION_REASON = declare_site("store.upsert.invalidation-reason-not-registered")
 _SITE_EPISODE_RETIRED_REASON = declare_site("store.episode.retired-reason-not-registered")
 _SITE_IMPORT_REASON = declare_site("store.import.reason-not-registered")
+_SITE_REDACTED_REASON = declare_site("store.redacted-reason.not-a-redaction")
 _SITE_JOURNAL_REDACTION_REASON = declare_site("store.journal.redaction-reason")
 _SITE_IMPORT_ATTESTED = declare_site("store.import.attested-redaction")     # tranche 4b: INV-11 at the import boundary
 _SITE_READ_OUTPUT_NOT_VISIBLE = declare_site("store.read.output-not-visible", declines=False)
@@ -491,6 +492,18 @@ class SqliteStore(Store):
             return lookup_successors(rows, edge_id, visible)
 
     # -- edges -------------------------------------------------------------
+    @staticmethod
+    def _refuse_redacted_reason(reason, what: str, where: str) -> None:
+        """specs/0041 §11.2 (round 10): `redacted` is written ONLY by a redaction — the treatment (`_redact_in_txn`)
+        writes the treated row directly and passes through none of the writers that call this. Every other writer
+        refuses it: an ordinary write that set it would make a record no redaction touched read, in `why` and in an
+        export, as redacted — the marker's own problem one field over (INV-11's mirror, for the registry value)."""
+        with _SITE_REDACTED_REASON.consult():
+            if reason == _redaction.REDACTED_REASON_VALUE:
+                raise _SITE_REDACTED_REASON.fire(ValueError(
+                    f"refused: {what} would carry the reason {reason!r}, which only a redaction writes "
+                    f"(specs/0041 §11.2)"), where)
+
     def _upsert_edge_row(self, edge: Edge) -> None:
         """INSERT OR REPLACE one edge with the specs/0008 §6d guards, WITHOUT taking the
         lock, bumping the write counter, or committing — the caller owns the transaction.
@@ -524,6 +537,7 @@ class SqliteStore(Store):
         # writes on the registry the journal already enforces for `invalidate_edge`. Absent (None) stays valid; a
         # prose reason — accepted here on create and on a re-upsert to invalidated — refuses. Stored legacy prose
         # still loads (the closure binds writers and import, never the read path).
+        self._refuse_redacted_reason(edge.invalidation_reason, f"edge {edge.id!r}", "edge-write")
         with _SITE_UPSERT_INVALIDATION_REASON.consult():
             if edge.invalidation_reason is not None and edge.invalidation_reason not in DISPOSITIONED_REASONS:
                 raise _SITE_UPSERT_INVALIDATION_REASON.fire(ValueError(
@@ -773,6 +787,7 @@ class SqliteStore(Store):
         # accepts a datetime or ISO text and REFUSES anything else, so garbage
         # refuses the write (Quentin, 2026-09-06: fixed as a separate item).
         edge.invalidated_at = as_utc_required(at)
+        self._refuse_redacted_reason(reason, f"edge {edge_id!r}", "edge-invalidate")
         edge.invalidation_reason = reason
         new_json = edge.model_dump_json()
         self._conn.execute("UPDATE edges SET active=0, json=? WHERE id=?",
@@ -809,6 +824,7 @@ class SqliteStore(Store):
             return None
         ep = Episode.model_validate_json(row[0])
         ep.retired_at = as_utc_required(at)      # the same normalization as the edge twin
+        self._refuse_redacted_reason(reason, f"episode {episode_id!r}", "episode-retire")
         ep.retired_reason = reason
         self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
                            (ep.model_dump_json(), episode_id))
@@ -1650,6 +1666,7 @@ class SqliteStore(Store):
                     f"{hit} — only a redaction writes the marker (specs/0041 §4b, INV-11's mirror)"))
         # specs/0041 §11.2 / D1 (round 10, R9-02(b)): a PRESENT `Episode.retired_reason` must be registered; None
         # (an active episode) stays valid
+        self._refuse_redacted_reason(episode.retired_reason, f"episode {episode.id!r}", "episode-write")
         with _SITE_EPISODE_RETIRED_REASON.consult():
             if episode.retired_reason is not None and episode.retired_reason not in DISPOSITIONED_REASONS:
                 raise _SITE_EPISODE_RETIRED_REASON.fire(ValueError(
@@ -2033,6 +2050,8 @@ class SqliteStore(Store):
                     for edge in edges:
                         # specs/0041 §11.2 / D1 at the IMPORT boundary (round 10, R9-02(c)): the reason closure binds
                         # import as it binds the writers
+                        if ("edge", edge.id) not in notice_targets and not self._attested_fields(user_id, "edge", edge.id):
+                            self._refuse_redacted_reason(edge.invalidation_reason, f"imported edge {edge.id!r}", "import-edge")
                         with _SITE_IMPORT_REASON.consult():
                             if edge.invalidation_reason is not None and edge.invalidation_reason not in DISPOSITIONED_REASONS:
                                 raise _SITE_IMPORT_REASON.fire(ValueError(
@@ -2059,6 +2078,8 @@ class SqliteStore(Store):
                         self._journal_edge_write(user_id, edge.id, new_json,
                                                  prior[0] if prior is not None else None)
                     for ep in episodes:
+                        if ("episode", ep.id) not in notice_targets and not self._attested_fields(user_id, "episode", ep.id):
+                            self._refuse_redacted_reason(ep.retired_reason, f"imported episode {ep.id!r}", "import-episode")
                         with _SITE_IMPORT_REASON.consult():
                             if ep.retired_reason is not None and ep.retired_reason not in DISPOSITIONED_REASONS:
                                 raise _SITE_IMPORT_REASON.fire(ValueError(
