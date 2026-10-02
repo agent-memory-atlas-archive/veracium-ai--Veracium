@@ -5,7 +5,7 @@
 # worse than none:
 #
 #   * PLATFORM-PINNED. `pydantic_core` is a compiled wheel — the file here is
-#     cp312 / manylinux_2_17_x86_64. On any other Python minor version or
+#     cp314 / manylinux_2_17_x86_64. On any other Python minor version or
 #     platform, pip will not use it and offline install FAILS CLOSED rather
 #     than resolving something else.
 #   * TEST DEPENDENCIES ONLY. The product itself needs `pydantic>=2.7` and
@@ -15,32 +15,37 @@
 #   * HASHES ARE MANDATORY on install (`--require-hashes`), so a substituted
 #     wheel is a hard failure, not a silent difference.
 #
-# Offline install, from the package root:
+# The suite is meant to run as ONE process; if you split it, keep the groups named in
+# specs/evidence/offline/JOINT-TEST-GROUPS.md together (process-local gates).
+#
+# Offline install, from the package root, WITH A CPython 3.14 INTERPRETER (the floor; 0041 round 10 rebuilt this
+# set from the exact runtime the suite measures — CPython 3.14.7 — after the round-9 verdict found the cp312
+# wheel could not reproduce it; run_offline.sh takes the interpreter from VERACIUM_PYTHON):
 #
 #   python -m venv .venv && .venv/bin/pip install \
 #       --no-index --find-links specs/evidence/offline \
 #       --require-hashes -r specs/evidence/offline/requirements-test.lock
 #   VERACIUM_FORBID_NETWORK=1 PYTHONPATH=src .venv/bin/python -m pytest -q tests -p no:randomly
 #
-annotated-types==0.7.0 \
-    --hash=sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53
+annotated-types==0.8.0 \
+    --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
 iniconfig==2.3.0 \
     --hash=sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12
-packaging==26.2 \
-    --hash=sha256:5fc45236b9446107ff2415ce77c807cee2862cb6fac22b8a73826d0693b0980e
+packaging==26.3 \
+    --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
 pluggy==1.6.0 \
     --hash=sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746
-pydantic==2.13.4 \
-    --hash=sha256:45a282cde31d808236fd7ea9d919b128653c8b38b393d1c4ab335c62924d9aba
-pydantic-core==2.46.4 \
-    --hash=sha256:926c9541b14b12b1681dca8a0b75feb510b06c6341b70a8e500c2fdcff837cce
-pygments==2.20.0 \
-    --hash=sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176
+pydantic==2.13.5 \
+    --hash=sha256:346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73
+pydantic-core==2.46.5 \
+    --hash=sha256:54d510bac3ee52247af28ed4bb18a1e799f040ac60fd2bf5ccd4c92f1fbe786f
+pygments==2.21.0 \
+    --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9
 pytest==9.1.1 \
     --hash=sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c
-pytest-randomly==4.1.0 \
-    --hash=sha256:f55e89e53367b090c0c053697d7f9d77595543d0e0516c93978b50c0f6b252f9
+pytest-randomly==5.0.0 \
+    --hash=sha256:8a0d4703115c0c25b38b6e129fc16b1947b9643ff26a41bc1d185d7e5a7689c1
 typing-extensions==4.16.0 \
     --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
-typing-inspection==0.4.2 \
-    --hash=sha256:4ed1cacbdc298c220f1bd249ed5287caa16f34d44ef4e9c3d0cbad5b521545e7
+typing-inspection==0.4.4 \
+    --hash=sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147

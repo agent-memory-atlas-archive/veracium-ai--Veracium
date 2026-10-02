@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Evidence tooling: the offline test kit now matches the qualified runtime.** `specs/evidence/offline/` held a
+  cp312 `pydantic_core`, which cannot install on the CPython 3.14 floor, and seven of its eleven wheels trailed the
+  measured runtime. It now holds that runtime's exact versions (cp314 `pydantic_core` 2.46.5, pydantic 2.13.5,
+  pytest-randomly 5.0.0 and the rest), hash-locked; `run_offline.sh` with a 3.14.7 interpreter ran the suite with no
+  network: 4854 passed, 46 skipped. `JOINT-TEST-GROUPS.md` beside it names the two groups of tests that must share one
+  pytest process when the suite is split. No product change.
 - **specs/0041 targeted redaction — the round-9 implementation corrections (round 10).** The round-9 review
   RETURNED the implementation with eight findings. Each was treated as a sample of its class and swept; the sweeps
   found more instances, which are corrected here too. **WHO SHOULD TAKE THIS: anyone who redacts.** Before it, a
