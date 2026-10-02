@@ -282,7 +282,7 @@ def control_lift_flips_with_no_row_rewrite(store, user_id: str,
         (user_id, edge_id)).fetchone()[0]
     restricted_before = source_restricted(store, user_id, edge_id)
     for d in sorted(standing_revocations(store._conn, user_id)):
-        rv.revoke_source(store, user_id, d, "lift", "seam-model", at)
+        rv.revoke_source(store, user_id, d, "lift", "policy", at)
     restricted_after = source_restricted(store, user_id, edge_id)
     row_after = store._conn.execute(
         "SELECT json FROM edges WHERE user_id=? AND id=?",

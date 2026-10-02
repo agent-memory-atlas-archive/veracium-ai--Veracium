@@ -753,7 +753,7 @@ def test_lift_flips_the_trust_input_without_touching_the_row(store):
     digest = source_identity_digest(store.local_origin(), "src:S")
     revoke_source(store, U, digest, "revoke", "policy", "2026-02-01T00:00:00Z")
     a = _cls(store, e.id, T0 + 5 * D, k=k)
-    revoke_source(store, U, digest, "lift", "op", "2026-02-02T00:00:00Z")
+    revoke_source(store, U, digest, "lift", "policy", "2026-02-02T00:00:00Z")
     b = _cls(store, e.id, T0 + 5 * D, k=k)
     assert (a.status, b.status) == (EXCLUDED, GROUNDED_AS_OF) and a.held_at_K is b.held_at_K is True
     assert _row(store, e.id) == row

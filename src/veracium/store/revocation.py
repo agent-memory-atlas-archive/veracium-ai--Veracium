@@ -157,7 +157,7 @@ import json as _json
 
 from . import revocation_sweep as _sw
 from ..census import declare_site
-from ..redaction import SOURCE_REVOCATION_REASONS
+from ..redaction import MARKER, SOURCE_LIFT_REASONS, SOURCE_REVOCATION_REASONS
 
 # specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
 # decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
@@ -276,6 +276,25 @@ def _apply_statement_effect(store, at, effect: dict) -> None:
             f"is closed and an unknown verb must refuse, not skip")
 
 
+def redact_revocation_reasons(conn, user_id: str, identity_digest: str) -> int:
+    """specs/0041 §11.2 (round 10, R9-02(d)) — THE ONE UPDATER of `source_revocations`, an amendment to 0022 §4a's
+    append-only rule (the 0029 V-APPEND precedent: the rule admits exactly one updater, the redaction treatment).
+
+    Run INSIDE a redaction's open write transaction, never on its own. It rewrites ONLY `reason`, and ONLY stored
+    prose — a revoke row's reason outside SOURCE_REVOCATION_REASONS, a lift row's outside SOURCE_LIFT_REASONS — to the
+    marker. It never touches seq, action, identity_digest or at, so the DERIVED standing state cannot change: the
+    rows that decide it are byte-for-byte the rows they were. Both 0022 gates bind this function by NAME and by
+    PROPERTY (its SET clause names only `reason`; it refuses outside a transaction). Returns the rows treated."""
+    if not conn.in_transaction:
+        raise RuntimeError("redact_revocation_reasons runs only inside a redaction's open write transaction "
+                           "(specs/0041 §11.2; 0022 §4a as amended)")
+    return conn.execute(
+        "UPDATE source_revocations SET reason=? WHERE user_id=? AND identity_digest=? AND reason<>? AND ("
+        f"(action='revoke' AND reason NOT IN ({','.join('?' * len(SOURCE_REVOCATION_REASONS))})) OR "
+        f"(action='lift' AND reason NOT IN ({','.join('?' * len(SOURCE_LIFT_REASONS))})))",
+        (MARKER, user_id, identity_digest, MARKER, *SOURCE_REVOCATION_REASONS, *SOURCE_LIFT_REASONS)).rowcount
+
+
 def revoke_source(store, user_id: str, target_digest: str, action: str,
                   reason: str, at: str, *, dry_run: bool = False) -> dict:
     """0022 §4e: preview or commit ONE revocation/lift, sweep included.
@@ -286,15 +305,15 @@ def revoke_source(store, user_id: str, target_digest: str, action: str,
     the R19 operation — together or not at all. The statement is RETURNED and
     is audit-event-only (Q6, approved 2026-08-20): the caller's audit sink is
     the durable record; the store keeps no second copy."""
-    # specs/0041 §11.2 / D1 (round 10, R9-02(a)): a REVOKE's reason closes on the owner's four values, at the one
-    # public entry — preview and commit alike; `revocation_operation`, the R19 construction rendered into 0022, is
-    # unchanged. The LIFT half is not closed: its vocabulary is held for the owner's ruling, and nothing here refuses
-    # or admits a lift reason until then.
+    # specs/0041 §11.2 / D1 (round 10, R9-02(a)): the reason closes on its ACTION's own vocabulary — a revoke on the
+    # owner's four, a lift on the lift list (the owner's ruling, 2026-10-02) — at the one public entry, preview and
+    # commit alike; `revocation_operation`, the R19 construction rendered into 0022, is unchanged
     with _SITE_REVOKE_REASON.consult():
-        if action == "revoke" and reason not in SOURCE_REVOCATION_REASONS:
+        allowed = SOURCE_REVOCATION_REASONS if action == "revoke" else SOURCE_LIFT_REASONS
+        if reason not in allowed:
             raise _SITE_REVOKE_REASON.fire(ValueError(
-                f"refused: revocation reason {reason!r} is not one of {SOURCE_REVOCATION_REASONS} (specs/0041 §11.2, "
-                f"D1) — a revocation fitting none of the four is refused, never filed under one"))
+                f"refused: {action} reason {reason!r} is not one of {allowed} (specs/0041 §11.2, D1) — a reason "
+                f"fitting none of them is refused, never filed under one"))
     proposed = {"identity_digest": target_digest, "action": action,
                 "at": at, "reason": reason}
     with store._lock:

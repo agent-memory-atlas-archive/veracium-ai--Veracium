@@ -114,10 +114,22 @@ def spec_route():
     return out
 
 
+def _ddl_only_side_paths(t=None):
+    """Side-table paths no MODEL carrier reaches — DERIVED: a path is DDL-only iff the enumeration places no carrier
+    on its table (`-> table` in its location) and it is not a record's own json. Such a path has no numbered spec
+    row (e.g. §11.2's `source_revocations.reason`); it is compared by the DDL accounting and executed below."""
+    t = t or R
+    _mod, carriers = _enumeration()
+    model_tables = {m.group(1) for _p, where in carriers.values() for m in [re.search(r"-> (\w+)", where)] if m}
+    return {p for entries in t.SIDE_TABLE_TREATMENTS.values() for p, how in entries
+            if how != t.DELETE and "." in p and p.split(".")[0] not in model_tables}
+
+
 def table_route(tables=None):
     """{kind: {path: class}} from `redaction.py` — the model carriers only (the DDL-only derived oracle, the embedding
-    row, is accounted by the DDL test below)."""
+    row, and the DDL-only side paths are accounted by the DDL test and executed below)."""
     t = tables or R
+    ddl_only = _ddl_only_side_paths(t)
     out = {"edge": {}, "episode": {}}
     for p in t.EDGE_REPLACE: out["edge"][p] = "REPLACE"
     for p in t.EDGE_CLEAR: out["edge"][p] = "CLEAR"
@@ -128,7 +140,7 @@ def table_route(tables=None):
     for p in t.EPISODE_REASON_THREE_CASE: out["episode"][p] = "REASON3"
     for kind, entries in t.SIDE_TABLE_TREATMENTS.items():
         for p, how in entries:
-            if how == t.DELETE:
+            if how == t.DELETE or p in ddl_only:
                 continue
             out[kind][p] = how
     return out
@@ -208,7 +220,6 @@ DDL_ACCOUNT = {
         "supersession_refusals.created_at", "wiki.user_id", "write_counter.user_id",
     },
     "D1 reason vocabulary (closed per field; §11.2)": {"edge_event.reason", "episode_event.reason", "redactions.reason"},
-    "§11.2 carrier, prose replaced at redaction — R9-02(d), OWED in this batch": {"source_revocations.reason"},
     "attestation field names — the kind's carrier paths, refused otherwise at the parser AND the commit (R9-08)":
         {"redactions.fields"},
     "a witnessed notice's foreign body: carrier-path NAMES, D1 vocabulary, versions, a time (R9-04/R9-05)":
@@ -484,6 +495,39 @@ def _episode_reason(tmp_path):
     return m, "episode", prose, check
 
 
+def _revocation_prose(kind):
+    """A record linked to a source whose revoke row holds PROSE. The prose is the PRE-CLOSURE state (the writer now
+    refuses it), planted here as the legacy row; the operation under test is the real redact. The FROZEN store's
+    `prose_source_revocation` row is the native instance (the edge cell's second half reads it)."""
+    def build(tmp_path):
+        from veracium.scope_linkage import identity_digest_of
+        from veracium.store.revocation import revoke_source
+        m = _mem(tmp_path)
+        if kind == "edge":
+            m.store.add_edge(Edge(id="e-1", user_id=U, subject="user", relation="lives_in", object="Berlin",
+                                  provenance=_prov(source_id="mb-1")))
+            tid = "e-1"
+        else:
+            m.store.add_episode(Episode(id="ep-1", user_id=U, date="2026-09-01", summary="day",
+                                        provenance=_prov(source_id="mb-1")))
+            tid = "ep-1"
+        d = identity_digest_of(None, "mb-1", m.store.local_origin())
+        m.store.add_edge(Edge(id="e-other", user_id=U, subject="user", relation="pet", object="cat",
+                              provenance=_prov(source_id="mb-1")))
+        revoke_source(m.store, U, d, "revoke", "policy", "2026-09-02T00:00:00Z")
+        revoke_source(m.store, U, d, "lift", "revoked_in_error", "2026-09-03T00:00:00Z")
+        m.store._conn.execute("UPDATE source_revocations SET reason=? WHERE user_id=? AND action='revoke'",
+                              ("told me in confidence " + SECRET, U))
+        m.store._conn.commit()
+        # the redaction needs the target ACTIVE (a revoke retires it); the lift reinstated it
+        def check(st, r):
+            rows = dict(st._conn.execute("SELECT action, reason FROM source_revocations WHERE user_id=?", (U,)).fetchall())
+            assert rows == {"revoke": R.MARKER, "lift": "revoked_in_error"}     # prose treated; vocabulary kept
+            assert "source_revocations.reason" in r.fields_cleared
+        return m, kind, tid, check
+    return build
+
+
 CELLS = {
     ("edge", "subject"): _dup_column_too("subject"),
     ("edge", "relation"): _dup_column_too("relation"),
@@ -503,12 +547,19 @@ CELLS = {
     ("episode", "retired_reason"): _episode_reason,
     ("episode", "contribution_ledger.identity_digest"): _episode_ledger,
     ("episode", "contribution_ledger.evidence_ref_digest"): _episode_ledger,
+    ("edge", "source_revocations.reason"): _revocation_prose("edge"),
+    ("episode", "source_revocations.reason"): _revocation_prose("episode"),
 }
+
+
+def test_the_ddl_only_side_paths_are_exactly_the_revocation_reason():
+    assert _ddl_only_side_paths() == {"source_revocations.reason"}
 
 
 def test_every_treated_path_has_exactly_one_execution_cell():
     paths = {(k, p) for k, d in table_route().items() for p in d}
-    paths |= {(k, p) for k, entries in R.SIDE_TABLE_TREATMENTS.items() for p, h in entries if h == R.DELETE}
+    paths |= {(k, p) for k, entries in R.SIDE_TABLE_TREATMENTS.items() for p, h in entries
+              if h == R.DELETE or p in _ddl_only_side_paths()}
     assert set(CELLS) == paths, (sorted(paths - set(CELLS)), sorted(set(CELLS) - paths))
 
 

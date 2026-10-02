@@ -66,8 +66,12 @@ REDACTION_REASONS = ("subject_request", "operator_policy", "erroneous_capture", 
 # §11.2 / D1, `source_revocations.reason` (round 10, R9-02(a)): the owner's FOUR values for a future REVOKE — a different
 # field from the redaction's own reason, so a different constant (`policy`, not `operator_policy`: the operator's own
 # standing policy required the revocation). A revocation fitting none of the four is REFUSED, never filed under one.
-# A LIFT row's reason is outside this vocabulary and outside its closure until the owner rules on it.
 SOURCE_REVOCATION_REASONS = ("subject_request", "legal_obligation", "erroneous_capture", "policy")
+# …and for a LIFT (owner's ruling, 2026-10-02, given in the dev session): its OWN closed list, research's values —
+# revoked_in_error (the revocation itself was a mistake: wrong source or wrong digest) · subject_request (the data
+# subject asked that it be restored) · legal_obligation (the order that compelled it ended, or one compels restoration)
+# · policy (the operator's standing policy changed — not a residual "other"). Anything else is refused.
+SOURCE_LIFT_REASONS = ("revoked_in_error", "subject_request", "legal_obligation", "policy")
 
 REPLACE, CLEAR, DELETE, PRESERVE = "REPLACE", "CLEAR", "DELETE", "PRESERVE"
 
@@ -88,10 +92,11 @@ EPISODE_REASON_THREE_CASE = ("retired_reason",)                                 
 SIDE_TABLE_TREATMENTS = {
     "edge": (("confirmations.request_digest", REPLACE), ("contribution_ledger.identity_digest", CLEAR),
              ("contribution_ledger.evidence_ref_digest", CLEAR), ("supersession_refusals.relation", REPLACE),
-             ("edge_embedding", DELETE)),
+             ("edge_embedding", DELETE), ("source_revocations.reason", REPLACE)),   # §11.2: no numbered row (R9-02(d))
     # rows 21/23 reach an episode too, as the SURVIVOR of a consolidation's ledger rows (round-9 R9-03: this
     # was empty while the treatment existed only for edges; an episode is never a recorded contributor)
-    "episode": (("contribution_ledger.identity_digest", CLEAR), ("contribution_ledger.evidence_ref_digest", CLEAR)),
+    "episode": (("contribution_ledger.identity_digest", CLEAR), ("contribution_ledger.evidence_ref_digest", CLEAR),
+                ("source_revocations.reason", REPLACE)),
 }
 def carrier_paths(kind: str) -> frozenset:
     """The carrier PATHS a redaction of `kind` can treat — DERIVED from the tables above, never listed again: the

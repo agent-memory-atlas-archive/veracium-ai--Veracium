@@ -1231,6 +1231,17 @@ def test_r19_binds_the_product_store_the_moment_a_revocation_writer_appears():
         # defect.
         return
 
+    # 0022 §4a AS AMENDED by 0041 §11.4 (round 10): the ONE admitted updater — the redaction treatment — is not an
+    # APPEND, allocates no ordinal and runs inside its caller's transaction, so R19's two literals do not apply to it.
+    # It is exempt by NAME and by PROPERTY, decided by the SAME definition the append-only gate reads
+    # (tests/support_0022_updater.py): a function that fails the property is NOT exempt and is held to R19 below.
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location("support_0022_updater", root / "tests" / "support_0022_updater.py")
+    _sup = _ilu.module_from_spec(_spec); _spec.loader.exec_module(_sup)
+    _w, _updater_ok, _violations = _sup.classify(
+        {str(f.relative_to(root)): f.read_text() for f in sorted(store.rglob("*.py"))})
+    assert not _violations, _violations
+    writers = [w for w in writers if (str(w[0]), w[1]) not in _updater_ok]
     for path, fname, line, body in writers:
         assert "BEGIN IMMEDIATE" in body, (
             f"{path}:{line} `{fname}` writes source_revocations without "

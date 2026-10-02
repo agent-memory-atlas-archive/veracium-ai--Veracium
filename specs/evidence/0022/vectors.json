@@ -112,7 +112,7 @@
     "action": "lift",
     "at": "2026-03-01T00:00:00Z",
     "seq": 1,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -149,7 +149,7 @@
     "action": "lift",
     "at": "2026-03-01T00:00:00Z",
     "seq": 1,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -186,7 +186,7 @@
     "action": "lift",
     "at": "2026-04-01T00:00:00Z",
     "seq": 2,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -4159,7 +4159,7 @@
    },
    "action": "lift",
    "at": "2026-04-01T00:00:00Z",
-   "reason": "operator: revoked in error"
+   "reason": "revoked_in_error"
   }
  },
  {
@@ -4504,7 +4504,7 @@
    },
    "action": "lift",
    "at": "2026-04-01T00:00:00Z",
-   "reason": "operator: revoked in error"
+   "reason": "revoked_in_error"
   }
  },
  {
@@ -4823,7 +4823,7 @@
    },
    "action": "lift",
    "at": "2026-04-01T00:00:00Z",
-   "reason": "operator: revoked in error"
+   "reason": "revoked_in_error"
   }
  },
  {
@@ -5409,7 +5409,7 @@
    },
    "action": "lift",
    "at": "2026-04-01T00:00:00Z",
-   "reason": "operator: revoked in error"
+   "reason": "revoked_in_error"
   }
  },
  {
@@ -5995,7 +5995,7 @@
    },
    "action": "lift",
    "at": "2026-04-01T00:00:00Z",
-   "reason": "operator: revoked in error"
+   "reason": "revoked_in_error"
   }
  },
  {
@@ -6635,7 +6635,7 @@
     "action": "lift",
     "at": "2026-08-17T00:00:00Z",
     "seq": 1,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -6659,7 +6659,7 @@
     "action": "lift",
     "at": "2099-01-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -6709,7 +6709,7 @@
     "action": "lift",
     "at": "2026-08-17T00:00:00Z",
     "seq": 1,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -6733,7 +6733,7 @@
     "action": "lift",
     "at": "2026-02-01T00:00:00Z",
     "seq": 1,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -6770,7 +6770,7 @@
     "action": "lift",
     "at": "1970-01-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",

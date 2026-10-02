@@ -934,7 +934,7 @@ def test_out_of_domain_confidence_refuses_revoke_and_lift(store):
         (_j.dumps({"base": GOOD, "contributor": EVIL}), U))
     store._conn.commit()
     with pytest.raises(_RE):
-        rv.revoke_source(store, U, d2, "lift", "seam-model", AT)
+        rv.revoke_source(store, U, d2, "lift", "policy", AT)
     assert _sr(store._conn, U), \
         "the refused lift removed the standing revocation — a half-lift"
     # and the survivor's stored edge still validates (nothing was committed)

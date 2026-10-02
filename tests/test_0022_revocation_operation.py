@@ -142,17 +142,57 @@ def test_a_failing_rollback_reports_unknown_state_and_closes(tmp_path):
 
 # --- append-only: no UPDATE path exists on the product surface ---------------
 
+def _updater_support():
+    import importlib.util, pathlib
+    spec = importlib.util.spec_from_file_location(
+        "support_0022_updater", pathlib.Path(__file__).resolve().parent / "support_0022_updater.py")
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    return mod
+
+
 def test_the_table_is_append_only_by_construction():
-    import ast, pathlib
-    src_root = pathlib.Path("src/veracium")
-    hits = []
-    for f in sorted(src_root.rglob("*.py")):
-        text = f.read_text()
-        if "source_revocations" not in text:
-            continue
-        for kw in ("UPDATE source_revocations", "DELETE FROM source_revocations"):
-            if kw in text:
-                hits.append((f.name, kw))
-    assert not hits, (
-        f"{hits}: source_revocations is APPEND-ONLY (0022 §4a) — the standing "
-        f"state is derived, never edited")
+    """0022 §4a, AS AMENDED by 0041 §11.4 (round 10): append-only, with EXACTLY ONE admitted updater — the redaction
+    treatment `redact_revocation_reasons`, bound by NAME and by PROPERTY (the shared definition in
+    tests/support_0022_updater.py, the same one the R19 gate reads). No other UPDATE, and no DELETE, anywhere in src."""
+    import pathlib
+    sup = _updater_support()
+    files = {str(f): f.read_text() for f in sorted(pathlib.Path("src/veracium").rglob("*.py"))}
+    _writers, updater_ok, violations = sup.classify(files)
+    assert not violations, violations
+    assert {name for _p, name in updater_ok} == {"redact_revocation_reasons"}, updater_ok
+
+
+@pytest.mark.parametrize("body, why", [
+    ("    if not conn.in_transaction:\n        raise RuntimeError('x')\n    conn.execute(\"UPDATE source_revocations SET action=? WHERE user_id=?\", ())\n", "SET assigns"),
+    ("    if not conn.in_transaction:\n        raise RuntimeError('x')\n    conn.execute(\"UPDATE source_revocations SET reason=?, seq=? WHERE user_id=?\", ())\n", "SET assigns"),
+    ("    if not conn.in_transaction:\n        raise RuntimeError('x')\n    conn.execute(\"UPDATE source_revocations SET reason=? WHERE user_id=?\", ())\n    conn.execute(\"INSERT INTO source_revocations(user_id) VALUES(?)\", ())\n", "not UPDATE alone"),
+    ("    conn.execute(\"UPDATE source_revocations SET reason=? WHERE user_id=?\", ())\n", "refuse outside a transaction"),
+])
+def test_the_updater_property_refuses_each_wrong_shape(body, why):
+    """The NEGATIVE controls: the named updater with a wrong SET, an extra INSERT, or no transaction guard is refused;
+    the same statement under ANY other name is refused as an updater that is not the one admitted."""
+    sup = _updater_support()
+    src = "def redact_revocation_reasons(conn, user_id, digest):\n" + body
+    _w, ok, violations = sup.classify({"src/veracium/store/revocation.py": src})
+    assert not ok and any(why in v for v in violations), violations
+    _w, ok2, v2 = sup.classify({"src/veracium/store/revocation.py": src.replace("redact_revocation_reasons", "other_writer")})
+    assert not ok2 and any("not the one admitted updater" in v for v in v2), v2
+
+
+def test_the_updater_property_accepts_the_shape_it_names():
+    """The POSITIVE control: a guarded UPDATE that sets `reason` alone, under the admitted name, is accepted."""
+    sup = _updater_support()
+    src = ("def redact_revocation_reasons(conn, user_id, digest):\n    \"\"\"doc\"\"\"\n"
+           "    if not conn.in_transaction:\n        raise RuntimeError('x')\n"
+           "    return conn.execute(\"UPDATE source_revocations SET reason=? WHERE user_id=?\", ()).rowcount\n")
+    _w, ok, violations = sup.classify({"src/veracium/store/revocation.py": src})
+    assert ok and not violations
+
+
+def test_the_one_updater_refuses_to_run_outside_a_transaction(tmp_path):
+    """The executed probe of the guard the property names."""
+    from veracium.store.revocation import redact_revocation_reasons
+    st = SqliteStore(str(tmp_path / "s.db"))
+    assert not st._conn.in_transaction
+    with pytest.raises(RuntimeError, match="open write transaction"):
+        redact_revocation_reasons(st._conn, "u", "a" * 64)

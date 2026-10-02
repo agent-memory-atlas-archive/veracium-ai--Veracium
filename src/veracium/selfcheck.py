@@ -360,7 +360,7 @@ def _check_revocation(llm, tmp, relations) -> tuple[int, int, dict]:
 
         # LIFT — restores exactly what the revocation took: the seed records
         # return to the seam whole, the birth floor is NOT revisited (Q2)
-        revoke_source(mem.store, uid, digest, "lift", "selfcheck",
+        revoke_source(mem.store, uid, digest, "lift", "policy",
                       "2026-05-06T00:00:00Z")
         lifted_seed = (all(e.active and e.invalidation_reason is None
                            for e in mem.store.edges(uid, active_only=False)

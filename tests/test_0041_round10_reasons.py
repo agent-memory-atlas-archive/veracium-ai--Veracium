@@ -80,14 +80,32 @@ def test_a_the_redaction_vocabulary_is_not_the_revocation_vocabulary(tmp_path):
         revoke_source(m.store, U, _digest(m), "revoke", "operator_policy", AT)
 
 
-def test_a_the_lift_half_is_held_a_lift_reason_is_neither_refused_nor_closed_today(tmp_path):
-    """HELD for the owner's ruling (research put the lift vocabulary to the owner): this pins TODAY's state — a lift
-    with a prose reason commits — so the ruling's implementation changes this cell visibly, never silently."""
+@pytest.mark.parametrize("reason", R.SOURCE_LIFT_REASONS)
+def test_a_a_lift_with_each_lift_reason_commits(tmp_path, reason):
+    """The owner's ruling (2026-10-02, given in the dev session): a lift closes on its OWN list."""
     m = tt._mem(tmp_path)
     d = _digest(m)
     revoke_source(m.store, U, d, "revoke", "policy", AT)
-    revoke_source(m.store, U, d, "lift", "revoked in error, the owner says", "2026-09-02T00:00:00Z")
+    revoke_source(m.store, U, d, "lift", reason, "2026-09-02T00:00:00Z")
     assert _count(m.store, "source_revocations") == 2
+
+
+@pytest.mark.parametrize("dry_run", [True, False])
+@pytest.mark.parametrize("reason", [PROSE, "erroneous_capture"])      # prose, and a REVOKE-only value
+def test_a_a_lift_outside_the_lift_list_refuses_in_preview_and_commit_and_writes_nothing(tmp_path, reason, dry_run):
+    m = tt._mem(tmp_path)
+    d = _digest(m)
+    revoke_source(m.store, U, d, "revoke", "policy", AT)
+    with pytest.raises(ValueError, match="not one of"):
+        revoke_source(m.store, U, d, "lift", reason, "2026-09-02T00:00:00Z", dry_run=dry_run)
+    assert _count(m.store, "source_revocations") == 1
+
+
+def test_a_revoked_in_error_is_a_lift_reason_and_not_a_revoke_reason(tmp_path):
+    m = tt._mem(tmp_path)
+    assert "revoked_in_error" in R.SOURCE_LIFT_REASONS and "revoked_in_error" not in R.SOURCE_REVOCATION_REASONS
+    with pytest.raises(ValueError, match="not one of"):
+        revoke_source(m.store, U, _digest(m), "revoke", "revoked_in_error", AT)
 
 
 # ------------------------------------------------------------------------------------------------ (b) retired_reason
@@ -181,3 +199,37 @@ def test_stored_legacy_prose_still_loads_the_closure_never_binds_the_read_path(t
     eid = tt._frozen_rows()["prose_retired_reason"]
     eps = {e.id: e for e in m.store.episodes(U, include_retired=True)}
     assert eid in eps and eps[eid].retired_reason not in DISPOSITIONED_REASONS     # loaded, prose intact
+
+
+# ------------------------------------------------------------------------------------------------ (d) stored prose
+def test_d_the_frozen_stores_prose_revocation_is_treated_by_the_real_redaction(tmp_path):
+    """The NATIVE legacy instance: the frozen pre-restriction store's revoke row holds the caller's sentence; redacting
+    the record linked to that source (`e-source-linked`) through the real `redact` carries the prose to the marker."""
+    m = tt._frozen_memory(tmp_path)
+    digest = tt._frozen_rows()["prose_source_revocation"]
+    before = m.store._conn.execute("SELECT reason FROM source_revocations WHERE identity_digest=?", (digest,)).fetchall()
+    assert before and all(r not in R.SOURCE_REVOCATION_REASONS for (r,) in before)          # it IS prose
+    receipt = m.redact(U, edge_id=tt._frozen_rows()["source_linked_edge"], reason="subject_request")
+    after = m.store._conn.execute("SELECT reason FROM source_revocations WHERE identity_digest=?", (digest,)).fetchall()
+    assert after == [(R.MARKER,)] * len(before) and "source_revocations.reason" in receipt.fields_cleared
+
+
+def test_d_the_standing_state_is_identical_before_and_after_the_treatment_across_revoke_lift_revoke(tmp_path):
+    """THE PROPERTY 0022 §4a's amendment claims: the one updater rewrites `reason` only, so every column the standing
+    state derives from — and the standing state itself — is byte-identical across the treatment. Prose rows are the
+    planted PRE-CLOSURE state (the writer refuses them now); a row holding a vocabulary value is the control."""
+    m = tt._mem(tmp_path)
+    d = _digest(m)
+    m.store.add_episode(Episode(id="ep-s", user_id=U, date="2026-09-01", summary="s", provenance=_prov(source_id="mailbox-1")))
+    revoke_source(m.store, U, d, "revoke", "policy", "2026-09-01T00:00:00Z")
+    revoke_source(m.store, U, d, "lift", "policy", "2026-09-02T00:00:00Z")
+    revoke_source(m.store, U, d, "revoke", "legal_obligation", "2026-09-03T00:00:00Z")
+    m.store._conn.execute("UPDATE source_revocations SET reason=? WHERE user_id=? AND seq IN (0, 1)", (PROSE, U))
+    m.store._conn.commit()
+    cols = "SELECT seq, action, identity_digest, at FROM source_revocations WHERE user_id=? ORDER BY seq"
+    rows_before, standing_before = m.store._conn.execute(cols, (U,)).fetchall(), m.store.standing_revocations(U)
+    m.redact(U, episode_id="ep-s", reason="subject_request")
+    assert m.store._conn.execute(cols, (U,)).fetchall() == rows_before
+    assert m.store.standing_revocations(U) == standing_before
+    reasons = [r for (r,) in m.store._conn.execute("SELECT reason FROM source_revocations WHERE user_id=? ORDER BY seq", (U,))]
+    assert reasons == [R.MARKER, R.MARKER, "legal_obligation"]                              # prose treated; vocabulary kept

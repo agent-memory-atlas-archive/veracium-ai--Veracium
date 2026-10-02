@@ -72,7 +72,7 @@ def test_a_lift_reinstates_what_the_revocation_took(tmp_path):
     s = _store(tmp_path)
     d = _seed(s)
     rv.revoke_source(s, U, d, "revoke", "policy", AT)
-    st = rv.revoke_source(s, U, d, "lift", "operator", AT)
+    st = rv.revoke_source(s, U, d, "lift", "policy", AT)
     assert st["standing"] is False
     e = s.edges(U)[0]
     assert e.active and e.invalidation_reason is None
@@ -85,7 +85,7 @@ def test_a_lift_does_not_reinstate_other_retirements(tmp_path):
     # retire the edge for an unrelated reason FIRST
     s.invalidate_edge("e1", utcnow(), "disputed")
     rv.revoke_source(s, U, d, "revoke", "policy", AT)
-    rv.revoke_source(s, U, d, "lift", "operator", AT)
+    rv.revoke_source(s, U, d, "lift", "policy", AT)
     e = s.edges(U, active_only=False)[0]
     assert not e.active and e.invalidation_reason == "disputed", (
         "a record retired as disputed is not this operation's to reinstate")

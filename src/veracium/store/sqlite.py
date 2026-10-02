@@ -2763,6 +2763,15 @@ class SqliteStore(Store):
                 (user_id, target_id)).rowcount
             if n:
                 fields.extend(["contribution_ledger.identity_digest", "contribution_ledger.evidence_ref_digest"])
+        # §11.2 (round 10, R9-02(d)): the source-revocation rows linked to this record's SOURCE carry their stored
+        # prose to the marker, through THE ONE UPDATER 0022 §4a now admits — inside this transaction, `reason` only,
+        # so the standing state those rows derive cannot change. Both kinds: the identity is the record's source.
+        from ..scope_linkage import identity_digest_of as _identity_digest_of
+        from .revocation import redact_revocation_reasons as _redact_revocation_reasons
+        _prov = before.get("provenance") or {}
+        _digest = _identity_digest_of(_prov.get("origin"), _prov.get("source_id"), self.local_origin())
+        if _digest is not None and _redact_revocation_reasons(self._conn, user_id, _digest):
+            fields.append("source_revocations.reason")
         self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))     # a derivation of the content
         self._bump(user_id)
         version_after = self.store_version(user_id)

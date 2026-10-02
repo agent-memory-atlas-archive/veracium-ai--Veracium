@@ -2119,34 +2119,34 @@
   "line": 910,
   "statement": "return _SITE_EDGES_READ_FENCE.fire([Edge.model_validate_json(r[0]) for r in rows], \"fence-applied\", declined=not include_quarantined)"
  },
- "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:2919:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:2928:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0027 §4f (refuse) through site store.embedding.delayed-writer",
   "reviewer": "dev",
   "site": "store.embedding.delayed-writer",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:RETURN_FALSE:1",
-  "line": 2919,
+  "line": 2928,
   "statement": "return _SITE_EMBEDDING_DELAYED_WRITER.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:2926:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:2935:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0027 §4f (refuse) through site store.embedding.stale-content",
   "reviewer": "dev",
   "site": "store.embedding.stale-content",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:RETURN_FALSE:2",
-  "line": 2926,
+  "line": 2935,
   "statement": "return _SITE_EMBEDDING_STALE_CONTENT.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore.upsert_embedding:2897:RAISE": {
+ "store/sqlite.py:SqliteStore.upsert_embedding:2906:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4e (0007 §4c form) (refuse) through site store.embedding.txn-locked",
   "reviewer": "dev",
   "site": "store.embedding.txn-locked",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.upsert_embedding:RAISE:1",
-  "line": 2897,
+  "line": 2906,
   "statement": "raise _SITE_EMBEDDING_TXN_LOCKED.fire(sqlite3.OperationalError("
  },
  "store/sqlite.py:SqliteStore.add_episode:1695:RAISE": {
@@ -2719,14 +2719,14 @@
   "line": 139,
   "statement": "raise _SITE_REVOCATION_ORDINAL.fire(OrdinalCollision(str(e))) from e"
  },
- "store/revocation.py:revoke_source:295:RAISE": {
+ "store/revocation.py:revoke_source:314:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.2 D1 (revoke) (refuse) through site store.revocation.revoke-reason-not-registered",
   "reviewer": "dev",
   "site": "store.revocation.revoke-reason-not-registered",
   "class": "enforcement",
   "key": "store/revocation.py:revoke_source:RAISE:1",
-  "line": 295,
+  "line": 314,
   "statement": "raise _SITE_REVOKE_REASON.fire(ValueError("
  },
  "store/revocation_sweep.py:validate_contribution_row:360:RAISE": {
@@ -3961,22 +3961,22 @@
   "line": 2239,
   "statement": "raise ValueError(f\"lease_duration must be in (0, {LEASE_MAX}], \""
  },
- "store/sqlite.py:SqliteStore.policy_receipts:2868:RAISE": {
+ "store/sqlite.py:SqliteStore.policy_receipts:2877:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/sqlite.py:SqliteStore.policy_receipts:RAISE:1",
-  "line": 2868,
+  "line": 2877,
   "statement": "raise ValueError(f\"policy_receipts: limit must be a positive int, got {limit!r}\")"
  },
- "store/sqlite.py:SqliteStore.write_policy_receipt:2853:RAISE": {
+ "store/sqlite.py:SqliteStore.write_policy_receipt:2862:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/sqlite.py:SqliteStore.write_policy_receipt:RAISE:1",
-  "line": 2853,
+  "line": 2862,
   "statement": "raise ValueError(f\"write_policy_receipt: row lacks {missing}\")"
  },
  "cli.py:<module>:564:RAISE": {
@@ -4744,13 +4744,13 @@
   "line": 2463,
   "statement": "return [op for op in self._ops_for_user(user_id)"
  },
- "store/sqlite.py:SqliteStore.policy_receipts:2871:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.policy_receipts:2880:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.policy_receipts:FILTER_RETURN:1",
-  "line": 2871,
+  "line": 2880,
   "statement": "return [dict(zip(self._RECEIPT_COLUMNS, r))"
  },
  "store/sqlite.py:SqliteStore.read_window:465:RAISE": {
@@ -6436,6 +6436,15 @@
   "line": 274,
   "statement": "raise RevocationEffectError("
  },
+ "store/revocation.py:redact_revocation_reasons:289:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/revocation.py:redact_revocation_reasons:RAISE:1",
+  "line": 289,
+  "statement": "raise RuntimeError(\"redact_revocation_reasons runs only inside a redaction's open write transaction \""
+ },
  "store/revocation_sweep.py:_bounded:174:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
@@ -6985,22 +6994,22 @@
   "line": 210,
   "statement": "raise RuntimeError("
  },
- "store/sqlite.py:SqliteStore.set_wiki:2987:BOOL_RETURN": {
+ "store/sqlite.py:SqliteStore.set_wiki:2996:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.set_wiki:BOOL_RETURN:1",
-  "line": 2987,
+  "line": 2996,
   "statement": "return n == 1"
  },
- "store/sqlite.py:SqliteStore.upsert_embedding:2907:RAISE": {
+ "store/sqlite.py:SqliteStore.upsert_embedding:2916:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.upsert_embedding:RAISE:2",
-  "line": 2907,
+  "line": 2916,
   "statement": "raise"
  },
  "store/sqlite.py:SqliteStore.validate_receipt_state:1001:RAISE": {
@@ -7318,22 +7327,22 @@
   "line": 254,
   "statement": "return False"
  },
- "redaction.py:_is_absent:115:BOOL_RETURN": {
+ "redaction.py:_is_absent:120:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by redaction.py:treat_edge, redaction.py:treat_episode, redaction.py:treat_reason",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "redaction.py:_is_absent:BOOL_RETURN:1",
-  "line": 115,
+  "line": 120,
   "statement": "return v is None or v == \"\" or v == [] or v == {}"
  },
- "redaction.py:carrier_paths:106:RAISE": {
+ "redaction.py:carrier_paths:111:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by store/sqlite.py:SqliteStore.commit_outcome_import_plan [site store.import-plan, store.import.attested-redaction, store.import.episode-kind-not-recognised, store.import.notice-body-conflict, store.import.reason-not-registered]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "redaction.py:carrier_paths:RAISE:1",
-  "line": 106,
+  "line": 111,
   "statement": "raise ValueError(f\"no carrier paths for target kind {kind!r}\")"
  },
  "redaction.py:carries_marker:31:BOOL_RETURN": {

@@ -94,7 +94,7 @@ def test_non_revival_grants_nothing(tmp_path):
     s.add_episode(quarantined)
     d = identity_digest_of(None, "feed-1", s.local_origin())
     rv.revoke_source(s, U, d, "revoke", "policy", AT)
-    rv.revoke_source(s, U, d, "lift", "operator", AT)
+    rv.revoke_source(s, U, d, "lift", "policy", AT)
     got = s.episodes(U, include_retired=True)[0]
     assert got.provenance.disclosure == Disclosure.QUARANTINED, (
         "a revocation cycle WIDENED an unrelated record's disclosure")

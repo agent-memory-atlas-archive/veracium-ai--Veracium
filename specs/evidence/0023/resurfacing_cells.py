@@ -70,8 +70,8 @@ def consequence(m, value, query):
 
 def revoke(m, action="revoke"):
     dg = identity_digest_of(None, S, m.store.local_origin())
-    # 0041 round 10 (D1): a revoke's reason is one of the owner's four; a lift's is held for the owner's ruling
-    st = rv.revoke_source(m.store, U, dg, action, "policy" if action == "revoke" else "operator", AT)
+    # 0041 round 10 (D1): a revoke's and a lift's reasons each close on their own list; "policy" is in both
+    st = rv.revoke_source(m.store, U, dg, action, "policy", AT)
     return dg, st
 
 def observe() -> dict:

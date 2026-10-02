@@ -73,7 +73,7 @@ tmp_path):
     digest = identity_digest_of(None, "feed-1", s.local_origin())
     rv.revoke_source(s, U, digest, "revoke", "policy", AT)
     _ingest(s, "feed-1")
-    rv.revoke_source(s, U, digest, "lift", "operator", AT)
+    rv.revoke_source(s, U, digest, "lift", "policy", AT)
     eps = s.episodes(U, include_retired=True)
     assert eps[0].provenance.disclosure == Disclosure.QUARANTINED, (
         "a lift revisited the birth floor — Q2 says it must not")
