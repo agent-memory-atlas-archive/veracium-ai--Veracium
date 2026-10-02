@@ -58,6 +58,9 @@ _SITE_UPSERT_ATTESTED = declare_site("store.upsert.attested-redaction")
 _SITE_EPISODE_ATTESTED = declare_site("store.episode.attested-redaction")
 _SITE_CONSOLIDATION_INPUT_REDACTED = declare_site("store.consolidation.input-redacted")
 _SITE_IMPORT_NOTICE_CONFLICT = declare_site("store.import.notice-body-conflict")
+_SITE_UPSERT_INVALIDATION_REASON = declare_site("store.upsert.invalidation-reason-not-registered")
+_SITE_EPISODE_RETIRED_REASON = declare_site("store.episode.retired-reason-not-registered")
+_SITE_IMPORT_REASON = declare_site("store.import.reason-not-registered")
 _SITE_JOURNAL_REDACTION_REASON = declare_site("store.journal.redaction-reason")
 _SITE_IMPORT_ATTESTED = declare_site("store.import.attested-redaction")     # tranche 4b: INV-11 at the import boundary
 _SITE_READ_OUTPUT_NOT_VISIBLE = declare_site("store.read.output-not-visible", declines=False)
@@ -514,6 +517,15 @@ class SqliteStore(Store):
         # the relation-only quarantine is held by one clause of `Edge.quarantined`, and a
         # later relation replacement would silently promote the claim. Ingest sets both;
         # this closes the model-and-store path that never did.
+        # specs/0041 §11.2 / D1 (round 10, R9-02(c); found by sweep D): `Edge.invalidation_reason` CLOSES for future
+        # writes on the registry the journal already enforces for `invalidate_edge`. Absent (None) stays valid; a
+        # prose reason — accepted here on create and on a re-upsert to invalidated — refuses. Stored legacy prose
+        # still loads (the closure binds writers and import, never the read path).
+        with _SITE_UPSERT_INVALIDATION_REASON.consult():
+            if edge.invalidation_reason is not None and edge.invalidation_reason not in DISPOSITIONED_REASONS:
+                raise _SITE_UPSERT_INVALIDATION_REASON.fire(ValueError(
+                    f"refused: edge {edge.id!r} carries invalidation reason {edge.invalidation_reason!r}, which is not "
+                    f"a registered reason {tuple(DISPOSITIONED_REASONS)} (specs/0041 §11.2, D1)"))
         with _SITE_UPSERT_RELATION_ONLY_QUARANTINE.consult():
             if edge.relation == QUARANTINE_RELATION and edge.provenance.disclosure != Disclosure.QUARANTINED:
                 raise _SITE_UPSERT_RELATION_ONLY_QUARANTINE.fire(ValueError(
@@ -1623,6 +1635,13 @@ class SqliteStore(Store):
                 raise _SITE_EPISODE_MARKER.fire(ValueError(
                     f"refused: episode {episode.id!r} would introduce the redaction marker in "
                     f"{hit} — only a redaction writes the marker (specs/0041 §4b, INV-11's mirror)"))
+        # specs/0041 §11.2 / D1 (round 10, R9-02(b)): a PRESENT `Episode.retired_reason` must be registered; None
+        # (an active episode) stays valid
+        with _SITE_EPISODE_RETIRED_REASON.consult():
+            if episode.retired_reason is not None and episode.retired_reason not in DISPOSITIONED_REASONS:
+                raise _SITE_EPISODE_RETIRED_REASON.fire(ValueError(
+                    f"refused: episode {episode.id!r} carries retired reason {episode.retired_reason!r}, which is not "
+                    f"a registered reason {tuple(DISPOSITIONED_REASONS)} (specs/0041 §11.2, D1)"))
         with _SITE_EPISODE_KIND.consult():
             if episode.kind not in _redaction.RECOGNISED_EPISODE_KINDS:
                 raise _SITE_EPISODE_KIND.fire(ValueError(
@@ -1996,6 +2015,13 @@ class SqliteStore(Store):
                 # the SAME transaction — nothing is durable after a prefix).
                 try:
                     for edge in edges:
+                        # specs/0041 §11.2 / D1 at the IMPORT boundary (round 10, R9-02(c)): the reason closure binds
+                        # import as it binds the writers
+                        with _SITE_IMPORT_REASON.consult():
+                            if edge.invalidation_reason is not None and edge.invalidation_reason not in DISPOSITIONED_REASONS:
+                                raise _SITE_IMPORT_REASON.fire(ValueError(
+                                    f"refused: imported edge {edge.id!r} carries invalidation reason "
+                                    f"{edge.invalidation_reason!r}, not a registered reason (specs/0041 §11.2, D1)"), "edge")
                         # specs/0041 §4b-ii / INV-11 at the IMPORT boundary (tranche 4b): a record whose
                         # redaction this store already attests (a prior redaction, or a standing notice) is
                         # not repopulated by an import — unless a notice in THIS plan covers it, in which
@@ -2017,6 +2043,11 @@ class SqliteStore(Store):
                         self._journal_edge_write(user_id, edge.id, new_json,
                                                  prior[0] if prior is not None else None)
                     for ep in episodes:
+                        with _SITE_IMPORT_REASON.consult():
+                            if ep.retired_reason is not None and ep.retired_reason not in DISPOSITIONED_REASONS:
+                                raise _SITE_IMPORT_REASON.fire(ValueError(
+                                    f"refused: imported episode {ep.id!r} carries retired reason {ep.retired_reason!r}, "
+                                    f"not a registered reason (specs/0041 §11.2, D1)"), "episode")
                         # specs/0041 §2d-iv / §4h(ii): the kind closure binds the IMPORT
                         # boundary as well; a marker-valued kind validates only under
                         # attestation (tranche 2) and is refused here until then

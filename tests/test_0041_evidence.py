@@ -439,6 +439,8 @@ def test_the_round4_reproduction_script_reports_every_claim_as_the_reviewer_foun
     out = r.stdout
     assert "F3a an invalidation with a reason outside DISPOSITIONED_REASONS is REFUSED by the journal writer: True" in out
     assert "non-invalidation kinds carry None: True | the invalidation carries the registry value: True" in out
+    # 0041 round 10 (R9-02(a)): the writer now refuses the sentence; the legacy claim runs on a PLANTED pre-closure row
+    assert "F3b a revoke carrying the caller's sentence is REFUSED at the write path (0041 round 10): True" in out
     assert "F3b source_revocations.reason == the caller's sentence: True | the affected edge's invalidation_reason: revoked_source | the episode's retired_reason: revoked_source" in out
     assert "F3b 'revoked_source' names the EFFECT's reason, not the revocation row's vocabulary: True" in out
 

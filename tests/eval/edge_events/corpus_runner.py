@@ -158,7 +158,7 @@ def s02():
     s, _ = _fresh()
     s.add_edge(_edge("E1", "Porto", source_id="src:S"))
     digest = source_identity_digest(s.local_origin(), "src:S")
-    revoke_source(s, U, digest, "revoke", "operator reason", _z(_at(1)))
+    revoke_source(s, U, digest, "revoke", "policy", _z(_at(1)))
     revoke_source(s, U, digest, "lift", "operator reason", _z(_at(2)))
     events, txn = _labelled(s)
     seq = [(e["txn"], e["kind"], e["edge"], e["reason"]) for e in events]

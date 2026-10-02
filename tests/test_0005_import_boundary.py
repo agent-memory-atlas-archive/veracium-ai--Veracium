@@ -673,6 +673,8 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round10_notices.py", "test_R9_06_a_standing_notice_admits_the_marker_kind_when_the_record_arrives_later"): "restore",
     ("test_0041_round10_notices.py", "test_R9_06_the_closure_still_refuses_what_no_attestation_accounts_for"): "restore",
     ("test_0041_round10_notices.py", "test_R9_08_notice_field_names_are_the_kinds_carrier_paths"): "default",
+    # 0041 round 10, the D1 reason closure at the import boundary (an own-store restore of an edited export)
+    ("test_0041_round10_reasons.py", "test_the_closure_binds_the_import_boundary"): "restore",
     ("test_0041_import_contract.py", "test_an_invalid_notice_refuses_the_record_and_notice_unit_with_nothing_written"): "restore",
     ("test_0041_import_contract.py", "test_two_notices_under_one_source_identity_with_different_bodies_are_an_integrity_refusal"): "restore",
     ("test_0041_import_contract.py", "test_a_held_different_version_is_redacted_anyway_and_flagged"): "restore",

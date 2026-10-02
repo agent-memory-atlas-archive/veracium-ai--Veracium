@@ -409,15 +409,20 @@ def test_F_a_repeated_call_returns_the_original_or_a_reconstructed_receipt(tmp_p
 def test_D_a_legacy_prose_retired_reason_is_retained_at_migration_and_replaced_by_the_registry_value_at_redaction(tmp_path):
     """Rows 30/49 at v7: PRESERVE if in DISPOSITIONED_REASONS, else the registry
     value `redacted` — never the marker (the journal refuses it), never NULL
-    (NULL un-retires the episode). Episode.retired_reason is a bare str today,
-    so the value writes and `active` is unchanged."""
-    st = _mem(tmp_path).store
-    st.add_episode(Episode(id="ep-r", user_id=U, date="2026-09-01", summary="s", retired_reason="told me in confidence: hiv-positive",
-                           provenance=_prov()))
-    before = [e for e in st.episodes(U, include_retired=True) if e.id == "ep-r"][0]
-    assert not before.active                                            # retained at migration, still retired
-    _rewrite(st, "episodes", "ep-r", summary=MARKER, retired_reason="redacted")
-    after = [e for e in st.episodes(U, include_retired=True) if e.id == "ep-r"][0]
+    (NULL un-retires the episode).
+
+    0041 round 10 (R9-02): this test used to BUILD the legacy row through
+    `add_episode` and WRITE its own postcondition (`_rewrite`) — the shape the
+    round-9 verdict named, a transition test that never invokes the operation
+    under test. `add_episode` now refuses prose (the closure), so the legacy row
+    comes from where legacy rows live — the frozen pre-restriction store, migrated
+    to the head — and the treatment is the REAL `redact`."""
+    m = _frozen_memory(tmp_path)
+    eid = _frozen_rows()["prose_retired_reason"]
+    before = [e for e in m.store.episodes(U, include_retired=True) if e.id == eid][0]
+    assert before.retired_reason not in DISPOSITIONED_REASONS and not before.active   # retained at migration, retired
+    m.redact(U, episode_id=eid, reason="subject_request")
+    after = [e for e in m.store.episodes(U, include_retired=True) if e.id == eid][0]
     assert after.retired_reason == "redacted" and after.active == before.active
 
 

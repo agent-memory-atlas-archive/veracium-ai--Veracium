@@ -27,7 +27,7 @@ def _edge(obj, *, source="feed-1", rel="located_at", author=EvidenceAuthor.USER)
 
 def _revoke(s, source="feed-1"):
     d = identity_digest_of(None, source, s.local_origin())
-    rv.revoke_source(s, U, d, "revoke", "operator", AT)
+    rv.revoke_source(s, U, d, "revoke", "policy", AT)
     return d
 
 

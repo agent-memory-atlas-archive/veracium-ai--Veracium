@@ -309,7 +309,7 @@ def test_revocation_completeness_holds_after_a_real_revocation_and_fails_after_a
         claim = next(e for e in store.edges(U, include_quarantined=True) if e.relation == "third_party_claim")
         digest = source_identity_digest(resolve_origin(claim.provenance.origin, store.local_origin()),
                                         claim.provenance.source_id)
-        rv.revoke_source(store, U, digest, "revoke", "operator", "2026-09-07T00:00:00Z")
+        rv.revoke_source(store, U, digest, "revoke", "policy", "2026-09-07T00:00:00Z")
         store.close()
         rep = doctor.diagnose(db)
         assert not [x for x in rep.findings if x.check == "revocation"], _messages(rep, "revocation")

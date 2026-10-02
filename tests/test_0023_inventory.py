@@ -69,7 +69,7 @@ def test_import_round_trip_requarantines(tmp_path):
     m.export_memory(U, out)
 
     d = identity_digest_of(None, "feed-1", m.store.local_origin())
-    rv.revoke_source(m.store, U, d, "revoke", "operator", AT)
+    rv.revoke_source(m.store, U, d, "revoke", "policy", AT)
     # the sweep retired the original; delete it so reimport is not an id-skip
     m.store._conn.execute("DELETE FROM episodes WHERE id=?", (ep.id,))
     m.store._conn.commit()
@@ -93,7 +93,7 @@ def test_non_revival_grants_nothing(tmp_path):
     quarantined = _ep(Disclosure.QUARANTINED, source="feed-2")
     s.add_episode(quarantined)
     d = identity_digest_of(None, "feed-1", s.local_origin())
-    rv.revoke_source(s, U, d, "revoke", "operator", AT)
+    rv.revoke_source(s, U, d, "revoke", "policy", AT)
     rv.revoke_source(s, U, d, "lift", "operator", AT)
     got = s.episodes(U, include_retired=True)[0]
     assert got.provenance.disclosure == Disclosure.QUARANTINED, (

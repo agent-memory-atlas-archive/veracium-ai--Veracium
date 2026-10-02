@@ -183,12 +183,17 @@ def test_R9_05_facts_the_notice_does_not_carry_are_None_and_serialise_as_null(tm
 
 # ------------------------------------------------------------------------------------------------ R9-06
 def _redacted_prose_kind_export(tmp_path):
+    """The treated frozen ep-prose-kind and its notice ONLY: the frozen store also holds other legacy shapes (a prose
+    retired_reason, which the D1 closure now refuses at import), and a cell about the kind must not be decided by them."""
     m = tt._frozen_memory(tmp_path)
     eid = tt._frozen_rows()["prose_kind"]
     m.redact(U, episode_id=eid, reason="subject_request")
-    path = tmp_path / "pk.jsonl"
-    export_memory(m.store, U, path)
-    return eid, path
+    full = tmp_path / "full.jsonl"
+    export_memory(m.store, U, full)
+    keep = [r for r in _lines(full) if r.get("record") not in ("edge", "episode", "redaction")
+            or (r.get("record") == "episode" and r["id"] == eid)
+            or (r.get("record") == "redaction" and r["target_id"] == eid)]
+    return eid, _write(tmp_path / "pk.jsonl", keep)
 
 
 def test_R9_06_the_treated_historical_prose_kind_episode_round_trips_with_its_notice(tmp_path):

@@ -149,7 +149,9 @@ def _check_revocation(llm, tmp, relations) -> tuple[int, int, dict]:
         # REVOKE — the 0022 R19 operation, sweep included, through the same
         # digest derivation ingest uses
         digest = identity_digest_of(None, SRC, mem.store.local_origin())
-        revoke_source(mem.store, uid, digest, "revoke", "selfcheck",
+        # specs/0041 §11.2 / D1: a revoke's reason is one of the owner's four; an operator's self-test on a temporary
+        # store is the operator's own policy
+        revoke_source(mem.store, uid, digest, "revoke", "policy",
                       "2026-05-02T00:00:00Z")
         feed_edge_ids = {e.id for e in mem.store.edges(uid, active_only=False)
                          if e.provenance.source_id == SRC}
@@ -319,7 +321,7 @@ def _check_revocation(llm, tmp, relations) -> tuple[int, int, dict]:
                         dst.store, uid,
                         identity_digest_of(c5_src_origin, SRC,
                                            dst.store.local_origin()),
-                        "revoke", "selfcheck", "2026-05-03T00:00:00Z")
+                        "revoke", "policy", "2026-05-03T00:00:00Z")
                 res = dst.import_memory(c5_export, restore=True)
                 disc, by_src = {}, {}
                 for e in dst.store.edges(uid, active_only=False):

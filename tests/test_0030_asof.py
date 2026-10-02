@@ -234,7 +234,7 @@ def test_two_state_current_caps_subtract_only(store):
         assert (r.held_at_K, r.status) == (True, FENCED_AS_OF), (reason, r)
     rv = _edge("rv", source="src:R"); store.add_edge(rv); k0 = _k(store, rv.id)
     revoke_source(store, U, source_identity_digest(store.local_origin(), "src:R"), "revoke",
-                  "op", _iso(ia).replace("+00:00", "Z"))
+                  "policy", _iso(ia).replace("+00:00", "Z"))
     k1 = _k(store, rv.id)
     # EXCLUDED at EVERY K; held_at_K is the snapshot's own fact — True at k0 (the
     # belief was held), False at k1 (the snapshot IS the revoked state)
@@ -509,7 +509,7 @@ def test_transactional_read_is_one_world__both_journal_modes(tmp_path, monkeypat
         e = _edge("Porto", source="src:clean"); reader.add_edge(e)
         other = _edge("Faro", source="src:bad", relation="visits"); reader.add_edge(other)
         revoke_source(reader, U, source_identity_digest(reader.local_origin(), "src:bad"), "revoke",
-                      "op", "2026-01-05T00:00:00Z")
+                      "policy", "2026-01-05T00:00:00Z")
         before = _row(reader, e.id)
         import veracium.store.current_state as cs_mod
         real = cs_mod.standing_revocations
@@ -733,7 +733,7 @@ def test_restricted_source_excludes_via_standing_state_not_row(store):
     store.invalidate_edge(e.id, T0 + 10 * D, "superseded")
     row_before = _row(store, e.id)
     assert _cls(store, e.id, T0 + 5 * D, k=k).status == GROUNDED_AS_OF
-    revoke_source(store, U, source_identity_digest(store.local_origin(), "src:S"), "revoke", "op",
+    revoke_source(store, U, source_identity_digest(store.local_origin(), "src:S"), "revoke", "policy",
                   "2026-02-01T00:00:00Z")
     cs = store.current_state(U, e.id)
     assert cs.source_restricted is RestrictionVerdict.RESTRICTED
@@ -751,7 +751,7 @@ def test_lift_flips_the_trust_input_without_touching_the_row(store):
     e = _edge("Porto", source="src:S"); store.add_edge(e); k = _k(store, e.id)
     store.invalidate_edge(e.id, T0 + 10 * D, "superseded"); row = _row(store, e.id)
     digest = source_identity_digest(store.local_origin(), "src:S")
-    revoke_source(store, U, digest, "revoke", "op", "2026-02-01T00:00:00Z")
+    revoke_source(store, U, digest, "revoke", "policy", "2026-02-01T00:00:00Z")
     a = _cls(store, e.id, T0 + 5 * D, k=k)
     revoke_source(store, U, digest, "lift", "op", "2026-02-02T00:00:00Z")
     b = _cls(store, e.id, T0 + 5 * D, k=k)

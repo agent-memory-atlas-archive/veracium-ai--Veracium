@@ -38,7 +38,7 @@ def test_revoked_source_ingest_is_quarantined_at_birth(   # N1's canonical name
 tmp_path):
     s = SqliteStore(str(tmp_path / "q.db"))
     digest = identity_digest_of(None, "feed-1", s.local_origin())
-    rv.revoke_source(s, U, digest, "revoke", "operator", AT)
+    rv.revoke_source(s, U, digest, "revoke", "policy", AT)
 
     _ingest(s, "feed-1")
     edges = s.edges(U, active_only=False)
@@ -56,7 +56,7 @@ def test_an_unrevoked_source_is_untouched(tmp_path):
     without which the positive test could pass by quarantining everything."""
     s = SqliteStore(str(tmp_path / "q.db"))
     digest = identity_digest_of(None, "feed-1", s.local_origin())
-    rv.revoke_source(s, U, digest, "revoke", "operator", AT)
+    rv.revoke_source(s, U, digest, "revoke", "policy", AT)
     _ingest(s, "feed-2")                       # a DIFFERENT source
     eps = s.episodes(U, include_retired=True)
     # third-party influence still caps at USE_ONLY — but never QUARANTINED
@@ -71,7 +71,7 @@ tmp_path):
     a side effect."""
     s = SqliteStore(str(tmp_path / "q.db"))
     digest = identity_digest_of(None, "feed-1", s.local_origin())
-    rv.revoke_source(s, U, digest, "revoke", "operator", AT)
+    rv.revoke_source(s, U, digest, "revoke", "policy", AT)
     _ingest(s, "feed-1")
     rv.revoke_source(s, U, digest, "lift", "operator", AT)
     eps = s.episodes(U, include_retired=True)
@@ -118,7 +118,7 @@ def test_q4_audit_facts_carry_digest_and_count():
     # the store's local origin + the host source_id)
     digest = identity_digest_of(None, "mail:spoofed@example.com",
                                 s.local_origin())
-    revoke_source(s, "u", digest, "revoke", "compromised",
+    revoke_source(s, "u", digest, "revoke", "erroneous_capture",
                   "2026-08-22T00:00:00Z")
     r = ingest_event(s, Stub(), "u", event_text="t",
                      author=EvidenceAuthor.THIRD_PARTY, date="2026-08-22",

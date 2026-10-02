@@ -92,7 +92,7 @@ def _revoked_superseded_fixture(store):
     store.add_edge(e)
     store.invalidate_edge(e.id, AT, "superseded")
     d = identity_digest_of(None, "feed-1", store.local_origin())
-    rv.revoke_source(store, U, d, "revoke", "seam-model", AT)
+    rv.revoke_source(store, U, d, "revoke", "policy", AT)
     return e, d
 
 
@@ -279,7 +279,7 @@ def test_end_to_end_matrix_never_raises(store, with_principal, with_standing,
     store.add_edge(other)
     if with_standing:
         d = identity_digest_of(None, "feed-1", store.local_origin())
-        rv.revoke_source(store, U, d, "revoke", "seam-model", AT)
+        rv.revoke_source(store, U, d, "revoke", "policy", AT)
     if malformed == "probe_row":
         _tamper(store, probe.id)
     elif malformed == "other_row":
@@ -326,7 +326,7 @@ def test_undeterminable_is_returned_not_raised__control(store):
     e = _edge("Boston")
     store.add_edge(e)
     d = identity_digest_of(None, "feed-1", store.local_origin())
-    rv.revoke_source(store, U, d, "revoke", "seam-model", AT)
+    rv.revoke_source(store, U, d, "revoke", "policy", AT)
     _tamper(store, e.id)
     import pydantic
     with pytest.raises(pydantic.ValidationError):
@@ -742,7 +742,7 @@ def _absorption_tamper_fixture(store, payload_obj, *, revoke_first):
     store.add_edge(surv)
     d_revoked = identity_digest_of(None, "feed-2", store.local_origin())
     if revoke_first:
-        rv.revoke_source(store, U, d_revoked, "revoke", "seam-model", AT)
+        rv.revoke_source(store, U, d_revoked, "revoke", "policy", AT)
     payload = _j.dumps(payload_obj)
     for i, dg in enumerate((d_revoked,
                             identity_digest_of(None, "feed-3",
@@ -787,7 +787,7 @@ def test_corrupt_ledger_refuses_revocation_with_a_typed_error(store):
     surv, d = _absorption_tamper_fixture(
         store, {"base": {}, "contributor": {}}, revoke_first=False)
     with pytest.raises(_RE):
-        rv.revoke_source(store, U, d, "revoke", "seam-model", AT)
+        rv.revoke_source(store, U, d, "revoke", "policy", AT)
     from restriction_derivation import standing_revocations as _sr
     assert not _sr(store._conn, U), \
         "the refused revocation left a standing row — R19 did not roll back"
@@ -918,7 +918,7 @@ def test_out_of_domain_confidence_refuses_revoke_and_lift(store):
     surv, d = _absorption_tamper_fixture(
         store, {"base": GOOD, "contributor": EVIL}, revoke_first=False)
     with pytest.raises(_RE):
-        rv.revoke_source(store, U, d, "revoke", "seam-model", AT)
+        rv.revoke_source(store, U, d, "revoke", "policy", AT)
     assert not _sr(store._conn, U), "refused revoke left a standing row"
 
     # -- lift half: make the store clean again, revoke on GOOD payload,

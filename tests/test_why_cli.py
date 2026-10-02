@@ -147,7 +147,7 @@ def test_a_revoked_source_is_reported_as_the_standing_verdict():
             digest = source_identity_digest(resolve_origin(prov.origin, mem.store.local_origin()),
                                             prov.source_id)
             assert digest, "the fixture's third-party claim carries no source identity"
-            rv.revoke_source(mem.store, U, digest, "revoke", "operator", "2026-09-07T00:00:00Z")
+            rv.revoke_source(mem.store, U, digest, "revoke", "policy", "2026-09-07T00:00:00Z")
             bio = why.gather(mem.store, U, claim.id)
             assert bio.revoked_source is True
             assert bio.verdict == "restricted"

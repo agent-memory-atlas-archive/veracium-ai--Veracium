@@ -143,6 +143,8 @@ def build(path: pathlib.Path):
     st.add_edge(Edge(id="e-source-linked", user_id=U, subject="user", relation="works_as",
                      object="Porto", provenance=prov(source_id="mb-frozen")))
     digest = source_identity_digest(resolve_origin(None, st.local_origin()), "mb-frozen")
+    # a PRE-CLOSURE write: since 0041 round 10 (R9-02(a)) the writer refuses this sentence, so `--write` is not
+    # re-runnable at the head — by design, the frozen bytes ARE the artifact (`--check` compares them, never rebuilds)
     revoke_source(st, U, digest, "revoke",
                   "she asked me to drop everything from that address", "2026-09-01T00:00:00Z")
     rows["prose_source_revocation"] = digest

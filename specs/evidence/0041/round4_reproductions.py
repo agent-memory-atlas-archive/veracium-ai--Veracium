@@ -47,7 +47,18 @@ st2.add_edge(Edge(id="e-2", user_id=U, subject="user", relation="works_as", obje
 st2.add_episode(Episode(id="ep-2", user_id=U, date="2026-09-01", summary="s", provenance=prov))
 digest = source_identity_digest(resolve_origin(None, st2.local_origin()), "mb-x")
 SENTENCE = "the mailbox was compromised on 3 March; every record from it is untrusted"
-rv.revoke_source(st2, U, digest, "revoke", SENTENCE, "2026-09-15T00:00:00Z")
+# 0041 round 10 (R9-02(a)): the field now CLOSES for a future revoke, so the writer refuses the sentence...
+try:
+    rv.revoke_source(st2, U, digest, "revoke", SENTENCE, "2026-09-15T00:00:00Z")
+    refused = False
+except ValueError:
+    refused = True
+print("F3b a revoke carrying the caller's sentence is REFUSED at the write path (0041 round 10):", refused)
+# ...and the reproduction below runs on a PLANTED pre-closure row (the §4h(iii) precedent): the revoke commits with a D1
+# value, so the sweep's effects are the real ones, then the row's reason is set to the sentence a pre-closure writer
+# stored — the legacy shape round 4 found, which redaction must still treat
+rv.revoke_source(st2, U, digest, "revoke", "erroneous_capture", "2026-09-15T00:00:00Z")
+st2._conn.execute("UPDATE source_revocations SET reason=? WHERE user_id=?", (SENTENCE, U)); st2._conn.commit()
 row = st2._conn.execute("SELECT action, reason FROM source_revocations WHERE user_id=?", (U,)).fetchone()
 e = [x for x in st2.store_edges(U) if x.id == "e-2"][0] if hasattr(st2, "store_edges") else [x for x in st2.edges(U, active_only=False) if x.id == "e-2"][0]
 ep = [x for x in st2.episodes(U, include_retired=True) if x.id == "ep-2"][0]

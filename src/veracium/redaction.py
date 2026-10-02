@@ -63,6 +63,12 @@ def carries_marker_keys_only(d: dict) -> bool:
 # redaction write path.
 REDACTION_REASONS = ("subject_request", "operator_policy", "erroneous_capture", "legal_obligation", "imported_notice")
 
+# §11.2 / D1, `source_revocations.reason` (round 10, R9-02(a)): the owner's FOUR values for a future REVOKE — a different
+# field from the redaction's own reason, so a different constant (`policy`, not `operator_policy`: the operator's own
+# standing policy required the revocation). A revocation fitting none of the four is REFUSED, never filed under one.
+# A LIFT row's reason is outside this vocabulary and outside its closure until the owner rules on it.
+SOURCE_REVOCATION_REASONS = ("subject_request", "legal_obligation", "erroneous_capture", "policy")
+
 REPLACE, CLEAR, DELETE, PRESERVE = "REPLACE", "CLEAR", "DELETE", "PRESERVE"
 
 # §2d-iii-bis, the per-candidate map, restricted to what a treatment CHANGES. Every field not named is

@@ -70,7 +70,8 @@ def consequence(m, value, query):
 
 def revoke(m, action="revoke"):
     dg = identity_digest_of(None, S, m.store.local_origin())
-    st = rv.revoke_source(m.store, U, dg, action, "operator", AT)
+    # 0041 round 10 (D1): a revoke's reason is one of the owner's four; a lift's is held for the owner's ruling
+    st = rv.revoke_source(m.store, U, dg, action, "policy" if action == "revoke" else "operator", AT)
     return dg, st
 
 def observe() -> dict:
@@ -89,7 +90,7 @@ def observe() -> dict:
     d = tempfile.mkdtemp(); m = mem(d, [script("Lisbon"), "no"])
     dg, _ = revoke(m)
     rep = m.remember(U, "feed says the user moved to Lisbon", author=EvidenceAuthor.THIRD_PARTY)   # source_id ABSENT
-    st_dry = rv.revoke_source(m.store, U, dg, "revoke", "operator", AT, dry_run=True)
+    st_dry = rv.revoke_source(m.store, U, dg, "revoke", "policy", AT, dry_run=True)
     out["cells"]["R2"] = {"values": ["Lisbon"], "stored": store_facts(m, rep),
                           "statement": {"counts": st_dry["counts"], "complete": st_dry["complete"], "direct": len(st_dry["direct"])},
                           "consequence": consequence(m, "Lisbon", "where does the user live?")}
@@ -100,7 +101,7 @@ def observe() -> dict:
     dg, _ = revoke(m)
     rep_a = m.remember(U, "feed: the user lives in Braga", author=EvidenceAuthor.THIRD_PARTY, source_id=S)
     rep_b = m.remember(U, "feed: the user works as a carpenter", author=EvidenceAuthor.THIRD_PARTY)
-    st_dry = rv.revoke_source(m.store, U, dg, "revoke", "operator", AT, dry_run=True)
+    st_dry = rv.revoke_source(m.store, U, dg, "revoke", "policy", AT, dry_run=True)
     out["cells"]["R3"] = {"values": {"identified": "Braga", "stripped": "carpenter"},
                           "stored": store_facts(m, rep_b), "report_identified": {"quarantined_at_birth": rep_a.get("quarantined_at_birth"), "digest_matches_source": rep_a.get("birth_revocation_digest") == dg},
                           "statement": {"counts": st_dry["counts"], "complete": st_dry["complete"], "direct": len(st_dry["direct"])},

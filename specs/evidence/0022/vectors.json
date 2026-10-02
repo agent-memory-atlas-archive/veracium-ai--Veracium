@@ -75,7 +75,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -99,7 +99,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -136,7 +136,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -162,7 +162,7 @@
     "action": "revoke",
     "at": "2026-04-01T00:00:00Z",
     "seq": 2,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -199,7 +199,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -212,7 +212,7 @@
     "action": "revoke",
     "at": "2026-03-01T00:00:00Z",
     "seq": 1,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -236,7 +236,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -260,7 +260,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -279,7 +279,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -327,7 +327,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -340,7 +340,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -388,7 +388,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator",
+    "reason": "policy",
     "scope": "everything"
    }
   ],
@@ -413,7 +413,7 @@
     "action": "revoke",
     "at": "2026-02-01T00:00:00Z",
     "seq": true,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -1627,7 +1627,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -1950,7 +1950,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -2516,7 +2516,7 @@
      "action": "revoke",
      "at": "2026-03-01T00:00:00Z",
      "seq": 0,
-     "reason": "operator"
+     "reason": "policy"
     }
    ]
   },
@@ -2533,7 +2533,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -2826,7 +2826,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -3122,7 +3122,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: unused connector"
+   "reason": "policy"
   }
  },
  {
@@ -3714,7 +3714,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -3762,7 +3762,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -3843,7 +3843,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -4142,7 +4142,7 @@
      "action": "revoke",
      "at": "2026-03-01T00:00:00Z",
      "seq": 0,
-     "reason": "operator"
+     "reason": "policy"
     }
    ]
   },
@@ -4474,7 +4474,7 @@
      "action": "revoke",
      "at": "2026-03-01T00:00:00Z",
      "seq": 0,
-     "reason": "operator"
+     "reason": "policy"
     },
     {
      "user_id": "u1",
@@ -4487,7 +4487,7 @@
      "action": "revoke",
      "at": "2026-03-01T00:00:00Z",
      "seq": 1,
-     "reason": "operator"
+     "reason": "policy"
     }
    ]
   },
@@ -4806,7 +4806,7 @@
      "action": "revoke",
      "at": "2026-03-01T00:00:00Z",
      "seq": 0,
-     "reason": "operator"
+     "reason": "policy"
     }
    ]
   },
@@ -5109,7 +5109,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -5392,7 +5392,7 @@
      "action": "revoke",
      "at": "2026-03-01T00:00:00Z",
      "seq": 0,
-     "reason": "operator"
+     "reason": "policy"
     }
    ]
   },
@@ -5695,7 +5695,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -5978,7 +5978,7 @@
      "action": "revoke",
      "at": "2026-03-01T00:00:00Z",
      "seq": 0,
-     "reason": "operator"
+     "reason": "policy"
     }
    ]
   },
@@ -6294,7 +6294,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -6312,7 +6312,7 @@
     "action": "revoke",
     "at": "2026-03-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator: connector compromised"
+    "reason": "erroneous_capture"
    }
   },
   "store": {
@@ -6594,7 +6594,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: connector compromised"
+   "reason": "erroneous_capture"
   }
  },
  {
@@ -6622,7 +6622,7 @@
     "action": "revoke",
     "at": "2099-01-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -6672,7 +6672,7 @@
     "action": "revoke",
     "at": "2026-01-01T00:00:00Z",
     "seq": 1,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -6696,7 +6696,7 @@
     "action": "revoke",
     "at": "2026-08-17T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    },
    {
     "user_id": "u1",
@@ -6746,7 +6746,7 @@
     "action": "revoke",
     "at": "2026-01-01T00:00:00Z",
     "seq": 0,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -6783,7 +6783,7 @@
     "action": "revoke",
     "at": "1970-01-01T00:00:00Z",
     "seq": 1,
-    "reason": "operator"
+    "reason": "policy"
    }
   ],
   "query": {
@@ -7097,7 +7097,7 @@
    },
    "action": "revoke",
    "at": "2026-03-01T00:00:00Z",
-   "reason": "operator: unused connector"
+   "reason": "policy"
   }
  },
  {

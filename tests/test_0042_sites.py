@@ -1184,6 +1184,58 @@ DECLINES.update({
 })
 
 
+# 0041 round 10 (R9-02): the D1 reason closures at the writers and at import
+_PROSE_REASON = "she asked me to drop everything"
+
+
+def _prose_invalidation():
+    import datetime as _dt
+    e = _edge("pr1").model_copy(update={"invalidated_at": _dt.datetime(2026, 9, 1, tzinfo=_dt.timezone.utc),
+                                        "invalidation_reason": _PROSE_REASON})
+    s = _store()
+    with pytest.raises(ValueError):
+        s.add_edge(e)
+    s.close()
+
+
+def _prose_retirement():
+    import datetime as _dt
+    ep = _episode("pr2").model_copy(update={"retired_at": _dt.datetime(2026, 9, 1, tzinfo=_dt.timezone.utc),
+                                            "retired_reason": _PROSE_REASON})
+    s = _store()
+    with pytest.raises(ValueError):
+        s.add_episode(ep)
+    s.close()
+
+
+def _import_prose_reason():
+    import datetime as _dt
+    e = _edge("pr3").model_copy(update={"invalidated_at": _dt.datetime(2026, 9, 1, tzinfo=_dt.timezone.utc),
+                                        "invalidation_reason": _PROSE_REASON})
+    s = _store()
+    with pytest.raises(ValueError):
+        s.commit_outcome_import_plan(U, {"edges": [e], "episodes": [], "contributions": [], "redactions": []},
+                                     {"edge_ids": {e.id: False}, "episode_records": {}, "chain_heads": {},
+                                      "contribution_state": {}})
+    s.close()
+
+
+def _prose_revoke():
+    from veracium.store.revocation import revoke_source as _rs
+    s = _store()
+    with pytest.raises(ValueError):
+        _rs(s, U, "a" * 64, "revoke", _PROSE_REASON, "2026-09-01T00:00:00Z")
+    s.close()
+
+
+DECLINES.update({
+    "store.upsert.invalidation-reason-not-registered": lambda mp: _prose_invalidation(),
+    "store.episode.retired-reason-not-registered": lambda mp: _prose_retirement(),
+    "store.import.reason-not-registered": lambda mp: _import_prose_reason(),
+    "store.revocation.revoke-reason-not-registered": lambda mp: _prose_revoke(),
+})
+
+
 # specs/0041 §4e (tranche 5): the embedding upsert's read-and-publish lock — a second connection holds the write
 # lock; the upsert cannot take BEGIN IMMEDIATE within its busy timeout and refuses loudly (0007 §4c form)
 def _embedding_lock_refused():

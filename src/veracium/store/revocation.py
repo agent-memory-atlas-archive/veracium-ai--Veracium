@@ -157,12 +157,14 @@ import json as _json
 
 from . import revocation_sweep as _sw
 from ..census import declare_site
+from ..redaction import SOURCE_REVOCATION_REASONS
 
 # specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
 # decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
 _SITE_REVOCATION_UNKNOWN_STATE = declare_site("store.revocation.unknown-state")
 _SITE_REVOCATION_ORDINAL = declare_site("store.revocation.ordinal-collision")
 _SITE_REVOCATION_INTEGRITY = declare_site("store.revocation.integrity")
+_SITE_REVOKE_REASON = declare_site("store.revocation.revoke-reason-not-registered")
 
 
 def _iso_z(dt) -> str:
@@ -284,6 +286,15 @@ def revoke_source(store, user_id: str, target_digest: str, action: str,
     the R19 operation — together or not at all. The statement is RETURNED and
     is audit-event-only (Q6, approved 2026-08-20): the caller's audit sink is
     the durable record; the store keeps no second copy."""
+    # specs/0041 §11.2 / D1 (round 10, R9-02(a)): a REVOKE's reason closes on the owner's four values, at the one
+    # public entry — preview and commit alike; `revocation_operation`, the R19 construction rendered into 0022, is
+    # unchanged. The LIFT half is not closed: its vocabulary is held for the owner's ruling, and nothing here refuses
+    # or admits a lift reason until then.
+    with _SITE_REVOKE_REASON.consult():
+        if action == "revoke" and reason not in SOURCE_REVOCATION_REASONS:
+            raise _SITE_REVOKE_REASON.fire(ValueError(
+                f"refused: revocation reason {reason!r} is not one of {SOURCE_REVOCATION_REASONS} (specs/0041 §11.2, "
+                f"D1) — a revocation fitting none of the four is refused, never filed under one"))
     proposed = {"identity_digest": target_digest, "action": action,
                 "at": at, "reason": reason}
     with store._lock:

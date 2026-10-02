@@ -172,7 +172,7 @@ def test_standing_revocation_floors_the_redispositioned_triple(tmp_path):
     from veracium.store import revocation as rv
     s = SqliteStore(str(tmp_path / "r.db"))
     digest = identity_digest_of(None, "src-1", s.local_origin())
-    rv.revoke_source(s, U, digest, "revoke", "operator",
+    rv.revoke_source(s, U, digest, "revoke", "policy",
                      "2026-08-23T00:00:00Z")
     r = ingest_event(s, _llm_for([_tpc("user")]), U, event_text="t",
                      author=EvidenceAuthor.USER, date="2026-08-23",

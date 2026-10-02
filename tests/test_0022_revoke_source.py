@@ -45,7 +45,7 @@ def _seed(s, source_id="feed-1"):
 def test_revoke_retires_both_record_types_and_drops_the_wiki(tmp_path):
     s = _store(tmp_path)
     d = _seed(s)
-    st = rv.revoke_source(s, U, d, "revoke", "operator", AT)
+    st = rv.revoke_source(s, U, d, "revoke", "policy", AT)
     assert st["standing"] is True
     assert ["edge:e1" == f"{t}:{i}" for t, i in st["direct"]]
     edges = s.edges(U, active_only=False)
@@ -60,8 +60,8 @@ def test_revoke_retires_both_record_types_and_drops_the_wiki(tmp_path):
 def test_preview_and_commit_run_the_same_computation(tmp_path):
     s = _store(tmp_path)
     d = _seed(s)
-    preview = rv.revoke_source(s, U, d, "revoke", "operator", AT, dry_run=True)
-    committed = rv.revoke_source(s, U, d, "revoke", "operator", AT)
+    preview = rv.revoke_source(s, U, d, "revoke", "policy", AT, dry_run=True)
+    committed = rv.revoke_source(s, U, d, "revoke", "policy", AT)
     assert preview["effects"] == committed["effects"]
     assert preview["retire"] == committed["retire"]
     # the preview wrote NOTHING: the commit still allocated seq 0
@@ -71,7 +71,7 @@ def test_preview_and_commit_run_the_same_computation(tmp_path):
 def test_a_lift_reinstates_what_the_revocation_took(tmp_path):
     s = _store(tmp_path)
     d = _seed(s)
-    rv.revoke_source(s, U, d, "revoke", "operator", AT)
+    rv.revoke_source(s, U, d, "revoke", "policy", AT)
     st = rv.revoke_source(s, U, d, "lift", "operator", AT)
     assert st["standing"] is False
     e = s.edges(U)[0]
@@ -84,7 +84,7 @@ def test_a_lift_does_not_reinstate_other_retirements(tmp_path):
     d = _seed(s)
     # retire the edge for an unrelated reason FIRST
     s.invalidate_edge("e1", utcnow(), "disputed")
-    rv.revoke_source(s, U, d, "revoke", "operator", AT)
+    rv.revoke_source(s, U, d, "revoke", "policy", AT)
     rv.revoke_source(s, U, d, "lift", "operator", AT)
     e = s.edges(U, active_only=False)[0]
     assert not e.active and e.invalidation_reason == "disputed", (
@@ -120,7 +120,7 @@ def test_revocation_retires_episodes(tmp_path):
     assert marker in ctx_before, (
         "fixture defect: the episode never rendered, so its absence after "
         "the revocation would prove nothing")
-    rv.revoke_source(s, U, d, "revoke", "operator", AT)
+    rv.revoke_source(s, U, d, "revoke", "policy", AT)
     assert marker not in m.recall(U, "where is the user").context, (
         "a revoked source's episode text reached the rendered context — the "
         "read-seam exclusion did not carry to the surface that matters")
@@ -160,7 +160,7 @@ def test_retired_episode_round_trips(tmp_path):
     from veracium import Memory, MemoryConfig
     m = Memory(llm=None, config=MemoryConfig(db_path=str(tmp_path / "a.db")))
     d = _seed(m.store)
-    rv.revoke_source(m.store, U, d, "revoke", "operator", AT)
+    rv.revoke_source(m.store, U, d, "revoke", "policy", AT)
     out = tmp_path / "export.json"
     m.export_memory(U, out)
 
@@ -204,7 +204,7 @@ def test_retire_writers_hold_datetimes_not_text(tmp_path):
         with warnings.catch_warnings():
             warnings.simplefilter("error", UserWarning)          # a serializer warning FAILS the test
             rv.revoke_source(s, "u", source_identity_digest(s.local_origin(), "src:S"), "revoke",
-                             "operator", "2026-09-05T00:00:00Z")
+                             "policy", "2026-09-05T00:00:00Z")
         live = Edge.model_validate_json(s._conn.execute("SELECT json FROM edges WHERE id='E1'").fetchone()[0])
         assert live.invalidated_at == datetime(2026, 9, 5, tzinfo=timezone.utc) and live.invalidation_reason == "revoked_source"
         recon = Edge.model_validate_json(s.edge_state_at("u", "E1", s.edge_events("u", edge_id="E1")[-1].txn).state)

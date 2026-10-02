@@ -758,7 +758,7 @@ def test_record_procedure_honours_quarantine_at_birth(tmp_path):
     assert next(e for e in mem.store.edges(U) if e.id == control).provenance.disclosure is Disclosure.MENTIONABLE
     from veracium.store import revocation as rv
     rv.revoke_source(mem.store, U, identity_digest_of(None, "bad-box", mem.store.local_origin()),
-                     "revoke", "operator", "2026-08-21T00:00:00Z")
+                     "revoke", "policy", "2026-08-21T00:00:00Z")
     eid = _record(mem, "Credentials are rotated quarterly.", source_id="bad-box")
     e = next(x for x in mem.store.edges(U, active_only=False) if x.id == eid)
     assert e.provenance.disclosure is Disclosure.QUARANTINED
