@@ -2,6 +2,56 @@
 
 ## Unreleased
 
+- **specs/0041 targeted redaction — the round-9 implementation corrections (round 10).** The round-9 review
+  RETURNED the implementation with eight findings. Each was treated as a sample of its class and swept; the sweeps
+  found more instances, which are corrected here too. **WHO SHOULD TAKE THIS: anyone who redacts.** Before it, a
+  redaction could be undone or bypassed by a concurrent write on a second connection, by a consolidation running at
+  the same time, or by a later import, and the receipt did not name records that still held the content.
+
+  - **BREAKING — reason fields are closed vocabularies for new writes.** A revoke's reason must be one of
+    `subject_request`, `legal_obligation`, `erroneous_capture`, `policy`. A lift's must be one of
+    `revoked_in_error`, `subject_request`, `legal_obligation`, `policy` (the owner's ruling). `Episode.retired_reason`
+    and `Edge.invalidation_reason`, when present, must be registered reasons. Each is checked when a record is
+    written and when it is imported, and anything else is refused. Records already stored with free text still load.
+    **WHO MUST ACT:** callers passing free-text reasons to `revoke_source`. Also: **a store holding legacy free-text
+    reasons (or a free-text episode kind) cannot restore its own export until those records are redacted**, because
+    redaction replaces the prose. Admitting legacy prose on restore would be a change to D1.
+  - **BREAKING (receipt shape) — a redaction receipt now reports two kinds of fact.** For a redaction received from
+    another store (an imported notice), `reason`, `recorded_at`, `store_version_before`, `store_version_after`,
+    `marker_version` and `event_ref` are the SOURCE's, and are `None` where the notice does not carry them. This
+    store's own application of the notice is reported under `applied_at`, `applied_store_version_before`,
+    `applied_store_version_after` and `applied_event_ref`. The four version and time fields are therefore Optional.
+    **WHO MUST ACT:** consumers that read those fields as always-integers.
+  - **The receipt names more of what may still hold the content** (§11.5(3), widened by the owner). It names
+    records linked to the redacted one by an identifier, in either direction:
+    - redacting a fact names the conversation episode it was extracted from and its outcome episodes;
+    - redacting an episode names the facts extracted from it and any consolidation output built from it.
+    Records already redacted are left out. Disputed or corrected facts add a named category, because the episode
+    recording the dispute or correction quotes them.
+  - **Concurrency.** These decisions are now made inside the write's own transaction, so a second connection's
+    redaction cannot land between the check and the write and be overwritten or consumed:
+    - an ordinary episode write's redaction check, and its in-flight-consolidation reservation check;
+    - consolidation's claim of its inputs. An input redacted after the listing makes the pool report the existing
+      `contended`, and a redacted episode is never consolidated;
+    - dispute, record_outcome and correct, which also no longer leave a partial write on a redacted record;
+    - the outcome chain's compare-and-set, which now holds across two connections.
+
+    The store's instance lock is now re-entrant, which changes nothing across threads.
+  - **Readers and derivations skip redacted records.** Semantic backfill no longer re-embeds them. Proactive recall
+    no longer returns them. Expiry skips them, so one redacted aged edge no longer makes every `maintain()` fail. A
+    wiki compile that raced a redaction recompiles once, and otherwise returns a fixed notice; it never returns a
+    body built from redacted content.
+  - **Import and export of redaction notices.** A notice is bound to the user and record it was imported for, so
+    the same file imported for two users protects both. A later notice that contradicts one already held refuses
+    the whole import. A re-export passes the original notice on unchanged, so an honest relay is not mistaken for
+    corruption. Notice field names must be the redacted record's real fields. An episode whose kind field holds
+    the redaction marker can now be imported when the same import attests that the kind was redacted.
+  - **Free text already stored in a revocation's reason** is replaced at redaction. This goes through the one
+    function specs/0022's append-only rule now admits; it changes only that column, so which sources are revoked
+    cannot change.
+  - The redaction-record table (`redactions`) gains a column. It is new in this unreleased store version 15, so
+    there is no further version bump.
+
 - **Fixed: opening a store no longer leaves an SQLite connection open.** `runtime_identity()` opened an in-memory
   connection to read `sqlite_source_id()` and never closed it, so every store open left one behind, reported on
   Python 3.13 and newer as `ResourceWarning: unclosed database` once the store was closed and collected (found by

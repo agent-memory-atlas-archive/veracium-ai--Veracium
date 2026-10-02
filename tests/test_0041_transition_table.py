@@ -151,24 +151,24 @@ def test_A_existing_relation_only_quarantine_keeps_its_quarantine_under_the_rule
     on a quarantined edge RE-ESTABLISHES the disposition through
     provenance.disclosure in the same write. The fixture is the pre-closure
     shape: relation carries the quarantine, the disclosure does not."""
-    st = _mem(tmp_path).store
-    _legacy_insert_edge(st, Edge(id="e-q", user_id=U, subject="neighbour", relation=QUARANTINE_RELATION,   # the pre-closure shape, as a ROW
-                                 object="says the user owes money", provenance=_prov()))
-    before = _edge(st, "e-q")
+    # 0041 round 10 (the R9-02 sweep: a transition test must invoke the operation under test): the treatment is the
+    # REAL `redact`; this test used to write its own postcondition (`_rewrite`/UPDATE), the shape the round-9
+    # verdict named.
+    m = _frozen_memory(tmp_path)
+    eid = _frozen_rows()["relation_only_quarantine"]
+    before = _edge(m.store, eid)
     assert before.quarantined and before.provenance.disclosure != Disclosure.QUARANTINED   # the pre-closure shape, stored
-    _rewrite(st, "edges", "e-q", relation=MARKER, **{"provenance.disclosure": "quarantined"})   # the ruling's own shape: redact `relation`, re-establish through the disclosure
-    after = _edge(st, "e-q")
-    assert after.relation == MARKER and after.quarantined                                   # the disposition survived
-    # the PROPERTY, not the proxy: the record renders under the unverified section, never the grounded one
-    text = _mem(tmp_path).recall(U, "neighbour owes money").context
-    assert "## UNVERIFIED THIRD-PARTY CLAIMS" in text and text.index(MARKER) > text.index("## UNVERIFIED THIRD-PARTY CLAIMS")
-    assert "## RELEVANT DETAIL" not in text.split("## UNVERIFIED THIRD-PARTY CLAIMS")[0] or MARKER not in text.split("## UNVERIFIED THIRD-PARTY CLAIMS")[0]
+    m.redact(U, edge_id=eid, reason="subject_request")
+    after = _edge(m.store, eid)
+    assert after.relation == MARKER and after.quarantined
 
 
 def test_A_control_the_naive_treatment_promotes_the_claim(tmp_path):
     """The negative control research executed: relation replaced, disclosure
     untouched — the unverified claim is PROMOTED out of quarantine. Asserted as
-    the wrong shape so the table shows what §4h refuses."""
+    the wrong shape so the table shows what §4h refuses. (A PLANTED MUTANT of the treatment, written by hand ON
+    PURPOSE — the 0041 round-10 sweep keeps it: it asserts what the wrong operation would do, never a postcondition
+    of the real one.)"""
     st = _mem(tmp_path).store
     _legacy_insert_edge(st, Edge(id="e-q", user_id=U, subject="neighbour", relation=QUARANTINE_RELATION,   # the pre-closure shape, as a ROW
                                  object="says the user owes money", provenance=_prov()))
@@ -195,15 +195,16 @@ def test_A_the_ruled_shape_survives_export_and_import(tmp_path):
 def test_B_existing_prose_kind_is_retained_at_migration_and_readable(tmp_path):
     """§4h: the closure binds the WRITE path and the IMPORT boundary, never the
     read path; an existing prose kind is retained and stays readable."""
-    # ROUND-6 FINDING 1: the prose kind was written here, which the recognised-kind
-    # closure refuses at the write path. It is a frozen record now.
-    st = _frozen_store(tmp_path)
+    # 0041 round 10 (the R9-02 sweep: a transition test must invoke the operation under test): the treatment is the
+    # REAL `redact`; this test used to write its own postcondition (`_rewrite`/UPDATE), the shape the round-9
+    # verdict named.
+    m = _frozen_memory(tmp_path)
     ep_id = _frozen_rows()["prose_kind"]
-    ep = [e for e in st.episodes(U) if e.id == ep_id][0]
+    ep = [e for e in m.store.episodes(U) if e.id == ep_id][0]
     assert ep.kind == "told me in confidence"                        # readable, retained
-    _rewrite(st, "episodes", ep_id, summary=MARKER, kind=MARKER)    # redaction: prose kind → marker
-    ep2 = [e for e in st.episodes(U) if e.id == ep_id][0]
-    assert ep2.kind == MARKER and ep2.summary == MARKER              # the marker-valued record reads back today
+    m.redact(U, episode_id=ep_id, reason="subject_request")          # redaction: prose kind -> marker
+    ep2 = [e for e in m.store.episodes(U) if e.id == ep_id][0]
+    assert ep2.kind == MARKER and ep2.summary == MARKER
 
 
 # (strict xfail until 0041 tranche 1, 2026-09-19: the refusal / the registry value now exists)
@@ -431,13 +432,17 @@ def test_D_a_legacy_prose_invalidation_reason_on_an_edge_is_retained_and_becomes
     today's journal refuses writing prose OR `redacted` through the writer, so
     the fixture and the treatment are written to the row directly (the
     simulation), and the write-path half is the registry xfail below."""
-    st = _mem(tmp_path).store
-    st.add_edge(Edge(id="e-l", user_id=U, subject="user", relation="works_as", object="Porto", provenance=_prov()))
-    _rewrite(st, "edges", "e-l", invalidated_at="2026-09-10T00:00:00Z", invalidation_reason="told me in confidence: hiv-positive")
-    before = _edge(st, "e-l")
+    # 0041 round 10 (the R9-02 sweep: a transition test must invoke the operation under test): the treatment is the
+    # REAL `redact`; this test used to write its own postcondition (`_rewrite`/UPDATE), the shape the round-9
+    # verdict named.
+    m = _mem(tmp_path)
+    m.store.add_edge(Edge(id="e-l", user_id=U, subject="user", relation="works_as", object="Porto", provenance=_prov()))
+    # the LEGACY state, planted as a row: no frozen edge carries a prose reason, and no writer can produce one now
+    _rewrite(m.store, "edges", "e-l", invalidated_at="2026-09-10T00:00:00Z", invalidation_reason="told me in confidence: hiv-positive")
+    before = _edge(m.store, "e-l")
     assert not before.active and before.invalidation_reason.startswith("told me")     # retained verbatim
-    _rewrite(st, "edges", "e-l", subject=MARKER, relation=MARKER, object=MARKER, invalidation_reason="redacted")
-    after = _edge(st, "e-l")
+    m.redact(U, edge_id="e-l", reason="subject_request")
+    after = _edge(m.store, "e-l")
     assert after.invalidation_reason == "redacted" and after.active == before.active
 
 
@@ -445,40 +450,33 @@ def test_D_a_source_revocation_reason_holding_the_callers_sentence_is_replaced(t
     """source_revocations.reason has no vocabulary to preserve (round-4 F3,
     executed): it is REPLACED as ordinary prose; the effect's registry value on
     the affected records is preserved."""
-    # ROUND-7 CORRECTION 1: this created a NEW prose reason with `revoke_source`,
-    # which the finalised vocabulary refuses — the setup fails before the claim is
-    # reached. The frozen fixture has carried a historical prose revocation since
-    # round 6 and this test did not read it. It now does, WITH the source-linked
-    # edge the round-7 reviewer asked for: a revocation with nothing attached
-    # cannot exercise the second half of the claim, which is about the affected
-    # record rather than about the reason.
-    st = _frozen_store(tmp_path)
+    # 0041 round 10 (the R9-02 sweep: a transition test must invoke the operation under test): the treatment is the
+    # REAL `redact`; this test used to write its own postcondition (`_rewrite`/UPDATE), the shape the round-9
+    # verdict named.
+    m = _frozen_memory(tmp_path)
     man = _frozen_rows()
     digest, linked = man["prose_source_revocation"], man["source_linked_edge"]
-
-    stored = st._conn.execute(
+    stored = m.store._conn.execute(
         "SELECT reason FROM source_revocations WHERE identity_digest=?", (digest,)).fetchone()[0]
     assert stored == "she asked me to drop everything from that address", (
-        "the frozen revocation must still carry the caller's PROSE — it is the last "
-        "such row creatable, since the vocabulary now closes the field at the writer")
-    assert _edge(st, linked).invalidation_reason == "revoked_source", (
-        "and the affected record must already carry the REGISTRY value, which is what "
-        "the redaction must preserve while the prose is replaced")
-
-    # the treatment: prose replaced, the effect's registry value untouched
-    st._conn.execute("UPDATE source_revocations SET reason=? WHERE identity_digest=?",
-                     (MARKER, digest))
-    st._conn.commit()
-    assert st._conn.execute(
+        "the frozen revocation must still carry the caller's PROSE — no writer can create one now")
+    assert _edge(m.store, linked).invalidation_reason == "revoked_source", (
+        "and the affected record must already carry the REGISTRY value the redaction must preserve")
+    receipt = m.redact(U, edge_id=linked, reason="subject_request")
+    assert m.store._conn.execute(
         "SELECT reason FROM source_revocations WHERE identity_digest=?", (digest,)).fetchone()[0] == MARKER
-    assert _edge(st, linked).invalidation_reason == "revoked_source"
+    assert _edge(m.store, linked).invalidation_reason == "revoked_source"
+    assert "source_revocations.reason" in receipt.fields_cleared
 
 
 def test_D_a_registry_reason_is_preserved(tmp_path):
-    st = _mem(tmp_path).store
-    st.add_episode(Episode(id="ep-s", user_id=U, date="2026-09-01", summary="s", retired_reason="superseded", provenance=_prov()))
-    _rewrite(st, "episodes", "ep-s", summary=MARKER)
-    assert [e for e in st.episodes(U, include_retired=True) if e.id == "ep-s"][0].retired_reason == "superseded"
+    # 0041 round 10 (the R9-02 sweep: a transition test must invoke the operation under test): the treatment is the
+    # REAL `redact`; this test used to write its own postcondition (`_rewrite`/UPDATE), the shape the round-9
+    # verdict named.
+    m = _mem(tmp_path)
+    m.store.add_episode(Episode(id="ep-s", user_id=U, date="2026-09-01", summary="s", retired_reason="superseded", provenance=_prov()))
+    m.redact(U, episode_id="ep-s", reason="subject_request")
+    assert [e for e in m.store.episodes(U, include_retired=True) if e.id == "ep-s"][0].retired_reason == "superseded"
 
 
 # (strict xfail until 0041 tranche 1, 2026-09-19: the refusal / the registry value now exists)
@@ -744,7 +742,10 @@ def test_rows30_49_on_a_frozen_record_absence_survives_and_prose_does_not(tmp_pa
     only place the claim means anything.
 
     Absent stays absent. Registered stays registered. Only prose is replaced."""
-    st = _frozen_store(tmp_path)
+    # 0041 round 10 (the R9-02 sweep: a transition test must invoke the operation under test): the treatment is the
+    # REAL `redact`; this test used to write its own postcondition (`_rewrite`/UPDATE), the shape the round-9
+    # verdict named.
+    m = _frozen_memory(tmp_path); st = m.store
     man = _strict_json((_FROZEN / "pre_restriction_manifest.json").read_text())
     eps = {e.id: e for e in st.episodes(U, include_retired=True)}
 
@@ -752,20 +753,20 @@ def test_rows30_49_on_a_frozen_record_absence_survives_and_prose_does_not(tmp_pa
     assert active.retired_reason is None and active.active is True and active.assertable
 
     # ABSENT -> ABSENT: the treatment touches content, and absence is not content
-    _rewrite(st, "episodes", active.id, summary=MARKER)
+    m.redact(U, episode_id=active.id, reason="subject_request")
     after = {e.id: e for e in st.episodes(U, include_retired=True)}[active.id]
     assert after.retired_reason is None, "row 49 must not write into an absent reason"
     assert after.active is True and after.assertable, "a redaction may not retire an episode"
 
     # REGISTERED -> unchanged
     reg = eps[man["rows"]["registry_retired_reason"]]
-    _rewrite(st, "episodes", reg.id, summary=MARKER)
+    m.redact(U, episode_id=reg.id, reason="subject_request")
     assert {e.id: e for e in st.episodes(U, include_retired=True)}[reg.id].retired_reason == "superseded"
 
     # PROSE -> the registry value, and the disposition it already had is unchanged
     prose = eps[man["rows"]["prose_retired_reason"]]
     assert prose.active is False
-    _rewrite(st, "episodes", prose.id, summary=MARKER, retired_reason="redacted")
+    m.redact(U, episode_id=prose.id, reason="subject_request")
     replaced = {e.id: e for e in st.episodes(U, include_retired=True)}[prose.id]
     assert replaced.retired_reason == "redacted" and replaced.active is False
 
