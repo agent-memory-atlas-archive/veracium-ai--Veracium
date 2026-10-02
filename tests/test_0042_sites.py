@@ -286,6 +286,11 @@ def _with_inactive_edge():
     mem = _mem(); e = _edge("d1"); mem.store.add_edge(e); mem.dispute(U, e.id); return (mem, e.id)
 
 
+def _with_redacted_edge():
+    mem = _mem(); e = _edge("fr1"); mem.store.add_edge(e); mem.redact(U, edge_id=e.id, reason="subject_request")
+    return (mem, e.id)
+
+
 def _inactive_edge_in(mem):
     e = _edge("d1"); mem.store.add_edge(e); mem.dispute(U, e.id); return e.id
 
@@ -346,6 +351,8 @@ DECLINES.update({
         U, "q", policy=veracium.PolicyLane(policy_id="p", policy_version="1", tags_matched=("t",), ranks={}), as_of=NOW)),
     "memory.edge.unknown-target": lambda mp: _memory_raises(ValueError, lambda m: m.dispute(U, "nope")),
     "memory.dispute.inactive-edge": TwoPhase(lambda mp: _with_inactive_edge(), lambda st: _raises(ValueError, st[0].dispute, U, st[1])),
+    # 0041 round 10: dispute/record_outcome/correct refuse an attested target (the setup redacts outside the window)
+    "memory.feedback.attested-target": TwoPhase(lambda mp: _with_redacted_edge(), lambda st: _raises(ValueError, st[0].dispute, U, st[1])),
     "memory.record-outcome.actor-vocabulary": lambda mp: _memory_raises(ValueError, lambda m: m.record_outcome(
         U, "x", outcome=Outcome.CONFIRMED, evidence_ref="r", actor="bogus")),
     "memory.record-outcome.human-judgment": lambda mp: _memory_raises(ValueError, lambda m: m.record_outcome(

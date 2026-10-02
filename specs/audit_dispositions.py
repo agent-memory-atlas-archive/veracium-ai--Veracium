@@ -35,25 +35,25 @@ DISPOSITIONS = {
     "clean — digest-conditional and idempotent: writes only when the live edge's §4e digest still matches (a racing text update or erasure drops the write); post-commit best-effort, never fails ingest",
     "`test_stale_vector_excluded_after_text_mutation` · `test_forget_user_erases_embeddings`"),
  # -- explicit user verbs ----------------------------------------------------
- ("src/veracium/__init__.py", "Memory.dispute", "invalidate_edge", "3bbd6e160bb1"):
+ ("src/veracium/__init__.py", "Memory.dispute", "invalidate_edge", "e2b396f8489a"):
    (W, "`active`, `invalidation_reason`", "act", "clean — narrows only", "`test_dispute_removes_from_assertable_but_keeps_history`"),
- ("src/veracium/__init__.py", "Memory.dispute", "add_episode", "c5468767db40"):
+ ("src/veracium/__init__.py", "Memory.dispute", "add_episode", "c77fe9f6b653"):
    (W, "episode provenance", "act", "clean", "`test_dispute_removes_from_assertable_but_keeps_history`"),
  ("src/veracium/__init__.py", "Memory.confirm", "confirm_edge", "0f81d39ca11c"):
    (W, "`needs_confirmation` (cleared), `observed_at`, `confidence`, the confirmation episode + record — ALL in one atomic store operation", "act",
     "clean — `specs/0008`: `confirm()` is the ONLY path that clears `needs_confirmation`, through the atomic `confirm_edge` (M2 first-known immutability preserved; the record is mandatory, C7)",
     "`test_confirm_clears_staleness` · `test_confirm_advances_liveness_not_first_known`"),
- ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "65802c446a27"):
+ ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "c581fd572ad4"):
    (W, "episode provenance / `author_of_evidence` (new chain link — NEVER overwritten)", "act",
     "clean — **`specs/0009` (ACCEPTED): M4 CLOSED.** `record_outcome` now APPENDS a new chain link via the CAS `append_outcome_if_head` (never mutates a prior judgment's author, H1); the Store assigns `seq`/id and DERIVES `source_type`; counters are derived from chain heads (H6).",
     "`test_outcome_authorship_is_never_overwritten` · `test_record_outcome_is_edge_blind_never_supersedes`"),
- ("src/veracium/__init__.py", "Memory.record_outcome", "add_edge", "5b46e2531803"):
+ ("src/veracium/__init__.py", "Memory.record_outcome", "add_edge", "e00d08c435b4"):
    (W, "`outcome_counts`, `last_outcome`, `needs_confirmation`", "act",
     "clean — counters are information, never gating", "`test_record_outcome_is_edge_blind_never_supersedes`"),
- ("src/veracium/__init__.py", "Memory.correct", "apply_supersession_plan", "666f27059611"):
+ ("src/veracium/__init__.py", "Memory.correct", "apply_supersession_plan", "ba370b6342c2"):
    (W, "`active`, `invalidation_reason=corrected`, `supersedes`, `author_of_evidence` USER", "act",
     "clean — **M7-correct CLOSED (specs/0011 §4e, E5)**: the correction reaches storage only through the atomic plan with a CorrectionAuthorisation verified in-transaction; §4b subject entitlement applies", "`test_correct_requires_bound_authorisation`"),
- ("src/veracium/__init__.py", "Memory.correct", "add_episode", "38943ba03330"):
+ ("src/veracium/__init__.py", "Memory.correct", "add_episode", "9fce4dabcb6f"):
    (W, "episode provenance", "act",
     "clean — post-commit narration of an ALREADY-authorised correction (specs/0011 §4e); writes no trust decision", "`test_correct_requires_bound_authorisation`"),
  ("src/veracium/__init__.py", "Memory.forget", "forget_user", "c5d9e9e2da39"):
@@ -182,13 +182,13 @@ DISPOSITIONS = {
 #   open_moved  open AND owned elsewhere
 STATES = {
   ("src/veracium/__init__.py", "Memory.embed_backfill", "upsert_embedding", "edb8a9a9b201"): "clean",
-  ("src/veracium/__init__.py", "Memory.dispute", "invalidate_edge", "3bbd6e160bb1"): "clean",
-  ("src/veracium/__init__.py", "Memory.dispute", "add_episode", "c5468767db40"): "clean",
+  ("src/veracium/__init__.py", "Memory.dispute", "invalidate_edge", "e2b396f8489a"): "clean",
+  ("src/veracium/__init__.py", "Memory.dispute", "add_episode", "c77fe9f6b653"): "clean",
   ("src/veracium/__init__.py", "Memory.confirm", "confirm_edge", "0f81d39ca11c"): "clean",
-  ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "65802c446a27"): "clean",
-  ("src/veracium/__init__.py", "Memory.record_outcome", "add_edge", "5b46e2531803"): "clean",
-  ("src/veracium/__init__.py", "Memory.correct", "apply_supersession_plan", "666f27059611"): "clean",
-  ("src/veracium/__init__.py", "Memory.correct", "add_episode", "38943ba03330"): "clean",
+  ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "c581fd572ad4"): "clean",
+  ("src/veracium/__init__.py", "Memory.record_outcome", "add_edge", "e00d08c435b4"): "clean",
+  ("src/veracium/__init__.py", "Memory.correct", "apply_supersession_plan", "ba370b6342c2"): "clean",
+  ("src/veracium/__init__.py", "Memory.correct", "add_episode", "9fce4dabcb6f"): "clean",
   ("src/veracium/__init__.py", "Memory.forget", "forget_user", "c5d9e9e2da39"): "clean",
   ("src/veracium/cli.py", "_forget", "forget_user", "269b73112fab"): "clean",
   ("src/veracium/compile.py", "compile_wiki", "set_wiki", "4365735ba43d"): "clean",

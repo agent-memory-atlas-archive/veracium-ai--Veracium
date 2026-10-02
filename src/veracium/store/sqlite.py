@@ -184,7 +184,9 @@ class SqliteStore(Store):
         except BaseException:
             self._conn.close()
             raise
-        self._lock = threading.Lock()
+        # RE-ENTRANT (0041 round 10): `atomic()` holds it across a caller's read-check-write, and the store's own
+        # methods called inside take it again on the same thread. Across threads nothing changes.
+        self._lock = threading.RLock()
         # specs/0028 §4b-o: the thread holding an open `read_window` — a
         # nested window on that thread JOINS instead of re-taking the
         # (non-reentrant) instance lock; any other thread waits on the lock.
@@ -429,8 +431,9 @@ class SqliteStore(Store):
         extracted so a resolution can open ONE outer window that every read
         joins — `edges(active_only=False)`, each `edges_superseding` hop and
         each `current_state` — and read one snapshot (V-ONE-SNAPSHOT). The
-        instance lock is a plain `threading.Lock`, so the join is keyed on
-        the OWNER THREAD: a nested window on the holding thread yields at
+        join is keyed on the OWNER THREAD (the instance lock is re-entrant
+        since 0041 round 10, and a window inside `atomic()` joins its open
+        write transaction): a nested window on the holding thread yields at
         once; a window on another thread waits on the lock as any store
         operation does. What a concurrent WRITER sees is measured in
         specs/0028 §5 (never "refused for the duration"): under the default
@@ -625,6 +628,16 @@ class SqliteStore(Store):
                  int(edge.active), int(edge.quarantined), new_json))
             self._journal_edge_write(edge.user_id, edge.id, new_json,
                                      prior[1] if prior is not None else None)
+
+    @contextlib.contextmanager
+    def atomic(self):
+        """specs/0041 round 10 (P-TXN, sweep A's dispute/record_outcome/correct): ONE write transaction — BEGIN
+        IMMEDIATE on this connection, under the (re-entrant) instance lock — for a caller's read, decision and writes
+        together. Every store writer called inside JOINS it (`_write_txn` joins an open transaction), so a record read
+        here and the episode that quotes it commit together or not at all, and no other connection can redact the
+        record in between."""
+        with self._lock, self._write_txn():
+            yield self
 
     def add_edge(self, edge: Edge) -> None:
         with self._lock, self._write_txn():
@@ -1797,8 +1810,12 @@ class SqliteStore(Store):
         mutation on the single connection), so the read-then-INSERT is a genuine
         compare-and-set: two concurrent callers cannot both extend one head (H3).
         INSERTs through its OWN statement, not `add_episode`, so it is a sanctioned
-        outcome-chain writer even once the generic mutators refuse outcome rows (H14)."""
-        with self._lock:
+        outcome-chain writer even once the generic mutators refuse outcome rows (H14).
+
+        0041 round 10 (found while fixing A3): the instance lock serialises ONE connection, so across two the head
+        read and the INSERT were not one compare-and-set. Both now run under BEGIN IMMEDIATE on this connection (and
+        join a caller's `atomic()` transaction when one is open)."""
+        with self._lock, self._write_txn():
             head = self._chain_head(user_id, edge_id, evidence_ref)
             head_id = head.id if head is not None else None
             if head_id != expected_head_id:
@@ -1829,8 +1846,7 @@ class SqliteStore(Store):
                 "INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
                 (ep.id, ep.user_id, ep.date, ep.model_dump_json()))
             self._bump(user_id)                          # H10
-            self._conn.commit()
-            return ep
+            return ep                                    # _write_txn commits (or the caller's atomic() does)
 
     def commit_outcome_import_plan(self, user_id, plan: dict,
                                    expected_destination_state: dict):

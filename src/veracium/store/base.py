@@ -295,6 +295,12 @@ class Store(ABC):
             "this Store does not implement redact (specs/0041 §4a) — a store without the "
             "operation refuses rather than pretending the content was removed")
 
+    def atomic(self):
+        """specs/0041 round 10: one write transaction for a caller's read, decision and writes. A store without
+        transactions has nothing to join — the honest default is a no-op scope, not a refusal."""
+        import contextlib
+        return contextlib.nullcontext(self)
+
     def redacted_targets(self, user_id: str, kind: str) -> frozenset:
         """specs/0041 §4b-iii: the ids of the user's attested-redacted records of `kind` ("edge" | "episode").
         A store without the operation holds none — the honest default is the empty set, not a refusal: the

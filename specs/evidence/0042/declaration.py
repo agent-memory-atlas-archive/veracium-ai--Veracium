@@ -47,6 +47,7 @@ DECLARATION = (
     ("memory.correct.refused", "0011", "§4b", "__init__.py:Memory.correct", "refuse"),
     ("memory.dispute.inactive-edge", "0003", "§4b", "__init__.py:Memory.dispute", "refuse"),
     ("memory.edge.unknown-target", "0041", "INV-5", "__init__.py:Memory._find_edge", "refuse"),
+    ("memory.feedback.attested-target", "0041", "§4b-ii INV-11 (derived episodes)", "__init__.py:Memory._refuse_attested", "refuse"),
     ("memory.recall.as-of-on-proactive", "0028", "§2c", "__init__.py:Memory.recall", "refuse"),
     ("memory.recall.policy-with-as-of", "0027", "v13 §4c", "__init__.py:Memory._recall", "refuse"),
     ("memory.record-outcome.actor-vocabulary", "0008", "§4", "__init__.py:Memory.record_outcome", "refuse"),

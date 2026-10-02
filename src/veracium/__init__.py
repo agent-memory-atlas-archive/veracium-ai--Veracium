@@ -68,6 +68,7 @@ _SITE_ASOF_ON_PROACTIVE = declare_site("memory.recall.as-of-on-proactive")
 _SITE_POLICY_WITH_ASOF = declare_site("memory.recall.policy-with-as-of")
 _SITE_EDGE_UNKNOWN_TARGET = declare_site("memory.edge.unknown-target")
 _SITE_DISPUTE_INACTIVE = declare_site("memory.dispute.inactive-edge")
+_SITE_FEEDBACK_ATTESTED = declare_site("memory.feedback.attested-target")
 _SITE_OUTCOME_ACTOR = declare_site("memory.record-outcome.actor-vocabulary")
 _SITE_OUTCOME_HUMAN = declare_site("memory.record-outcome.human-judgment")
 _SITE_OUTCOME_SYSTEM = declare_site("memory.record-outcome.system-judgment")
@@ -1815,6 +1816,16 @@ class Memory:
                 if e.provenance.observed_at > since]
 
     # -- user feedback verbs -------------------------------------------------
+    def _refuse_attested(self, user_id: str, edge_id: str, op: str) -> None:
+        """specs/0041 round 10: dispute, record_outcome and correct each quote the record they act on in a NEW episode;
+        on an ATTESTED-redacted record that quote would carry the treated record's marker at best and, read before a
+        redaction, its content at worst. Refused by the attestation record, read inside the caller's `atomic()`."""
+        with _SITE_FEEDBACK_ATTESTED.consult():
+            if edge_id in self.store.redacted_targets(user_id, "edge"):
+                raise _SITE_FEEDBACK_ATTESTED.fire(ValueError(
+                    f"refused: edge {edge_id!r} is redacted — {op} quotes the record it acts on, and a redacted "
+                    f"record is not quoted (specs/0041 §4b-ii, round 10)"), op)
+
     def _find_edge(self, user_id: str, edge_id: str) -> Edge:
         with _SITE_EDGE_UNKNOWN_TARGET.consult():
             for e in self.store.edges(user_id, active_only=False, include_quarantined=True):
@@ -1831,20 +1842,25 @@ class Memory:
         was actually right, it re-enters the normal way: new evidence via
         `remember()`. Not exposed over MCP (an agent-callable suppress verb is
         a prompt-injection target); hosts wire it to a real user action."""
-        edge = self._find_edge(user_id, edge_id)
-        with _SITE_DISPUTE_INACTIVE.consult():
-            if not edge.active:
-                raise _SITE_DISPUTE_INACTIVE.fire(ValueError(f"edge {edge_id!r} is not active (already "
-                                 f"{edge.invalidation_reason or 'invalidated'})"))
-        today = _today_utc()
-        self.store.invalidate_edge(edge_id, utcnow(), "disputed")
-        note = f" — {reason}" if reason else ""
-        self.store.add_episode(Episode(
-            id=f"ep-{uuid4().hex[:12]}", user_id=user_id, date=today,
-            summary=f"({actor}) disputed the remembered fact "
-                    f"'{edge.relation}: {edge.object}'{note}",
-            provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
-                                  evidence_ref=f"dispute:{edge_id}")))
+        # specs/0041 round 10 (found in sweep A): the record is read, judged and quoted INSIDE one write
+        # transaction — a redaction cannot land between the read and the derived episode — and an
+        # ATTESTED target is refused before anything is written
+        with self.store.atomic():
+            self._refuse_attested(user_id, edge_id, "dispute")
+            edge = self._find_edge(user_id, edge_id)
+            with _SITE_DISPUTE_INACTIVE.consult():
+                if not edge.active:
+                    raise _SITE_DISPUTE_INACTIVE.fire(ValueError(f"edge {edge_id!r} is not active (already "
+                                     f"{edge.invalidation_reason or 'invalidated'})"))
+            today = _today_utc()
+            self.store.invalidate_edge(edge_id, utcnow(), "disputed")
+            note = f" — {reason}" if reason else ""
+            self.store.add_episode(Episode(
+                id=f"ep-{uuid4().hex[:12]}", user_id=user_id, date=today,
+                summary=f"({actor}) disputed the remembered fact "
+                        f"'{edge.relation}: {edge.object}'{note}",
+                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
+                                      evidence_ref=f"dispute:{edge_id}")))
         self._record("feedback", {"disputed": 1, "confirmed": 0}, user_id)
         return {"disputed": edge_id, "relation": edge.relation}
 
@@ -1938,45 +1954,50 @@ class Memory:
         with _SITE_OUTCOME_SYSTEM.consult():
             if outcome in (Outcome.CHALLENGED, Outcome.CONCURRED) and actor != "system":
                 raise _SITE_OUTCOME_SYSTEM.fire(ValueError(f"{outcome.value} is a system judgment (actor='system')"))
-        edge = self._find_edge(user_id, edge_id)
-        date = _event_dt(date or _today_utc()).date().isoformat()
+        # specs/0041 round 10 (found in sweep A): the record is read, judged and quoted INSIDE one write
+        # transaction — a redaction cannot land between the read and the derived episode — and an
+        # ATTESTED target is refused before anything is written
+        with self.store.atomic():
+            self._refuse_attested(user_id, edge_id, "record_outcome")
+            edge = self._find_edge(user_id, edge_id)
+            date = _event_dt(date or _today_utc()).date().isoformat()
 
-        # specs/0009: NEVER mutate a prior judgment — append a new chain link.
-        # The head is the max-`seq` outcome episode for (edge_id, evidence_ref);
-        # `append_outcome_if_head` CAS-appends and retries if the head moved. The
-        # `[prior judgment was …]` note is rebuilt against the WINNING head, and
-        # `upgraded` reflects the successful attempt (H11, round-5 Correction A).
-        val = f" (true value: {corrected_value})" if corrected_value else ""
-        while True:
-            head = self._outcome_head(user_id, edge_id, evidence_ref)
-            summary = (f"({actor}) {outcome.value}: use of "
-                       f"'{edge.relation}: {edge.object}'{val}")
-            if head is not None:
-                was = head.provenance.author_of_evidence
-                if was != author:
-                    summary += f" [prior judgment was {was.value}-authored]"
-            draft = OutcomeJudgmentDraft(
-                author=author, event_timestamp=date, outcome=outcome,
-                summary=summary, context_ref=context_ref)
-            appended = self.store.append_outcome_if_head(
-                user_id, edge_id, evidence_ref,
-                head.id if head is not None else None, draft)
-            if appended is not HEAD_MOVED:
-                break                                    # committed
-        upgraded = head is not None                      # revised an existing chain
+            # specs/0009: NEVER mutate a prior judgment — append a new chain link.
+            # The head is the max-`seq` outcome episode for (edge_id, evidence_ref);
+            # `append_outcome_if_head` CAS-appends and retries if the head moved. The
+            # `[prior judgment was …]` note is rebuilt against the WINNING head, and
+            # `upgraded` reflects the successful attempt (H11, round-5 Correction A).
+            val = f" (true value: {corrected_value})" if corrected_value else ""
+            while True:
+                head = self._outcome_head(user_id, edge_id, evidence_ref)
+                summary = (f"({actor}) {outcome.value}: use of "
+                           f"'{edge.relation}: {edge.object}'{val}")
+                if head is not None:
+                    was = head.provenance.author_of_evidence
+                    if was != author:
+                        summary += f" [prior judgment was {was.value}-authored]"
+                draft = OutcomeJudgmentDraft(
+                    author=author, event_timestamp=date, outcome=outcome,
+                    summary=summary, context_ref=context_ref)
+                appended = self.store.append_outcome_if_head(
+                    user_id, edge_id, evidence_ref,
+                    head.id if head is not None else None, draft)
+                if appended is not HEAD_MOVED:
+                    break                                    # committed
+            upgraded = head is not None                      # revised an existing chain
 
-        # Counters are DERIVED from chain heads (H6), recomputed rather than
-        # mutated in place — the denormalisation the M4 defect was.
-        times_used, counts = self._edge_outcome_aggregates(user_id, edge_id)
-        edge.times_used = times_used
-        edge.outcome_counts = counts
-        # last_outcome / last_outcome_at are DEPRECATED (Option A) — best-effort,
-        # no cross-chain guarantee.
-        edge.last_outcome = outcome
-        edge.last_outcome_at = _event_dt(date)
-        if outcome is Outcome.CHALLENGED:
-            edge.needs_confirmation = True   # "confirm before relying" — existing surface
-        self.store.add_edge(edge)
+            # Counters are DERIVED from chain heads (H6), recomputed rather than
+            # mutated in place — the denormalisation the M4 defect was.
+            times_used, counts = self._edge_outcome_aggregates(user_id, edge_id)
+            edge.times_used = times_used
+            edge.outcome_counts = counts
+            # last_outcome / last_outcome_at are DEPRECATED (Option A) — best-effort,
+            # no cross-chain guarantee.
+            edge.last_outcome = outcome
+            edge.last_outcome_at = _event_dt(date)
+            if outcome is Outcome.CHALLENGED:
+                edge.needs_confirmation = True   # "confirm before relying" — existing surface
+            self.store.add_edge(edge)
         self._record("outcome", {"new": 0 if upgraded else 1,
                                  "upgraded": 1 if upgraded else 0}, user_id)
         return {"edge_id": edge_id, "outcome": outcome.value, "upgraded": upgraded,
@@ -2041,74 +2062,82 @@ class Memory:
         # bound to (store origin, prior id, replacement digest, kind,
         # principal) and verified INSIDE the transaction. The CAS retry loop
         # is apply_supersession's own shape: PlanStale → re-read, recompute.
-        for _ in range(graph._MAX_PLAN_ATTEMPTS):
-            edge = self._find_edge(user_id, edge_id)
-            with _SITE_CORRECT_INACTIVE.consult():
-                if not edge.active:
-                    raise _SITE_CORRECT_INACTIVE.fire(ValueError(f"edge {edge_id!r} is not active (already "
-                                     f"{edge.invalidation_reason or 'invalidated'})"))
-            # specs/0026 §3b at the THIRD establishment boundary
-            # (research's implementation red-team: correct() preserved
-            # the note at default-MENTIONABLE with no floor and no
-            # record, reopening B02/B07 for corrected facts): the
-            # corrected edge's preserved note + new value pass through
-            # the SAME restrict-only floor and the ONE derivation site
-            # as ingest and import — a correction updates the VALUE,
-            # never launders the relay out of the note
-            from . import agreement as _agreement
-            # specs/0037 v19 (V-NO-CORRECTION-OF-PROCEDURES; research's red team): a
-            # correction mints a successor whose OBJECT is the host's text, so
-            # inheriting the stamp would attribute that text to the user, and
-            # dropping it rendered the record. Neither is honest: a procedural
-            # record is not corrected — it is retired and restated through the
-            # producer that can attest it (record_procedure, or the user again).
-            with _SITE_CORRECT_PROCEDURAL.consult():
-                if is_procedural(edge):
-                    from .procedures import ProcedureValueError
-                    raise _SITE_CORRECT_PROCEDURAL.fire(ProcedureValueError(
-                        "correction_of_procedure",
-                        f"edge {edge_id!r} is a procedural record; correct() does not mint a successor for one "
-                        "(specs/0037 §4a-iii, V-NO-CORRECTION-OF-PROCEDURES) — retire it and restate the procedure"))
-            _disc = Disclosure.MENTIONABLE
-            if _agreement.relay_markers(edge.note, corrected_value):
-                _disc = Disclosure.USE_ONLY
-            new = Edge(
-                id=f"e-{uuid4().hex[:12]}", user_id=user_id, subject=edge.subject,
-                relation=edge.relation, object=corrected_value, note=edge.note,
-                volatility=edge.volatility, valid_from=when,
-                agreement=_agreement.derive_record(
-                    edge.note, corrected_value, _disc,
-                    relation=edge.relation),
-                provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
-                                      evidence_ref=evidence_ref or f"correct:{edge_id}",
-                                      disclosure=_disc,
-                                      observed_at=when))
-            plan, refused = graph.plan_correction(
-                self.store, edge, new, op_id=f"corr-{new.id}")
-            auth = None if refused else CorrectionAuthorisation(
-                origin=self.store.local_origin(), prior_edge_id=edge_id,
-                replacement_digest=correction_digest(corrected_value),
-                kind="corrected", principal=actor)
-            result = self.store.apply_supersession_plan(
-                plan, authorisation=auth, acting_principal=actor)
-            if result is not PLAN_STALE:
-                break
-        else:
-            raise RuntimeError(
-                f"correction of {edge_id!r} kept returning PlanStale after "
-                f"{graph._MAX_PLAN_ATTEMPTS} attempts (specs/0003 §4f)")
+        # specs/0041 round 10 (found in sweep A): the record is read, judged and quoted INSIDE one write
+        # transaction — a redaction cannot land between the read and the derived episode — and an
+        # ATTESTED target is refused before anything is written
+        with self.store.atomic():
+            self._refuse_attested(user_id, edge_id, "correct")
+            for _ in range(graph._MAX_PLAN_ATTEMPTS):
+                edge = self._find_edge(user_id, edge_id)
+                with _SITE_CORRECT_INACTIVE.consult():
+                    if not edge.active:
+                        raise _SITE_CORRECT_INACTIVE.fire(ValueError(f"edge {edge_id!r} is not active (already "
+                                         f"{edge.invalidation_reason or 'invalidated'})"))
+                # specs/0026 §3b at the THIRD establishment boundary
+                # (research's implementation red-team: correct() preserved
+                # the note at default-MENTIONABLE with no floor and no
+                # record, reopening B02/B07 for corrected facts): the
+                # corrected edge's preserved note + new value pass through
+                # the SAME restrict-only floor and the ONE derivation site
+                # as ingest and import — a correction updates the VALUE,
+                # never launders the relay out of the note
+                from . import agreement as _agreement
+                # specs/0037 v19 (V-NO-CORRECTION-OF-PROCEDURES; research's red team): a
+                # correction mints a successor whose OBJECT is the host's text, so
+                # inheriting the stamp would attribute that text to the user, and
+                # dropping it rendered the record. Neither is honest: a procedural
+                # record is not corrected — it is retired and restated through the
+                # producer that can attest it (record_procedure, or the user again).
+                with _SITE_CORRECT_PROCEDURAL.consult():
+                    if is_procedural(edge):
+                        from .procedures import ProcedureValueError
+                        raise _SITE_CORRECT_PROCEDURAL.fire(ProcedureValueError(
+                            "correction_of_procedure",
+                            f"edge {edge_id!r} is a procedural record; correct() does not mint a successor for one "
+                            "(specs/0037 §4a-iii, V-NO-CORRECTION-OF-PROCEDURES) — retire it and restate the procedure"))
+                _disc = Disclosure.MENTIONABLE
+                if _agreement.relay_markers(edge.note, corrected_value):
+                    _disc = Disclosure.USE_ONLY
+                new = Edge(
+                    id=f"e-{uuid4().hex[:12]}", user_id=user_id, subject=edge.subject,
+                    relation=edge.relation, object=corrected_value, note=edge.note,
+                    volatility=edge.volatility, valid_from=when,
+                    agreement=_agreement.derive_record(
+                        edge.note, corrected_value, _disc,
+                        relation=edge.relation),
+                    provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
+                                          evidence_ref=evidence_ref or f"correct:{edge_id}",
+                                          disclosure=_disc,
+                                          observed_at=when))
+                plan, refused = graph.plan_correction(
+                    self.store, edge, new, op_id=f"corr-{new.id}")
+                auth = None if refused else CorrectionAuthorisation(
+                    origin=self.store.local_origin(), prior_edge_id=edge_id,
+                    replacement_digest=correction_digest(corrected_value),
+                    kind="corrected", principal=actor)
+                result = self.store.apply_supersession_plan(
+                    plan, authorisation=auth, acting_principal=actor)
+                if result is not PLAN_STALE:
+                    break
+            else:
+                raise RuntimeError(
+                    f"correction of {edge_id!r} kept returning PlanStale after "
+                    f"{graph._MAX_PLAN_ATTEMPTS} attempts (specs/0003 §4f)")
+            if not refused:
+                self.store.add_episode(Episode(
+                    id=f"ep-{uuid4().hex[:12]}", user_id=user_id, date=date,
+                    summary=(f"({actor}) corrected '{edge.relation}: {edge.object}' "
+                             f"to '{corrected_value}'"),
+                    provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
+                                          evidence_ref=evidence_ref or f"correct:{edge_id}",
+                                          observed_at=when)))
+        # the refusal is raised AFTER the atomic scope: raised inside it, the scope would roll back the durable
+        # refusal row the plan just wrote — and specs/0011 §4b requires that row to commit
         with _SITE_CORRECT_REFUSED.consult():
             if refused:
                 # the durable refusal row committed with the plan; the correction
                 # itself is loud (specs/0011 §4b applies to corrections)
                 raise _SITE_CORRECT_REFUSED.fire(graph.CorrectionRefused(edge_id, authority.RULE_VERSION))
-        self.store.add_episode(Episode(
-            id=f"ep-{uuid4().hex[:12]}", user_id=user_id, date=date,
-            summary=(f"({actor}) corrected '{edge.relation}: {edge.object}' "
-                     f"to '{corrected_value}'"),
-            provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
-                                  evidence_ref=evidence_ref or f"correct:{edge_id}",
-                                  observed_at=when)))
         self._record("feedback", {"disputed": 0, "confirmed": 0, "corrected": 1}, user_id)
         return {"corrected": edge_id, "replacement": new.id}
 
