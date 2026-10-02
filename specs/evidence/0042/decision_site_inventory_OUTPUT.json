@@ -85,70 +85,63 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 796,
+   "line": 803,
    "module": "__init__.py",
    "qualname": "Memory.describe_procedures"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 798,
+   "line": 805,
    "module": "__init__.py",
    "qualname": "Memory.describe_procedures"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 801,
+   "line": 808,
    "module": "__init__.py",
    "qualname": "Memory.describe_procedures"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 896,
+   "line": 903,
    "module": "__init__.py",
    "qualname": "Memory.recall"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 901,
+   "line": 908,
    "module": "__init__.py",
    "qualname": "Memory.recall"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 917,
+   "line": 924,
    "module": "__init__.py",
    "qualname": "Memory.recall"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 933,
+   "line": 940,
    "module": "__init__.py",
    "qualname": "Memory.facts_valid_at"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 994,
+   "line": 1001,
    "module": "__init__.py",
    "qualname": "Memory._recall"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 998,
-   "module": "__init__.py",
-   "qualname": "Memory._recall"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1002,
+   "line": 1005,
    "module": "__init__.py",
    "qualname": "Memory._recall"
   },
@@ -162,13 +155,6 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1011,
-   "module": "__init__.py",
-   "qualname": "Memory._recall"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
    "line": 1016,
    "module": "__init__.py",
    "qualname": "Memory._recall"
@@ -176,120 +162,127 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1019,
+   "line": 1018,
+   "module": "__init__.py",
+   "qualname": "Memory._recall"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1023,
+   "module": "__init__.py",
+   "qualname": "Memory._recall"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1026,
    "module": "__init__.py",
    "qualname": "Memory._recall"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1514,
+   "line": 1521,
    "module": "__init__.py",
    "qualname": "Memory._fit_to_budget._claim_lines"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1655,
+   "line": 1662,
    "module": "__init__.py",
    "qualname": "Memory.answer"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1677,
+   "line": 1684,
    "module": "__init__.py",
    "qualname": "Memory.maintain"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1726,
+   "line": 1733,
    "module": "__init__.py",
    "qualname": "Memory.flush_telemetry"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1733,
+   "line": 1740,
    "module": "__init__.py",
    "qualname": "Memory.telemetry_preview"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1744,
+   "line": 1751,
    "module": "__init__.py",
    "qualname": "Memory.report_error"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1751,
+   "line": 1758,
    "module": "__init__.py",
    "qualname": "Memory.diagnostics_preview"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1780,
+   "line": 1787,
    "module": "__init__.py",
    "qualname": "Memory.introspect"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1806,
+   "line": 1813,
    "module": "__init__.py",
    "qualname": "Memory.edges_since"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1816,
+   "line": 1823,
    "module": "__init__.py",
    "qualname": "Memory._find_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1830,
+   "line": 1837,
    "module": "__init__.py",
    "qualname": "Memory.dispute"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1927,
+   "line": 1934,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1930,
+   "line": 1937,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1933,
+   "line": 1940,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2041,
+   "line": 2048,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2061,
-   "module": "__init__.py",
-   "qualname": "Memory.correct"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 2090,
+   "line": 2068,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
@@ -301,8 +294,15 @@
    "qualname": "Memory.correct"
   },
   {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2104,
+   "module": "__init__.py",
+   "qualname": "Memory.correct"
+  },
+  {
    "kind": "FILTER_RETURN",
-   "line": 2155,
+   "line": 2162,
    "module": "__init__.py",
    "qualname": "Memory.policy_receipts"
   },
@@ -709,7 +709,7 @@
   },
   {
    "kind": "RETURN_NONE",
-   "line": 300,
+   "line": 315,
    "module": "compile.py",
    "qualname": "ensure_wiki"
   },
@@ -1371,28 +1371,48 @@
    "qualname": "report"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 41,
+   "module": "lifecycle.py",
+   "qualname": "_attested_now"
+  },
+  {
+   "bare": true,
+   "kind": "RAISE",
+   "line": 82,
+   "module": "lifecycle.py",
+   "qualname": "expire"
+  },
+  {
+   "bare": true,
+   "kind": "RAISE",
+   "line": 91,
+   "module": "lifecycle.py",
+   "qualname": "expire"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
-   "line": 124,
+   "line": 148,
    "module": "lifecycle.py",
    "qualname": "_pool_result"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 126,
+   "line": 150,
    "module": "lifecycle.py",
    "qualname": "_pool_result"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 184,
+   "line": 208,
    "module": "lifecycle.py",
    "qualname": "partition_cold"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 330,
+   "line": 354,
    "module": "lifecycle.py",
    "qualname": "_safe_date"
   },
@@ -1777,14 +1797,14 @@
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 149,
+   "line": 154,
    "module": "proactive.py",
    "qualname": "assemble._eligible"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 274,
+   "line": 280,
    "module": "proactive.py",
    "qualname": "assemble"
   },
@@ -5288,9 +5308,9 @@
  ],
  "summary": {
   "by_kind": {
-   "BOOL_RETURN": 68,
+   "BOOL_RETURN": 69,
    "FILTER_RETURN": 42,
-   "RAISE": 527,
+   "RAISE": 529,
    "RETURN_FALSE": 84,
    "RETURN_NONE": 72
   },
@@ -5459,9 +5479,9 @@
     "RETURN_NONE": 0
    },
    "lifecycle.py": {
-    "BOOL_RETURN": 0,
+    "BOOL_RETURN": 1,
     "FILTER_RETURN": 1,
-    "RAISE": 2,
+    "RAISE": 4,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
@@ -5634,7 +5654,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 793,
+  "total": 796,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

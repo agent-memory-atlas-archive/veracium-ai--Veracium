@@ -33,11 +33,25 @@ from .schema import (DEFAULT_EXPIRY, Disclosure, Episode, EvidenceAuthor, Expiry
                      utcnow)
 
 
+def _attested_now(store, user_id: str, e) -> bool:
+    """specs/0041 round 10: a redaction landing between expire's read and its write-back is REFUSED by the write path
+    (an attested target); expiry SKIPS that edge instead of failing the run — decided by a FRESH read of the
+    attestation record, so any other refusal still raises. Each write-back keeps its own call site (and the audit
+    its own verdict for it): only the refusal handling is shared."""
+    return e.id in store.redacted_targets(user_id, "edge")
+
+
 def expire(store, user_id: str, config, *, now: Optional[datetime] = None) -> dict:
     """Apply volatility-driven expiry to `user_id`'s active edges. Idempotent."""
     now = now or utcnow()
     lapsed = decayed = flagged = 0
+    # specs/0041 round 10 (found in sweep E): an ATTESTED-redacted edge is skipped at the read. Expiry writes the
+    # edge back (decay, the confirm flag), and the write path rightly refuses an attested target — so before this, ONE
+    # redacted aged edge made every maintain() raise, permanently, and the edges after it were never processed.
+    redacted = store.redacted_targets(user_id, "edge")
     for e in store.edges(user_id, active_only=True):
+        if e.id in redacted:
+            continue
         lifetime = config.volatility_lifetime_days.get(e.volatility)
         if lifetime is None:
             continue
@@ -60,11 +74,21 @@ def expire(store, user_id: str, config, *, now: Optional[datetime] = None) -> di
             if e.provenance.confidence < config.confidence_floor:
                 store.invalidate_edge(e.id, now, "decayed"); decayed += 1
             else:
-                store.add_edge(e)
+                try:
+                    store.add_edge(e)
+                except ValueError:
+                    if _attested_now(store, user_id, e):
+                        continue
+                    raise
         else:  # CONFIRM — never silently dropped; surfaced as possibly-stale
             if not e.needs_confirmation:
                 e.needs_confirmation = True
-                store.add_edge(e); flagged += 1
+                try:
+                    store.add_edge(e); flagged += 1
+                except ValueError:
+                    if _attested_now(store, user_id, e):
+                        continue
+                    raise
     return {"lapsed": lapsed, "decayed": decayed, "flagged_for_confirmation": flagged}
 
 

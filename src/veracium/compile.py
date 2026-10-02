@@ -185,7 +185,7 @@ def needs_recompile(store, user_id: str, recompile_after: int,
 
 def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relation],
                  *, budget_tokens: int = 900, wiki_input_budget: int = 8000,
-                 variant_cap: int = 4, item_cap: int = 512) -> str:
+                 variant_cap: int = 4, item_cap: int = 512, _retry: bool = False) -> str:
     """specs/0012 I10a/I10j: the compiler INPUT is hard-budgeted (each item clamped to the
     per-item cap; at most `variant_cap` value lines per (subject, relation) group; the whole
     input under `wiki_input_budget` est. tokens) and every drop is COUNTED into the
@@ -276,8 +276,23 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
     published = store.set_wiki(user_id, f"{_ENVELOPE}{digest}\n{wiki}", version_at_begin)
     if not published:
         # the store moved under the compile: nothing is published (the next read recompiles from the store
-        # of record); the wiki text is still returned for THIS call's own use — it was compiled from a
-        # consistent read, and it is never cached
+        # of record). specs/0041 round 10 (found in sweep A): if what moved is a REDACTION of a record this compile
+        # drew on, the body must not be served either — it was compiled from content redacted since. Recompile
+        # ONCE from the post-redaction state (whose inputs exclude the attested records); if that too cannot
+        # publish and a record IT drew on was redacted meanwhile, return the closed stale notice — never a body
+        # drawn from an attested record, and never a loop. A plain concurrent write keeps the behaviour below.
+        drew_edges = {e.id for e in edges} & store.redacted_targets(user_id, "edge")
+        drew_episodes = {e.id for e in episodes} & store.redacted_targets(user_id, "episode")
+        if drew_edges or drew_episodes:
+            if _retry:
+                _log.info("wiki compile for %r withheld: a record it drew on was redacted during the compile "
+                          "(specs/0041 §4e, round 10)", user_id)
+                return _budgets.REDACTED_DURING_COMPILE_NOTICE
+            return compile_wiki(store, llm, user_id, relations, budget_tokens=budget_tokens,
+                                wiki_input_budget=wiki_input_budget, variant_cap=variant_cap, item_cap=item_cap,
+                                _retry=True)
+        # otherwise the wiki text is returned for THIS call's own use — it was compiled from a consistent read,
+        # and it is never cached
         _log.info("wiki compile for %r not published: the store moved during the compile (specs/0041 §4e)", user_id)
     return wiki
 

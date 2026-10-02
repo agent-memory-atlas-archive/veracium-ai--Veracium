@@ -206,6 +206,9 @@ def parse_compile_marker(body: Optional[str]) -> dict:
 
 # --- the provider-free stale-cache notice (0012 I10l) ------------------------------- #
 STALE_WIKI_NOTICE = "[wiki omitted: cache is stale; recompilation requires an LLM provider]"
+# specs/0041 round 10: the closed, content-free body served when a compile's inputs were redacted DURING the compile
+# and its one recompile could not publish either — never the body drawn from the redacted record
+REDACTED_DURING_COMPILE_NOTICE = "[wiki omitted: a record it drew on was redacted during the compile; the next read recompiles]"
 
 
 def clamp_edge_line(edge, cap_tokens: int, render_fn) -> str:

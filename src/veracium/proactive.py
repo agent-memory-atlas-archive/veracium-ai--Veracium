@@ -99,7 +99,12 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
     # instant it is read — before collapse and categorization — so every
     # downstream section, and the returned `Recall.edges`, can only contain
     # records the relation admits.
-    _edges = list(store.edges(user_id))
+    # specs/0041 §4b-iii (round 10, found in sweep E): proactive IS recall — §4b-iii's recall row ("the record is
+    # not returned") binds it. An ATTESTED-redacted record is excluded HERE, at the read and by the attestation
+    # record, before collapse and categorisation; before, three sections returned it as marker lines, and the
+    # dated-commitment section dropped it only because its date lived in the redacted object.
+    _redacted_edges = store.redacted_targets(user_id, "edge")
+    _edges = [e for e in store.edges(user_id) if e.id not in _redacted_edges]
     # specs/0037 §4a (V-RENDER-SITES): the briefing renders records into
     # model context — a procedural record is out of scope here too, by its
     # own stamp/basis (`gate.exclude_procedural`, PROCEDURAL_OUT_OF_SCOPE)
@@ -216,7 +221,8 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
             seen.add(e.id)
 
     recents: list[tuple[str, Episode]] = []
-    _episodes = list(store.episodes(user_id))
+    _redacted_episodes = store.redacted_targets(user_id, "episode")
+    _episodes = [e for e in store.episodes(user_id) if e.id not in _redacted_episodes]
     if visible is not None:                      # specs/0020 §4f, same relation
         _episodes = visible(_episodes)
     for ep in _episodes:

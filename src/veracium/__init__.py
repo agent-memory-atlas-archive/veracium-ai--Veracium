@@ -696,7 +696,14 @@ class Memory:
         except NotImplementedError:
             return 0
         pending = []
+        # specs/0041 D3 (round-9 R9-07): an ATTESTED-redacted edge is SKIPPED by the rebuild — its vector was deleted
+        # by the redaction and the tombstone is never embedded. Keyed on the attestation record: an UNATTESTED
+        # marker row is an ordinary record and is embedded under its own contract. A redaction landing after this
+        # read is caught by the digest-conditional upsert below (the stored row's digest no longer matches).
+        redacted = self.store.redacted_targets(user_id, "edge")
         for e in self.store.edges(user_id, active_only=False):
+            if e.id in redacted:
+                continue
             d = _semantic_mod.content_digest(e)
             if (e.id, d) not in have:
                 pending.append((e, d))

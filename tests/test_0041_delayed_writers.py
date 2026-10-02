@@ -41,7 +41,7 @@ def test_the_wiki_publish_is_one_conditional_statement_on_the_version_read_befor
     seen = {}
     def interleaved(store, user_id, relations):
         out = real(store, user_id, relations)
-        seen["inputs"] = out
+        seen.setdefault("inputs", out)                                   # the FIRST read (A5 recompiles once after it)
         B.redact(U, edge_id="e-1", reason="subject_request")        # the store moves after the read
         return out
     C._grounded_inputs = interleaved
@@ -49,9 +49,14 @@ def test_the_wiki_publish_is_one_conditional_statement_on_the_version_read_befor
         wiki = C.compile_wiki(A.store, _quiet, U, A.config.relations)
     finally:
         C._grounded_inputs = real
-    assert wiki                                                      # this call's own text, compiled from a consistent read
-    assert A.store._conn.execute("SELECT COUNT(*) FROM wiki WHERE user_id=?", (U,)).fetchone()[0] == 0   # NOT published
     assert seen["inputs"][0] and any(e.id == "e-1" for e in seen["inputs"][0])                            # the read did see the content
+    # 0041 round 10 (A5): the compile that read the content is NEVER published, and because what moved was a
+    # REDACTION of a record it drew on, it recompiles ONCE from the post-redaction state. What is published, and
+    # what this call returns, is that recompile — neither carries the redacted content. (Before A5 the row stayed
+    # absent and the stale body was returned to the caller: the served read A5 closes.)
+    row = A.store._conn.execute("SELECT text FROM wiki WHERE user_id=?", (U,)).fetchone()
+    assert row is not None and "night auditor" not in row[0]
+    assert wiki and "night auditor" not in wiki
     # the control: uninterleaved, the publish lands under the version the compile read
     before = A.store.store_version(U)
     C.compile_wiki(A.store, _quiet, U, A.config.relations)
