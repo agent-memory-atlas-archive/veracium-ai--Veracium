@@ -1085,6 +1085,17 @@ def _add_attested_episode(s):
     s.close()
 
 
+def _redacted_cold_input():
+    s = _store(); s.add_episode(_episode("cir1")); s.add_episode(_episode("cir2"))
+    s.redact(U, episode_id="cir2", reason="subject_request"); return (s,)
+
+
+def _claim_redacted_input(s):
+    with pytest.raises(ValueError):
+        s.create_or_takeover_consolidation(U, ["cir1", "cir2"], "w", 60)
+    s.close()
+
+
 def _redact_bad_reason():
     s = _store(); s.add_edge(_edge("rr1"))
     with pytest.raises(ValueError):
@@ -1128,6 +1139,7 @@ DECLINES.update({
     "store.redact.disposition-changed": _redact_disposition,
     "store.upsert.attested-redaction": TwoPhase(lambda mp: _redacted_edge(), lambda st: _upsert_attested(*st)),
     "store.episode.attested-redaction": TwoPhase(lambda mp: _redacted_episode(), lambda st: _add_attested_episode(*st)),
+    "store.consolidation.input-redacted": TwoPhase(lambda mp: _redacted_cold_input(), lambda st: _claim_redacted_input(*st)),
     "store.journal.redaction-reason": lambda mp: _journal_bad_redaction_reason(),
 })
 

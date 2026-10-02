@@ -171,8 +171,12 @@ def test_every_decision_key_resolves_and_every_candidate_has_exactly_one_decisio
 # hand-read 2026-09-19 (research's sweep after the two collapse corrections): every function
 # carrying more than one id on non-raising exits, each a set of DISTINCT declining reasons
 # 0041 tranche 5 (2026-09-20): the embedding upsert's body moved into `_upsert_embedding_in_txn` under the lock-taking wrapper
+# 0041 round 10 (2026-10-02): `create_or_takeover_consolidation` gained its second id — `input-redacted` is a RAISE on
+# an attested requested input, `contended` the RETURN None on a live intersecting op: two statements, two distinct
+# declining conditions, no shared exit (the lease_duration RAISE is an argument check, not an id)
 COLLAPSE_SWEEP_READ = frozenset({
     "asof/resolve.py:_resolve_edge", "gate.py:scoped_assertable", "graph.py:_absorption_scope_gate.same_scope",
+    "store/sqlite.py:SqliteStore.create_or_takeover_consolidation",
     "store/sqlite.py:SqliteStore._ordinary_read_visible", "store/sqlite.py:SqliteStore._upsert_embedding_in_txn",
     "telemetry.py:flush_if_due", "telemetry.py:preview",
 })

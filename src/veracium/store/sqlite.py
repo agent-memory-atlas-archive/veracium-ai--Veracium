@@ -56,6 +56,7 @@ _SITE_REDACT_CLAIMED = declare_site("store.redact.input-claimed")
 _SITE_REDACT_DISPOSITION = declare_site("store.redact.disposition-changed")
 _SITE_UPSERT_ATTESTED = declare_site("store.upsert.attested-redaction")
 _SITE_EPISODE_ATTESTED = declare_site("store.episode.attested-redaction")
+_SITE_CONSOLIDATION_INPUT_REDACTED = declare_site("store.consolidation.input-redacted")
 _SITE_JOURNAL_REDACTION_REASON = declare_site("store.journal.redaction-reason")
 _SITE_IMPORT_ATTESTED = declare_site("store.import.attested-redaction")     # tranche 4b: INV-11 at the import boundary
 _SITE_READ_OUTPUT_NOT_VISIBLE = declare_site("store.read.output-not-visible", declines=False)
@@ -1625,12 +1626,6 @@ class SqliteStore(Store):
                     f"refused: episode {episode.id!r} kind {episode.kind!r} is not a recognised "
                     f"operational kind {_redaction.RECOGNISED_EPISODE_KINDS} — the set is closed at the "
                     f"write path (specs/0041 §2d-iv, §4h(ii))"))
-        with _SITE_EPISODE_ATTESTED.consult():
-            attested = self._attested_fields(episode.user_id, "episode", episode.id)
-            if attested:
-                raise _SITE_EPISODE_ATTESTED.fire(ValueError(
-                    f"refused: episode {episode.id!r} is redacted — a redaction record attests {sorted(attested)}; "
-                    f"an ordinary write may not repopulate it (specs/0041 §4b-ii, INV-11)"))
         # specs/0014 §4c: store-assigned identity cannot be fabricated — a
         # caller-supplied consolidation_output_index on the generic path is
         # REFUSED; only write_consolidation_output_if_current assigns it.
@@ -1666,7 +1661,18 @@ class SqliteStore(Store):
                 raise _SITE_ADD_EPISODE.fire(ValueError(
                     f"add_episode refuses id {episode.id!r} — the '{episode.id[:5]}' "
                     f"namespace is reserved for historical lineage ids (specs/0010 X19)"), "historical-id")
-            with self._lock:
+            # specs/0041 round 9 R9-01: the decisions about the STORED state — the attestation (INV-11)
+            # and the X21 reservation — are made under BEGIN IMMEDIATE on this connection, in the SAME
+            # transaction as the write. Before, both were read before the write's transaction began (the
+            # instance lock serialises only this connection), so a second connection's redaction or claim
+            # committing in between was overwritten. The checks above read only the argument and stay outside.
+            with self._lock, self._write_txn():
+                with _SITE_EPISODE_ATTESTED.consult():
+                    attested = self._attested_fields(episode.user_id, "episode", episode.id)
+                    if attested:
+                        raise _SITE_EPISODE_ATTESTED.fire(ValueError(
+                            f"refused: episode {episode.id!r} is redacted — a redaction record attests "
+                            f"{sorted(attested)}; an ordinary write may not repopulate it (specs/0041 §4b-ii, INV-11)"))
                 # specs/0010 X21: an id RESERVED by a non-quiescent op is refused — the
                 # reservation survives the input's physical deletion until the op finalizes
                 # or cleanly abandons (so a deleted-but-reserved id cannot be recreated).
@@ -1678,7 +1684,6 @@ class SqliteStore(Store):
                     "INSERT OR REPLACE INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
                     (episode.id, episode.user_id, episode.date, episode.model_dump_json()))
                 self._bump(episode.user_id)
-                self._conn.commit()
 
     def episodes(self, user_id, *, limit=None,
                  include_retired=False) -> list[Episode]:
@@ -2170,7 +2175,20 @@ class SqliteStore(Store):
                              f"not {lease_duration} (specs/0010 §4a-ii)")
         req = list(dict.fromkeys(ids))          # de-dup, preserve order
         req_set = set(req)
-        with self._lock:
+        # specs/0041 round 10 (found in sweep A): the claim is ONE transaction under BEGIN IMMEDIATE on this
+        # connection, and refuses an ATTESTED input. The caller's candidate listing (and the LLM call made
+        # from it) PRECEDES the claim, so a redaction committed by another connection in that gap would
+        # otherwise be consumed: its content carried into the output, the redaction's target gone. Redact
+        # already refuses a CLAIMED input (X21), so after this transaction commits no redaction can land on
+        # the inputs; this check closes the window before it. The instance lock alone never serialised a
+        # second connection.
+        with self._lock, self._write_txn():
+            with _SITE_CONSOLIDATION_INPUT_REDACTED.consult():
+                redacted = sorted(req_set & self.redacted_targets(user_id, "episode"))
+                if redacted:
+                    raise _SITE_CONSOLIDATION_INPUT_REDACTED.fire(ValueError(
+                        f"cannot claim: {len(redacted)} requested input(s) are attested-redacted — the candidate "
+                        f"listing is stale; nothing is claimed (specs/0041 round 10, sweep A; specs/0010 §4a)"))
             # Recovery race rule (§4a-ii): abandon any EXPIRED pre-cutover op that
             # intersects the request BEFORE claiming, so a new fence issues only from a
             # clean ABANDONED state (X15). Re-evaluate until no expired intersection.
@@ -2205,8 +2223,7 @@ class SqliteStore(Store):
                 lease_expires_at=expires, claimed_ids=req)
             self._claim_inputs(op)               # all-or-nothing under this transaction
             self._write_op(op)
-            self._conn.commit()
-            return op
+            return op                            # _write_txn commits the claim as one transaction
 
     def renew_consolidation_lease(self, operation_id, fence, owner) -> bool:
         with self._lock:

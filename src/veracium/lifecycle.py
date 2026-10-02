@@ -211,7 +211,9 @@ def _consolidate_pool(store, llm: Complete, user_id: str, config,
     if not new or len(new) >= len(cold):
         return _pool_result("ok")                      # no compression
     # Claim the whole POOL atomically (X4). A contended set → None; a stale
-    # candidate (concurrently finalized out from under us) → ValueError.
+    # candidate → ValueError: an input concurrently finalized out from under us,
+    # OR attested-redacted since the listing above (specs/0041 round 10 — the
+    # pool result does not distinguish the two; the redaction's own record does).
     # Either way, skip this pool having mutated nothing — and CONTINUE.
     owner = f"consolidate:{uuid.uuid4().hex[:12]}"
     lease = getattr(config, "consolidate_lease_seconds", 300)
@@ -281,8 +283,13 @@ def consolidate(store, llm: Complete, user_id: str, config, *,
     # Candidates exclude: outcome episodes (structured records the compactor never
     # sees), consolidation OUTPUTS (non-empty lineage — X16, never a candidate), and
     # already-claimed inputs (a concurrent op holds them — X4).
+    # specs/0041 round 10 (found in sweep A/E): an ATTESTED-redacted episode is never a candidate — it stays
+    # as its marker and is never a consolidation input (a consumed input would leave its attestation naming
+    # an absent record). Excluded HERE, at the read, by the attestation record; the claim refuses one that
+    # was redacted after this listing.
+    redacted = store.redacted_targets(user_id, "episode")
     cold = [e for e in episodes if e.kind != "outcome" and not e.lineage
-            and e.claimed_by is None
+            and e.claimed_by is None and e.id not in redacted
             and _safe_date(e.date) and _safe_date(e.date) < cutoff]
     pools: dict = {}
     total_in = total_out = 0

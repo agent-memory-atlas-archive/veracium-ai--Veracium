@@ -111,6 +111,7 @@ DECLARATION = (
     ("store.consolidation.abandon-live-lease", "0010", "X7", "store/sqlite.py:SqliteStore.abandon_consolidation_if_current", "refuse"),
     ("store.consolidation.contended", "0010", "X7/X11", "store/sqlite.py:SqliteStore.create_or_takeover_consolidation", "refuse"),
     ("store.consolidation.delete-not-current", "0010", "X21", "store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current", "refuse"),
+    ("store.consolidation.input-redacted", "0041", "§4b-ii INV-11", "store/sqlite.py:SqliteStore.create_or_takeover_consolidation", "refuse"),
     ("store.consolidation.renew-refused", "0010", "X7", "store/sqlite.py:SqliteStore.renew_consolidation_lease", "refuse"),
     ("store.consolidation.transition", "0010", "§4b", "store/sqlite.py:SqliteStore.transition_consolidation_if_current", "refuse"),
     ("store.consolidation.write-not-current", "0010", "X23", "store/sqlite.py:SqliteStore.write_consolidation_output_if_current", "refuse"),
