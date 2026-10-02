@@ -83,7 +83,9 @@ SIDE_TABLE_TREATMENTS = {
     "edge": (("confirmations.request_digest", REPLACE), ("contribution_ledger.identity_digest", CLEAR),
              ("contribution_ledger.evidence_ref_digest", CLEAR), ("supersession_refusals.relation", REPLACE),
              ("edge_embedding", DELETE)),
-    "episode": (),
+    # rows 21/23 reach an episode too, as the SURVIVOR of a consolidation's ledger rows (round-9 R9-03: this
+    # was empty while the treatment existed only for edges; an episode is never a recorded contributor)
+    "episode": (("contribution_ledger.identity_digest", CLEAR), ("contribution_ledger.evidence_ref_digest", CLEAR)),
 }
 REDACTED_REASON_VALUE = "redacted"       # the registry value rows 30/49 write over prose (schema.DISPOSITIONED_REASONS)
 

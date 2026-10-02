@@ -414,6 +414,9 @@ def triage():
         print( "   text-capable field in veracium.schema has a closed value space. EVERY")
         print( "   non-carrier is one because it never reaches disk -- NOT because its")
         print( "   content is constrained. If storage changes, they become carriers at once.")
+    # the buckets themselves, for a caller comparing data to data (0041 round 10's generated treatment matrix);
+    # the printed output above is unchanged
+    return carriers, non, unres
 
 
 triage()

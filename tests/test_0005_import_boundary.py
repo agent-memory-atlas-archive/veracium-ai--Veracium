@@ -654,6 +654,10 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_import_contract.py", "test_repeat_imports_are_idempotent_by_source_identity"): "restore",
     ("test_0041_import_contract.py", "test_a_notice_before_its_record_is_a_standing_notice_and_the_record_is_redacted_on_arrival"): "restore",
     ("test_0041_import_contract.py", "test_the_two_orders_reach_the_same_destination_state"): "restore",
+    # 0041 round 10: the generated matrix — an own-store before/after restore pair (the receipt's lineage case), and a
+    # CROSS-USER import on the capping path whose minted imp-… survivor the ledger treatment must read
+    ("test_0041_round10_matrix.py", "test_the_receipt_names_a_restored_output_whose_lineage_consumed_the_redacted_episode"): "restore",
+    ("test_0041_round10_matrix.py", "test_an_imported_absorption_ledger_is_treated_under_its_minted_id"): "default",
     ("test_0041_import_contract.py", "test_an_invalid_notice_refuses_the_record_and_notice_unit_with_nothing_written"): "restore",
     ("test_0041_import_contract.py", "test_two_notices_under_one_source_identity_with_different_bodies_are_an_integrity_refusal"): "restore",
     ("test_0041_import_contract.py", "test_a_held_different_version_is_redacted_anyway_and_flagged"): "restore",

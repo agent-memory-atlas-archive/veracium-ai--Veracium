@@ -1579,9 +1579,11 @@ class SqliteStore(Store):
         NAMES the given record — the export path's reverse join
         (`derive_absorbed_by`). Pre-v8 rows carry NULL `contributor_ref` and
         never match (the disclosed legacy class)."""
+        # typed (round 10, sweep B): every caller names an EDGE, and edges and episodes are independent id
+        # namespaces in this table — a raw-ref match could attribute another kind's row to the edge
         rows = self._conn.execute(
             "SELECT survivor_type,survivor_id,site,payload,contributor_ref "
-            "FROM contribution_ledger WHERE user_id=? AND contributor_ref=? "
+            "FROM contribution_ledger WHERE user_id=? AND contributor_type='edge' AND contributor_ref=? "
             "ORDER BY created_at DESC, id DESC",
             (user_id, contributor_ref)).fetchall()
         return [{"survivor_type": r[0], "survivor_id": r[1], "site": r[2],
@@ -2497,13 +2499,17 @@ class SqliteStore(Store):
         if kind == "edge":
             for st, sid, site in self._conn.execute(
                     "SELECT DISTINCT survivor_type, survivor_id, site FROM contribution_ledger "
-                    "WHERE user_id=? AND contributor_ref=?", (user_id, target_id)):
+                    "WHERE user_id=? AND contributor_type='edge' AND contributor_ref=?", (user_id, target_id)):
                 out.append({"kind": st, "id": sid, "via": f"contribution_ledger:{site}",
                             "note": "a survivor this record contributed to; its content may derive from the redacted record"})
         else:
+            # lineage carries the HISTORICAL form of each consumed input's id (X19), so the target is matched in
+            # that form — a raw-id comparison never matched (round 10, found in the R9-03 fix: reachable when a
+            # store holds an input live beside a restored output that consumed it elsewhere)
+            hist = to_historical_id(target_id)
             for eid, js in self._conn.execute("SELECT id, json FROM episodes WHERE user_id=? AND id<>?", (user_id, target_id)):
                 d = json.loads(js)
-                if target_id in (d.get("lineage") or []):
+                if hist in (d.get("lineage") or []):
                     out.append({"kind": "episode", "id": eid, "via": "lineage",
                                 "note": "a consolidation output whose lineage names the redacted episode"})
         return out
@@ -2616,9 +2622,13 @@ class SqliteStore(Store):
                                    (_redaction.MARKER, user_id, target_id)).rowcount
             if n:
                 fields.append("confirmations.request_digest")
+            # rows 21/23, joined by user, KIND and id in both absorption directions (round-9 R9-03): edges and
+            # episodes are independent id namespaces in this table, so a raw-id match cleared an unrelated
+            # episode's digests when an edge shared its id
             n = self._conn.execute(
                 "UPDATE contribution_ledger SET identity_digest=NULL, evidence_ref_digest=NULL "
-                "WHERE user_id=? AND (survivor_id=? OR contributor_ref=?) "
+                "WHERE user_id=? AND ((survivor_type='edge' AND survivor_id=?) "
+                "OR (contributor_type='edge' AND contributor_ref=?)) "
                 "AND (identity_digest IS NOT NULL OR evidence_ref_digest IS NOT NULL)",
                 (user_id, target_id, target_id)).rowcount
             if n:
@@ -2651,6 +2661,17 @@ class SqliteStore(Store):
                 "VALUES(?,?,?,?,?,?,?,?)",
                 (user_id, seq, txn, target_id, "redacted", reason, new_json, self._now().isoformat()))
             event_ref = f"{user_id}:episode:{seq}"
+            # rows 21/23 for an episode (round-9 R9-03: the treatment existed only in the edge branch): the rows
+            # whose SURVIVOR is this episode — a consolidation output's ledger. An episode is never a recorded
+            # CONTRIBUTOR (contributor_type is 'edge' or NULL: a consolidation row names its inputs only through
+            # op_key), so the survivor direction is the whole of it.
+            n = self._conn.execute(
+                "UPDATE contribution_ledger SET identity_digest=NULL, evidence_ref_digest=NULL "
+                "WHERE user_id=? AND survivor_type='episode' AND survivor_id=? "
+                "AND (identity_digest IS NOT NULL OR evidence_ref_digest IS NOT NULL)",
+                (user_id, target_id)).rowcount
+            if n:
+                fields.extend(["contribution_ledger.identity_digest", "contribution_ledger.evidence_ref_digest"])
         self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))     # a derivation of the content
         self._bump(user_id)
         version_after = self.store_version(user_id)
