@@ -131,6 +131,7 @@ DECLARATION = (
     ("store.import-plan", "0009", "§4c", "store/sqlite.py:SqliteStore.commit_outcome_import_plan", "refuse"),
     ("store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "store/sqlite.py:SqliteStore.commit_outcome_import_plan", "refuse"),
     ("store.import.episode-kind-not-recognised", "0041", "§2d-iv/§4h(ii) import boundary", "store/sqlite.py:SqliteStore.commit_outcome_import_plan", "refuse"),
+    ("store.import.notice-body-conflict", "0041", "§4g", "store/sqlite.py:SqliteStore.commit_outcome_import_plan", "refuse"),
     ("store.journal.pre-epoch", "0029", "§4a", "store/sqlite.py:SqliteStore.edge_state_at", "refuse"),
     ("store.journal.reason-not-dispositioned", "0030", "V-TOTAL", "store/sqlite.py:SqliteStore._journal_edge_write", "refuse"),
     ("store.journal.redaction-reason", "0041", "§4c/§11.2 D1", "store/sqlite.py:SqliteStore._journal_edge_write", "refuse"),

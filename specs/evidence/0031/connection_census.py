@@ -662,14 +662,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 2026-09-29, 0007 (schema_version's in-memory probe connections closed on every path, `contextlib.closing`): moved dotted/dataflow 6,800 -> 6,797 (three `c.close()` calls gone), dotted/module-plain 342 -> 346 (four `contextlib.closing`), the rest unchanged.
 #: 2026-10-02, 0041 round 10 P-TXN (add_episode's attestation and X21 checks and the consolidation claim inside `_write_txn`; the claim's attested-input refusal; cold selection by `redacted_targets`): moved dotted/dataflow 6,797 -> 6,800, the rest unchanged.
 #: 2026-10-02, 0041 round 10 P-TYPED (the ledger treatment keyed by kind in both redaction branches; `_surviving_derived` matches lineage in its historical form; `contributions_naming` typed): moved dotted/dataflow 6,800 -> 6,804, the rest unchanged.
+#: 2026-10-02, 0041 round 10 (the notice identity bound to its destination, the foreign body kept and compared, the two-fact receipt, the marker kind under attestation, field names as carrier paths): moved dotted/dataflow 6,804 -> 6,833, dotted/module-plain 346 -> 351, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 6804,
+    "dotted/dataflow": 6833,
     "dotted/module-machinery": 19,
-    "dotted/module-plain": 346,
+    "dotted/module-plain": 351,
     "dotted/module-protected": 50,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 7252
+SRC_ATTRIBUTE_TOTAL = 7286
 SRC_DATA_DUNDERS_IN_DATAFLOW = 133   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 #   2026-09-20 0042 round 7: +1 — `type(exc).__name__` in `census.Site._measurement_failed` (the failure KIND recorded as a type name, R6-1)

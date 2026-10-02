@@ -658,6 +658,21 @@ _CALLSITE_DISPOSITIONS = {
     # CROSS-USER import on the capping path whose minted imp-… survivor the ledger treatment must read
     ("test_0041_round10_matrix.py", "test_the_receipt_names_a_restored_output_whose_lineage_consumed_the_redacted_episode"): "restore",
     ("test_0041_round10_matrix.py", "test_an_imported_absorption_ledger_is_treated_under_its_minted_id"): "default",
+    # 0041 round 10, the notice across the import boundary (R9-04/05/08 on the capping path; R9-06 restores the
+    # frozen store's own treated history)
+    ("test_0041_round10_notices.py", "test_R9_04_one_notice_imported_for_two_destination_users_attests_each_users_own_record"): "default",
+    ("test_0041_round10_notices.py", "test_R9_04_an_honest_repeat_is_idempotent_and_writes_nothing"): "default",
+    ("test_0041_round10_notices.py", "test_R9_04_a_later_contradictory_body_under_the_same_identity_refuses_atomically"): "default",
+    ("test_0041_round10_notices.py", "test_R9_04_two_bodies_under_one_identity_in_one_file_still_refuse"): "default",
+    ("test_0041_round10_notices.py", "test_R9_05_a_witnessed_receipt_reports_the_sources_facts_and_this_stores_application_beside_them"): "default",
+    ("test_0041_round10_notices.py", "test_R9_05_the_relay_re_exports_the_source_body_unchanged"): "default",
+    ("test_0041_round10_notices.py", "test_R9_05_the_original_and_its_honest_relay_are_one_notice_together_or_in_sequence"): "default",
+    ("test_0041_round10_notices.py", "test_R9_05_a_relay_that_alters_the_body_is_refused"): "default",
+    ("test_0041_round10_notices.py", "test_R9_05_facts_the_notice_does_not_carry_are_None_and_serialise_as_null"): "default",
+    ("test_0041_round10_notices.py", "test_R9_06_the_treated_historical_prose_kind_episode_round_trips_with_its_notice"): "restore",
+    ("test_0041_round10_notices.py", "test_R9_06_a_standing_notice_admits_the_marker_kind_when_the_record_arrives_later"): "restore",
+    ("test_0041_round10_notices.py", "test_R9_06_the_closure_still_refuses_what_no_attestation_accounts_for"): "restore",
+    ("test_0041_round10_notices.py", "test_R9_08_notice_field_names_are_the_kinds_carrier_paths"): "default",
     ("test_0041_import_contract.py", "test_an_invalid_notice_refuses_the_record_and_notice_unit_with_nothing_written"): "restore",
     ("test_0041_import_contract.py", "test_two_notices_under_one_source_identity_with_different_bodies_are_an_integrity_refusal"): "restore",
     ("test_0041_import_contract.py", "test_a_held_different_version_is_redacted_anyway_and_flagged"): "restore",

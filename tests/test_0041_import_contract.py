@@ -95,7 +95,13 @@ def test_a_held_record_and_its_notice_commit_together_and_the_destination_attest
         st.add_edge(Edge(id="e-red", user_id=U, subject="user", relation="works_as", object="repopulated", provenance=_prov()))
     # the witnessed receipt: a repeat call returns it, reconstructed and repeated
     rec = dst.redact(U, edge_id="e-red", reason="subject_request")
-    assert rec.repeated is True and rec.reconstructed is True and rec.reason == "imported_notice"
+    assert rec.repeated is True and rec.reconstructed is True
+    # round 10 (R9-05): its reason is the SOURCE's — not `imported_notice`, and not the repeat call's argument. The
+    # episode distinguishes all three (source operator_policy, call subject_request); this store's application
+    # facts ride under their own names
+    rec_ep = dst.redact(U, episode_id="ep-red", reason="subject_request")
+    assert rec_ep.reconstructed is True and rec_ep.reason == "operator_policy"
+    assert rec_ep.applied_event_ref is not None and rec_ep.applied_at is not None
     # the row keeps the SOURCE identity, so a re-export names the original source
     port.export_memory(st, U, tmp_path / "re.jsonl")
     again = [l for l in _lines(tmp_path / "re.jsonl") if l.get("record") == "redaction" and l["target_id"] == "e-red"][0]

@@ -87,6 +87,20 @@ SIDE_TABLE_TREATMENTS = {
     # was empty while the treatment existed only for edges; an episode is never a recorded contributor)
     "episode": (("contribution_ledger.identity_digest", CLEAR), ("contribution_ledger.evidence_ref_digest", CLEAR)),
 }
+def carrier_paths(kind: str) -> frozenset:
+    """The carrier PATHS a redaction of `kind` can treat — DERIVED from the tables above, never listed again: the
+    record's own carriers plus its side-table paths. The ONE domain of an attestation record's `fields` (round-9
+    R9-08: a notice's field names were accepted as any non-empty strings, so prose reached a column whose
+    non-content character was assumed). The generated treatment matrix compares these same tables to the spec."""
+    if kind == "edge":
+        own = EDGE_REPLACE + EDGE_CLEAR + EDGE_REASON_THREE_CASE + EDGE_MARKERS_PER_ENTRY
+    elif kind == "episode":
+        own = EPISODE_REPLACE + EPISODE_KIND_TWO_BRANCH + EPISODE_REASON_THREE_CASE
+    else:
+        raise ValueError(f"no carrier paths for target kind {kind!r}")
+    return frozenset(own) | frozenset(p for p, _how in SIDE_TABLE_TREATMENTS[kind])
+
+
 REDACTED_REASON_VALUE = "redacted"       # the registry value rows 30/49 write over prose (schema.DISPOSITIONED_REASONS)
 
 
@@ -157,11 +171,20 @@ class RedactionReceipt(BaseModel):
     user_id: str
     reason: str                              # REDACTION_REASONS
     fields_cleared: list[str]                # the carriers treated (dotted; side tables by table)
-    marker_version: int
-    store_version_before: int
-    store_version_after: int
-    recorded_at: str
+    # THE ORIGINAL RECEIPT's facts (round 10, R9-05). For this store's own redaction they are this store's; for a
+    # WITNESSED one (an imported notice) they are the SOURCE's, from the notice's immutable foreign body, and
+    # None where nothing the store holds supports a value — never a local counter standing in for an unknown.
+    marker_version: Optional[int]
+    store_version_before: Optional[int]
+    store_version_after: Optional[int]
+    recorded_at: Optional[str]
     event_ref: Optional[str] = None          # "user_id:seq" of the journal event the redaction wrote
+    # the LOCAL APPLICATION of a witnessed redaction — this store's own facts, under their own names (None for a
+    # redaction this store originated, where the original facts above are already local)
+    applied_at: Optional[str] = None
+    applied_store_version_before: Optional[int] = None
+    applied_store_version_after: Optional[int] = None
+    applied_event_ref: Optional[str] = None
     repeated: bool = False                   # §4b-ii: idempotent by content — a second call returns the ORIGINAL
     reconstructed: bool = False              # the receipt rebuilt from the attestation record alone (no original held)
     receipts_complete: bool = False          # §4f: no exact tier exists; the domains that may retain a digest

@@ -207,8 +207,26 @@ def test_the_failing_arm_is_unmeasured_everywhere_and_the_off_arm_counts_nothing
 
 
 def test_the_comparison_can_fail_a_replay_that_took_a_different_path(arms, leg):
-    """The negative control: skip one declining execution and the trace diverges at a named record."""
-    victim = sorted(leg.DECLINES)[len(leg.DECLINES) // 2]
+    """The negative control: skip one declining execution and the trace diverges at a named record.
+
+    The victim is chosen among the ids the observer can SEE: an id declared on a nested symbol is excluded from the
+    wrapping by design (`observer._EXCLUDED`, "nested inside a function"), so its execution leaves no record and
+    skipping it cannot change the trace. A positional pick over every id landed on one (`scope.closure.walk`) when two
+    ids were added in 0041 round 10 — the control read as unfailable for a reason that had nothing to do with the
+    comparison. The pick is now over the observable ids, and the victim's visibility is asserted, not assumed."""
+    observer.install(str(EVIDENCE / "declaration.py"))
+    try:
+        hidden = {sym for sym, _why in observer._EXCLUDED}
+    finally:
+        observer.uninstall()
+    symbol_of = {row[0]: row[3] for row in declaration.DECLARATION}
+    observable = sorted(i for i in leg.DECLINES if symbol_of[i] not in hidden)
+    assert len(observable) < len(leg.DECLINES), "the exclusion this pick guards against no longer exists — re-read it"
+    victim = observable[len(observable) // 2]
+    assert symbol_of[victim] not in hidden
+    # the positive side: an UNSKIPPED replay after this test's own install/uninstall reproduces the arm, so a
+    # difference below is the skip's and never an artefact of re-indexing
+    assert _replay("healthy", leg)["bytes"] == arms["healthy"]["bytes"]
     other = _replay("healthy", leg, skip=(victim,))
     assert other["bytes"] != arms["healthy"]["bytes"]
     i = harness.first_divergence(other["bytes"], arms["healthy"]["bytes"])     # a BYTE index; records are 3 bytes

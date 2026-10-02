@@ -26,7 +26,7 @@
         "12": "ee2e1e869ddc320d0e53315de751cc7126dd6bdf3746ec0419638c0b4fd39dfa",
         "13": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
         "14": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
-        "15": "c9e9e291d8df69aeb51465847c69ed4b228cd3abb5a99d23e92af9730460f024"
+        "15": "3fc9561ad834a184708e1a87922c1eebd648bea9de3c7eda0a964473a7693ed7"
       },
       "manifestations": {
         "constructor v1": {
@@ -8879,7 +8879,7 @@
           "table:redactions": {
             "type": "table",
             "table": "redactions",
-            "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL\n)",
+            "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT\n)",
             "columns": [
               [
                 "id",
@@ -8965,6 +8965,14 @@
                 "recorded_at",
                 "TEXT",
                 1,
+                null,
+                0,
+                0
+              ],
+              [
+                "source_body",
+                "TEXT",
+                0,
                 null,
                 0,
                 0

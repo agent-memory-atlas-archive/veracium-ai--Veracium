@@ -559,6 +559,10 @@ SCHEMA_V14 = SCHEMA_V13 + (
 # current state — the `edge_event` argument; absence is damage, not drift); the indexes REBUILDABLE. DDL only:
 # crossing INTO v15 adds the objects and nothing else — no redaction exists before the table does — so
 # `migrate_store` needs no data step and the constructor no row.
+# Round 10 (R9-04/R9-05, before any release carried v15): `source_body` holds a WITNESSED redaction's foreign notice
+# body — the source's field names, marker version, reason, time and store versions, canonical JSON — immutable once
+# written, so a repeat import is compared against it and a relay re-exports it unchanged; NULL for a redaction this
+# store originated. The local columns stay this store's own application facts.
 SCHEMA_V15 = SCHEMA_V14 + (
     SchemaObject("table", "episode_event", """CREATE TABLE episode_event (
     user_id     TEXT    NOT NULL,
@@ -585,7 +589,8 @@ SCHEMA_V15 = SCHEMA_V14 + (
     store_version_before INTEGER NOT NULL,
     store_version_after  INTEGER NOT NULL,
     event_ref            TEXT,
-    recorded_at          TEXT NOT NULL
+    recorded_at          TEXT NOT NULL,
+    source_body          TEXT
 )""", REQUIRED),
     SchemaObject("index", "ix_redactions_target",
                  "CREATE INDEX ix_redactions_target ON redactions(user_id, target_kind, target_id)",

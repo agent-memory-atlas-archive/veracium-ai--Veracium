@@ -1158,8 +1158,29 @@ def _import_plan_repopulates(s, e):
     s.close()
 
 
+_NOTICE = {"origin": "o", "source_user": U, "source_event_ref": "u:1", "target_kind": "edge", "target_id": "absent",
+           "fields": ["object"], "marker_version": 1, "reason": "subject_request"}
+_EMPTY_EXPECT = {"edge_ids": {}, "episode_records": {}, "chain_heads": {}, "contribution_state": {}}
+
+
+def _standing_notice_held():
+    # 0041 round 10 (R9-04): a notice committed once (its target absent here, so it stands) under one source identity
+    s = _store()
+    s.commit_outcome_import_plan(U, {"edges": [], "episodes": [], "contributions": [], "redactions": [dict(_NOTICE)]},
+                                 dict(_EMPTY_EXPECT))
+    return (s,)
+
+
+def _contradictory_notice(s):
+    with pytest.raises(ValueError):
+        s.commit_outcome_import_plan(U, {"edges": [], "episodes": [], "contributions": [],
+                                         "redactions": [dict(_NOTICE, fields=["object", "subject"])]}, dict(_EMPTY_EXPECT))
+    s.close()
+
+
 DECLINES.update({
     "store.import.attested-redaction": TwoPhase(lambda mp: _redacted_then_plan(), lambda st: _import_plan_repopulates(*st)),
+    "store.import.notice-body-conflict": TwoPhase(lambda mp: _standing_notice_held(), lambda st: _contradictory_notice(*st)),
 })
 
 

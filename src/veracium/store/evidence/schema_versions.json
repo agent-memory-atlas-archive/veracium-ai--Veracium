@@ -29229,7 +29229,7 @@
       "accepted": [
         {
           "provenance": "constructor v15",
-          "digest": "c9e9e291d8df69aeb51465847c69ed4b228cd3abb5a99d23e92af9730460f024",
+          "digest": "3fc9561ad834a184708e1a87922c1eebd648bea9de3c7eda0a964473a7693ed7",
           "objects": {
             "index:ix_confirmations_edge": {
               "type": "index",
@@ -29929,7 +29929,7 @@
             "table:redactions": {
               "type": "table",
               "table": "redactions",
-              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT\n)",
               "columns": [
                 [
                   "id",
@@ -30015,6 +30015,14 @@
                   "recorded_at",
                   "TEXT",
                   1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "source_body",
+                  "TEXT",
+                  0,
                   null,
                   0,
                   0
@@ -30338,7 +30346,7 @@
         },
         {
           "provenance": "migrated->v15 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ledger inline) [v14 shape + the 0041 v15 additive diff \u2014 specs/0041 \u00a74b/\u00a74b-ii]",
-          "digest": "da189821cf4d67bd7e27b223b7ee54c915d66ecf44f42f1ff036496dbd414172",
+          "digest": "60eecabe4c92c107dee915185d31c944070afafc5236f727c50ce8cf9099fa57",
           "objects": {
             "index:ix_confirmations_edge": {
               "type": "index",
@@ -31038,7 +31046,7 @@
             "table:redactions": {
               "type": "table",
               "table": "redactions",
-              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT\n)",
               "columns": [
                 [
                   "id",
@@ -31124,6 +31132,14 @@
                   "recorded_at",
                   "TEXT",
                   1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "source_body",
+                  "TEXT",
+                  0,
                   null,
                   0,
                   0
@@ -31447,7 +31463,7 @@
         },
         {
           "provenance": "migrated->v15 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v14 shape + the 0041 v15 additive diff \u2014 specs/0041 \u00a74b/\u00a74b-ii]",
-          "digest": "2f219a420e2f9ac9a60c83e456ba416115ea1c7bb3e6720cfb1e09702e37b484",
+          "digest": "684561eba4282819df93fbc99c4dabaaf73a8684ca3d2934b0947624e5aad96c",
           "objects": {
             "index:ix_confirmations_edge": {
               "type": "index",
@@ -32147,7 +32163,7 @@
             "table:redactions": {
               "type": "table",
               "table": "redactions",
-              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT\n)",
               "columns": [
                 [
                   "id",
@@ -32233,6 +32249,14 @@
                   "recorded_at",
                   "TEXT",
                   1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "source_body",
+                  "TEXT",
+                  0,
                   null,
                   0,
                   0
@@ -32556,7 +32580,7 @@
         },
         {
           "provenance": "migrated->v15 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ledger inline) [v14 shape + the 0041 v15 additive diff \u2014 specs/0041 \u00a74b/\u00a74b-ii]",
-          "digest": "f53dff28f47a5562d70b313bdd8d93d8504facbeaf0befcf0750ba15e44ae87c",
+          "digest": "2ae5f7ae2558d7824fde0bf53e6bf0233cab989876aa16bce17f6a5b4473c2ab",
           "objects": {
             "index:ix_confirmations_edge": {
               "type": "index",
@@ -33256,7 +33280,7 @@
             "table:redactions": {
               "type": "table",
               "table": "redactions",
-              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT\n)",
               "columns": [
                 [
                   "id",
@@ -33342,6 +33366,14 @@
                   "recorded_at",
                   "TEXT",
                   1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "source_body",
+                  "TEXT",
+                  0,
                   null,
                   0,
                   0
@@ -33665,7 +33697,7 @@
         },
         {
           "provenance": "migrated->v15 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v14 shape + the 0041 v15 additive diff \u2014 specs/0041 \u00a74b/\u00a74b-ii]",
-          "digest": "56c1ffabc9bc75e784f6d8b51dbbb2bed1d189dc08c406d1f7f9a0b4be0321b4",
+          "digest": "349ad7e2be6f1e2068e3c8b2916b4cf12ef9a4aa4404e6cd9f20d3201d0055d3",
           "objects": {
             "index:ix_confirmations_edge": {
               "type": "index",
@@ -34365,7 +34397,7 @@
             "table:redactions": {
               "type": "table",
               "table": "redactions",
-              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT\n)",
               "columns": [
                 [
                   "id",
@@ -34451,6 +34483,14 @@
                   "recorded_at",
                   "TEXT",
                   1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "source_body",
+                  "TEXT",
+                  0,
                   null,
                   0,
                   0

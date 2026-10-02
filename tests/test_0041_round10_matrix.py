@@ -209,7 +209,10 @@ DDL_ACCOUNT = {
     },
     "D1 reason vocabulary (closed per field; §11.2)": {"edge_event.reason", "episode_event.reason", "redactions.reason"},
     "§11.2 carrier, prose replaced at redaction — R9-02(d), OWED in this batch": {"source_revocations.reason"},
-    "attestation field names — validated against the carrier paths (R9-08), OWED in this batch": {"redactions.fields"},
+    "attestation field names — the kind's carrier paths, refused otherwise at the parser AND the commit (R9-08)":
+        {"redactions.fields"},
+    "a witnessed notice's foreign body: carrier-path NAMES, D1 vocabulary, versions, a time (R9-04/R9-05)":
+        {"redactions.source_body"},
     "§4f domains: no exact tier, named in every receipt": {
         "supersession_operations.logical_request_digest", "supersession_operations.request_digest",
         "supersession_operations.response", "policy_receipt.receipt"},

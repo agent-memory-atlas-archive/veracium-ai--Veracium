@@ -207,12 +207,13 @@ def export_memory(store, user_id: str, path) -> dict:
         # specs/0041 D2 (tranche 4b): the redaction records travel — the record itself travels redacted (its
         # json holds the marker), and the notice is what lets the destination ATTEST it (§4g). Source identity
         # materialised: this store's origin for its own redactions, the original source's for witnessed ones.
+        # Round 10 (R9-05): the notice's BODY is the source's own — this store's facts for its own redaction, the
+        # immutable foreign body for a witnessed one — so a relay re-exports the source's reason, time and store
+        # versions unchanged, and an original and its honest relay are one notice wherever they meet.
         for r in redaction_records:
             f.write(json.dumps({"record": "redaction", "origin": r["origin"], "source_user": r["source_user"],
                                 "source_event_ref": r["source_event_ref"], "target_kind": r["target_kind"],
-                                "target_id": r["target_id"], "fields": r["fields"], "marker_version": r["marker_version"],
-                                "reason": r["reason"] if r["reason"] != "imported_notice" else "imported_notice",
-                                "recorded_at": r["recorded_at"]}) + "\n")
+                                "target_id": r["target_id"], **r["notice_body"]}) + "\n")
     return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records), "path": str(path)}
 
 
@@ -373,7 +374,8 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         # SOURCE IDENTITY (origin, source user, source event ref) — the same notice twice is one notice, and
         # two notices under one identity with different bodies are a corrupted source, refused; the user
         # remap moves the notice's subject with the record's (the target id is never remapped).
-        from .redaction import MARKER_VERSION as _MARKER_VERSION, REDACTION_REASONS as _REASONS, marker_fields as _marker_fields
+        from .redaction import (MARKER_VERSION as _MARKER_VERSION, REDACTION_REASONS as _REASONS,
+                                marker_fields as _marker_fields, carrier_paths as _carrier_paths)
         from .store.sqlite import SqliteStore as _S
         if notice_recs and src_version < FORMAT_VERSION:
             # refuse-don't-drop, in the other direction: a notice in an envelope declaring a version below the
@@ -388,28 +390,41 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 raise _SITE_IMPORT_FILE.fire(ValueError(
                     f"{path}: redaction notice is missing {[k for k in need if k not in n]} — the record-and-notice "
                     f"unit is refused, nothing imported (specs/0041 §4g)"), "invalid-notice")
+            def _opt_int(v):
+                return v is None or (isinstance(v, int) and not isinstance(v, bool) and v >= 0)
             if (n["target_kind"] not in ("edge", "episode") or not isinstance(n["target_id"], str) or not n["target_id"]
                     or not isinstance(n["fields"], list) or not all(isinstance(f, str) and f for f in n["fields"])
                     or not isinstance(n["marker_version"], int) or isinstance(n["marker_version"], bool)
                     or not 1 <= n["marker_version"] <= _MARKER_VERSION or n["reason"] not in _REASONS
-                    or not all(isinstance(n[k], str) and n[k] for k in ("origin", "source_user", "source_event_ref"))):
+                    or not all(isinstance(n[k], str) and n[k] for k in ("origin", "source_user", "source_event_ref"))
+                    or not (n.get("recorded_at") is None or isinstance(n.get("recorded_at"), str))
+                    or not _opt_int(n.get("store_version_before")) or not _opt_int(n.get("store_version_after"))):
                 raise _SITE_IMPORT_FILE.fire(ValueError(
                     f"{path}: redaction notice for {n.get('target_kind')!r} {n.get('target_id')!r} is invalid — the "
                     f"record-and-notice unit is refused, nothing imported (specs/0041 §4g)"), "invalid-notice")
-            rid = _S.notice_id(n["origin"], n["source_user"], n["source_event_ref"])
-            body = {k: n[k] for k in ("target_kind", "target_id", "fields", "marker_version", "reason")}
-            body["fields"] = sorted(body["fields"])
-            if rid in notices:
-                if notices[rid]["_body"] != body:
+            # round 10 (R9-08): the field NAMES are carrier paths of the declared kind — the domain DERIVED from the
+            # treatment tables — never free strings: prose, a wrong-kind path or a repeated path refuses the unit
+            allowed = _carrier_paths(n["target_kind"])
+            if len(set(n["fields"])) != len(n["fields"]) or not n["fields"] or not set(n["fields"]) <= allowed:
+                raise _SITE_IMPORT_FILE.fire(ValueError(
+                    f"{path}: redaction notice for {n['target_kind']!r} {n['target_id']!r} names fields outside the "
+                    f"{n['target_kind']} carrier paths {sorted(set(n['fields']) - allowed) or '(empty or repeated)'} — "
+                    f"the record-and-notice unit is refused, nothing imported (specs/0041 §4b, §4g)"), "invalid-notice")
+            key = (n["origin"], n["source_user"], n["source_event_ref"])
+            body = (n["target_kind"], n["target_id"], _S.notice_body(n))
+            if key in notices:
+                if notices[key]["_body"] != body:
                     raise _SITE_IMPORT_FILE.fire(ValueError(
                         f"{path}: two redaction notices share one source identity "
                         f"({n['origin']}, {n['source_user']}, {n['source_event_ref']}) with different bodies — a "
                         f"corrupted source, refused (specs/0041 §4g)"), "notice-integrity")
                 continue
-            notices[rid] = {"id": rid, "origin": n["origin"], "source_user": n["source_user"],
+            notices[key] = {"origin": n["origin"], "source_user": n["source_user"],
                             "source_event_ref": n["source_event_ref"], "target_kind": n["target_kind"],
                             "target_id": n["target_id"], "fields": list(n["fields"]), "marker_version": n["marker_version"],
-                            "reason": n["reason"], "recorded_at": n.get("recorded_at"), "_body": body}
+                            "reason": n["reason"], "recorded_at": n.get("recorded_at"),
+                            "store_version_before": n.get("store_version_before"),
+                            "store_version_after": n.get("store_version_after"), "_body": body}
         notice_list = [{k: v for k, v in n.items() if k != "_body"} for n in notices.values()]
         notice_targets = {(n["target_kind"], n["target_id"]) for n in notice_list}
         # §4g: a tombstone arriving with NO notice is ADMITTED as an UNATTESTED marker (§4b) — carrying, not
