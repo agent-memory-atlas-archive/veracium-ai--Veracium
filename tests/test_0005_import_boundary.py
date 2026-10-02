@@ -673,6 +673,12 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round10_notices.py", "test_R9_06_a_standing_notice_admits_the_marker_kind_when_the_record_arrives_later"): "restore",
     ("test_0041_round10_notices.py", "test_R9_06_the_closure_still_refuses_what_no_attestation_accounts_for"): "restore",
     ("test_0041_round10_notices.py", "test_R9_08_notice_field_names_are_the_kinds_carrier_paths"): "default",
+    # 0041 round 10 stage 2 (S2-1): the body compared on the SOURCE identity — remapping imports on the capping path, and
+    # the non-remapping control over BOTH paths by parameter
+    ("test_0041_round10_notices.py", "test_S2_1_a_remapping_import_with_a_contradictory_body_is_refused_atomically"): "default",
+    ("test_0041_round10_notices.py", "test_S2_1_the_same_contradiction_across_two_destination_users_is_refused"): "default",
+    ("test_0041_round10_notices.py", "test_S2_1_control_remapping_twice_with_an_equal_body_is_not_refused"): "default",
+    ("test_0041_round10_notices.py", "test_S2_1_control_the_non_remapping_paths_still_refuse"): "both",
     # 0041 round 10, the D1 reason closure at the import boundary (an own-store restore of an edited export)
     ("test_0041_round10_reasons.py", "test_the_closure_binds_the_import_boundary"): "restore",
     # 0041 round 10: `redacted` admitted at import only with an attesting notice (own-store restores of edited exports)

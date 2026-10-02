@@ -2135,8 +2135,16 @@ class SqliteStore(Store):
                             "SELECT event_ref, source_body FROM redactions WHERE id=?", (n["_rid"],)).fetchone()
                         # round 10 (R9-04): a repeat is idempotent only for the SAME body; a contradictory body under
                         # one identity refuses the whole import, across calls as well as within one file
+                        # round 10, stage 2 (S2-1): the body is compared on the SOURCE identity, not the bound row id —
+                        # one source event has ONE body whichever destination user or remapped target it lands on. A
+                        # user-remapping import mints a fresh target each time, so a bound-id lookup found nothing and
+                        # compared nothing. The prefix is compared with substr, never LIKE (an origin may hold % or _).
+                        prefix = self.NOTICE_SEP.join(("notice", n["origin"], n["source_user"], n["source_event_ref"], ""))
+                        bodies = {b for (b,) in self._conn.execute(
+                            "SELECT source_body FROM redactions WHERE source_body IS NOT NULL AND substr(id, 1, ?) = ?",
+                            (len(prefix), prefix))}
                         with _SITE_IMPORT_NOTICE_CONFLICT.consult():
-                            if held is not None and held[1] is not None and held[1] != n["_body"]:
+                            if bodies - {n["_body"]}:
                                 raise _SITE_IMPORT_NOTICE_CONFLICT.fire(ValueError(
                                     f"refused: a redaction notice for {n['target_kind']} {n['target_id']!r} carries a "
                                     f"different body from the one this store already holds under the same source "

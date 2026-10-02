@@ -274,3 +274,65 @@ def test_R9_08_the_allowed_set_is_derived_from_the_treatment_tables():
         own = {p for p, _h in R.SIDE_TABLE_TREATMENTS[kind]}
         assert own <= R.carrier_paths(kind)
     assert "summary" in R.carrier_paths("episode") and "summary" not in R.carrier_paths("edge")
+
+
+# ------------------------------------------------------------------------------------------------ stage 2, S2-1
+def _contradicting_copy(tmp_path, path, **change):
+    """The source file with its notice changed (a REASON, which R9-08's field check does not catch first) and a NEW
+    record added, so "nothing written" is an atomicity claim about a real write, not an empty file."""
+    other = tt._mem(tmp_path, "other-s2.db")
+    other.store.add_edge(Edge(id="e-new-s2", user_id=U, subject="user", relation="likes", object="tea", provenance=_prov()))
+    extra = [r for r in _lines(export_memory(other.store, U, tmp_path / "o-s2.jsonl")["path"]) if r.get("record") == "edge"]
+    orig = [r for r in _lines(path) if r.get("record") == "redaction"]
+    assert orig and all(orig[0].get(k) != v for k, v in change.items()), "the change must actually differ from the source"
+    recs = [dict(r, **change) if r.get("record") == "redaction" else r for r in _lines(path)] + extra
+    return _write(tmp_path / "contradicting-s2.jsonl", recs)
+
+
+def _snap(st):
+    return [st._conn.execute(f"SELECT * FROM {t} ORDER BY 1").fetchall() for t in ("edges", "redactions")]
+
+
+def test_S2_1_a_remapping_import_with_a_contradictory_body_is_refused_atomically(tmp_path):
+    """Research's stage-2 finding: the bound id carries the post-remap target, which a remapping import mints afresh, so
+    the body comparison found no held row. It now compares on the SOURCE identity."""
+    _s, _r, path = _source(tmp_path)
+    dst = tt._mem(tmp_path, "dst.db")
+    import_memory(dst.store, path, user_id="v1")
+    bad = _contradicting_copy(tmp_path, path, reason="subject_request")
+    before = _snap(dst.store)
+    with pytest.raises(ValueError, match="different body"):
+        import_memory(dst.store, bad, user_id="v1")
+    assert _snap(dst.store) == before                                   # the new record in that file stays absent
+
+
+def test_S2_1_the_same_contradiction_across_two_destination_users_is_refused(tmp_path):
+    _s, _r, path = _source(tmp_path)
+    dst = tt._mem(tmp_path, "dst.db")
+    import_memory(dst.store, path, user_id="v1")
+    bad = _contradicting_copy(tmp_path, path, reason="subject_request")
+    before = _snap(dst.store)
+    with pytest.raises(ValueError, match="different body"):
+        import_memory(dst.store, bad, user_id="v2")
+    assert _snap(dst.store) == before
+
+
+def test_S2_1_control_remapping_twice_with_an_equal_body_is_not_refused(tmp_path):
+    _s, _r, path = _source(tmp_path)
+    dst = tt._mem(tmp_path, "dst.db")
+    import_memory(dst.store, path, user_id="v1")
+    second = import_memory(dst.store, path, user_id="v1")              # a fresh minted target, the SAME body
+    assert second["notices_applied"] == 1
+    import_memory(dst.store, path, user_id="v2")                        # and another destination user, same body
+
+
+@pytest.mark.parametrize("restore", [False, True])
+def test_S2_1_control_the_non_remapping_paths_still_refuse(tmp_path, restore):
+    _s, _r, path = _source(tmp_path)
+    dst = tt._mem(tmp_path, "dst.db")
+    import_memory(dst.store, path, restore=restore)
+    bad = _contradicting_copy(tmp_path, path, reason="subject_request")
+    before = _snap(dst.store)
+    with pytest.raises(ValueError, match="different body"):
+        import_memory(dst.store, bad, restore=restore)
+    assert _snap(dst.store) == before
