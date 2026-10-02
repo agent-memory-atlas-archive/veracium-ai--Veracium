@@ -94,11 +94,11 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("store/sqlite.py", 765): "control-flow", ("store/sqlite.py", 809): "control-flow", ("store/sqlite.py", 874): "control-flow",
     ("store/sqlite.py", 890): "predicate-helper", ("store/sqlite.py", 1045): "control-flow", ("store/sqlite.py", 2157): "control-flow",
     ("store/sqlite.py", 2184): "control-flow", ("store/sqlite.py", 2193): "predicate-helper", ("store/sqlite.py", 168): "argument-check",
-    ("store/sqlite.py", 364): "argument-check", ("store/sqlite.py", 2255): "argument-check", ("store/sqlite.py", 2878): "argument-check",
-    ("store/sqlite.py", 2893): "argument-check", ("store/sqlite.py", 359): "control-flow", ("store/sqlite.py", 758): "control-flow",
+    ("store/sqlite.py", 364): "argument-check", ("store/sqlite.py", 2255): "argument-check", ("store/sqlite.py", 2939): "argument-check",
+    ("store/sqlite.py", 2954): "argument-check", ("store/sqlite.py", 359): "control-flow", ("store/sqlite.py", 758): "control-flow",
     ("store/sqlite.py", 1325): "control-flow", ("store/sqlite.py", 1601): "control-flow", ("store/sqlite.py", 1615): "control-flow",
     ("store/sqlite.py", 1630): "control-flow", ("store/sqlite.py", 2479): "control-flow", ("store/sqlite.py", 2501): "control-flow",
-    ("store/sqlite.py", 2896): "control-flow", ("store/sqlite.py", 2232): "argument-check",
+    ("store/sqlite.py", 2957): "control-flow", ("store/sqlite.py", 2232): "argument-check",
     ("store/revocation.py", 56): "predicate-helper", ("store/revocation.py", 110): "control-flow", ("store/revocation.py", 145): "control-flow",
     ("store/revocation_sweep.py", 172): "control-flow", ("store/revocation_sweep.py", 192): "control-flow",
     ("store/schema_version.py", 1671): "argument-check", ("store/schema_version.py", 1845): "control-flow",
@@ -343,9 +343,9 @@ e("store/sqlite.py", 1199, "store.correction.authorisation", "0011", "§4b", "re
 e("store/sqlite.py", 1774, "store.delete-episode.outcome", "0009", "§4c", "refuse")
 e("store/sqlite.py", 1782, "store.delete-episode.reserved", "0010", "X21", "refuse")
 e("store/sqlite.py", 923, "store.edges.read-fence", "0001", "§4", "withhold")
-e("store/sqlite.py", 2944, "store.embedding.delayed-writer", "0027", "§4f", "refuse")
-e("store/sqlite.py", 2951, "store.embedding.stale-content", "0027", "§4f", "refuse")
-e("store/sqlite.py", 2922, "store.embedding.txn-locked", "0041", "§4e (0007 §4c form)", "refuse")
+e("store/sqlite.py", 3005, "store.embedding.delayed-writer", "0027", "§4f", "refuse")
+e("store/sqlite.py", 3012, "store.embedding.stale-content", "0027", "§4f", "refuse")
+e("store/sqlite.py", 2983, "store.embedding.txn-locked", "0041", "§4e (0007 §4c form)", "refuse")
 e("store/sqlite.py", 1708, "store.episode.attested-redaction", "0041", "§4b-ii INV-11", "refuse")
 e("store/sqlite.py", 1660, "store.episode.kind-not-recognised", "0041", "§2d-iv/§4h(ii) write path", "refuse")
 e("store/sqlite.py", 1648, "store.episode.marker-introduced", "0041", "§4b INV-11's mirror", "refuse")
@@ -396,11 +396,11 @@ e("store/schema_version.py", 1606, "store.open.unaccepted-shape", "0007", "§4a-
 e("store/sqlite.py", 1832, "store.outcome.context-ref", "0009", "§4c", "refuse")
 e("store/sqlite.py", 1761, "store.read.input-claimed", "0010", "§4b", "withhold")
 e("store/sqlite.py", 1758, "store.read.output-not-visible", "0010", "§4b", "withhold")
-e("store/sqlite.py", 2647, "store.redact.both-or-neither", "0041", "§4a/INV-5", "refuse")
-e("store/sqlite.py", 2714, "store.redact.disposition-changed", "0041", "§4h(i)", "refuse")
-e("store/sqlite.py", 2670, "store.redact.input-claimed", "0041/0010", "X21", "refuse")
-e("store/sqlite.py", 2651, "store.redact.reason-not-registered", "0041", "§11.2", "refuse")
-e("store/sqlite.py", 2662, "store.redact.target", "0041", "§4a/INV-5", "refuse")
+e("store/sqlite.py", 2706, "store.redact.both-or-neither", "0041", "§4a/INV-5", "refuse")
+e("store/sqlite.py", 2773, "store.redact.disposition-changed", "0041", "§4h(i)", "refuse")
+e("store/sqlite.py", 2729, "store.redact.input-claimed", "0041/0010", "X21", "refuse")
+e("store/sqlite.py", 2710, "store.redact.reason-not-registered", "0041", "§11.2", "refuse")
+e("store/sqlite.py", 2721, "store.redact.target", "0041", "§4a/INV-5", "refuse")
 e("store/revocation.py", 140, "store.revocation.integrity", "0022", "§4c", "refuse")
 e("store/revocation.py", 139, "store.revocation.ordinal-collision", "0022", "§4c", "refuse")
 e("store/revocation.py", 314, "store.revocation.revoke-reason-not-registered", "0041", "§11.2 D1 (revoke)", "refuse")

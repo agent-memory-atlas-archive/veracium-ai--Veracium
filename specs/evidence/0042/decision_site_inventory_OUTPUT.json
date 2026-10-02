@@ -5146,89 +5146,107 @@
    "qualname": "SqliteStore._completed_attestation"
   },
   {
+   "kind": "RETURN_FALSE",
+   "line": 2664,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._quoting_domain"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 2668,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._quoting_domain"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 2680,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._quoting_domain"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
-   "line": 2647,
+   "line": 2706,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.redact"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2651,
+   "line": 2710,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.redact"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2662,
+   "line": 2721,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.redact"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2670,
+   "line": 2729,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.redact"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2714,
+   "line": 2773,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._redact_in_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2878,
+   "line": 2939,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.write_policy_receipt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2893,
+   "line": 2954,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2896,
+   "line": 2957,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2922,
+   "line": 2983,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.upsert_embedding"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 2932,
+   "line": 2993,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.upsert_embedding"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2944,
+   "line": 3005,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_embedding_in_txn"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2951,
+   "line": 3012,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_embedding_in_txn"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 3012,
+   "line": 3073,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.set_wiki"
   },
@@ -5325,7 +5343,7 @@
    "BOOL_RETURN": 69,
    "FILTER_RETURN": 42,
    "RAISE": 531,
-   "RETURN_FALSE": 84,
+   "RETURN_FALSE": 87,
    "RETURN_NONE": 72
   },
   "kinds": [
@@ -5657,7 +5675,7 @@
     "BOOL_RETURN": 6,
     "FILTER_RETURN": 12,
     "RAISE": 109,
-    "RETURN_FALSE": 13,
+    "RETURN_FALSE": 16,
     "RETURN_NONE": 7
    },
    "telemetry.py": {
@@ -5668,7 +5686,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 798,
+  "total": 801,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

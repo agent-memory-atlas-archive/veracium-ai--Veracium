@@ -2597,28 +2597,87 @@ class SqliteStore(Store):
             (user_id, kind, target_id)).fetchone()
 
     def _surviving_derived(self, user_id: str, kind: str, target_id: str) -> list:
-        """F6: the derived records that may still carry the target's content, NAMED so the caller can redact
-        them — never redacted here (§4d). An edge: the SURVIVORS the contribution ledger records the target
-        as a contributor to (an absorption carries the contributor's content into the survivor). An episode:
-        consolidation OUTPUTS whose lineage names it (the output's summary may derive from it)."""
-        out = []
+        """§11.5(3) as WIDENED by the owner (2026-10-02, given in the dev session; 0041 round 10): the records that may
+        still carry the target's content, FOUND BY AN IDENTIFIER JOIN IN EITHER DIRECTION — derived from the target,
+        or its source — NAMED so the caller can redact them; never redacted here (§4d). Each carries its `via`.
+
+          an EDGE      the SURVIVORS the ledger records it as a contributor to (an absorption carries its content);
+                       its OUTCOME episodes (`edge_id`), whose summaries quote it; its SOURCE episode(s) — the
+                       interaction it was extracted from — sharing its `provenance.evidence_ref`;
+          an EPISODE   consolidation OUTPUTS whose lineage names it (in the historical form, X19); the EDGES extracted
+                       from it, sharing its `provenance.evidence_ref`.
+
+        Same user only. A record that is itself attested-redacted is left out: it no longer carries the content.
+        `evidence_ref` is preserved by the treatment (row 53), so the join holds after the redaction and on a repeat
+        receipt. A caller-supplied evidence_ref can OVER-name — the conservative direction for a "may still carry
+        it" list (noise, never a false guarantee). Dispute/correct summaries have no structural link this round;
+        they are the NAMED DOMAIN `_quoting_domain` reports, not a list."""
+        redacted = {"edge": self.redacted_targets(user_id, "edge"), "episode": self.redacted_targets(user_id, "episode")}
+        out, seen = [], set()
+
+        def name(k, rid, via, note):
+            if (k, rid) in seen or rid in redacted[k] or (k, rid) == (kind, target_id):
+                return
+            seen.add((k, rid))
+            out.append({"kind": k, "id": rid, "via": via, "note": note})
+        table = "edges" if kind == "edge" else "episodes"
+        row = self._conn.execute(f"SELECT json FROM {table} WHERE id=? AND user_id=?", (target_id, user_id)).fetchone()
+        ev = (json.loads(row[0]).get("provenance") or {}).get("evidence_ref") if row else None
         if kind == "edge":
             for st, sid, site in self._conn.execute(
                     "SELECT DISTINCT survivor_type, survivor_id, site FROM contribution_ledger "
                     "WHERE user_id=? AND contributor_type='edge' AND contributor_ref=?", (user_id, target_id)):
-                out.append({"kind": st, "id": sid, "via": f"contribution_ledger:{site}",
-                            "note": "a survivor this record contributed to; its content may derive from the redacted record"})
+                name(st, sid, f"contribution_ledger:{site}",
+                     "a survivor this record contributed to; its content may derive from the redacted record")
+            for eid, js in self._conn.execute("SELECT id, json FROM episodes WHERE user_id=?", (user_id,)):
+                d = json.loads(js)
+                if d.get("kind") == "outcome" and d.get("edge_id") == target_id:
+                    name("episode", eid, "edge_id", "an outcome judgment whose summary quotes the redacted record")
+                elif ev and (d.get("provenance") or {}).get("evidence_ref") == ev:
+                    name("episode", eid, "evidence_ref",
+                         "the source episode the redacted record was extracted from (it may quote the content)")
         else:
             # lineage carries the HISTORICAL form of each consumed input's id (X19), so the target is matched in
             # that form — a raw-id comparison never matched (round 10, found in the R9-03 fix: reachable when a
             # store holds an input live beside a restored output that consumed it elsewhere)
             hist = to_historical_id(target_id)
             for eid, js in self._conn.execute("SELECT id, json FROM episodes WHERE user_id=? AND id<>?", (user_id, target_id)):
-                d = json.loads(js)
-                if hist in (d.get("lineage") or []):
-                    out.append({"kind": "episode", "id": eid, "via": "lineage",
-                                "note": "a consolidation output whose lineage names the redacted episode"})
+                if hist in (json.loads(js).get("lineage") or []):
+                    name("episode", eid, "lineage", "a consolidation output whose lineage names the redacted episode")
+            if ev:
+                for eid, js in self._conn.execute("SELECT id, json FROM edges WHERE user_id=?", (user_id,)):
+                    if (json.loads(js).get("provenance") or {}).get("evidence_ref") == ev:
+                        name("edge", eid, "evidence_ref", "a fact extracted from the redacted episode")
         return out
+
+    # the NAMED DOMAIN for summaries with no structural link this round (the owner's ruling (ii), 2026-10-02, given in
+    # the dev session): an edge that was disputed or corrected — or that REPLACED a corrected prior — is quoted by an
+    # episode the receipt cannot list exactly; the domain says so. A structural link is a later spec's.
+    QUOTING_DOMAIN = ("episodes quoting the record (dispute/correct summaries) — no exact list this round: the record "
+                      "was disputed or corrected, and the episode that says so quotes it")
+
+    def _quoting_domain(self, user_id: str, kind: str, target_id: str) -> bool:
+        """Sound over every writer of a quoting summary: dispute retires the target `disputed`, a correction retires
+        the prior `corrected` (the reason survives redaction, and so does the journal event), and a correction's
+        REPLACEMENT — quoted as "… to '<its value>'" — supersedes a `corrected` prior."""
+        if kind != "edge":
+            return False
+        quoting = ("disputed", "corrected")
+        row = self._conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (target_id, user_id)).fetchone()
+        if row is None:
+            return False
+        d = json.loads(row[0])
+        if d.get("invalidation_reason") in quoting:
+            return True
+        if self._conn.execute("SELECT 1 FROM edge_event WHERE user_id=? AND edge_id=? AND kind='invalidated' AND "
+                              "reason IN (?,?) LIMIT 1", (user_id, target_id, *quoting)).fetchone():
+            return True
+        prior = d.get("supersedes")
+        if prior:
+            p = self._conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (prior, user_id)).fetchone()
+            if p is not None and json.loads(p[0]).get("invalidation_reason") == "corrected":
+                return True
+        return False
 
     _RECEIPT_DOMAINS = (
         "confirmations.request_digest (replaced with the marker; the row kept)",
@@ -2820,7 +2879,9 @@ class SqliteStore(Store):
         them under their own names."""
         rid, fields, mv, reason, vb, va, event_ref, recorded_at, source_body = record
         common = dict(redacted_kind=kind, target_id=target_id, user_id=user_id, fields_cleared=json.loads(fields),
-                      repeated=repeated, receipts_complete=False, receipt_domains=list(self._RECEIPT_DOMAINS),
+                      repeated=repeated, receipts_complete=False,
+                      receipt_domains=(list(self._RECEIPT_DOMAINS)
+                                       + ([self.QUOTING_DOMAIN] if self._quoting_domain(user_id, kind, target_id) else [])),
                       surviving_derived=self._surviving_derived(user_id, kind, target_id))
         if reason != "imported_notice" and source_body is None:
             return _redaction.RedactionReceipt(
