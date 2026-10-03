@@ -163,7 +163,10 @@ def test_R9_05_the_original_and_its_honest_relay_are_one_notice_together_or_in_s
 
 def test_R9_05_a_relay_that_alters_the_body_is_refused(tmp_path):
     _s, _r, path = _source(tmp_path)
-    altered = dict(_notice(path), reason="imported_notice", recorded_at="2099-01-01T00:00:00+00:00")
+    # round 11 (R10-04): the alteration was the witness label, which the parser now refuses on its own (before any
+    # body comparison); a genuinely different ORIGINATING reason keeps this cell on the body comparison it tests
+    altered = dict(_notice(path), reason="subject_request", recorded_at="2099-01-01T00:00:00+00:00")
+    assert altered["reason"] != _notice(path)["reason"]
     with pytest.raises(ValueError, match="different bodies"):
         import_memory(tt._mem(tmp_path, "d.db").store, _write(tmp_path / "a.jsonl", _lines(path) + [altered]))
 

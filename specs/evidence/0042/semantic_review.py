@@ -66,7 +66,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("__init__.py", 925): "control-flow", ("__init__.py", 1522): "control-flow", ("__init__.py", 1663): "control-flow",
     ("__init__.py", 1685): "control-flow", ("__init__.py", 1734): "control-flow", ("__init__.py", 1741): "control-flow",
     ("__init__.py", 1752): "control-flow", ("__init__.py", 1759): "control-flow", ("__init__.py", 1788): "control-flow",
-    ("__init__.py", 1814): "control-flow", ("__init__.py", 2123): "internal-invariant", ("__init__.py", 2191): "control-flow",
+    ("__init__.py", 1814): "control-flow", ("__init__.py", 2123): "internal-invariant", ("__init__.py", 2192): "control-flow",
     ("__init__.py", 294): "internal-invariant", ("__init__.py", 301): "internal-invariant",
     ("__init__.py", 1002): "internal-invariant", ("__init__.py", 1006): "internal-invariant", ("__init__.py", 1010): "internal-invariant",
     ("__init__.py", 1017): "internal-invariant", ("__init__.py", 1019): "internal-invariant",
@@ -74,7 +74,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("asof/adapter.py", 54): "internal-invariant", ("asof/resolve.py", 117): "internal-invariant", ("asof/resolve.py", 122): "internal-invariant",
     ("asof/resolve.py", 179): "control-flow", ("asof/resolve.py", 204): "predicate-helper",
     ("compile.py", 183): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
-    ("doctor.py", 394): "predicate-helper", ("dryrun.py", 68): "predicate-helper",
+    ("doctor.py", 398): "predicate-helper", ("dryrun.py", 68): "predicate-helper",
     ("graph.py", 56): "predicate-helper", ("graph.py", 71): "predicate-helper", ("graph.py", 230): "internal-invariant",
     ("graph.py", 890): "argument-check", ("grounding.py", 154): "control-flow",
     ("ingest.py", 180): "control-flow", ("ingest.py", 132): "argument-check",
@@ -94,11 +94,11 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("store/sqlite.py", 779): "control-flow", ("store/sqlite.py", 824): "control-flow", ("store/sqlite.py", 890): "control-flow",
     ("store/sqlite.py", 906): "predicate-helper", ("store/sqlite.py", 1061): "control-flow", ("store/sqlite.py", 2195): "control-flow",
     ("store/sqlite.py", 2222): "control-flow", ("store/sqlite.py", 2231): "predicate-helper", ("store/sqlite.py", 169): "argument-check",
-    ("store/sqlite.py", 365): "argument-check", ("store/sqlite.py", 2293): "argument-check", ("store/sqlite.py", 2975): "argument-check",
-    ("store/sqlite.py", 2990): "argument-check", ("store/sqlite.py", 360): "control-flow", ("store/sqlite.py", 772): "control-flow",
+    ("store/sqlite.py", 365): "argument-check", ("store/sqlite.py", 2293): "argument-check", ("store/sqlite.py", 2979): "argument-check",
+    ("store/sqlite.py", 2994): "argument-check", ("store/sqlite.py", 360): "control-flow", ("store/sqlite.py", 772): "control-flow",
     ("store/sqlite.py", 1341): "control-flow", ("store/sqlite.py", 1617): "control-flow", ("store/sqlite.py", 1631): "control-flow",
     ("store/sqlite.py", 1646): "control-flow", ("store/sqlite.py", 2517): "control-flow", ("store/sqlite.py", 2539): "control-flow",
-    ("store/sqlite.py", 2993): "control-flow", ("store/sqlite.py", 2270): "argument-check",
+    ("store/sqlite.py", 2997): "control-flow", ("store/sqlite.py", 2270): "argument-check",
     ("store/revocation.py", 56): "predicate-helper", ("store/revocation.py", 110): "control-flow", ("store/revocation.py", 145): "control-flow",
     ("store/revocation_sweep.py", 172): "control-flow", ("store/revocation_sweep.py", 192): "control-flow",
     ("store/schema_version.py", 1679): "argument-check", ("store/schema_version.py", 1853): "control-flow",
@@ -343,9 +343,9 @@ e("store/sqlite.py", 1215, "store.correction.authorisation", "0011", "§4b", "re
 e("store/sqlite.py", 1791, "store.delete-episode.outcome", "0009", "§4c", "refuse")
 e("store/sqlite.py", 1799, "store.delete-episode.reserved", "0010", "X21", "refuse")
 e("store/sqlite.py", 939, "store.edges.read-fence", "0001", "§4", "withhold")
-e("store/sqlite.py", 3041, "store.embedding.delayed-writer", "0027", "§4f", "refuse")
-e("store/sqlite.py", 3048, "store.embedding.stale-content", "0027", "§4f", "refuse")
-e("store/sqlite.py", 3019, "store.embedding.txn-locked", "0041", "§4e (0007 §4c form)", "refuse")
+e("store/sqlite.py", 3045, "store.embedding.delayed-writer", "0027", "§4f", "refuse")
+e("store/sqlite.py", 3052, "store.embedding.stale-content", "0027", "§4f", "refuse")
+e("store/sqlite.py", 3023, "store.embedding.txn-locked", "0041", "§4e (0007 §4c form)", "refuse")
 e("store/sqlite.py", 1725, "store.episode.attested-redaction", "0041", "§4b-ii INV-11", "refuse")
 e("store/sqlite.py", 1677, "store.episode.kind-not-recognised", "0041", "§2d-iv/§4h(ii) write path", "refuse")
 e("store/sqlite.py", 1664, "store.episode.marker-introduced", "0041", "§4b INV-11's mirror", "refuse")
@@ -398,10 +398,10 @@ e("store/sqlite.py", 1849, "store.outcome.context-ref", "0009", "§4c", "refuse"
 e("store/sqlite.py", 1778, "store.read.input-claimed", "0010", "§4b", "withhold")
 e("store/sqlite.py", 1775, "store.read.output-not-visible", "0010", "§4b", "withhold")
 e("store/sqlite.py", 2744, "store.redact.both-or-neither", "0041", "§4a/INV-5", "refuse")
-e("store/sqlite.py", 2811, "store.redact.disposition-changed", "0041", "§4h(i)", "refuse")
-e("store/sqlite.py", 2767, "store.redact.input-claimed", "0041/0010", "X21", "refuse")
-e("store/sqlite.py", 2748, "store.redact.reason-not-registered", "0041", "§11.2", "refuse")
-e("store/sqlite.py", 2759, "store.redact.target", "0041", "§4a/INV-5", "refuse")
+e("store/sqlite.py", 2815, "store.redact.disposition-changed", "0041", "§4h(i)", "refuse")
+e("store/sqlite.py", 2771, "store.redact.input-claimed", "0041/0010", "X21", "refuse")
+e("store/sqlite.py", 2750, "store.redact.reason-not-registered", "0041", "§11.2", "refuse")
+e("store/sqlite.py", 2763, "store.redact.target", "0041", "§4a/INV-5", "refuse")
 e("store/sqlite.py", 503, "store.redacted-reason.not-a-redaction", "0041", "§11.2 (only a redaction writes `redacted`)", "refuse")
 e("store/revocation.py", 140, "store.revocation.integrity", "0022", "§4c", "refuse")
 e("store/revocation.py", 139, "store.revocation.ordinal-collision", "0022", "§4c", "refuse")

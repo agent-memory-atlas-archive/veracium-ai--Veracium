@@ -1972,7 +1972,7 @@ class SqliteStore(Store):
                     raise _SITE_IMPORT_PLAN.fire(ValueError(
                         f"redaction notice for {n['target_id']!r} declares marker version {n['marker_version']!r}, which this "
                         f"build does not know (it knows up to {_redaction.MARKER_VERSION}) — refused (specs/0041 §4g)"), "notice-marker-version")
-                if n["reason"] not in _redaction.REDACTION_REASONS:
+                if n["reason"] not in _redaction.ORIGINATING_REASONS:      # round 11 (R10-04): the SOURCE's own
                     raise _SITE_IMPORT_PLAN.fire(ValueError(
                         f"redaction notice for {n['target_id']!r} carries reason {n['reason']!r} outside the vocabulary — "
                         f"refused (specs/0041 §11.2)"), "notice-reason")
@@ -2182,7 +2182,7 @@ class SqliteStore(Store):
                     arrived = 0
                     for rid, kind, tid, fields in self._conn.execute(
                             "SELECT id, target_kind, target_id, fields FROM redactions WHERE user_id=? AND event_ref IS NULL "
-                            "AND reason='imported_notice'", (user_id,)).fetchall():
+                            "AND source_origin IS NOT NULL", (user_id,)).fetchall():   # round 11 (R10-04): structure
                         tbl = "edges" if kind == "edge" else "episodes"
                         row = self._conn.execute(f"SELECT user_id, json FROM {tbl} WHERE id=?", (tid,)).fetchone()
                         if row is not None and row[0] == user_id:
@@ -2607,7 +2607,7 @@ class SqliteStore(Store):
             # IMMUTABLE foreign body, unchanged — never `imported_notice` and the import time in the source's place
             if source_body is not None:
                 body = json.loads(source_body)                    # this store's own canonical write
-            elif reason == "imported_notice":                    # a witnessed row holding no body: unknowns stay unknown
+            elif src is not None:                                 # a witnessed row holding no body: unknowns stay unknown
                 body = {"fields": json.loads(fields), "marker_version": None, "reason": None, "recorded_at": None,
                         "store_version_before": None, "store_version_after": None}
             else:
@@ -2744,9 +2744,13 @@ class SqliteStore(Store):
                 raise _SITE_REDACT_BOTH_OR_NEITHER.fire(ValueError(
                     "redact takes exactly one of edge_id / episode_id (specs/0041 §4a)"), "both-or-neither")
         with _SITE_REDACT_REASON.consult():
-            if reason not in _redaction.REDACTION_REASONS:
+            # round 11 (R10-04): a caller's redaction ORIGINATES here, so its reason is an originating one; the
+            # witness label `imported_notice` is the import path's alone (the owner's ruling, 2026-10-03)
+            if reason not in _redaction.ORIGINATING_REASONS:
                 raise _SITE_REDACT_REASON.fire(ValueError(
-                    f"redaction reason {reason!r} is not one of {_redaction.REDACTION_REASONS} (specs/0041 §11.2)"))
+                    f"redaction reason {reason!r} is not one of {_redaction.ORIGINATING_REASONS} — "
+                    f"`{_redaction.WITNESS_REASON}` is written only when another store's notice is imported "
+                    f"(specs/0041 §11.2)"))
         kind = "edge" if edge_id is not None else "episode"
         target_id = edge_id if edge_id is not None else episode_id
         table = "edges" if kind == "edge" else "episodes"
@@ -2920,7 +2924,7 @@ class SqliteStore(Store):
                       receipt_domains=(list(self._RECEIPT_DOMAINS)
                                        + ([self.QUOTING_DOMAIN] if self._quoting_domain(user_id, kind, target_id) else [])),
                       surviving_derived=self._surviving_derived(user_id, kind, target_id))
-        if reason != "imported_notice" and source_body is None:
+        if _s_origin is None:                     # round 11 (R10-04): a LOCAL redaction — by the record, never the reason
             return _redaction.RedactionReceipt(
                 reason=reason, marker_version=mv, store_version_before=vb, store_version_after=va,
                 recorded_at=recorded_at, event_ref=event_ref, reconstructed=False, **common)

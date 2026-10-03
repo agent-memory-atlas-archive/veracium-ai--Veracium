@@ -374,7 +374,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         # SOURCE IDENTITY (origin, source user, source event ref) — the same notice twice is one notice, and
         # two notices under one identity with different bodies are a corrupted source, refused; the user
         # remap moves the notice's subject with the record's (the target id is never remapped).
-        from .redaction import (MARKER_VERSION as _MARKER_VERSION, REDACTION_REASONS as _REASONS,
+        from .redaction import (MARKER_VERSION as _MARKER_VERSION, ORIGINATING_REASONS as _REASONS,
                                 marker_fields as _marker_fields, carrier_paths as _carrier_paths)
         from .store.sqlite import SqliteStore as _S
         if notice_recs and src_version < FORMAT_VERSION:

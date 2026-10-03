@@ -660,6 +660,12 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round10_matrix.py", "test_an_imported_absorption_ledger_is_treated_under_its_minted_id"): "default",
     # 0041 round 10, the notice across the import boundary (R9-04/05/08 on the capping path; R9-06 restores the
     # frozen store's own treated history)
+    ("test_0041_round11_provenance.py", "test_R10_04_every_admitted_local_reason_round_trips"): "restore",
+    ("test_0041_round11_provenance.py", "test_control_a_genuine_imported_notice_keeps_the_sources_facts"): "default",
+    ("test_0041_round11_provenance.py", "test_R10_04_a_hand_built_notice_claiming_this_stores_own_identity_still_reads_as_witnessed"): "default",
+    ("test_0041_round11_provenance.py", "test_R10_04_a_hand_built_notice_cannot_clear_its_own_provenance"): "default",
+    ("test_0041_round11_provenance.py", "test_R10_04_a_notice_whose_own_reason_is_the_witness_label_is_refused"): "default",
+    ("test_0041_round11_provenance.py", "test_the_doctor_calls_a_notice_standing_by_its_missing_event_and_never_a_local_row"): "default",
     ("test_0041_round11_identity.py", "test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices"): "default",
     ("test_0041_round11_identity.py", "test_R10_03_b_a_relay_preserves_the_native_source_triple"): "default",
     ("test_0041_round11_identity.py", "test_the_original_and_its_relay_are_held_as_one_source_identity"): "default",

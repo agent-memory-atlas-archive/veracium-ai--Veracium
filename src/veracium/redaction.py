@@ -62,6 +62,13 @@ def carries_marker_keys_only(d: dict) -> bool:
 # closed once, in one place. A column CHECK cannot distinguish operations, so the closure is a refusal at the
 # redaction write path.
 REDACTION_REASONS = ("subject_request", "operator_policy", "erroneous_capture", "legal_obligation", "imported_notice")
+# Round 11 (R10-04; the owner's ruling, 2026-10-03, given in the dev session: "Refuse it"): `imported_notice` is
+# the WITNESS label — this store was told another store redacted the record — and only the import path writes
+# it. A caller may not claim it: `Memory.redact` refuses it before any write, and a notice's own reason (the
+# SOURCE's, in its body) must be one a redaction ORIGINATES with. Provenance is never read from the reason:
+# a witnessed record is the one whose source identity columns are set (`redactions.source_origin`).
+WITNESS_REASON = "imported_notice"
+ORIGINATING_REASONS = tuple(r for r in REDACTION_REASONS if r != WITNESS_REASON)
 
 # §11.2 / D1, `source_revocations.reason` (round 10, R9-02(a)): the owner's FOUR values for a future REVOKE — a different
 # field from the redaction's own reason, so a different constant (`policy`, not `operator_policy`: the operator's own

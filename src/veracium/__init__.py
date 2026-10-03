@@ -2171,7 +2171,8 @@ class Memory:
         treatment map is replaced by the marker, cleared, or deleted in ONE store transaction; the journal
         is tombstoned and a `redacted` event appended; a redaction record ATTESTS the fields, and an ordinary
         write may not repopulate them (INV-11). Exactly one of `edge_id` / `episode_id`; `reason` is one of
-        `redaction.REDACTION_REASONS` (a closed vocabulary — the reason is not a content channel, INV-6).
+        `redaction.ORIGINATING_REASONS` (a closed vocabulary — the reason is not a content channel, INV-6;
+        `imported_notice` is refused: only an imported notice writes it, specs/0041 §11.2).
         Idempotent by content: a second call returns the original receipt with `repeated=True`. Returns a
         `RedactionReceipt`, which never carries a content digest and names the derived records that may
         still carry the content (F6) and the receipt domains it cannot vouch for (§4f). Not a deletion and
