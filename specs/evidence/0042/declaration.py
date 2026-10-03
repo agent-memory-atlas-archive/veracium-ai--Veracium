@@ -152,6 +152,7 @@ DECLARATION = (
     ("store.redact.both-or-neither", "0041", "§4a/INV-5", "store/sqlite.py:SqliteStore.redact", "refuse"),
     ("store.redact.disposition-changed", "0041", "§4h(i)", "store/sqlite.py:SqliteStore._redact_in_txn", "refuse"),
     ("store.redact.input-claimed", "0041/0010", "X21", "store/sqlite.py:SqliteStore.redact", "refuse"),
+    ("store.redact.nothing-to-redact", "0041", "§4b-ii (round 11: the owner's ruling, nothing to redact)", "store/sqlite.py:SqliteStore._redact_in_txn", "refuse"),
     ("store.redact.reason-not-registered", "0041", "§11.2", "store/sqlite.py:SqliteStore.redact", "refuse"),
     ("store.redact.target", "0041", "§4a/INV-5", "store/sqlite.py:SqliteStore.redact", "refuse"),
     ("store.redacted-reason.not-a-redaction", "0041", "§11.2 (only a redaction writes `redacted`)", "store/sqlite.py:SqliteStore._refuse_redacted_reason", "refuse"),

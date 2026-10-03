@@ -54,6 +54,7 @@ _SITE_REDACT_BOTH_OR_NEITHER = declare_site("store.redact.both-or-neither")   # 
 _SITE_REDACT_REASON = declare_site("store.redact.reason-not-registered")
 _SITE_REDACT_CLAIMED = declare_site("store.redact.input-claimed")
 _SITE_REDACT_DISPOSITION = declare_site("store.redact.disposition-changed")
+_SITE_REDACT_NOTHING = declare_site("store.redact.nothing-to-redact")   # round 11: the owner's "Refuse: nothing to redact"
 _SITE_UPSERT_ATTESTED = declare_site("store.upsert.attested-redaction")
 _SITE_EPISODE_ATTESTED = declare_site("store.episode.attested-redaction")
 _SITE_CONSOLIDATION_INPUT_REDACTED = declare_site("store.consolidation.input-redacted")
@@ -2853,8 +2854,16 @@ class SqliteStore(Store):
                     f"{moved} (specs/0041 §4h(i)) — nothing written"))
         new_json = model_after.model_dump_json()
         # an applied notice (§4g): the record arrives already carrying the marker, so this store's treatment
-        # finds little to do — the attestation names the SOURCE's carriers too (the notice's fields), never fewer
-        fields = sorted(set(treated) | set(fields_hint or []))
+        # finds little to do — the attestation names the SOURCE's carriers too (the notice's fields), never fewer.
+        # Round 11 (R10-04's class): it names EVERY carrier holding its treated value after the operation — what this
+        # call treated AND what already held it (an unattested marker row is redacted precisely to attest it, v15
+        # §4b-ii) — so a redaction never attests nothing, and never exports a notice its own importer refuses
+        fields = sorted(set(treated) | set(_redaction.already_treated(kind, before)) | set(fields_hint or []))
+        with _SITE_REDACT_NOTHING.consult():
+            if not fields:
+                raise _SITE_REDACT_NOTHING.fire(ValueError(
+                    f"redact refuses {kind} {target_id!r}: nothing to redact — no carrier holds content or the marker "
+                    f"(specs/0041 §4b-ii; the owner's ruling, 2026-10-03) — nothing written"))
         event_ref = None
         if kind == "edge":
             self._conn.execute(

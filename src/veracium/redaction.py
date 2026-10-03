@@ -159,6 +159,26 @@ def treat_edge(dump: dict, *, reason_registry, recognised_kinds=None) -> tuple:
     return d, treated
 
 
+def already_treated(kind: str, dump: dict) -> list:
+    """Round 11 (R10-04's class): the carriers ALREADY at their treated value — the exact complement of what
+    `treat_edge` / `treat_episode` would change: a REPLACE carrier holding the marker, a marker-valued `kind`, a reason
+    holding `REDACTED_REASON_VALUE`, an `agreement.markers` list of markers only. CLEAR carriers are not listed: a
+    cleared value is indistinguishable from an absent one and carries nothing to attest. Pure."""
+    out = []
+    if kind == "edge":
+        out += [f for f in EDGE_REPLACE if dump.get(f) == MARKER]
+        out += [f for f in EDGE_REASON_THREE_CASE if dump.get(f) == REDACTED_REASON_VALUE]
+        ag = dump.get("agreement")
+        if isinstance(ag, dict) and isinstance(ag.get("markers"), list) and ag["markers"] \
+                and all(m == MARKER for m in ag["markers"]):
+            out.append("agreement.markers")
+    else:
+        out += [f for f in EPISODE_REPLACE if dump.get(f) == MARKER]
+        out += [f for f in EPISODE_KIND_TWO_BRANCH if dump.get(f) == MARKER]
+        out += [f for f in EPISODE_REASON_THREE_CASE if dump.get(f) == REDACTED_REASON_VALUE]
+    return out
+
+
 def treat_episode(dump: dict, *, reason_registry, recognised_kinds) -> tuple:
     """The episode's carriers (rows 39-52): summary REPLACE; kind PRESERVE-if-recognised else REPLACE (row 46,
     v6); retired_reason THREE-CASE (row 49, v11 — `None` stays `None` and the episode stays ACTIVE)."""

@@ -1130,6 +1130,14 @@ def _redact_disposition(mp):
     s.close()
 
 
+def _redact_nothing(mp):
+    """0041 round 11 (the owner's ruling): a record with no content and no marker has nothing to redact — refused."""
+    s = _store(); s.add_episode(Episode(id="rn", user_id=U, date="2026-10-01", summary="", provenance=_edge("x").provenance))
+    with pytest.raises(ValueError, match="nothing to redact"):
+        s.redact(U, episode_id="rn", reason="subject_request")
+    s.close()
+
+
 def _journal_bad_redaction_reason():
     s = _store(); s.add_edge(_edge("jr"))
     with pytest.raises(ValueError):
@@ -1144,6 +1152,7 @@ DECLINES.update({
     "store.redact.reason-not-registered": lambda mp: _redact_bad_reason(),
     "store.redact.input-claimed": _redact_claimed,
     "store.redact.disposition-changed": _redact_disposition,
+    "store.redact.nothing-to-redact": _redact_nothing,
     "store.upsert.attested-redaction": TwoPhase(lambda mp: _redacted_edge(), lambda st: _upsert_attested(*st)),
     "store.episode.attested-redaction": TwoPhase(lambda mp: _redacted_episode(), lambda st: _add_attested_episode(*st)),
     "store.consolidation.input-redacted": TwoPhase(lambda mp: _redacted_cold_input(), lambda st: _claim_redacted_input(*st)),

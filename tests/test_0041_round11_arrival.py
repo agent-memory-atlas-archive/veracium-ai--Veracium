@@ -225,14 +225,19 @@ def test_the_doctor_still_reads_events_of_an_UNATTESTED_absent_episode_as_an_err
 
 
 def test_an_arrival_needing_treatment_in_a_carrier_the_attestation_never_named_is_refused(tmp_path):
-    """The predicate's REFUSAL, reached natively. An episode whose summary was EMPTY is redacted (the attestation names
-    no field); after `delete_episode`, a file carries that id with summary content and a notice naming `summary`. The
-    pure treatment of the arrival would treat `summary`, which the attestation does not cover: refused, fail-closed,
-    with nothing written (the attestation is the authority, and it does not attest that field)."""
+    """The predicate's REFUSAL. NO NATIVE ROUTE IS KNOWN to an attestation that misses a carrier an arrival would need
+    treated, so the state is PLANTED: a genuine redaction whose `fields` column is then narrowed by SQL. Routes tried
+    and closed: an empty-summary redaction (attested nothing in R10-02's commit; now refused, "nothing to redact", the
+    owner's ruling); a prose `retired_reason` or `kind` beside an empty summary (refused by the writers' and the
+    import's D1 closures); the frozen fixtures (every summary non-empty). If a route is found, this cell should use
+    it. After `delete_episode`, a file carries that id with summary content and a valid notice naming `summary`: the
+    pure treatment would treat `summary`, which the attestation does not cover — refused, nothing written."""
     m = tt._mem(tmp_path, "m.db")
-    m.store.add_episode(Episode(id="ep-e", user_id=U, date="2026-10-01", summary="", provenance=tt._prov()))
+    m.store.add_episode(Episode(id="ep-e", user_id=U, date="2026-10-01", summary="before", provenance=tt._prov()))
     m.redact(U, episode_id="ep-e", reason="subject_request")
-    assert not m.store._attested_fields(U, "episode", "ep-e")              # the attestation names no field
+    m.store._conn.execute("UPDATE redactions SET fields='[]' WHERE target_id='ep-e'")      # THE PLANT
+    m.store._conn.commit()
+    assert not m.store._attested_fields(U, "episode", "ep-e")
     full = tmp_path / "full.jsonl"
     m.store.add_episode(Episode(id="ep-c", user_id=U, date="2026-10-01", summary="x", provenance=tt._prov()))
     m.redact(U, episode_id="ep-c", reason="subject_request")
