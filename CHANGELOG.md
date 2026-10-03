@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+- **specs/0041 targeted redaction — the round-10 implementation corrections (round 11).** The round-10 review
+  RETURNED the implementation with four findings, each in the import, attestation or provenance contracts. Each
+  was swept as a sample of its class, and one more instance was found by our own testing. **WHO SHOULD TAKE THIS:
+  anyone who imports redaction notices from another store, or restores a store that has deleted a redacted
+  episode.**
+
+  - **BREAKING — `Memory.redact` refuses the reason `imported_notice`.** It is the label a store writes when it
+    applies ANOTHER store's redaction notice. A caller using it claimed a provenance that didn't happen, its
+    receipt lost its known facts, and its export could not be imported. The owner's ruling: only the import path
+    writes it. **WHO MUST ACT:** callers passing `imported_notice` to `redact`; pass the reason that applies
+    (`subject_request`, `operator_policy`, `erroneous_capture` or `legal_obligation`). A notice whose own reason is
+    `imported_notice` is refused on import too.
+  - **BREAKING — `Memory.redact` refuses a record with nothing to redact** (no content and no redaction marker in
+    any field, e.g. an episode whose summary is empty). It used to succeed, attest nothing, and export a notice the
+    importer refused. The owner's ruling. **WHO MUST ACT:** callers that redact records which may be empty should
+    expect the refusal.
+  - **A redaction now attests every field holding its redacted value**, including fields that already held the
+    marker. Redacting a row that arrived carrying the marker without its notice now protects it from ordinary
+    writes, and its export round-trips.
+  - **Restoring after deleting a redacted episode works.** After `delete_episode` on a redacted episode, importing a
+    file that carries that episode and its notice — the store's own backup, before or after the redaction —
+    writes the episode back in its redacted form, under the original redaction record. Before, the content came
+    back while the record still said "redacted". A file carrying the episode WITHOUT its notice is still refused.
+    `veracium doctor` now reports such a deleted, redacted episode as information, not an error.
+  - **A full export carrying a newly redacted outcome now applies to a store holding the earlier outcome.** It was
+    refused, and the held outcome kept its content. Outcome records follow the same rule as other records; a
+    change to an outcome chain's structure is still refused.
+  - **Redaction notices from other stores are identified exactly.** A notice's source (origin, user, event) is now
+    stored in its own columns and compared exactly. Identifiers containing control characters (U+001F, NUL) could
+    make two notices collide, make a relayed notice lose its source, or bypass the check that refuses a
+    contradictory notice. The `redactions` table gains three columns; it is new in the unreleased store version 15,
+    so there is no further version bump. A store created from an unreleased main checkout at the earlier v15
+    shape is not supported across this change.
+  - **Provenance is read from the redaction record, not from its reason**: a redaction counts as received from
+    another store only when the record holds that store's identity, which only an import writes.
+
 - **Evidence tooling: the offline test kit now matches the qualified runtime.** `specs/evidence/offline/` held a
   cp312 `pydantic_core`, which cannot install on the CPython 3.14 floor, and seven of its eleven wheels trailed the
   measured runtime. It now holds that runtime's exact versions (cp314 `pydantic_core` 2.46.5, pydantic 2.13.5,

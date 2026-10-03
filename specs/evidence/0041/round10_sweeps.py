@@ -384,11 +384,18 @@ row("C8 the confirmation request digest", "OBSERVED", "OBSERVED",
 section("D — a stored VALUE deciding provenance (R10-04)",
         "per branch: (1) the fact it keys on; (2) every writer of that fact and whether a PUBLIC caller can set it "
         "independently of the operation (a hand-built export file is a public input). Accused only when (2) is yes")
-branches = [(m.start(), m.group(0)) for m in re.finditer(r"reason\s*[!=]=\s*\"imported_notice\"|reason='imported_notice'|"
-                                                           r"source_body is (not )?None|source_body IS (NOT )?NULL|"
-                                                           r"event_ref IS NULL", store_src)]
-lines_of = sorted({store_src.count("\n", 0, p) + 1 for p, _ in branches})
-print(f"    provenance-keyed expressions in store/sqlite.py, derived: {len(branches)} at lines {lines_of}")
+# CORRECTED (round 11, before any fix touched these lines' subject): the first form searched store/sqlite.py ONLY — a
+# scope narrower than its subject — and missed doctor.py's standing-notice test, which keys on the same reason. The
+# derivation now covers every module under src/veracium, and every module it names gets a row.
+PROV_RE = re.compile(r"reason\s*[!=]=\s*\"imported_notice\"|\[\"reason\"\]\s*[!=]=\s*\"imported_notice\"|"
+                     r"reason='imported_notice'|source_body is (not )?None|source_body IS (NOT )?NULL|event_ref IS NULL")
+branches = {}
+for f in sorted((ROOT / "src" / "veracium").rglob("*.py")):
+    t = f.read_text()
+    hits = sorted({t.count("\n", 0, m.start()) + 1 for m in PROV_RE.finditer(t)})
+    if hits:
+        branches[str(f.relative_to(ROOT / "src" / "veracium"))] = hits
+print(f"    provenance-keyed expressions under src/veracium, derived: {branches}")
 with tempfile.TemporaryDirectory() as d:
     m = mem(d, "d.db")
     m.store.add_edge(Edge(id="e-1", user_id=U, subject="user", relation="lives_at", object=SECRET, provenance=tt._prov()))
@@ -417,6 +424,23 @@ with tempfile.TemporaryDirectory() as d:
         "writers of a NULL event_ref: the standing insert only (a local redaction always writes its event); the "
         f"arrival's UPDATE completes the row and leaves source_body: kept {sb[0] is not None}, event written {sb[1] is not None}")
 
+with tempfile.TemporaryDirectory() as d:                       # the doctor's branch the first derivation missed
+    from veracium import doctor as doc
+    m = mem(d, "dd.db")
+    m.store.add_episode(Episode(id="ep-d", user_id=U, date="2026-10-01", summary=SECRET, provenance=tt._prov()))
+    m.redact(U, episode_id="ep-d", reason="imported_notice")     # a LOCAL row holding the witness label (D1's writer)
+    m.store._conn.execute("DELETE FROM episodes WHERE id='ep-d'")  # its target gone (the pin has no delete for it here)
+    m.store._conn.commit()
+    m.close()
+    rep = doc.diagnose(str(pathlib.Path(d) / "dd.db"))
+    standing = any("standing redaction notice" in f.message for f in rep.findings)
+    row("D5 doctor.py: STANDING keyed on reason == 'imported_notice' AND event_ref IS NULL", "HOLDS",
+        "HOLDS" if not standing else "FOUND",
+        "writers of the pair: the reason is caller-settable (D1), but a NULL event_ref is written only by the import's "
+        f"standing insert, so a caller cannot make a local row read as standing: local row with the label called "
+        f"standing: {standing}. Not accused; keyed on the reason TEXT all the same, so round 11 moves it to structure")
+
+# ---------------------------------------------------------------- summary
 # ---------------------------------------------------------------- summary
 print("\n" + "-" * 100)
 bad = [r for r, ok in ROWS if not ok]
