@@ -354,15 +354,30 @@ def _check_refs(rep: Report, conn, user: Optional[str], edges: dict, episodes: d
         # source identity — the shape only the import's standing insert writes. A row with no event and NO source
         # identity is a shape no writer produces: damage, an error
         is_standing = lambda r: r["event_ref"] is None and r["source_origin"] is not None   # noqa: E731
+        # round 11 (R10-02): a COMPLETED attestation whose EPISODE is gone is a state the store makes legitimately —
+        # the supported `delete_episode`, after which a re-arriving record is written in its treated shape (§4g).
+        # Only episodes: no supported remover deletes a single edge, so an absent edge stays an error. The doctor
+        # cannot tell "deleted" from "never existed"; planting the latter needs raw SQL, outside what it serves.
+        is_deleted_episode = lambda r: r["event_ref"] is not None and r["target_kind"] == "episode"   # noqa: E731
         standing = [r["id"] for r in absent if is_standing(r)]
-        ids = [r["id"] for r in absent if not is_standing(r)]
+        deleted = [r["id"] for r in absent if is_deleted_episode(r)]
+        ids = [r["id"] for r in absent if not is_standing(r) and not is_deleted_episode(r)]
         if standing:
             rep.add("refs", "info", f"{len(standing)} standing redaction notice(s) awaiting their record — the record is "
                     f"redacted on arrival (specs/0041 §4g); not damage", standing)
+        if deleted:
+            rep.add("refs", "info", f"{len(deleted)} redaction record(s) for an episode since deleted — the record stays "
+                    f"attested (its journal events stay too), and a re-arriving copy with its notice is written treated "
+                    f"(specs/0041 §4g); not damage",
+                    deleted)
         if ids:
             rep.add("refs", "error", f"{len(ids)} redaction record(s) naming a target that does not exist", ids)
+        # round 11 (R10-02): the episode journal is append-only, so a deleted ATTESTED episode keeps its events — the
+        # same legitimate state as its redaction record above, reported there; events of any OTHER absent episode stay
+        # an error
+        gone_attested = {(r["user_id"], r["target_id"]) for r in absent if is_deleted_episode(r)}
         ids = [r["episode_id"] for r in conn.execute(f"SELECT DISTINCT episode_id, user_id FROM episode_event {where}", args)
-               if (r["user_id"], r["episode_id"]) not in episodes]
+               if (r["user_id"], r["episode_id"]) not in episodes and (r["user_id"], r["episode_id"]) not in gone_attested]
         if ids:
             rep.add("refs", "error", f"{len(ids)} episode event(s) naming an episode that does not exist", ids)
     # embeddings

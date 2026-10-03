@@ -2064,15 +2064,23 @@ class SqliteStore(Store):
                                     f"refused: imported edge {edge.id!r} carries invalidation reason "
                                     f"{edge.invalidation_reason!r}, not a registered reason (specs/0041 §11.2, D1)"), "edge")
                         # specs/0041 §4b-ii / INV-11 at the IMPORT boundary (tranche 4b): a record whose
-                        # redaction this store already attests (a prior redaction, or a standing notice) is
-                        # not repopulated by an import — unless a notice in THIS plan covers it, in which
-                        # case the record is written and redacted again in the same transaction
+                        # redaction this store already COMPLETED is not repopulated by an import with no notice
+                        # for it. Round 11 (R10-02): WITH the notice, the record is written as the attestation's
+                        # TREATED shape here, in this transaction — round 10's comment said it was "redacted again",
+                        # but the notice was then counted existing and skipped, and the content arrived verbatim
                         with _SITE_IMPORT_ATTESTED.consult():
                             if self._completed_attestation(user_id, "edge", edge.id) and ("edge", edge.id) not in notice_targets:
                                 raise _SITE_IMPORT_ATTESTED.fire(ValueError(
                                     f"refused: imported edge {edge.id!r} is redacted here (a redaction record attests it) "
                                     f"and the file carries no notice for it — an import may not repopulate it "
                                     f"(specs/0041 §4b-ii, INV-11; §4g)"))
+                            if self._completed_attestation(user_id, "edge", edge.id):     # ONE consult per arrival
+                                edge, uncovered = self._treated_on_arrival(user_id, "edge", edge.id, edge.model_dump(mode="json"))
+                                if uncovered:
+                                    raise _SITE_IMPORT_ATTESTED.fire(ValueError(
+                                        f"refused: imported edge {edge.id!r} arrives under this store's completed redaction "
+                                        f"record, but carries content in {uncovered}, which the record does not attest — "
+                                        f"nothing imported (specs/0041 §4b-ii, INV-11; §4g)"), "arrival-outside-attestation")
                         prior = self._conn.execute(
                             "SELECT json FROM edges WHERE id=?", (edge.id,)).fetchone()
                         new_json = edge.model_dump_json()
@@ -2114,6 +2122,15 @@ class SqliteStore(Store):
                                     f"refused: imported episode {ep.id!r} is redacted here (a redaction record attests it) "
                                     f"and the file carries no notice for it — an import may not repopulate it "
                                     f"(specs/0041 §4b-ii, INV-11; §4g)"))
+                            # round 11 (R10-02): WITH the notice, the arrival is written in the attestation's treated
+                            # shape — never the content (the notice below is `existing` and treats nothing)
+                            if self._completed_attestation(user_id, "episode", ep.id):
+                                ep, uncovered = self._treated_on_arrival(user_id, "episode", ep.id, ep.model_dump(mode="json"))
+                                if uncovered:
+                                    raise _SITE_IMPORT_ATTESTED.fire(ValueError(
+                                        f"refused: imported episode {ep.id!r} arrives under this store's completed "
+                                        f"redaction record, but carries content in {uncovered}, which the record does not "
+                                        f"attest — nothing imported (specs/0041 §4b-ii, INV-11; §4g)"), "arrival-outside-attestation")
                         self._conn.execute(
                             "INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
                             (ep.id, ep.user_id, ep.date, ep.model_dump_json()))
@@ -2627,6 +2644,25 @@ class SqliteStore(Store):
         return self._conn.execute(
             "SELECT 1 FROM redactions WHERE user_id=? AND target_kind=? AND target_id=? AND event_ref IS NOT NULL LIMIT 1",
             (user_id, kind, target_id)).fetchone() is not None
+
+    def _treated_on_arrival(self, user_id: str, kind: str, target_id: str, dump: dict):
+        """Round 11 (R10-02): the shape a record ARRIVING under a COMPLETED attestation is written in — the PURE
+        treatment (`treat_edge` / `treat_episode`, the same functions the redaction ran), validated under the model.
+        No event and no attestation row is written: the attestation is complete and stays the original, so the next
+        receipt is `repeated=True` with the ORIGINAL facts. If the arriving record carries content in a carrier the
+        attestation never named, the store cannot attest it and the arrival is REFUSED (fail-closed) — the
+        attestation is the authority, and it does not cover that field. Pure: returns (the treated record, the carriers
+        it would need treated that the attestation does not name)."""
+        if kind == "edge":
+            new, treated = _redaction.treat_edge(dump, reason_registry=DISPOSITIONED_REASONS)
+            model = Edge
+        else:
+            new, treated = _redaction.treat_episode(dump, reason_registry=DISPOSITIONED_REASONS,
+                                                    recognised_kinds=_redaction.RECOGNISED_EPISODE_KINDS)
+            model = Episode
+        uncovered = sorted(set(treated) - set(self._attested_fields(user_id, kind, target_id)))
+        return model.model_validate(new), uncovered      # the CALLER refuses a non-empty `uncovered` (one census id,
+                                                         # one function: the refusal stays at the insert it guards)
 
     def _redaction_record(self, user_id: str, kind: str, target_id: str):
         return self._conn.execute(
