@@ -669,75 +669,25 @@
   "line": 136,
   "statement": "raise _SITE_EXPORT_NON_QUIESCENT.fire(ValueError("
  },
- "portability.py:import_memory:794:RAISE": {
+ "portability.py:import_memory:823:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0025 §4c (refuse) through site portability.import.agreement-invalid",
   "reviewer": "dev",
   "site": "portability.import.agreement-invalid",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:12",
-  "line": 794,
+  "line": 823,
   "statement": "raise _SITE_IMPORT_AGREEMENT_INVALID.fire(ValueError("
  },
- "portability.py:_validate_incoming_chain:259:RAISE": {
+ "portability.py:_validate_incoming_chain:288:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
   "reviewer": "dev",
   "site": "portability.import.chain",
   "class": "enforcement",
   "key": "portability.py:_validate_incoming_chain:RAISE:1",
-  "line": 259,
+  "line": 288,
   "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} has {len(roots)} roots — \""
- },
- "portability.py:_validate_incoming_chain:263:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
-  "reviewer": "dev",
-  "site": "portability.import.chain",
-  "class": "enforcement",
-  "key": "portability.py:_validate_incoming_chain:RAISE:2",
-  "line": 263,
-  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} root seq={root.seq!r} != 1 — \""
- },
- "portability.py:_validate_incoming_chain:272:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
-  "reviewer": "dev",
-  "site": "portability.import.chain",
-  "class": "enforcement",
-  "key": "portability.py:_validate_incoming_chain:RAISE:3",
-  "line": 272,
-  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} link {m.id!r} supersedes \""
- },
- "portability.py:_validate_incoming_chain:276:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
-  "reviewer": "dev",
-  "site": "portability.import.chain",
-  "class": "enforcement",
-  "key": "portability.py:_validate_incoming_chain:RAISE:4",
-  "line": 276,
-  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} is not dense +1 at \""
- },
- "portability.py:_validate_incoming_chain:280:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
-  "reviewer": "dev",
-  "site": "portability.import.chain",
-  "class": "enforcement",
-  "key": "portability.py:_validate_incoming_chain:RAISE:5",
-  "line": 280,
-  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} branches at \""
- },
- "portability.py:_validate_incoming_chain:285:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
-  "reviewer": "dev",
-  "site": "portability.import.chain",
-  "class": "enforcement",
-  "key": "portability.py:_validate_incoming_chain:RAISE:6",
-  "line": 285,
-  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} has {len(leaves)} leaves — \""
  },
  "portability.py:_validate_incoming_chain:292:RAISE": {
   "decision": "enforcement",
@@ -745,159 +695,189 @@
   "reviewer": "dev",
   "site": "portability.import.chain",
   "class": "enforcement",
-  "key": "portability.py:_validate_incoming_chain:RAISE:7",
+  "key": "portability.py:_validate_incoming_chain:RAISE:2",
   "line": 292,
+  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} root seq={root.seq!r} != 1 — \""
+ },
+ "portability.py:_validate_incoming_chain:301:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
+  "reviewer": "dev",
+  "site": "portability.import.chain",
+  "class": "enforcement",
+  "key": "portability.py:_validate_incoming_chain:RAISE:3",
+  "line": 301,
+  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} link {m.id!r} supersedes \""
+ },
+ "portability.py:_validate_incoming_chain:305:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
+  "reviewer": "dev",
+  "site": "portability.import.chain",
+  "class": "enforcement",
+  "key": "portability.py:_validate_incoming_chain:RAISE:4",
+  "line": 305,
+  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} is not dense +1 at \""
+ },
+ "portability.py:_validate_incoming_chain:309:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
+  "reviewer": "dev",
+  "site": "portability.import.chain",
+  "class": "enforcement",
+  "key": "portability.py:_validate_incoming_chain:RAISE:5",
+  "line": 309,
+  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} branches at \""
+ },
+ "portability.py:_validate_incoming_chain:314:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
+  "reviewer": "dev",
+  "site": "portability.import.chain",
+  "class": "enforcement",
+  "key": "portability.py:_validate_incoming_chain:RAISE:6",
+  "line": 314,
+  "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} has {len(leaves)} leaves — \""
+ },
+ "portability.py:_validate_incoming_chain:321:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
+  "reviewer": "dev",
+  "site": "portability.import.chain",
+  "class": "enforcement",
+  "key": "portability.py:_validate_incoming_chain:RAISE:7",
+  "line": 321,
   "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} has a cycle — refuse \""
  },
- "portability.py:_validate_incoming_chain:297:RAISE": {
+ "portability.py:_validate_incoming_chain:326:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/H5 (refuse) through site portability.import.chain",
   "reviewer": "dev",
   "site": "portability.import.chain",
   "class": "enforcement",
   "key": "portability.py:_validate_incoming_chain:RAISE:8",
-  "line": 297,
+  "line": 326,
   "statement": "raise _SITE_IMPORT_CHAIN.fire(ValueError(f\"{path}: outcome chain {key} is disconnected or has a \""
  },
- "portability.py:import_memory:346:RAISE": {
+ "portability.py:import_memory:375:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:3",
-  "line": 346,
+  "line": 375,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError(f\"{path}: empty file\"), \"empty\")"
  },
- "portability.py:import_memory:349:RAISE": {
+ "portability.py:import_memory:378:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:4",
-  "line": 349,
+  "line": 378,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError(f\"{path}: not a Veracium export (missing header)\"), \"not-an-export\")"
  },
- "portability.py:import_memory:352:RAISE": {
+ "portability.py:import_memory:381:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:5",
-  "line": 352,
+  "line": 381,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError(f\"{path}: export version {src_version} is newer \""
  },
- "portability.py:import_memory:369:RAISE": {
+ "portability.py:import_memory:398:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:6",
-  "line": 369,
+  "line": 398,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError(f\"{path}: unknown record kind {marker!r}\"), \"unknown-kind\")"
  },
- "portability.py:import_memory:383:RAISE": {
+ "portability.py:import_memory:412:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:7",
-  "line": 383,
+  "line": 412,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:390:RAISE": {
+ "portability.py:import_memory:419:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:8",
-  "line": 390,
+  "line": 419,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:402:RAISE": {
+ "portability.py:import_memory:431:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:9",
-  "line": 402,
+  "line": 431,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:409:RAISE": {
+ "portability.py:import_memory:438:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:10",
-  "line": 409,
+  "line": 438,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:417:RAISE": {
+ "portability.py:import_memory:446:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 §4 (refuse) through site portability.import.file",
   "reviewer": "dev",
   "site": "portability.import.file",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:11",
-  "line": 417,
+  "line": 446,
   "statement": "raise _SITE_IMPORT_FILE.fire(ValueError("
  },
- "portability.py:import_memory:879:RAISE": {
+ "portability.py:import_memory:908:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §4 (refuse) through site portability.import.origin-missing",
   "reviewer": "dev",
   "site": "portability.import.origin-missing",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:13",
-  "line": 879,
+  "line": 908,
   "statement": "raise _SITE_IMPORT_ORIGIN_MISSING.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1126:RAISE": {
+ "portability.py:_preflight_and_commit:1153:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:1",
-  "line": 1126,
+  "line": 1153,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1137:RAISE": {
+ "portability.py:_preflight_and_commit:1157:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:2",
-  "line": 1137,
-  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: edge {edge.id!r} already exists with \""
- },
- "portability.py:_preflight_and_commit:1148:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
-  "reviewer": "dev",
-  "site": "portability.import.preflight",
-  "class": "enforcement",
-  "key": "portability.py:_preflight_and_commit:RAISE:3",
-  "line": 1148,
-  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: outcome chain references edge {edge_id!r}, \""
- },
- "portability.py:_preflight_and_commit:1162:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
-  "reviewer": "dev",
-  "site": "portability.import.preflight",
-  "class": "enforcement",
-  "key": "portability.py:_preflight_and_commit:RAISE:4",
-  "line": 1162,
-  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
+  "line": 1157,
+  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: edge {edge.id!r} already exists with different content — refuse (specs/0009 §4c){_tail}\"), \"edge-conflict\")"
  },
  "portability.py:_preflight_and_commit:1168:RAISE": {
   "decision": "enforcement",
@@ -905,49 +885,119 @@
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
-  "key": "portability.py:_preflight_and_commit:RAISE:5",
+  "key": "portability.py:_preflight_and_commit:RAISE:3",
   "line": 1168,
-  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: episode {ep.id!r} already exists with \""
+  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: outcome chain references edge {edge_id!r}, \""
  },
- "portability.py:_preflight_and_commit:1190:RAISE": {
+ "portability.py:_preflight_and_commit:1183:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
+  "reviewer": "dev",
+  "site": "portability.import.preflight",
+  "class": "enforcement",
+  "key": "portability.py:_preflight_and_commit:RAISE:4",
+  "line": 1183,
+  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
+ },
+ "portability.py:_preflight_and_commit:1187:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
+  "reviewer": "dev",
+  "site": "portability.import.preflight",
+  "class": "enforcement",
+  "key": "portability.py:_preflight_and_commit:RAISE:5",
+  "line": 1187,
+  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: episode {ep.id!r} already exists with different content — refuse (specs/0009 §4c){_tail}\"), \"episode-conflict\")"
+ },
+ "portability.py:_preflight_and_commit:1210:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:6",
-  "line": 1190,
+  "line": 1210,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1199:RAISE": {
+ "portability.py:_preflight_and_commit:1219:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:7",
-  "line": 1199,
+  "line": 1219,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:_preflight_and_commit:1218:RAISE": {
+ "portability.py:_preflight_and_commit:1223:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
   "reviewer": "dev",
   "site": "portability.import.preflight",
   "class": "enforcement",
   "key": "portability.py:_preflight_and_commit:RAISE:8",
-  "line": 1218,
+  "line": 1223,
+  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f\"{path}: outcome link {m.id!r} already exists with different content — refuse the whole import (specs/0009 §4c){_tail}\"), \"outcome-link-conflict\")"
+ },
+ "portability.py:_preflight_and_commit:1231:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
+  "reviewer": "dev",
+  "site": "portability.import.preflight",
+  "class": "enforcement",
+  "key": "portability.py:_preflight_and_commit:RAISE:9",
+  "line": 1231,
   "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
  },
- "portability.py:import_memory:1084:RAISE": {
+ "portability.py:_preflight_and_commit:1250:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c (refuse) through site portability.import.preflight",
+  "reviewer": "dev",
+  "site": "portability.import.preflight",
+  "class": "enforcement",
+  "key": "portability.py:_preflight_and_commit:RAISE:10",
+  "line": 1250,
+  "statement": "raise _SITE_IMPORT_PREFLIGHT.fire(ValueError("
+ },
+ "portability.py:import_memory:1113:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site portability.import.race-exhausted",
   "reviewer": "dev",
   "site": "portability.import.race-exhausted",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:24",
-  "line": 1084,
+  "line": 1113,
   "statement": "raise _SITE_IMPORT_RACE_EXHAUSTED.fire(ValueError(f\"{path}: import kept losing a race against concurrent writes \""
+ },
+ "portability.py:import_memory:1008:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
+  "reviewer": "dev",
+  "site": "portability.import.record",
+  "class": "enforcement",
+  "key": "portability.py:import_memory:RAISE:18",
+  "line": 1008,
+  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
+ },
+ "portability.py:import_memory:1014:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
+  "reviewer": "dev",
+  "site": "portability.import.record",
+  "class": "enforcement",
+  "key": "portability.py:import_memory:RAISE:19",
+  "line": 1014,
+  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
+ },
+ "portability.py:import_memory:1018:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
+  "reviewer": "dev",
+  "site": "portability.import.record",
+  "class": "enforcement",
+  "key": "portability.py:import_memory:RAISE:20",
+  "line": 1018,
+  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
  "portability.py:import_memory:1026:RAISE": {
   "decision": "enforcement",
@@ -955,118 +1005,88 @@
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
-  "key": "portability.py:import_memory:RAISE:22",
+  "key": "portability.py:import_memory:RAISE:21",
   "line": 1026,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:1048:RAISE": {
+ "portability.py:import_memory:1055:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
+  "reviewer": "dev",
+  "site": "portability.import.record",
+  "class": "enforcement",
+  "key": "portability.py:import_memory:RAISE:22",
+  "line": 1055,
+  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
+ },
+ "portability.py:import_memory:1077:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:23",
-  "line": 1048,
+  "line": 1077,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:935:RAISE": {
+ "portability.py:import_memory:964:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:14",
-  "line": 935,
+  "line": 964,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:946:RAISE": {
+ "portability.py:import_memory:975:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:15",
-  "line": 946,
+  "line": 975,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:953:RAISE": {
+ "portability.py:import_memory:982:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:16",
-  "line": 953,
+  "line": 982,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:962:RAISE": {
+ "portability.py:import_memory:991:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
   "reviewer": "dev",
   "site": "portability.import.record",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:17",
-  "line": 962,
+  "line": 991,
   "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
  },
- "portability.py:import_memory:979:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
-  "reviewer": "dev",
-  "site": "portability.import.record",
-  "class": "enforcement",
-  "key": "portability.py:import_memory:RAISE:18",
-  "line": 979,
-  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
- },
- "portability.py:import_memory:985:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
-  "reviewer": "dev",
-  "site": "portability.import.record",
-  "class": "enforcement",
-  "key": "portability.py:import_memory:RAISE:19",
-  "line": 985,
-  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
- },
- "portability.py:import_memory:989:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
-  "reviewer": "dev",
-  "site": "portability.import.record",
-  "class": "enforcement",
-  "key": "portability.py:import_memory:RAISE:20",
-  "line": 989,
-  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
- },
- "portability.py:import_memory:997:RAISE": {
-  "decision": "enforcement",
-  "reason": "enforces 0009 §4c/0014 §2c (refuse) through site portability.import.record",
-  "reviewer": "dev",
-  "site": "portability.import.record",
-  "class": "enforcement",
-  "key": "portability.py:import_memory:RAISE:21",
-  "line": 997,
-  "statement": "raise _SITE_IMPORT_RECORD.fire(ValueError("
- },
- "portability.py:import_memory:333:RAISE": {
+ "portability.py:import_memory:362:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 P13 (refuse) through site portability.import.restore-not-bool",
   "reviewer": "dev",
   "site": "portability.import.restore-not-bool",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:1",
-  "line": 333,
+  "line": 362,
   "statement": "raise _SITE_IMPORT_RESTORE_NOT_BOOL.fire(TypeError("
  },
- "portability.py:import_memory:338:RAISE": {
+ "portability.py:import_memory:367:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0005 P5 (refuse) through site portability.import.restore-with-user",
   "reviewer": "dev",
   "site": "portability.import.restore-with-user",
   "class": "enforcement",
   "key": "portability.py:import_memory:RAISE:2",
-  "line": 338,
+  "line": 367,
   "statement": "raise _SITE_IMPORT_RESTORE_WITH_USER.fire(ValueError("
  },
  "proactive.py:assemble._eligible:154:BOOL_RETURN": {
@@ -4450,22 +4470,22 @@
   "line": 208,
   "statement": "return [(k, pools[k]) for k in order]"
  },
- "portability.py:import_memory._one_or_unresolved:523:RETURN_NONE": {
+ "portability.py:import_memory._one_or_unresolved:552:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "portability.py:import_memory._one_or_unresolved:RETURN_NONE:1",
-  "line": 523,
+  "line": 552,
   "statement": "return None"
  },
- "portability.py:import_memory._opt_int:394:BOOL_RETURN": {
+ "portability.py:import_memory._opt_int:423:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "portability.py:import_memory._opt_int:BOOL_RETURN:1",
-  "line": 394,
+  "line": 423,
   "statement": "return v is None or (isinstance(v, int) and not isinstance(v, bool) and v >= 0)"
  },
  "procedures.py:build_procedure_edge._opt:104:RETURN_NONE": {

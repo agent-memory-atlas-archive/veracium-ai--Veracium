@@ -243,6 +243,35 @@ def source_identity_projection(record: dict) -> dict:
     return d
 
 
+# Round 11 (R10-01): the STRUCTURE of an outcome link — the chain's topology and the chain key's evidence_ref half —
+# NAMED, not inferred. A held link differing here is a topology conflict and refuses whatever notice accompanies it
+# (INV-1, §4h; the verdict: "this does not authorize overwriting outcome history"); a held link equal here and
+# differing elsewhere differs in CONTENT, which the held-differs rule shared with edges and episodes decides.
+OUTCOME_LINK_STRUCTURE = ("id", "user_id", "kind", "edge_id", "seq", "supersedes_episode", "provenance.evidence_ref")
+
+
+def _outcome_structure(ep: Episode) -> tuple:
+    d = ep.model_dump(mode="json")
+    return tuple(d["provenance"]["evidence_ref"] if f == "provenance.evidence_ref" else d.get(f)
+                 for f in OUTCOME_LINK_STRUCTURE)
+
+
+def held_differs_verdict(attested_complete: bool, noticed: bool) -> str:
+    """specs/0041 §4g — the ONE held-differs rule, for every record kind (round 11, R10-01; it was the edge and
+    non-outcome episode branches' rule, and the outcome branch had none). The destination holds the record with
+    DIFFERENT content:
+      • it ATTESTS a redaction of it and the file carries no notice → "attested-redaction" (INV-11 at the import
+        boundary);
+      • the file's notice names it → "inconsistent": content-derived divergence is no ground to keep content the
+        source says was redacted — the held version is redacted anyway (the notice applies in the commit), the
+        incoming copy is not written, and the import flags it in `inconsistent_notices`;
+      • otherwise → "conflict", refused with the branch's own message and census label.
+    Pure: the caller fires the refusal, so each census id stays in the one function that declares it."""
+    if attested_complete and not noticed:
+        return "attested-redaction"
+    return "inconsistent" if noticed else "conflict"
+
+
 def _chain_id(ep: Episode) -> tuple:
     """The `(edge_id, evidence_ref)` identity that groups one outcome chain."""
     return (ep.edge_id, ep.provenance.evidence_ref)
@@ -1114,28 +1143,19 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
         ep_records_expected: dict = {}   # id -> current-persisted-json (None if absent)
         chain_heads_expected: dict = {}  # (edge_id, evidence_ref) -> head id or None
 
-        # edges: record-equal existing → idempotent skip; differing → refuse; new → insert
+        # edges: record-equal existing → idempotent skip; differing → the held-differs rule; new → insert
         for edge in edges:
             prior = existing_edges.get(edge.id)
             if prior is not None:
                 if prior.model_dump() != edge.model_dump():
-                    if store._completed_attestation(target_uid, "edge", edge.id) and ("edge", edge.id) not in notice_targets:
-                        # specs/0041 §4b-ii / INV-11 at the import boundary: the destination REDACTED this record
-                        # and the file carries its content with no notice — the refusal names the rule, not a
-                        # content conflict
+                    _v = held_differs_verdict(store._completed_attestation(target_uid, "edge", edge.id), ("edge", edge.id) in notice_targets)
+                    if _v == "attested-redaction":
                         raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
                             f"{path}: edge {edge.id!r} is redacted here (a redaction record attests it) and the file "
                             f"carries no notice for it — an import may not repopulate it (specs/0041 §4b-ii, INV-11; §4g)"), "attested-redaction")
-                    if ("edge", edge.id) in notice_targets:
-                        # specs/0041 §4g: the destination holds a DIFFERENT version and the file's notice names
-                        # the id — content-derived divergence is not grounds to keep content the source says was
-                        # redacted: the held version is redacted anyway (the notice applies to it) and the
-                        # import records an inconsistent-notice flag; the incoming copy is not written
-                        inconsistent.append(edge.id); skipped += 1
-                        edge_ids_expected[edge.id] = True
-                        continue
-                    raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: edge {edge.id!r} already exists with "
-                                     f"different content — refuse (specs/0009 §4c){_tail}"), "edge-conflict")
+                    if _v == "conflict":
+                        raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: edge {edge.id!r} already exists with different content — refuse (specs/0009 §4c){_tail}"), "edge-conflict")
+                    inconsistent.append(edge.id)                     # "inconsistent": skip, the notice treats the held version
                 skipped += 1
                 edge_ids_expected[edge.id] = True
             else:
@@ -1158,15 +1178,14 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
             ep_records_expected[ep.id] = None if prior is None else prior.model_dump_json()
             if prior is not None:
                 if prior.model_dump() != ep.model_dump():
-                    if store._completed_attestation(target_uid, "episode", ep.id) and ("episode", ep.id) not in notice_targets:
+                    _v = held_differs_verdict(store._completed_attestation(target_uid, "episode", ep.id), ("episode", ep.id) in notice_targets)
+                    if _v == "attested-redaction":
                         raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
                             f"{path}: episode {ep.id!r} is redacted here (a redaction record attests it) and the file "
                             f"carries no notice for it — an import may not repopulate it (specs/0041 §4b-ii, INV-11; §4g)"), "attested-redaction")
-                    if ("episode", ep.id) in notice_targets:
-                        inconsistent.append(ep.id); skipped += 1          # specs/0041 §4g, as for edges
-                        continue
-                    raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: episode {ep.id!r} already exists with "
-                                     f"different content — refuse (specs/0009 §4c){_tail}"), "episode-conflict")
+                    if _v == "conflict":
+                        raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: episode {ep.id!r} already exists with different content — refuse (specs/0009 §4c){_tail}"), "episode-conflict")
+                    inconsistent.append(ep.id)                     # "inconsistent": skip, the notice treats the held version
                 skipped += 1
             else:
                 plan_eps.append(ep)
@@ -1187,9 +1206,22 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                 prior = dest_by_id.get(m.id)
                 if prior is not None:
                     if prior.model_dump() != m.model_dump():   # RECORD equality, not id
-                        raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
-                            f"{path}: outcome link {m.id!r} already exists with different "
-                            f"content — refuse the whole import (specs/0009 §4c){_tail}"), "outcome-link-conflict")
+                        if _outcome_structure(prior) != _outcome_structure(m):
+                            raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
+                                f"{path}: outcome link {m.id!r} already exists with a different chain STRUCTURE "
+                                f"({', '.join(OUTCOME_LINK_STRUCTURE)}) — outcome history is never overwritten, notice "
+                                f"or not; refuse the whole import (specs/0009 §4c, specs/0041 §4h){_tail}"),
+                                "outcome-link-conflict")
+                        # round 11 (R10-01): the same held-differs rule as edges and episodes — a notice for the
+                        # link redacts the held version in the commit and flags it; without one, refuse
+                        _v = held_differs_verdict(store._completed_attestation(target_uid, "episode", m.id), ("episode", m.id) in notice_targets)
+                        if _v == "attested-redaction":
+                            raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
+                                f"{path}: episode {m.id!r} is redacted here (a redaction record attests it) and the file "
+                                f"carries no notice for it — an import may not repopulate it (specs/0041 §4b-ii, INV-11; §4g)"), "attested-redaction")
+                        if _v == "conflict":
+                            raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: outcome link {m.id!r} already exists with different content — refuse the whole import (specs/0009 §4c){_tail}"), "outcome-link-conflict")
+                        inconsistent.append(m.id)                     # "inconsistent": skip, the notice treats the held version
                     skipped += 1
                 else:
                     new_members.append(m)
