@@ -26,7 +26,7 @@
         "12": "ee2e1e869ddc320d0e53315de751cc7126dd6bdf3746ec0419638c0b4fd39dfa",
         "13": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
         "14": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
-        "15": "3fc9561ad834a184708e1a87922c1eebd648bea9de3c7eda0a964473a7693ed7"
+        "15": "9579d81a7f996d22b4c0f705a550aca93050ac9d29ce6cdf263951bbbbbd32ac"
       },
       "manifestations": {
         "constructor v1": {
@@ -8879,7 +8879,7 @@
           "table:redactions": {
             "type": "table",
             "table": "redactions",
-            "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT\n)",
+            "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT,\n    source_origin        TEXT,\n    source_user          TEXT,\n    source_event_ref     TEXT\n)",
             "columns": [
               [
                 "id",
@@ -8971,6 +8971,30 @@
               ],
               [
                 "source_body",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "source_origin",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "source_user",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "source_event_ref",
                 "TEXT",
                 0,
                 null,

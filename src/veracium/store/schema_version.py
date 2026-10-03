@@ -563,6 +563,11 @@ SCHEMA_V14 = SCHEMA_V13 + (
 # body — the source's field names, marker version, reason, time and store versions, canonical JSON — immutable once
 # written, so a repeat import is compared against it and a relay re-exports it unchanged; NULL for a redaction this
 # store originated. The local columns stay this store's own application facts.
+# Round 11 (R10-03, still before any release carried v15): a witnessed redaction's SOURCE IDENTITY is held as three
+# structured columns — `source_origin`, `source_user`, `source_event_ref` — compared EXACTLY, never parsed out of
+# a separator-joined row id (which collided, failed to decode, and was matched by a substr prefix NUL defeated).
+# NULL, all three, for a redaction this store originated. A store created from an unreleased main checkout at the
+# earlier v15 shape is not supported across this change: no release ever carried v15.
 SCHEMA_V15 = SCHEMA_V14 + (
     SchemaObject("table", "episode_event", """CREATE TABLE episode_event (
     user_id     TEXT    NOT NULL,
@@ -590,7 +595,10 @@ SCHEMA_V15 = SCHEMA_V14 + (
     store_version_after  INTEGER NOT NULL,
     event_ref            TEXT,
     recorded_at          TEXT NOT NULL,
-    source_body          TEXT
+    source_body          TEXT,
+    source_origin        TEXT,
+    source_user          TEXT,
+    source_event_ref     TEXT
 )""", REQUIRED),
     SchemaObject("index", "ix_redactions_target",
                  "CREATE INDEX ix_redactions_target ON redactions(user_id, target_kind, target_id)",

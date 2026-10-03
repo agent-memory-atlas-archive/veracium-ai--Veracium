@@ -660,6 +660,13 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round10_matrix.py", "test_an_imported_absorption_ledger_is_treated_under_its_minted_id"): "default",
     # 0041 round 10, the notice across the import boundary (R9-04/05/08 on the capping path; R9-06 restores the
     # frozen store's own treated history)
+    ("test_0041_round11_identity.py", "test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices"): "default",
+    ("test_0041_round11_identity.py", "test_R10_03_b_a_relay_preserves_the_native_source_triple"): "default",
+    ("test_0041_round11_identity.py", "test_the_original_and_its_relay_are_held_as_one_source_identity"): "default",
+    ("test_0041_round11_identity.py", "test_R10_03_c_a_changed_body_under_the_same_source_identity_refuses"): "default",
+    ("test_0041_round11_identity.py", "test_R10_03_c_the_comparison_crosses_a_destination_remap_for_a_NUL_identity"): "default",
+    ("test_0041_round11_identity.py", "test_control_an_equal_body_remapped_twice_is_not_a_contradiction"): "default",
+    ("test_0041_round11_identity.py", "test_an_empty_source_component_is_refused_at_the_boundary"): "default",
     ("test_0041_round10_notices.py", "test_R9_04_one_notice_imported_for_two_destination_users_attests_each_users_own_record"): "default",
     ("test_0041_round10_notices.py", "test_R9_04_an_honest_repeat_is_idempotent_and_writes_nothing"): "default",
     ("test_0041_round10_notices.py", "test_R9_04_a_later_contradictory_body_under_the_same_identity_refuses_atomically"): "default",

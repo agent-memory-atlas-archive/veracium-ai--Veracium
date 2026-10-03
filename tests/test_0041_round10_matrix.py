@@ -224,6 +224,9 @@ DDL_ACCOUNT = {
         {"redactions.fields"},
     "a witnessed notice's foreign body: carrier-path NAMES, D1 vocabulary, versions, a time (R9-04/R9-05)":
         {"redactions.source_body"},
+    "a witnessed notice's SOURCE IDENTITY, held structured and compared exactly: an origin, a user id and an event "
+    "ref — identifiers, the class of `redactions.user_id` / `event_ref`; NULL on a local row (round 11, R10-03)":
+        {"redactions.source_origin", "redactions.source_user", "redactions.source_event_ref"},
     "§4f domains: no exact tier, named in every receipt": {
         "supersession_operations.logical_request_digest", "supersession_operations.request_digest",
         "supersession_operations.response", "policy_receipt.receipt"},

@@ -1950,6 +1950,12 @@ class SqliteStore(Store):
                 if missing:
                     raise _SITE_IMPORT_PLAN.fire(ValueError(
                         f"redaction notice is missing {missing} — refused (specs/0041 §4g)"), "notice-missing-fields")
+                # round 11 (R10-03): the source identity is three non-empty strings, as the parser requires — checked
+                # here too (a plan reaches this primitive by other routes); any value is then held VERBATIM, framed
+                if not all(isinstance(n[k], str) and n[k] for k in ("origin", "source_user", "source_event_ref")):
+                    raise _SITE_IMPORT_PLAN.fire(ValueError(
+                        f"redaction notice for {n.get('target_id')!r} carries an empty or non-string source identity — "
+                        f"refused (specs/0041 §4g)"), "notice-target")
                 if n["target_kind"] not in ("edge", "episode") or not isinstance(n["target_id"], str) or not n["target_id"]:
                     raise _SITE_IMPORT_PLAN.fire(ValueError(
                         f"redaction notice names an invalid target {n['target_kind']!r}/{n['target_id']!r} — refused (specs/0041 §4g)"), "notice-target")
@@ -2138,11 +2144,12 @@ class SqliteStore(Store):
                         # round 10, stage 2 (S2-1): the body is compared on the SOURCE identity, not the bound row id —
                         # one source event has ONE body whichever destination user or remapped target it lands on. A
                         # user-remapping import mints a fresh target each time, so a bound-id lookup found nothing and
-                        # compared nothing. The prefix is compared with substr, never LIKE (an origin may hold % or _).
-                        prefix = self.NOTICE_SEP.join(("notice", n["origin"], n["source_user"], n["source_event_ref"], ""))
+                        # compared nothing.
+                        # round 11 (R10-03): the SOURCE identity compared EXACTLY on its own columns — no prefix
                         bodies = {b for (b,) in self._conn.execute(
-                            "SELECT source_body FROM redactions WHERE source_body IS NOT NULL AND substr(id, 1, ?) = ?",
-                            (len(prefix), prefix))}
+                            "SELECT source_body FROM redactions WHERE source_body IS NOT NULL AND source_origin=? "
+                            "AND source_user=? AND source_event_ref=?",
+                            (n["origin"], n["source_user"], n["source_event_ref"]))}
                         with _SITE_IMPORT_NOTICE_CONFLICT.consult():
                             if bodies - {n["_body"]}:
                                 raise _SITE_IMPORT_NOTICE_CONFLICT.fire(ValueError(
@@ -2158,16 +2165,18 @@ class SqliteStore(Store):
                         if present:
                             self._redact_in_txn(user_id, n["target_kind"], n["target_id"], "imported_notice",
                                                 row_json=row[1], row_id=n["_rid"], fields_hint=n["fields"],
-                                                source_body=n["_body"])
+                                                source_body=n["_body"],
+                                                source_identity=(n["origin"], n["source_user"], n["source_event_ref"]))
                             applied += 1
                         else:
                             ver = self.store_version(user_id)
                             self._conn.execute(
                                 "INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
-                                "store_version_before, store_version_after, event_ref, recorded_at, source_body) "
-                                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                                "store_version_before, store_version_after, event_ref, recorded_at, source_body, "
+                                "source_origin, source_user, source_event_ref) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                                 (n["_rid"], user_id, n["target_kind"], n["target_id"], json.dumps(n["fields"]),
-                                 n["marker_version"], "imported_notice", ver, ver, None, now, n["_body"]))
+                                 n["marker_version"], "imported_notice", ver, ver, None, now, n["_body"],
+                                 n["origin"], n["source_user"], n["source_event_ref"]))
                             standing += 1
                     # §4g's arrival rule: a STANDING notice whose record this plan just delivered is applied now
                     arrived = 0
@@ -2549,26 +2558,27 @@ class SqliteStore(Store):
         return frozenset(r[0] for r in self._conn.execute(
             "SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=?", (user_id, kind)))
 
-    # specs/0041 §4g (tranche 4b): a WITNESSED redaction (an imported notice) keeps the SOURCE identity in its
-    # row id — "notice", origin, source user, source event ref, joined by the unit separator — so a re-export
-    # names the original source and a repeat import is idempotent on (origin, target, event). The row's
-    # `reason` column is `imported_notice` (the witness distinction: this store was TOLD the source redacted
-    # it); the source's own reason travels in the export line, never as this store's claim.
-    NOTICE_SEP = "\x1f"
+    # specs/0041 §4g: a WITNESSED redaction (an imported notice) is attested by a row whose `reason` column is
+    # `imported_notice` (the witness distinction: this store was TOLD the source redacted it); the source's own reason
+    # travels in the notice body, never as this store's claim.
+    # Round 11 (R10-03): the SOURCE identity — origin, source user, source event ref — is held in three structured
+    # columns and compared EXACTLY. Round 10 joined it into the row id with U+001F and read it back by splitting
+    # and by a substr prefix: two distinct triples whose separators fell differently encoded equal, a component
+    # carrying the separator failed to decode (and the relay then re-labelled the row as LOCAL), and a NUL defeated
+    # the prefix match. The row id is now a DIGEST over the six components, each length-framed (scope_linkage's
+    # `_framed`, the same injective form 0021 adopted for its op keys), and nothing ever parses it.
+    NOTICE_ID_DOMAIN = b"veracium.redaction-notice-id.v1"
+    RECORD_COLS = ("id, fields, marker_version, reason, store_version_before, store_version_after, event_ref, "
+                   "recorded_at, source_body, source_origin, source_user, source_event_ref")
 
-    # Round 10 (R9-04): the row id binds the DESTINATION user and the TYPED target as well as the source identity.
-    # Keyed on the source identity alone, the same notice imported for a second user (or onto a remapped target)
-    # read as "existing" and that user's record stayed unattested. `parse_notice_id` still yields the SOURCE
-    # identity, which is what a re-export names.
     @classmethod
     def notice_id(cls, origin: str, source_user: str, source_event_ref: str, user_id: str, target_kind: str,
                   target_id: str) -> str:
-        return cls.NOTICE_SEP.join(("notice", origin, source_user, source_event_ref, user_id, target_kind, target_id))
-
-    @classmethod
-    def parse_notice_id(cls, rid: str):
-        parts = rid.split(cls.NOTICE_SEP)
-        return tuple(parts[1:4]) if len(parts) == 7 and parts[0] == "notice" else None
+        from ..scope_linkage import _framed
+        h = hashlib.sha256(cls.NOTICE_ID_DOMAIN + b"".join(
+            _framed(str(v).encode("utf-8")) for v in (origin, source_user, source_event_ref, user_id, target_kind,
+                                                      target_id))).hexdigest()
+        return "notice-" + h
 
     # the foreign notice BODY (round 10, R9-04/R9-05): the source's own facts, canonical, compared on every repeat
     # and re-exported unchanged — never this store's application facts
@@ -2589,10 +2599,10 @@ class SqliteStore(Store):
         out = []
         for row in self._conn.execute(
                 "SELECT id, target_kind, target_id, fields, marker_version, reason, store_version_before, "
-                "store_version_after, event_ref, recorded_at, source_body FROM redactions WHERE user_id=? "
-                "ORDER BY recorded_at, id", (user_id,)):
-            rid, kind, tid, fields, mv, reason, vb, va, event_ref, recorded_at, source_body = row
-            src = self.parse_notice_id(rid)
+                "store_version_after, event_ref, recorded_at, source_body, source_origin, source_user, "
+                "source_event_ref FROM redactions WHERE user_id=? ORDER BY recorded_at, id", (user_id,)):
+            rid, kind, tid, fields, mv, reason, vb, va, event_ref, recorded_at, source_body = row[:11]
+            src = tuple(row[11:]) if row[11] is not None else None      # round 11 (R10-03): read, never parsed
             # the NOTICE this record exports (round 10, R9-05): a local redaction's own facts; a witnessed one's
             # IMMUTABLE foreign body, unchanged — never `imported_notice` and the import time in the source's place
             if source_body is not None:
@@ -2620,8 +2630,7 @@ class SqliteStore(Store):
 
     def _redaction_record(self, user_id: str, kind: str, target_id: str):
         return self._conn.execute(
-            "SELECT id, fields, marker_version, reason, store_version_before, store_version_after, event_ref, "
-            "recorded_at, source_body FROM redactions WHERE user_id=? AND target_kind=? AND target_id=? "
+            f"SELECT {self.RECORD_COLS} FROM redactions WHERE user_id=? AND target_kind=? AND target_id=? "
             "ORDER BY recorded_at, id",
             (user_id, kind, target_id)).fetchone()
 
@@ -2763,7 +2772,7 @@ class SqliteStore(Store):
 
     def _redact_in_txn(self, user_id: str, kind: str, target_id: str, reason: str, *, row_json: str,
                        row_id: Optional[str] = None, fields_hint: Optional[list] = None,
-                       source_body: Optional[str] = None):
+                       source_body: Optional[str] = None, source_identity: Optional[tuple] = None):
         """The treatment, inside an OPEN journaled transaction (the caller holds the lock and `_write_txn`):
         the record's carriers, the side tables, the journal, the attestation row. `row_id` names the
         attestation row to write (the import's deterministic notice id; a fresh id otherwise) — and when a
@@ -2891,13 +2900,12 @@ class SqliteStore(Store):
         else:
             self._conn.execute(
                 "INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
-                "store_version_before, store_version_after, event_ref, recorded_at, source_body) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                "store_version_before, store_version_after, event_ref, recorded_at, source_body, source_origin, "
+                "source_user, source_event_ref) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (rid, user_id, kind, target_id, json.dumps(fields), _redaction.MARKER_VERSION, reason,
-                 version_before, version_after, event_ref, recorded_at, source_body))
-        body = self._conn.execute("SELECT source_body FROM redactions WHERE id=?", (rid,)).fetchone()[0]
-        return (rid, json.dumps(fields), _redaction.MARKER_VERSION, reason, version_before, version_after,
-                event_ref, recorded_at, body)
+                 version_before, version_after, event_ref, recorded_at, source_body,
+                 *(source_identity or (None, None, None))))
+        return self._conn.execute(f"SELECT {self.RECORD_COLS} FROM redactions WHERE id=?", (rid,)).fetchone()
 
     def _receipt_from_record(self, user_id, kind, target_id, record, *, repeated: bool):
         """The receipt IS the attestation record read back (§4b-ii): a repeat returns the ORIGINAL's fields,
@@ -2906,7 +2914,7 @@ class SqliteStore(Store):
         versions and event — and are None where the body does not carry them (round 10, R9-05: never this
         store's counters standing in for an unknown); this store's own application facts are reported beside
         them under their own names."""
-        rid, fields, mv, reason, vb, va, event_ref, recorded_at, source_body = record
+        rid, fields, mv, reason, vb, va, event_ref, recorded_at, source_body, _s_origin, _s_user, s_event = record
         common = dict(redacted_kind=kind, target_id=target_id, user_id=user_id, fields_cleared=json.loads(fields),
                       repeated=repeated, receipts_complete=False,
                       receipt_domains=(list(self._RECEIPT_DOMAINS)
@@ -2917,11 +2925,10 @@ class SqliteStore(Store):
                 reason=reason, marker_version=mv, store_version_before=vb, store_version_after=va,
                 recorded_at=recorded_at, event_ref=event_ref, reconstructed=False, **common)
         body = json.loads(source_body) if source_body is not None else {}      # this store's own canonical write
-        src = self.parse_notice_id(rid)
         return _redaction.RedactionReceipt(
             reason=body.get("reason", reason), marker_version=body.get("marker_version"),
             store_version_before=body.get("store_version_before"), store_version_after=body.get("store_version_after"),
-            recorded_at=body.get("recorded_at"), event_ref=(src[2] if src else None), reconstructed=True,
+            recorded_at=body.get("recorded_at"), event_ref=s_event, reconstructed=True,
             applied_at=recorded_at, applied_store_version_before=vb, applied_store_version_after=va,
             applied_event_ref=event_ref, **common)
 
