@@ -1258,7 +1258,18 @@ def test_bootstrap_paths_cannot_alias_and_worklists_stay_local(tmp_path):
     # refuses too (research, round-8 pre-seal: path-string resolution
     # alone missed it)
     link = tmp_path / "cache_link.jsonl"
-    os.link(cache, link)
+    try:
+        os.link(cache, link)
+    except OSError as e:
+        import errno
+        if e.errno != errno.EXDEV:
+            raise
+        # the 0041 round-10 reviewer's environment: a tmp on another filesystem cannot hold a hard link to a file
+        # of the tree. That is a run-environment precondition, named with its remedy — never a skip (a skip reads
+        # as a pass) and never a link written inside the tree under review
+        pytest.fail(f"this test hard-links {cache} into tmp_path ({tmp_path}), which is on another filesystem "
+                    f"(EXDEV): run pytest with --basetemp=<a directory OUTSIDE the package tree on ITS filesystem> "
+                    f"(specs/evidence/offline/README.md)")
     r = run("--emit-aggregate", str(link))
     assert r.returncode == 1 and "SAME" in r.stderr
     assert cache.read_bytes() == before

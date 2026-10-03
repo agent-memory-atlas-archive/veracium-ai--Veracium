@@ -2,7 +2,12 @@
 # Self-contained offline test launcher (external round 5's package request,
 # corrected at round 6).
 #
-#   bash specs/evidence/offline/run_offline.sh
+#   bash specs/evidence/offline/run_offline.sh [pytest arguments...]
+#
+# Any arguments are passed to pytest unchanged, after the launcher's own. Two a reviewer will want (round 11; see
+# README.md beside this script): --basetemp=<a directory OUTSIDE the package tree but on the SAME filesystem> — one
+# test hard-links a file of the tree into its tmp_path, which a tmp on another filesystem cannot do — and
+# --junitxml=<file>, the same run's machine-readable result.
 #
 # Creates a venv, installs the pinned wheels with NO network, then asks the
 # REPOSITORY whether this runtime is qualified — and REFUSES if it is not.
@@ -123,4 +128,4 @@ fi
 
 echo "== running the suite =="
 VERACIUM_FORBID_NETWORK=1 PYTHONPATH=src \
-    "$VENV/bin/python" -m pytest -q tests -p no:randomly -rs
+    "$VENV/bin/python" -m pytest -q tests -p no:randomly -rs "$@"
