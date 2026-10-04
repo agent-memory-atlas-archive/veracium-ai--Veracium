@@ -404,7 +404,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         # two notices under one identity with different bodies are a corrupted source, refused; the user
         # remap moves the notice's subject with the record's (the target id is never remapped).
         from .redaction import (MARKER_VERSION as _MARKER_VERSION, ORIGINATING_REASONS as _REASONS,
-                                marker_fields as _marker_fields, carrier_paths as _carrier_paths)
+                                marker_fields as _marker_fields, attestation_paths as _attestation_paths)
         from .store.sqlite import SqliteStore as _S
         if notice_recs and src_version < FORMAT_VERSION:
             # refuse-don't-drop, in the other direction: a notice in an envelope declaring a version below the
@@ -433,7 +433,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                     f"record-and-notice unit is refused, nothing imported (specs/0041 §4g)"), "invalid-notice")
             # round 10 (R9-08): the field NAMES are carrier paths of the declared kind — the domain DERIVED from the
             # treatment tables — never free strings: prose, a wrong-kind path or a repeated path refuses the unit
-            allowed = _carrier_paths(n["target_kind"])
+            allowed = _attestation_paths(n["target_kind"])
             if len(set(n["fields"])) != len(n["fields"]) or not n["fields"] or not set(n["fields"]) <= allowed:
                 raise _SITE_IMPORT_FILE.fire(ValueError(
                     f"{path}: redaction notice for {n['target_kind']!r} {n['target_id']!r} names fields outside the "

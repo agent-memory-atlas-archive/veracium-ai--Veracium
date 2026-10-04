@@ -1965,7 +1965,7 @@ class SqliteStore(Store):
                 # other routes); prose, a wrong-kind path, an empty or repeated list refuses the whole plan
                 if (not isinstance(n["fields"], list) or not n["fields"] or len(set(n["fields"])) != len(n["fields"])
                         or not all(isinstance(f, str) for f in n["fields"])
-                        or not set(n["fields"]) <= _redaction.carrier_paths(n["target_kind"])):
+                        or not set(n["fields"]) <= _redaction.attestation_paths(n["target_kind"])):
                     raise _SITE_IMPORT_PLAN.fire(ValueError(
                         f"redaction notice for {n['target_id']!r} carries fields outside the {n['target_kind']} carrier "
                         f"paths — refused (specs/0041 §4b, §4g)"), "notice-fields")
@@ -2824,13 +2824,8 @@ class SqliteStore(Store):
         before = json.loads(before_json)
         version_before = self.store_version(user_id)
         if kind == "edge":
+            # §4h(i)'s quarantine re-establishment is inside the pure treatment (round 12, R11-01)
             new, treated = _redaction.treat_edge(before, reason_registry=DISPOSITIONED_REASONS)
-            # §4h(i): the relation-only quarantine — the disclosure the treatment does not redact carries
-            # what the replaced relation held
-            if before.get("relation") == QUARANTINE_RELATION and "relation" in treated:
-                new["provenance"]["disclosure"] = Disclosure.QUARANTINED.value
-                if "provenance.disclosure" not in treated:
-                    treated.append("provenance.disclosure")
             model_before, model_after = Edge.model_validate(before), Edge.model_validate(new)
             # the derived dispositions, read EXPLICITLY (0031's census admits no dynamic attribute form)
             dispositions = {

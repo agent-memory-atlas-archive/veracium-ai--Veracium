@@ -2148,7 +2148,7 @@
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 127,
+   "line": 141,
    "module": "redaction.py",
    "qualname": "_is_absent"
   },
@@ -5242,66 +5242,66 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2852,
+   "line": 2847,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._redact_in_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2864,
+   "line": 2859,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._redact_in_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3024,
+   "line": 3019,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.write_policy_receipt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3039,
+   "line": 3034,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 3042,
+   "line": 3037,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3068,
+   "line": 3063,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.upsert_embedding"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 3078,
+   "line": 3073,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.upsert_embedding"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3090,
+   "line": 3085,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_embedding_in_txn"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3097,
+   "line": 3092,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_embedding_in_txn"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 3158,
+   "line": 3153,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.set_wiki"
   },

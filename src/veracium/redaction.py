@@ -119,6 +119,20 @@ def carrier_paths(kind: str) -> frozenset:
     return frozenset(own) | frozenset(p for p, _how in SIDE_TABLE_TREATMENTS[kind])
 
 
+# Round 12 (R11-01): an attestation names CARRIERS (the content a redaction removes) and, besides them, a CLOSED, NAMED
+# set of BOOKKEEPING paths — values a redaction changes to keep the record's meaning, never content. Each is listed
+# ONLY when the treatment changed it. `provenance.disclosure`: §4h(i)'s re-establishment of a relation-only quarantine
+# (a current-writer record already holds QUARANTINED, so nothing moves and nothing is listed). Round 11 listed it
+# unconditionally while the notice's domain was carrier_paths alone, so the store exported a notice its own importer
+# refused. ONE definition, read by the writer, the parser and the commit primitive.
+BOOKKEEPING_PATHS = {"edge": ("provenance.disclosure",), "episode": ()}
+
+
+def attestation_paths(kind: str) -> frozenset:
+    """The domain of an attestation record's `fields`, and of a notice's: carrier_paths(kind) ∪ BOOKKEEPING_PATHS."""
+    return carrier_paths(kind) | frozenset(BOOKKEEPING_PATHS[kind])
+
+
 REDACTED_REASON_VALUE = "redacted"       # the registry value rows 30/49 write over prose (schema.DISPOSITIONED_REASONS)
 
 
@@ -156,6 +170,15 @@ def treat_edge(dump: dict, *, reason_registry, recognised_kinds=None) -> tuple:
     if isinstance(ag, dict) and isinstance(ag.get("markers"), list) and ag["markers"]:
         if any(m != MARKER for m in ag["markers"]):
             ag["markers"] = [MARKER] * len(ag["markers"]); treated.append("agreement.markers")
+    # §4h(i): a relation-only quarantine — the disclosure the treatment does not redact carries what the replaced
+    # relation held. Round 12 (R11-01): here, in the pure treatment, so the arrival helper gets it too; and LISTED
+    # only when it MOVED the value (bookkeeping, attestation_paths)
+    from .schema import QUARANTINE_RELATION, Disclosure
+    if dump.get("relation") == QUARANTINE_RELATION and "relation" in treated:
+        prov = d.setdefault("provenance", {})
+        if prov.get("disclosure") != Disclosure.QUARANTINED.value:
+            prov["disclosure"] = Disclosure.QUARANTINED.value
+            treated.append("provenance.disclosure")
     return d, treated
 
 

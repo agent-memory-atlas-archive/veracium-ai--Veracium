@@ -675,14 +675,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 2026-10-03, 0041 round 11 (R10-01: one held-differs verdict for edges, episodes and outcome links; the outcome branch's named structure, checked first): moved dotted/dataflow 6,959 -> 6,968, the rest unchanged.
 #: 2026-10-03, 0041 round 11 (R10-02: an arrival under a completed attestation written in its treated shape, by one pure helper for both kinds; the doctor's deleted-attested-episode state): moved dotted/dataflow 6,968 -> 6,988, the rest unchanged.
 #: 2026-10-03, 0041 round 11 (what an attestation names: treated plus already-treated carriers, `redaction.already_treated`; nothing to redact refuses): moved dotted/dataflow 6,988 -> 6,999, the rest unchanged.
+#: 2026-10-04, 0041 round 12 (R11-01: the attestation domain, carriers plus named bookkeeping; the §4h repair inside the pure treat_edge): moved dotted/dataflow 6,999 -> 7,003, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 6999,
+    "dotted/dataflow": 7003,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 358,
     "dotted/module-protected": 50,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 7459
+SRC_ATTRIBUTE_TOTAL = 7463
 SRC_DATA_DUNDERS_IN_DATAFLOW = 133   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 #   2026-09-20 0042 round 7: +1 — `type(exc).__name__` in `census.Site._measurement_failed` (the failure KIND recorded as a type name, R6-1)
