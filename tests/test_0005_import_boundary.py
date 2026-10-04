@@ -687,6 +687,8 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round12_quarantine.py", "test_the_notice_domain_stays_closed"): "default",
     ("test_0041_round12_quarantine.py", "test_R11_01_quarantine_redaction_export_applies_to_held_target"): "both",
     ("test_0041_round12_quarantine.py", "test_a_destination_holding_the_relation_only_shape_moves_and_attests_its_own_disclosure"): "default",
+    ("test_0041_round12_surface.py", "test_a_history_only_redaction_exports_a_notice_another_store_applies"): "both",
+    ("test_0041_round12_surface.py", "test_a_notice_WITHOUT_the_journal_path_still_treats_the_destinations_journal"): "default",
     ("test_0041_round11_identity.py", "test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices"): "default",
     ("test_0041_round11_identity.py", "test_R10_03_b_a_relay_preserves_the_native_source_triple"): "default",
     ("test_0041_round11_identity.py", "test_the_original_and_its_relay_are_held_as_one_source_identity"): "default",

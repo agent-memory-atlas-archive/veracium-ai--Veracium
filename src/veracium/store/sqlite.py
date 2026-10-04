@@ -2854,11 +2854,6 @@ class SqliteStore(Store):
         # call treated AND what already held it (an unattested marker row is redacted precisely to attest it, v15
         # §4b-ii) — so a redaction never attests nothing, and never exports a notice its own importer refuses
         fields = sorted(set(treated) | set(_redaction.already_treated(kind, before)) | set(fields_hint or []))
-        with _SITE_REDACT_NOTHING.consult():
-            if not fields:
-                raise _SITE_REDACT_NOTHING.fire(ValueError(
-                    f"redact refuses {kind} {target_id!r}: nothing to redact — no carrier holds content or the marker "
-                    f"(specs/0041 §4b-ii; the owner's ruling, 2026-10-03) — nothing written"))
         event_ref = None
         if kind == "edge":
             self._conn.execute(
@@ -2890,9 +2885,12 @@ class SqliteStore(Store):
                                    (user_id, target_id)).rowcount
             if n:
                 fields.append("edge_embedding")
-            # §4c: tombstone every prior event, then the `redacted` event with the reason (INV-4)
-            self._conn.execute("UPDATE edge_event SET state=? WHERE user_id=? AND edge_id=?",
-                               (_redaction.MARKER, user_id, target_id))
+            # §4c: tombstone every prior event, then the `redacted` event with the reason (INV-4); round 12 (R11-02):
+            # a prior state that still held a value is a carrier this redaction treated — recorded as bookkeeping
+            n = self._conn.execute("UPDATE edge_event SET state=? WHERE user_id=? AND edge_id=? AND state<>?",
+                                   (_redaction.MARKER, user_id, target_id, _redaction.MARKER)).rowcount
+            if n:
+                fields.append("journal.state")
             self._journal_edge_write(user_id, target_id, new_json, before_json, kind="redacted", reason=reason)
             seq = self._conn.execute("SELECT MAX(seq) FROM edge_event WHERE user_id=? AND edge_id=?",
                                      (user_id, target_id)).fetchone()[0]
@@ -2929,6 +2927,19 @@ class SqliteStore(Store):
         _digest = _identity_digest_of(_prov.get("origin"), _prov.get("source_id"), self.local_origin())
         if _digest is not None and _redact_revocation_reasons(self._conn, user_id, _digest):
             fields.append("source_revocations.reason")
+        # round 12 (R11-02): "nothing to redact" is decided HERE, over the whole surface the treatment reached — the
+        # record, its side tables, its journal, the linked revocation prose — never from the live record alone (an
+        # edge emptied by an ordinary write still carries its content in the journal and its side rows). The raise is
+        # inside the caller's transaction: every statement above rolls back, so nothing is written. The owner's
+        # ruling (2026-10-03) unchanged: a record with no covered content or marker ANYWHERE is refused.
+        with _SITE_REDACT_NOTHING.consult():
+            if not fields:
+                raise _SITE_REDACT_NOTHING.fire(ValueError(
+                    f"redact refuses {kind} {target_id!r}: nothing to redact — no carrier, side row or journal state "
+                    f"holds content or the marker (specs/0041 §4b-ii; the owner's ruling, 2026-10-03) — nothing written"))
+        # the attestation's fields in ONE canonical order — side-table and journal paths were appended after a sort, so
+        # a store's own export listed them in another order than the canonical body a relay re-exports (round 12)
+        fields = sorted(fields)
         self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))     # a derivation of the content
         self._bump(user_id)
         version_after = self.store_version(user_id)

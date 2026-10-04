@@ -125,7 +125,12 @@ def carrier_paths(kind: str) -> frozenset:
 # (a current-writer record already holds QUARANTINED, so nothing moves and nothing is listed). Round 11 listed it
 # unconditionally while the notice's domain was carrier_paths alone, so the store exported a notice its own importer
 # refused. ONE definition, read by the writer, the parser and the commit primitive.
-BOOKKEEPING_PATHS = {"edge": ("provenance.disclosure",), "episode": ()}
+# `journal.state` (round 12, R11-02): §4c's journal tombstone, listed when it changed a PRIOR event's state — an
+# edge emptied by an ordinary write keeps its content in the journal, and that redaction must attest something.
+# (The episode journal needs no entry: only a redaction writes it, and it writes the treated record.) The path is
+# named for the JOURNAL, not its table: 0029's V-INERT keeps the event table's name out of every module but the
+# store, the doctor and why, and this module only names a path — it never reads events.
+BOOKKEEPING_PATHS = {"edge": ("provenance.disclosure", "journal.state"), "episode": ()}
 
 
 def attestation_paths(kind: str) -> frozenset:

@@ -92,7 +92,7 @@ def _round_trip(tmp_path, src_store, tid, restore, recs_filter=None):
 def test_the_attestation_domain_is_the_carriers_plus_a_closed_named_bookkeeping_set():
     for kind in ("edge", "episode"):
         assert R.attestation_paths(kind) == R.carrier_paths(kind) | frozenset(R.BOOKKEEPING_PATHS[kind])
-    assert R.BOOKKEEPING_PATHS["edge"] == ("provenance.disclosure",)
+    assert R.BOOKKEEPING_PATHS["edge"] == ("provenance.disclosure", "journal.state")   # the journal: R11-02
     assert "provenance.disclosure" not in R.carrier_paths("edge")          # bookkeeping, never a carrier
 
 
