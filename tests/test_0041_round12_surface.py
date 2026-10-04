@@ -154,3 +154,23 @@ def test_a_populated_edge_attests_the_journal_it_tombstoned(tmp_path):
     m.confirm(U, "t")
     rec = m.redact(U, edge_id="t", reason="subject_request")
     assert {"subject", "relation", "object", "confirmations.request_digest", "journal.state"} <= set(rec.fields_cleared)
+
+
+def test_an_applied_notice_attests_each_path_once(tmp_path):
+    """Found in the round-12 parent split: the notice's fields arrive as the hint, and the side-table and journal paths
+    were appended AFTER the hint's set — so the destination's attestation listed `confirmations.request_digest` (since
+    round 10) and `journal.state` (round 12) twice. Every path once, at the destination and through its relay."""
+    def held(name):
+        m = tt._mem(tmp_path, name)
+        m.store.add_edge(Edge(id="t", user_id=U, subject="user", relation="lives_at", object=SECRET, provenance=tt._prov()))
+        m.confirm(U, "t")
+        return m
+    src = held("src.db")
+    src.redact(U, edge_id="t", reason="subject_request")
+    export_memory(src.store, U, tmp_path / "x.jsonl")
+    dst = held("dst.db")
+    import_memory(dst.store, tmp_path / "x.jsonl")
+    (fields,) = dst.store._conn.execute("SELECT fields FROM redactions").fetchone()
+    fields = json.loads(fields)
+    assert {"confirmations.request_digest", "journal.state"} <= set(fields)
+    assert fields == sorted(set(fields))

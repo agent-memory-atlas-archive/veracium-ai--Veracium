@@ -2163,17 +2163,35 @@ class SqliteStore(Store):
                         # one source event has ONE body whichever destination user or remapped target it lands on. A
                         # user-remapping import mints a fresh target each time, so a bound-id lookup found nothing and
                         # compared nothing.
-                        # round 11 (R10-03): the SOURCE identity compared EXACTLY on its own columns — no prefix
-                        bodies = {b for (b,) in self._conn.execute(
-                            "SELECT source_body FROM redactions WHERE source_body IS NOT NULL AND source_origin=? "
-                            "AND source_user=? AND source_event_ref=?",
-                            (n["origin"], n["source_user"], n["source_event_ref"]))}
+                        # round 11 (R10-03): the SOURCE identity compared EXACTLY — no prefix. Round 12 (R11-03): every
+                        # candidate row — witnessed (its source columns) AND this store's own NATIVE rows (no source
+                        # columns, so round 11's column query never saw them, and a contradictory notice of the store's
+                        # own event was accepted) — is projected by `_canonical_source`, the one definition the export
+                        # uses, and kept when its identity equals the notice's — that comparison DECIDES; the WHERE only
+                        # narrows the scan (dropping its origin clause changes no outcome). A witnessed row holding no
+                        # body is not compared: its body is unknown, and unknown never contradicts.
+                        ident = (n["origin"], n["source_user"], n["source_event_ref"])
+                        bodies, native_same_target = set(), False
+                        for row in self._conn.execute(
+                                f"SELECT user_id, target_kind, target_id, {self.RECORD_COLS} FROM redactions "
+                                "WHERE source_origin=? AND source_user=? AND source_event_ref=? "
+                                "OR source_origin IS NULL AND user_id=? AND ?=?",
+                                ident + (n["source_user"], n["origin"], self.local_origin())).fetchall():
+                            r_ident, rb = self._canonical_source(row[0], *row[4:])
+                            if r_ident != ident or (row[12] is not None and row[11] is None):
+                                continue                        # another event; or a witnessed row with no body
+                            bodies.add(self.notice_body(rb))
+                            if row[12] is None and (row[0], row[1], row[2]) == (user_id, n["target_kind"], n["target_id"]):
+                                native_same_target = True
                         with _SITE_IMPORT_NOTICE_CONFLICT.consult():
                             if bodies - {n["_body"]}:
                                 raise _SITE_IMPORT_NOTICE_CONFLICT.fire(ValueError(
                                     f"refused: a redaction notice for {n['target_kind']} {n['target_id']!r} carries a "
                                     f"different body from the one this store already holds under the same source "
                                     f"identity — a contradictory source, nothing imported (specs/0041 §4g)"))
+                        if native_same_target:
+                            existing += 1                       # the store's own event, already attested on that target
+                            continue
                         tbl = "edges" if n["target_kind"] == "edge" else "episodes"
                         row = self._conn.execute(f"SELECT user_id, json FROM {tbl} WHERE id=?", (n["target_id"],)).fetchone()
                         present = row is not None and row[0] == user_id
@@ -2609,33 +2627,39 @@ class SqliteStore(Store):
         body["fields"] = sorted(body["fields"])
         return json.dumps(body, sort_keys=True, separators=(",", ":"))
 
+    def _canonical_source(self, user_id: str, fields, mv, reason, vb, va, event_ref, recorded_at, source_body,
+                          s_origin, s_user, s_event) -> tuple:
+        """Round 12 (R11-03): a redaction row's SOURCE IDENTITY and canonical BODY, one definition for the export and
+        the import's comparison. A witnessed row: its columns and its stored foreign body. A NATIVE row (no source
+        columns): this store's origin, the row's user and event ref, and the body built from its own facts — never
+        foreign columns written onto it."""
+        if s_origin is not None:
+            body = json.loads(source_body) if source_body is not None else {
+                "fields": json.loads(fields), "marker_version": None, "reason": None, "recorded_at": None,
+                "store_version_before": None, "store_version_after": None}
+            return (s_origin, s_user, s_event), body
+        body = {"fields": json.loads(fields), "marker_version": mv, "reason": reason, "recorded_at": recorded_at,
+                "store_version_before": vb, "store_version_after": va}
+        return (self.local_origin(), user_id, event_ref or ""), body
+
     def redaction_records(self, user_id: str) -> list:
         """specs/0041 D2 (tranche 4b): the user's redaction records as dicts, for export — every column, plus the
         SOURCE identity (`origin`, `source_user`, `source_event_ref`): this store's own for a local redaction,
         the original source's for a witnessed one. Never a content digest (the table holds none)."""
-        local = self.local_origin()
         out = []
         for row in self._conn.execute(
                 "SELECT id, target_kind, target_id, fields, marker_version, reason, store_version_before, "
                 "store_version_after, event_ref, recorded_at, source_body, source_origin, source_user, "
                 "source_event_ref FROM redactions WHERE user_id=? ORDER BY recorded_at, id", (user_id,)):
             rid, kind, tid, fields, mv, reason, vb, va, event_ref, recorded_at, source_body = row[:11]
-            src = tuple(row[11:]) if row[11] is not None else None      # round 11 (R10-03): read, never parsed
+            (origin, s_user, s_event), body = self._canonical_source(user_id, fields, mv, reason, vb, va, event_ref,
+                                                                     recorded_at, source_body, *row[11:])
             # the NOTICE this record exports (round 10, R9-05): a local redaction's own facts; a witnessed one's
-            # IMMUTABLE foreign body, unchanged — never `imported_notice` and the import time in the source's place
-            if source_body is not None:
-                body = json.loads(source_body)                    # this store's own canonical write
-            elif src is not None:                                 # a witnessed row holding no body: unknowns stay unknown
-                body = {"fields": json.loads(fields), "marker_version": None, "reason": None, "recorded_at": None,
-                        "store_version_before": None, "store_version_after": None}
-            else:
-                body = {"fields": json.loads(fields), "marker_version": mv, "reason": reason,
-                        "recorded_at": recorded_at, "store_version_before": vb, "store_version_after": va}
+            # IMMUTABLE foreign body, unchanged — the ONE projection the import compares against (round 12, R11-03)
             out.append({"id": rid, "target_kind": kind, "target_id": tid, "fields": json.loads(fields),
                         "marker_version": mv, "reason": reason, "store_version_before": vb,
                         "store_version_after": va, "event_ref": event_ref, "recorded_at": recorded_at,
-                        "origin": src[0] if src else local, "source_user": src[1] if src else user_id,
-                        "source_event_ref": src[2] if src else (event_ref or ""), "notice_body": body})
+                        "origin": origin, "source_user": s_user, "source_event_ref": s_event, "notice_body": body})
         return out
 
     def _completed_attestation(self, user_id: str, kind: str, target_id: str) -> bool:
@@ -2937,9 +2961,10 @@ class SqliteStore(Store):
                 raise _SITE_REDACT_NOTHING.fire(ValueError(
                     f"redact refuses {kind} {target_id!r}: nothing to redact — no carrier, side row or journal state "
                     f"holds content or the marker (specs/0041 §4b-ii; the owner's ruling, 2026-10-03) — nothing written"))
-        # the attestation's fields in ONE canonical order — side-table and journal paths were appended after a sort, so
-        # a store's own export listed them in another order than the canonical body a relay re-exports (round 12)
-        fields = sorted(fields)
+        # the attestation's fields as ONE canonical SET — side-table and journal paths are appended after the first
+        # set-and-sort, so a store's own export listed them in another order than the canonical body a relay re-exports,
+        # and an applied notice whose hint already named one listed it TWICE (round 12; the duplicate since round 10)
+        fields = sorted(set(fields))
         self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))     # a derivation of the content
         self._bump(user_id)
         version_after = self.store_version(user_id)
