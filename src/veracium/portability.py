@@ -256,7 +256,7 @@ def held_output_redaction(held: dict, incoming: dict, notice_fields) -> bool:
     difference in the output's structure (`HELD_OUTPUT_STRUCTURE`) is never one. Pure: the caller decides what follows
     (the arrival is not installed; the notice binds to the held id). An EQUAL projection is the idempotent path, not
     this class, so it returns False."""
-    from .redaction import attestation_paths, marker_fields
+    from .redaction import MARKER, attestation_paths
     if notice_fields is None:
         return False
     a, b = source_identity_projection(held), source_identity_projection(incoming)
@@ -265,8 +265,10 @@ def held_output_redaction(held: dict, incoming: dict, notice_fields) -> bool:
         return False
     if not differing <= (attestation_paths("episode") & set(notice_fields)):
         return False
-    marked = set(marker_fields(a)) | set(marker_fields(b))
-    return all(k in marked for k in differing)
+    # round 14 (R13-02): the rider's third condition is that the held OR the incoming VALUE IS the marker — the whole
+    # value, compared exactly. Round 13 asked `marker_fields`, whose `carries_marker` is a SUBSTRING test (the right test
+    # for ordinary-write reservation and unattested-marker diagnostics, which keep it), and so admitted prefix+MARKER+suffix
+    return all(a.get(k) == MARKER or b.get(k) == MARKER for k in differing)
 
 
 # Round 11 (R10-01): the STRUCTURE of an outcome link — the chain's topology and the chain key's evidence_ref half —

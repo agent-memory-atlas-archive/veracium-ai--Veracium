@@ -718,6 +718,11 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round13_outputs.py", "test_control_the_redacted_export_without_its_notice_still_refuses"): "default",
     # 0041 round 13 (N12-02): the frozen store's redacted episode, isolated, into a fresh destination
     ("test_0041_round13_side.py", "test_N12_02_an_empty_episode_of_a_source_whose_revocation_row_is_marked_is_redacted"): "default",
+    # 0041 round 14 (R13-02, the rider's marker condition the WHOLE value): every call takes the mode from a parameter
+    ("test_0041_round14_marker.py", "_setup"): "both",
+    ("test_0041_round14_marker.py", "test_R13_02_a_value_that_merely_CONTAINS_the_marker_refuses_whole_import"): "both",
+    ("test_0041_round14_marker.py", "test_control_ordinary_text_in_a_named_field_refuses"): "both",
+    ("test_0041_round14_marker.py", "test_control_the_exact_marker_with_the_notices_is_admitted_and_treats_both"): "both",
     # 0041 round 13 (the round-12 verdict's evidence-scope note): the generated edge matrix into a HELD destination
     ("test_0041_round12_quarantine.py", "test_every_writer_reachable_edge_state_reaches_a_destination_holding_it_earlier"): "both",
     ("test_0041_round11_identity.py", "test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices"): "default",
