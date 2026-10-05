@@ -207,7 +207,7 @@ def capture_shipped(db_path: str, question: str, inner, *, max_subgraph_edges: i
     delivered = [{"edge": e.id, "subject": e.subject, "relation": e.relation, "object": e.object, "class": mc.edge_class(e),
                   "unit": f"{e.relation}: {e.object} (since {e.valid_from.date()})"} for e in recalls[0].edges]
     return {"system": c["system"], "prompt": c["prompt"], "answer": c.get("answer", ""), "error": c.get("error"), "ms": c["ms"],
-            "digest": hashlib.sha256((c["system"] + "\n\x00\n" + c["prompt"]).encode()).hexdigest(), "delivered": delivered, "source": "captured",
+            "digest": capture_digest(c["system"], c["prompt"]), "delivered": delivered, "source": "captured",
             "partition": {"grounded": recalls[0].grounded, "unverified": recalls[0].unverified}, "execution": execution,
             "config": {"question": question, "max_subgraph_edges": max_subgraph_edges, "compilation": "on"}}
 
@@ -230,9 +230,9 @@ def capture_baseline_real(shipped: dict, inner) -> dict:
         raise Refused(f"expected exactly one gate call at the baseline boundary, saw {len(gate_calls)}")
     c = gate_calls[0]
     captured = {"system": c["system"], "prompt": c["prompt"], "answer": c.get("answer", ""), "error": c.get("error"), "ms": c["ms"],
-                "digest": hashlib.sha256((c["system"] + "\n\x00\n" + c["prompt"]).encode()).hexdigest(), "source": "captured", "execution": execution}
+                "digest": capture_digest(c["system"], c["prompt"]), "source": "captured", "execution": execution}
     o_system, o_prompt = mc.baseline_transform(shipped["system"], shipped["prompt"])
-    captured["oracle_digest"] = hashlib.sha256((o_system + "\n\x00\n" + o_prompt).encode()).hexdigest()
+    captured["oracle_digest"] = capture_digest(o_system, o_prompt)
     if captured["digest"] != captured["oracle_digest"]:
         raise Refused("the CAPTURED baseline is not the transform of the shipped capture")
     if captured["digest"] == shipped["digest"]:
@@ -393,6 +393,12 @@ def strip_compiled_wiki(prompt: str) -> tuple[str, str]:
     return prompt[:i] + prompt[k:], prompt[i:k]
 
 
+def capture_digest(system: str, prompt: str) -> str:
+    """The digest a capture declares: sha256 over its system, a separator, and its prompt — the one definition the
+    capture writers and the verifier share."""
+    return hashlib.sha256((system + "\n\x00\n" + prompt).encode()).hexdigest()
+
+
 def reverify(res: dict, inner=None) -> dict:
     """THE COMMITTED RUN'S INPUTS, RE-DERIVED AT HEAD WITHOUT THE MODEL (2026-09-19, after 0041 tranche 1 moved src/
     under the run's pin). A pin says which tree the run was made on; it cannot say whether THIS tree would have put
@@ -400,10 +406,15 @@ def reverify(res: dict, inner=None) -> dict:
     rebuilt and its examiner-view digest compared; every kept question is captured again through the shipped path
     with a canned model, and the gate SYSTEM text and the gate PROMPT OUTSIDE THE COMPILED-WIKI BLOCK are compared
     byte-for-byte to the ledger's; the baseline input is re-derived by the transform from the ledger's SHIPPED
-    capture and compared to the ledger's baseline digest. What is NOT re-derived, named: the compiled-wiki block
-    (a compile-role model output — the run's own record, carried in the prompt and compared to itself) and the
-    fixture FILE digest (sqlite page bytes vary between builds; the view digest is the content). The answers are
-    the run's; this establishes that they are answers to inputs this tree produces."""
+    capture and compared to the ledger's baseline CAPTURE. Round 6 (0043-R5-05): every arm's stored system and prompt
+    are first BOUND to the digest the ledger declares for them (recomputed from the bytes), and the baseline comparison
+    is between the ACTUAL captured pair and the transform of the shipped one — the earlier form hashed the transform
+    and compared it to the stored digest field alone, so a baseline whose bytes were replaced and whose digest was kept
+    still read REVERIFIED. What is NOT re-derived, named: the compiled-wiki block (a compile-role model output, the
+    run's own record — now BOUND by the shipped capture's digest, where the earlier check took the block from the prompt
+    and asked whether it was in the prompt, which could not fail) and the fixture FILE digest (sqlite page bytes vary
+    between builds; the view digest is the content). The answers are the run's; this establishes that they are
+    answers to inputs this tree produces."""
     import tempfile
     ev, mc = _load("examiner_view"), _load("model_input_capture")
     inner = inner or FakeModel()
@@ -411,7 +422,8 @@ def reverify(res: dict, inner=None) -> dict:
     qs = {q["id"]: q["text"] for q in res["questions"]}
     out = {"head": tree_head(),
            "run_head": res["head"], "kept": len(res["kept"]), "view_digest_equal": None, "system_equal": 0, "prompt_outside_compiled_equal": 0,
-           "compiled_block_present": 0, "baseline_transform_equal": 0, "mismatches": []}
+           "compiled_block_present": 0, "baseline_transform_equal": 0, "shipped_bytes_bound": 0, "baseline_bytes_bound": 0,
+           "mismatches": []}
     with tempfile.TemporaryDirectory() as d:
         db = pathlib.Path(d) / "fixture.db"
         st = ev.fixture_store(str(db)); rows = ev.view(st, "u"); _, vd = ev.freeze(rows); st.close()
@@ -422,15 +434,20 @@ def reverify(res: dict, inner=None) -> dict:
             s_ok = cap["system"] == old_s["system"]
             new_rest, _ = strip_compiled_wiki(cap["prompt"]); old_rest, old_block = strip_compiled_wiki(old_s["prompt"])
             p_ok = new_rest == old_rest
-            c_ok = bool(old_block) and old_block in old_s["prompt"]
+            # round 6 (R5-05): each arm's bytes BOUND to the digest the ledger declares for them
+            sb_ok = capture_digest(old_s["system"], old_s["prompt"]) == old_s["prompt_digest"]
+            bb_ok = capture_digest(old_b["system"], old_b["prompt"]) == old_b["prompt_digest"]
+            c_ok = bool(old_block) and sb_ok          # the block is carried in a capture its digest binds
             try:                                    # the transform REFUSES a capture that is not the shipped gate's shape
                 o_sys, o_pr = mc.baseline_transform(old_s["system"], old_s["prompt"])
-                b_ok = hashlib.sha256((o_sys + "\n\x00\n" + o_pr).encode()).hexdigest() == old_b["prompt_digest"]
+                b_ok = bb_ok and (o_sys, o_pr) == (old_b["system"], old_b["prompt"])   # the ACTUAL captured pair
             except (AssertionError, Refused):
                 b_ok = False
             out["system_equal"] += s_ok; out["prompt_outside_compiled_equal"] += p_ok; out["compiled_block_present"] += c_ok; out["baseline_transform_equal"] += b_ok
-            if not (s_ok and p_ok and c_ok and b_ok):
-                out["mismatches"].append({"question_id": qid, "system": s_ok, "prompt_outside_compiled": p_ok, "compiled_block": c_ok, "baseline_transform": b_ok})
+            out["shipped_bytes_bound"] += sb_ok; out["baseline_bytes_bound"] += bb_ok
+            if not (s_ok and p_ok and c_ok and b_ok and sb_ok and bb_ok):
+                out["mismatches"].append({"question_id": qid, "system": s_ok, "prompt_outside_compiled": p_ok, "compiled_block": c_ok,
+                                          "baseline_transform": b_ok, "shipped_bytes_bound": sb_ok, "baseline_bytes_bound": bb_ok})
     n = out["kept"]
     out["verdict"] = ("REVERIFIED" if out["view_digest_equal"] and not out["mismatches"] and n > 0 else "NOT REVERIFIED")
     return out
@@ -440,8 +457,10 @@ def reverify_lines(v: dict) -> str:
     n = v["kept"]
     return (f"{v['verdict']} at {v['head'][:12]} (run pinned at {v['run_head'][:12]}): examiner view digest "
             f"{'equal' if v['view_digest_equal'] else 'DIFFERENT'}; gate system {v['system_equal']}/{n}; gate prompt outside the "
-            f"compiled-wiki block {v['prompt_outside_compiled_equal']}/{n}; compiled-wiki block carried {v['compiled_block_present']}/{n} "
-            f"(a compile-role model output, the run's own — not re-derived); baseline input = transform(shipped) {v['baseline_transform_equal']}/{n}"
+            f"compiled-wiki block {v['prompt_outside_compiled_equal']}/{n}; each arm's bytes bound to its declared digest: shipped "
+            f"{v['shipped_bytes_bound']}/{n}, baseline {v['baseline_bytes_bound']}/{n}; compiled-wiki block carried in a bound capture "
+            f"{v['compiled_block_present']}/{n} (a compile-role model output, the run's own — not re-derived); baseline capture = "
+            f"transform(shipped capture) {v['baseline_transform_equal']}/{n}"
             + (f"; mismatches {v['mismatches']}" if v["mismatches"] else ""))
 
 

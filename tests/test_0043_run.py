@@ -273,9 +273,11 @@ def test_reverify_refuses_a_run_whose_inputs_this_tree_would_not_produce():
 
 
 def test_reverify_does_not_see_inside_the_compiled_wiki_block_and_says_so():
-    """THE NAMED LIMIT, executed: the compiled-wiki block is a compile-role model output carried from the run; an
-    edit INSIDE it is invisible to the re-derivation by design. The verdict line names the exclusion, so a reader
-    cannot take REVERIFIED for more than it is."""
+    """THE NAMED LIMIT, executed, at its round-6 width: the compiled-wiki block is a compile-role model output carried
+    from the run and NOT re-derived. Since 0043-R5-05 each arm's bytes are bound to their declared digest, so an edit
+    inside the block with the digest KEPT is refused (tests/test_0043_round6_binding.py); what stays invisible is an
+    edit made CONSISTENTLY — the block, the shipped digest, and the baseline capture re-derived from it together. The
+    verdict line names the exclusion, so a reader cannot take REVERIFIED for more than it is."""
     import copy
     rh = _load("run_harness")
     res = _committed_run(); q0 = res["kept"][0]
@@ -285,11 +287,13 @@ def test_reverify_does_not_see_inside_the_compiled_wiki_block_and_says_so():
     edited = block.replace("Miso", "Mochi") if "Miso" in block else block.replace("\n", "\n- (edited)\n", 1)
     assert edited != block
     row["prompt"] = row["prompt"].replace(block, edited, 1)
-    # the baseline row keeps its digest bound to the ORIGINAL shipped capture, so that comparison is not what catches
-    # the edit either: re-bind it to the edited capture to isolate the block
-    mc = _load("model_input_capture"); import hashlib
-    o_sys, o_pr = mc.baseline_transform(row["system"], row["prompt"])
-    next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "baseline")["prompt_digest"] = hashlib.sha256((o_sys + "\n\x00\n" + o_pr).encode()).hexdigest()
+    # the edit made CONSISTENTLY: the shipped digest re-bound to the edited bytes, and the baseline capture re-derived
+    # from them with its own digest — every binding holds, and only the block's content (never re-derived) moved
+    mc = _load("model_input_capture")
+    row["prompt_digest"] = rh.capture_digest(row["system"], row["prompt"])
+    b = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "baseline")
+    b["system"], b["prompt"] = mc.baseline_transform(row["system"], row["prompt"])
+    b["prompt_digest"] = rh.capture_digest(b["system"], b["prompt"])
     v = rh.reverify(m)
     assert v["verdict"] == "REVERIFIED" and v["mismatches"] == []
     assert "not re-derived" in rh.reverify_lines(v) and "compiled-wiki block" in rh.reverify_lines(v)
