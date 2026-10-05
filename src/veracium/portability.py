@@ -1096,8 +1096,26 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 if dep.lineage and dep.consolidation_output_index is not None:
                     drec = json.loads(dep.model_dump_json())
                     dest_by_key[_out_key(drec)] = drec
+            # round 14 (R13-01): RESOLVE every arriving output to the held output it collides with BEFORE any notice is
+            # read for a collision. Round 13 matched a notice's RAW target against "the arriving id OR the held id",
+            # so with two outputs' ids permuted, B's notice (naming arriving `a`) read as A's (held `a`) and admitted A's
+            # unexcused difference. A raw id now names ONE subject: an ARRIVING episode's id names that arrival (an
+            # indexed one resolved to its held output, an ordinary one to its own id); any other id names a held or
+            # standing record directly. A notice counts for a collision only through THAT collision's own arrival, or
+            # directly — never through a DIFFERENT arrival that happens to resolve to the same destination record.
+            hits = {r["id"]: dest_by_key.get(_out_key(r)) for r in incoming_indexed}
+            arriving_eps = {r["id"] for r in ep_recs}
+
+            def _notice_counts_for(n, r, h):
+                if n["target_kind"] != "episode":
+                    return False
+                t = n["target_id"]
+                if t in arriving_eps:
+                    return t == r["id"]                # through THIS arrival only
+                return t == h["id"]                    # no arrival under that id: the held output named directly
+
             for r in incoming_indexed:
-                hit = dest_by_key.get(_out_key(r))
+                hit = hits[r["id"]]
                 if hit is None:
                     continue
                 if (source_identity_projection(r)
@@ -1105,10 +1123,9 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                     skip_ids.add(r["id"])              # idempotent re-import: no-op
                     rebind[r["id"]] = hit["id"]        # ... and a notice for the arrival names the held output (N12-01)
                     continue
-                # round 13 (R12-01): the rider's ONE admitted class — a redaction of THIS held output, by a notice for
-                # it: in the unit (naming the arriving id or the held id) or already held for the held output
-                in_unit = [set(n["fields"]) for n in notice_list
-                           if n["target_kind"] == "episode" and n["target_id"] in (r["id"], hit["id"])]
+                # the rider's ONE admitted class — a redaction of THIS held output, by a notice for it: in the unit,
+                # resolved to it through this arrival or naming it directly, or already held for the held output
+                in_unit = [set(n["fields"]) for n in notice_list if _notice_counts_for(n, r, hit)]
                 held_fields = store._attested_fields(dest_uid, "episode", hit["id"])
                 if any(held_output_redaction(hit, r, f) for f in in_unit + ([held_fields] if held_fields else [])):
                     skip_ids.add(r["id"])

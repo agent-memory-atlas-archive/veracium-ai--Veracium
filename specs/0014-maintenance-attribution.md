@@ -589,6 +589,12 @@ both sites, a no-op transfer visible in the values). The identity is
 > difference REJECTS exactly as before: a field the notice does not name, a non-marker difference in a named field,
 > and any difference in `lineage`, the operation reference or the index, notice or not.
 >
+> *(⚠️ Wording aligned at 0041 round 14, at the reviewer's request; meaning unchanged: the arriving output is
+> discarded when its identity is resolved, and 0041's NOTICE STEP treats the held output, as it treats any held target;
+> the general held-differs branch for arriving records is not executed. The outcome is the one that branch gives a held
+> record under a notice. The notice is the one for the RESOLVED held output, and each named field's held or incoming
+> value IS the marker, the whole value, as the round-13 sign-off restates the rider's three conditions.)*
+>
 > **The mutation oracle gains paired cells:**
 > - a notice-named field mutated to the marker WITH the notice → resolves, and the notice is applied to the held output;
 > - the same mutation WITHOUT the notice → REJECT;

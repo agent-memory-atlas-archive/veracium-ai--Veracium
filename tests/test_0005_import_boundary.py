@@ -723,6 +723,13 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round14_marker.py", "test_R13_02_a_value_that_merely_CONTAINS_the_marker_refuses_whole_import"): "both",
     ("test_0041_round14_marker.py", "test_control_ordinary_text_in_a_named_field_refuses"): "both",
     ("test_0041_round14_marker.py", "test_control_the_exact_marker_with_the_notices_is_admitted_and_treats_both"): "both",
+    # 0041 round 14 (R13-01, a notice for its own RESOLVED subject only): by AST, a helper included
+    ("test_0041_round14_resolution.py", "_setup"): "both",
+    ("test_0041_round14_resolution.py", "test_R13_01_permuted_ids_with_ONE_notice_refuse_the_whole_import"): "both",
+    ("test_0041_round14_resolution.py", "test_R13_01_an_ordinary_arrival_reusing_a_held_id_does_not_lend_its_notice"): "both",
+    ("test_0041_round14_resolution.py", "test_control_permuted_ids_with_BOTH_notices_treat_both_held_outputs"): "both",
+    ("test_0041_round14_resolution.py", "test_control_a_notice_naming_a_held_target_with_no_arrival_applies_to_it"): "both",
+    ("test_0041_round14_resolution.py", "test_control_a_repeated_user_remap_binds_both_notices_to_the_surviving_copies"): "default",
     # 0041 round 13 (the round-12 verdict's evidence-scope note): the generated edge matrix into a HELD destination
     ("test_0041_round12_quarantine.py", "test_every_writer_reachable_edge_state_reaches_a_destination_holding_it_earlier"): "both",
     ("test_0041_round11_identity.py", "test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices"): "default",
