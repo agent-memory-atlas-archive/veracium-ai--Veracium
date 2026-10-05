@@ -188,9 +188,9 @@ _DIMS = {"relation": ("lives_at", QUARANTINE_RELATION), "note": (None, "a note "
 _CELLS = [dict(zip(_DIMS, c)) for c in itertools.product(*_DIMS.values())]
 
 
-@pytest.mark.parametrize("cell", _CELLS, ids=["-".join(str(v)[:10] for v in c.values()) for c in _CELLS])
-def test_every_writer_reachable_edge_state_round_trips_through_destination_and_relay(tmp_path, cell):
-    m = tt._mem(tmp_path, "m.db")
+def _cell_store(tmp_path, cell, name="m.db"):
+    """One generated edge state, written through the real writers, NOT yet redacted."""
+    m = tt._mem(tmp_path, name)
     disc = Disclosure.QUARANTINED if cell["relation"] == QUARANTINE_RELATION else Disclosure.MENTIONABLE
     kw = {k: cell[k] for k in ("note", "original_relation") if cell[k] is not None}
     # every generated state is writer-reachable (the round-11 sweep measured 32 of 32); one that is not FAILS here
@@ -200,8 +200,38 @@ def test_every_writer_reachable_edge_state_round_trips_through_destination_and_r
         m.store.invalidate_edge("t", dt.datetime(2026, 10, 1, tzinfo=dt.timezone.utc), cell["invalidation_reason"])
     if cell["confirm"] and not cell["invalidation_reason"] and cell["relation"] != QUARANTINE_RELATION:
         m.confirm(U, "t")
+    return m
+
+
+_IDS = ["-".join(str(v)[:10] for v in c.values()) for c in _CELLS]
+
+
+@pytest.mark.parametrize("cell", _CELLS, ids=_IDS)
+def test_every_writer_reachable_edge_state_round_trips_through_destination_and_relay(tmp_path, cell):
+    """A FRESH destination and its relay (what `_round_trip` builds); the held-earlier destination is the next test."""
+    m = _cell_store(tmp_path, cell)
     m.redact(U, edge_id="t", reason="subject_request")
     for restore in (False, True):
         d = tmp_path / f"rt{int(restore)}"
         d.mkdir()
         _round_trip(d, m.store, "t", restore)
+
+
+@pytest.mark.parametrize("restore", [False, True])
+@pytest.mark.parametrize("cell", _CELLS, ids=_IDS)
+def test_every_writer_reachable_edge_state_reaches_a_destination_holding_it_earlier(tmp_path, cell, restore):
+    """Round 13 (the round-12 verdict's evidence-scope note): the SAME generated states, into a destination that HOLDS
+    the earlier edge — exported before the redaction and imported first — then the redacted export: the held edge is
+    treated in place and attested, a quarantined edge stays quarantined, the journal holds no prior content."""
+    m = _cell_store(tmp_path, cell)
+    export_memory(m.store, U, tmp_path / "before.jsonl")
+    m.redact(U, edge_id="t", reason="subject_request")
+    export_memory(m.store, U, tmp_path / "after.jsonl")
+    dst = tt._mem(tmp_path, "dst.db")
+    import_memory(dst.store, tmp_path / "before.jsonl", restore=restore)
+    assert SECRET in _edge_json(dst.store, "t")[0]                     # the destination HOLDS the earlier edge
+    import_memory(dst.store, tmp_path / "after.jsonl", restore=restore)
+    js, quarantined = _edge_json(dst.store, "t")
+    assert SECRET not in js and dst.store._attested_fields(U, "edge", "t")
+    assert quarantined == (cell["relation"] == QUARANTINE_RELATION)
+    assert not any(SECRET in (st or "") for (st,) in dst.store._conn.execute("SELECT state FROM edge_event WHERE edge_id='t'"))
