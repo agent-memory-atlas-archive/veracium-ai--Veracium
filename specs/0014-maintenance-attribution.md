@@ -572,6 +572,36 @@ both sites, a no-op transfer visible in the values). The identity is
 > `provenance` itself, which partitions through its own sub-fields) and two
 > Provenance classes (exact-equal / recomputed).
 
+> **Amended by 0041 (same commit as 0041 round 13's correction; the owner's approval, 2026-10-05):** the
+> source-identity comparison of an incoming lineage-bearing output whose key `(destination user, resolved origin,
+> operation_id, index)` already exists in the destination admits EXACTLY ONE class of VERBATIM difference: a
+> REDACTION OF THAT OUTPUT. A difference is in that class iff ALL of the following hold:
+> 1. a valid redaction notice for the held output, under 0041 §4g, is part of the same atomic import unit, or is
+>    already held (standing or completed) for it;
+> 2. every field that differs is named in that notice's `fields` and is an episode carrier path (0041's
+>    `attestation_paths("episode")`);
+> 3. for each such field, the held value or the incoming value is the redaction marker.
+>
+> When it holds, the arriving output is NOT installed and its identity is NOT re-claimed: the held output IS the
+> identity, the notice is applied to the held output under 0041 §4g's held-differs rule, every other field is
+> preserved, and the arrival is flagged `inconsistent_notices`. The notice binds to the HELD output's id, not to an id
+> the importer minted for the discarded arrival (0041 round-12 N12-01). The EXCLUDED set is unchanged, and every other
+> difference REJECTS exactly as before: a field the notice does not name, a non-marker difference in a named field,
+> and any difference in `lineage`, the operation reference or the index, notice or not.
+>
+> **The mutation oracle gains paired cells:**
+> - a notice-named field mutated to the marker WITH the notice → resolves, and the notice is applied to the held output;
+> - the same mutation WITHOUT the notice → REJECT;
+> - a field the notice does NOT name, mutated → REJECT;
+> - a named field mutated to a non-marker value → REJECT;
+> - `lineage`, the operation reference or the index mutated → REJECT, notice or not;
+> - the held output already treated, meeting its untreated arrival with the notice → existing, nothing installed.
+>
+> `test_every_projection_field_binds_source_identity`'s statement "ANY verbatim-field difference → REJECT" is
+> qualified by this rider for the one class above and is otherwise unchanged.
+>
+> *(Rider for the 0041 external reviewer, round 13: the separate cross-spec sign-off.)*
+
 The contributor whose attribution we record may itself be adversarial (a compromised feed
 is the motivating case). The record must therefore be **fail-closed and content-free**: it records
 *that* a contributor was consumed and *what state, if any,* moved, keyed on a **digest** of

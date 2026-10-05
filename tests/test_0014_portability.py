@@ -314,3 +314,107 @@ def test_every_projection_field_binds_source_identity(tmp_path):
     before = len(dest.episodes("u1"))
     P.import_memory(dest, _mutated_file(lambda l: l.__setitem__("id", "ep-renamed")))
     assert len(dest.episodes("u1")) == before
+
+
+# -- the 0041 rider's paired oracle cells (0041 round 13; 0014 §2c as amended) -------------------------------------
+# The rider admits EXACTLY ONE class of verbatim difference on a colliding indexed output: a redaction of the HELD
+# output. Each cell starts from a REAL redaction (a consolidation through the lifecycle, `Memory.redact`, export) and
+# mutates the redacted file once; `test_every_projection_field_binds_source_identity` above stays the general oracle.
+
+def _rider_memory(tmp_path, name):
+    from veracium import Memory
+    from veracium.config import MemoryConfig
+    return Memory(llm=lambda *a, **k: "{}", config=MemoryConfig(db_path=str(tmp_path / name), wiki_recompile_after_writes=0,
+                                                              scope_groups={}, require_source_id=False))
+
+
+def _rider_files(tmp_path):
+    """(before, after) exports of one consolidation output: `after` carries its redaction and the notice."""
+    from veracium.lifecycle import consolidate
+    src = _rider_memory(tmp_path, "rider-src.db")
+    for i in range(8):
+        src.store.add_episode(Episode(id=f"ep-{i}", user_id="u", date=f"2026-01-{i + 1:02d}", summary=f"day {i}",
+                                      provenance=_prov(ref=f"ev-{i}", source_id="src-one")))
+    consolidate(src.store, lambda p, system=None, role=None: json.dumps(
+        {"records": [{"date": "2026-01-01", "summary": "the week RIDER-SECRET"}]}), "u", src.config,
+        now=datetime(2026, 9, 1, tzinfo=timezone.utc))
+    (out,) = [e for e in src.store.episodes("u") if e.lineage]
+    before, after = tmp_path / "rider-before.jsonl", tmp_path / "rider-after.jsonl"
+    P.export_memory(src.store, "u", before)
+    src.redact("u", episode_id=out.id, reason="subject_request")
+    P.export_memory(src.store, "u", after)
+    return before, after
+
+
+def _rider_held(tmp_path, before):
+    dst = _rider_memory(tmp_path, f"rider-dst-{uuid.uuid4().hex[:6]}.db")
+    P.import_memory(dst.store, before)
+    return dst
+
+
+def _rider_edit(path, tmp_path, *, output=None, drop_notice=False):
+    recs = [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+    if drop_notice:
+        recs = [r for r in recs if r.get("record") != "redaction"]
+    for r in recs:
+        if r.get("lineage") and output:
+            output(r)
+    f = tmp_path / f"rider-{uuid.uuid4().hex[:6]}.jsonl"
+    f.write_text("".join(json.dumps(r) + "\n" for r in recs))
+    return f
+
+
+def test_rider_a_named_field_at_the_marker_WITH_the_notice_resolves_and_treats_the_held_output(tmp_path):
+    before, after = _rider_files(tmp_path)
+    dst = _rider_held(tmp_path, before)
+    (held,) = [e for e in dst.store.episodes("u") if e.lineage]
+    P.import_memory(dst.store, after)
+    (now,) = [e for e in dst.store.episodes("u") if e.lineage]
+    assert now.id == held.id and "RIDER-SECRET" not in now.summary
+
+
+def test_rider_the_same_difference_WITHOUT_the_notice_rejects(tmp_path):
+    before, after = _rider_files(tmp_path)
+    dst = _rider_held(tmp_path, before)
+    with pytest.raises(ValueError, match="DIFFERENT source-identity"):
+        P.import_memory(dst.store, _rider_edit(after, tmp_path, drop_notice=True))
+
+
+def test_rider_a_field_the_notice_does_NOT_name_rejects(tmp_path):
+    before, after = _rider_files(tmp_path)
+    dst = _rider_held(tmp_path, before)
+    with pytest.raises(ValueError, match="DIFFERENT source-identity"):
+        P.import_memory(dst.store, _rider_edit(after, tmp_path, output=lambda r: r.__setitem__("date", "1999-01-01")))
+
+
+def test_rider_a_named_field_at_a_NON_marker_value_rejects(tmp_path):
+    before, after = _rider_files(tmp_path)
+    dst = _rider_held(tmp_path, before)
+    with pytest.raises(ValueError, match="DIFFERENT source-identity"):
+        P.import_memory(dst.store, _rider_edit(after, tmp_path, output=lambda r: r.__setitem__("summary", "tampered")))
+
+
+def test_rider_a_lineage_difference_rejects_notice_or_not(tmp_path):
+    before, after = _rider_files(tmp_path)
+    for drop in (False, True):
+        dst = _rider_held(tmp_path, before)
+        with pytest.raises(ValueError, match="DIFFERENT source-identity"):
+            P.import_memory(dst.store, _rider_edit(after, tmp_path, drop_notice=drop,
+                                                   output=lambda r: r["lineage"].__setitem__(0, _thi("DIFFERENT-EPISODE"))))
+
+
+def test_rider_a_treated_held_output_meeting_its_untreated_arrival_with_the_notice_is_existing(tmp_path):
+    before, after = _rider_files(tmp_path)
+    dst = _rider_memory(tmp_path, "rider-treated.db")
+    P.import_memory(dst.store, after)                             # the destination holds the TREATED output, attested
+    held = [json.loads(e.model_dump_json()) for e in dst.store.episodes("u") if e.lineage]
+    rows = dst.store._conn.execute("SELECT * FROM redactions").fetchall()
+    # the REDACTED export (format 13, its notice) with the output record swapped for the UNTREATED one — the "before"
+    # file alone declares the pre-redaction format and could not carry a notice
+    untreated = next(l for l in before.read_text().splitlines() if l.strip() and json.loads(l).get("lineage"))
+    lines = [untreated if (l.strip() and json.loads(l).get("lineage")) else l for l in after.read_text().splitlines()]
+    f = tmp_path / "rider-untreated-with-notice.jsonl"
+    f.write_text("\n".join(lines) + "\n")
+    P.import_memory(dst.store, f)                                 # the UNTREATED arrival, with the notice
+    assert [json.loads(e.model_dump_json()) for e in dst.store.episodes("u") if e.lineage] == held
+    assert dst.store._conn.execute("SELECT * FROM redactions").fetchall() == rows

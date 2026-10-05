@@ -26,7 +26,7 @@ is the number that decides what can be built.
 | **0011** | subject-scoped entitlement | `accepted` | 2026-09-08 | 2 | 19 | 0 | 0 | 1 | 1/1 |
 | **0012** | who may renew a fact's currency | `accepted` | 2026-09-19 | 1 | 14 | 0 | 0 | 1 | 1/1 |
 | **0013** | on-disk store migrations | `accepted` | 2026-08-07 | 0 | 29 | 0 | 0 | 0 | — |
-| **0014** | maintenance attribution — a consumed contributor must leave a recoverable record | `accepted` | 2026-09-14 | 0 | 16 | 0 | 0 | 0 | — |
+| **0014** | maintenance attribution — a consumed contributor must leave a recoverable record | `accepted` | 2026-10-05 | 0 | 16 | 0 | 0 | 0 | — |
 | **0015** | supersession / reinforcement telemetry counters | `accepted` | 2026-08-11 | 1 | 11 | 0 | 0 | 0 | — |
 | **0016** | SourceType deletion + the evidence_basis contract freeze | `accepted` | 2026-09-27 | 1 | 15 | 0 | 0 | 0 | — |
 | **0017** | token-usage telemetry over the Metered wrapper | `accepted` | 2026-08-14 | 1 | 10 | 0 | 0 | 0 | — |

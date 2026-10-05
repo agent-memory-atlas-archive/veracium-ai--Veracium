@@ -243,6 +243,32 @@ def source_identity_projection(record: dict) -> dict:
     return d
 
 
+# Round 13 (0041 R12-01): the 0014 §2c RIDER's one admitted class. Fields that, differing, are never a redaction:
+# the output's identity and its history (the key's operation and index are equal by construction of the collision).
+HELD_OUTPUT_STRUCTURE = ("lineage", "operation_id", "consolidation_output_index")
+
+
+def held_output_redaction(held: dict, incoming: dict, notice_fields) -> bool:
+    """0014 §2c as amended by 0041 (round 13; the owner's approval 2026-10-05): an incoming lineage-bearing output
+    colliding with a HELD one admits a verbatim difference iff it is a REDACTION OF THAT OUTPUT — a notice for it exists
+    (its `fields` passed here; None when there is none), every differing field is named by that notice AND is an
+    episode record carrier path, and for each such field the held value or the incoming value carries the marker. Any
+    difference in the output's structure (`HELD_OUTPUT_STRUCTURE`) is never one. Pure: the caller decides what follows
+    (the arrival is not installed; the notice binds to the held id). An EQUAL projection is the idempotent path, not
+    this class, so it returns False."""
+    from .redaction import attestation_paths, marker_fields
+    if notice_fields is None:
+        return False
+    a, b = source_identity_projection(held), source_identity_projection(incoming)
+    differing = {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
+    if not differing or differing & set(HELD_OUTPUT_STRUCTURE):
+        return False
+    if not differing <= (attestation_paths("episode") & set(notice_fields)):
+        return False
+    marked = set(marker_fields(a)) | set(marker_fields(b))
+    return all(k in marked for k in differing)
+
+
 # Round 11 (R10-01): the STRUCTURE of an outcome link — the chain's topology and the chain key's evidence_ref half —
 # NAMED, not inferred. A held link differing here is a topology conflict and refuses whatever notice accompanies it
 # (INV-1, §4h; the verdict: "this does not authorize overwriting outcome history"); a held link equal here and
@@ -1059,6 +1085,8 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                     f"(specs/0014 §2c R8-3)"), "duplicate-lineage-key")
             seen_keys[k] = r
         skip_ids = set()
+        rebind: dict = {}                  # round 13 (R12-01, N12-01): an arriving output's id -> the HELD output's id
+        redaction_arrivals: list = []      # the arrivals resolved by the 0014 §2c rider's one class (flagged, §4g)
         if incoming_indexed:
             dest_uid = user_id if user_id is not None else header.get("user_id")
             dest_by_key = {}
@@ -1073,6 +1101,17 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 if (source_identity_projection(r)
                         == source_identity_projection(hit)):
                     skip_ids.add(r["id"])              # idempotent re-import: no-op
+                    rebind[r["id"]] = hit["id"]        # ... and a notice for the arrival names the held output (N12-01)
+                    continue
+                # round 13 (R12-01): the rider's ONE admitted class — a redaction of THIS held output, by a notice for
+                # it: in the unit (naming the arriving id or the held id) or already held for the held output
+                in_unit = [set(n["fields"]) for n in notice_list
+                           if n["target_kind"] == "episode" and n["target_id"] in (r["id"], hit["id"])]
+                held_fields = store._attested_fields(dest_uid, "episode", hit["id"])
+                if any(held_output_redaction(hit, r, f) for f in in_unit + ([held_fields] if held_fields else [])):
+                    skip_ids.add(r["id"])
+                    rebind[r["id"]] = hit["id"]
+                    redaction_arrivals.append(hit["id"])
                 else:
                     raise _SITE_IMPORT_RECORD.fire(ValueError(
                         f"{path}: incoming output {r.get('id')!r} claims the "
@@ -1081,6 +1120,12 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                         f"(specs/0014 §2c R9-5/R11-3)"), "lineage-claims-foreign")
         if skip_ids:
             ep_recs = [r for r in ep_recs if r["id"] not in skip_ids]
+        # the notice binds to the HELD output's id, never to an id minted for a discarded arrival (0041 R12-01 N12-01):
+        # rebound HERE, before the commit, so the notice loop — R11-03's body comparison included — sees the held id
+        for n in notice_list:
+            if n["target_kind"] == "episode" and n["target_id"] in rebind:
+                n["target_id"] = rebind[n["target_id"]]
+        notice_targets = {(n["target_kind"], n["target_id"]) for n in notice_list}
 
         edges = [Edge.model_validate(r) for r in edge_recs]
         eps = [Episode.model_validate(r) for r in ep_recs]
@@ -1100,6 +1145,9 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                                             incoming_chains, contrib_rows,
                                             capped_path=not restore, notices=notice_list)
             if outcome is not DESTINATION_CHANGED:
+                if redaction_arrivals:                 # the rider's arrivals: the held output treated, flagged (§4g)
+                    outcome = {**outcome, "inconsistent_notices": sorted(set(outcome.get("inconsistent_notices", []))
+                                                                         | set(redaction_arrivals))}
                 return {**outcome, "capped": capped_count,
                         # specs/0041 §4g: what the notices did, and the tombstones that came without one
                         "unattested_markers": unattested_markers,
