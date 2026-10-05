@@ -679,14 +679,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 2026-10-04, 0041 round 12 (R11-02: nothing to redact decided at the end over the whole surface; the journal tombstone attested as journal.state): moved dotted/dataflow 7,003 -> 7,006, the rest unchanged.
 #: 2026-10-04, 0041 round 12 (R11-03: one canonical source projection for the export and the comparison, native rows included; the attestation's fields a set): moved dotted/dataflow 7,006 -> 7,013, the rest unchanged.
 #: 2026-10-05, 0041 round 13 (R12-01/N12-01: the 0014 §2c rider's one admitted class, held_output_redaction, and the notice rebound to the held output): moved dotted/dataflow 7,013 -> 7,019, the rest unchanged.
+#: 2026-10-05, 0041 round 13 (N12-02: a shared revocation row already at the marker attested, revocation_reason_marked): moved dotted/dataflow 7,019 -> 7,022, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 7019,
+    "dotted/dataflow": 7022,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 358,
     "dotted/module-protected": 50,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 7479
+SRC_ATTRIBUTE_TOTAL = 7482
 SRC_DATA_DUNDERS_IN_DATAFLOW = 133   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 #   2026-09-20 0042 round 7: +1 — `type(exc).__name__` in `census.Site._measurement_failed` (the failure KIND recorded as a type name, R6-1)

@@ -295,6 +295,14 @@ def redact_revocation_reasons(conn, user_id: str, identity_digest: str) -> int:
         (MARKER, user_id, identity_digest, MARKER, *SOURCE_REVOCATION_REASONS, *SOURCE_LIFT_REASONS)).rowcount
 
 
+def revocation_reason_marked(conn, user_id: str, identity_digest: str) -> bool:
+    """0041 round 13 (N12-02): whether a revocation row linked to this SOURCE already carries the marker in `reason`
+    — the shared side carrier's treated value, whoever's redaction put it there. A READ; the one updater stays
+    `redact_revocation_reasons`."""
+    return conn.execute("SELECT 1 FROM source_revocations WHERE user_id=? AND identity_digest=? AND reason=? LIMIT 1",
+                        (user_id, identity_digest, MARKER)).fetchone() is not None
+
+
 def revoke_source(store, user_id: str, target_digest: str, action: str,
                   reason: str, at: str, *, dry_run: bool = False) -> dict:
     """0022 §4e: preview or commit ONE revocation/lift, sweep included.

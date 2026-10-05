@@ -716,6 +716,8 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round13_outputs.py", "test_a_contradictory_body_on_the_rebound_notice_still_refuses_whole_import"): "default",
     ("test_0041_round13_outputs.py", "test_control_the_unchanged_first_export_still_reimports_idempotently"): "default",
     ("test_0041_round13_outputs.py", "test_control_the_redacted_export_without_its_notice_still_refuses"): "default",
+    # 0041 round 13 (N12-02): the frozen store's redacted episode, isolated, into a fresh destination
+    ("test_0041_round13_side.py", "test_N12_02_an_empty_episode_of_a_source_whose_revocation_row_is_marked_is_redacted"): "default",
     ("test_0041_round11_identity.py", "test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices"): "default",
     ("test_0041_round11_identity.py", "test_R10_03_b_a_relay_preserves_the_native_source_triple"): "default",
     ("test_0041_round11_identity.py", "test_the_original_and_its_relay_are_held_as_one_source_identity"): "default",

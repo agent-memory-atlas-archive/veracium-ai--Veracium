@@ -2947,9 +2947,15 @@ class SqliteStore(Store):
         # so the standing state those rows derive cannot change. Both kinds: the identity is the record's source.
         from ..scope_linkage import identity_digest_of as _identity_digest_of
         from .revocation import redact_revocation_reasons as _redact_revocation_reasons
+        from .revocation import revocation_reason_marked as _revocation_reason_marked
         _prov = before.get("provenance") or {}
         _digest = _identity_digest_of(_prov.get("origin"), _prov.get("source_id"), self.local_origin())
-        if _digest is not None and _redact_revocation_reasons(self._conn, user_id, _digest):
+        # round 13 (N12-02): the revocation rows are SHARED by every record of the source, and the updater reports only
+        # the rows IT changed — so a row another record's redaction already marked never entered this union, and an
+        # empty record of a redacted source read "nothing to redact". A row already at the marker is this carrier at
+        # its treated value: attested here like a record carrier already holding the marker (already_treated).
+        if _digest is not None and (_redact_revocation_reasons(self._conn, user_id, _digest)
+                                    or _revocation_reason_marked(self._conn, user_id, _digest)):
             fields.append("source_revocations.reason")
         # round 12 (R11-02): "nothing to redact" is decided HERE, over the whole surface the treatment reached — the
         # record, its side tables, its journal, the linked revocation prose — never from the live record alone (an

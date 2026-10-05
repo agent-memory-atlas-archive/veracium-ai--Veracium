@@ -3754,9 +3754,15 @@
    "qualname": "redact_revocation_reasons"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 302,
+   "module": "store/revocation.py",
+   "qualname": "revocation_reason_marked"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
-   "line": 314,
+   "line": 322,
    "module": "store/revocation.py",
    "qualname": "revoke_source"
   },
@@ -5267,59 +5273,59 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2961,
+   "line": 2967,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._redact_in_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3055,
+   "line": 3061,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.write_policy_receipt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3070,
+   "line": 3076,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 3073,
+   "line": 3079,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3099,
+   "line": 3105,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.upsert_embedding"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 3109,
+   "line": 3115,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.upsert_embedding"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3121,
+   "line": 3127,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_embedding_in_txn"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3128,
+   "line": 3134,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_embedding_in_txn"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 3189,
+   "line": 3195,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.set_wiki"
   },
@@ -5413,7 +5419,7 @@
  ],
  "summary": {
   "by_kind": {
-   "BOOL_RETURN": 69,
+   "BOOL_RETURN": 70,
    "FILTER_RETURN": 43,
    "RAISE": 538,
    "RETURN_FALSE": 90,
@@ -5724,7 +5730,7 @@
     "RETURN_NONE": 0
    },
    "store/revocation.py": {
-    "BOOL_RETURN": 1,
+    "BOOL_RETURN": 2,
     "FILTER_RETURN": 0,
     "RAISE": 8,
     "RETURN_FALSE": 0,
@@ -5759,7 +5765,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 812,
+  "total": 813,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }
