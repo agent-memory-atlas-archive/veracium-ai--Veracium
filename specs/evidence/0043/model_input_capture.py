@@ -239,16 +239,31 @@ def evidence_units(prompt: str) -> list[str]:
     return sorted(units)
 
 
-def check(shipped: dict, baseline: dict) -> list[str]:
+def arm_problems(shipped: dict, baseline: dict) -> list[str]:
+    """0043 round 6 (R5-03): THE per-pair arm check, on ANY captured pair — the run's every question as well as the
+    calibration probe. It reads what the two CAPTURED prompts carry and is independent of `baseline_transform` (a faulty
+    transform that is also its own oracle agrees with itself; it cannot make the arms carry the same evidence units
+    while dropping one, or remove a discipline it retained): (1) both arms carry the SAME evidence units; (2) the
+    baseline carries none of the trust discipline. No fixture sentinel: an actual question's pair is checked on what it
+    actually carries."""
     p = []
     ep = _load("examiner_projection"); d = ep.derive_forbidden_markers()
-    if COMPILED_SENTINEL not in shipped["prompt"]:
-        p.append("the captured shipped prompt carries no compiled body — compilation is not ON, or the shipped path did not include it; the fixture cannot show the arms matched on that kind")
     us, ub = evidence_units(shipped["prompt"]), evidence_units(baseline["prompt"])
     if us != ub:
         p.append(f"the arms differ in EVIDENCE, not only in discipline: only-shipped {sorted(set(us)-set(ub))} only-baseline {sorted(set(ub)-set(us))}")
     if ep.hits(baseline["prompt"], d) or "UNVERIFIED" in baseline["prompt"] or " claims: " in baseline["prompt"] or "strict about grounding" in baseline["system"]:
         p.append("the baseline still carries the trust discipline (a marker, a section, the quarantine construction, or the grounding instruction)")
+    return p
+
+
+def check(shipped: dict, baseline: dict) -> list[str]:
+    """The calibration probe's check: `arm_problems` on its pair, plus the two FIXTURE properties only the probe can
+    assert (its question reaches the compiled body, and the shipped prompt carries a trust annotation to remove)."""
+    p = []
+    ep = _load("examiner_projection"); d = ep.derive_forbidden_markers()
+    if COMPILED_SENTINEL not in shipped["prompt"]:
+        p.append("the captured shipped prompt carries no compiled body — compilation is not ON, or the shipped path did not include it; the fixture cannot show the arms matched on that kind")
+    p += arm_problems(shipped, baseline)
     if not ep.hits(shipped["prompt"], d):
         p.append("the shipped prompt carries no trust annotation — nothing for the arms to differ in (fixture defect)")
     return p

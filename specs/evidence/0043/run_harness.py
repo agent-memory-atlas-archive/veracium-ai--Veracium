@@ -274,6 +274,11 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
     fixture_digest = _digest_file(db)
     # calibration BEFORE the run (the gate is on the instrument): the reference cases over a captured pair
     probe = mc.run()
+    # round 6 (R5-03): the INDEPENDENT arm check gates the run, before calibration is even read — the probe's arm
+    # problems and its heading-without-body control. Round 5 computed both and read neither, so a faulty transform
+    # shared by invocation and oracle produced a report with rates while this check reported two problems.
+    if probe["problems"] or not probe["control_refuses"]:
+        raise Refused(f"the arm comparison is not valid on the calibration probe — {probe['problems'] or 'its heading-without-body control did not refuse'} — no rate may be reported")
     cal_s = ip.calibrate(probe["shipped"]["prompt"], probe["record"]); cal_b = ip.calibrate(probe["baseline"]["prompt"], probe["record"])
     garble = ip.garble_control(probe["shipped"]["prompt"], probe["record"])
     if not (cal_s["calibrated"] and cal_b["calibrated"] and garble["collapsed"]):
@@ -304,6 +309,12 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
         shipped = capture_shipped(str(db), q["text"], inner)
         record = mc.adjudication_record(shipped["delivered"])
         baseline = capture_baseline_real(shipped, inner)
+        # round 6 (R5-03): every question's ACTUAL captured pair, checked independently of the transform before any
+        # answer of it is scored — a pair that differs in evidence, or a baseline still carrying the discipline, stops
+        # the run: no rate is reported over a comparison that did not hold
+        bad = mc.arm_problems(shipped, baseline)
+        if bad:
+            raise Refused(f"the arm comparison is not valid for {q['id']}: {bad} — no rate may be reported")
         for arm, cap in (("veracium", shipped), (lg.BASELINE_ARM, baseline)):
             execution = dict(cap["execution"])
             if cap.get("error"):
