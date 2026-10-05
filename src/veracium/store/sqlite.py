@@ -2903,7 +2903,14 @@ class SqliteStore(Store):
             n = self._conn.execute(
                 "UPDATE supersession_refusals SET relation=? WHERE user_id=? AND (prior_edge_id=? OR incoming_edge_id=?) "
                 "AND relation<>?", (_redaction.MARKER, user_id, target_id, target_id, _redaction.MARKER)).rowcount
-            if n:
+            # round 14 (N13-01): a refusal row links TWO edges — either end matches — so a row the OTHER edge's
+            # redaction already marked never reached this union through the update's changed-row count. A row linked
+            # to this edge at either end and already AT the marker is this carrier at its treated value: attested, as
+            # the shared revocation row is (N12-02). `relation` is NOT NULL and REPLACE-treated, so the marker there is
+            # distinguishable from content — unlike the ledger's CLEAR digests (round 14's measured limit)
+            if n or self._conn.execute(
+                    "SELECT 1 FROM supersession_refusals WHERE user_id=? AND (prior_edge_id=? OR incoming_edge_id=?) "
+                    "AND relation=? LIMIT 1", (user_id, target_id, target_id, _redaction.MARKER)).fetchone():
                 fields.append("supersession_refusals.relation")
             n = self._conn.execute("DELETE FROM edge_embedding WHERE user_id=? AND edge_id=?",
                                    (user_id, target_id)).rowcount
