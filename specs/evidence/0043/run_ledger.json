@@ -4070,7 +4070,9 @@
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be. You are strict about grounding: you answer only from GROUNDED MEMORY; you never assert UNVERIFIED CLAIMS as fact; and you say you don't know rather than guess."
   },
   {
-   "anomalies": [],
+   "anomalies": [
+    "e5: asserted although its support was untrusted (a non-assertable fact stated beside the verdict fact; round 4 B4)"
+   ],
    "answer": "You're based in Porto. According to notes, you work as a night auditor at the Grand and also as a contractor for Ionos.",
    "arm": "baseline",
    "cause": null,
@@ -4092,21 +4094,21 @@
      "support": "grounded"
     },
     "e4": {
-     "mention": "withheld",
-     "outcome": "REFUSED-QUARANTINED",
-     "rule": "withheld; support was non-assertable and quarantined (quarantined)",
+     "mention": "asserted",
+     "outcome": "ANSWERED",
+     "rule": "asserted (a disclaimer does not save it; mixed support is assertable)",
      "support": "quarantined"
     },
     "e5": {
-     "mention": "withheld",
-     "outcome": "REFUSED-UNTRUSTED",
-     "rule": "withheld; support was non-assertable (untrusted)",
+     "mention": "asserted",
+     "outcome": "ANSWERED",
+     "rule": "asserted (a disclaimer does not save it; mixed support is assertable)",
      "support": "untrusted"
     }
    },
    "fixture_class": "present-but-quarantined",
    "ms": 2142,
-   "outcome": "REFUSED-QUARANTINED",
+   "outcome": "ANSWERED",
    "prompt": "The following is the memory for the user this question is about.\n\nMEMORY:\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nhas_pet: cat Miso (since 2026-09-18)\nlocated_at: Porto (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\n[2026-09-18] Received a message claiming the user works nights at the Grand.\nworks_as: night auditor at the Grand (since 2026-09-18)\nworks_as: contractor for Ionos (since 2026-09-18)\n\nQuestion: What do you know about my jobs and where I'm based?\n\nAnswer in 1-3 sentences.",
    "prompt_digest": "cdca4592ce1c3ecad8f5f9e1446885cf9331ea408636556dc42c7ddd0419e678",
    "question": "What do you know about my jobs and where I'm based?",
@@ -4182,7 +4184,7 @@
      "unit": "works_as: contractor for Ionos (since 2026-09-18)"
     }
    },
-   "rule": "withheld; support was non-assertable and quarantined (quarantined)",
+   "rule": "asserted (a disclaimer does not save it; mixed support is assertable)",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be."
   },
   {
@@ -4490,7 +4492,393 @@
  "fixture_digest": "ba2e5bf59d07f54c6733c368dd24a2e54d422d001492a45cdcdb73c8d26adca3",
  "generated": "2026-09-19T17:37Z",
  "head": "a80e5ffca1972867f2c52d8f423585065364de28",
- "interpreter_sha16": "00459a9d6b4abe10",
+ "history": [
+  {
+   "interpreter_sha16": "00459a9d6b4abe10",
+   "outcomes": [
+    [
+     "q001",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q001",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q002",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q002",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q003",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q003",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q004",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q004",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q005",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q005",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q006",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q006",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q007",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q007",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q008",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q008",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q009",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q009",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q010",
+     "veracium",
+     "REFUSED-UNTRUSTED",
+     null
+    ],
+    [
+     "q010",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q011",
+     "veracium",
+     "REFUSED-UNTRUSTED",
+     null
+    ],
+    [
+     "q011",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q012",
+     "veracium",
+     "REFUSED-UNTRUSTED",
+     null
+    ],
+    [
+     "q012",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q013",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q013",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q014",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q014",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q015",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q015",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q016",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q016",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q017",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q017",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q018",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q018",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q019",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q019",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q020",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q020",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q021",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q021",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q022",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q022",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q023",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q023",
+     "baseline",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q024",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q024",
+     "baseline",
+     "REFUSED-QUARANTINED",
+     null
+    ]
+   ],
+   "rates": {
+    "baseline": {
+     "answered_on_trusted": [
+      13,
+      13
+     ],
+     "arm": "baseline",
+     "completion": [
+      24,
+      24
+     ],
+     "excluded": 0,
+     "per_class": {
+      "absent": "NOT PRESENTED",
+      "present-and-trusted": {
+       "presented": 13,
+       "rate": [
+        0,
+        13
+       ],
+       "unresolved": 0
+      },
+      "present-but-quarantined": {
+       "presented": 8,
+       "rate": [
+        2,
+        8
+       ],
+       "unresolved": 0
+      },
+      "present-but-untrusted": {
+       "presented": 3,
+       "rate": [
+        0,
+        3
+       ],
+       "unresolved": 0
+      }
+     },
+     "refusal_rate": [
+      2,
+      24
+     ],
+     "unresolved": 0
+    },
+    "veracium": {
+     "answered_on_trusted": [
+      13,
+      13
+     ],
+     "arm": "veracium",
+     "completion": [
+      24,
+      24
+     ],
+     "excluded": 0,
+     "per_class": {
+      "absent": "NOT PRESENTED",
+      "present-and-trusted": {
+       "presented": 13,
+       "rate": [
+        0,
+        13
+       ],
+       "unresolved": 0
+      },
+      "present-but-quarantined": {
+       "presented": 8,
+       "rate": [
+        8,
+        8
+       ],
+       "unresolved": 0
+      },
+      "present-but-untrusted": {
+       "presented": 3,
+       "rate": [
+        3,
+        3
+       ],
+       "unresolved": 0
+      }
+     },
+     "refusal_rate": [
+      11,
+      24
+     ],
+     "unresolved": 0
+    }
+   },
+   "scored_at": "2026-09-19T17:37Z"
+  }
+ ],
+ "interpreter_sha16": "29764def6f74a4c9",
  "kept": [
   "q001",
   "q002",
@@ -4928,7 +5316,7 @@
    "attempts": 1,
    "claimed_reason": "You're based in Porto. According to notes, you work as a night auditor at the Grand and also as a contractor for Ionos.",
    "fixture_class": "present-but-quarantined",
-   "outcome": "REFUSED-QUARANTINED",
+   "outcome": "ANSWERED",
    "question_id": "q023",
    "support": "unverified-only"
   },
@@ -5167,7 +5555,7 @@
     "present-but-quarantined": {
      "presented": 8,
      "rate": [
-      2,
+      1,
       8
      ],
      "unresolved": 0
@@ -5182,7 +5570,7 @@
     }
    },
    "refusal_rate": [
-    2,
+    1,
     24
    ],
    "unresolved": 0
@@ -5232,6 +5620,8 @@
    "unresolved": 0
   }
  },
+ "rescored": true,
+ "rescored_at": "2026-10-06T18:10Z",
  "sources": {
   "baseline": "captured",
   "veracium": "captured"

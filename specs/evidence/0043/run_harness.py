@@ -410,8 +410,14 @@ def rescore(res: dict) -> dict:
     if problems:
         raise Refused("the re-scored ledger refused: " + "; ".join(problems))
     rates = {arm: lg.rates(rows, arm, expected, tuple(res["arms"]), exclusions=excluded, sources=res["sources"]) for arm in res["arms"]}
+    # R5-02's closure: the scoring this replaces is KEPT, never overwritten — its instrument, when it scored, its rates
+    # and every (question, arm, outcome, cause) — so the effect of an instrument change is visible in the record
+    replaced = {"interpreter_sha16": res.get("interpreter_sha16"), "scored_at": res.get("rescored_at") or res["generated"],
+                "rates": res["rates"],
+                "outcomes": [[x["question_id"], x["arm"], x["outcome"], x.get("cause")] for x in res["detail"]]}
     return {**res, "ledger": rows, "detail": detail, "rates": rates, "rescored": True, "interpreter_sha16": interpreter_sha16(),
-            "rescored_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")}
+            "rescored_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
+            "history": list(res.get("history", [])) + [replaced]}
 
 
 def interpreter_sha16() -> str:
@@ -511,12 +517,33 @@ def reverify_lines(v: dict) -> str:
             + (f"; mismatches {v['mismatches']}" if v["mismatches"] else ""))
 
 
+def _history_lines(res: dict) -> list:
+    """Each earlier scoring of these captured answers (R5-02's closure: kept as history), and every outcome that
+    differs between it and the scoring that followed it — the effect of each instrument change, on the same answers."""
+    hist = res.get("history", [])
+    if not hist:
+        return []
+    L = [f"earlier scorings of the same captured answers, oldest first ({len(hist)}):"]
+    later = hist[1:] + [{"interpreter_sha16": res.get("interpreter_sha16"), "scored_at": res.get("rescored_at"),
+                         "outcomes": [[x["question_id"], x["arm"], x["outcome"], x.get("cause")] for x in res["detail"]]}]
+    for h, nxt in zip(hist, later):
+        rates = "; ".join(f"{arm} refusal {_ratio(r['refusal_rate'])} completion {_ratio(r['completion'])}"
+                          for arm, r in sorted(h["rates"].items()))
+        L.append(f"  interpreter sha16 {h['interpreter_sha16']}, scored {h['scored_at']}: {rates}")
+        now = {(q, a): (o, c) for q, a, o, c in nxt["outcomes"]}
+        moved = [f"{q}/{a} {o} -> {now[(q, a)][0]}" for q, a, o, c in h["outcomes"] if now.get((q, a), (o,))[0] != o]
+        L.append(f"    outcomes changed by the next scoring (interpreter {nxt['interpreter_sha16']}): "
+                 + (", ".join(moved) if moved else "none"))
+    return L
+
+
 def report(res: dict) -> str:
     lg = _load("ledger")
     L = [f"# generated {res['generated']} against veracium @ {res['head']}",
          "0043 — THE REFUSAL HARNESS, RUN (tranche 2): two arms against the model, every rate with its denominator", "",
          f"fixture store digest (as built): {res['fixture_digest']}", f"examiner view digest: {res['view_digest']}",
          f"scored with interpreter.py sha16 {res.get('interpreter_sha16')}" + (f" — RE-SCORED {res['rescored_at']} over the captured answers (no new model call)" if res.get("rescored") else ""),
+         *_history_lines(res),
          f"model configuration (frozen): {json.dumps(res['config'], sort_keys=True)}",
          f"authorship: {json.dumps(res['authorship'], sort_keys=True)}",
          f"calibration before the run: shipped {_ratio(res['calibration']['shipped'])}, baseline {_ratio(res['calibration']['baseline'])} over "

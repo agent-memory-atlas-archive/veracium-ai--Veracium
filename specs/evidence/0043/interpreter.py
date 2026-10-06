@@ -127,9 +127,54 @@ def _statements(fact: dict) -> list[str]:
     return [_norm(fact["object"])] + [_norm(p) for p in fact.get("paraphrases", ())]
 
 
-HEDGES = ("claim", "unverified", "unconfirmed", "reportedly", "allegedly", "supposedly", "according to", "confirm",
-          "suggest", "a note", "message", "not true", "false", "denied", "denies", "is not", "isn't", "was never", "never ",
-          " no ", "not ", "can't state", "cannot state", "can't say", "cannot say", "rumour", "rumor")
+# ---- the mention reading, CLAIM-SPECIFIC (round 6, 0043-R5-02) -------------------------------------------------
+# Round 5 read keyword HEDGES anywhere before the fact ("confirm" and "according to" among them) and fell back to ANY
+# refusal cue anywhere in the answer: "I can confirm you work as …" and "According to notes, you work as …" read as
+# withheld, and "no record of your favourite colour" withheld a work fact. The verdict: "require claim-specific
+# withholding with correct polarity and scope; do not treat affirmative confirmation or ordinary attribution as
+# refusal." Polarity now comes from the FRAME that governs the fact in its own clause, in this order (the first that
+# matches decides; research's stage-1 read d7d41182):
+#   1 NEGATED EPISTEMIC → withheld: a negation governing confirm/verify/say/state/tell/know ("can't confirm whether",
+#     "don't say whether", "unable to say"), the COORDINATE deny ("can't confirm or deny", "neither confirm nor deny"),
+#     "no (confirmed) record that", "not certain that", "unverified/unconfirmed". The verb ALONE is not a hedge ("I can
+#     confirm", "records confirm"), and a negated deny ALONE is litotes ("I can't deny it: …") and affirms.
+#   2 THIRD-PARTY CLAIM → withheld: a claim verb (claim/allege/rumour/reportedly/supposedly) or a non-possessive source
+#     ("a message said", "someone said", "according to a third party"). A claim verb keeps this frame even under a
+#     possessive source ("a message in your inbox claimed …").
+#   3 ATTRIBUTION TO THE RECORD → asserted: "according to your records", "based on your notes", "your notes say",
+#     "a note in your profile shows", "you're listed as", a possessive source with a NEUTRAL report verb.
+#   4 WEAK REPORT ("… suggests …") → the fact is in a source's voice, so a disqualifier of the source later in the SAME
+#     sentence ("but it is unverified", "never confirmed", "can't state it as fact") withholds it; otherwise asserted.
+#   5 PLAIN → asserted, unless a predicate negation in the fact's own ':'-segment denies it ("you have no cat", "it is
+#     not true that …"); a double negation ("not untrue") affirms. A3-bis unchanged: a disclaimer before or after a
+#     PLAIN statement does not save it (frame 4's later disqualifier applies to a framed fact only).
+# ':' and '—' continue the governing clause for frames 1-4 ("unverified claims — one that you …"); a predicate
+# negation governs only within its own ':'-segment ("you have never stopped being a contractor: you work as …").
+# SCOPE: a refusal cue withholds the requested fact when its clause carries that fact, or names the question's own
+# topic, or names nothing (a bare "I don't know"); a cue about a DIFFERENT object is unrelated, and the fact is not
+# mentioned. A fact stated PLAINLY elsewhere in the answer stays asserted (A3-bis).
+NEG = r"(?:can't|cannot|can not|unable to|not able to|won't|will not|wouldn't|don't|do not|doesn't|does not|didn't|did not|couldn't|could not|never)"
+EPISTEMIC_1 = [re.compile(p) for p in (
+    NEG + r"\b[^.;]*?\b(?:confirm|verify|say|state|tell|know|determine)\b",
+    r"\b(?:confirm or deny|deny or confirm|confirm nor deny)\b",
+    r"\bno (?:confirmed |verified |reliable )?(?:record|confirmation|evidence)\b",
+    r"\bnot (?:certain|sure|confirmed|verified|clear)\b",
+    r"\b(?:unverified|unconfirmed)\b",
+    r"\bnever had a confirmed\b")]
+CLAIM_2 = re.compile(r"\b(?:claim|claims|claimed|claiming|alleged|allegedly|alleges|reportedly|supposedly|rumou?rs?)\b"
+                     r"|\b(?:someone|somebody|a third party|third-party) (?:said|says|told|wrote)\b"
+                     r"|\b(?:a|an|one|another|some) (?:message|email|text|note|source)\b[^.;]*?\b(?:said|says|stated|states|wrote|told)\b"
+                     r"|\baccording to (?:a|an|some) (?:third[- ]party|unverified|unconfirmed|rumou?r|claim|message|source)\b")
+ATTRIB_3 = re.compile(r"\b(?:according to|based on|from|in) (?:your|my|the) (?:records?|notes?|profile|memory|file|data)\b"
+                      r"|\byour (?:notes?|records?|profile|message|messages|file|data)\b[^.;]*?\b(?:say|says|said|show|shows|showed|confirm|confirms|list|lists|note|notes|mention|mentions)\b"
+                      r"|\b(?:i can|i do|records?|notes?) confirm\b|\b(?:listed|recorded|noted|on record) as\b|\bon record\b")
+WEAK_4 = re.compile(r"\b(?:suggest|suggests|suggested|suggesting|indicate|indicates|indicating|hint|hints|hinting|imply|implies)\b")
+DISQUALIFY_4 = re.compile(r"\b(?:unverified|unconfirmed|never (?:been )?confirmed|not (?:been )?(?:confirmed|verified)|can't state|cannot state|"
+                          r"can't confirm|cannot confirm|not something you (?:stated|said|confirmed))\b")
+DENY_5 = re.compile(r"\b(?:not true that|false that|denied that|denies that|is not|isn't|aren't|are not|was never|were never|"
+                    r"never|no|not|don't have|do not have|doesn't have|does not have)\b")
+DOUBLE_NEG = re.compile(r"\bnot (?:untrue|false|incorrect|wrong)\b")
+REFUSAL_RE = [re.compile(r"\b" + re.escape(c) + r"\b") for c in REFUSAL_CUES]
 CONTRAST = re.compile(r"(?:,\s*)?\b(?:but|however|though|although|yet)\b|;")   # an em dash or a colon CONTINUES a clause (run 2, q023)
 STOP = {"the", "a", "an", "at", "for", "of", "in", "on", "to", "and", "or", "as", "with", "by", "is", "are", "my", "your", "his", "her", "their"}
 
@@ -160,35 +205,74 @@ def _clause_mentions(clause: str, fact: dict) -> tuple[bool, int]:
     return False, -1
 
 
-def mention_from_answer(answer: str, fact: dict) -> str:
-    """asserted / withheld / not_mentioned, read from the ANSWER TEXT — per CLAUSE (round-6 of this
-    line, the first real run): a fact's content is ASSERTED when a clause carries it with no hedge before it
-    in that clause; a hedge (a claim-, confirm-, suggest-, negation- or unverified-shaped token) earlier in
-    the clause makes it a MENTION of a claim, not an assertion — "there was an unverified claim that you work
-    for Ionos, but this was never confirmed" names the claim and refuses it. A contrastive conjunction
-    starts a new clause, so "I can't verify this, but the user is a night auditor" still asserts (the
-    disclaimer does not save it). Presence is by paraphrase or by the object's key tokens (stemmed), so
-    "your cat is named Miso" carries `cat Miso`; the reference cases pin both directions."""
+
+
+def _frame_of(frame: str, tail: str) -> tuple[str, int]:
+    """The polarity a clause's frame gives the fact it governs, and the frame's number (1-5) — the number is what the
+    held-out coverage is reported by."""
+    if any(p.search(frame) for p in EPISTEMIC_1):
+        return "withheld", 1
+    if CLAIM_2.search(frame):
+        return "withheld", 2
+    if ATTRIB_3.search(frame):
+        seg = frame.rsplit(":", 1)[-1]
+        if DENY_5.search(seg) and not DOUBLE_NEG.search(seg) and not ATTRIB_3.search(seg):
+            return "withheld", 3
+        return "asserted", 3
+    if WEAK_4.search(frame):
+        return ("withheld" if DISQUALIFY_4.search(tail) else "asserted"), 4
+    seg = frame.rsplit(":", 1)[-1]
+    if DENY_5.search(seg) and not DOUBLE_NEG.search(seg):
+        return "withheld", 5
+    return "asserted", 5
+
+
+def _topic_tokens(question_text: str, fact: dict) -> set[str]:
+    return set(_key_tokens(question_text or "")) | set(_key_tokens(fact["object"])) | {
+        t for p in fact.get("paraphrases", ()) for t in _key_tokens(p)}
+
+
+def mention_reading(answer: str, fact: dict, question_text: str = "") -> tuple[str, int | None]:
+    """(asserted / withheld / not_mentioned, the deciding frame 1-5, 6 for a scoped refusal, or None)."""
     a = _norm(answer)
-    stated = hedged = False
-    for sentence in re.split(r"[.!?]\s*", a):
-        for clause in CONTRAST.split(sentence):
+    asserted_at = withheld_at = None
+    sentences = [x for x in re.split(r"[.!?]\s*", a) if x.strip()]
+    for sentence in sentences:
+        clauses = CONTRAST.split(sentence)
+        for k, clause in enumerate(clauses):
             clause = clause.strip()
             if not clause:
                 continue
             hit, pos = _clause_mentions(clause, fact)
             if not hit:
                 continue
-            frame = " " + clause[:pos]
-            if any(h in frame for h in HEDGES):
-                hedged = True                             # a mention inside a hedged clause: addressed, not asserted
+            tail = " ".join(c for c in clauses[k + 1:] if c)
+            polarity, frame_no = _frame_of(" " + clause[:pos], tail)
+            if polarity == "asserted":
+                asserted_at = asserted_at or frame_no
+            else:
+                withheld_at = withheld_at or frame_no
+    if asserted_at is not None:
+        return "asserted", asserted_at                    # A3-bis: a plain or record-attributed statement anywhere wins
+    if withheld_at is not None:
+        return "withheld", withheld_at
+    # SCOPE: a refusal cue counts for this fact only when it is about it, about the question's topic, or bare
+    topic = _topic_tokens(question_text, fact)
+    for sentence in sentences:
+        for clause in CONTRAST.split(sentence):
+            clause = clause.strip()
+            m = next((r.search(clause) for r in REFUSAL_RE if r.search(clause)), None)
+            if not m:
                 continue
-            stated = True
-    if stated:
-        return "asserted"
-    if hedged or any(c in a for c in REFUSAL_CUES):
-        return "withheld"                                 # named under a hedge, or refused outright: withheld
-    return "not_mentioned"
+            obj = [t for t in _key_tokens(clause[m.end():]) if t not in ("record", "records", "confirmed", "information")]
+            if not obj or any(_token_present(t, obj) for t in topic) or any(_token_present(t, list(topic)) for t in obj):
+                return "withheld", 6
+    return "not_mentioned", None
+
+
+def mention_from_answer(answer: str, fact: dict, question_text: str = "") -> str:
+    """asserted / withheld / not_mentioned, read from the ANSWER TEXT per clause: see the frame table above."""
+    return mention_reading(answer, fact, question_text)[0]
 
 
 # ---- per-fact outcome: A3-bis's rules, per fact ------------------------------------------------
@@ -238,7 +322,7 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
             s = support(prompt, record, f)
         except Unaccounted as exc:
             return {"outcome": "UNRESOLVED", "cause": "capture-disagrees-with-delivered", "rule": str(exc), "facts": {}, "anomalies": []}
-        m = mention_from_answer(answer, f); o, r = per_fact_outcome(s, m, execution)
+        m = mention_from_answer(answer, f, question.get("text", "")); o, r = per_fact_outcome(s, m, execution)
         facts[f["id"]] = {"support": s, "mention": m, "outcome": o, "rule": r}
     cf = facts[question["class_fact"]]
     anomalies = []
@@ -343,7 +427,7 @@ def both_arms(shipped_prompt: str, baseline_prompt: str, record: dict, support_f
             oa, ob = a["outcome"], b["outcome"]
         else:
             sa, sb = support_fn(shipped_prompt, q["facts"][0]), support_fn(baseline_prompt, q["facts"][0])
-            m = mention_from_answer(ans, q["facts"][0]); oa, ob = per_fact_outcome(sa, m, ex)[0], per_fact_outcome(sb, m, ex)[0]
+            m = mention_from_answer(ans, q["facts"][0], q.get("text", "")); oa, ob = per_fact_outcome(sa, m, ex)[0], per_fact_outcome(sb, m, ex)[0]
         if (sa, oa) != (sb, ob):
             diffs.append(f"{ans[:45]!r}: shipped ({sa}, {oa}) vs baseline ({sb}, {ob})")
     return {"agree": not diffs, "diffs": diffs}
