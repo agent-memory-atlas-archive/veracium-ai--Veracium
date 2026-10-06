@@ -80,6 +80,15 @@ def _snapshot(st):
     return {t: st._conn.execute(f"SELECT * FROM {t} ORDER BY 1").fetchall() for t in ("episodes", "episode_event", "redactions")}
 
 
+def _state(st):
+    """Every row of the three tables an import writes here, `recorded_at` (the wall clock) alone excepted."""
+    out = {}
+    for t in ("episodes", "episode_event", "redactions"):
+        cols = [c[1] for c in st._conn.execute(f"PRAGMA table_info({t})") if c[1] != "recorded_at"]
+        out[t] = st._conn.execute(f"SELECT {', '.join(cols)} FROM {t} ORDER BY {', '.join(cols)}").fetchall()
+    return out
+
+
 def _permute(recs, a, b, *, keep_a_notice):
     sw = {a: b, b: a}
     out = []
@@ -130,13 +139,22 @@ def test_R13_01_an_ordinary_arrival_reusing_a_held_id_does_not_lend_its_notice(t
 
 @pytest.mark.parametrize("restore", [False, True])
 def test_control_permuted_ids_with_BOTH_notices_treat_both_held_outputs(tmp_path, restore):
+    """The relabelled unit with both notices leaves the destination EXACTLY as the unrelabelled unit leaves a twin
+    destination holding the same outputs: the same import result, and every episode, event and notice row (the
+    notices' source identities included) equal, `recorded_at` alone excepted. A relabelled copy is resolved, never
+    refused merely for being relabelled."""
     dst, a, b = _setup(tmp_path, restore)
-    import_memory(dst.store, _write(tmp_path / "p.jsonl", _permute(_lines(tmp_path / "after.jsonl"), a, b, keep_a_notice=True)),
-                  restore=restore)
+    twin = tt._mem(tmp_path, "twin.db"); import_memory(twin.store, tmp_path / "before.jsonl", restore=restore)
+    want = import_memory(twin.store, tmp_path / "after.jsonl", restore=restore)
+    got = import_memory(dst.store, _write(tmp_path / "p.jsonl", _permute(_lines(tmp_path / "after.jsonl"), a, b, keep_a_notice=True)),
+                        restore=restore)
+    assert got == want and got["notices_applied"] == 2 and got["unattested_markers"] == []
+    assert _state(dst.store) == _state(twin.store)
     assert _summary(dst, a) == R.MARKER and _summary(dst, b) == R.MARKER
-    assert dst.store._attested_fields(U, "episode", a) and dst.store._attested_fields(U, "episode", b)
-    ids = {e.id for e in dst.store.episodes(U)}
-    assert all(t in ids for (t,) in dst.store._conn.execute("SELECT target_id FROM redactions WHERE user_id=?", (U,)))
+    fa, fb = dst.store._attested_fields(U, "episode", a), dst.store._attested_fields(U, "episode", b)
+    assert "summary" in fa and fa == fb
+    rows = sorted(t for (t,) in dst.store._conn.execute("SELECT target_id FROM redactions WHERE user_id=?", (U,)))
+    assert rows == sorted([a, b])
 
 
 @pytest.mark.parametrize("restore", [False, True])
@@ -144,8 +162,10 @@ def test_control_a_notice_naming_a_held_target_with_no_arrival_applies_to_it(tmp
     """A's arrival is absent from the unit; A's notice names held `a` directly; B arrives with its own notice."""
     dst, a, b = _setup(tmp_path, restore)
     recs = [r for r in _lines(tmp_path / "after.jsonl") if not (r.get("lineage") and r.get("id") == a)]
-    import_memory(dst.store, _write(tmp_path / "h.jsonl", recs), restore=restore)
+    r = import_memory(dst.store, _write(tmp_path / "h.jsonl", recs), restore=restore)
     assert _summary(dst, a) == R.MARKER and _summary(dst, b) == R.MARKER
+    assert r["notices_applied"] == 2 and r["unattested_markers"] == []
+    assert all("summary" in dst.store._attested_fields(U, "episode", x) for x in (a, b))
 
 
 def test_control_a_repeated_user_remap_binds_both_notices_to_the_surviving_copies(tmp_path):

@@ -109,13 +109,19 @@ def test_R13_02_a_value_that_merely_CONTAINS_the_marker_refuses_whole_import(tmp
 @pytest.mark.parametrize("restore", [False, True])
 def test_control_the_exact_marker_with_the_notices_is_admitted_and_treats_both(tmp_path, restore):
     dst, a, b = _setup(tmp_path, restore)
-    import_memory(dst.store, tmp_path / "after.jsonl", restore=restore)
+    r = import_memory(dst.store, tmp_path / "after.jsonl", restore=restore)
     assert _summary(dst, a) == R.MARKER and _summary(dst, b) == R.MARKER
+    assert r["notices_applied"] == 2 and r["unattested_markers"] == []
+    assert all("summary" in dst.store._attested_fields(U, "episode", x) for x in (a, b))
+    rows = sorted(t for (t,) in dst.store._conn.execute("SELECT target_id FROM redactions WHERE user_id=?", (U,)))
+    assert rows == sorted([a, b])
 
 
 @pytest.mark.parametrize("restore", [False, True])
 def test_control_ordinary_text_in_a_named_field_refuses(tmp_path, restore):
     dst, a, b = _setup(tmp_path, restore)
     recs = [dict(r, summary="tampered") if (r.get("lineage") and r.get("id") == a) else r for r in _lines(tmp_path / "after.jsonl")]
+    before = _snapshot(dst.store)
     with pytest.raises(ValueError, match="DIFFERENT source-identity projection"):
         import_memory(dst.store, _write(tmp_path / "x.jsonl", recs), restore=restore)
+    assert _snapshot(dst.store) == before
