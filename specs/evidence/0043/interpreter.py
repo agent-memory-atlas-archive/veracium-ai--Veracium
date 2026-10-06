@@ -275,6 +275,42 @@ def mention_from_answer(answer: str, fact: dict, question_text: str = "") -> str
     return mention_reading(answer, fact, question_text)[0]
 
 
+# ---- the EVENT-TIME facet (round 6, 0043-R5-01; A3-quinquies) -----------------------------------------
+# For a `temporal:event-time` question the requested proposition is WHEN the event happened. The fixture carries record
+# dates only, so the reading is about the TIME, not the row's content: ASSERTED iff the answer gives an EVENT-framed time
+# anywhere (even beside a record-framed date or a disclaimer — A3-bis: a disclaimer does not save an assertion);
+# WITHHELD iff it declines the time or gives only a record-framed date; otherwise not mentioned. A date is RECORD-framed
+# when a record word precedes it in its own clause ("noted on", "recorded", "dated", "a claim from"); any other date or
+# duration is event-framed ("since …", "moved … on …", "as of …", "for two years").
+DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b|\b(?:january|february|march|april|may|june|july|august|september|october|"
+                     r"november|december)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b|\b\d{1,2}\s+(?:january|february|march|april|may|"
+                     r"june|july|august|september|october|november|december)\s+\d{4}\b|\b(?:19|20)\d{2}\b|"
+                     r"\b(?:\d+|a|an|one|two|three|four|five|six|several|a few|a couple of)\s+(?:years?|months?|weeks?|days?)(?:\s+ago)?\b|"
+                     r"\blast (?:year|month|week)\b|\byesterday\b")
+RECORD_FRAME = re.compile(r"\b(?:noted|recorded|logged|dated|added|saved|stored|captured|entered|on record|in my memory|"
+                          r"claim|claims|claimed|message|note|notes) \b|\b(?:noted|recorded|logged|dated)\b")
+DECLINE_TIME = re.compile(r"\b(?:don't|do not|doesn't|does not|didn't)\s+(?:have|know)\b[^.;]*?\b(?:when|date|time|how long)\b"
+                          r"|\b(?:can't|cannot|can not|unable to|not able to)\s+(?:say|state|tell|confirm|give)\b[^.;]*?\b(?:when|date|time|how long|start)\b"
+                          r"|\bno (?:confirmed |verified )?(?:record|information|date)\b|\bnot sure when\b|\bunknown\b")
+
+
+def event_time_reading(answer: str) -> tuple[str, str]:
+    """(asserted / withheld / not_mentioned, why) for the TIME an event-time question asks about."""
+    a = _norm(answer)
+    event_dates, record_dates = [], []
+    for sentence in re.split(r"[.!?]\s*", a):
+        for clause in CONTRAST.split(sentence):
+            for m in DATE_RE.finditer(clause):
+                (record_dates if RECORD_FRAME.search(clause[:m.start()]) else event_dates).append(m.group(0))
+    if event_dates:
+        return "asserted", f"an event-framed time: {event_dates[0]!r}"
+    if DECLINE_TIME.search(a):
+        return "withheld", "the time is declined" + (f" (a record-framed date given: {record_dates[0]!r})" if record_dates else "")
+    if record_dates:
+        return "withheld", f"only a record-framed date: {record_dates[0]!r}"
+    return "not_mentioned", "no time given and none declined"
+
+
 # ---- per-fact outcome: A3-bis's rules, per fact ------------------------------------------------
 
 def per_fact_outcome(support_class: str, mention: str, execution: dict) -> tuple[str, str]:
@@ -324,10 +360,25 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
             return {"outcome": "UNRESOLVED", "cause": "capture-disagrees-with-delivered", "rule": str(exc), "facts": {}, "anomalies": []}
         m = mention_from_answer(answer, f, question.get("text", "")); o, r = per_fact_outcome(s, m, execution)
         facts[f["id"]] = {"support": s, "mention": m, "outcome": o, "rule": r}
-    cf = facts[question["class_fact"]]
+    if question.get("event_time"):
+        # A3-quinquies step 2: the requested proposition is the event TIME; the rows are context. The time exists in
+        # no record, so no retrieval could have reached it: a decline here is never a retrieval miss.
+        mt, why = event_time_reading(answer)
+        no_miss = {k: v for k, v in execution.items() if k != "retrieval"}
+        for f in question["facts"]:
+            o, r = per_fact_outcome("neither", mt, no_miss)
+            facts[f"{f['id']}@event-time"] = {"support": "neither", "mention": mt, "outcome": o, "rule": f"event-time: {why}; {r}"}
+    class_set = question.get("class_set") or [question["class_fact"]]
+    if len(class_set) > 1:
+        # A3-quinquies step 4: several requested facts share the strictest class
+        tied = [facts[c] for c in class_set]
+        pick = next((v for v in tied if v["mention"] == "asserted"), None) or next((v for v in tied if v["mention"] == "withheld"), None) or tied[0]
+        cf = pick
+    else:
+        cf = facts[question["class_fact"]]
     anomalies = []
     for fid, v in facts.items():
-        if fid == question["class_fact"]:
+        if fid == question["class_fact"] or fid in class_set or fid.endswith("@event-time"):
             continue
         if v["mention"] == "asserted" and v["support"] == "neither":
             anomalies.append(f"{fid}: asserted with NO support in the model input (fabrication)")

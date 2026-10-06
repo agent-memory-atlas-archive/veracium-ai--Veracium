@@ -1,0 +1,251 @@
+{
+ "agreement": "21 of 24 questions identical on all four fields; 3 disagreed on facet only, ruled by the owner",
+ "blind_input_sha256": "9d33d3a356539d43bedd1213e52e3d94d618cf2eda40ce232203640696c9bbc3",
+ "imperfect_blindness": [
+  "q001",
+  "q003",
+  "q006",
+  "q012",
+  "q013",
+  "q015",
+  "q023"
+ ],
+ "labels": {
+  "dev": "coordination dba0c6e labels-dev.json",
+  "research": "research 12dcd87b labels-research.json"
+ },
+ "manifest": "0043 R5-01 requested-proposition manifest (FROZEN)",
+ "questions": {
+  "q001": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e2"
+   ]
+  },
+  "q002": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e2"
+   ]
+  },
+  "q003": {
+   "ambiguous": false,
+   "answerable_from_fixture": false,
+   "decided_by": "both seats agreed, blind",
+   "facet": "temporal:event-time",
+   "requested": [
+    "e2"
+   ]
+  },
+  "q004": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e3"
+   ]
+  },
+  "q005": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e3"
+   ]
+  },
+  "q006": {
+   "ambiguous": false,
+   "answerable_from_fixture": false,
+   "decided_by": "both seats agreed, blind",
+   "facet": "temporal:event-time",
+   "requested": [
+    "e3"
+   ]
+  },
+  "q007": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e1"
+   ]
+  },
+  "q008": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "owner ruling 2026-10-04 (research session): research='none', dev='comparison' -> 'comparison'",
+   "facet": "comparison",
+   "requested": [
+    "e1"
+   ]
+  },
+  "q009": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e1"
+   ]
+  },
+  "q010": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e5"
+   ]
+  },
+  "q011": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e5"
+   ]
+  },
+  "q012": {
+   "ambiguous": false,
+   "answerable_from_fixture": false,
+   "decided_by": "both seats agreed, blind",
+   "facet": "temporal:event-time",
+   "requested": [
+    "e5"
+   ]
+  },
+  "q013": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e4"
+   ]
+  },
+  "q014": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e4"
+   ]
+  },
+  "q015": {
+   "ambiguous": false,
+   "answerable_from_fixture": false,
+   "decided_by": "both seats agreed, blind",
+   "facet": "temporal:event-time",
+   "requested": [
+    "e4"
+   ]
+  },
+  "q016": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "scope",
+   "requested": [
+    "e4",
+    "e5"
+   ]
+  },
+  "q017": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "scope",
+   "requested": [
+    "e4",
+    "e5"
+   ]
+  },
+  "q018": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e2",
+    "e3"
+   ]
+  },
+  "q019": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "owner ruling 2026-10-04 (research session): research='none', dev='other' -> 'other'",
+   "facet": "other",
+   "requested": [
+    "e2",
+    "e3"
+   ]
+  },
+  "q020": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "none",
+   "requested": [
+    "e1",
+    "e3"
+   ]
+  },
+  "q021": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "scope",
+   "requested": [
+    "e4",
+    "e5"
+   ]
+  },
+  "q022": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "owner ruling 2026-10-04 (research session): research='none', dev='scope' -> 'scope'",
+   "facet": "scope",
+   "requested": [
+    "e1",
+    "e2",
+    "e3"
+   ]
+  },
+  "q023": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "scope",
+   "requested": [
+    "e3",
+    "e4",
+    "e5"
+   ]
+  },
+  "q024": {
+   "ambiguous": false,
+   "answerable_from_fixture": true,
+   "decided_by": "both seats agreed, blind",
+   "facet": "scope",
+   "requested": [
+    "e1",
+    "e2",
+    "e3",
+    "e4",
+    "e5"
+   ]
+  }
+ },
+ "schema": "SCHEMA.md v2 (research 230aca8d)"
+}

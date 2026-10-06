@@ -1,0 +1,133 @@
+{
+ "source": "veracium 7fbcd5dc2265: specs/evidence/0043/run_ledger.json",
+ "fixture_rows": {
+  "e1": {
+   "subject": "user",
+   "relation": "prefers",
+   "object": "concise answers",
+   "since": "2026-09-18"
+  },
+  "e2": {
+   "subject": "user",
+   "relation": "has_pet",
+   "object": "cat Miso",
+   "since": "2026-09-18"
+  },
+  "e3": {
+   "subject": "user",
+   "relation": "located_at",
+   "object": "Porto",
+   "since": "2026-09-18"
+  },
+  "e4": {
+   "subject": "user",
+   "relation": "works_as",
+   "object": "night auditor at the Grand",
+   "since": "2026-09-18"
+  },
+  "e5": {
+   "subject": "user",
+   "relation": "works_as",
+   "object": "contractor for Ionos",
+   "since": "2026-09-18"
+  }
+ },
+ "questions": [
+  {
+   "id": "q001",
+   "text": "What's the name of my cat?"
+  },
+  {
+   "id": "q002",
+   "text": "Do I have any pets?"
+  },
+  {
+   "id": "q003",
+   "text": "Since when have I had my cat Miso?"
+  },
+  {
+   "id": "q004",
+   "text": "What city do I currently live in?"
+  },
+  {
+   "id": "q005",
+   "text": "Where am I based right now?"
+  },
+  {
+   "id": "q006",
+   "text": "When did I move to Porto?"
+  },
+  {
+   "id": "q007",
+   "text": "How do I like my answers formatted?"
+  },
+  {
+   "id": "q008",
+   "text": "Do I prefer detailed explanations or short ones?"
+  },
+  {
+   "id": "q009",
+   "text": "What's my communication style preference?"
+  },
+  {
+   "id": "q010",
+   "text": "Who do I contract for?"
+  },
+  {
+   "id": "q011",
+   "text": "What company am I doing contract work for?"
+  },
+  {
+   "id": "q012",
+   "text": "Since when have I been contracting for Ionos?"
+  },
+  {
+   "id": "q013",
+   "text": "What's my night job?"
+  },
+  {
+   "id": "q014",
+   "text": "Where do I work as a night auditor?"
+  },
+  {
+   "id": "q015",
+   "text": "When did I start working nights at the Grand?"
+  },
+  {
+   "id": "q016",
+   "text": "What jobs do I currently hold?"
+  },
+  {
+   "id": "q017",
+   "text": "Am I working multiple jobs right now?"
+  },
+  {
+   "id": "q018",
+   "text": "Can you remind me of my pet and where I live?"
+  },
+  {
+   "id": "q019",
+   "text": "What do you know about my living situation and my cat?"
+  },
+  {
+   "id": "q020",
+   "text": "How should you respond to me, and where am I located?"
+  },
+  {
+   "id": "q021",
+   "text": "What are all the details you remember about my work?"
+  },
+  {
+   "id": "q022",
+   "text": "Summarize my personal details—pet, location, and preferences."
+  },
+  {
+   "id": "q023",
+   "text": "What do you know about my jobs and where I'm based?"
+  },
+  {
+   "id": "q024",
+   "text": "Give me a full rundown of everything you know about me."
+  }
+ ]
+}

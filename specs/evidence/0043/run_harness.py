@@ -262,7 +262,14 @@ def _digest_file(p: pathlib.Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
-def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: list | None = None) -> dict:
+def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: list | None = None,
+        request_manifest=None) -> dict:
+    """CAPTURE, THEN SCORE (round 6, R5-01). Both arms are captured and checked (R5-03) with no answer interpreted.
+    `request_manifest=None`: the ledger is written UNSCORED — the captures and the blind input, no outcome,
+    classification or rate anywhere — and is scored later by --rescore against the frozen manifest. A (manifest path,
+    blind-input path) pair, or "generated" for a FAKE run (a manifest built from the run's own row references, which
+    says it is generated and which bind() refuses on a real run): the run is scored through rescore(), the ONE scoring
+    path."""
     ev, mc, ip, lg = _load("examiner_view"), _load("model_input_capture"), _load("interpreter"), _load("ledger")
     ep = _load("examiner_projection")
     out.mkdir(parents=True, exist_ok=True)
@@ -301,10 +308,10 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
         questions, authorship = author_questions(view_rows, inner, n_questions)
     paraphrases = {(f["relation"], f["object"]): f.get("paraphrases", []) for f in ip.FACTS.values()}
     kept, excluded = attach_classes(questions, view_rows, man, screen_fragments(ep.forbidden_fragments(), view_rows), paraphrases)
-    expected = {q["id"]: q["fixture_class"] for q in kept}
     arms = ("veracium", lg.BASELINE_ARM)
-    # the arms
-    rows, detail = [], []
+    # the arms — CAPTURED only (R5-01): no answer is interpreted here; the requested propositions come from the request
+    # manifest, which for a fresh run cannot exist until its questions do
+    detail = []
     for q in kept:
         shipped = capture_shipped(str(db), q["text"], inner)
         record = mc.adjudication_record(shipped["delivered"])
@@ -319,25 +326,11 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
             execution = dict(cap["execution"])
             if cap.get("error"):
                 execution["event"] = "error"
-            qd = {"text": q["text"], "facts": q["facts"], "class_fact": q["class_fact"]}
-            r = ip.interpret(qd, cap["prompt"], record, cap["answer"] or "", execution, delivered=shipped["delivered"])
-            cf = r["facts"].get(q["class_fact"], {})
-            rows.append({"question_id": q["id"], "arm": arm, "fixture_class": q["fixture_class"], "outcome": r["outcome"], "attempts": 1,
-                         "claimed_reason": (cap["answer"] or cap.get("error") or "")[:160], "support": _ledger_support(cf.get("support") if cf else None)})
-            detail.append({"question_id": q["id"], "arm": arm, "question": q["text"], "fixture_class": q["fixture_class"], "class_fact": q["class_fact"],
-                           "answer": cap["answer"], "error": cap.get("error"), "ms": cap["ms"], "outcome": r["outcome"], "cause": r.get("cause"), "rule": r["rule"],
-                           "facts": r["facts"], "anomalies": r["anomalies"], "prompt_digest": cap["digest"], "delivered": [d["edge"] for d in shipped["delivered"]],
-                           "system": cap["system"], "prompt": cap["prompt"], "record": record, "question_facts": q["facts"], "execution": execution})
-    # excluded questions appear in the ledger with their reason (A1-bis) and are declared exclusions
-    for qid, why in excluded.items():
-        for arm in arms:
-            rows.append({"question_id": qid, "arm": arm, "fixture_class": "absent", "outcome": "UNRESOLVED", "attempts": 1, "claimed_reason": f"excluded: {why}"[:160], "support": "none"})
-    expected_all = {**expected, **{qid: "absent" for qid in excluded}}
+            detail.append({"question_id": q["id"], "arm": arm, "question": q["text"], "answer": cap["answer"], "error": cap.get("error"),
+                           "ms": cap["ms"], "prompt_digest": cap["digest"], "delivered": [d["edge"] for d in shipped["delivered"]],
+                           "system": cap["system"], "prompt": cap["prompt"], "record": record,
+                           "question_facts": [{k: v for k, v in f.items() if k != "class"} for f in q["facts"]], "execution": execution})
     sources = {"veracium": "captured", lg.BASELINE_ARM: "captured"}
-    problems = lg.gate(rows, expected_all, arms, exclusions=excluded, sources=sources)
-    if problems:
-        raise Refused("the ledger refused: " + "; ".join(problems))
-    rates = {arm: lg.rates(rows, arm, expected_all, arms, exclusions=excluded, sources=sources) for arm in arms}
     # model configuration, frozen and quoted
     models = getattr(inner, "_models", None) or {"note": "fake model"}
     config = {"models": dict(models) if isinstance(models, dict) else models, "max_tokens": getattr(inner, "_max_tokens", None),
@@ -346,13 +339,20 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
     result = {"head": head, "generated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"), "interpreter_sha16": interpreter_sha16(),
               "fixture_digest": fixture_digest, "view_digest": view_digest, "manifest_classes": {eid: v["class"] for eid, v in man.items()},
               "authorship": authorship, "questions": questions, "kept": [q["id"] for q in kept], "excluded": excluded,
-              "calibration": calibration, "config": config, "sources": sources, "arms": list(arms), "ledger": rows, "detail": detail, "rates": rates}
+              "calibration": calibration, "config": config, "sources": sources, "arms": list(arms), "ledger": [], "detail": detail,
+              "rates": None, "unscored": True}
+    rm = _load("request_manifest")
+    (out / "blind_input.json").write_text(rm.blind_text(result, f"veracium {head[:12]}: the run's own ledger (this directory)"), encoding="utf-8")
+    if request_manifest is not None:
+        if request_manifest == "generated":
+            request_manifest = rm.generate(result, out)
+        result = rescore(result, request_manifest)
     (out / "run_ledger.json").write_text(json.dumps(result, indent=1, sort_keys=True, ensure_ascii=False) + "\n")
     (out / "run_report.txt").write_text(report(result))
     return result
 
 
-def rescore(res: dict) -> dict:
+def rescore(res: dict, request_manifest=None) -> dict:
     """Re-interpret a committed run's captured answers with the CURRENT interpreter — no model call, the
     prompts and records travel in the ledger's detail — and recompute the rates. The instrument can be
     improved and its effect shown on the SAME answers; the answers themselves never change.
@@ -386,8 +386,33 @@ def rescore(res: dict) -> dict:
         if bad:
             raise Refused(f"the stored arm pair for {qid} is not a valid comparison: {bad} — no re-scored rate")
     rows, detail = [], []
+    # round 6 (R5-01): the REQUESTED PROPOSITION comes from the request manifest (A3-quinquies), bound by its bytes, its
+    # blind input re-derived from this ledger, every kept question present and none empty — all before any answer is
+    # scored. Each row's facts, class-determining fact, tie set and event-time flag are the manifest's, never the row
+    # reference's; the rows' text comes from the bound blind input, the fixture as the examiner saw it.
+    rm = _load("request_manifest")
+    try:
+        if request_manifest is None:
+            rman, rdig = rm.load(); blind_path = rm.BLIND_PATH                  # the committed run: the FROZEN manifest
+        else:
+            mpath, blind_path = request_manifest
+            rman, rdig = rm.load(mpath, frozen=False)
+        rm.bind(res, rman, rdig, blind_path)
+    except rm.Refused as exc:                                                   # the harness's own refusal, its reason kept
+        raise Refused(str(exc)) from exc
+    fixture = json.loads(pathlib.Path(blind_path).read_text(encoding="utf-8"), object_pairs_hook=_strict_pairs)["fixture_rows"]
+    para = {}
+    for y in res["detail"]:
+        for f in y.get("question_facts", []):
+            para.setdefault(f["id"], f.get("paraphrases", []))
     for x in res["detail"]:
-        qd = {"text": x["question"], "facts": x["question_facts"], "class_fact": x["class_fact"]}
+        cd = rm.class_determining(rman["questions"][x["question_id"]], x["record"], res["manifest_classes"])
+        facts = [{"id": e, **{k: fixture[e][k] for k in ("subject", "relation", "object")}, "paraphrases": para.get(e, []),
+                  "class": res["manifest_classes"][e]} for e in cd["requested"]]
+        x = {**x, "question_facts": facts, "class_fact": cd["class_fact"], "fixture_class": cd["fixture_class"],
+             "facet": cd["facet"], "requested": cd["requested"]}
+        qd = {"text": x["question"], "facts": facts, "class_fact": cd["class_fact"], "class_set": cd["class_set"],
+              "event_time": cd["event_time"], "ambiguous": cd["ambiguous"]}
         # the DELIVERED identities, rebuilt from the row's adjudication record (each delivered edge with its unit) and
         # bound to the ids the row recorded — then handed to the interpreter exactly as the run handed them
         if sorted(x["record"]) != sorted(x["delivered"]):
@@ -402,20 +427,30 @@ def rescore(res: dict) -> dict:
     excluded = res["excluded"]
     for qid in excluded:
         for arm in res["arms"]:
-            rows.append(next(r for r in res["ledger"] if r["question_id"] == qid and r["arm"] == arm))
+            prior = next((r for r in res["ledger"] if r["question_id"] == qid and r["arm"] == arm), None)
+            rows.append(prior or {"question_id": qid, "arm": arm, "fixture_class": "absent", "outcome": "UNRESOLVED", "attempts": 1,
+                                  "claimed_reason": f"excluded: {excluded[qid]}"[:160], "support": "none"})
     # the denominator is the FROZEN set's: each kept question's class as the run recorded it, each exclusion absent —
     # never "whatever rows survived"
-    expected = {**{x["question_id"]: x["fixture_class"] for x in res["detail"]}, **{qid: "absent" for qid in excluded}}
+    # R5-01: the denominator is the MANIFEST's — each kept question's class as the requested proposition sets it
+    expected = {**{x["question_id"]: x["fixture_class"] for x in detail}, **{qid: "absent" for qid in excluded}}
     problems = lg.gate(rows, expected, tuple(res["arms"]), exclusions=excluded, sources=res["sources"])
     if problems:
         raise Refused("the re-scored ledger refused: " + "; ".join(problems))
     rates = {arm: lg.rates(rows, arm, expected, tuple(res["arms"]), exclusions=excluded, sources=res["sources"]) for arm in res["arms"]}
     # R5-02's closure: the scoring this replaces is KEPT, never overwritten — its instrument, when it scored, its rates
     # and every (question, arm, outcome, cause) — so the effect of an instrument change is visible in the record
-    replaced = {"interpreter_sha16": res.get("interpreter_sha16"), "scored_at": res.get("rescored_at") or res["generated"],
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+    if res.get("unscored"):
+        # the FIRST scoring of captured answers: nothing is replaced, so nothing enters the history
+        return {**{k: v for k, v in res.items() if k != "unscored"}, "ledger": rows, "detail": detail, "rates": rates,
+                "interpreter_sha16": interpreter_sha16(), "manifest_sha256": rdig, "scored_at": now,
+                "history": list(res.get("history", []))}
+    replaced = {"interpreter_sha16": res.get("interpreter_sha16"), "scored_at": res.get("rescored_at") or res.get("scored_at") or res["generated"],
                 "rates": res["rates"],
                 "outcomes": [[x["question_id"], x["arm"], x["outcome"], x.get("cause")] for x in res["detail"]]}
     return {**res, "ledger": rows, "detail": detail, "rates": rates, "rescored": True, "interpreter_sha16": interpreter_sha16(),
+            "manifest_sha256": rdig,
             "rescored_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
             "history": list(res.get("history", [])) + [replaced]}
 
@@ -537,12 +572,30 @@ def _history_lines(res: dict) -> list:
     return L
 
 
+def _unscored_report(res: dict) -> str:
+    cal = res["calibration"]
+    L = [f"# generated {res['generated']} against veracium @ {res['head']}",
+         "0043 — THE REFUSAL HARNESS, RUN: UNSCORED — awaiting the request manifest (A3-quinquies: capture, then score)", "",
+         f"fixture store digest (as built): {res['fixture_digest']}", f"examiner view digest: {res['view_digest']}",
+         f"calibration gate passed before capture: shipped {_ratio(cal['shipped'])}, baseline {_ratio(cal['baseline'])}, garble collapsed {cal['garble_collapsed']}",
+         f"captured: {len(res['detail'])} (question, arm) pairs over {len(res['kept'])} kept questions; {len(res['excluded'])} excluded",
+         "blind input for the two seats' labelling: blind_input.json beside this report (question id and text, the fixture rows)",
+         "no answer has been interpreted: the requested propositions come from a request manifest adjudicated blind AFTER",
+         "authorship, and the captures are scored only by `run_harness.py --rescore` against it", "",
+         "questions (id, text):"]
+    L += [f"  {q['id']}: {q['text']}" for q in res["questions"]]
+    return "\n".join(L) + "\n"
+
+
 def report(res: dict) -> str:
+    if res.get("unscored"):
+        return _unscored_report(res)
     lg = _load("ledger")
     L = [f"# generated {res['generated']} against veracium @ {res['head']}",
          "0043 — THE REFUSAL HARNESS, RUN (tranche 2): two arms against the model, every rate with its denominator", "",
          f"fixture store digest (as built): {res['fixture_digest']}", f"examiner view digest: {res['view_digest']}",
          f"scored with interpreter.py sha16 {res.get('interpreter_sha16')}" + (f" — RE-SCORED {res['rescored_at']} over the captured answers (no new model call)" if res.get("rescored") else ""),
+         *([f"requested propositions from the request manifest, sha256 {res['manifest_sha256']} (A3-quinquies: adjudicated blind by both seats, frozen, bound by its bytes)"] if res.get("manifest_sha256") else []),
          *_history_lines(res),
          f"model configuration (frozen): {json.dumps(res['config'], sort_keys=True)}",
          f"authorship: {json.dumps(res['authorship'], sort_keys=True)}",

@@ -44,7 +44,7 @@ def _with_transform(make):
 def _run(tmp_path, monkeypatch, make=None, questions=None):
     if make is not None:
         monkeypatch.setattr(rh, "_load", _with_transform(make))
-    return rh.run(tmp_path / "out", rh.FakeModel(), questions_override=questions)
+    return rh.run(tmp_path / "out", rh.FakeModel(), questions_override=questions, request_manifest="generated")
 
 
 def _drop_compiled_keep_grounding(honest):

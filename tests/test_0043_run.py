@@ -45,7 +45,8 @@ def _strict_pairs(pairs):
 def fake_run(tmp_path_factory):
     rh = _load("run_harness")
     out = tmp_path_factory.mktemp("run")
-    return rh, rh.run(out, rh.FakeModel(), n_questions=6), out
+    # R5-01: a fresh run captures, then scores against a request manifest; a FAKE run uses a generated one
+    return rh, rh.run(out, rh.FakeModel(), n_questions=6, request_manifest="generated"), out
 
 
 def test_the_pipeline_runs_end_to_end_on_the_canned_model_and_the_ledger_passes_its_gate(fake_run):
@@ -133,7 +134,7 @@ def test_an_unexpected_unresolved_reference_case_refuses_the_run_before_any_ques
     original_load = rh._load
     monkeypatch.setattr(rh, "_load", lambda name: ip if name == "interpreter" else original_load(name))   # run() loads the interpreter through _load
     with pytest.raises(rh.Refused, match="not calibrated"):        # the agreement check fires first; the split count is what the REPORT names
-        rh.run(tmp_path / "r", rh.FakeModel(), n_questions=6)
+        rh.run(tmp_path / "r", rh.FakeModel(), n_questions=6, request_manifest="generated")
     assert not (tmp_path / "r" / "run_report.txt").exists()
 
 
