@@ -642,7 +642,7 @@ def test_rulings_and_spec_question_tables_agree():
 
 
 def test_the_spec_status_index_is_current():
-    """specs/STATUS.md is the at-a-glance view for Quentin and the coordination
+    """specs/STATUS.md is the at-a-glance view for the owner and the coordination
     session. It is generated: every column comes from the spec files, git,
     findings.py or reviews.py. A hand-maintained status table is what got 0002
     deferred seven times."""
@@ -3323,7 +3323,7 @@ def test_the_citation_derivation_detects_a_planted_name_and_resolves_a_real_one(
 
 
 # --- the retrospective deadline (PROCESS §3b's carve-out; research's check,
-# landed 2026-09-08 on Quentin's word "Fix the deadline check first, then
+# landed 2026-09-08 on the owner's word "Fix the deadline check first, then
 # name the variant"). check_spec_reference.py verifies at COMMIT TIME that a
 # security-hotfix commit carries a Spec-Retrospective-Due that parses; nothing
 # read the date again, and seven obligations passed their dates in silence.

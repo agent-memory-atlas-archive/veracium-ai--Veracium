@@ -779,7 +779,7 @@ class Edge(BaseModel):
         # received email) are not quarantined; they're marked use_only at ingest
         # (finding B: content-type quarantine, not blanket sender distrust).
         if _census.enabled():                # the shipped default skips the machinery
-            with _SITE_EDGE_QUARANTINED.consult():     # (Quentin, 2026-09-19: the four hot Edge
+            with _SITE_EDGE_QUARANTINED.consult():     # (the owner, 2026-09-19: the four hot Edge
                 q = (self.relation == QUARANTINE_RELATION            # predicates cost 12.4k decisions per recall);
                      or self.provenance.disclosure == Disclosure.QUARANTINED)   # round 6, R6-2b: consulted BEFORE
                 q = _SITE_EDGE_QUARANTINED.fire(q)      # the value is evaluated; the expression is repeated on the
@@ -793,7 +793,7 @@ class Edge(BaseModel):
         # A benign third-party *inference* (finding B): may shape behavior, but
         # the user never confirmed it — never volunteered or asserted as fact.
         if _census.enabled():                # the shipped default skips the machinery
-            with _SITE_EDGE_USE_ONLY.consult():     # (Quentin, 2026-09-19: the four hot Edge
+            with _SITE_EDGE_USE_ONLY.consult():     # (the owner, 2026-09-19: the four hot Edge
                 u = self.provenance.disclosure == Disclosure.USE_ONLY   # predicates cost 12.4k decisions per recall);
                 u = _SITE_EDGE_USE_ONLY.fire(u)      # round 6, R6-2b: consulted BEFORE the value is evaluated
         else:
@@ -817,7 +817,7 @@ class Edge(BaseModel):
         which is why the ruling sequences this BEFORE Phase A. UTC-aware
         comparison only."""
         if _census.enabled():                # the shipped default skips the machinery
-            with _SITE_EDGE_VALID_NOW.consult():     # (Quentin, 2026-09-19: the four hot Edge
+            with _SITE_EDGE_VALID_NOW.consult():     # (the owner, 2026-09-19: the four hot Edge
                 v = as_utc(self.valid_from) <= utcnow()   # predicates cost 12.4k decisions per recall);
                 v = _SITE_EDGE_VALID_NOW.fire(v)      # round 6, R6-2b: consulted BEFORE the value is evaluated
         else:
@@ -833,7 +833,7 @@ class Edge(BaseModel):
         stored and becomes assertable by itself when its `valid_from`
         arrives; nothing is rewritten."""
         if _census.enabled():                # the shipped default skips the machinery
-            with _SITE_EDGE_ASSERTABLE.consult():     # (Quentin, 2026-09-19: the four hot Edge
+            with _SITE_EDGE_ASSERTABLE.consult():     # (the owner, 2026-09-19: the four hot Edge
                 ok = (self.active and not self.quarantined and not self.use_only   # predicates cost 12.4k decisions
                       and self.valid_now)                                          # per recall); round 6, R6-2b:
                 ok = _SITE_EDGE_ASSERTABLE.fire(ok)   # consulted BEFORE the value is evaluated
@@ -886,7 +886,7 @@ class Episode(BaseModel):
     consolidation_output_index: Optional[int] = None
 
     # --- specs/0022 §4b-ii (R18; internal S1) — episode retirement -----------
-    # Quentin's ruled mechanism (2026-08-17): a JSON field plus the
+    # The owner's ruled mechanism (2026-08-17): a JSON field plus the
     # store.episodes() read seam, no DDL. The sweep retires an episode whose
     # resolved source identity is revoked, exactly as it retires an edge;
     # store.episodes() default-EXCLUDES retired rows so every reader inherits

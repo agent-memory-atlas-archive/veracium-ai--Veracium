@@ -4,7 +4,7 @@
     veracium remember --user ida "email from acme" --author third_party --dry-run --json
 
 Why it exists (the developer-tools backlog, item 4, endorsed 2026-08-30 and
-started on Quentin's word 2026-09-12): every decision `remember` makes is
+started on the owner's word 2026-09-12): every decision `remember` makes is
 silent until the row is written — which facts it extracts, which it refuses,
 which it quarantines at birth, whether the 0026 relay floor demotes one,
 which existing fact it supersedes or reinforces, whether the extraction was

@@ -175,7 +175,7 @@ def test_retired_episode_round_trips(tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# the str-in-datetime defect (Quentin, 2026-09-06: fixed as a separate item)
+# the str-in-datetime defect (the owner, 2026-09-06: fixed as a separate item)
 # --------------------------------------------------------------------------- #
 
 def test_retire_writers_hold_datetimes_not_text(tmp_path):

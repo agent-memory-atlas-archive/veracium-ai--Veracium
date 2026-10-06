@@ -13,7 +13,7 @@ finding R5-2 rework:
     ISOLATED store = the target edge + a fixed distractor set; fixed observed_at /
     valid_from / insertion order / budget / empty wiki / no higher-priority
     classes. See §6a; the per-case params ride the manifest `fixture` block.
-  * Preregistered NON-BLIND (Quentin-approved 2026-08-30): accept cases are in
+  * Preregistered NON-BLIND (owner-approved 2026-08-30): accept cases are in
     plaintext + digest; the tuning PROCEDURE is frozen in §6a (only
     semantic_min_cosine is tunable, on the `tune` split, before any accept run).
 

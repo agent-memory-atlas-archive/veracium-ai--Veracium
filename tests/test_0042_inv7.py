@@ -1370,7 +1370,7 @@ def test_r8_f3_the_census_import_is_restored_for_a_derived_alias():
 
 # ------------------------------------------------------------------------------------------------------------------
 # ROUND 12 — the round-11 verdict's two findings, and research's stage-1 read of the fix (R1-R4 blocking; R4a and
-# R7 pulled into this batch on Quentin's word). Every cell below was written BEFORE the fix and run against the
+# R7 pulled into this batch on the owner's word). Every cell below was written BEFORE the fix and run against the
 # pin: each defect cell FAILED there and each control PASSED, which is what makes the controls controls.
 # ------------------------------------------------------------------------------------------------------------------
 
@@ -2005,7 +2005,7 @@ def test_r14_a_fire_the_transform_cannot_bind_is_still_refused():
             un.uninstrument_source(_R14_SELF + body, "<fire>")
 
 
-# ---- round 15: the twin keeps a REAL census.py (Quentin's decision, 2026-09-24): round 15 the SOURCE'S verbatim; round 16
+# ---- round 15: the twin keeps a REAL census.py (the owner's decision, 2026-09-24): round 15 the SOURCE'S verbatim; round 16
 # the REFERENCE census, an accepted commit's (tests below) — these round-15 tests hold under both --------------------------
 # The round-14 verdict: "The new stand-in can still change an instrumented decision from True to False while
 # verification is clean and its use counter stays at zero." Reproduced at 8074e6b through the stand-in's CLASS — its

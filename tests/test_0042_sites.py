@@ -993,7 +993,7 @@ def test_the_trace_names_the_branch_not_the_content(enabled, monkeypatch):
     assert all(len(r) == 3 for r in rows)
 
 
-# ---- the bypass at the four hot Edge predicates (Quentin, 2026-09-19): both paths, and the raise --
+# ---- the bypass at the four hot Edge predicates (the owner, 2026-09-19): both paths, and the raise --
 # The decision is computed ONCE (`q = <expr>`) and the census machinery runs only when enabled, so
 # §4A-2's "consulted before the decision branches" is honoured in purpose (counted at the site) and
 # not in letter: a predicate that RAISES is invisible to the census at these four sites. Research's

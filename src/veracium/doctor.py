@@ -5,7 +5,7 @@
     veracium doctor --db veracium.db --json       # machine-readable
 
 Why it exists (the developer-tools backlog, item 5, endorsed 2026-08-30 and
-started on Quentin's word 2026-09-12): the selfcheck needs a provider, so a
+started on the owner's word 2026-09-12): the selfcheck needs a provider, so a
 host's first touch of a store had nothing to run; and the store's own
 invariants — the version stamp, the singleton identity, the journal, the
 supersession links, the ledger's references, the revocation sweep's

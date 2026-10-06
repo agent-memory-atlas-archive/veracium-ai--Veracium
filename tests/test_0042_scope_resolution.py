@@ -1192,7 +1192,7 @@ def test_r12_s2_1_definition_time_positions_resolve_in_the_enclosing_scope(cell,
 # the in-header order: positional defaults, kw-only defaults, annotations (posonly, args, *args, **kwargs, kw-only),
 # return. `iter_fields` groups by FIELD. Where the two disagree, each scope is handed the other's table.
 #
-# Remedy (b), on Quentin's word: REFUSE rather than guess the order, which is the resolver's own principle. A
+# Remedy (b), on the owner's word: REFUSE rather than guess the order, which is the resolver's own principle. A
 # collision is refused when one key spans two or more ROLES and at least one is a header role. "Self + body" and
 # "one role twice" are left alone: their orders provably agree and ordinary code uses them.
 SAME_LINE_ROLE_COLLISIONS = [
@@ -1251,7 +1251,7 @@ def _own_names(n):
 
 @pytest.mark.parametrize("cell,body", SAME_LINE_ORDERED, ids=[c for c, _ in SAME_LINE_ORDERED])
 def test_r12_s2b_1_a_header_part_beside_its_own_block_gets_its_own_table(cell, body):
-    """RESEARCH'S S2b-1, the part fixed by ORDER on Quentin's word. The resolver took a statement's own block from the
+    """RESEARCH'S S2b-1, the part fixed by ORDER on the owner's word. The resolver took a statement's own block from the
     queue BEFORE the blocks nested in its header, which the interpreter creates first — so a lambda in a lambda's
     default, a return annotation beside a same-line body lambda, and a genexp in a genexp's first iterable each got
     the other's table. Dev confirmed all three silent; the genexp shape is live in asof/resolve.py:445. Refusing them
@@ -1285,7 +1285,7 @@ def test_r12_s2c_2_an_inlinable_comprehension_in_a_first_iterable_is_refused_on_
     it is not; through the transform a census read there stayed live in the twin with unresolved=0. On 3.12.3 the
     source ITSELF raises UnboundLocalError (a CPython inlining bug on that version).
 
-    REFUSED ON 3.12+, on Quentin's word — the resolver cannot answer where its source of truth is wrong, and refusing
+    REFUSED ON 3.12+, on the owner's word — the resolver cannot answer where its source of truth is wrong, and refusing
     is its principle. NOT refused on 3.10/3.11, where symtable and the compiler agree and the answer is right: the
     refusal is loud where it fires and the answer correct where it does not, so this is not round 8's SILENT
     version divergence. Only inside a function or class block: at module level `block_of` answers module outright."""

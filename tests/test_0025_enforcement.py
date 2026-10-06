@@ -400,7 +400,7 @@ def test_no_unvalidated_relation_path():
 
 
 def test_q3_empty_subject_cells_ruled_and_pinned():
-    """0024 Q3, RESOLVED 2026-08-22 (Quentin, with the reachability check
+    """0024 Q3, RESOLVED 2026-08-22 (the owner, with the reachability check
     the question asked for): a LITERAL empty subject never reaches the
     coherence code — the shipped completeness check drops the falsy value —
     and a WHITESPACE subject (truthy) survives, strips to an empty

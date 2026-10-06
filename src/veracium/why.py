@@ -8,7 +8,7 @@ accessors, and renders. It writes nothing and decides nothing.
                                                       # object contain the text, with ids
 
 Why it exists (the developer-tools backlog, item 3, endorsed 2026-08-30 and
-started on Quentin's word 2026-09-11): every decision the system makes about a
+started on the owner's word 2026-09-11): every decision the system makes about a
 fact is silent — superseded by what, absorbed into what, why it is not
 assertable, who cleared its confirmation, whether its source was revoked. All of
 it is recorded (0009 outcome history, 0029's transaction-time journal, 0028's

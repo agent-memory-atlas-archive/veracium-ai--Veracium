@@ -6,7 +6,7 @@ control that makes it fail, in this file, and the controls are themselves
 asserted — a control that stops discriminating is a test failure, not a
 silent green.
 
-Written test-first from the accepted spec (2026-09-05, Quentin's ruling
+Written test-first from the accepted spec (2026-09-05, the owner's ruling
 "start on 0029 and 0030"); the implementation lands behind these.
 """
 from __future__ import annotations

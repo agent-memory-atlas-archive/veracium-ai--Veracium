@@ -786,7 +786,7 @@ class SqliteStore(Store):
         # attributes differing; a serializer warning on every revocation-
         # retired edge, reproduced in shipped 0.19.0). `as_utc_required`
         # accepts a datetime or ISO text and REFUSES anything else, so garbage
-        # refuses the write (Quentin, 2026-09-06: fixed as a separate item).
+        # refuses the write (the owner, 2026-09-06: fixed as a separate item).
         edge.invalidated_at = as_utc_required(at)
         self._refuse_redacted_reason(reason, f"edge {edge_id!r}", "edge-invalidate")
         edge.invalidation_reason = reason
