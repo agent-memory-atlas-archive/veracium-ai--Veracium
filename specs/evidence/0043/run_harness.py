@@ -355,12 +355,46 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
 def rescore(res: dict) -> dict:
     """Re-interpret a committed run's captured answers with the CURRENT interpreter — no model call, the
     prompts and records travel in the ledger's detail — and recompute the rates. The instrument can be
-    improved and its effect shown on the SAME answers; the answers themselves never change."""
-    ip, lg = _load("interpreter"), _load("ledger")
+    improved and its effect shown on the SAME answers; the answers themselves never change.
+
+    Round 6 (0043-R5-04): it replays the run's VALIDATION PATH, not only its interpretation. Round 5 derived the
+    denominator from the rows that survived (a missing pair vanished from the obligation set: 23/23) and passed
+    `delivered=None` (an unaccounted unit the run made UNRESOLVED was scored). Now, before any row is scored: the
+    detail must carry EXACTLY the frozen (kept question, arm) pairs; each row's delivered identities are rebuilt from
+    its adjudication record and must equal the ids it recorded; the interpreter must pass the calibration gate the run
+    applies; and every stored pair must pass R5-03's arm check. Each is a refusal, never a smaller report."""
+    ip, lg, mc = _load("interpreter"), _load("ledger"), _load("model_input_capture")
+    # the FROZEN obligation set: every kept question, in every arm — nothing missing, nothing extra
+    want = {(qid, arm) for qid in res["kept"] for arm in res["arms"]}
+    have = [(x["question_id"], x["arm"]) for x in res["detail"]]
+    if len(have) != len(set(have)) or set(have) != want:
+        raise Refused(f"the re-scored detail is not the frozen (question, arm) set: missing {sorted(want - set(have))}, "
+                      f"extra {sorted(set(have) - want)}, duplicated {sorted({p for p in have if have.count(p) > 1})} — "
+                      f"a missing pair refuses, it never leaves the denominator")
+    # the same calibration gate the run applies, on the CURRENT instrument
+    probe = mc.run()
+    if probe["problems"] or not probe["control_refuses"]:
+        raise Refused(f"the arm comparison is not valid on the calibration probe — {probe['problems']} — no re-scored rate")
+    cal_s, cal_b = ip.calibrate(probe["shipped"]["prompt"], probe["record"]), ip.calibrate(probe["baseline"]["prompt"], probe["record"])
+    if not (cal_s["calibrated"] and cal_b["calibrated"] and ip.garble_control(probe["shipped"]["prompt"], probe["record"])["collapsed"]):
+        raise Refused(f"the current interpreter is not calibrated: shipped {cal_s['agreement']} baseline {cal_b['agreement']} — no re-scored rate")
+    # R5-03's arm check on every stored pair
+    by = {(x["question_id"], x["arm"]): x for x in res["detail"]}
+    for qid in res["kept"]:
+        s, b = by[(qid, "veracium")], by[(qid, lg.BASELINE_ARM)]
+        bad = mc.arm_problems({"system": s["system"], "prompt": s["prompt"]}, {"system": b["system"], "prompt": b["prompt"]})
+        if bad:
+            raise Refused(f"the stored arm pair for {qid} is not a valid comparison: {bad} — no re-scored rate")
     rows, detail = [], []
     for x in res["detail"]:
         qd = {"text": x["question"], "facts": x["question_facts"], "class_fact": x["class_fact"]}
-        r = ip.interpret(qd, x["prompt"], x["record"], x["answer"] or "", x.get("execution", {}), delivered=None)
+        # the DELIVERED identities, rebuilt from the row's adjudication record (each delivered edge with its unit) and
+        # bound to the ids the row recorded — then handed to the interpreter exactly as the run handed them
+        if sorted(x["record"]) != sorted(x["delivered"]):
+            raise Refused(f"{x['question_id']}/{x['arm']}: the adjudication record's edges {sorted(x['record'])} are not the "
+                          f"delivered ids the row recorded {sorted(x['delivered'])}")
+        delivered = [{"edge": e, **v} for e, v in x["record"].items()]
+        r = ip.interpret(qd, x["prompt"], x["record"], x["answer"] or "", x.get("execution", {}), delivered=delivered)
         cf = r["facts"].get(x["class_fact"], {})
         rows.append({"question_id": x["question_id"], "arm": x["arm"], "fixture_class": x["fixture_class"], "outcome": r["outcome"], "attempts": 1,
                      "claimed_reason": (x["answer"] or x.get("error") or "")[:160], "support": _ledger_support(cf.get("support") if cf else None)})
@@ -369,7 +403,9 @@ def rescore(res: dict) -> dict:
     for qid in excluded:
         for arm in res["arms"]:
             rows.append(next(r for r in res["ledger"] if r["question_id"] == qid and r["arm"] == arm))
-    expected = {r["question_id"]: r["fixture_class"] for r in rows}
+    # the denominator is the FROZEN set's: each kept question's class as the run recorded it, each exclusion absent —
+    # never "whatever rows survived"
+    expected = {**{x["question_id"]: x["fixture_class"] for x in res["detail"]}, **{qid: "absent" for qid in excluded}}
     problems = lg.gate(rows, expected, tuple(res["arms"]), exclusions=excluded, sources=res["sources"])
     if problems:
         raise Refused("the re-scored ledger refused: " + "; ".join(problems))
