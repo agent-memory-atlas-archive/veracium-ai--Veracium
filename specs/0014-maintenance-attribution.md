@@ -607,6 +607,8 @@ both sites, a no-op transfer visible in the values). The identity is
 > qualified by this rider for the one class above and is otherwise unchanged.
 >
 > *(Rider for the 0041 external reviewer, round 13: the separate cross-spec sign-off.)*
+>
+> **Implementation accepted (0041 round 14, 2026-10-06, `0041-round14-verdict-verbatim.md`):** *"Separate 0014 §2c rider sign-off: the contract accepted at round 13 is unchanged."* Its implementation, at pin `8a54a87`, is accepted on three conjunctive conditions: (1) *"A valid notice accounts for this resolved held output, in the same unit or already held; another arrival’s notice cannot authorize it."* (2) *"Every projected difference is both named by the notice and in the episode carrier domain; structural lineage/operation/index changes retain their refusal."* (3) *"Each differing field’s held or incoming whole value equals the marker."*
 
 The contributor whose attribution we record may itself be adversarial (a compromised feed
 is the motivating case). The record must therefore be **fail-closed and content-free**: it records

@@ -2,6 +2,42 @@
 
 ## Unreleased
 
+- **Accepted: the implementation of specs/0041, targeted redaction, at external round 14 — "Verdict: ACCEPTED. The
+  implementation at this pin closes both round-13 findings and the shared-carrier observation. No new blocking or
+  nonblocking finding is raised."** The implementation review ran rounds 9 to 14 on round 8's design acceptance.
+  The accepted code is pin `8a54a87`, reviewed as the round-14 package; the reviewer's own offline run read 5,139
+  passed and 48 skips, each explained, with no failures. The design accepted at round 8 is unchanged: the reviewer
+  checked INV-1–INV-12, the 64-carrier treatment map and §4h's transition rules byte-identical to round 13's. The
+  same verdict accepts the IMPLEMENTATION of specs/0014 §2c's rider (accepted as a contract at round 13) on its three
+  conditions. Rounds 9 to 13 raised 22 findings and observations; each is a row in the spec's generated Review
+  closure ledger, closed by a test a reader can run, and each round's package and verdict are rows in
+  `specs/reviews.py`. The spec moves to v15.5, which records what was accepted and the limits the acceptance keeps:
+  other records holding the same content need their own redaction; earlier backups and host-held copies are outside
+  the guarantee; contention cost is not quantified. **WHO SHOULD TAKE THIS: anyone who redacts records, or moves
+  stores carrying redactions between instances (export/import or restore).** This entry also stands for the round-12
+  to round-14 corrections, which this file did not record one by one:
+
+  - **A store's own export of a redacted quarantined edge imports again.** Redacting an edge already quarantined
+    listed a bookkeeping field the importer did not accept, so the store exported a notice its own importer
+    refused. A notice's field set is now one closed, named domain, read by both the writer and the importer.
+  - **"Nothing to redact" is decided over everything a redaction reaches**, not the live record alone. An edge
+    emptied by an ordinary write still carries content in its history, its confirmation digest and its ledger
+    digests; `Memory.redact` used to refuse it and leave all three. It now treats them. A record with no covered
+    content or marker anywhere is still refused, and the refusal writes nothing.
+  - **One redaction event has one body.** A contradictory notice of a store's OWN redaction event was accepted on
+    import, and a store's own event relayed back wrote a second record of it. Both now resolve to one source
+    identity and one body: a contradiction refuses the whole import, and a faithful relay is recognised as
+    existing.
+  - **A redaction now reaches a consolidation output the destination already holds.** The importer refused any
+    difference on such an output before a notice could apply, so the held summary kept its content. Under the
+    specs/0014 §2c rider it admits exactly one difference: that output's own redaction — its own notice, every
+    differing field named by it, and each one's value exactly the marker. Any other difference refuses the whole
+    import, as before. A repeated import under another user id binds the notice to the copy that exists.
+  - **Rows shared between records are accounted for.** A source-revocation reason, or a supersession refusal that
+    links two edges, already marked by another record's redaction is now attested in the second record's receipt
+    instead of being omitted. The contribution ledger is the named exception: its digests are cleared, not marked,
+    and an empty digest cannot show that it was ever written.
+
 - **specs/0041 targeted redaction — the round-10 implementation corrections (round 11).** The round-10 review
   RETURNED the implementation with four findings, each in the import, attestation or provenance contracts. Each
   was swept as a sample of its class, and one more instance was found by our own testing. **WHO SHOULD TAKE THIS:
