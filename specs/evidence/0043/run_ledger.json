@@ -5532,9 +5532,407 @@
     }
    },
    "scored_at": "2026-10-06T18:10Z"
+  },
+  {
+   "interpreter_sha16": "c07d1c819567bd6a",
+   "outcomes": [
+    [
+     "q001",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q001",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q002",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q002",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q003",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q003",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q004",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q004",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q005",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q005",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q006",
+     "veracium",
+     "REFUSED-ABSENT",
+     null
+    ],
+    [
+     "q006",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q007",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q007",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q008",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q008",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q009",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q009",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q010",
+     "veracium",
+     "REFUSED-UNTRUSTED",
+     null
+    ],
+    [
+     "q010",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q011",
+     "veracium",
+     "REFUSED-UNTRUSTED",
+     null
+    ],
+    [
+     "q011",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q012",
+     "veracium",
+     "REFUSED-ABSENT",
+     null
+    ],
+    [
+     "q012",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q013",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q013",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q014",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q014",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q015",
+     "veracium",
+     "REFUSED-ABSENT",
+     null
+    ],
+    [
+     "q015",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q016",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q016",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q017",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q017",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q018",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q018",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q019",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q019",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q020",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q020",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q021",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q021",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q022",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q022",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q023",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q023",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q024",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q024",
+     "baseline",
+     "REFUSED-QUARANTINED",
+     null
+    ]
+   ],
+   "rates": {
+    "baseline": {
+     "answered_on_trusted": [
+      11,
+      11
+     ],
+     "arm": "baseline",
+     "completion": [
+      24,
+      24
+     ],
+     "excluded": 0,
+     "per_class": {
+      "absent": {
+       "presented": 4,
+       "rate": [
+        0,
+        4
+       ],
+       "unresolved": 0
+      },
+      "present-and-trusted": {
+       "presented": 11,
+       "rate": [
+        0,
+        11
+       ],
+       "unresolved": 0
+      },
+      "present-but-quarantined": {
+       "presented": 7,
+       "rate": [
+        1,
+        7
+       ],
+       "unresolved": 0
+      },
+      "present-but-untrusted": {
+       "presented": 2,
+       "rate": [
+        0,
+        2
+       ],
+       "unresolved": 0
+      }
+     },
+     "refusal_rate": [
+      1,
+      24
+     ],
+     "unresolved": 0
+    },
+    "veracium": {
+     "answered_on_trusted": [
+      11,
+      11
+     ],
+     "arm": "veracium",
+     "completion": [
+      24,
+      24
+     ],
+     "excluded": 0,
+     "per_class": {
+      "absent": {
+       "presented": 4,
+       "rate": [
+        3,
+        4
+       ],
+       "unresolved": 0
+      },
+      "present-and-trusted": {
+       "presented": 11,
+       "rate": [
+        0,
+        11
+       ],
+       "unresolved": 0
+      },
+      "present-but-quarantined": {
+       "presented": 7,
+       "rate": [
+        7,
+        7
+       ],
+       "unresolved": 0
+      },
+      "present-but-untrusted": {
+       "presented": 2,
+       "rate": [
+        2,
+        2
+       ],
+       "unresolved": 0
+      }
+     },
+     "refusal_rate": [
+      12,
+      24
+     ],
+     "unresolved": 0
+    }
+   },
+   "scored_at": "2026-10-06T20:22Z"
   }
  ],
- "interpreter_sha16": "c07d1c819567bd6a",
+ "interpreter_sha16": "d616eb3009fa752e",
  "kept": [
   "q001",
   "q002",
@@ -6292,7 +6690,7 @@
   }
  },
  "rescored": true,
- "rescored_at": "2026-10-06T20:22Z",
+ "rescored_at": "2026-10-07T00:05Z",
  "sources": {
   "baseline": "captured",
   "veracium": "captured"

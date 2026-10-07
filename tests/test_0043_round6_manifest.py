@@ -62,8 +62,11 @@ def test_R5_01_an_event_framed_date_for_an_unanswerable_time_is_ANSWERED():
 
 def test_R5_01_the_committed_run_is_bound_to_the_frozen_manifest_and_its_history_kept():
     assert LEDGER["manifest_sha256"] == rm.FROZEN_SHA256
-    changed = {(q, a) for h in LEDGER["history"][-1:] for q, a, o, c in h["outcomes"] if o != _outcome(LEDGER, q, a)}
-    assert ("q006", "veracium") in changed
+    # the scoring R5-01 replaced is found by its INSTRUMENT (R5-02's interpreter), not by its position: a later instrument
+    # change appends its own entry after it
+    before = next(h for h in LEDGER["history"] if h["interpreter_sha16"] == "29764def6f74a4c9")
+    was = {(q, a): o for q, a, o, c in before["outcomes"]}
+    assert was[("q006", "veracium")] == "ANSWERED" and _outcome(LEDGER, "q006", "veracium") == "REFUSED-ABSENT"
 
 
 # ---- the refusals A3-quinquies names ------------------------------------------------------------------------------

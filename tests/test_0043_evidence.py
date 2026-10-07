@@ -182,7 +182,8 @@ def test_a3quater_the_record_is_the_delivered_identities_with_subject_and_class_
     u = it.interpret(it.Q_WORK, stray_prompt, rec, "I don't know.", {}, delivered=delivered)
     assert u["outcome"] == "UNRESOLVED" and u["cause"] == "capture-disagrees-with-delivered" and "a red car" in u["rule"]
     c = it.calibrate(r["shipped"]["prompt"], rec)
-    assert c["unresolved_by_cause"] == {"ambiguous-question": 1, "capture-disagrees-with-delivered": 0}
+    # the fail-closed rule (round 6) added the cause `unrecognised-frame`: no reference case reads unrecognised
+    assert c["unresolved_by_cause"] == {"ambiguous-question": 1, "capture-disagrees-with-delivered": 0, "unrecognised-frame": 0}
 
 
 def test_a3quater_round5_another_subjects_record_with_the_same_text_does_not_merge_into_the_users_fact():

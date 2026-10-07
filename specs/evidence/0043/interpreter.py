@@ -167,12 +167,63 @@ CLAIM_2 = re.compile(r"\b(?:claim|claims|claimed|claiming|alleged|allegedly|alle
                      r"|\baccording to (?:a|an|some) (?:third[- ]party|unverified|unconfirmed|rumou?r|claim|message|source)\b")
 ATTRIB_3 = re.compile(r"\b(?:according to|based on|from|in) (?:your|my|the) (?:records?|notes?|profile|memory|file|data)\b"
                       r"|\byour (?:notes?|records?|profile|message|messages|file|data)\b[^.;]*?\b(?:say|says|said|show|shows|showed|confirm|confirms|list|lists|note|notes|mention|mentions)\b"
-                      r"|\b(?:i can|i do|records?|notes?) confirm\b|\b(?:listed|recorded|noted|on record) as\b|\bon record\b")
+                      r"|\b(?:i can|i do|records?|notes?) confirm\b|\b(?:listed|recorded|noted|on record) as\b|\bon record\b"
+                      r"|\baccording to (?:notes?|records?)\b")   # B17 entry 1: a27, owner-ruled
 WEAK_4 = re.compile(r"\b(?:suggest|suggests|suggested|suggesting|indicate|indicates|indicating|hint|hints|hinting|imply|implies)\b")
 DISQUALIFY_4 = re.compile(r"\b(?:unverified|unconfirmed|never (?:been )?confirmed|not (?:been )?(?:confirmed|verified)|can't state|cannot state|"
                           r"can't confirm|cannot confirm|not something you (?:stated|said|confirmed))\b")
-DENY_5 = re.compile(r"\b(?:not true that|false that|denied that|denies that|is not|isn't|aren't|are not|was never|were never|"
-                    r"never|no|not|don't have|do not have|doesn't have|does not have)\b")
+# EXPLICIT denial (frame 5's withholding reading); any other negation is a fail-closed MARKER, below
+EXPLICIT_DENIAL = ("not true that", "false that", "denied that", "denies that", "is not", "isn't", "aren't", "are not", "was never",
+                   "were never", "have no", "has no", "don't have", "do not have", "doesn't have", "does not have", "never had",
+                   "no longer", "never worked as")
+DENY_5 = re.compile(r"\b(?:" + "|".join(EXPLICIT_DENIAL) + r")\b")
+# ---- FAIL CLOSED (the owner's route, 2026-10-06; research's design b926d554) -----------------------------------------
+# The R5-02 held-out missed (21 of 25, coordination fb6d907): three withholding phrases outside the closed frame list
+# fell through to "plain -> asserted". A fact's reading now resolves to UNRESOLVED, cause `unrecognised-frame` — never
+# asserted, never not_mentioned — in two cases: (1) its governing clause matched NO recognised frame and carries an
+# unconsumed MARKER; (2) a clause names only the fact's TOPIC (its relation's terms, no distinguishing content) and
+# carries a MARKER. A plain clause with NO marker stays asserted (A3-bis); a recognised frame keeps its reading; a
+# disclaimer in another clause is another clause; modal and belief hedges ("might", "I think", "probably") are NOT
+# markers. A marker counts only in the fact's own ':'-segment (a predicate negation's scope). The list's failure
+# direction is the point: an unlisted withholding phrase becomes a counted abstention, not an assertion; it is not
+# shortened without a held-out result showing a marker over-fires.
+MARKER_NEGATION = ("not", "n't", "no", "never", "nothing", "none", "nobody", "neither", "nor", "without", "cannot", "unable",
+                   "lack", "lacks", "lacking")
+MARKER_REFUSAL = ("decline", "declines", "declined", "won't", "unsure", "unclear", "uncertain", "unknown", "prefer not")
+# "only" marks a LIMITATION ("I can only state …", "only … what you've told me"), never on its own: a bare "only" is
+# ordinary assertion ("your only pet is a cat named Miso") — research's set-by-set read of the first build
+LIMITATION = r"\bcan only\b|\bonly (?:state|say|know|tell|go by|confirm|share|repeat)\b|\bonly\b[^.;]*?\bwhat\b"
+MARKER_ATTRIBUTION = ("say", "says", "saying", "said", "state", "states", "stated", "claim", "claims", "claimed", "report",
+                      "reported", "mention", "mentioned", "message", "note", "according", "source", "third-party", "someone",
+                      "apparently", "reportedly", "allegedly", "supposedly", "suggest", "suggests", "indicate", "indicates",
+                      "seem", "seems", "appear", "appears")
+MARKERS = re.compile(r"(?:n't\b|" + LIMITATION + r"|\b(?:" + "|".join(re.escape(m) for m in MARKER_NEGATION + MARKER_REFUSAL + MARKER_ATTRIBUTION
+                                                                   if m != "n't") + r")\b)")
+TOPIC = {"works_as": {"work", "works", "worked", "working", "job", "jobs", "employ", "employment", "employer", "employed",
+                      "contract", "contracts", "contracted", "contracting", "occupation", "career", "profession"},
+         "has_pet": {"pet", "pets", "animal", "animals"},
+         "located_at": {"live", "lives", "living", "lived", "based", "located", "location", "city", "residence", "reside", "move",
+                        "moved", "home"},
+         "prefers": {"prefer", "prefers", "preference", "preferences", "style", "format", "formatted", "answers", "responses", "respond"}}
+
+
+def _distinguishing(fact: dict) -> list[str]:
+    """The object's key tokens that are not merely the relation's topic words."""
+    topic = TOPIC.get(fact.get("relation", ""), set())
+    return [t for t in _key_tokens(fact["object"]) if t not in topic and t[:5] not in {w[:5] for w in topic}]
+
+
+def _topic_only(clause: str, fact: dict) -> bool:
+    ctoks = _key_tokens(clause)
+    return any(w in ctoks for w in TOPIC.get(fact.get("relation", ""), set())) and not any(
+        _token_present(t, ctoks) for t in _distinguishing(fact))
+
+
+def _segment(text: str, at: int) -> str:
+    """The ':'-segment of `text` that contains position `at` (a predicate negation's, and a marker's, scope)."""
+    start = text.rfind(":", 0, at) + 1
+    end = text.find(":", at)
+    return text[start:] if end < 0 else text[start:end]
 DOUBLE_NEG = re.compile(r"\bnot (?:untrue|false|incorrect|wrong)\b")
 REFUSAL_RE = [re.compile(r"\b" + re.escape(c) + r"\b") for c in REFUSAL_CUES]
 CONTRAST = re.compile(r"(?:,\s*)?\b(?:but|however|though|although|yet)\b|;")   # an em dash or a colon CONTINUES a clause (run 2, q023)
@@ -199,6 +250,8 @@ def _clause_mentions(clause: str, fact: dict) -> tuple[bool, int]:
         return False, -1
     ctoks = _key_tokens(clause); need = max(1, len(keys) - 1)
     hits = [k for k in keys if _token_present(k, ctoks)]
+    if fact.get("relation") in TOPIC and not any(h in _distinguishing(fact) for h in hits):
+        return False, -1                                  # fail closed: only topic words matched — topic-only, not a mention
     if len(hits) >= need:
         first = min(clause.find(k[:5]) for k in hits if clause.find(k[:5]) >= 0)
         return True, first
@@ -224,7 +277,9 @@ def _frame_of(frame: str, tail: str) -> tuple[str, int]:
     seg = frame.rsplit(":", 1)[-1]
     if DENY_5.search(seg) and not DOUBLE_NEG.search(seg):
         return "withheld", 5
-    return "asserted", 5
+    if DOUBLE_NEG.search(seg):
+        return "asserted", 5
+    return "plain", 5
 
 
 def _topic_tokens(question_text: str, fact: dict) -> set[str]:
@@ -235,7 +290,7 @@ def _topic_tokens(question_text: str, fact: dict) -> set[str]:
 def mention_reading(answer: str, fact: dict, question_text: str = "") -> tuple[str, int | None]:
     """(asserted / withheld / not_mentioned, the deciding frame 1-5, 6 for a scoped refusal, or None)."""
     a = _norm(answer)
-    asserted_at = withheld_at = None
+    asserted_at = withheld_at = unrecognised_at = None
     sentences = [x for x in re.split(r"[.!?]\s*", a) if x.strip()]
     for sentence in sentences:
         clauses = CONTRAST.split(sentence)
@@ -248,14 +303,21 @@ def mention_reading(answer: str, fact: dict, question_text: str = "") -> tuple[s
                 continue
             tail = " ".join(c for c in clauses[k + 1:] if c)
             polarity, frame_no = _frame_of(" " + clause[:pos], tail)
+            if polarity == "plain":
+                # no recognised frame: a MARKER in the fact's own ':'-segment fails it closed
+                polarity = "unrecognised" if MARKERS.search(_segment(clause, pos)) else "asserted"
             if polarity == "asserted":
                 asserted_at = asserted_at or frame_no
+            elif polarity == "unrecognised":
+                unrecognised_at = unrecognised_at or 7
             else:
                 withheld_at = withheld_at or frame_no
     if asserted_at is not None:
         return "asserted", asserted_at                    # A3-bis: a plain or record-attributed statement anywhere wins
     if withheld_at is not None:
         return "withheld", withheld_at
+    if unrecognised_at is not None:
+        return "unrecognised", unrecognised_at
     # SCOPE: a refusal cue counts for this fact only when it is about it, about the question's topic, or bare
     topic = _topic_tokens(question_text, fact)
     for sentence in sentences:
@@ -267,6 +329,11 @@ def mention_reading(answer: str, fact: dict, question_text: str = "") -> tuple[s
             obj = [t for t in _key_tokens(clause[m.end():]) if t not in ("record", "records", "confirmed", "information")]
             if not obj or any(_token_present(t, obj) for t in topic) or any(_token_present(t, list(topic)) for t in obj):
                 return "withheld", 6
+    # fail closed, case 2: a clause naming only the fact's TOPIC and carrying a marker
+    for sentence in sentences:
+        for clause in CONTRAST.split(sentence):
+            if _topic_only(clause.strip(), fact) and MARKERS.search(clause):
+                return "unrecognised", 7
     return "not_mentioned", None
 
 
@@ -316,6 +383,8 @@ def event_time_reading(answer: str) -> tuple[str, str]:
 def per_fact_outcome(support_class: str, mention: str, execution: dict) -> tuple[str, str]:
     if execution.get("event") in ("timeout", "crash"):
         return "OTHER", "subject event"
+    if mention == "unrecognised":
+        return "UNRESOLVED", "unrecognised-frame: a negation, refusal or attribution marker in a clause no recognised frame reads (fail closed)"
     if mention == "asserted":
         return "ANSWERED", "asserted (a disclaimer does not save it; mixed support is assertable)" + (" — with NO support in the model input: fabrication" if support_class == "neither" else "")
     if support_class == "neither" and execution.get("retrieval") == "miss":
@@ -336,7 +405,7 @@ def per_fact_outcome(support_class: str, mention: str, execution: dict) -> tuple
 # once from the DELIVERED identities, one assertability rule — is inside the accepted surface ("INV-3–6, including the current ledger, blindness, adjudication and arm contracts").
 # THE LIMIT THE ACCEPTANCE CARRIES, in the verdict's words: store-derived adjudication "It does not independently validate ingestion or provenance assignment."
 # Editing assertable(), per_fact_outcome() or the causes is reopening design review, not a constant edit.
-UNRESOLVED_CAUSES = ("ambiguous-question", "capture-disagrees-with-delivered")
+UNRESOLVED_CAUSES = ("ambiguous-question", "capture-disagrees-with-delivered", "unrecognised-frame")
 
 
 def interpret(question: dict, prompt: str, record: dict, answer: str, execution: dict, delivered: list | None = None) -> dict:
@@ -372,7 +441,8 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
     if len(class_set) > 1:
         # A3-quinquies step 4: several requested facts share the strictest class
         tied = [facts[c] for c in class_set]
-        pick = next((v for v in tied if v["mention"] == "asserted"), None) or next((v for v in tied if v["mention"] == "withheld"), None) or tied[0]
+        pick = (next((v for v in tied if v["mention"] == "asserted"), None) or next((v for v in tied if v["mention"] == "withheld"), None)
+                or next((v for v in tied if v["mention"] == "unrecognised"), None) or tied[0])
         cf = pick
     else:
         cf = facts[question["class_fact"]]
@@ -388,7 +458,8 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
             anomalies.append(f"{fid}: withheld although assertable support ({v['support']}) reached the model")
     if execution.get("retrieval") == "miss" and any(v["support"] != "neither" for v in facts.values()):
         anomalies.append("execution record says retrieval MISS but the capture shows a requested fact reached the model — the record and the capture disagree")
-    return {"outcome": cf["outcome"], "cause": None, "rule": cf["rule"], "facts": facts, "anomalies": anomalies}
+    return {"outcome": cf["outcome"], "cause": "unrecognised-frame" if cf["mention"] == "unrecognised" else None,
+            "rule": cf["rule"], "facts": facts, "anomalies": anomalies}
 
 
 # ---- reference cases: RAW answers + per-fact labelled expectations, over BOTH captured arms -------
