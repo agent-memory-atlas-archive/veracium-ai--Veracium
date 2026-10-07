@@ -82,9 +82,12 @@ def test_R5_01_the_committed_run_is_bound_to_the_frozen_manifest_and_its_history
     before = next(h for h in LEDGER["history"] if h["interpreter_sha16"] == "29764def6f74a4c9")
     was = {(q, a): o for q, a, o, c in before["outcomes"]}
     assert was[("q006", "veracium")] == "ANSWERED" and V63_OUTCOMES[("q006", "veracium")] == "REFUSED-ABSENT"
-    # and the fallback's own scoring appended after it, the entries in time order
+    # and every later scoring appended after it, the entries in time order (found by instrument, never by position: an
+    # earlier form asserted v6.3's entry was the LAST one, and the next re-score broke it)
     order = [h["interpreter_sha16"] for h in LEDGER["history"]]
-    assert order.index("29764def6f74a4c9") < order.index("3f495a60e59d8639") == len(order) - 1
+    assert order.index("29764def6f74a4c9") < order.index("3f495a60e59d8639")
+    times = [h["scored_at"] for h in LEDGER["history"]]
+    assert times == sorted(times), times
 
 
 # ---- the refusals A3-quinquies names ------------------------------------------------------------------------------

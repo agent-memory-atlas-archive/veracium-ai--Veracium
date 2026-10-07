@@ -170,14 +170,30 @@ class Refused(Exception):
 
 # ---- the stated transform ----------------------------------------------------------------------
 
+_MARKER_PATTERNS: dict = {}
+
+
 def _marker_patterns() -> list[str]:
     """EXACTLY the bracketed forms the render layer attaches (graph.py: `[<marker>]` and
     `[<origin label>; unconfirmed]`), built from the derived set — never a generic bracket-stripper,
     which would eat the product's own `[compiled …]` record (a compilation annotation both arms keep)
-    and, being whitespace-greedy, merge lines."""
+    and, being whitespace-greedy, merge lines.
+    Memoised on the BYTES it derives from (examiner_projection.py and the two product files it parses, graph.py and
+    introspect.py): it re-parsed them on every evidence_units() call; a changed or mutant tree has other bytes and
+    re-derives."""
+    src = pathlib.Path(__file__).resolve().parents[3] / "src" / "veracium"
+    key = hashlib.sha256(b"\0".join(p.read_bytes() for p in (HERE / "examiner_projection.py", src / "graph.py", src / "introspect.py"))).hexdigest()
+    if key not in _MARKER_PATTERNS:
+        _MARKER_PATTERNS[key] = _derive_marker_patterns()
+    return list(_MARKER_PATTERNS[key])
+
+
+def _derive_marker_patterns() -> list[str]:
     ep = _load("examiner_projection"); d = ep.derive_forbidden_markers()["prose"]
-    frags = sorted({f for fr in d.values() for f in fr}, key=len, reverse=True)
-    origins = sorted(set(d.get("graph.py:_ORIGIN_LABELS", [])) | set(d.get("graph.py:_origin_label", [])), key=len, reverse=True)
+    # longest first, ties broken by the text itself: the order was set-iteration order for equal lengths, so it varied
+    # between processes (measured: two orders in three runs at the same tree); the SET is unchanged
+    frags = sorted({f for fr in d.values() for f in fr}, key=lambda f: (-len(f), f))
+    origins = sorted(set(d.get("graph.py:_ORIGIN_LABELS", [])) | set(d.get("graph.py:_origin_label", [])), key=lambda o: (-len(o), o))
     pats = [r"\[" + re.escape(f) + r"\] ?" for f in frags if f != "unconfirmed"]
     pats += [r" ?\[" + re.escape(o) + r"; unconfirmed\]" for o in origins]
     return pats

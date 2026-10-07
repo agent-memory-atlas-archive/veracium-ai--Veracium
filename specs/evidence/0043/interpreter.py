@@ -31,6 +31,7 @@ OTHER on the baseline. A default is a refusal that decided not to happen.
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import pathlib
 import re
@@ -52,8 +53,18 @@ class Refused(Exception):
     pass
 
 
+_LOADED: dict = {}
+
+
 def _load(name):
-    spec = importlib.util.spec_from_file_location(name, HERE / f"{name}.py"); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); return m
+    """A sibling evidence module, loaded ONCE per interpreter module (it was re-executed on every call: 792 times in one
+    calibration, which also threw away every cache inside it). Keyed by the sibling's bytes, so an edited or mutant
+    sibling is loaded afresh rather than served stale."""
+    path = HERE / f"{name}.py"; key = (name, hashlib.sha256(path.read_bytes()).hexdigest())
+    if key not in _LOADED:
+        spec = importlib.util.spec_from_file_location(name, path); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+        _LOADED[key] = m
+    return _LOADED[key]
 
 
 def _norm(s: str) -> str:

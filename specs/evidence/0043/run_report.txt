@@ -3,9 +3,9 @@
 
 fixture store digest (as built): ba2e5bf59d07f54c6733c368dd24a2e54d422d001492a45cdcdb73c8d26adca3
 examiner view digest: 04707f0c9980d2474ec95114871a5b557ccc6f36864dc6c1ee3c93fbffa0e83a
-scored with interpreter.py sha16 9fbd599bed2f4612 — RE-SCORED 2026-10-07T16:22Z over the captured answers (no new model call)
+scored with interpreter.py sha16 93c820d452e25338 — RE-SCORED 2026-10-07T22:25Z over the captured answers (no new model call)
 requested propositions from the request manifest, sha256 2862495c8bceb48dae6164deb856e145a5a7d1ae40a4940f1f3d487eeb329fb8 (A3-quinquies: adjudicated blind by both seats, frozen, bound by its bytes)
-earlier scorings of the same captured answers, oldest first (6):
+earlier scorings of the same captured answers, oldest first (7):
   interpreter sha16 00459a9d6b4abe10, scored 2026-09-19T17:37Z: baseline refusal 2/24 completion 24/24; veracium refusal 11/24 completion 24/24
     outcomes changed by the next scoring (interpreter 29764def6f74a4c9): q023/baseline REFUSED-QUARANTINED -> ANSWERED
   interpreter sha16 29764def6f74a4c9, scored 2026-10-06T18:10Z: baseline refusal 1/24 completion 24/24; veracium refusal 11/24 completion 24/24
@@ -18,6 +18,8 @@ earlier scorings of the same captured answers, oldest first (6):
     outcomes changed by the next scoring (interpreter 3f495a60e59d8639): none
   interpreter sha16 3f495a60e59d8639, scored 2026-10-07T13:05Z: baseline refusal 1/24 completion 24/24; veracium refusal 12/24 completion 24/24
     outcomes changed by the next scoring (interpreter 9fbd599bed2f4612): q003/veracium ANSWERED -> UNRESOLVED, q003/baseline ANSWERED -> UNRESOLVED, q006/veracium REFUSED-ABSENT -> UNRESOLVED, q006/baseline ANSWERED -> UNRESOLVED, q012/veracium REFUSED-ABSENT -> UNRESOLVED, q012/baseline ANSWERED -> UNRESOLVED, q015/veracium REFUSED-ABSENT -> UNRESOLVED, q015/baseline ANSWERED -> UNRESOLVED
+  interpreter sha16 9fbd599bed2f4612, scored 2026-10-07T16:22Z: baseline refusal 1/20 completion 24/24; veracium refusal 9/20 completion 24/24
+    outcomes changed by the next scoring (interpreter 93c820d452e25338): none
 model configuration (frozen): {"compilation": "on", "max_subgraph_edges": 40, "max_tokens": 4096, "models": {"compile": "claude-sonnet-5", "distill": "claude-haiku-4-5", "gate": "claude-sonnet-5"}, "seed": "not exposed by the provider", "temperature": "not sent by the shipped provider (the API default applies)"}
 authorship: {"author": "model, blind", "input": "the examiner view only (numbered rows)", "prompt_sha16": "bb38e92e78c0de68", "requested": 24, "returned": 24, "system_sha16": "0f2e6dd18775ec4c"}
 calibration before the run: shipped 24/24, baseline 24/24 over 24 reference cases; UNRESOLVED on them 1 (expected — a case whose labelled outcome is UNRESOLVED, the ambiguity control: 1; unexpected — a known answer the judge could not resolve: 0); garble control collapsed: True
