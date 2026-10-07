@@ -347,30 +347,125 @@ def mention_from_answer(answer: str, fact: dict, question_text: str = "") -> str
 # dates only, so the reading is about the TIME, not the row's content: ASSERTED iff the answer gives an EVENT-framed time
 # anywhere (even beside a record-framed date or a disclaimer — A3-bis: a disclaimer does not save an assertion);
 # WITHHELD iff it declines the time or gives only a record-framed date; otherwise not mentioned. A date is RECORD-framed
-# when a record word precedes it in its own clause ("noted on", "recorded", "dated", "a claim from"); any other date or
-# duration is event-framed ("since …", "moved … on …", "as of …", "for two years").
+# when a record word precedes it in its own clause ("noted on", "recorded", "dated", "a claim from", "mentioned … on",
+# "received"); EVENT-framed only under an explicit event frame ("since …", "as of …", "moved / started / got … on …",
+# "for two years"); an "… ago" duration is framed like any other date, by the words before it.
+# Round 6 (held-out-2): FAIL CLOSED, as mention_reading. A date that is NEITHER record- nor event-framed used to read as
+# an event time, so "I don't have the exact date … only that you first mentioned your cat on 2026-09-18" asserted. It now
+# reads `unrecognised` -> UNRESOLVED (cause unrecognised-frame), unless an event-framed date elsewhere asserts.
 DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b|\b(?:january|february|march|april|may|june|july|august|september|october|"
                      r"november|december)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}\b|\b\d{1,2}\s+(?:january|february|march|april|may|"
                      r"june|july|august|september|october|november|december)\s+\d{4}\b|\b(?:19|20)\d{2}\b|"
                      r"\b(?:\d+|a|an|one|two|three|four|five|six|several|a few|a couple of)\s+(?:years?|months?|weeks?|days?)(?:\s+ago)?\b|"
                      r"\blast (?:year|month|week)\b|\byesterday\b")
 RECORD_FRAME = re.compile(r"\b(?:noted|recorded|logged|dated|added|saved|stored|captured|entered|on record|in my memory|"
-                          r"claim|claims|claimed|message|note|notes) \b|\b(?:noted|recorded|logged|dated)\b")
+                          r"claim|claims|claimed|message|messages|note|notes|mentioned|mention|mentioning|told me|"
+                          r"shared|received)\b")
+EVENT_FRAME = re.compile(r"\b(?:since|starting|started|start|began|begun|beginning|moved|relocated|got|adopted|"
+                         r"joined|hired|arrived|became|for(?=\s+$))\b")   # "for" only directly before a duration
+# An event word is an EVENT frame only when (1) its SUBJECT is the user — the nearest subject before it in its clause is
+# second person — and (2) it GOVERNS THE REQUESTED FACT: the span from that subject to the date names the fact's content
+# or its relation's TOPIC words ("you got Miso on", "you moved on", "you started at the Grand on"). Claim-specific, as the
+# mention reading is (R5-02): "you began sharing these details on <date>" names no fact, so it is no frame and the date
+# reads unframed (fail closed) — no verb list has to anticipate it. The assistant or a record noun as subject ("I got
+# that information", "the claim became") makes the word a RECORD frame. A pronoun whose referent is unknown ("it started
+# on", "that began on") is no subject: no frame. Bare "as of" is no frame either.
+USER_SUBJECT = {"you", "you've", "you're", "you'd", "you'll"}
+RECORD_SUBJECT = {"i", "i've", "i'm", "i'd", "we", "we've",
+                  "note", "notes", "message", "messages", "claim", "claims", "information", "info", "record", "records",
+                  "entry", "entries", "profile", "file", "memory", "memories", "system", "data", "detail", "details"}
+UNKNOWN_SUBJECT = {"it", "it's", "that", "this", "which", "they", "he", "she"}
+
+
+# A user-subject event word whose span up to the date is about the CONVERSATION ("you got in touch on …", "you started
+# telling me on …", "you joined this service on …") dates the record, not the event: a RECORD frame. Over-reading here
+# withholds (the safe direction); under-reading would assert the record's date as the event's.
+CONVERSATION = re.compile(r"\b(?:in touch|talk\w*|chat\w*|tell\w*|told|messag\w*|writ\w*|wrote|spoke|speak\w*|using|used|"
+                          r"signed up|me|us|(?:this|the|our) (?:service|assistant|app|chat|conversation|platform|account))\b")
+
+
+# An -ing ACTIVITY in the event phrase that is not the fact's own topic ("you began SHARING details about Porto", "you've
+# been BRINGING UP the Grand since") makes the event that activity, not the fact: no frame. Grammatical, not a verb list,
+# so an unlisted conversation verb cannot reopen it; a missed non-verb "-ing" word only withholds (the safe direction).
+GERUND = re.compile(r"\b[a-z]{2,}ing\b")
+NOT_A_GERUND = {"during", "morning", "mornings", "evening", "evenings", "thing", "things", "nothing", "something", "anything",
+                "everything", "king", "ring", "spring", "string", "wedding", "building", "ceiling", "sibling", "according"}
+
+
+# An ASPECTUAL event word (start / begin / got) takes its activity as "-ing" OR as a TO-INFINITIVE — a closed pair:
+# "you began TO DESCRIBE Porto", "you got TO KNOW Miso" date the activity, not the fact, unless the verb is the topic's.
+INFINITIVE = re.compile(r"\b(?:start|starts|started|starting|begin|begins|began|begun|beginning|got)\s+to\s+([a-z]+)")
+
+
+def _foreign_activity(span: str, fact: dict) -> bool:
+    topic = TOPIC.get(fact.get("relation", ""), set())
+    return (any(g not in topic and g not in NOT_A_GERUND for g in GERUND.findall(span))
+            or any(v not in topic for v in INFINITIVE.findall(span)))
+
+
+def _event_subject(text_before_word: str) -> tuple[bool | None, int]:
+    """(True for the user / False for the assistant or a record / None for no known subject, the subject's position)
+    for the nearest subject before an event word."""
+    for m in reversed(list(re.finditer(r"[a-z]+(?:'[a-z]+)?", text_before_word))):
+        tok = m.group(0)
+        if tok in USER_SUBJECT:
+            return True, m.start()
+        if tok in RECORD_SUBJECT:
+            return False, m.start()
+        if tok in UNKNOWN_SUBJECT:
+            return None, m.start()
+    return None, -1
+
+
+def _new_subject(after_word: str) -> bool:
+    """A subject between an event word and the date opens a new predicate: the event word does not date it."""
+    return any(t in USER_SUBJECT | RECORD_SUBJECT | UNKNOWN_SUBJECT for t in re.findall(r"[a-z]+(?:'[a-z]+)?", after_word))
+
+
+def _governs(span: str, fact: dict) -> bool:
+    """Whether an event phrase (its subject up to the date) names the requested fact: the fact itself, any of its
+    DISTINGUISHING tokens ("you started at the Grand"), or its relation's TOPIC words ("you moved")."""
+    toks = _key_tokens(span)
+    return (_clause_mentions(span, fact)[0] or any(_token_present(t, toks) for t in _distinguishing(fact))
+            or any(w in toks for w in TOPIC.get(fact.get("relation", ""), set())))
 DECLINE_TIME = re.compile(r"\b(?:don't|do not|doesn't|does not|didn't)\s+(?:have|know)\b[^.;]*?\b(?:when|date|time|how long)\b"
                           r"|\b(?:can't|cannot|can not|unable to|not able to)\s+(?:say|state|tell|confirm|give)\b[^.;]*?\b(?:when|date|time|how long|start)\b"
                           r"|\bno (?:confirmed |verified )?(?:record|information|date)\b|\bnot sure when\b|\bunknown\b")
 
 
-def event_time_reading(answer: str) -> tuple[str, str]:
-    """(asserted / withheld / not_mentioned, why) for the TIME an event-time question asks about."""
+def event_time_reading(answer: str, fact: dict) -> tuple[str, str]:
+    """(asserted / withheld / unrecognised / not_mentioned, why) for the TIME of `fact`'s event, which an event-time
+    question asks about."""
     a = _norm(answer)
-    event_dates, record_dates = [], []
+    event_dates, record_dates, unframed = [], [], []
     for sentence in re.split(r"[.!?]\s*", a):
         for clause in CONTRAST.split(sentence):
             for m in DATE_RE.finditer(clause):
-                (record_dates if RECORD_FRAME.search(clause[:m.start()]) else event_dates).append(m.group(0))
+                before = clause[:m.start()]
+                # the NEAREST frame word before the date governs it: "as you mentioned, you moved there in 2024" is an
+                # event date, "you moved there; you mentioned it on <date>" a record date
+                rec = max((x.end() for x in RECORD_FRAME.finditer(before)), default=None)
+                ev = None
+                for x in EVENT_FRAME.finditer(before):
+                    who, at = _event_subject(before[:x.start()])
+                    if who is True and CONVERSATION.search(before[x.start():]):
+                        who = False                           # the user's event is the conversation: the record's date
+                    if who is True and _new_subject(before[x.end():]):
+                        who = None                            # "you got Miso — this came up <date>": another predicate's date
+                    if who is True and _governs(before[at:], fact) and not _foreign_activity(before[at:], fact):
+                        ev = x.end()
+                    elif who is False:                        # the record's own event ("that note arrived on …")
+                        rec = max(rec or 0, x.end())
+                if ev is not None and (rec is None or ev > rec):
+                    event_dates.append(m.group(0))           # the ONLY path to asserted: a positive event frame
+                elif rec is not None:
+                    record_dates.append(m.group(0))
+                else:
+                    unframed.append(m.group(0))
     if event_dates:
         return "asserted", f"an event-framed time: {event_dates[0]!r}"
+    if unframed:
+        return "unrecognised", f"a date no recognised frame reads: {unframed[0]!r} (fail closed)"
     if DECLINE_TIME.search(a):
         return "withheld", "the time is declined" + (f" (a record-framed date given: {record_dates[0]!r})" if record_dates else "")
     if record_dates:
@@ -432,9 +527,9 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
     if question.get("event_time"):
         # A3-quinquies step 2: the requested proposition is the event TIME; the rows are context. The time exists in
         # no record, so no retrieval could have reached it: a decline here is never a retrieval miss.
-        mt, why = event_time_reading(answer)
         no_miss = {k: v for k, v in execution.items() if k != "retrieval"}
         for f in question["facts"]:
+            mt, why = event_time_reading(answer, f)           # claim-specific: each requested fact's own event time
             o, r = per_fact_outcome("neither", mt, no_miss)
             facts[f"{f['id']}@event-time"] = {"support": "neither", "mention": mt, "outcome": o, "rule": f"event-time: {why}; {r}"}
     class_set = question.get("class_set") or [question["class_fact"]]
