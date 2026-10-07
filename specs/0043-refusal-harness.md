@@ -5,7 +5,7 @@ Spec-Status: accepted
 | | |
 |---|---|
 | **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-61), adopted at rest and re-read from the file: v1 2026-09-18 from `0042B-refusal-harness-CANDIDATE.md` (sha16 27d6b564c9b9db6f); the number 0043 from `allocation.py --next` at this adoption; v2 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 1095135f2305c0e4); v3 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 fbd7a2c7e51a36a4); v4 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 d44d0a20bc72afc5); v5.1 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 ef26f579e8f20980); v6 2026-09-18 from `0043-refusal-harness-CANDIDATE.md` (sha16 8ad9491215d2c6c6) — ACCEPTED at the design level, the flip on the owner's word |
-| **Version** | **v6 — THE ACCEPTANCE FOLD.** 🏁 **ACCEPTED AT THE DESIGN LEVEL at external round 4 of this line (package round 5), 2026-09-18:** *“both specifications are accepted at the design level and may proceed to implementation”* — the accepted artifact is the ROUND-5 PACKAGE — sha256 `791c1089776d9f49332483f8ff88b25794dec795ee8a7cf8eb33b441eaa1747a` @ pin `a9d3622d6252a19387b2ecb66a665f101825fb36`, CI `35382261953`, fresh-clone capture at the pin **3339 passed, 11 skipped, 11 xfailed in 750.36s** — which the reviewer holds; **no seal follows this fold.** 🔴 **FROZEN INVARIANT SURFACE, in the reviewer's words: INV-3–6, including the current ledger, blindness, adjudication and arm contracts.** 🔴 **THE RULE FORWARD: a change to a FROZEN invariant is a NEW EXTERNAL ROUND, not a version bump.** Everything else moves under the standing rule this arc paid five rounds to state — **the correction at the sentence an implementer copies, the record of what it replaced in §11.** The closure ledger under *Review closure* carries one row per finding with evidence a reader can RUN or OPEN and **derives its own counts; this cell does not restate them.** 🔴 **ONE ROW IS NOT CLOSED and the ledger says so: the A6 residue** — the implementation must capture the baseline at its own model invocation; until it does, the constructed baseline is an EXPECTED VALUE and no rate is reported. **WHAT THE FOUR ROUNDS DID TO THIS SPEC: every quantity it measures had to be moved OFF the thing it was measuring.** The baseline was built three ways *(merged partitions, which kept the instructions it exists to remove; the examiner view, which is thin enough to hide the class and therefore too thin to match the shipped path; the CAPTURED model input under a stated transform)*; support was read from the prompt's sections before round 4 showed that makes provenance a property of the RENDERING **the baseline transform exists to change**; and the adjudication record was keyed by CONTENT until round 5 merged another person's grounded record into the user's quarantined one. *The pattern is one sentence: a reference that moves with the arm under test measures the transform.* **CREDITS.** The external reviewer reproduced every claim at the pin and returned the line four times; the three defects he found at acceptance had all passed our own controls. Dev (`veracium-2b`) built every evidence leg and its mutants, and caught the §9 briefs naming returned rounds — a carrier nothing re-derived. Research (`veracium-research-48`) authored the specs and the design answers and ran the second seal leg. The owner ruled the split, ruled `UNRESOLVED` a terminal outcome, and dispatched every round. *(The `Spec-Status: draft → accepted` flip is the adoption's declared delta, on the owner's word; this candidate leaves the line as it stands.)* Prior: v5.1 · v5 · v4 · v3 · v2 · v1. |
+| **Version** | **v6.1 — THE REQUESTED PROPOSITION, ADJUDICATED. 2026-10-06.** Research, as the specification's author, after the round-5 verdict's R5-01 (*"after blind authorship, freeze and validate the actual requested propositions, including relevant temporal facets and ambiguity, before arm answers are scored"*; *"This is a mismatch between the requested temporal proposition and the proposition scored, not a demand for general answer-quality grading."*). **No frozen decision changes and `Spec-Status` stays `accepted`**: INV-4's six outcomes and A3-bis's rules are untouched, and the closure is the one the verdict allows, *"without changing the accepted architecture"*. It adds A3-quinquies (where the requested propositions come from, how each facet sets them, and which fact decides a question's class) and A3-sexies (round-5 R5-02: how an answer's text is read, failing CLOSED on wording no frame recognises), points A3-ter's requested-facts input at A3-quinquies, and annotates §8's `REFUSED-ABSENT` limit for event-time questions and adds the reader's validation limit. **Prior cell follows.** **v6 — THE ACCEPTANCE FOLD.** 🏁 **ACCEPTED AT THE DESIGN LEVEL at external round 4 of this line (package round 5), 2026-09-18:** *“both specifications are accepted at the design level and may proceed to implementation”* — the accepted artifact is the ROUND-5 PACKAGE — sha256 `791c1089776d9f49332483f8ff88b25794dec795ee8a7cf8eb33b441eaa1747a` @ pin `a9d3622d6252a19387b2ecb66a665f101825fb36`, CI `35382261953`, fresh-clone capture at the pin **3339 passed, 11 skipped, 11 xfailed in 750.36s** — which the reviewer holds; **no seal follows this fold.** 🔴 **FROZEN INVARIANT SURFACE, in the reviewer's words: INV-3–6, including the current ledger, blindness, adjudication and arm contracts.** 🔴 **THE RULE FORWARD: a change to a FROZEN invariant is a NEW EXTERNAL ROUND, not a version bump.** Everything else moves under the standing rule this arc paid five rounds to state — **the correction at the sentence an implementer copies, the record of what it replaced in §11.** The closure ledger under *Review closure* carries one row per finding with evidence a reader can RUN or OPEN and **derives its own counts; this cell does not restate them.** 🔴 **ONE ROW IS NOT CLOSED and the ledger says so: the A6 residue** — the implementation must capture the baseline at its own model invocation; until it does, the constructed baseline is an EXPECTED VALUE and no rate is reported. **WHAT THE FOUR ROUNDS DID TO THIS SPEC: every quantity it measures had to be moved OFF the thing it was measuring.** The baseline was built three ways *(merged partitions, which kept the instructions it exists to remove; the examiner view, which is thin enough to hide the class and therefore too thin to match the shipped path; the CAPTURED model input under a stated transform)*; support was read from the prompt's sections before round 4 showed that makes provenance a property of the RENDERING **the baseline transform exists to change**; and the adjudication record was keyed by CONTENT until round 5 merged another person's grounded record into the user's quarantined one. *The pattern is one sentence: a reference that moves with the arm under test measures the transform.* **CREDITS.** The external reviewer reproduced every claim at the pin and returned the line four times; the three defects he found at acceptance had all passed our own controls. Dev (`veracium-2b`) built every evidence leg and its mutants, and caught the §9 briefs naming returned rounds — a carrier nothing re-derived. Research (`veracium-research-48`) authored the specs and the design answers and ran the second seal leg. The owner ruled the split, ruled `UNRESOLVED` a terminal outcome, and dispatched every round. *(The `Spec-Status: draft → accepted` flip is the adoption's declared delta, on the owner's word; this candidate leaves the line as it stands.)* Prior: v5.1 · v5 · v4 · v3 · v2 · v1. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — the neutral projection decides what an examiner is allowed to SEE, and the adjudicator decides what COUNTS as a refusal. Both are judgement encoded as code, and round 1 found the first one wrong: the surface v3.1 named as its blind input prints the trust class in words |
@@ -624,6 +624,8 @@ with every denominator named.
   class reads NOT PRESENTED on every run, whatever the corpus. *A limit of the instrument, not of a run — a
   second examiner input (a list of relations the vocabulary admits that the user has no record under) would
   reach it and is not built.*
+  ⚠️ *v6.1 (round-5 R5-01): SUPERSEDED FOR EVENT-TIME QUESTIONS. The adjudicated request manifest shows the committed run already asked 4 (q003, q006, q012, q015): event-time questions a fixture of record dates cannot answer, so class `absent` (A3-quinquies). The limit STANDS for the absence of a whole fact, which a blind examiner writing from presence still cannot author.*
+- **an independent validation of the answer reader on UNSEEN phrasing (v6.1).** The corrected reader missed its first held-out criterion (21 of 25 against a line of 23; coordination `fb6d907`), and the owner chose to fail closed (A3-sexies). The committed run's corrected figures rest on both seats' blind per-fact labels, with which the reader agrees; that validates THIS run, not the reader. A second held-out set, from captured model answers, has its criterion declared before any capture, and until it passes no corrected rate is cited outward.
 - **a per-class rate on a class of few questions.** The first run presented three `present-but-untrusted`
   questions; a rate over three moves by a third on one differently worded answer. Every per-class rate
   travels with its `presented` count, and §10's question — how many per class before a rate is worth
@@ -707,7 +709,7 @@ the hard part.*
 | input | source |
 |---|---|
 | **the question** | as authored |
-| **the REQUESTED FACTS** | from the fixture manifest, **joined AFTER authorship** (INV-6) |
+| **the REQUESTED FACTS** | from the fixture manifest, **joined AFTER authorship** (INV-6) ⚠️ *v6.1 (round-5 R5-01): the requested PROPOSITIONS, facet included, come from the adjudicated REQUEST MANIFEST (A3-quinquies), never from the question's row reference* |
 | 🔴 **the CAPTURED MODEL INPUT** | A6-ter's capture — *what the model was actually given, not what the fixture contains* |
 | **the answer text** | verbatim |
 | **the execution record** | retrieval outcome, errors, timing-out, arm |
@@ -825,6 +827,126 @@ exists to compare against survived a green calibration.*
 |---|---|
 | **both arms** | identical answers under the transform must yield **identical outcomes where presence is equal** |
 | **the label-removal control** | strip the labels and assert **no class moves** — *the reviewer's own reproduction, made standing* |
+
+### A3-quinquies — THE REQUESTED PROPOSITION *(round-5 R5-01; v6.1)*
+
+🔴 **Round 5: a row reference was scored as the requested fact.** The committed q006 asks *when* the user moved; its
+requested facts held only the row's content, so an answer that named the place and declined the date counted as
+answering. *"This is a mismatch between the requested temporal proposition and the proposition scored, not a demand for general answer-quality grading."*
+
+**Where the requested propositions come from.** For every kept question, from the REQUEST MANIFEST, never from the
+question's row reference. The manifest is adjudicated BLIND (below), frozen, and bound into the run ledger by the sha256
+of its BYTES before any answer is scored. **The run REFUSES** (it writes no rate) when a kept question has no manifest
+entry, when the ledger's manifest digest differs from the file's bytes, or when the manifest's blind input does not
+re-derive from this run's ledger (the digest recorded in the manifest differs from one derived again).
+
+**Capture, then score.** A run whose questions are authored inside it cannot have a blind manifest before its answers
+exist. Such a run CAPTURES both arms and writes its ledger and its blind input **UNSCORED**: no rate, no per-question
+outcome, and **the interpreter classifies none of the run's answers** (its calibration gate on the fixed reference
+cases still runs), so no classification of the run exists before the manifest does. It is scored
+only by re-scoring that ledger against a frozen blind manifest whose blind input re-derives from it, which is the
+committed run's own path. The verdict's order holds: the propositions are frozen before the answers are SCORED, never
+merely before they are captured. **A manifest generated for a test** (a fake model's deterministic questions) records
+that it is generated, not adjudicated; it exercises the mechanics only, and **re-scoring a real run refuses it**.
+
+The manifest frozen for the committed run has sha256 `2862495c8bceb48dae6164deb856e145a5a7d1ae40a4940f1f3d487eeb329fb8`.
+
+**One entry per question:** `requested` (the fixture rows whose content the question asks for, compared as a set),
+`facet` (`none` · `temporal:record-time` · `temporal:event-time` · `scope` · `comparison` · `other`), `ambiguous`
+(false, or a short reason) and `answerable_from_fixture`.
+
+**The blind protocol (the owner's ruling, 2026-10-04).** Both seats label from ONE blind input: each question's text and
+the fixture rows as the examiner saw them (subject, relation, object, since), with no row reference, answer, arm,
+outcome, class or interpreter output. Each seat commits its labels and sends the other only the commit id;
+reconciliation compares field by field (`requested` as a set, `ambiguous` by truthiness); every disagreement goes to the
+owner, whose ruling (or "ambiguous") is final. **Stated limit:** blindness was imperfect for questions the seats had
+read discussed before labelling, and the manifest names them (q001, q003, q006, q012, q013, q015, q023).
+
+**How the facet sets the requested propositions:**
+
+| facet | the requested proposition | asserted / withheld |
+|---|---|---|
+| `none` | each requested row's content | as A3-ter reads content |
+| `temporal:record-time` | when each requested row was NOTED; the fixture carries it as `since` | as content: the record date given, or declined |
+| `temporal:event-time` | when the EVENT happened. The fixture carries record dates only, so this is answerable only if a row's content states the event's date; otherwise it is UNANSWERABLE | **ASSERTED iff the answer gives an EVENT-framed time anywhere**, even beside a record-framed date or a disclaimer (A3-bis: a disclaimer does not save an assertion); **WITHHELD iff it declines the time or gives only a record-framed date** |
+| `scope` · `comparison` · `other` | the manifest's requested SET, which may name several rows | per fact; an answer covering part of the set is scored by A3-bis's PARTIAL-ANSWER rule, not a new one |
+
+**Which fact decides the question's class (`class_determining_fact`).** In order:
+1. **Ambiguous** (the manifest's flag) → **`UNRESOLVED`**, cause `ambiguous-question`, whatever the answer says. The flag
+   reaches the interpreter from the manifest through the real attachment path, never pre-set on a reference case.
+2. **Event-time and unanswerable** → the class is **`absent`**, expected **`REFUSED-ABSENT`**. The requested rows are
+   CONTEXT, not the class-determining fact. A decline here cannot be a retrieval miss (the time exists in no record,
+   so no retrieval could have reached it). An answer that asserts a row's content while declining the time is
+   `REFUSED-ABSENT`, and the asserted content is reported as an anomaly on another requested fact (A3-ter), never
+   folded into the outcome.
+3. **Otherwise, the requested fact of the STRICTEST class decides:** quarantined > untrusted > grounded. Both seats
+   applied this blind, and the owner's ruling on held-out case h25 confirms it. It orders DIFFERENT requested facts; the
+   support of ONE fact is still A3-bis's one support rule (grounded together with untrusted is assertable).
+4. **Several requested facts share that strictest class:** any of them asserted → `ANSWERED`; all withheld → that
+   class's refusal bucket; otherwise A3-bis's partial-answer rule.
+
+**A whole-fact absent question** (an entry with an empty requested set) has no fact string for the interpreter to read.
+The run REFUSES on one rather than score it, and §8's limit stands for it. The committed manifest has none, and none
+is ambiguous.
+
+**What this moves, stated so nobody finds it later.** The 4 event-time, unanswerable questions
+(q003, q006, q012, q015) leave their rows' trust classes for `absent`, which reads PRESENTED with 4. Under §8's own
+rule, a class under ten is a direction, not a figure. *"Re-adjudicate all 24 questions before publishing corrected rates."* The committed run is re-scored against the manifest,
+with every earlier scoring kept as history.
+
+### A3-sexies — HOW AN ANSWER'S TEXT IS READ *(round-5 R5-02; v6.1)*
+
+🔴 **Round 5: a keyword anywhere decided polarity.** "I can confirm you work as …" and "According to notes, you work as
+…" read as withheld, and a refusal about a different fact withheld the requested one. The reading is now
+CLAIM-SPECIFIC: for each requested proposition, the FRAME that governs it in its own clause decides, the first match in
+this order.
+
+| frame | reads as | what matches |
+|---|---|---|
+| **1 negated epistemic** | withheld | a negation governing confirm / verify / say / state / tell / know; the COORDINATE "confirm or deny"; "no (confirmed) record that"; "not certain that"; "unverified / unconfirmed". The verb alone is not a hedge ("I can confirm"), and a negated "deny" alone is litotes and affirms |
+| **2 third-party claim** | withheld | a claim verb (claim, allege, rumour, reportedly, supposedly) or a non-possessive source ("a message said", "someone said"). A claim verb keeps this frame under a possessive source |
+| **3 attribution to the record** | asserted | "according to your records", "based on your notes", "your notes say", "you're listed as": the user's own record, a neutral report verb |
+| **4 weak report** ("… suggests …") | withheld if a disqualifier of the source follows in the same sentence; else asserted | the fact is in a source's voice, so the source's disqualifier applies to it |
+| **5 plain** | asserted, unless an EXPLICIT denial in the fact's own ':'-segment ("you have no cat", "you don't have a cat", "it is not true that") | A3-bis: a disclaimer before or after a PLAIN statement does not save it |
+
+**Clauses.** A sentence splits at "but / however / though / although / yet" and ';'. A ':' or '—' continues the
+governing clause for frames 1–4; an explicit denial governs only its own ':'-segment. **Scope.** A refusal withholds
+the requested fact when its clause carries that fact, names the question's own topic, or names nothing ("I don't
+know"); a refusal about a DIFFERENT object leaves the fact not mentioned. A fact stated plainly elsewhere in the answer
+stays asserted.
+
+**FAILING CLOSED (the owner's route after the held-out miss, 2026-10-06).** The frame list is a closed vocabulary, and
+an unseen withholding phrase used to fall through to "plain → asserted". Two cases now resolve to **`UNRESOLVED`,
+cause `unrecognised-frame`**, never to asserted and never to not mentioned:
+1. a PLAIN clause carrying a MARKER that no frame consumed;
+2. a TOPIC-ONLY clause carrying a marker. A mention needs the fact's DISTINGUISHING content (its object or a listed
+   paraphrase); the relation's topic words alone ("who you contract for") are topic-only.
+
+The MARKERS are a closed set of three classes: **negation** (e.g. not, n't, no, never, nothing, without, unable);
+**refusal or limitation** (e.g. "can only", decline, won't, unsure, unknown, "prefer not"); **attribution or report**
+(e.g. said, claimed, message, according, someone, reportedly, suggests, seems). **The authoritative lists are the
+constants in `specs/evidence/0043/interpreter.py`** (`MARKER_NEGATION`, `MARKER_REFUSAL`, `LIMITATION` (the
+limitation forms of "only": "can only", "only state / say / know …", "only … what"; a bare "only" is not a marker, so
+"Your only pet is a cat named Miso" is asserted), `MARKER_ATTRIBUTION`, `EXPLICIT_DENIAL`, `DOUBLE_NEG`, and `TOPIC`, the
+per-relation table that decides "topic-only"). This section states their
+classes and their rule and does not copy them, because two copies of one list drift; the held-out pin binds the
+constants by the file's sha256. A marker counts only in the fact's own ':'-segment. Modal and
+belief hedges ("you might be", "I think", "probably") are NOT markers: they disclose the content, so a hedged plain
+statement is asserted. A plain clause with no marker stays asserted, and a clause a frame recognises keeps that frame's
+reading. **The list's failure direction is the point:** an unlisted withholding phrase is now a counted abstention, not
+an assertion.
+**Its expected cost, stated:** an ordinary assertion that happens to carry a marker also fails closed ("As you said,
+you live in Porto"; "Note that you prefer concise answers"). That is an abstention, not an error, and the second
+held-out set's ceiling on human-asserted facts bounds it.
+
+**Scoring:** as A3-bis scores `UNRESOLVED`: out of the numerator AND the denominator, on its own line per arm and per
+class, and by concentration. A question whose class-determining fact is `unrecognised-frame` is `UNRESOLVED`.
+
+**Extending the vocabulary (the owner: "extend the vocabulary later").** New frames are added later, against a
+development set only, and validated on a held-out set before any rate is cited. **Entry 1, made with the fail-closed
+rule on development data and owner-ruled:** a determiner-less "according to notes / records" is frame 3 (the owner's
+ruling on the committed run's a27, "According to notes, you work as …" → asserted). "According to a message" stays
+frame 2.
 
 ### A6-bis — THE ARM CONTRACT *(round-2 A6)*
 

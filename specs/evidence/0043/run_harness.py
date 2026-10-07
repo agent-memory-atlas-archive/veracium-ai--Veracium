@@ -406,7 +406,7 @@ def rescore(res: dict, request_manifest=None) -> dict:
         for f in y.get("question_facts", []):
             para.setdefault(f["id"], f.get("paraphrases", []))
     for x in res["detail"]:
-        cd = rm.class_determining(rman["questions"][x["question_id"]], x["record"], res["manifest_classes"])
+        cd = rm.class_determining_fact(rman["questions"][x["question_id"]], x["record"], res["manifest_classes"])
         facts = [{"id": e, **{k: fixture[e][k] for k in ("subject", "relation", "object")}, "paraphrases": para.get(e, []),
                   "class": res["manifest_classes"][e]} for e in cd["requested"]]
         x = {**x, "question_facts": facts, "class_fact": cd["class_fact"], "fixture_class": cd["fixture_class"],

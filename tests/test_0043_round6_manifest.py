@@ -3,7 +3,7 @@
 Round 5 scored a question's row reference as its requested fact: q006 asks WHEN the user moved to Porto, and an answer
 naming Porto while declining the date was ANSWERED. Now the manifest (adjudicated blind by both seats, frozen, bound by
 its bytes, its blind input re-derived from the ledger) sets each question's requested facts, facet and ambiguity, and
-`class_determining` applies A3-quinquies's four steps. A fresh run captures, then scores: without a manifest it writes
+`class_determining_fact` applies A3-quinquies's four steps. A fresh run captures, then scores: without a manifest it writes
 no interpretation at all, and a generated test manifest cannot score a real run.
 """
 import copy
@@ -105,7 +105,7 @@ def test_R5_01_a_blind_input_that_does_not_re_derive_from_the_ledger_refuses():
         rh.rescore(res)
 
 
-# ---- class_determining's steps -------------------------------------------------------------------------------------
+# ---- class_determining_fact's steps -------------------------------------------------------------------------------------
 
 def test_R5_01_a_planted_ambiguous_question_is_UNRESOLVED_through_the_real_attach_path(tmp_path):
     """The verdict's raw 'Which one?', captured by a fresh run, then scored against a manifest that flags it."""

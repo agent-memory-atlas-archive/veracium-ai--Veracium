@@ -12,7 +12,7 @@ The run (and every re-score) REFUSES, writing no rate, when:
   - an entry's requested set is empty (a whole-fact absent question: there is no fact string to read, and §8's limit
     stands for it).
 
-`class_determining` applies A3-quinquies's four steps: (1) ambiguous → UNRESOLVED, cause ambiguous-question; (2)
+`class_determining_fact` applies A3-quinquies's four steps: (1) ambiguous → UNRESOLVED, cause ambiguous-question; (2)
 event-time and unanswerable → class `absent`, the requested proposition is the event TIME, the rows are context; (3)
 otherwise the requested fact of the STRICTEST class decides (quarantined > untrusted > grounded); (4) facts sharing
 that class form the tie set the interpreter reads (any asserted → ANSWERED; else any withheld → the bucket; else OTHER).
@@ -142,7 +142,7 @@ def bind(res: dict, man: dict, digest: str, blind_path: pathlib.Path = BLIND_PAT
                           f"to read; §8's limit stands) — no rate")
 
 
-def class_determining(entry: dict, record: dict, classes: dict) -> dict:
+def class_determining_fact(entry: dict, record: dict, classes: dict) -> dict:
     """A3-quinquies's four steps over one manifest entry. `record` is the run's fixture (row id → s/r/o) and `classes`
     each row's trust class. Returns the interpreter's view of the requested proposition and the expected class."""
     rows = sorted(entry["requested"])
