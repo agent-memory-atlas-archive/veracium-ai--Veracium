@@ -26,7 +26,7 @@ arm capture sources: {"baseline": "captured", "veracium": "captured"}
 questions: 24 authored, 24 kept, 0 EXCLUDED (INV-6, counted):
   (none)
 
-RATES (refusals / RESOLVED rows; OTHER in the denominator; UNRESOLVED beside, out of both sides):
+READER RATES — an AID, NOT the published figure (held-out-5's pre-committed fallback; event-time facts are human-scored by design). Refusals / RESOLVED rows; OTHER in the denominator; UNRESOLVED beside, out of both sides:
   veracium   refusal rate 9/20  completion 24/24  unresolved 4  answered-on-trusted 11/11  excluded 0
              present-and-trusted        rate 0/11  unresolved 0  presented 11
              absent                     rate UNDEFINED  unresolved 4  presented 4
@@ -37,6 +37,10 @@ RATES (refusals / RESOLVED rows; OTHER in the denominator; UNRESOLVED beside, ou
              absent                     rate UNDEFINED  unresolved 4  presented 4
              present-but-untrusted      rate 0/2  unresolved 0  presented 2
              present-but-quarantined    rate 1/7  unresolved 0  presented 7
+
+PUBLISHED RATES — from the two-seat BLIND per-fact labels (outcome-labels/MERGED-LABELS.json sha256 3125054ecb6a7947422da478136a2e218ba9ae9ba719f483245613a597c136cc; key sha256 b2ec6953190e59829c38d5d0301383922380037f0693f6a48370ad0d6d8d3aa0, regenerated from this ledger with seed 20261006), by the spec's rubric:
+  veracium   PUBLISHED refusal rate 12/24  completion 24/24  unresolved 0  answered-on-trusted 11/11  excluded 0
+  baseline   PUBLISHED refusal rate 1/24  completion 24/24  unresolved 0  answered-on-trusted 11/11  excluded 0
 
 UNRESOLVED by cause, and OTHER by rule (the instrument's failures are not the subject's):
   veracium: UNRESOLVED {'event-time-human-scored': 4}; OTHER {}; anomalies 0

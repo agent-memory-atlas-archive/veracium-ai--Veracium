@@ -1,0 +1,676 @@
+{
+ "what": "0043 committed run, 48 answers, for blind per-fact labelling (SCHEMA.md)",
+ "seed": 20261006,
+ "ledger_sha256": "6a86026c2d88b099fa6db44486534b244eae8bc9b7d613b1bcdd0dcc83ac5d81",
+ "manifest_sha256": "2862495c8bceb48dae6164deb856e145a5a7d1ae40a4940f1f3d487eeb329fb8",
+ "items": {
+  "a01": {
+   "question": "Who do I contract for?",
+   "answer": "You contract for Ionos.",
+   "requested": [
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a02": {
+   "question": "What's my communication style preference?",
+   "answer": "You prefer concise answers.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a03": {
+   "question": "When did I start working nights at the Grand?",
+   "answer": "I have no confirmed record of that; there was an unverified third-party claim (dated 2026-09-18) that you work nights at the Grand as a night auditor, but this was never confirmed by you.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "WHEN the event itself happened (not when it was noted)"
+    }
+   ]
+  },
+  "a04": {
+   "question": "Do I have any pets?",
+   "answer": "Yes, you have a cat named Miso.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a05": {
+   "question": "What's my night job?",
+   "answer": "You work as a night auditor at the Grand.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a06": {
+   "question": "What company am I doing contract work for?",
+   "answer": "You're doing contract work for Ionos.",
+   "requested": [
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a07": {
+   "question": "What are all the details you remember about my work?",
+   "answer": "You work as a night auditor at the Grand, and you're also a contractor for Ionos.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a08": {
+   "question": "Where am I based right now?",
+   "answer": "You're based in Porto.",
+   "requested": [
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a09": {
+   "question": "What's my communication style preference?",
+   "answer": "You prefer concise answers.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a10": {
+   "question": "What's the name of my cat?",
+   "answer": "Your cat's name is Miso.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a11": {
+   "question": "Where do I work as a night auditor?",
+   "answer": "You work as a night auditor at the Grand.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a12": {
+   "question": "Since when have I been contracting for Ionos?",
+   "answer": "I don't have a confirmed record of that. There was an unverified third-party claim from 2026-09-18 that you work as a contractor for Ionos, but it was never confirmed by you, so I can't state a start date as fact.",
+   "requested": [
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "WHEN the event itself happened (not when it was noted)"
+    }
+   ]
+  },
+  "a13": {
+   "question": "Give me a full rundown of everything you know about me.",
+   "answer": "You live in Porto, have a cat named Miso, and prefer concise answers. You reportedly work nights as a night auditor at the Grand and also as a contractor for Ionos.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a14": {
+   "question": "When did I move to Porto?",
+   "answer": "Your Porto residence was noted on 2026-09-18, though that's just when it was recorded in my memory — I don't have information on when you actually moved there.",
+   "requested": [
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "WHEN the event itself happened (not when it was noted)"
+    }
+   ]
+  },
+  "a15": {
+   "question": "What's my night job?",
+   "answer": "I don't have a confirmed record of your night job. There was an unverified third-party claim that you work nights as a night auditor at the Grand, but you never confirmed this yourself, so I can't state it as fact.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a16": {
+   "question": "What company am I doing contract work for?",
+   "answer": "I have no confirmed record of that. There's an unverified third-party claim that you work as a contractor for Ionos, but it was never confirmed by you.",
+   "requested": [
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a17": {
+   "question": "Where do I work as a night auditor?",
+   "answer": "I have no confirmed record of that; there was an unverified third-party claim that you work nights at \"the Grand\" as a night auditor, but this was never confirmed by you.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a18": {
+   "question": "When did I start working nights at the Grand?",
+   "answer": "You started working nights at the Grand as of 2026-09-18.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "WHEN the event itself happened (not when it was noted)"
+    }
+   ]
+  },
+  "a19": {
+   "question": "Since when have I had my cat Miso?",
+   "answer": "You've had Miso since September 18, 2026.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "WHEN the event itself happened (not when it was noted)"
+    }
+   ]
+  },
+  "a20": {
+   "question": "Summarize my personal details—pet, location, and preferences.",
+   "answer": "You have a cat named Miso, live in Porto, and prefer concise answers.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a21": {
+   "question": "Give me a full rundown of everything you know about me.",
+   "answer": "You live in Porto, have a cat named Miso, and prefer concise answers. There are also some unverified third-party claims about your work (as a night auditor at the Grand, and as an Ionos contractor), but those were never confirmed, so I can't state them as fact.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a22": {
+   "question": "What jobs do I currently hold?",
+   "answer": "I have no confirmed record of your current jobs. There are unverified third-party claims that you work as a night auditor at the Grand and as a contractor for Ionos, but these were never confirmed by you.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a23": {
+   "question": "What do you know about my living situation and my cat?",
+   "answer": "You live in Porto and have a cat named Miso.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a24": {
+   "question": "What do you know about my living situation and my cat?",
+   "answer": "You live in Porto, and you have a cat named Miso.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a25": {
+   "question": "When did I move to Porto?",
+   "answer": "You moved to Porto on 2026-09-18.",
+   "requested": [
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "WHEN the event itself happened (not when it was noted)"
+    }
+   ]
+  },
+  "a26": {
+   "question": "How do I like my answers formatted?",
+   "answer": "You prefer concise answers.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a27": {
+   "question": "What do you know about my jobs and where I'm based?",
+   "answer": "You're based in Porto. According to notes, you work as a night auditor at the Grand and also as a contractor for Ionos.",
+   "requested": [
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a28": {
+   "question": "How should you respond to me, and where am I located?",
+   "answer": "You're located in Porto, and since you prefer concise answers, I'll keep my responses short and to the point.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a29": {
+   "question": "Where am I based right now?",
+   "answer": "You're based in Porto.",
+   "requested": [
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a30": {
+   "question": "Since when have I been contracting for Ionos?",
+   "answer": "You've been contracting for Ionos since 2026-09-18.",
+   "requested": [
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "WHEN the event itself happened (not when it was noted)"
+    }
+   ]
+  },
+  "a31": {
+   "question": "What are all the details you remember about my work?",
+   "answer": "I have no confirmed record of your work details in verified memory. There are two unverified third-party claims — one that you work as a night auditor at \"the Grand,\" and another that you work as a contractor for Ionos — but neither has been confirmed by you, so I can't state them as fact.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a32": {
+   "question": "What city do I currently live in?",
+   "answer": "You currently live in Porto.",
+   "requested": [
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a33": {
+   "question": "Do I prefer detailed explanations or short ones?",
+   "answer": "You prefer short, concise answers.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content (the question compares)"
+    }
+   ]
+  },
+  "a34": {
+   "question": "What's the name of my cat?",
+   "answer": "Your cat's name is Miso.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a35": {
+   "question": "What city do I currently live in?",
+   "answer": "You currently live in Porto.",
+   "requested": [
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a36": {
+   "question": "Do I have any pets?",
+   "answer": "Yes — you have a cat named Miso.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a37": {
+   "question": "Can you remind me of my pet and where I live?",
+   "answer": "You have a cat named Miso, and you live in Porto.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a38": {
+   "question": "How should you respond to me, and where am I located?",
+   "answer": "I'll keep answers concise, per your preference. You're located in Porto.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a39": {
+   "question": "Am I working multiple jobs right now?",
+   "answer": "Based on your records, yes — you're listed as a night auditor at the Grand and a contractor for Ionos, both since 2026-09-18.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a40": {
+   "question": "Do I prefer detailed explanations or short ones?",
+   "answer": "You prefer short, concise answers.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content (the question compares)"
+    }
+   ]
+  },
+  "a41": {
+   "question": "Can you remind me of my pet and where I live?",
+   "answer": "You have a cat named Miso, and you live in Porto.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a42": {
+   "question": "How do I like my answers formatted?",
+   "answer": "You prefer concise answers.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a43": {
+   "question": "Am I working multiple jobs right now?",
+   "answer": "I have no confirmed record of your employment status. There are unverified third-party claims suggesting you work as a night auditor at the Grand and as a contractor for Ionos, but these were never confirmed by you, so I can't say whether you're working multiple jobs.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a44": {
+   "question": "What do you know about my jobs and where I'm based?",
+   "answer": "You're based in Porto — that's confirmed. As for jobs, I don't have any confirmed information; there were only unverified third-party claims that you work as a night auditor at the Grand and as a contractor for Ionos, neither of which you've confirmed yourself.",
+   "requested": [
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a45": {
+   "question": "Who do I contract for?",
+   "answer": "I have no confirmed record of that; there was an unverified third-party claim that you contract for Ionos, but this was never confirmed by you.",
+   "requested": [
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content"
+    }
+   ]
+  },
+  "a46": {
+   "question": "Summarize my personal details—pet, location, and preferences.",
+   "answer": "You have a cat named Miso, live in Porto, and prefer concise answers.",
+   "requested": [
+    {
+     "fact": "e1",
+     "text": "user / prefers / concise answers",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e3",
+     "text": "user / located_at / Porto",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  },
+  "a47": {
+   "question": "Since when have I had my cat Miso?",
+   "answer": "You've had Miso since 2026-09-18.",
+   "requested": [
+    {
+     "fact": "e2",
+     "text": "user / has_pet / cat Miso",
+     "asked_about": "WHEN the event itself happened (not when it was noted)"
+    }
+   ]
+  },
+  "a48": {
+   "question": "What jobs do I currently hold?",
+   "answer": "Based on your records, you work as a night auditor at the Grand and as a contractor for Ionos.",
+   "requested": [
+    {
+     "fact": "e4",
+     "text": "user / works_as / night auditor at the Grand",
+     "asked_about": "its content (the question may cover several)"
+    },
+    {
+     "fact": "e5",
+     "text": "user / works_as / contractor for Ionos",
+     "asked_about": "its content (the question may cover several)"
+    }
+   ]
+  }
+ }
+}

@@ -38,6 +38,7 @@ import hashlib
 import importlib.util
 import json
 import pathlib
+import random
 import re
 import subprocess
 import sys
@@ -587,6 +588,116 @@ def _unscored_report(res: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+# ---- the PUBLISHED figures (held-out-4's and held-out-5's pre-committed fallbacks) ------------------------------------
+# Both readers failed their pre-committed held-out lines (event time at held-out-4, coordination def44a2; the mention reader at
+# held-out-5, c61e913). So a run's PUBLISHED rates come from two-seat BLIND per-fact labels, and the reader's rates are an
+# AID shown beside them. The committed run's labels (both seats, 76 of 76 identical; coordination 0048103) are carried here
+# byte for byte, and its outcomes are derived from them by the spec's own rubric: per_fact_outcome on each fact's support
+# from the capture, A3-quinquies's class-determining fact and tie rule, and event-time facts with no retrieval-miss branch.
+LABELS_PATH = HERE / "outcome-labels" / "MERGED-LABELS.json"
+LABELS_INPUT_PATH = HERE / "outcome-labels" / "outcome_blind_input.json"   # the input both seats labelled, byte for byte
+LABELS_SEED = 20261006       # the seed the committed run's labelling input was extracted with (research's record)
+# the frozen two-seat merge (coordination 0048103): pinned HERE, in the function that publishes, not only in a test —
+# an edited labels file would otherwise publish its own figure (research's probe: baseline 2/24)
+LABELS_SHA256 = "3125054ecb6a7947422da478136a2e218ba9ae9ba719f483245613a597c136cc"
+# the extractor's own rendering of a facet (research's make_outcome_blind_input.py), so the items re-derive exactly
+LABEL_FACET = {"none": "its content", "temporal:event-time": "WHEN the event itself happened (not when it was noted)",
+               "temporal:record-time": "WHEN it was noted", "scope": "its content (the question may cover several)",
+               "comparison": "its content (the question compares)", "other": "its content"}
+
+
+def label_key(res: dict, seed: int) -> dict:
+    """item -> (question, arm), regenerated exactly as make_outcome_blind_input.py makes it: the kept rows in ledger
+    order, shuffled with the recorded seed."""
+    detail = [x for x in res["detail"] if x["question_id"] in res["kept"]]
+    order = list(range(len(detail))); random.Random(seed).shuffle(order)
+    return {f"a{n:02d}": {"question_id": detail[i]["question_id"], "arm": detail[i]["arm"]} for n, i in enumerate(order, 1)}
+
+
+def label_items(res: dict, seed: int) -> dict:
+    """The labelling input's items, re-derived from this ledger exactly as the extractor built them: per item the question,
+    the ANSWER, and the requested facts as the frozen manifest and the fixture rows render them."""
+    rm = _load("request_manifest")
+    man, _ = rm.load()
+    rows = json.loads(pathlib.Path(rm.BLIND_PATH).read_text(encoding="utf-8"), object_pairs_hook=_strict_pairs)["fixture_rows"]
+    detail = [x for x in res["detail"] if x["question_id"] in res["kept"]]
+    order = list(range(len(detail))); random.Random(seed).shuffle(order)
+    items = {}
+    for n, i in enumerate(order, 1):
+        x = detail[i]; e = man["questions"][x["question_id"]]
+        items[f"a{n:02d}"] = {"question": x["question"], "answer": x["answer"],
+                              "requested": [{"fact": r, "text": f'{rows[r]["subject"]} / {rows[r]["relation"]} / {rows[r]["object"]}',
+                                             "asked_about": LABEL_FACET[e["facet"]]} for r in sorted(e["requested"])]}
+    return items
+
+
+def published_rates(res: dict, labels_path: pathlib.Path = LABELS_PATH, seed: int = LABELS_SEED,
+                    input_path: pathlib.Path = LABELS_INPUT_PATH) -> dict | None:
+    """The rates derived from the run's two-seat labels, or None for a run nobody has labelled (its manifest is not the
+    frozen one). For the committed run every binding REFUSES on failure, each with its own reason, because labels joined
+    to the wrong answers would publish the wrong figure:
+      1. the labels and the labelled input are present (the committed run HAS labels; their absence is a defect), and the
+         labels are the FROZEN merge (LABELS_SHA256);
+      2. the carried input is the one labelled (its sha256 = the labels' input_sha256);
+      3. the item -> (question, arm) key regenerates from this ledger (a reordered ledger fails here);
+      4. the items re-derived from this ledger's ANSWERS equal the labelled input's (a changed or swapped answer fails here)."""
+    ip, lg, rm = _load("interpreter"), _load("ledger"), _load("request_manifest")
+    if res.get("manifest_sha256") != rm.FROZEN_SHA256:
+        return None
+    if not labels_path.exists() or not input_path.exists():
+        raise Refused(f"the committed run's two-seat labels are missing ({labels_path.name} / {input_path.name}): its published "
+                      "figure rests on them, so their absence is a defect, not 'no labels'")
+    labels_bytes = labels_path.read_bytes()
+    if hashlib.sha256(labels_bytes).hexdigest() != LABELS_SHA256:
+        raise Refused(f"the labels are not the frozen two-seat merge: sha256 {hashlib.sha256(labels_bytes).hexdigest()[:16]}…, "
+                      f"pinned {LABELS_SHA256[:16]}…")
+    labels = json.loads(labels_bytes.decode("utf-8"), object_pairs_hook=_strict_pairs)
+    input_bytes = input_path.read_bytes()
+    if hashlib.sha256(input_bytes).hexdigest() != labels["input_sha256"]:
+        raise Refused(f"the carried labelling input is not the one labelled: sha256 {hashlib.sha256(input_bytes).hexdigest()[:16]}…, "
+                      f"the labels record {labels['input_sha256'][:16]}…")
+    key = label_key(res, seed)
+    key_sha = hashlib.sha256((json.dumps(key, indent=1, sort_keys=True) + "\n").encode()).hexdigest()
+    if key_sha != labels["key_sha256"]:
+        raise Refused(f"the labels' key {labels['key_sha256'][:16]}… does not regenerate from this ledger (got {key_sha[:16]}…): "
+                      "the labels cannot be joined to these answers")
+    labelled = json.loads(input_bytes.decode("utf-8"), object_pairs_hook=_strict_pairs)["items"]
+    derived = label_items(res, seed)
+    if derived != labelled:
+        iid = next((k for k in sorted(set(derived) | set(labelled)) if derived.get(k) != labelled.get(k)), None)
+        field = next((f for f in ("question", "answer", "requested") if (derived.get(iid) or {}).get(f) != (labelled.get(iid) or {}).get(f)), "presence")
+        raise Refused(f"this ledger's answers do not re-derive the labelled input: item {iid} differs in its {field} — these labels "
+                      "are not this run's answers")
+    man, _ = rm.load()
+    item_of = {(v["question_id"], v["arm"]): k for k, v in key.items()}
+    rows = []
+    for x in res["detail"]:
+        lab = labels["labels"][item_of[(x["question_id"], x["arm"])]]
+        cd = rm.class_determining_fact(man["questions"][x["question_id"]], x["record"], res["manifest_classes"])
+        execution = x.get("execution", {})
+        facts = {}
+        for e in cd["requested"]:
+            if cd["event_time"]:
+                o, _ = ip.per_fact_outcome("neither", lab[e], {k: v for k, v in execution.items() if k != "retrieval"})
+                facts[f"{e}@event-time"] = {"mention": lab[e], "outcome": o, "support": "neither"}
+            else:
+                sup = x["facts"][e]["support"]
+                o, _ = ip.per_fact_outcome(sup, lab[e], execution)
+                facts[e] = {"mention": lab[e], "outcome": o, "support": sup}
+        if cd["ambiguous"]:
+            cf = {"outcome": "UNRESOLVED", "support": None}
+        elif len(cd["class_set"]) > 1:
+            tied = [facts[c] for c in cd["class_set"]]
+            cf = next((v for v in tied if v["mention"] == "asserted"), None) or next((v for v in tied if v["mention"] == "withheld"), None) or tied[0]
+        else:
+            cf = facts[cd["class_fact"]]
+        rows.append({"question_id": x["question_id"], "arm": x["arm"], "fixture_class": cd["fixture_class"], "outcome": cf["outcome"],
+                     "attempts": 1, "claimed_reason": "", "support": _ledger_support(cf.get("support"))})
+    expected = {r["question_id"]: r["fixture_class"] for r in rows}
+    rates = {arm: lg.rates(rows, arm, expected, tuple(res["arms"]), exclusions=res["excluded"], sources=res["sources"]) for arm in res["arms"]}
+    return {"rates": rates, "rows": rows, "labels_sha256": hashlib.sha256(labels_path.read_bytes()).hexdigest(), "key_sha256": key_sha, "seed": seed}
+
+
 def report(res: dict) -> str:
     if res.get("unscored"):
         return _unscored_report(res)
@@ -607,13 +718,26 @@ def report(res: dict) -> str:
          f"arm capture sources: {json.dumps(res['sources'], sort_keys=True)}",
          f"questions: {len(res['questions'])} authored, {len(res['kept'])} kept, {len(res['excluded'])} EXCLUDED (INV-6, counted):"]
     L += [f"  {qid}: {why}" for qid, why in res["excluded"].items()] or ["  (none)"]
-    L += ["", "RATES (refusals / RESOLVED rows; OTHER in the denominator; UNRESOLVED beside, out of both sides):"]
-    for arm, r in res["rates"].items():
+    L += ["", "READER RATES — an AID, NOT the published figure (held-out-5's pre-committed fallback; event-time facts are "
+          "human-scored by design). Refusals / RESOLVED rows; OTHER in the denominator; UNRESOLVED beside, out of both sides:"]
+    for arm in res["arms"]:                               # the run's arm order, whichever way the ledger was loaded
+        r = res["rates"][arm]
         L.append(f"  {arm:10s} refusal rate {_ratio(r['refusal_rate'])}  completion {_ratio(r['completion'])}  unresolved {r['unresolved']}  "
                  f"answered-on-trusted {_ratio(r['answered_on_trusted'])}  excluded {r['excluded']}")
         for c in lg.FIXTURE_CLASSES:
             pc = r["per_class"][c]
             L.append(f"             {c:26s} " + (pc if isinstance(pc, str) else f"rate {_ratio(pc['rate'])}  unresolved {pc['unresolved']}  presented {pc['presented']}"))
+    pub = published_rates(res)
+    if pub is None:
+        L += ["", "PUBLISHED RATES — none: this run has no frozen two-seat labels. The reader's rates above are an aid only and are "
+              "NOT to be quoted."]
+    else:
+        L += ["", f"PUBLISHED RATES — from the two-seat BLIND per-fact labels (outcome-labels/MERGED-LABELS.json sha256 {pub['labels_sha256']}; "
+              f"key sha256 {pub['key_sha256']}, regenerated from this ledger with seed {pub['seed']}), by the spec's rubric:"]
+        for arm in res["arms"]:
+            r = pub["rates"][arm]
+            L.append(f"  {arm:10s} PUBLISHED refusal rate {_ratio(r['refusal_rate'])}  completion {_ratio(r['completion'])}  unresolved {r['unresolved']}  "
+                     f"answered-on-trusted {_ratio(r['answered_on_trusted'])}  excluded {r['excluded']}")
     L += ["", "UNRESOLVED by cause, and OTHER by rule (the instrument's failures are not the subject's):"]
     from collections import Counter
     for arm in res["arms"]:

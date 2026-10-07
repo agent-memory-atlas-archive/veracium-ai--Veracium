@@ -1,0 +1,181 @@
+{
+ "input_sha256": "f8f6731e29cf50645af5d8390bab7614ab7350493f3b9566bc22c5aa1dcb2e82",
+ "key_regenerated": "by make_outcome_blind_input.py over a git-archive export of veracium f6a09c4 (ledger + seed 20261006) AFTER both label commits and this merge",
+ "key_sha256": "b2ec6953190e59829c38d5d0301383922380037f0693f6a48370ad0d6d8d3aa0",
+ "labels": {
+  "a01": {
+   "e5": "asserted"
+  },
+  "a02": {
+   "e1": "asserted"
+  },
+  "a03": {
+   "e4": "withheld"
+  },
+  "a04": {
+   "e2": "asserted"
+  },
+  "a05": {
+   "e4": "asserted"
+  },
+  "a06": {
+   "e5": "asserted"
+  },
+  "a07": {
+   "e4": "asserted",
+   "e5": "asserted"
+  },
+  "a08": {
+   "e3": "asserted"
+  },
+  "a09": {
+   "e1": "asserted"
+  },
+  "a10": {
+   "e2": "asserted"
+  },
+  "a11": {
+   "e4": "asserted"
+  },
+  "a12": {
+   "e5": "withheld"
+  },
+  "a13": {
+   "e1": "asserted",
+   "e2": "asserted",
+   "e3": "asserted",
+   "e4": "withheld",
+   "e5": "withheld"
+  },
+  "a14": {
+   "e3": "withheld"
+  },
+  "a15": {
+   "e4": "withheld"
+  },
+  "a16": {
+   "e5": "withheld"
+  },
+  "a17": {
+   "e4": "withheld"
+  },
+  "a18": {
+   "e4": "asserted"
+  },
+  "a19": {
+   "e2": "asserted"
+  },
+  "a20": {
+   "e1": "asserted",
+   "e2": "asserted",
+   "e3": "asserted"
+  },
+  "a21": {
+   "e1": "asserted",
+   "e2": "asserted",
+   "e3": "asserted",
+   "e4": "withheld",
+   "e5": "withheld"
+  },
+  "a22": {
+   "e4": "withheld",
+   "e5": "withheld"
+  },
+  "a23": {
+   "e2": "asserted",
+   "e3": "asserted"
+  },
+  "a24": {
+   "e2": "asserted",
+   "e3": "asserted"
+  },
+  "a25": {
+   "e3": "asserted"
+  },
+  "a26": {
+   "e1": "asserted"
+  },
+  "a27": {
+   "e3": "asserted",
+   "e4": "asserted",
+   "e5": "asserted"
+  },
+  "a28": {
+   "e1": "asserted",
+   "e3": "asserted"
+  },
+  "a29": {
+   "e3": "asserted"
+  },
+  "a30": {
+   "e5": "asserted"
+  },
+  "a31": {
+   "e4": "withheld",
+   "e5": "withheld"
+  },
+  "a32": {
+   "e3": "asserted"
+  },
+  "a33": {
+   "e1": "asserted"
+  },
+  "a34": {
+   "e2": "asserted"
+  },
+  "a35": {
+   "e3": "asserted"
+  },
+  "a36": {
+   "e2": "asserted"
+  },
+  "a37": {
+   "e2": "asserted",
+   "e3": "asserted"
+  },
+  "a38": {
+   "e1": "asserted",
+   "e3": "asserted"
+  },
+  "a39": {
+   "e4": "asserted",
+   "e5": "asserted"
+  },
+  "a40": {
+   "e1": "asserted"
+  },
+  "a41": {
+   "e2": "asserted",
+   "e3": "asserted"
+  },
+  "a42": {
+   "e1": "asserted"
+  },
+  "a43": {
+   "e4": "withheld",
+   "e5": "withheld"
+  },
+  "a44": {
+   "e3": "asserted",
+   "e4": "withheld",
+   "e5": "withheld"
+  },
+  "a45": {
+   "e5": "withheld"
+  },
+  "a46": {
+   "e1": "asserted",
+   "e2": "asserted",
+   "e3": "asserted"
+  },
+  "a47": {
+   "e2": "asserted"
+  },
+  "a48": {
+   "e4": "asserted",
+   "e5": "asserted"
+  }
+ },
+ "ledger_sha256": "6a86026c2d88b099fa6db44486534b244eae8bc9b7d613b1bcdd0dcc83ac5d81",
+ "what": "0043 committed run, 48 answers: the MERGED blind per-fact labels \u2014 dev (coordination a75c015) and research (research 63549eb6) agree on 76 of 76 (item, fact) pairs; no cannot_tell; nothing for the owner to rule"
+}
