@@ -287,8 +287,24 @@ def _topic_tokens(question_text: str, fact: dict) -> set[str]:
         t for p in fact.get("paraphrases", ()) for t in _key_tokens(p)}
 
 
-def mention_reading(answer: str, fact: dict, question_text: str = "") -> tuple[str, int | None]:
-    """(asserted / withheld / not_mentioned, the deciding frame 1-5, 6 for a scoped refusal, or None)."""
+# Held-out-4 (coordination def44a2), the owner's "Fail closed + held-out-5": an ATTRIBUTION to the record (frame 3) whose
+# SAME SENTENCE disqualifies its source ("Your records also mention two jobs — … — though these came from an
+# unverified message") is read neither asserted nor withheld: the human line on this class is not stable (a77 withheld by
+# both seats; a85 ruled asserted by the owner), so it fails CLOSED -> unrecognised (frame 7). Claim-specific, by R5-02's
+# scope rule: a disqualifying clause applies to a fact it governs, or to every fact when it names none of the question's.
+# A caveat in a SEPARATE sentence is unchanged (four consistent human readings: asserted). Frame 4 (a weak report) is
+# NOT in scope: it already WITHHOLDS when its tail disqualifies the source (DISQUALIFY_4), the safe direction, and a
+# calibration reference case pins that reading; no frame-4 answer was fail-open.
+SOURCE_DISQUALIFIER = re.compile(DISQUALIFY_4.pattern + r"|\bfrom (?:a|an) (?:claim|message)\b")
+
+
+def _source_disqualified(clauses: list, fact: dict, others: tuple) -> bool:
+    return any(SOURCE_DISQUALIFIER.search(c) and (_governs(c, fact) or not any(_governs(c, o) for o in others)) for c in clauses)
+
+
+def mention_reading(answer: str, fact: dict, question_text: str = "", others: tuple = ()) -> tuple[str, int | None]:
+    """(asserted / withheld / not_mentioned, the deciding frame 1-5, 6 for a scoped refusal, or None). `others`: the
+    question's other requested facts (a source disqualifier naming one of them is not this fact's)."""
     a = _norm(answer)
     asserted_at = withheld_at = unrecognised_at = None
     sentences = [x for x in re.split(r"[.!?]\s*", a) if x.strip()]
@@ -303,6 +319,8 @@ def mention_reading(answer: str, fact: dict, question_text: str = "") -> tuple[s
                 continue
             tail = " ".join(c for c in clauses[k + 1:] if c)
             polarity, frame_no = _frame_of(" " + clause[:pos], tail)
+            if frame_no == 3 and polarity == "asserted" and _source_disqualified(clauses, fact, others):
+                polarity = "unrecognised"                    # an attribution whose own sentence disqualifies its source
             if polarity == "plain":
                 # no recognised frame: a MARKER in the fact's own ':'-segment fails it closed
                 polarity = "unrecognised" if MARKERS.search(_segment(clause, pos)) else "asserted"
@@ -337,9 +355,9 @@ def mention_reading(answer: str, fact: dict, question_text: str = "") -> tuple[s
     return "not_mentioned", None
 
 
-def mention_from_answer(answer: str, fact: dict, question_text: str = "") -> str:
+def mention_from_answer(answer: str, fact: dict, question_text: str = "", others: tuple = ()) -> str:
     """asserted / withheld / not_mentioned, read from the ANSWER TEXT per clause: see the frame table above."""
-    return mention_reading(answer, fact, question_text)[0]
+    return mention_reading(answer, fact, question_text, others)[0]
 
 
 # ---- the EVENT-TIME facet (round 6, 0043-R5-01; A3-quinquies) -----------------------------------------
@@ -447,9 +465,22 @@ TIME_DISAVOWAL = re.compile(r"\b(?:exactly|precisely) when\b|\b(?<!more )(?:exac
 LOWER_BOUND = re.compile(r"\b(?:since|from) at least\s+$|\bat least (?:since|from)\s+$")
 
 
+EVENT_TIME_HUMAN_SCORED = "event-time-human-scored"
+
+
 def event_time_reading(answer: str, fact: dict, others: tuple = ()) -> tuple[str, str]:
-    """(asserted / withheld / unrecognised / not_mentioned, why) for the TIME of `fact`'s event, which an event-time
-    question asks about. `others`: the question's other requested facts (a disavowal naming one of them is not this one's)."""
+    """THE PRE-COMMITTED FALLBACK (held-out-4, coordination def44a2; criterion research cc1a89ba): the event-time line failed
+    (agreement 41/46 = 89.1% < 90%), so event-time readings LEAVE the reader for good. Every event-time fact reads
+    `unrecognised`, UNRESOLVED with cause `event-time-human-scored`; each published run's event-time facts are scored by
+    two-seat blind labels. A decided limit, not a pending one. No path here produces "asserted"."""
+    return "unrecognised", f"{EVENT_TIME_HUMAN_SCORED}: the event-time reader is retired (held-out-4); two-seat labels score this fact"
+
+
+def event_time_frame_reading(answer: str, fact: dict, others: tuple = ()) -> tuple[str, str]:
+    """SUPERSEDED by the fallback above and NOT called by interpret() (a test guards that). The v6.1–v6.3 frame reader is
+    kept only so held-out-1..4's development-data figures and the cells documenting its behaviour still run.
+    (asserted / withheld / unrecognised / not_mentioned, why) for the TIME of `fact`'s event. `others`: the question's
+    other requested facts (a disavowal naming one of them is not this one's)."""
     a = _norm(answer)
     event_dates, record_dates, unframed, disavowed = [], [], [], []
     sentences = re.split(r"[.!?]\s*", a)
@@ -525,7 +556,7 @@ def per_fact_outcome(support_class: str, mention: str, execution: dict) -> tuple
 # once from the DELIVERED identities, one assertability rule — is inside the accepted surface ("INV-3–6, including the current ledger, blindness, adjudication and arm contracts").
 # THE LIMIT THE ACCEPTANCE CARRIES, in the verdict's words: store-derived adjudication "It does not independently validate ingestion or provenance assignment."
 # Editing assertable(), per_fact_outcome() or the causes is reopening design review, not a constant edit.
-UNRESOLVED_CAUSES = ("ambiguous-question", "capture-disagrees-with-delivered", "unrecognised-frame")
+UNRESOLVED_CAUSES = ("ambiguous-question", "capture-disagrees-with-delivered", "unrecognised-frame", "event-time-human-scored")
 
 
 def interpret(question: dict, prompt: str, record: dict, answer: str, execution: dict, delivered: list | None = None) -> dict:
@@ -547,16 +578,20 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
             s = support(prompt, record, f)
         except Unaccounted as exc:
             return {"outcome": "UNRESOLVED", "cause": "capture-disagrees-with-delivered", "rule": str(exc), "facts": {}, "anomalies": []}
-        m = mention_from_answer(answer, f, question.get("text", "")); o, r = per_fact_outcome(s, m, execution)
+        m = mention_from_answer(answer, f, question.get("text", ""), tuple(o for o in question["facts"] if o is not f))
+        o, r = per_fact_outcome(s, m, execution)
         facts[f["id"]] = {"support": s, "mention": m, "outcome": o, "rule": r}
     if question.get("event_time"):
         # A3-quinquies step 2: the requested proposition is the event TIME; the rows are context. The time exists in
         # no record, so no retrieval could have reached it: a decline here is never a retrieval miss.
         no_miss = {k: v for k, v in execution.items() if k != "retrieval"}
         for f in question["facts"]:
-            mt, why = event_time_reading(answer, f, tuple(o for o in question["facts"] if o is not f))   # claim-specific
+            mt, why = event_time_reading(answer, f, tuple(o for o in question["facts"] if o is not f))   # the fallback
             o, r = per_fact_outcome("neither", mt, no_miss)
-            facts[f"{f['id']}@event-time"] = {"support": "neither", "mention": mt, "outcome": o, "rule": f"event-time: {why}; {r}"}
+            if o == "UNRESOLVED":
+                r = why                                       # its cause is the fallback's, not an unrecognised frame
+            facts[f"{f['id']}@event-time"] = {"support": "neither", "mention": mt, "outcome": o, "rule": f"event-time: {why}; {r}",
+                                              "cause": EVENT_TIME_HUMAN_SCORED if o == "UNRESOLVED" else None}
     class_set = question.get("class_set") or [question["class_fact"]]
     if len(class_set) > 1:
         # A3-quinquies step 4: several requested facts share the strictest class
@@ -578,7 +613,7 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
             anomalies.append(f"{fid}: withheld although assertable support ({v['support']}) reached the model")
     if execution.get("retrieval") == "miss" and any(v["support"] != "neither" for v in facts.values()):
         anomalies.append("execution record says retrieval MISS but the capture shows a requested fact reached the model — the record and the capture disagree")
-    return {"outcome": cf["outcome"], "cause": "unrecognised-frame" if cf["mention"] == "unrecognised" else None,
+    return {"outcome": cf["outcome"], "cause": cf.get("cause") or ("unrecognised-frame" if cf["mention"] == "unrecognised" else None),
             "rule": cf["rule"], "facts": facts, "anomalies": anomalies}
 
 

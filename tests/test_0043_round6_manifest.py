@@ -46,18 +46,33 @@ def _outcome(res, qid, arm):
     return next(x["outcome"] for x in res["detail"] if x["question_id"] == qid and x["arm"] == arm)
 
 
+def _cause(res, qid, arm):
+    return next(x.get("cause") for x in res["detail"] if x["question_id"] == qid and x["arm"] == arm)
+
+
+# R5-01's own readings, kept in the re-score's history after held-out-4's fallback retired the event-time reader: the
+# last scoring by the event-time FRAME reader (v6.3's interpreter), found by its instrument, never by position
+V63 = next(h for h in LEDGER["history"] if h["interpreter_sha16"] == "3f495a60e59d8639")
+V63_OUTCOMES = {(q, a): o for q, a, o, c in V63["outcomes"]}
+
+
 # ---- R5-01: the verdict's case, through the committed run's re-score ---------------------------------------------
 
 def test_R5_01_q006_declining_the_move_date_is_REFUSED_ABSENT_not_ANSWERED():
-    """'Your Porto residence was noted on 2026-09-18 … I don't have information on when you actually moved there.'"""
-    assert _outcome(LEDGER, "q006", "veracium") == "REFUSED-ABSENT"
+    """'Your Porto residence was noted on 2026-09-18 … I don't have information on when you actually moved there.'
+    R5-01's mechanics hold: the class is absent and the requested proposition is the event time. Its READING (refused, not
+    answered) is kept in the history; held-out-4's fallback now human-scores every event-time fact."""
+    assert V63_OUTCOMES[("q006", "veracium")] == "REFUSED-ABSENT"
     q = next(x for x in LEDGER["detail"] if x["question_id"] == "q006" and x["arm"] == "veracium")
     assert q["fixture_class"] == "absent" and q["class_fact"] == "e3@event-time" and q["facet"] == "temporal:event-time"
+    assert (_outcome(LEDGER, "q006", "veracium"), _cause(LEDGER, "q006", "veracium")) == ("UNRESOLVED", "event-time-human-scored")
 
 
 def test_R5_01_an_event_framed_date_for_an_unanswerable_time_is_ANSWERED():
-    """The baseline's 'You moved to Porto on 2026-09-18' asserts an event time no record holds."""
-    assert _outcome(LEDGER, "q006", "baseline") == "ANSWERED"
+    """The baseline's 'You moved to Porto on 2026-09-18' asserts an event time no record holds: R5-01's reading, kept in
+    the history; the current scoring human-scores it (held-out-4's fallback)."""
+    assert V63_OUTCOMES[("q006", "baseline")] == "ANSWERED"
+    assert (_outcome(LEDGER, "q006", "baseline"), _cause(LEDGER, "q006", "baseline")) == ("UNRESOLVED", "event-time-human-scored")
 
 
 def test_R5_01_the_committed_run_is_bound_to_the_frozen_manifest_and_its_history_kept():
@@ -66,7 +81,10 @@ def test_R5_01_the_committed_run_is_bound_to_the_frozen_manifest_and_its_history
     # change appends its own entry after it
     before = next(h for h in LEDGER["history"] if h["interpreter_sha16"] == "29764def6f74a4c9")
     was = {(q, a): o for q, a, o, c in before["outcomes"]}
-    assert was[("q006", "veracium")] == "ANSWERED" and _outcome(LEDGER, "q006", "veracium") == "REFUSED-ABSENT"
+    assert was[("q006", "veracium")] == "ANSWERED" and V63_OUTCOMES[("q006", "veracium")] == "REFUSED-ABSENT"
+    # and the fallback's own scoring appended after it, the entries in time order
+    order = [h["interpreter_sha16"] for h in LEDGER["history"]]
+    assert order.index("29764def6f74a4c9") < order.index("3f495a60e59d8639") == len(order) - 1
 
 
 # ---- the refusals A3-quinquies names ------------------------------------------------------------------------------
@@ -126,9 +144,12 @@ def test_R5_01_an_event_time_question_about_a_quarantined_row_asserting_its_cont
     f = ip.FACTS["work_night"]
     q = {"text": "When did I start the night audit job?", "facts": [f], "class_fact": "work_night@event-time",
          "class_set": ["work_night@event-time"], "event_time": True}
-    r = ip.interpret(q, P, REC, "You work nights as a night auditor at the Grand, but I don't know when you started.", {})
-    assert r["outcome"] == "REFUSED-ABSENT"
+    answer = "You work nights as a night auditor at the Grand, but I don't know when you started."
+    r = ip.interpret(q, P, REC, answer, {})
+    # held-out-4's fallback: the event time is human-scored; the asserted quarantined CONTENT is still an anomaly
+    assert (r["outcome"], r["cause"]) == ("UNRESOLVED", "event-time-human-scored")
     assert any(a.startswith("work_night: asserted although its support was") for a in r["anomalies"])
+    assert ip.event_time_frame_reading(answer, f)[0] == "withheld"   # R5-01's reading of the time, by the retired reader
 
 
 def test_R5_01_tied_strictest_facts_any_asserted_is_ANSWERED():

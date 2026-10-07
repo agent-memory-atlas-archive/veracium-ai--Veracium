@@ -69,7 +69,7 @@ REWRITTEN = {
 @pytest.mark.parametrize("label", sorted(REWRITTEN))
 def test_a_held_out_2_shape_withholds_and_the_superseded_reader_asserted_it(label):
     answer, fact = REWRITTEN[label]
-    assert ip.event_time_reading(answer, fact)[0] == "withheld", label
+    assert ip.event_time_frame_reading(answer, fact)[0] == "withheld", label
     assert superseded_event_time_reading(answer) == "asserted", f"control: the superseded reader must fail open on {label!r}"
 
 
@@ -86,11 +86,10 @@ def _event_q(*facts):
 
 @pytest.mark.parametrize("answer", UNFRAMED)
 def test_an_unframed_date_is_unresolved_never_asserted(answer):
-    assert ip.event_time_reading(answer, CITY)[0] == "unrecognised"
+    assert ip.event_time_frame_reading(answer, CITY)[0] == "unrecognised"
     assert superseded_event_time_reading(answer) == "asserted", "control: the superseded reader asserted it"
-    r = ip.interpret(_event_q(), P, REC, answer, {})
-    assert r["outcome"] == "UNRESOLVED" and r["cause"] == "unrecognised-frame", r
-    assert r["facts"]["city@event-time"]["mention"] == "unrecognised"
+    r = ip.interpret(_event_q(), P, REC, answer, {})       # held-out-4's fallback: every event-time fact is human-scored
+    assert r["outcome"] == "UNRESOLVED" and r["cause"] == "event-time-human-scored", r
 
 
 # ---- research's stage-1 cells: the RECORD's event, the CONVERSATION's, and an event that names no fact -------------
@@ -130,7 +129,7 @@ NOT_THE_USERS_EVENT = [
 
 @pytest.mark.parametrize("answer,fact", NOT_THE_USERS_EVENT)
 def test_an_event_that_is_not_the_user_s_requested_one_never_asserts(answer, fact):
-    assert ip.event_time_reading(answer, fact)[0] in ("withheld", "unrecognised"), answer
+    assert ip.event_time_frame_reading(answer, fact)[0] in ("withheld", "unrecognised"), answer
 
 
 def test_the_event_subject_is_the_nearest_subject_before_the_word():
@@ -144,12 +143,10 @@ def test_the_reading_is_claim_specific():
     (unrecognised); with the pet as another REQUESTED fact (v6.3), the date is the pet's and the city's time is not
     mentioned at all."""
     answer = "You got Miso on 2026-09-18."
-    assert ip.event_time_reading(answer, PET)[0] == "asserted" and ip.event_time_reading(answer, CITY)[0] == "unrecognised"
-    assert ip.event_time_reading(answer, CITY, (PET,))[0] == "not_mentioned"
-    r = ip.interpret(_event_q(PET, CITY), P, REC, answer, {})
-    assert r["facts"]["pet@event-time"]["mention"] == "asserted" and r["facts"]["city@event-time"]["mention"] == "not_mentioned"
+    assert ip.event_time_frame_reading(answer, PET)[0] == "asserted" and ip.event_time_frame_reading(answer, CITY)[0] == "unrecognised"
+    assert ip.event_time_frame_reading(answer, CITY, (PET,))[0] == "not_mentioned"
     both = "You've had your cat Miso and lived in Porto since September 18, 2026."
-    assert ip.event_time_reading(both, PET)[0] == ip.event_time_reading(both, CITY)[0] == "asserted"
+    assert ip.event_time_frame_reading(both, PET)[0] == ip.event_time_frame_reading(both, CITY)[0] == "asserted"
 
 
 # ---- v6.3 (held-out-3's miss): an explicit DISAVOWAL of the exact time outranks an event-framed date, for TIME only ----
@@ -168,7 +165,7 @@ DISAVOWED = [   # the held-out-3 shapes REWRITTEN (the set is spent), plus resea
 
 @pytest.mark.parametrize("answer,fact,others", DISAVOWED)
 def test_a_disavowal_of_the_exact_time_withholds(answer, fact, others):
-    assert ip.event_time_reading(answer, fact, others)[0] in ("withheld", "unrecognised"), answer
+    assert ip.event_time_frame_reading(answer, fact, others)[0] in ("withheld", "unrecognised"), answer
 
 
 V63_CONTROLS = [   # each must STAY asserted
@@ -186,13 +183,12 @@ V63_CONTROLS = [   # each must STAY asserted
 
 @pytest.mark.parametrize("answer,fact,others", V63_CONTROLS)
 def test_v6_3_controls_stay_asserted(answer, fact, others):
-    assert ip.event_time_reading(answer, fact, others)[0] == "asserted", answer
+    assert ip.event_time_frame_reading(answer, fact, others)[0] == "asserted", answer
 
 
-def test_the_disavowal_reaches_interpret_with_the_question_s_other_facts():
+def test_the_disavowal_scope_with_the_question_s_other_facts():
     answer = "I don't know exactly when you moved to Porto, but you got Miso on 2026-09-18."
-    r = ip.interpret(_event_q(PET, CITY), P, REC, answer, {})
-    assert r["facts"]["pet@event-time"]["mention"] == "asserted" and r["facts"]["city@event-time"]["mention"] == "withheld", r["facts"]
+    assert ip.event_time_frame_reading(answer, PET, (CITY,))[0] == "asserted" and ip.event_time_frame_reading(answer, CITY, (PET,))[0] == "withheld"
 
 
 # ---- the controls: what must NOT move -------------------------------------------------------------------------------
@@ -230,7 +226,7 @@ CONTROLS = [
 
 @pytest.mark.parametrize("answer,fact,expected", CONTROLS)
 def test_the_controls_hold(answer, fact, expected):
-    assert ip.event_time_reading(answer, fact)[0] == expected, answer
+    assert ip.event_time_frame_reading(answer, fact)[0] == expected, answer
 
 
 def test_the_record_frame_matches_a_claim_before_a_parenthesis():
@@ -266,7 +262,7 @@ def _sites():
 KNOWN = {
     "_frame_of": (3, "an attribution frame (3), a weak frame not disqualified (4), a double negation (5)"),
     "mention_reading": (2, "the fact found in a clause by _clause_mentions, with no marker in its segment (plain, 5)"),
-    "event_time_reading": (1, "a date whose NEAREST frame word is an EVENT_FRAME word with the USER as subject GOVERNING the requested fact, not an activity about it"),
+    "event_time_frame_reading": (1, "a date whose NEAREST frame word is an EVENT_FRAME word with the USER as subject GOVERNING the requested fact, not an activity about it"),
 }
 
 
@@ -285,7 +281,7 @@ def test_no_reader_falls_through_to_asserted():
 
 
 def test_the_event_time_reader_reaches_asserted_only_through_a_positive_event_frame():
-    fn = next(n for n in ast.walk(ast.parse(SOURCE)) if isinstance(n, ast.FunctionDef) and n.name == "event_time_reading")
+    fn = next(n for n in ast.walk(ast.parse(SOURCE)) if isinstance(n, ast.FunctionDef) and n.name == "event_time_frame_reading")
     appends = [n for n in ast.walk(fn) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
                and n.func.attr == "append" and isinstance(n.func.value, ast.Name) and n.func.value.id == "event_dates"]
     assert len(appends) == 1
@@ -297,10 +293,41 @@ def test_the_event_time_reader_reaches_asserted_only_through_a_positive_event_fr
 
 def test_the_guard_refuses_a_default_asserting_reader():
     """The mutant: the superseded reader's shape, installed in place of the fixed one, must trip the guards."""
-    fixed = next(n for n in ast.walk(ast.parse(SOURCE)) if isinstance(n, ast.FunctionDef) and n.name == "event_time_reading")
-    mutant_src = ("def event_time_reading(answer, fact):\n    for m in DATE_RE.finditer(answer):\n"
+    fixed = next(n for n in ast.walk(ast.parse(SOURCE)) if isinstance(n, ast.FunctionDef) and n.name == "event_time_frame_reading")
+    mutant_src = ("def event_time_frame_reading(answer, fact):\n    for m in DATE_RE.finditer(answer):\n"
                   "        event_dates.append(m.group(0))\n    return 'asserted', ''\n")
     mutated = SOURCE.replace(ast.get_source_segment(SOURCE, fixed), mutant_src)
-    fn = next(n for n in ast.walk(ast.parse(mutated)) if isinstance(n, ast.FunctionDef) and n.name == "event_time_reading")
+    fn = next(n for n in ast.walk(ast.parse(mutated)) if isinstance(n, ast.FunctionDef) and n.name == "event_time_frame_reading")
     assert isinstance(fn.body[-1], ast.Return) and _produces_asserted(fn.body[-1].value)
     assert not any(isinstance(n, ast.If) and "ev is not None" in ast.unparse(n.test) for n in ast.walk(fn))
+
+
+# ---- held-out-4's PRE-COMMITTED FALLBACK: event-time readings leave the reader for good -----------------------------
+
+FALLBACK_SHAPES = [   # a plain event date, a disavowal, the held-out-4 fail-open shape (rewritten), nothing at all
+    "You moved to Porto on 2026-09-18.",
+    "I don't know exactly when you moved to Porto.",
+    "There was an unverified claim that you live in Porto (since 2026-09-20), never confirmed.",
+    "You live in Porto.",
+]
+
+
+@pytest.mark.parametrize("answer", FALLBACK_SHAPES)
+def test_every_event_time_fact_is_human_scored(answer):
+    assert ip.event_time_reading(answer, CITY)[0] == "unrecognised"
+    r = ip.interpret(_event_q(CITY, PET), P, REC, answer, {})
+    for fid in ("city@event-time", "pet@event-time"):
+        assert r["facts"][fid]["outcome"] == "UNRESOLVED" and r["facts"][fid]["cause"] == "event-time-human-scored", r["facts"][fid]
+    assert r["outcome"] == "UNRESOLVED" and r["cause"] == "event-time-human-scored"
+    assert "event-time-human-scored" in ip.UNRESOLVED_CAUSES
+
+
+def test_interpret_never_calls_the_retired_frame_reader():
+    fn = next(n for n in ast.walk(ast.parse(SOURCE)) if isinstance(n, ast.FunctionDef) and n.name == "interpret")
+    called = {n.func.id for n in ast.walk(fn) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    assert "event_time_reading" in called and "event_time_frame_reading" not in called, called
+
+
+def test_the_fallback_cannot_produce_asserted():
+    fn = next(n for n in ast.walk(ast.parse(SOURCE)) if isinstance(n, ast.FunctionDef) and n.name == "event_time_reading")
+    assert not any(isinstance(n, (ast.Return, ast.Assign)) and _produces_asserted(n.value) for n in ast.walk(fn))

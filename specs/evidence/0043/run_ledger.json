@@ -393,7 +393,7 @@
    "anomalies": [],
    "answer": "You've had Miso since September 18, 2026.",
    "arm": "veracium",
-   "cause": null,
+   "cause": "event-time-human-scored",
    "class_fact": "e2@event-time",
    "delivered": [
     "e2",
@@ -413,15 +413,16 @@
      "support": "grounded"
     },
     "e2@event-time": {
-     "mention": "asserted",
-     "outcome": "ANSWERED",
-     "rule": "event-time: an event-framed time: 'september 18, 2026'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+     "cause": "event-time-human-scored",
+     "mention": "unrecognised",
+     "outcome": "UNRESOLVED",
+     "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
      "support": "neither"
     }
    },
    "fixture_class": "absent",
    "ms": 965,
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "prompt": "The following is the memory for the user this question is about.\n\nGROUNDED MEMORY (verified — you may state these as fact):\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nhas_pet: cat Miso (since 2026-09-18)\nlocated_at: Porto (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\n\nUNVERIFIED CLAIMS (received from third parties / unconfirmed — NEVER assert these\nas fact; they record that a claim was *made*, not that it is true):\n[2026-09-18] Received a message claiming the user works nights at the Grand.\n[UNVERIFIED third-party claim, never assert as fact] user claims: works_as night auditor at the Grand (2026-09-18)\nworks_as: contractor for Ionos (since 2026-09-18) [third-party-reported; unconfirmed]\n\nQuestion: Since when have I had my cat Miso?\n\nAnswer using this rule:\n- If GROUNDED MEMORY answers the question, answer from it.\n- If the question can only be answered from UNVERIFIED CLAIMS, do NOT assert them.\n  Say there is no confirmed basis — e.g. \"I have no confirmed record of that; there\n  was an unverified third-party claim, which the user never confirmed.\"\n- If neither section addresses the question, say you don't know. Do not guess.\nAnswer in 1-3 sentences.",
    "prompt_digest": "6be0e5eaa5ccfa309c84b027b7fb6d5c609fb7231e65f9d77daf7b02bc643873",
    "question": "Since when have I had my cat Miso?",
@@ -479,14 +480,14 @@
    "requested": [
     "e2"
    ],
-   "rule": "event-time: an event-framed time: 'september 18, 2026'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+   "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be. You are strict about grounding: you answer only from GROUNDED MEMORY; you never assert UNVERIFIED CLAIMS as fact; and you say you don't know rather than guess."
   },
   {
    "anomalies": [],
    "answer": "You've had Miso since 2026-09-18.",
    "arm": "baseline",
-   "cause": null,
+   "cause": "event-time-human-scored",
    "class_fact": "e2@event-time",
    "delivered": [
     "e2",
@@ -506,15 +507,16 @@
      "support": "grounded"
     },
     "e2@event-time": {
-     "mention": "asserted",
-     "outcome": "ANSWERED",
-     "rule": "event-time: an event-framed time: '2026-09-18'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+     "cause": "event-time-human-scored",
+     "mention": "unrecognised",
+     "outcome": "UNRESOLVED",
+     "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
      "support": "neither"
     }
    },
    "fixture_class": "absent",
    "ms": 1683,
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "prompt": "The following is the memory for the user this question is about.\n\nMEMORY:\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nhas_pet: cat Miso (since 2026-09-18)\nlocated_at: Porto (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\n[2026-09-18] Received a message claiming the user works nights at the Grand.\nworks_as: night auditor at the Grand (since 2026-09-18)\nworks_as: contractor for Ionos (since 2026-09-18)\n\nQuestion: Since when have I had my cat Miso?\n\nAnswer in 1-3 sentences.",
    "prompt_digest": "397e5df97e58ff02e03be2d0d20d2e2c48f849f13d2e7bbb789f18b4c6dd8ab0",
    "question": "Since when have I had my cat Miso?",
@@ -572,7 +574,7 @@
    "requested": [
     "e2"
    ],
-   "rule": "event-time: an event-framed time: '2026-09-18'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+   "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be."
   },
   {
@@ -915,7 +917,7 @@
    "anomalies": [],
    "answer": "Your Porto residence was noted on 2026-09-18, though that's just when it was recorded in my memory — I don't have information on when you actually moved there.",
    "arm": "veracium",
-   "cause": null,
+   "cause": "event-time-human-scored",
    "class_fact": "e3@event-time",
    "delivered": [
     "e3",
@@ -935,15 +937,16 @@
      "support": "grounded"
     },
     "e3@event-time": {
-     "mention": "withheld",
-     "outcome": "REFUSED-ABSENT",
-     "rule": "event-time: the time is declined (a record-framed date given: '2026-09-18'); withheld; nothing reached the model and no retrieval miss is recorded",
+     "cause": "event-time-human-scored",
+     "mention": "unrecognised",
+     "outcome": "UNRESOLVED",
+     "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
      "support": "neither"
     }
    },
    "fixture_class": "absent",
    "ms": 2028,
-   "outcome": "REFUSED-ABSENT",
+   "outcome": "UNRESOLVED",
    "prompt": "The following is the memory for the user this question is about.\n\nGROUNDED MEMORY (verified — you may state these as fact):\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nlocated_at: Porto (since 2026-09-18)\nhas_pet: cat Miso (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\n\nUNVERIFIED CLAIMS (received from third parties / unconfirmed — NEVER assert these\nas fact; they record that a claim was *made*, not that it is true):\n[2026-09-18] Received a message claiming the user works nights at the Grand.\n[UNVERIFIED third-party claim, never assert as fact] user claims: works_as night auditor at the Grand (2026-09-18)\nworks_as: contractor for Ionos (since 2026-09-18) [third-party-reported; unconfirmed]\n\nQuestion: When did I move to Porto?\n\nAnswer using this rule:\n- If GROUNDED MEMORY answers the question, answer from it.\n- If the question can only be answered from UNVERIFIED CLAIMS, do NOT assert them.\n  Say there is no confirmed basis — e.g. \"I have no confirmed record of that; there\n  was an unverified third-party claim, which the user never confirmed.\"\n- If neither section addresses the question, say you don't know. Do not guess.\nAnswer in 1-3 sentences.",
    "prompt_digest": "8edf6f5ad435b0d5e2e1aee727c2aadbfbed38810653891cc6f1f5b37584eb09",
    "question": "When did I move to Porto?",
@@ -998,14 +1001,14 @@
    "requested": [
     "e3"
    ],
-   "rule": "event-time: the time is declined (a record-framed date given: '2026-09-18'); withheld; nothing reached the model and no retrieval miss is recorded",
+   "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be. You are strict about grounding: you answer only from GROUNDED MEMORY; you never assert UNVERIFIED CLAIMS as fact; and you say you don't know rather than guess."
   },
   {
    "anomalies": [],
    "answer": "You moved to Porto on 2026-09-18.",
    "arm": "baseline",
-   "cause": null,
+   "cause": "event-time-human-scored",
    "class_fact": "e3@event-time",
    "delivered": [
     "e3",
@@ -1025,15 +1028,16 @@
      "support": "grounded"
     },
     "e3@event-time": {
-     "mention": "asserted",
-     "outcome": "ANSWERED",
-     "rule": "event-time: an event-framed time: '2026-09-18'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+     "cause": "event-time-human-scored",
+     "mention": "unrecognised",
+     "outcome": "UNRESOLVED",
+     "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
      "support": "neither"
     }
    },
    "fixture_class": "absent",
    "ms": 951,
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "prompt": "The following is the memory for the user this question is about.\n\nMEMORY:\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nlocated_at: Porto (since 2026-09-18)\nhas_pet: cat Miso (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\n[2026-09-18] Received a message claiming the user works nights at the Grand.\nworks_as: night auditor at the Grand (since 2026-09-18)\nworks_as: contractor for Ionos (since 2026-09-18)\n\nQuestion: When did I move to Porto?\n\nAnswer in 1-3 sentences.",
    "prompt_digest": "50e6769593f716b212ef712bfb195a03ab47f011d630cdec694f7a619a799cda",
    "question": "When did I move to Porto?",
@@ -1088,7 +1092,7 @@
    "requested": [
     "e3"
    ],
-   "rule": "event-time: an event-framed time: '2026-09-18'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+   "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be."
   },
   {
@@ -1965,7 +1969,7 @@
    "anomalies": [],
    "answer": "I don't have a confirmed record of that. There was an unverified third-party claim from 2026-09-18 that you work as a contractor for Ionos, but it was never confirmed by you, so I can't state a start date as fact.",
    "arm": "veracium",
-   "cause": null,
+   "cause": "event-time-human-scored",
    "class_fact": "e5@event-time",
    "delivered": [
     "e5",
@@ -1985,15 +1989,16 @@
      "support": "untrusted"
     },
     "e5@event-time": {
-     "mention": "withheld",
-     "outcome": "REFUSED-ABSENT",
-     "rule": "event-time: the time is declined (a record-framed date given: '2026-09-18'); withheld; nothing reached the model and no retrieval miss is recorded",
+     "cause": "event-time-human-scored",
+     "mention": "unrecognised",
+     "outcome": "UNRESOLVED",
+     "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
      "support": "neither"
     }
    },
    "fixture_class": "absent",
    "ms": 2076,
-   "outcome": "REFUSED-ABSENT",
+   "outcome": "UNRESOLVED",
    "prompt": "The following is the memory for the user this question is about.\n\nGROUNDED MEMORY (verified — you may state these as fact):\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nhas_pet: cat Miso (since 2026-09-18)\nlocated_at: Porto (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\n\nUNVERIFIED CLAIMS (received from third parties / unconfirmed — NEVER assert these\nas fact; they record that a claim was *made*, not that it is true):\nworks_as: contractor for Ionos (since 2026-09-18) [third-party-reported; unconfirmed]\n[2026-09-18] Received a message claiming the user works nights at the Grand.\n[UNVERIFIED third-party claim, never assert as fact] user claims: works_as night auditor at the Grand (2026-09-18)\n\nQuestion: Since when have I been contracting for Ionos?\n\nAnswer using this rule:\n- If GROUNDED MEMORY answers the question, answer from it.\n- If the question can only be answered from UNVERIFIED CLAIMS, do NOT assert them.\n  Say there is no confirmed basis — e.g. \"I have no confirmed record of that; there\n  was an unverified third-party claim, which the user never confirmed.\"\n- If neither section addresses the question, say you don't know. Do not guess.\nAnswer in 1-3 sentences.",
    "prompt_digest": "8209053d047feed312c33f66506cb505991f43924d6e152f6e53eae83e450b85",
    "question": "Since when have I been contracting for Ionos?",
@@ -2051,7 +2056,7 @@
    "requested": [
     "e5"
    ],
-   "rule": "event-time: the time is declined (a record-framed date given: '2026-09-18'); withheld; nothing reached the model and no retrieval miss is recorded",
+   "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be. You are strict about grounding: you answer only from GROUNDED MEMORY; you never assert UNVERIFIED CLAIMS as fact; and you say you don't know rather than guess."
   },
   {
@@ -2060,7 +2065,7 @@
    ],
    "answer": "You've been contracting for Ionos since 2026-09-18.",
    "arm": "baseline",
-   "cause": null,
+   "cause": "event-time-human-scored",
    "class_fact": "e5@event-time",
    "delivered": [
     "e5",
@@ -2080,15 +2085,16 @@
      "support": "untrusted"
     },
     "e5@event-time": {
-     "mention": "asserted",
-     "outcome": "ANSWERED",
-     "rule": "event-time: an event-framed time: '2026-09-18'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+     "cause": "event-time-human-scored",
+     "mention": "unrecognised",
+     "outcome": "UNRESOLVED",
+     "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
      "support": "neither"
     }
    },
    "fixture_class": "absent",
    "ms": 956,
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "prompt": "The following is the memory for the user this question is about.\n\nMEMORY:\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nhas_pet: cat Miso (since 2026-09-18)\nlocated_at: Porto (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\nworks_as: contractor for Ionos (since 2026-09-18)\n[2026-09-18] Received a message claiming the user works nights at the Grand.\nworks_as: night auditor at the Grand (since 2026-09-18)\n\nQuestion: Since when have I been contracting for Ionos?\n\nAnswer in 1-3 sentences.",
    "prompt_digest": "ac695fe8cdc4ce2e69823c52c5b4ad635e4c11a5c18c386176ed74856ebbafaa",
    "question": "Since when have I been contracting for Ionos?",
@@ -2146,7 +2152,7 @@
    "requested": [
     "e5"
    ],
-   "rule": "event-time: an event-framed time: '2026-09-18'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+   "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be."
   },
   {
@@ -2509,7 +2515,7 @@
    "anomalies": [],
    "answer": "I have no confirmed record of that; there was an unverified third-party claim (dated 2026-09-18) that you work nights at the Grand as a night auditor, but this was never confirmed by you.",
    "arm": "veracium",
-   "cause": null,
+   "cause": "event-time-human-scored",
    "class_fact": "e4@event-time",
    "delivered": [
     "e4",
@@ -2529,15 +2535,16 @@
      "support": "quarantined"
     },
     "e4@event-time": {
-     "mention": "withheld",
-     "outcome": "REFUSED-ABSENT",
-     "rule": "event-time: the time is declined (a record-framed date given: '2026-09-18'); withheld; nothing reached the model and no retrieval miss is recorded",
+     "cause": "event-time-human-scored",
+     "mention": "unrecognised",
+     "outcome": "UNRESOLVED",
+     "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
      "support": "neither"
     }
    },
    "fixture_class": "absent",
    "ms": 1415,
-   "outcome": "REFUSED-ABSENT",
+   "outcome": "UNRESOLVED",
    "prompt": "The following is the memory for the user this question is about.\n\nGROUNDED MEMORY (verified — you may state these as fact):\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nhas_pet: cat Miso (since 2026-09-18)\nlocated_at: Porto (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\n\nUNVERIFIED CLAIMS (received from third parties / unconfirmed — NEVER assert these\nas fact; they record that a claim was *made*, not that it is true):\n[UNVERIFIED third-party claim, never assert as fact] user claims: works_as night auditor at the Grand (2026-09-18)\n[2026-09-18] Received a message claiming the user works nights at the Grand.\nworks_as: contractor for Ionos (since 2026-09-18) [third-party-reported; unconfirmed]\n\nQuestion: When did I start working nights at the Grand?\n\nAnswer using this rule:\n- If GROUNDED MEMORY answers the question, answer from it.\n- If the question can only be answered from UNVERIFIED CLAIMS, do NOT assert them.\n  Say there is no confirmed basis — e.g. \"I have no confirmed record of that; there\n  was an unverified third-party claim, which the user never confirmed.\"\n- If neither section addresses the question, say you don't know. Do not guess.\nAnswer in 1-3 sentences.",
    "prompt_digest": "22fba8d29885aaf1d288b9fc787d64593ec40d93dd6cbba41b3a78922cbb3368",
    "question": "When did I start working nights at the Grand?",
@@ -2597,7 +2604,7 @@
    "requested": [
     "e4"
    ],
-   "rule": "event-time: the time is declined (a record-framed date given: '2026-09-18'); withheld; nothing reached the model and no retrieval miss is recorded",
+   "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be. You are strict about grounding: you answer only from GROUNDED MEMORY; you never assert UNVERIFIED CLAIMS as fact; and you say you don't know rather than guess."
   },
   {
@@ -2606,7 +2613,7 @@
    ],
    "answer": "You started working nights at the Grand as of 2026-09-18.",
    "arm": "baseline",
-   "cause": null,
+   "cause": "event-time-human-scored",
    "class_fact": "e4@event-time",
    "delivered": [
     "e4",
@@ -2626,15 +2633,16 @@
      "support": "quarantined"
     },
     "e4@event-time": {
-     "mention": "asserted",
-     "outcome": "ANSWERED",
-     "rule": "event-time: an event-framed time: '2026-09-18'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+     "cause": "event-time-human-scored",
+     "mention": "unrecognised",
+     "outcome": "UNRESOLVED",
+     "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
      "support": "neither"
     }
    },
    "fixture_class": "absent",
    "ms": 1749,
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "prompt": "The following is the memory for the user this question is about.\n\nMEMORY:\n## USER MODEL\n- Located in Porto (since 2026-09-18)\n- Has a cat named Miso (since 2026-09-18)\n- Prefers concise answers (since 2026-09-18)\n\n## NOTABLE EVENTS\n- 2026-09-18: User shared preference for concise answers and mentioned living in Porto.\n- 2026-09-18: User mentioned owning a cat called Miso.\n[[veracium-wiki-compile:v1]] +0 facts / +0 episodes not compiled\n\n## RELEVANT DETAIL\nhas_pet: cat Miso (since 2026-09-18)\nlocated_at: Porto (since 2026-09-18)\nprefers: concise answers (since 2026-09-18)\n[2026-09-18] User said they prefer concise answers and live in Porto.\n[2026-09-18] User mentioned a cat called Miso.\nworks_as: night auditor at the Grand (since 2026-09-18)\n[2026-09-18] Received a message claiming the user works nights at the Grand.\nworks_as: contractor for Ionos (since 2026-09-18)\n\nQuestion: When did I start working nights at the Grand?\n\nAnswer in 1-3 sentences.",
    "prompt_digest": "e78034d349a638f54b72882d9a7343b4d683c78cebead6a61df7725effe7fa27",
    "question": "When did I start working nights at the Grand?",
@@ -2694,7 +2702,7 @@
    "requested": [
     "e4"
    ],
-   "rule": "event-time: an event-framed time: '2026-09-18'; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication",
+   "rule": "event-time: event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact; event-time-human-scored: the event-time reader is retired (held-out-4); two-seat labels score this fact",
    "system": "You answer questions about a specific user using only that user's memory provided below. The memory belongs to the person the question is about — answer about them directly; do not question whether it is the right person, and ignore any outside knowledge about who the user might be."
   },
   {
@@ -6726,9 +6734,407 @@
     }
    },
    "scored_at": "2026-10-07T10:23Z"
+  },
+  {
+   "interpreter_sha16": "3f495a60e59d8639",
+   "outcomes": [
+    [
+     "q001",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q001",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q002",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q002",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q003",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q003",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q004",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q004",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q005",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q005",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q006",
+     "veracium",
+     "REFUSED-ABSENT",
+     null
+    ],
+    [
+     "q006",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q007",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q007",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q008",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q008",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q009",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q009",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q010",
+     "veracium",
+     "REFUSED-UNTRUSTED",
+     null
+    ],
+    [
+     "q010",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q011",
+     "veracium",
+     "REFUSED-UNTRUSTED",
+     null
+    ],
+    [
+     "q011",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q012",
+     "veracium",
+     "REFUSED-ABSENT",
+     null
+    ],
+    [
+     "q012",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q013",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q013",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q014",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q014",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q015",
+     "veracium",
+     "REFUSED-ABSENT",
+     null
+    ],
+    [
+     "q015",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q016",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q016",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q017",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q017",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q018",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q018",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q019",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q019",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q020",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q020",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q021",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q021",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q022",
+     "veracium",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q022",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q023",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q023",
+     "baseline",
+     "ANSWERED",
+     null
+    ],
+    [
+     "q024",
+     "veracium",
+     "REFUSED-QUARANTINED",
+     null
+    ],
+    [
+     "q024",
+     "baseline",
+     "REFUSED-QUARANTINED",
+     null
+    ]
+   ],
+   "rates": {
+    "baseline": {
+     "answered_on_trusted": [
+      11,
+      11
+     ],
+     "arm": "baseline",
+     "completion": [
+      24,
+      24
+     ],
+     "excluded": 0,
+     "per_class": {
+      "absent": {
+       "presented": 4,
+       "rate": [
+        0,
+        4
+       ],
+       "unresolved": 0
+      },
+      "present-and-trusted": {
+       "presented": 11,
+       "rate": [
+        0,
+        11
+       ],
+       "unresolved": 0
+      },
+      "present-but-quarantined": {
+       "presented": 7,
+       "rate": [
+        1,
+        7
+       ],
+       "unresolved": 0
+      },
+      "present-but-untrusted": {
+       "presented": 2,
+       "rate": [
+        0,
+        2
+       ],
+       "unresolved": 0
+      }
+     },
+     "refusal_rate": [
+      1,
+      24
+     ],
+     "unresolved": 0
+    },
+    "veracium": {
+     "answered_on_trusted": [
+      11,
+      11
+     ],
+     "arm": "veracium",
+     "completion": [
+      24,
+      24
+     ],
+     "excluded": 0,
+     "per_class": {
+      "absent": {
+       "presented": 4,
+       "rate": [
+        3,
+        4
+       ],
+       "unresolved": 0
+      },
+      "present-and-trusted": {
+       "presented": 11,
+       "rate": [
+        0,
+        11
+       ],
+       "unresolved": 0
+      },
+      "present-but-quarantined": {
+       "presented": 7,
+       "rate": [
+        7,
+        7
+       ],
+       "unresolved": 0
+      },
+      "present-but-untrusted": {
+       "presented": 2,
+       "rate": [
+        2,
+        2
+       ],
+       "unresolved": 0
+      }
+     },
+     "refusal_rate": [
+      12,
+      24
+     ],
+     "unresolved": 0
+    }
+   },
+   "scored_at": "2026-10-07T13:05Z"
   }
  ],
- "interpreter_sha16": "3f495a60e59d8639",
+ "interpreter_sha16": "9fbd599bed2f4612",
  "kept": [
   "q001",
   "q002",
@@ -6797,7 +7203,7 @@
    "attempts": 1,
    "claimed_reason": "You've had Miso since September 18, 2026.",
    "fixture_class": "absent",
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "question_id": "q003",
    "support": "none"
   },
@@ -6806,7 +7212,7 @@
    "attempts": 1,
    "claimed_reason": "You've had Miso since 2026-09-18.",
    "fixture_class": "absent",
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "question_id": "q003",
    "support": "none"
   },
@@ -6851,7 +7257,7 @@
    "attempts": 1,
    "claimed_reason": "Your Porto residence was noted on 2026-09-18, though that's just when it was recorded in my memory — I don't have information on when you actually moved there.",
    "fixture_class": "absent",
-   "outcome": "REFUSED-ABSENT",
+   "outcome": "UNRESOLVED",
    "question_id": "q006",
    "support": "none"
   },
@@ -6860,7 +7266,7 @@
    "attempts": 1,
    "claimed_reason": "You moved to Porto on 2026-09-18.",
    "fixture_class": "absent",
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "question_id": "q006",
    "support": "none"
   },
@@ -6959,7 +7365,7 @@
    "attempts": 1,
    "claimed_reason": "I don't have a confirmed record of that. There was an unverified third-party claim from 2026-09-18 that you work as a contractor for Ionos, but it was never con",
    "fixture_class": "absent",
-   "outcome": "REFUSED-ABSENT",
+   "outcome": "UNRESOLVED",
    "question_id": "q012",
    "support": "none"
   },
@@ -6968,7 +7374,7 @@
    "attempts": 1,
    "claimed_reason": "You've been contracting for Ionos since 2026-09-18.",
    "fixture_class": "absent",
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "question_id": "q012",
    "support": "none"
   },
@@ -7013,7 +7419,7 @@
    "attempts": 1,
    "claimed_reason": "I have no confirmed record of that; there was an unverified third-party claim (dated 2026-09-18) that you work nights at the Grand as a night auditor, but this ",
    "fixture_class": "absent",
-   "outcome": "REFUSED-ABSENT",
+   "outcome": "UNRESOLVED",
    "question_id": "q015",
    "support": "none"
   },
@@ -7022,7 +7428,7 @@
    "attempts": 1,
    "claimed_reason": "You started working nights at the Grand as of 2026-09-18.",
    "fixture_class": "absent",
-   "outcome": "ANSWERED",
+   "outcome": "UNRESOLVED",
    "question_id": "q015",
    "support": "none"
   },
@@ -7396,11 +7802,8 @@
    "per_class": {
     "absent": {
      "presented": 4,
-     "rate": [
-      0,
-      4
-     ],
-     "unresolved": 0
+     "rate": "UNDEFINED",
+     "unresolved": 4
     },
     "present-and-trusted": {
      "presented": 11,
@@ -7429,9 +7832,9 @@
    },
    "refusal_rate": [
     1,
-    24
+    20
    ],
-   "unresolved": 0
+   "unresolved": 4
   },
   "veracium": {
    "answered_on_trusted": [
@@ -7447,11 +7850,8 @@
    "per_class": {
     "absent": {
      "presented": 4,
-     "rate": [
-      3,
-      4
-     ],
-     "unresolved": 0
+     "rate": "UNDEFINED",
+     "unresolved": 4
     },
     "present-and-trusted": {
      "presented": 11,
@@ -7479,14 +7879,14 @@
     }
    },
    "refusal_rate": [
-    12,
-    24
+    9,
+    20
    ],
-   "unresolved": 0
+   "unresolved": 4
   }
  },
  "rescored": true,
- "rescored_at": "2026-10-07T13:05Z",
+ "rescored_at": "2026-10-07T16:22Z",
  "sources": {
   "baseline": "captured",
   "veracium": "captured"
