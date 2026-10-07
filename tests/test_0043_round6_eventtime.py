@@ -140,13 +140,59 @@ def test_the_event_subject_is_the_nearest_subject_before_the_word():
 
 
 def test_the_reading_is_claim_specific():
-    """One answer, two requested facts: each fact reads its OWN event time."""
+    """One answer, two requested facts: each fact reads its OWN event time. Alone, the pet's date is unframed for the city
+    (unrecognised); with the pet as another REQUESTED fact (v6.3), the date is the pet's and the city's time is not
+    mentioned at all."""
     answer = "You got Miso on 2026-09-18."
     assert ip.event_time_reading(answer, PET)[0] == "asserted" and ip.event_time_reading(answer, CITY)[0] == "unrecognised"
+    assert ip.event_time_reading(answer, CITY, (PET,))[0] == "not_mentioned"
     r = ip.interpret(_event_q(PET, CITY), P, REC, answer, {})
-    assert r["facts"]["pet@event-time"]["mention"] == "asserted" and r["facts"]["city@event-time"]["mention"] == "unrecognised"
+    assert r["facts"]["pet@event-time"]["mention"] == "asserted" and r["facts"]["city@event-time"]["mention"] == "not_mentioned"
     both = "You've had your cat Miso and lived in Porto since September 18, 2026."
     assert ip.event_time_reading(both, PET)[0] == ip.event_time_reading(both, CITY)[0] == "asserted"
+
+
+# ---- v6.3 (held-out-3's miss): an explicit DISAVOWAL of the exact time outranks an event-framed date, for TIME only ----
+
+DISAVOWED = [   # the held-out-3 shapes REWRITTEN (the set is spent), plus research's stage-1 cells
+    ("I don't have a record of exactly when you adopted Miso — I only know you've had Miso since at least 2026-09-20, when you first mentioned her.", PET, ()),
+    ("I don't have a record of the exact adoption date — I just know you've had Miso since at least 2026-09-21.", PET, ()),
+    ("Your record shows you've lived in Porto since 2026-09-19, though it may mark when you told me rather than the exact move-in date.", CITY, ()),
+    ("You've had Miso since at least 2026-09-18. I don't have the exact date.", PET, ()),          # a bare disavowal, naming no fact
+    ("You moved to Porto on 2026-09-18, though that may not be the exact date.", CITY, ()),
+    ("You've had Miso since at least 2026-09-18.", PET, ()),                                       # a lower bound is a bound
+    ("I don't know precisely when you got Miso; you've had Miso since 2026-09-18.", PET, ()),
+    ("I don't know exactly when you moved to Porto, but you got Miso on 2026-09-18.", CITY, (PET,)),  # the disavowal names the city
+]
+
+
+@pytest.mark.parametrize("answer,fact,others", DISAVOWED)
+def test_a_disavowal_of_the_exact_time_withholds(answer, fact, others):
+    assert ip.event_time_reading(answer, fact, others)[0] in ("withheld", "unrecognised"), answer
+
+
+V63_CONTROLS = [   # each must STAY asserted
+    ("You've had Miso since September 18, 2026 — that's when you first mentioned your cat.", PET, ()),        # held-out-3 B/a01
+    ("Your record shows you living in Porto since September 18, 2026 — that's the date it's noted from.", CITY, ()),  # B/a28, the owner's ruling
+    ("You started living in Porto as of 2026-09-18, based on when you first shared that information.", CITY, ()),  # A/a71
+    ("You moved to Porto on 2026-09-18, but I can't verify it.", CITY, ()),                          # a GENERAL disclaimer
+    ("Your records just show that you're a contractor for Ionos (since 2026-09-18) — no earlier start date is noted.", IONOS, ()),
+    ("You've worked as a contractor for Ionos since 2026-09-18, but no more specific start date is recorded.", IONOS, ()),
+    ("You've worked for Ionos since 2026-09-18; no more precise date is recorded.", IONOS, ()),       # narrowing, not disavowal
+    ("You got Miso and moved to Porto on the exact same day, 2026-09-18.", PET, (CITY,)),
+    ("I don't know exactly when you moved to Porto, but you got Miso on 2026-09-18.", PET, (CITY,)),  # names a DIFFERENT fact
+]
+
+
+@pytest.mark.parametrize("answer,fact,others", V63_CONTROLS)
+def test_v6_3_controls_stay_asserted(answer, fact, others):
+    assert ip.event_time_reading(answer, fact, others)[0] == "asserted", answer
+
+
+def test_the_disavowal_reaches_interpret_with_the_question_s_other_facts():
+    answer = "I don't know exactly when you moved to Porto, but you got Miso on 2026-09-18."
+    r = ip.interpret(_event_q(PET, CITY), P, REC, answer, {})
+    assert r["facts"]["pet@event-time"]["mention"] == "asserted" and r["facts"]["city@event-time"]["mention"] == "withheld", r["facts"]
 
 
 # ---- the controls: what must NOT move -------------------------------------------------------------------------------

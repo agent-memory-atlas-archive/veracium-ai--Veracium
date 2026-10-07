@@ -433,19 +433,36 @@ DECLINE_TIME = re.compile(r"\b(?:don't|do not|doesn't|does not|didn't)\s+(?:have
                           r"|\bno (?:confirmed |verified )?(?:record|information|date)\b|\bnot sure when\b|\bunknown\b")
 
 
-def event_time_reading(answer: str, fact: dict) -> tuple[str, str]:
+# v6.3 (held-out-3's miss): for TIME, an explicit DISAVOWAL of the exact or actual time OUTRANKS an event-framed date.
+# "I don't have a record of exactly when you got Miso — I know you've had her since at least <date>" states a BOUND and
+# disclaims the date; for content a disclaimer cannot unsay a disclosed fact (A3-bis, unchanged), but for a time what the
+# answer asserts changes. Claim-specific, by R5-02's own scope rule for bare refusals: a disavowal clause that GOVERNS the
+# fact applies to it; one that names NO requested fact ("I don't have the exact date") applies to every requested fact;
+# one that names a DIFFERENT requested fact applies only to that one. A lower bound ("since at least <date>") is a bound,
+# not the time: it reads disavowed. A GENERAL disclaimer ("I can't verify this") does not outrank, and a NARROWING ("no
+# more specific / no earlier start date is recorded") is not a disavowal — both seats read those asserted, blind.
+TIME_DISAVOWAL = re.compile(r"\b(?:exactly|precisely) when\b|\b(?<!more )(?:exact|precise) (?!same\b)(?:[a-z-]+ )?(?:date|time|day|month|year|moment)\b|"
+                            r"\bnot necessarily (?:when|the date)\b|\brather than (?:the )?(?:exact|actual|precise)\b|"
+                            r"\bhow long you(?:'ve| have)? actually\b|\bactual (?:date|start|time|day)\b|\bwhen you actually\b")
+LOWER_BOUND = re.compile(r"\b(?:since|from) at least\s+$|\bat least (?:since|from)\s+$")
+
+
+def event_time_reading(answer: str, fact: dict, others: tuple = ()) -> tuple[str, str]:
     """(asserted / withheld / unrecognised / not_mentioned, why) for the TIME of `fact`'s event, which an event-time
-    question asks about."""
+    question asks about. `others`: the question's other requested facts (a disavowal naming one of them is not this one's)."""
     a = _norm(answer)
-    event_dates, record_dates, unframed = [], [], []
-    for sentence in re.split(r"[.!?]\s*", a):
+    event_dates, record_dates, unframed, disavowed = [], [], [], []
+    sentences = re.split(r"[.!?]\s*", a)
+    time_disavowed = any(TIME_DISAVOWAL.search(c) and (_governs(c, fact) or not any(_governs(c, o) for o in others))
+                         for snt in sentences for c in CONTRAST.split(snt))
+    for sentence in sentences:
         for clause in CONTRAST.split(sentence):
             for m in DATE_RE.finditer(clause):
                 before = clause[:m.start()]
                 # the NEAREST frame word before the date governs it: "as you mentioned, you moved there in 2024" is an
                 # event date, "you moved there; you mentioned it on <date>" a record date
                 rec = max((x.end() for x in RECORD_FRAME.finditer(before)), default=None)
-                ev = None
+                ev = other_ev = None
                 for x in EVENT_FRAME.finditer(before):
                     who, at = _event_subject(before[:x.start()])
                     if who is True and CONVERSATION.search(before[x.start():]):
@@ -454,18 +471,26 @@ def event_time_reading(answer: str, fact: dict) -> tuple[str, str]:
                         who = None                            # "you got Miso — this came up <date>": another predicate's date
                     if who is True and _governs(before[at:], fact) and not _foreign_activity(before[at:], fact):
                         ev = x.end()
+                    elif who is True and any(_governs(before[at:], o) and not _foreign_activity(before[at:], o) for o in others):
+                        other_ev = x.end()                    # ANOTHER requested fact's event date: not this fact's
                     elif who is False:                        # the record's own event ("that note arrived on …")
                         rec = max(rec or 0, x.end())
-                if ev is not None and (rec is None or ev > rec):
+                if ev is not None and (rec is None or ev > rec) and (time_disavowed or LOWER_BOUND.search(before)):
+                    disavowed.append(m.group(0))             # v6.3: the exact time is disavowed — a bound, not the time
+                elif ev is not None and (rec is None or ev > rec):
                     event_dates.append(m.group(0))           # the ONLY path to asserted: a positive event frame
                 elif rec is not None:
                     record_dates.append(m.group(0))
+                elif other_ev is not None:
+                    continue                                  # it dates another requested fact; this one is silent here
                 else:
                     unframed.append(m.group(0))
     if event_dates:
         return "asserted", f"an event-framed time: {event_dates[0]!r}"
     if unframed:
         return "unrecognised", f"a date no recognised frame reads: {unframed[0]!r} (fail closed)"
+    if disavowed:
+        return "withheld", f"the exact time is disavowed; the event-framed date {disavowed[0]!r} is a bound, not the time"
     if DECLINE_TIME.search(a):
         return "withheld", "the time is declined" + (f" (a record-framed date given: {record_dates[0]!r})" if record_dates else "")
     if record_dates:
@@ -529,7 +554,7 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
         # no record, so no retrieval could have reached it: a decline here is never a retrieval miss.
         no_miss = {k: v for k, v in execution.items() if k != "retrieval"}
         for f in question["facts"]:
-            mt, why = event_time_reading(answer, f)           # claim-specific: each requested fact's own event time
+            mt, why = event_time_reading(answer, f, tuple(o for o in question["facts"] if o is not f))   # claim-specific
             o, r = per_fact_outcome("neither", mt, no_miss)
             facts[f"{f['id']}@event-time"] = {"support": "neither", "mention": mt, "outcome": o, "rule": f"event-time: {why}; {r}"}
     class_set = question.get("class_set") or [question["class_fact"]]
