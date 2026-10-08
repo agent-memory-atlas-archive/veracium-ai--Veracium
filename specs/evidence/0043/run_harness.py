@@ -59,6 +59,14 @@ def tree_head() -> str:
     return h if r.returncode == 0 and re.fullmatch(r"[0-9a-f]{40}", h) else UNPINNED
 
 
+def short_head(h: str) -> str:
+    """A commit abbreviated for a line of prose; any other value (the UNPINNED marker) whole. 2026-10-08, found at the
+    round-6 stage: `head[:12]` cut the marker to "unpinned (no", so reverify run in an extracted package printed
+    "at unpinned (no (run pinned at ...)" — the declaration the marker exists to make, lost in the one environment
+    that makes it."""
+    return h[:12] if re.fullmatch(r"[0-9a-f]{40}", h or "") else h
+
+
 def _strict_pairs(pairs):
     """0026's evidence-boundary rule: a duplicate key is a REFUSAL, never last-wins."""
     out = {}
@@ -355,7 +363,7 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
               # later reverify can compare the compiler's INPUT, not only replay its output (a run before round 6 has none)
               "compile_invocation": compile_invocation}
     rm = _load("request_manifest")
-    (out / "blind_input.json").write_text(rm.blind_text(result, f"veracium {head[:12]}: the run's own ledger (this directory)"), encoding="utf-8")
+    (out / "blind_input.json").write_text(rm.blind_text(result, f"veracium {short_head(head)}: the run's own ledger (this directory)"), encoding="utf-8")
     if request_manifest is not None:
         if request_manifest == "generated":
             request_manifest = rm.generate(result, out)
@@ -387,7 +395,7 @@ def rescore(res: dict, request_manifest=None) -> dict:
     # the same calibration gate the run applies, on the CURRENT instrument
     probe = mc.run()
     if probe["problems"] or not probe["control_refuses"]:
-        raise Refused(f"the arm comparison is not valid on the calibration probe — {probe['problems']} — no re-scored rate")
+        raise Refused(f"the arm comparison is not valid on the calibration probe — {probe['problems'] or 'its heading-without-body control did not refuse'} — no re-scored rate")
     cal_s, cal_b = ip.calibrate(probe["shipped"]["prompt"], probe["record"]), ip.calibrate(probe["baseline"]["prompt"], probe["record"])
     if not (cal_s["calibrated"] and cal_b["calibrated"] and ip.garble_control(probe["shipped"]["prompt"], probe["record"])["collapsed"]):
         raise Refused(f"the current interpreter is not calibrated: shipped {cal_s['agreement']} baseline {cal_b['agreement']} — no re-scored rate")
@@ -622,7 +630,7 @@ def reverify(res: dict, inner=None) -> dict:
 
 def reverify_lines(v: dict) -> str:
     n = v["kept"]
-    return (f"{v['verdict']} — at {v['head'][:12]} (run pinned at {v['run_head'][:12]}): examiner view digest "
+    return (f"{v['verdict']} — at {short_head(v['head'])} (run pinned at {short_head(v['run_head'])}): examiner view digest "
             f"{'equal' if v['view_digest_equal'] else 'DIFFERENT'}; gate system {v['system_equal']}/{n}; gate prompt outside the "
             f"compiled-wiki block {v['prompt_outside_compiled_equal']}/{n}; each arm's bytes bound to its declared digest: shipped "
             f"{v['shipped_bytes_bound']}/{n}, baseline {v['baseline_bytes_bound']}/{n}; compiled-wiki block carried in a bound capture "

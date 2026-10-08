@@ -105,6 +105,26 @@ def test_a_tree_that_is_not_a_git_checkout_declares_itself_unpinned_and_a_checko
     assert (rh.tree_head() == real.stdout.strip()) if real.returncode == 0 else (rh.tree_head() == rh.UNPINNED)
 
 
+def test_the_unpinned_marker_reaches_every_line_that_names_the_head_whole(monkeypatch, tmp_path):
+    """The marker is a declaration, and a line that abbreviates a commit must not abbreviate it. 2026-10-08 (the
+    round-6 stage, run in a git-less copy of the pin): `head[:12]` printed reverify's location as "at unpinned (no
+    (run pinned at ...)", and the run's blind input as "veracium unpinned (no:". Both carriers are driven here, in
+    every environment, with the git-less answer FORCED; a checkout's head still abbreviates to 12 hex. The mutant is
+    the superseded slice itself, which this test's first assertion refuses."""
+    import copy
+    rh = _load("run_harness")
+    ledger = json.loads((EVIDENCE / "run_ledger.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(rh, "tree_head", lambda: rh.UNPINNED)
+    line = rh.reverify_lines(rh.reverify(copy.deepcopy(ledger)))
+    assert f" — at {rh.UNPINNED} (run pinned at {ledger['head'][:12]}):" in line, line[:300]
+    assert rh.UNPINNED[:12] + " (" not in line                       # the superseded slice's output
+    rh.run(tmp_path / "run", rh.FakeModel(), request_manifest="generated")
+    blind = (tmp_path / "run" / "blind_input.json").read_text(encoding="utf-8")
+    assert f"veracium {rh.UNPINNED}: the run's own ledger" in blind, blind[:300]
+    # the control: a checkout's head is abbreviated, and only a 40-hex value is
+    assert rh.short_head("a" * 40) == "a" * 12 and rh.short_head(rh.UNPINNED) == rh.UNPINNED and rh.short_head("abc") == "abc"
+
+
 def test_the_disciplined_arm_refuses_the_quarantined_fact_and_the_undisciplined_arm_asserts_it(fake_run):
     """The canned model answers the work question from the prompt's discipline: with it, a refusal; without
     it, an assertion — so the two arms differ on exactly the class-3/4 question and agree on the trusted."""
@@ -125,7 +145,12 @@ def test_the_disciplined_arm_refuses_the_quarantined_fact_and_the_undisciplined_
 def test_an_unexpected_unresolved_reference_case_refuses_the_run_before_any_question_is_asked(tmp_path, monkeypatch):
     """The mutant for research's point 1: relabel a known-answer reference case so the judge's UNRESOLVED on it is
     UNEXPECTED — the gate is bright, and the run must not start (no examiner call is made: the canned model's
-    examiner would author questions; none are recorded)."""
+    examiner would author questions; none are recorded).
+    WHICH REFUSAL FIRES (research's stage-2 read, 2026-10-08): the CALIBRATION gate, "the interpreter is not
+    calibrated:". `calibrated` means every reference case agrees, and an unexpected UNRESOLVED is a disagreement, so
+    the later unexpected-UNRESOLVED gate is unreachable while that definition holds; it stays as defence in depth. The
+    match below is that gate's own message: the earlier match, "not calibrated", was also a substring of the
+    unreachable gate's message, so it could not tell which one fired."""
     rh = _load("run_harness"); ip = _load("interpreter")
     q_amb = dict(ip.Q_WORK); q_amb["ambiguous"] = True                       # a known-answer question made unresolvable
     # appended IN PLACE: calibrate()'s `cases=REFERENCE` default bound the list object at definition, so rebinding the
@@ -133,7 +158,7 @@ def test_an_unexpected_unresolved_reference_case_refuses_the_run_before_any_ques
     ip.REFERENCE.append((q_amb, "The user is a night auditor at the Grand.", {}, "ANSWERED", ("quarantined", "asserted")))
     original_load = rh._load
     monkeypatch.setattr(rh, "_load", lambda name: ip if name == "interpreter" else original_load(name))   # run() loads the interpreter through _load
-    with pytest.raises(rh.Refused, match="not calibrated"):        # the agreement check fires first; the split count is what the REPORT names
+    with pytest.raises(rh.Refused, match=r"^the interpreter is not calibrated: shipped "):   # the agreement gate's own message
         rh.run(tmp_path / "r", rh.FakeModel(), n_questions=6, request_manifest="generated")
     assert not (tmp_path / "r" / "run_report.txt").exists()
 

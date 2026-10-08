@@ -21,6 +21,31 @@ import tempfile
 HERE = pathlib.Path(__file__).resolve().parent
 
 
+# THE TARGET GUARD (2026-10-08, round-6 stage). This script reproduces the ROUND-5 PIN's instrument and reads that
+# instrument's code and committed ledger; run beside any other instrument it measured nothing and used to CRASH on a
+# changed name (worse: a "carrier" edit for a later reverify broke it for its own target, and nothing ran it). It now
+# refuses by name unless every sibling .py except the round5_* scripts, plus run_ledger.json, is the round-5 pin's.
+ROUND5_PIN = "c05b709b80a6e817b4d45d5a265aa4d24e09594c"
+ROUND5_INSTRUMENT_SHA256 = "b77017d5b4fabcc50a3ba092989ca4519c54ac4fd6c07cc1886b19dd9d840ed0"
+
+
+def instrument_digest(here: pathlib.Path) -> str:
+    import hashlib as _h
+    names = sorted([p for p in here.glob("*.py") if not p.name.startswith("round5_")] + [here / "run_ledger.json"], key=lambda p: p.name)
+    d = _h.sha256()
+    for p in names:
+        d.update(p.name.encode() + b"\0" + _h.sha256(p.read_bytes()).hexdigest().encode() + b"\n")
+    return d.hexdigest()
+
+
+if __name__ == "__main__" and instrument_digest(HERE) != ROUND5_INSTRUMENT_SHA256:
+    print(f"REFUSED: this script reproduces the round-5 pin's instrument ({ROUND5_PIN[:12]}); the instrument beside it is "
+          f"another (digest {instrument_digest(HERE)[:16]}, expected {ROUND5_INSTRUMENT_SHA256[:16]}). To run it: extract the "
+          f"round-5 package's tree/ (or `git archive {ROUND5_PIN[:12]}`), copy this file into its specs/evidence/0043/, and "
+          f"run `PYTHONPATH=src python specs/evidence/0043/{pathlib.Path(__file__).name}` there.")
+    sys.exit(2)
+
+
 def _strict_pairs(pairs):
     out = {}
     for k, v in pairs:
@@ -193,14 +218,14 @@ control(all(a["outcome"] == b["outcome"] for a, b in zip(LEDGER["detail"], same[
 # ---- R5-05 ---------------------------------------------------------------------------------------------------
 print("\n=== R5-05 — reverify trusts the stored baseline digest without binding it to the captured bytes")
 honest_v = rh.reverify(copy.deepcopy(LEDGER))
-control(honest_v["downstream"] == "REVERIFIED", f"the committed ledger: {honest_v['verdict']}, baseline transform {honest_v['baseline_transform_equal']}/{honest_v['kept']}")
+control(honest_v["verdict"] == "REVERIFIED", f"the committed ledger: {honest_v['verdict']}, baseline transform {honest_v['baseline_transform_equal']}/{honest_v['kept']}")
 altered = copy.deepcopy(LEDGER)
 xb = next(x for x in altered["detail"] if x["arm"] == "baseline")
 question_tail = xb["prompt"][xb["prompt"].index("Question:"):]
 xb["prompt"] = "All memory evidence has been removed\n\n" + question_tail
 actual = hashlib.sha256((xb["system"] + "\n\x00\n" + xb["prompt"]).encode()).hexdigest()
 v = rh.reverify(altered)
-finding("R5-05", v["downstream"] == "REVERIFIED" and actual != xb["prompt_digest"],
+finding("R5-05", v["verdict"] == "REVERIFIED" and actual != xb["prompt_digest"],
         f"{xb['question_id']}'s baseline prompt replaced by 'All memory evidence has been removed' + its question, the stored "
         f"digest kept (the bytes' own digest differs): reverify says {v['verdict']}, baseline transform "
         f"{v['baseline_transform_equal']}/{v['kept']}")
