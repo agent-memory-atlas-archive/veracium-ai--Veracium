@@ -332,7 +332,7 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
         # round 6 (R5-03): every question's ACTUAL captured pair, checked independently of the transform before any
         # answer of it is scored — a pair that differs in evidence, or a baseline still carrying the discipline, stops
         # the run: no rate is reported over a comparison that did not hold
-        bad = mc.arm_problems(shipped, baseline)
+        bad = mc.arm_problems(shipped, baseline, q["text"])          # R6-02: the AUTHORED question (author_questions)
         if bad:
             raise Refused(f"the arm comparison is not valid for {q['id']}: {bad} — no rate may be reported")
         for arm, cap in (("veracium", shipped), (lg.BASELINE_ARM, baseline)):
@@ -373,17 +373,14 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
     return result
 
 
-def rescore(res: dict, request_manifest=None) -> dict:
-    """Re-interpret a committed run's captured answers with the CURRENT interpreter — no model call, the
-    prompts and records travel in the ledger's detail — and recompute the rates. The instrument can be
-    improved and its effect shown on the SAME answers; the answers themselves never change.
-
-    Round 6 (0043-R5-04): it replays the run's VALIDATION PATH, not only its interpretation. Round 5 derived the
-    denominator from the rows that survived (a missing pair vanished from the obligation set: 23/23) and passed
-    `delivered=None` (an unaccounted unit the run made UNRESOLVED was scored). Now, before any row is scored: the
-    detail must carry EXACTLY the frozen (kept question, arm) pairs; each row's delivered identities are rebuilt from
-    its adjudication record and must equal the ids it recorded; the interpreter must pass the calibration gate the run
-    applies; and every stored pair must pass R5-03's arm check. Each is a refusal, never a smaller report."""
+def _score(res: dict, request_manifest=None, mention_for=None) -> tuple[list, list, dict, str]:
+    """THE scoring path, shared by `rescore` (the reader) and `published_rates` (the two-seat labels): the frozen
+    obligation set, the calibration probe and its arm check, every stored pair's arm check, the request manifest bound,
+    each row's delivered identities rebuilt and bound, then `interpret` over the CAPTURED prompt and record. 0043 round 6
+    (R6-01): the published figures were a parallel path that re-used a cached `support` and called `per_fact_outcome`
+    directly, so an unaccounted unit the run made UNRESOLVED published resolved, and an edit to the cache moved the rate.
+    Now the only difference between the two is `mention_for(row, class_determining)`, which supplies the label map
+    `interpret` substitutes for the reader's judgement and for nothing else. Returns (rows, detail, rates, manifest digest)."""
     ip, lg, mc = _load("interpreter"), _load("ledger"), _load("model_input_capture")
     # the FROZEN obligation set: every kept question, in every arm — nothing missing, nothing extra
     want = {(qid, arm) for qid in res["kept"] for arm in res["arms"]}
@@ -399,14 +396,6 @@ def rescore(res: dict, request_manifest=None) -> dict:
     cal_s, cal_b = ip.calibrate(probe["shipped"]["prompt"], probe["record"]), ip.calibrate(probe["baseline"]["prompt"], probe["record"])
     if not (cal_s["calibrated"] and cal_b["calibrated"] and ip.garble_control(probe["shipped"]["prompt"], probe["record"])["collapsed"]):
         raise Refused(f"the current interpreter is not calibrated: shipped {cal_s['agreement']} baseline {cal_b['agreement']} — no re-scored rate")
-    # R5-03's arm check on every stored pair
-    by = {(x["question_id"], x["arm"]): x for x in res["detail"]}
-    for qid in res["kept"]:
-        s, b = by[(qid, "veracium")], by[(qid, lg.BASELINE_ARM)]
-        bad = mc.arm_problems({"system": s["system"], "prompt": s["prompt"]}, {"system": b["system"], "prompt": b["prompt"]})
-        if bad:
-            raise Refused(f"the stored arm pair for {qid} is not a valid comparison: {bad} — no re-scored rate")
-    rows, detail = [], []
     # round 6 (R5-01): the REQUESTED PROPOSITION comes from the request manifest (A3-quinquies), bound by its bytes, its
     # blind input re-derived from this ledger, every kept question present and none empty — all before any answer is
     # scored. Each row's facts, class-determining fact, tie set and event-time flag are the manifest's, never the row
@@ -421,6 +410,17 @@ def rescore(res: dict, request_manifest=None) -> dict:
         rm.bind(res, rman, rdig, blind_path)
     except rm.Refused as exc:                                                   # the harness's own refusal, its reason kept
         raise Refused(str(exc)) from exc
+    # the manifest is bound BEFORE the stored-pair arm check (R6-02): that check reads the authored question list as its
+    # reference, and binding is what proves the list is the frozen one; a reference must be verified before it is used
+    # R5-03's arm check on every stored pair
+    by = {(x["question_id"], x["arm"]): x for x in res["detail"]}
+    authored = {q["id"]: q["text"] for q in res["questions"]}      # R6-02: the examiner's list, frozen before any capture
+    for qid in res["kept"]:
+        s, b = by[(qid, "veracium")], by[(qid, lg.BASELINE_ARM)]
+        bad = mc.arm_problems({"system": s["system"], "prompt": s["prompt"]}, {"system": b["system"], "prompt": b["prompt"]}, authored[qid])
+        if bad:
+            raise Refused(f"the stored arm pair for {qid} is not a valid comparison: {bad} — no re-scored rate")
+    rows, detail = [], []
     fixture = json.loads(pathlib.Path(blind_path).read_text(encoding="utf-8"), object_pairs_hook=_strict_pairs)["fixture_rows"]
     para = {}
     for y in res["detail"]:
@@ -440,7 +440,11 @@ def rescore(res: dict, request_manifest=None) -> dict:
             raise Refused(f"{x['question_id']}/{x['arm']}: the adjudication record's edges {sorted(x['record'])} are not the "
                           f"delivered ids the row recorded {sorted(x['delivered'])}")
         delivered = [{"edge": e, **v} for e, v in x["record"].items()]
-        r = ip.interpret(qd, x["prompt"], x["record"], x["answer"] or "", x.get("execution", {}), delivered=delivered)
+        ms = mention_for(x, cd) if mention_for is not None else None
+        try:
+            r = ip.interpret(qd, x["prompt"], x["record"], x["answer"] or "", x.get("execution", {}), delivered=delivered, mention_source=ms)
+        except ValueError as exc:                                     # a published row with no label for its class fact
+            raise Refused(f"{x['question_id']}/{x['arm']}: {exc}") from exc
         cf = r["facts"].get(x["class_fact"], {})
         rows.append({"question_id": x["question_id"], "arm": x["arm"], "fixture_class": x["fixture_class"], "outcome": r["outcome"], "attempts": 1,
                      "claimed_reason": (x["answer"] or x.get("error") or "")[:160], "support": _ledger_support(cf.get("support") if cf else None)})
@@ -459,6 +463,21 @@ def rescore(res: dict, request_manifest=None) -> dict:
     if problems:
         raise Refused("the re-scored ledger refused: " + "; ".join(problems))
     rates = {arm: lg.rates(rows, arm, expected, tuple(res["arms"]), exclusions=excluded, sources=res["sources"]) for arm in res["arms"]}
+    return rows, detail, rates, rdig
+
+
+def rescore(res: dict, request_manifest=None) -> dict:
+    """Re-interpret a committed run's captured answers with the CURRENT interpreter — no model call, the
+    prompts and records travel in the ledger's detail — and recompute the rates. The instrument can be
+    improved and its effect shown on the SAME answers; the answers themselves never change.
+
+    Round 6 (0043-R5-04): it replays the run's VALIDATION PATH, not only its interpretation. Round 5 derived the
+    denominator from the rows that survived (a missing pair vanished from the obligation set: 23/23) and passed
+    `delivered=None` (an unaccounted unit the run made UNRESOLVED was scored). Now, before any row is scored: the
+    detail must carry EXACTLY the frozen (kept question, arm) pairs; each row's delivered identities are rebuilt from
+    its adjudication record and must equal the ids it recorded; the interpreter must pass the calibration gate the run
+    applies; and every stored pair must pass R5-03's arm check. Each is a refusal, never a smaller report."""
+    rows, detail, rates, rdig = _score(res, request_manifest)
     # R5-02's closure: the scoring this replaces is KEPT, never overwritten — its instrument, when it scored, its rates
     # and every (question, arm, outcome, cause) — so the effect of an instrument change is visible in the record
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
@@ -619,13 +638,38 @@ def reverify(res: dict, inner=None) -> dict:
     elif head_compile is None:
         compiler_stage, why = "NOT REVERIFIED", "this tree made no compile-role call"
     else:
-        same = capture_digest(head_compile["system"] or "", head_compile["prompt"]) == recorded["digest"]
-        compiler_stage = "REVERIFIED" if same else "NOT REVERIFIED"
-        why = "the compile invocation (system + prompt) equals the recorded one" if same else "the compile invocation differs from the recorded one"
+        compiler_stage, why = compiler_stage_status(recorded, head_compile, inner)
     out.update(downstream=downstream, compiler_stage=compiler_stage, compiler_stage_reason=why,
                verdict=f"downstream {downstream}" + (f" ({out['downstream_cause']})" if out.get("downstream_cause") else "")
                + f"; compiler stage {compiler_stage} ({why})")
     return out
+
+
+def compiler_stage_status(recorded: dict, head_compile: dict, inner) -> tuple[str, str]:
+    """0043 round 6 (R6-03): the compiler stage of a run that RECORDED its compile invocation. BINDING FIRST: the recorded
+    system and prompt must hash to the digest recorded beside them (R5-05's rule, now at this carrier: the first form
+    compared this tree's digest with the recorded DIGEST only, so an edited recorded system or prompt, digest kept, read
+    REVERIFIED). THEN each field is compared with what this tree sends and is configured to send: the system and prompt
+    bytes, the compile model and the token limit, each mismatch named. A field this tree cannot observe (a model that
+    reports no id or limit) is NOT verified and is named: the status is PARTIAL, never REVERIFIED. Equal inputs do not
+    imply equal outputs: this compares the invocation, not what the model returned."""
+    if capture_digest(recorded.get("system") or "", recorded.get("prompt") or "") != recorded.get("digest"):
+        return "NOT REVERIFIED", "the recorded compile invocation's system and prompt do not hash to its recorded digest"
+    models = getattr(inner, "_models", None)
+    live = {"system": head_compile["system"], "prompt": head_compile["prompt"],
+            "model": models.get("compile") if isinstance(models, dict) else None,
+            "max_tokens": getattr(inner, "_max_tokens", None)}
+    differ = [f for f in ("system", "prompt") if (live[f] or "") != (recorded.get(f) or "")]
+    # absence is `is None`, never falsiness: a recorded or live max_tokens of 0 is a value, and is compared
+    unobserved = [(f, "not recorded" if recorded.get(f) is None else "not observable in this tree")
+                  for f in ("model", "max_tokens") if live[f] is None or recorded.get(f) is None]
+    differ += [f for f in ("model", "max_tokens") if f not in dict(unobserved) and live[f] != recorded[f]]
+    if differ:                                          # a mismatch on any observable field outranks PARTIAL
+        return "NOT REVERIFIED", "the compile invocation differs from the recorded one in: " + ", ".join(differ)
+    if unobserved:
+        return "PARTIAL", ("system and prompt equal the bound record; not verified: "
+                           + ", ".join(f"{f} ({side})" for f, side in unobserved))
+    return "REVERIFIED", "the bound recorded invocation equals this tree's: system, prompt, model and max_tokens"
 
 
 def reverify_lines(v: dict) -> str:
@@ -680,8 +724,9 @@ def _unscored_report(res: dict) -> str:
 # Both readers failed their pre-committed held-out lines (event time at held-out-4, coordination def44a2; the mention reader at
 # held-out-5, c61e913). So a run's PUBLISHED rates come from two-seat BLIND per-fact labels, and the reader's rates are an
 # AID shown beside them. The committed run's labels (both seats, 76 of 76 identical; coordination 0048103) are carried here
-# byte for byte, and its outcomes are derived from them by the spec's own rubric: per_fact_outcome on each fact's support
-# from the capture, A3-quinquies's class-determining fact and tie rule, and event-time facts with no retrieval-miss branch.
+# byte for byte, and its outcomes are scored by the run's OWN path (`_score` -> `interpret`) with each label in place of the
+# reader's judgement of the answer and of nothing else (round 6, R6-01): the delivered accounting, support from the
+# captured prompt and record, A3-quinquies's class-determining fact and tie, and the event-time rule all run unchanged.
 LABELS_PATH = HERE / "outcome-labels" / "MERGED-LABELS.json"
 LABELS_INPUT_PATH = HERE / "outcome-labels" / "outcome_blind_input.json"   # the input both seats labelled, byte for byte
 LABELS_SEED = 20261006       # the seed the committed run's labelling input was extracted with (research's record)
@@ -756,33 +801,25 @@ def published_rates(res: dict, labels_path: pathlib.Path = LABELS_PATH, seed: in
         field = next((f for f in ("question", "answer", "requested") if (derived.get(iid) or {}).get(f) != (labelled.get(iid) or {}).get(f)), "presence")
         raise Refused(f"this ledger's answers do not re-derive the labelled input: item {iid} differs in its {field} — these labels "
                       "are not this run's answers")
-    man, _ = rm.load()
-    item_of = {(v["question_id"], v["arm"]): k for k, v in key.items()}
+    lab_of = {(v["question_id"], v["arm"]): labels["labels"][k] for k, v in key.items()}
+
+    def mention_for(x, cd):
+        """The label map for one row: each requested fact's two-seat label, keyed as `interpret` keys it (an event-time
+        question's requested proposition is the time, `<id>@event-time`). The labels must cover exactly the requested set."""
+        lab = lab_of[(x["question_id"], x["arm"])]
+        if set(lab) != set(cd["requested"]):
+            raise Refused(f"{x['question_id']}/{x['arm']}: the labels cover {sorted(lab)}, the request is {sorted(cd['requested'])}")
+        return {(f"{e}@event-time" if cd["event_time"] else e): lab[e] for e in cd["requested"]}
+
+    _rows, detail, rates, _ = _score(res, None, mention_for)
     rows = []
-    for x in res["detail"]:
-        lab = labels["labels"][item_of[(x["question_id"], x["arm"])]]
-        cd = rm.class_determining_fact(man["questions"][x["question_id"]], x["record"], res["manifest_classes"])
-        execution = x.get("execution", {})
-        facts = {}
-        for e in cd["requested"]:
-            if cd["event_time"]:
-                o, _ = ip.per_fact_outcome("neither", lab[e], {k: v for k, v in execution.items() if k != "retrieval"})
-                facts[f"{e}@event-time"] = {"mention": lab[e], "outcome": o, "support": "neither"}
-            else:
-                sup = x["facts"][e]["support"]
-                o, _ = ip.per_fact_outcome(sup, lab[e], execution)
-                facts[e] = {"mention": lab[e], "outcome": o, "support": sup}
-        if cd["ambiguous"]:
-            cf = {"outcome": "UNRESOLVED", "support": None}
-        elif len(cd["class_set"]) > 1:
-            tied = [facts[c] for c in cd["class_set"]]
-            cf = next((v for v in tied if v["mention"] == "asserted"), None) or next((v for v in tied if v["mention"] == "withheld"), None) or tied[0]
-        else:
-            cf = facts[cd["class_fact"]]
-        rows.append({"question_id": x["question_id"], "arm": x["arm"], "fixture_class": cd["fixture_class"], "outcome": cf["outcome"],
-                     "attempts": 1, "claimed_reason": "", "support": _ledger_support(cf.get("support"))})
-    expected = {r["question_id"]: r["fixture_class"] for r in rows}
-    rates = {arm: lg.rates(rows, arm, expected, tuple(res["arms"]), exclusions=res["excluded"], sources=res["sources"]) for arm in res["arms"]}
+    for x in detail:
+        cf = x["facts"].get(x["class_fact"]) or {}
+        rows.append({"question_id": x["question_id"], "arm": x["arm"], "fixture_class": x["fixture_class"], "outcome": x["outcome"],
+                     "cause": x.get("cause"), "support": cf.get("support"), "rule": x.get("rule")})
+    leaked = [(r["question_id"], r["arm"], r["cause"]) for r in rows if r["cause"] in ip.READER_CAUSES]
+    if leaked:                                      # a reader cause cannot survive a label: if one does, a label did not apply
+        raise Refused(f"a published row carries a READER cause, which its label should have resolved: {leaked}")
     return {"rates": rates, "rows": rows, "labels_sha256": hashlib.sha256(labels_path.read_bytes()).hexdigest(), "key_sha256": key_sha, "seed": seed}
 
 
@@ -826,6 +863,11 @@ def report(res: dict) -> str:
             r = pub["rates"][arm]
             L.append(f"  {arm:10s} PUBLISHED refusal rate {_ratio(r['refusal_rate'])}  completion {_ratio(r['completion'])}  unresolved {r['unresolved']}  "
                      f"answered-on-trusted {_ratio(r['answered_on_trusted'])}  excluded {r['excluded']}")
+        L += ["", "PUBLISHED PER ROW — the authoritative outcome of every (question, arm), scored by the run's own path with the "
+              "two-seat label in place of the reader (question · arm · class · outcome · cause · the class fact's support · rule):"]
+        for r in pub["rows"]:
+            L.append(f"  {r['question_id']} {r['arm']:9s} {r['fixture_class']:24s} {r['outcome']:20s} {r['cause'] or '-':33s} "
+                     f"{r['support'] or '-':12s} {r['rule'] or ''}")
     L += ["", "UNRESOLVED by cause, and OTHER by rule (the instrument's failures are not the subject's):"]
     from collections import Counter
     for arm in res["arms"]:

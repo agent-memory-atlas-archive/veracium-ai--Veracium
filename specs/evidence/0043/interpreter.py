@@ -568,15 +568,29 @@ def per_fact_outcome(support_class: str, mention: str, execution: dict) -> tuple
 # THE LIMIT THE ACCEPTANCE CARRIES, in the verdict's words: store-derived adjudication "It does not independently validate ingestion or provenance assignment."
 # Editing assertable(), per_fact_outcome() or the causes is reopening design review, not a constant edit.
 UNRESOLVED_CAUSES = ("ambiguous-question", "capture-disagrees-with-delivered", "unrecognised-frame", "event-time-human-scored")
+# 0043 round 6 (R6-01): the causes partitioned, CLOSED (a test asserts the union is UNRESOLVED_CAUSES and the parts are
+# disjoint; a new cause fails until it is placed — it never defaults to READER). STRUCTURAL: the comparison or the
+# question itself is not sound, and no label can repair it; it survives into a published row. READER: the reader's
+# uncertainty about the answer's words, which is exactly what a two-seat label resolves.
+STRUCTURAL_CAUSES = ("ambiguous-question", "capture-disagrees-with-delivered")
+READER_CAUSES = ("unrecognised-frame", "event-time-human-scored")
 
 
-def interpret(question: dict, prompt: str, record: dict, answer: str, execution: dict, delivered: list | None = None) -> dict:
+def interpret(question: dict, prompt: str, record: dict, answer: str, execution: dict, delivered: list | None = None,
+              mention_source: dict | None = None) -> dict:
     """question = {"text", "facts": [{"id","subject","relation","object","paraphrases"?}], "class_fact": id, "ambiguous": bool}.
     v5.1: UNRESOLVED is a terminal outcome with its CAUSE carried (the two causes are counted
     separately by calibrate(): ambiguity and a capture that disagrees with the delivered set have
     different remedies). The disagreement check runs BEFORE the rubric: a fact-shaped unit in this arm's
     prompt that no delivered edge accounts for, or a class-determining fact present in the prompt that
-    resolves to no delivered edge, makes the row UNRESOLVED with the unit reported verbatim."""
+    resolves to no delivered edge, makes the row UNRESOLVED with the unit reported verbatim.
+
+    0043 round 6 (R6-01): `mention_source` is how a PUBLISHED figure is scored — by this same function, never a parallel
+    one. It maps a fact id (and `<id>@event-time` for an event time) to the two-seat label ("asserted" | "withheld"), and
+    replaces the READER's judgement of the answer (`mention_from_answer`, `event_time_reading`) for exactly those facts
+    and nothing else: the ambiguity check, the delivered accounting, support from the captured prompt and record, the
+    tie and the anomalies all run unchanged. So a STRUCTURAL cause (STRUCTURAL_CAUSES) survives into the published row,
+    and only a READER cause (READER_CAUSES) is what a label resolves. A class-determining fact with no label refuses."""
     if question.get("ambiguous"):
         return {"outcome": "UNRESOLVED", "cause": "ambiguous-question", "rule": "genuine ambiguity in the QUESTION", "facts": {}, "anomalies": []}
     if delivered is not None:
@@ -589,7 +603,10 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
             s = support(prompt, record, f)
         except Unaccounted as exc:
             return {"outcome": "UNRESOLVED", "cause": "capture-disagrees-with-delivered", "rule": str(exc), "facts": {}, "anomalies": []}
-        m = mention_from_answer(answer, f, question.get("text", ""), tuple(o for o in question["facts"] if o is not f))
+        if mention_source is not None and f["id"] in mention_source:
+            m = mention_source[f["id"]]                       # the two-seat label, in place of the reader
+        else:
+            m = mention_from_answer(answer, f, question.get("text", ""), tuple(o for o in question["facts"] if o is not f))
         o, r = per_fact_outcome(s, m, execution)
         facts[f["id"]] = {"support": s, "mention": m, "outcome": o, "rule": r}
     if question.get("event_time"):
@@ -597,13 +614,21 @@ def interpret(question: dict, prompt: str, record: dict, answer: str, execution:
         # no record, so no retrieval could have reached it: a decline here is never a retrieval miss.
         no_miss = {k: v for k, v in execution.items() if k != "retrieval"}
         for f in question["facts"]:
-            mt, why = event_time_reading(answer, f, tuple(o for o in question["facts"] if o is not f))   # the fallback
+            if mention_source is not None and f"{f['id']}@event-time" in mention_source:
+                mt, why = mention_source[f"{f['id']}@event-time"], "two-seat label"
+            else:
+                mt, why = event_time_reading(answer, f, tuple(o for o in question["facts"] if o is not f))   # the fallback
             o, r = per_fact_outcome("neither", mt, no_miss)
             if o == "UNRESOLVED":
                 r = why                                       # its cause is the fallback's, not an unrecognised frame
             facts[f"{f['id']}@event-time"] = {"support": "neither", "mention": mt, "outcome": o, "rule": f"event-time: {why}; {r}",
                                               "cause": EVENT_TIME_HUMAN_SCORED if o == "UNRESOLVED" else None}
     class_set = question.get("class_set") or [question["class_fact"]]
+    if mention_source is not None:
+        unlabelled = [c for c in class_set if c not in mention_source]
+        if unlabelled or any(mention_source[c] not in ("asserted", "withheld") for c in class_set):
+            raise ValueError(f"a published row needs a two-seat label (asserted | withheld) for every class-determining fact: "
+                             f"unlabelled {unlabelled}, labels {[mention_source.get(c) for c in class_set]}")
     if len(class_set) > 1:
         # A3-quinquies step 4: several requested facts share the strictest class
         tied = [facts[c] for c in class_set]

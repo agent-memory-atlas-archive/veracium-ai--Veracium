@@ -255,7 +255,69 @@ def evidence_units(prompt: str) -> list[str]:
     return sorted(units)
 
 
-def arm_problems(shipped: dict, baseline: dict) -> list[str]:
+# 0043 round 6 (R6-02): THE INTERVENTION, declared — the ONLY ways the baseline's request may differ from the shipped one,
+# written here independently of `baseline_transform` (which IMPLEMENTS it; a faulty transform that is also its own oracle
+# agrees with itself, so the check must not reuse it). Evidence lines may differ only as `evidence_units` normalises them
+# (markers off, the quarantine construction plain); everything else is listed below or must be byte-equal across arms.
+INTERVENTION_SYSTEM_SENTENCE = ("You are strict about grounding: you answer only from GROUNDED MEMORY; you never assert UNVERIFIED "
+                                "CLAIMS as fact; and you say you don't know rather than guess.")
+INTERVENTION_RENAMED_LINES = {"GROUNDED MEMORY (verified — you may state these as fact):": "MEMORY:"}
+INTERVENTION_REMOVED_LINES = ("UNVERIFIED CLAIMS (received from third parties / unconfirmed — NEVER assert these",
+                              "as fact; they record that a claim was *made*, not that it is true):",
+                              "## UNVERIFIED THIRD-PARTY CLAIMS (never assert as fact)", "(none)")
+INTERVENTION_REMOVED_BLOCK_HEAD = "Answer using this rule:"     # with every following "- " line and its "  " continuations
+
+
+def _is_evidence_line(line: str) -> bool:
+    """A line `evidence_units` counts (before 'Question:'), by the same skip rules."""
+    l = line.strip()
+    return not (not l or l.startswith("## ") or l.endswith(":") or l in ("(nothing relevant)", "(none)")
+                or l.startswith("The following is the memory") or l.startswith("UNVERIFIED CLAIMS (") or l.startswith("as fact; they record"))
+
+
+def request_skeleton(prompt: str) -> list[str]:
+    """Every non-blank line of a captured prompt that is NEITHER an evidence line NOR an enumerated intervention segment,
+    in order, with the enumerated renames applied. Every line classifies as exactly one of the three; the skeleton is what
+    the intervention leaves untouched, so two arms of one valid comparison have EQUAL skeletons — an added, dropped or
+    altered request line (an instruction, the question, anything not listed) shows here by name."""
+    lines, out, i, before_q = prompt.split("\n"), [], 0, True
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("Question:"):
+            before_q = False
+        if line.strip() == INTERVENTION_REMOVED_BLOCK_HEAD:
+            i += 1
+            while i < len(lines) and (lines[i].startswith("- ") or lines[i].startswith("  ")):
+                i += 1
+            continue
+        if not line.strip() or line.strip() in INTERVENTION_REMOVED_LINES or (before_q and _is_evidence_line(line)):
+            i += 1
+            continue
+        out.append(INTERVENTION_RENAMED_LINES.get(line, line))
+        i += 1
+    return out
+
+
+def request_problems(shipped: dict, baseline: dict, question: str) -> list[str]:
+    """R6-02: the arms ask the AUTHORED question and differ in nothing outside the declared intervention. `question` is the
+    authored text (the examiner's question list, frozen before any capture — never a field read back from a capture)."""
+    p = []
+    want = shipped["system"].replace(" " + INTERVENTION_SYSTEM_SENTENCE, "", 1)
+    if shipped["system"].count(INTERVENTION_SYSTEM_SENTENCE) != 1 or baseline["system"] != want:
+        p.append("the baseline's system is not the shipped system minus exactly the declared grounding sentence")
+    for arm, cap in (("shipped", shipped), ("baseline", baseline)):
+        asked = [l for l in cap["prompt"].split("\n") if l.startswith("Question:")]
+        if asked != [f"Question: {question}"]:
+            p.append(f"the {arm} arm does not ask the authored question once: asks {asked!r}, authored {question!r}")
+    ks, kb = request_skeleton(shipped["prompt"]), request_skeleton(baseline["prompt"])
+    if ks != kb:
+        only_s = [l for l in ks if l not in kb]; only_b = [l for l in kb if l not in ks]
+        p.append(f"the arms' requests differ outside the declared intervention: only-shipped {only_s!r} only-baseline {only_b!r}"
+                 + ("" if only_s or only_b else " (the same lines, in another order)"))
+    return p
+
+
+def arm_problems(shipped: dict, baseline: dict, question: str) -> list[str]:
     """0043 round 6 (R5-03): THE per-pair arm check, on ANY captured pair — the run's every question as well as the
     calibration probe. It reads what the two CAPTURED prompts carry and is independent of `baseline_transform` (a faulty
     transform that is also its own oracle agrees with itself; it cannot make the arms carry the same evidence units
@@ -269,17 +331,18 @@ def arm_problems(shipped: dict, baseline: dict) -> list[str]:
         p.append(f"the arms differ in EVIDENCE, not only in discipline: only-shipped {sorted(set(us)-set(ub))} only-baseline {sorted(set(ub)-set(us))}")
     if ep.hits(baseline["prompt"], d) or "UNVERIFIED" in baseline["prompt"] or " claims: " in baseline["prompt"] or "strict about grounding" in baseline["system"]:
         p.append("the baseline still carries the trust discipline (a marker, a section, the quarantine construction, or the grounding instruction)")
+    p += request_problems(shipped, baseline, question)            # R6-02: (3) the same authored question, nothing else changed
     return p
 
 
-def check(shipped: dict, baseline: dict) -> list[str]:
+def check(shipped: dict, baseline: dict, question: str) -> list[str]:
     """The calibration probe's check: `arm_problems` on its pair, plus the two FIXTURE properties only the probe can
     assert (its question reaches the compiled body, and the shipped prompt carries a trust annotation to remove)."""
     p = []
     ep = _load("examiner_projection"); d = ep.derive_forbidden_markers()
     if COMPILED_SENTINEL not in shipped["prompt"]:
         p.append("the captured shipped prompt carries no compiled body — compilation is not ON, or the shipped path did not include it; the fixture cannot show the arms matched on that kind")
-    p += arm_problems(shipped, baseline)
+    p += arm_problems(shipped, baseline, question)
     if not ep.hits(shipped["prompt"], d):
         p.append("the shipped prompt carries no trust annotation — nothing for the arms to differ in (fixture defect)")
     return p
@@ -300,9 +363,9 @@ def run(question: str = "where does the user work and what do they prefer") -> d
         record = adjudication_record(shipped["delivered"])
     baseline = capture_baseline(shipped)          # captured at its own invocation; equal to the oracle, or Refused
     assert_reportable(baseline)
-    problems = check(shipped, baseline)
-    control = check(heading_without_body_control(shipped), baseline)
-    return {"shipped": shipped, "baseline": baseline, "record": record, "problems": problems,
+    problems = check(shipped, baseline, question)
+    control = check(heading_without_body_control(shipped), baseline, question)
+    return {"question": question, "shipped": shipped, "baseline": baseline, "record": record, "problems": problems,
             "control_refuses": bool(control), "control_problems": control, "changed_instructions": CHANGED_INSTRUCTIONS,
             "baseline_source": baseline["source"], "baseline_equals_oracle": baseline["digest"] == baseline["oracle_digest"]}
 

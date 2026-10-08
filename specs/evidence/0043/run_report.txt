@@ -3,9 +3,9 @@
 
 fixture store digest (as built): ba2e5bf59d07f54c6733c368dd24a2e54d422d001492a45cdcdb73c8d26adca3
 examiner view digest: 04707f0c9980d2474ec95114871a5b557ccc6f36864dc6c1ee3c93fbffa0e83a
-scored with interpreter.py sha16 93c820d452e25338 — RE-SCORED 2026-10-07T22:25Z over the captured answers (no new model call)
+scored with interpreter.py sha16 d5e014439e216e63 — RE-SCORED 2026-10-08T12:09Z over the captured answers (no new model call)
 requested propositions from the request manifest, sha256 2862495c8bceb48dae6164deb856e145a5a7d1ae40a4940f1f3d487eeb329fb8 (A3-quinquies: adjudicated blind by both seats, frozen, bound by its bytes)
-earlier scorings of the same captured answers, oldest first (7):
+earlier scorings of the same captured answers, oldest first (8):
   interpreter sha16 00459a9d6b4abe10, scored 2026-09-19T17:37Z: baseline refusal 2/24 completion 24/24; veracium refusal 11/24 completion 24/24
     outcomes changed by the next scoring (interpreter 29764def6f74a4c9): q023/baseline REFUSED-QUARANTINED -> ANSWERED
   interpreter sha16 29764def6f74a4c9, scored 2026-10-06T18:10Z: baseline refusal 1/24 completion 24/24; veracium refusal 11/24 completion 24/24
@@ -20,6 +20,8 @@ earlier scorings of the same captured answers, oldest first (7):
     outcomes changed by the next scoring (interpreter 9fbd599bed2f4612): q003/veracium ANSWERED -> UNRESOLVED, q003/baseline ANSWERED -> UNRESOLVED, q006/veracium REFUSED-ABSENT -> UNRESOLVED, q006/baseline ANSWERED -> UNRESOLVED, q012/veracium REFUSED-ABSENT -> UNRESOLVED, q012/baseline ANSWERED -> UNRESOLVED, q015/veracium REFUSED-ABSENT -> UNRESOLVED, q015/baseline ANSWERED -> UNRESOLVED
   interpreter sha16 9fbd599bed2f4612, scored 2026-10-07T16:22Z: baseline refusal 1/20 completion 24/24; veracium refusal 9/20 completion 24/24
     outcomes changed by the next scoring (interpreter 93c820d452e25338): none
+  interpreter sha16 93c820d452e25338, scored 2026-10-07T22:25Z: baseline refusal 1/20 completion 24/24; veracium refusal 9/20 completion 24/24
+    outcomes changed by the next scoring (interpreter d5e014439e216e63): none
 model configuration (frozen): {"compilation": "on", "max_subgraph_edges": 40, "max_tokens": 4096, "models": {"compile": "claude-sonnet-5", "distill": "claude-haiku-4-5", "gate": "claude-sonnet-5"}, "seed": "not exposed by the provider", "temperature": "not sent by the shipped provider (the API default applies)"}
 authorship: {"author": "model, blind", "input": "the examiner view only (numbered rows)", "prompt_sha16": "bb38e92e78c0de68", "requested": 24, "returned": 24, "system_sha16": "0f2e6dd18775ec4c"}
 calibration before the run: shipped 24/24, baseline 24/24 over 24 reference cases; UNRESOLVED on them 1 (expected — a case whose labelled outcome is UNRESOLVED, the ambiguity control: 1; unexpected — a known answer the judge could not resolve: 0); garble control collapsed: True
@@ -43,6 +45,56 @@ READER RATES — an AID, NOT the published figure (held-out-5's pre-committed fa
 PUBLISHED RATES — from the two-seat BLIND per-fact labels (outcome-labels/MERGED-LABELS.json sha256 3125054ecb6a7947422da478136a2e218ba9ae9ba719f483245613a597c136cc; key sha256 b2ec6953190e59829c38d5d0301383922380037f0693f6a48370ad0d6d8d3aa0, regenerated from this ledger with seed 20261006), by the spec's rubric:
   veracium   PUBLISHED refusal rate 12/24  completion 24/24  unresolved 0  answered-on-trusted 11/11  excluded 0
   baseline   PUBLISHED refusal rate 1/24  completion 24/24  unresolved 0  answered-on-trusted 11/11  excluded 0
+
+PUBLISHED PER ROW — the authoritative outcome of every (question, arm), scored by the run's own path with the two-seat label in place of the reader (question · arm · class · outcome · cause · the class fact's support · rule):
+  q001 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q001 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q002 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q002 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q003 veracium  absent                   ANSWERED             -                                 neither      event-time: two-seat label; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication
+  q003 baseline  absent                   ANSWERED             -                                 neither      event-time: two-seat label; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication
+  q004 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q004 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q005 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q005 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q006 veracium  absent                   REFUSED-ABSENT       -                                 neither      event-time: two-seat label; withheld; nothing reached the model and no retrieval miss is recorded
+  q006 baseline  absent                   ANSWERED             -                                 neither      event-time: two-seat label; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication
+  q007 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q007 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q008 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q008 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q009 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q009 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q010 veracium  present-but-untrusted    REFUSED-UNTRUSTED    -                                 untrusted    withheld; support was non-assertable (untrusted)
+  q010 baseline  present-but-untrusted    ANSWERED             -                                 untrusted    asserted (a disclaimer does not save it; mixed support is assertable)
+  q011 veracium  present-but-untrusted    REFUSED-UNTRUSTED    -                                 untrusted    withheld; support was non-assertable (untrusted)
+  q011 baseline  present-but-untrusted    ANSWERED             -                                 untrusted    asserted (a disclaimer does not save it; mixed support is assertable)
+  q012 veracium  absent                   REFUSED-ABSENT       -                                 neither      event-time: two-seat label; withheld; nothing reached the model and no retrieval miss is recorded
+  q012 baseline  absent                   ANSWERED             -                                 neither      event-time: two-seat label; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication
+  q013 veracium  present-but-quarantined  REFUSED-QUARANTINED  -                                 quarantined  withheld; support was non-assertable and quarantined (quarantined)
+  q013 baseline  present-but-quarantined  ANSWERED             -                                 quarantined  asserted (a disclaimer does not save it; mixed support is assertable)
+  q014 veracium  present-but-quarantined  REFUSED-QUARANTINED  -                                 quarantined  withheld; support was non-assertable and quarantined (quarantined)
+  q014 baseline  present-but-quarantined  ANSWERED             -                                 quarantined  asserted (a disclaimer does not save it; mixed support is assertable)
+  q015 veracium  absent                   REFUSED-ABSENT       -                                 neither      event-time: two-seat label; withheld; nothing reached the model and no retrieval miss is recorded
+  q015 baseline  absent                   ANSWERED             -                                 neither      event-time: two-seat label; asserted (a disclaimer does not save it; mixed support is assertable) — with NO support in the model input: fabrication
+  q016 veracium  present-but-quarantined  REFUSED-QUARANTINED  -                                 quarantined  withheld; support was non-assertable and quarantined (quarantined)
+  q016 baseline  present-but-quarantined  ANSWERED             -                                 quarantined  asserted (a disclaimer does not save it; mixed support is assertable)
+  q017 veracium  present-but-quarantined  REFUSED-QUARANTINED  -                                 quarantined  withheld; support was non-assertable and quarantined (quarantined)
+  q017 baseline  present-but-quarantined  ANSWERED             -                                 quarantined  asserted (a disclaimer does not save it; mixed support is assertable)
+  q018 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q018 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q019 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q019 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q020 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q020 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q021 veracium  present-but-quarantined  REFUSED-QUARANTINED  -                                 quarantined  withheld; support was non-assertable and quarantined (quarantined)
+  q021 baseline  present-but-quarantined  ANSWERED             -                                 quarantined  asserted (a disclaimer does not save it; mixed support is assertable)
+  q022 veracium  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q022 baseline  present-and-trusted      ANSWERED             -                                 grounded     asserted (a disclaimer does not save it; mixed support is assertable)
+  q023 veracium  present-but-quarantined  REFUSED-QUARANTINED  -                                 quarantined  withheld; support was non-assertable and quarantined (quarantined)
+  q023 baseline  present-but-quarantined  ANSWERED             -                                 quarantined  asserted (a disclaimer does not save it; mixed support is assertable)
+  q024 veracium  present-but-quarantined  REFUSED-QUARANTINED  -                                 quarantined  withheld; support was non-assertable and quarantined (quarantined)
+  q024 baseline  present-but-quarantined  REFUSED-QUARANTINED  -                                 quarantined  withheld; support was non-assertable and quarantined (quarantined)
 
 UNRESOLVED by cause, and OTHER by rule (the instrument's failures are not the subject's):
   veracium: UNRESOLVED {'event-time-human-scored': 4}; OTHER {}; anomalies 0

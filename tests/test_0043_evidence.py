@@ -335,9 +335,9 @@ def test_a6_the_heading_without_body_control_refuses_and_a_leaky_baseline_refuse
     r = mc.run()
     assert r["control_refuses"] and any("differ in EVIDENCE" in x for x in r["control_problems"])
     leaky = {**r["baseline"], "system": r["shipped"]["system"]}                    # the grounding instruction retained
-    assert any("still carries the trust discipline" in x for x in mc.check(r["shipped"], leaky))
+    assert any("still carries the trust discipline" in x for x in mc.check(r["shipped"], leaky, r["question"]))
     thin = {**r["baseline"], "prompt": r["baseline"]["prompt"].replace("[2026-09-18] User mentioned a cat called Miso.\n", "")}
-    assert any("differ in EVIDENCE" in x for x in mc.check(r["shipped"], thin))
+    assert any("differ in EVIDENCE" in x for x in mc.check(r["shipped"], thin, r["question"]))
 
 
 def test_a6_capture_sees_exactly_one_gate_call_and_compilation_is_on():
