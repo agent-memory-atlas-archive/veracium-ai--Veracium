@@ -193,14 +193,14 @@ control(all(a["outcome"] == b["outcome"] for a, b in zip(LEDGER["detail"], same[
 # ---- R5-05 ---------------------------------------------------------------------------------------------------
 print("\n=== R5-05 — reverify trusts the stored baseline digest without binding it to the captured bytes")
 honest_v = rh.reverify(copy.deepcopy(LEDGER))
-control(honest_v["verdict"] == "REVERIFIED", f"the committed ledger: {honest_v['verdict']}, baseline transform {honest_v['baseline_transform_equal']}/{honest_v['kept']}")
+control(honest_v["downstream"] == "REVERIFIED", f"the committed ledger: {honest_v['verdict']}, baseline transform {honest_v['baseline_transform_equal']}/{honest_v['kept']}")
 altered = copy.deepcopy(LEDGER)
 xb = next(x for x in altered["detail"] if x["arm"] == "baseline")
 question_tail = xb["prompt"][xb["prompt"].index("Question:"):]
 xb["prompt"] = "All memory evidence has been removed\n\n" + question_tail
 actual = hashlib.sha256((xb["system"] + "\n\x00\n" + xb["prompt"]).encode()).hexdigest()
 v = rh.reverify(altered)
-finding("R5-05", v["verdict"] == "REVERIFIED" and actual != xb["prompt_digest"],
+finding("R5-05", v["downstream"] == "REVERIFIED" and actual != xb["prompt_digest"],
         f"{xb['question_id']}'s baseline prompt replaced by 'All memory evidence has been removed' + its question, the stored "
         f"digest kept (the bytes' own digest differs): reverify says {v['verdict']}, baseline transform "
         f"{v['baseline_transform_equal']}/{v['kept']}")

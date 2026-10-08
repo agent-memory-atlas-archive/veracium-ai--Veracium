@@ -205,12 +205,16 @@ def capture_shipped(db_path: str, question: str, inner, *, max_subgraph_edges: i
     if len(gate_calls) != 1 or len(recalls) != 1:
         raise Refused(f"expected exactly one gate call and one recall behind it, saw {len(gate_calls)} / {len(recalls)}")
     c = gate_calls[0]; mc = _load("model_input_capture")
+    compiles = [k for k in llm.calls if k["role"] == "compile" and "answer" in k]
     delivered = [{"edge": e.id, "subject": e.subject, "relation": e.relation, "object": e.object, "class": mc.edge_class(e),
                   "unit": f"{e.relation}: {e.object} (since {e.valid_from.date()})"} for e in recalls[0].edges]
     return {"system": c["system"], "prompt": c["prompt"], "answer": c.get("answer", ""), "error": c.get("error"), "ms": c["ms"],
             "digest": capture_digest(c["system"], c["prompt"]), "delivered": delivered, "source": "captured",
             "partition": {"grounded": recalls[0].grounded, "unverified": recalls[0].unverified}, "execution": execution,
-            "config": {"question": question, "max_subgraph_edges": max_subgraph_edges, "compilation": "on"}}
+            "config": {"question": question, "max_subgraph_edges": max_subgraph_edges, "compilation": "on"},
+            # round 6 (the round-5 verdict's Q3): the compile-role invocation this capture made, if it made one (the wiki is
+            # compiled once per store and then served from the cache, so in a run only the FIRST capture carries it)
+            "compile": ({"system": compiles[0]["system"], "prompt": compiles[0]["prompt"]} if compiles else None)}
 
 
 def capture_baseline_real(shipped: dict, inner) -> dict:
@@ -312,9 +316,9 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
     arms = ("veracium", lg.BASELINE_ARM)
     # the arms — CAPTURED only (R5-01): no answer is interpreted here; the requested propositions come from the request
     # manifest, which for a fresh run cannot exist until its questions do
-    detail = []
+    detail = []; compile_calls = []
     for q in kept:
-        shipped = capture_shipped(str(db), q["text"], inner)
+        shipped = capture_shipped(str(db), q["text"], inner); compile_calls.append(shipped["compile"])
         record = mc.adjudication_record(shipped["delivered"])
         baseline = capture_baseline_real(shipped, inner)
         # round 6 (R5-03): every question's ACTUAL captured pair, checked independently of the transform before any
@@ -337,11 +341,19 @@ def run(out: pathlib.Path, inner, *, n_questions: int = 24, questions_override: 
     config = {"models": dict(models) if isinstance(models, dict) else models, "max_tokens": getattr(inner, "_max_tokens", None),
               "temperature": "not sent by the shipped provider (the API default applies)", "seed": "not exposed by the provider",
               "max_subgraph_edges": 40, "compilation": "on"}
+    compile_invocation = next((c for c in compile_calls if c), None)
+    if compile_invocation is not None:
+        compile_invocation = {**compile_invocation, "model": (models.get("compile") if isinstance(models, dict) else None),
+                              "max_tokens": getattr(inner, "_max_tokens", None),
+                              "digest": capture_digest(compile_invocation["system"] or "", compile_invocation["prompt"])}
     result = {"head": head, "generated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"), "interpreter_sha16": interpreter_sha16(),
               "fixture_digest": fixture_digest, "view_digest": view_digest, "manifest_classes": {eid: v["class"] for eid, v in man.items()},
               "authorship": authorship, "questions": questions, "kept": [q["id"] for q in kept], "excluded": excluded,
               "calibration": calibration, "config": config, "sources": sources, "arms": list(arms), "ledger": [], "detail": detail,
-              "rates": None, "unscored": True}
+              "rates": None, "unscored": True,
+              # round 6 (Q3): the compile-role invocation behind every captured prompt's compiled-wiki block, recorded so a
+              # later reverify can compare the compiler's INPUT, not only replay its output (a run before round 6 has none)
+              "compile_invocation": compile_invocation}
     rm = _load("request_manifest")
     (out / "blind_input.json").write_text(rm.blind_text(result, f"veracium {head[:12]}: the run's own ledger (this directory)"), encoding="utf-8")
     if request_manifest is not None:
@@ -488,6 +500,32 @@ def capture_digest(system: str, prompt: str) -> str:
     return hashlib.sha256((system + "\n\x00\n" + prompt).encode()).hexdigest()
 
 
+class ReplayCompile:
+    """A canned inner model whose COMPILE-role answer is the run's STORED compile output (round 6, the round-5 verdict's
+    Q3): the captured block's body with its code-owned marker line removed. The shipped wrapping — strip, the sentinel
+    sanitizer, newline normalisation, the marker with counts RECOMPUTED from this compile's inputs — is a fixed point on
+    that body, so everything after the model call is the CURRENT shipped path and the complete gate prompt can be
+    compared byte for byte. Not recoverable, named: the model's raw bytes (whitespace and a literal escaped prefix are
+    normalised away); what is replayed is its sanitised, normalised body. Every other role delegates to `inner`.
+    As in the run, the wiki compiles ONCE per store and is then served from the cache: in reverify's replay pass exactly one
+    compile-role call reaches this model, so the body actually replayed is the FIRST kept row's (`compiles` records it)."""
+    def __init__(self, inner, body: str):
+        self.inner, self.body, self.compiles = inner, body, []
+    def __getattr__(self, k):
+        return getattr(self.inner, k)
+    def __call__(self, prompt, *, system=None, role="compile", json_schema=None):
+        if role == "compile" and json_schema is None:
+            self.compiles.append({"system": system, "prompt": prompt})
+            return self.body
+        return self.inner(prompt, system=system, role=role, json_schema=json_schema)
+
+
+def stored_compile_body(prompt: str) -> str:
+    """The compile output a captured gate prompt carries: its compiled-wiki block minus the code-owned marker line."""
+    _, block = strip_compiled_wiki(prompt)
+    return block.rstrip("\n").rsplit("\n", 1)[0]
+
+
 def reverify(res: dict, inner=None) -> dict:
     """THE COMMITTED RUN'S INPUTS, RE-DERIVED AT HEAD WITHOUT THE MODEL (2026-09-19, after 0041 tranche 1 moved src/
     under the run's pin). A pin says which tree the run was made on; it cannot say whether THIS tree would have put
@@ -512,7 +550,7 @@ def reverify(res: dict, inner=None) -> dict:
     out = {"head": tree_head(),
            "run_head": res["head"], "kept": len(res["kept"]), "view_digest_equal": None, "system_equal": 0, "prompt_outside_compiled_equal": 0,
            "compiled_block_present": 0, "baseline_transform_equal": 0, "shipped_bytes_bound": 0, "baseline_bytes_bound": 0,
-           "mismatches": []}
+           "prompt_complete_equal": 0, "mismatches": []}
     with tempfile.TemporaryDirectory() as d:
         db = pathlib.Path(d) / "fixture.db"
         st = ev.fixture_store(str(db)); rows = ev.view(st, "u"); _, vd = ev.freeze(rows); st.close()
@@ -537,18 +575,60 @@ def reverify(res: dict, inner=None) -> dict:
             if not (s_ok and p_ok and c_ok and b_ok and sb_ok and bb_ok):
                 out["mismatches"].append({"question_id": qid, "system": s_ok, "prompt_outside_compiled": p_ok, "compiled_block": c_ok,
                                           "baseline_transform": b_ok, "shipped_bytes_bound": sb_ok, "baseline_bytes_bound": bb_ok})
+        # round 6 (Q3): the DOWNSTREAM half, with no compiled-block carve-out. One FRESH fixture store (the pass above cached
+        # the canned model's own wiki in its store); every question captured again through the shipped path. As in the run,
+        # the wiki compiles ONCE per store and is cached, so exactly one compile-role call reaches the replayer and the body
+        # replayed is the FIRST kept row's; EVERY row's complete gate prompt is then compared byte for byte with what that
+        # one body produces. A row whose block differs is caught; an edit to the first row's block flags every row. A run
+        # whose rows carry more than one stored compile output cannot be modelled by one compile per store, and says so.
+        bodies = {stored_compile_body(by[(qid, "veracium")]["prompt"]) for qid in res["kept"]}
+        out["distinct_stored_bodies"] = len(bodies); out["compile_calls"] = 0
+        db2 = pathlib.Path(d) / "replay.db"
+        st = ev.fixture_store(str(db2)); st.close()
+        head_compile = None
+        for qid in res["kept"]:
+            old_s = by[(qid, "veracium")]
+            replay = ReplayCompile(inner, stored_compile_body(old_s["prompt"]))
+            cap = capture_shipped(str(db2), qs[qid], replay)
+            out["compile_calls"] += len(replay.compiles)
+            head_compile = head_compile or (replay.compiles[0] if replay.compiles else None)
+            full_ok = cap["system"] == old_s["system"] and cap["prompt"] == old_s["prompt"]
+            out["prompt_complete_equal"] += full_ok
+            if not full_ok:
+                hit = next((m for m in out["mismatches"] if m["question_id"] == qid), None)
+                (hit.update(prompt_complete=False) if hit else out["mismatches"].append({"question_id": qid, "prompt_complete": False}))
     n = out["kept"]
-    out["verdict"] = ("REVERIFIED" if out["view_digest_equal"] and not out["mismatches"] and n > 0 else "NOT REVERIFIED")
+    downstream = ("REVERIFIED" if out["view_digest_equal"] and not out["mismatches"] and n > 0
+                  and out["prompt_complete_equal"] == n and out["distinct_stored_bodies"] == 1 else "NOT REVERIFIED")
+    if out["distinct_stored_bodies"] > 1:
+        out["downstream_cause"] = (f"the run's rows carry {out['distinct_stored_bodies']} compile outputs; the replay models one "
+                                   "compile per store")
+    # the COMPILER STAGE: a run that recorded its compile invocation is compared with the one this tree makes; a run that
+    # did not is HISTORICAL, by name — never folded into one undivided REVERIFIED
+    recorded = res.get("compile_invocation")
+    if recorded is None:
+        compiler_stage, why = "HISTORICAL", "compile invocation not recorded at the run's pin"
+    elif head_compile is None:
+        compiler_stage, why = "NOT REVERIFIED", "this tree made no compile-role call"
+    else:
+        same = capture_digest(head_compile["system"] or "", head_compile["prompt"]) == recorded["digest"]
+        compiler_stage = "REVERIFIED" if same else "NOT REVERIFIED"
+        why = "the compile invocation (system + prompt) equals the recorded one" if same else "the compile invocation differs from the recorded one"
+    out.update(downstream=downstream, compiler_stage=compiler_stage, compiler_stage_reason=why,
+               verdict=f"downstream {downstream}" + (f" ({out['downstream_cause']})" if out.get("downstream_cause") else "")
+               + f"; compiler stage {compiler_stage} ({why})")
     return out
 
 
 def reverify_lines(v: dict) -> str:
     n = v["kept"]
-    return (f"{v['verdict']} at {v['head'][:12]} (run pinned at {v['run_head'][:12]}): examiner view digest "
+    return (f"{v['verdict']} — at {v['head'][:12]} (run pinned at {v['run_head'][:12]}): examiner view digest "
             f"{'equal' if v['view_digest_equal'] else 'DIFFERENT'}; gate system {v['system_equal']}/{n}; gate prompt outside the "
             f"compiled-wiki block {v['prompt_outside_compiled_equal']}/{n}; each arm's bytes bound to its declared digest: shipped "
             f"{v['shipped_bytes_bound']}/{n}, baseline {v['baseline_bytes_bound']}/{n}; compiled-wiki block carried in a bound capture "
-            f"{v['compiled_block_present']}/{n} (a compile-role model output, the run's own — not re-derived); baseline capture = "
+            f"{v['compiled_block_present']}/{n}; the COMPLETE gate prompt with the run's stored compile output replayed through "
+            f"the current shipped path {v['prompt_complete_equal']}/{n} (distinct stored compile bodies {v['distinct_stored_bodies']}, "
+            f"compile-role calls replayed {v['compile_calls']}); baseline capture = "
             f"transform(shipped capture) {v['baseline_transform_equal']}/{n}"
             + (f"; mismatches {v['mismatches']}" if v["mismatches"] else ""))
 
@@ -787,7 +867,8 @@ if __name__ == "__main__":
     ap.add_argument("--reverify", help="a committed run_ledger.json: re-derive its inputs at HEAD without the model and print the verdict")
     a = ap.parse_args()
     if a.reverify:
-        v = reverify(json.loads(pathlib.Path(a.reverify).read_text(), object_pairs_hook=_strict_pairs)); print(reverify_lines(v)); sys.exit(0 if v["verdict"] == "REVERIFIED" else 1)
+        v = reverify(json.loads(pathlib.Path(a.reverify).read_text(), object_pairs_hook=_strict_pairs)); print(reverify_lines(v))
+        sys.exit(0 if v["downstream"] == "REVERIFIED" and v["compiler_stage"] != "NOT REVERIFIED" else 1)
     if a.rescore:
         if not a.out:
             ap.error("--rescore needs --out")

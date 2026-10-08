@@ -55,7 +55,7 @@ def test_control_the_committed_capture_reverifies():
     """BEHAVIOUR, which held before this round too: the honest committed capture reads REVERIFIED."""
     res, _ = _one_question_run()
     v = rh.reverify(res)
-    assert v["verdict"] == "REVERIFIED", rh.reverify_lines(v)
+    assert v["downstream"] == "REVERIFIED", rh.reverify_lines(v)
 
 
 def test_the_verdict_counts_each_arms_binding():
@@ -77,7 +77,7 @@ def test_R5_05_a_baseline_whose_bytes_moved_and_digest_stayed_is_not_reverified(
         b["system"] = b["system"] + " ALTERED"
     assert rh.capture_digest(b["system"], b["prompt"]) != b["prompt_digest"]   # the bytes no longer have their digest
     v = rh.reverify(res)
-    assert v["verdict"] == "NOT REVERIFIED", rh.reverify_lines(v)
+    assert v["downstream"] == "NOT REVERIFIED", rh.reverify_lines(v)
 
 
 def test_R5_05_a_compiled_block_edited_consistently_but_with_its_shipped_digest_kept_is_not_reverified():
@@ -93,7 +93,7 @@ def test_R5_05_a_compiled_block_edited_consistently_but_with_its_shipped_digest_
     b["system"], b["prompt"] = mc.baseline_transform(s["system"], s["prompt"])
     b["prompt_digest"] = rh.capture_digest(b["system"], b["prompt"])
     v = rh.reverify(res)
-    assert v["verdict"] == "NOT REVERIFIED", rh.reverify_lines(v)
+    assert v["downstream"] == "NOT REVERIFIED", rh.reverify_lines(v)
 
 
 def test_control_a_baseline_rebound_to_a_digest_that_is_not_the_transform_is_not_reverified():
@@ -104,7 +104,7 @@ def test_control_a_baseline_rebound_to_a_digest_that_is_not_the_transform_is_not
     b["prompt"] = "All memory evidence has been removed\n\n" + b["prompt"][b["prompt"].index("Question:"):]
     b["prompt_digest"] = rh.capture_digest(b["system"], b["prompt"])
     v = rh.reverify(res)
-    assert v["verdict"] == "NOT REVERIFIED", rh.reverify_lines(v)
+    assert v["downstream"] == "NOT REVERIFIED", rh.reverify_lines(v)
 
 
 def test_a_moved_baseline_is_reported_as_unbound():

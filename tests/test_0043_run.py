@@ -207,7 +207,7 @@ def test_the_committed_run_report_is_this_tree_and_its_rates_re_derive_from_its_
     rh = _load("run_harness")
     v = rh.reverify(res)
     n = len(res["kept"])
-    assert v["verdict"] == "REVERIFIED", rh.reverify_lines(v)
+    assert v["downstream"] == "REVERIFIED", rh.reverify_lines(v)
     assert v["view_digest_equal"] and v["system_equal"] == n and v["prompt_outside_compiled_equal"] == n \
         and v["compiled_block_present"] == n and v["baseline_transform_equal"] == n and v["mismatches"] == [] and n == 24, rh.reverify_lines(v)
     # the ledger passes its own gate and the rates re-derive
@@ -249,22 +249,22 @@ def test_reverify_refuses_a_run_whose_inputs_this_tree_would_not_produce():
     res = _committed_run(); n = len(res["kept"])
     # the fixture's content moved
     m = copy.deepcopy(res); m["view_digest"] = "0" * 64
-    v = rh.reverify(m); assert v["verdict"] == "NOT REVERIFIED" and v["view_digest_equal"] is False and v["mismatches"] == []
+    v = rh.reverify(m); assert v["downstream"] == "NOT REVERIFIED" and v["view_digest_equal"] is False and v["mismatches"] == []
     # the question this tree renders is not the question the run put in front of the model (outside the block)
     m = copy.deepcopy(res); q0 = m["kept"][0]
     row = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "veracium")
     assert "Question: " in row["prompt"]
     row["prompt"] = row["prompt"].replace("Question: ", "Question: (edited) ", 1)
     v = rh.reverify(m)
-    assert v["verdict"] == "NOT REVERIFIED" and v["prompt_outside_compiled_equal"] == n - 1 and [x["question_id"] for x in v["mismatches"]] == [q0]
+    assert v["downstream"] == "NOT REVERIFIED" and v["prompt_outside_compiled_equal"] == n - 1 and [x["question_id"] for x in v["mismatches"]] == [q0]
     assert v["mismatches"][0]["prompt_outside_compiled"] is False and v["mismatches"][0]["baseline_transform"] is False   # the baseline is the transform of the edited shipped capture
     # the system text moved
     m = copy.deepcopy(res); row = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "veracium"); row["system"] = row["system"] + " "
-    v = rh.reverify(m); assert v["verdict"] == "NOT REVERIFIED" and v["system_equal"] == n - 1 and v["mismatches"][0]["system"] is False \
+    v = rh.reverify(m); assert v["downstream"] == "NOT REVERIFIED" and v["system_equal"] == n - 1 and v["mismatches"][0]["system"] is False \
         and v["mismatches"][0]["baseline_transform"] is False   # the transform refuses a foreign system text: counted, not crashed
     # the baseline row's digest is not the transform of the shipped capture
     m = copy.deepcopy(res); rowb = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "baseline"); rowb["prompt_digest"] = "f" * 64
-    v = rh.reverify(m); assert v["verdict"] == "NOT REVERIFIED" and v["baseline_transform_equal"] == n - 1 and v["mismatches"][0]["baseline_transform"] is False \
+    v = rh.reverify(m); assert v["downstream"] == "NOT REVERIFIED" and v["baseline_transform_equal"] == n - 1 and v["mismatches"][0]["baseline_transform"] is False \
         and v["mismatches"][0]["prompt_outside_compiled"] is True and v["mismatches"][0]["system"] is True
     # a captured prompt without the compiled-wiki block is not the shape the run captured: refused, not scored
     m = copy.deepcopy(res); row = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "veracium")
@@ -274,30 +274,41 @@ def test_reverify_refuses_a_run_whose_inputs_this_tree_would_not_produce():
 
 
 def test_reverify_does_not_see_inside_the_compiled_wiki_block_and_says_so():
-    """THE NAMED LIMIT, executed, at its round-6 width: the compiled-wiki block is a compile-role model output carried
-    from the run and NOT re-derived. Since 0043-R5-05 each arm's bytes are bound to their declared digest, so an edit
-    inside the block with the digest KEPT is refused (tests/test_0043_round6_binding.py); what stays invisible is an
-    edit made CONSISTENTLY — the block, the shipped digest, and the baseline capture re-derived from it together. The
-    verdict line names the exclusion, so a reader cannot take REVERIFIED for more than it is."""
+    """THE NAMED LIMIT, executed, at its round-6 width (the round-5 verdict's Q3). The compiled-wiki block is a
+    compile-role model output: its CONTENT cannot be re-derived without the model. Since round 6 the run's stored
+    compile output is REPLAYED through the current shipped path and the complete gate prompt compared, so an edit made
+    consistently in ONE row's block (digest re-bound, baseline re-derived) is now CAUGHT: the wiki is compiled once and
+    cached, and the other questions' prompts no longer match. What stays invisible is an edit made consistently in EVERY
+    row's block; the verdict says so by naming the compiler stage HISTORICAL for a run that recorded no compile
+    invocation, never one undivided REVERIFIED."""
     import copy
-    rh = _load("run_harness")
+    rh, mc = _load("run_harness"), _load("model_input_capture")
     res = _committed_run(); q0 = res["kept"][0]
-    m = copy.deepcopy(res); row = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "veracium")
-    rest, block = rh.strip_compiled_wiki(row["prompt"])
-    assert block.startswith(rh.COMPILED_WIKI_OPEN) and rh.COMPILED_WIKI_MARKER in block and rest + block != row["prompt"]  # the block sits inside, not at an end
-    edited = block.replace("Miso", "Mochi") if "Miso" in block else block.replace("\n", "\n- (edited)\n", 1)
-    assert edited != block
-    row["prompt"] = row["prompt"].replace(block, edited, 1)
-    # the edit made CONSISTENTLY: the shipped digest re-bound to the edited bytes, and the baseline capture re-derived
-    # from them with its own digest — every binding holds, and only the block's content (never re-derived) moved
-    mc = _load("model_input_capture")
-    row["prompt_digest"] = rh.capture_digest(row["system"], row["prompt"])
-    b = next(x for x in m["detail"] if x["question_id"] == q0 and x["arm"] == "baseline")
-    b["system"], b["prompt"] = mc.baseline_transform(row["system"], row["prompt"])
-    b["prompt_digest"] = rh.capture_digest(b["system"], b["prompt"])
-    v = rh.reverify(m)
-    assert v["verdict"] == "REVERIFIED" and v["mismatches"] == []
-    assert "not re-derived" in rh.reverify_lines(v) and "compiled-wiki block" in rh.reverify_lines(v)
+
+    def edit(row, b):
+        rest, block = rh.strip_compiled_wiki(row["prompt"])
+        assert block.startswith(rh.COMPILED_WIKI_OPEN) and rh.COMPILED_WIKI_MARKER in block and rest + block != row["prompt"]
+        edited = block.replace("Miso", "Mochi") if "Miso" in block else block.replace("\n", "\n- (edited)\n", 1)
+        assert edited != block
+        row["prompt"] = row["prompt"].replace(block, edited, 1)
+        row["prompt_digest"] = rh.capture_digest(row["system"], row["prompt"])
+        b["system"], b["prompt"] = mc.baseline_transform(row["system"], row["prompt"])
+        b["prompt_digest"] = rh.capture_digest(b["system"], b["prompt"])
+
+    def rows(m, qid):
+        return (next(x for x in m["detail"] if x["question_id"] == qid and x["arm"] == "veracium"),
+                next(x for x in m["detail"] if x["question_id"] == qid and x["arm"] == "baseline"))
+
+    one = copy.deepcopy(res); edit(*rows(one, q0))
+    v = rh.reverify(one)
+    assert v["downstream"] == "NOT REVERIFIED" and v["prompt_complete_equal"] < len(res["kept"]), rh.reverify_lines(v)
+    assert v["prompt_outside_compiled_equal"] == len(res["kept"])        # the pre-round-6 carve-out could not see it
+    every = copy.deepcopy(res)
+    for qid in res["kept"]:
+        edit(*rows(every, qid))
+    v = rh.reverify(every)
+    assert v["downstream"] == "REVERIFIED" and v["compiler_stage"] == "HISTORICAL", rh.reverify_lines(v)
+    assert "compiler stage HISTORICAL (compile invocation not recorded at the run's pin)" in rh.reverify_lines(v)
 
 
 def test_the_pin_check_treats_a_git_failure_as_an_error_and_only_a_missing_repository_as_a_skip(monkeypatch):

@@ -182,7 +182,7 @@ def mutated(kind):
 undetected = []
 for kind in ("shipped prompt outside the compiled block", "shipped compiled-wiki block", "shipped system", "baseline prompt", "baseline system"):
     v = rh.reverify(mutated(kind))
-    if v["verdict"] == "REVERIFIED":
+    if v["downstream"] == "REVERIFIED":
         undetected.append(kind)
 row("E1 each bound content altered, digest kept: reverify still says REVERIFIED", "FOUND", "FOUND" if undetected else "HOLDS",
     f"{len(undetected)} of 5 undetected: {undetected}")
