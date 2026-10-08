@@ -85,6 +85,13 @@ TOP_SCHEMA = {
     "skipped": (lambda v: type(v) is list and all(type(x) is str for x in v),
                 "a list of strings"),
     "commands": (lambda v: type(v) is list, "a list"),
+    # 2026-10-07 (the owner's "Keep local full suite" + research's conditions): a LOCAL run may opt in, by an explicit
+    # variable, to collecting its simple pytest rows instead of executing them. That transcript says so here, and
+    # validate() REFUSES it unless the caller explicitly allows it — the seal, the archive verifier and the CLI never
+    # do. "full" is the default everywhere; absence is not a mode. Consequence, measured by research and accepted: an
+    # archive sealed BEFORE this field existed no longer validates under later code ("the transcript has no `mode`") —
+    # it fails closed and loud, never a false pass; a pre-mode archive verifies with its own shipped code only.
+    "mode": (lambda v: type(v) is str and v in ("full", "collect"), 'exactly "full" or "collect"'),
 }
 
 
@@ -96,8 +103,10 @@ def _ledger(specs_dir: pathlib.Path):
     return closure_findings.CLOSURES
 
 
-def validate(transcript_path: pathlib.Path, specs_dir: pathlib.Path) -> list:
-    """Return a list of problems; empty means the transcript IS the execution."""
+def validate(transcript_path: pathlib.Path, specs_dir: pathlib.Path, *, allow_collect: bool = False) -> list:
+    """Return a list of problems; empty means the transcript IS the execution. A collect-only transcript (mode
+    "collect": its simple pytest rows were COLLECTED, not run) is refused unless `allow_collect` — only the local
+    opt-in's own in-suite check passes it; the seal and the archive verifier use the default."""
     problems = []
     if not transcript_path.exists():
         return [f"no transcript at {transcript_path} — the evidence claim has "
@@ -126,6 +135,11 @@ def validate(transcript_path: pathlib.Path, specs_dir: pathlib.Path) -> list:
             problems.append(f"`{field}` is {data[field]!r} "
                             f"({type(data[field]).__name__}); required: {why}")
     if problems:
+        return problems
+    if data["mode"] != "full" and not allow_collect:
+        problems.append(f'the transcript is mode "{data["mode"]}": its pytest rows were collected, not run, so it is not '
+                        f'evidence of execution — a seal or an archive needs a full run (the default; unset '
+                        f'VERACIUM_EVIDENCE_MODE)')
         return problems
     commands = data["commands"]
 

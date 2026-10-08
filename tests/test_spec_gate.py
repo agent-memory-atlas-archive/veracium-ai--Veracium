@@ -13,6 +13,7 @@ again" rather than "test_17 broke".
 """
 
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -1381,6 +1382,60 @@ def test_the_count_of_closure_evidence_unrunnable_in_a_package_is_pinned():
         "behaviour that no longer exists and must be rewritten, not deleted")
 
 
+_SHELL_META = ("|", "&", ";", "<", ">", "`", "$(")
+
+
+def _collectable(evidence: str) -> bool:
+    """Whether an evidence command is ONE simple `$PY -m pytest …` invocation — the only shape the local collect-only
+    opt-in may collect instead of run. Parsed as shell (a trailing `# comment` is dropped by shlex), never grepped: a
+    `;` inside a comment is not a sequence. Any pipe, list, redirect or substitution in a token runs the row in full."""
+    try:
+        toks = shlex.split(evidence, comments=True)
+    except ValueError:
+        return False
+    return (toks[:3] == ["$PY", "-m", "pytest"]
+            and not any(m in t for t in toks[3:] for m in _SHELL_META))
+
+
+def test_the_collect_opt_in_collects_only_a_single_simple_pytest_invocation():
+    assert _collectable("$PY -m pytest tests/x.py::test_a -q -p no:randomly  # closed against R1; see R2")
+    assert _collectable("$PY -m pytest tests/x.py -k 'a and not b'")
+    for full in ("$PY -m pytest tests/x.py | grep passed", "$PY -m pytest tests/x.py && echo ok",
+                 "$PY -m pytest tests/x.py; true", "$PY -m pytest tests/x.py > out.txt",
+                 "$PY specs/evidence/0011/mutant_registry.py", "git show abc -- specs/x.md", "$PY -m pytest 'unterminated"):
+        assert not _collectable(full), full
+
+
+def test_a_collect_only_transcript_is_refused_unless_explicitly_allowed():
+    """Both halves of research's condition: the default validate() — the seal's, the archive verifier's, the CLI's —
+    refuses a collect-only transcript; only an explicit allow_collect (the local opt-in's own check) passes it; and an
+    unknown mode is refused by the schema."""
+    import json, pathlib, shutil, tempfile
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    from evidence_transcript import validate
+    from closure_findings import CLOSURES
+    with tempfile.TemporaryDirectory() as td:
+        d = pathlib.Path(td); (d / "specs").mkdir()
+        shutil.copy2(root / "specs" / "closure_findings.py", d / "specs")
+        rows = [{"spec": c[0], "finding": c[3], "argv": c[6], "cwd": "/x", "exit": 0, "output_sha256": "a" * 64,
+                 "duration_ms": 1} for c in CLOSURES if "run_offline.sh" not in c[6]]
+        skipped = [f"{c[0]} {c[3]} (launcher — run separately at seal)" for c in CLOSURES if "run_offline.sh" in c[6]]
+        base = {"ran": len(rows), "wall_ms": 1, "workers": 1, "skipped": skipped, "commands": rows}
+        t = d / "evidence_run.json"
+        t.write_text(json.dumps({**base, "mode": "full"}))
+        assert validate(t, d / "specs") == []                              # the control: a full transcript validates
+        t.write_text(json.dumps({**base, "mode": "collect"}))
+        refused = validate(t, d / "specs")
+        assert refused and "not evidence of execution" in refused[0], refused
+        assert validate(t, d / "specs", allow_collect=True) == []
+        for bad in ("partial", "", None, 1):
+            t.write_text(json.dumps({**base, "mode": bad}))
+            assert any("`mode`" in p for p in validate(t, d / "specs", allow_collect=True)), bad
+        t.write_text(json.dumps(base))                                    # absence is not a mode
+        assert any("`mode`" in p for p in validate(t, d / "specs", allow_collect=True))
+
+
 def test_every_closure_evidence_command_actually_runs():
     """External round 7, R7-1. Four of the ledger's evidence commands could not
     run as written — three said `python3 -m pytest` and a bare python3 has no
@@ -1425,6 +1480,17 @@ def test_every_closure_evidence_command_actually_runs():
     # durations, so a load-induced failure has somewhere to show up.
     env = dict(os.environ, PY=str(py), VERACIUM_EVIDENCE_CHILD="1",
                PYTEST_ADDOPTS="-p no:cacheprovider")
+
+    # THE LOCAL OPT-IN (2026-10-07; the owner kept the per-commit local full suite and agreed this speed-up, research's
+    # conditions). FULL is the default and is what CI, the seal and the reviewer run. A local run may set
+    # VERACIUM_EVIDENCE_MODE=collect: a row that is ONE simple `$PY -m pytest …` invocation is COLLECTED (a dead node
+    # id or a -k that selects nothing still fails, exit 5); every other row runs in full. The transcript records the
+    # mode, and evidence_transcript.validate() refuses a collect-only transcript unless told otherwise, so it can never
+    # be sealed. Never inferred from the absence of CI: only this variable, and an unknown value refuses.
+    # THE COST THE OPT-IN BUYS ITS SPEED WITH: in collect mode a node that collects but FAILS when run alone is caught
+    # by CI or the seal (both FULL), not before the commit.
+    mode = os.environ.get("VERACIUM_EVIDENCE_MODE", "full")
+    assert mode in ("full", "collect"), f"VERACIUM_EVIDENCE_MODE must be full or collect, not {mode!r}"
 
     import hashlib, json, time
     from concurrent.futures import ThreadPoolExecutor
@@ -1515,9 +1581,12 @@ def test_every_closure_evidence_command_actually_runs():
 
     def _execute(item):
         spec, fid, evidence = item
+        run_env = env
+        if mode == "collect" and _collectable(evidence):
+            run_env = dict(env, PYTEST_ADDOPTS=env["PYTEST_ADDOPTS"] + " --collect-only -q")
         t0 = time.monotonic()
         r = subprocess.run(evidence, shell=True, capture_output=True,
-                           cwd=root, env=env, timeout=600)
+                           cwd=root, env=run_env, timeout=600)
         ms = int((time.monotonic() - t0) * 1000)
         out = (r.stdout or b"") + (r.stderr or b"")
         return {
@@ -1554,7 +1623,7 @@ def test_every_closure_evidence_command_actually_runs():
     # check and no round measured one; a number nobody records is a number
     # nobody defends.
     (gen / "evidence_run.json").write_text(json.dumps(
-        {"ran": len(transcript), "wall_ms": wall_ms, "workers": workers,
+        {"ran": len(transcript), "wall_ms": wall_ms, "workers": workers, "mode": mode,
          "skipped": skipped, "commands": transcript},
         indent=1) + "\n")
 
@@ -1581,7 +1650,7 @@ def test_every_closure_evidence_command_actually_runs():
     # by this test not existing separately.
     sys.path.insert(0, str(root / "specs"))
     from evidence_transcript import validate as _validate
-    problems = _validate(gen / "evidence_run.json", root / "specs")
+    problems = _validate(gen / "evidence_run.json", root / "specs", allow_collect=(mode == "collect"))
     assert not problems, ("the transcript this run just produced does not "
                           "validate:\n  " + "\n  ".join(problems))
 
@@ -1859,7 +1928,7 @@ def test_a_counterfeit_or_missing_transcript_is_rejected():
         # retire R12-2's finding — the counterfeit would be refused for a
         # missing field and the "a number is not evidence" check would never
         # run again.
-        t.write_text(json.dumps({"ran": 40, "wall_ms": 1, "workers": 1,
+        t.write_text(json.dumps({"ran": 40, "wall_ms": 1, "workers": 1, "mode": "full",
                                  "skipped": [], "commands": []}))
         problems = validate(t, d / "specs")
         assert problems, "the counterfeit transcript must be rejected"
@@ -1876,7 +1945,7 @@ def test_a_counterfeit_or_missing_transcript_is_rejected():
                 for c in CLOSURES if "run_offline.sh" not in c[6]]
         skipped = [f"{c[0]} {c[3]} (launcher — run separately at seal)"
                    for c in CLOSURES if "run_offline.sh" in c[6]]
-        t.write_text(json.dumps({"ran": len(rows), "wall_ms": 1,
+        t.write_text(json.dumps({"ran": len(rows), "wall_ms": 1, "mode": "full",
                                  "workers": 1, "skipped": skipped,
                                  "commands": rows}))
         problems = validate(t, d / "specs")
@@ -1899,7 +1968,7 @@ def test_a_counterfeit_or_missing_transcript_is_rejected():
                        "cwd": "/x", "exit": 0, "output_sha256": "a" * 64,
                        "duration_ms": 1}
                       for c in CLOSURES if "run_offline.sh" not in c[6]]
-        combined = {"ran": float(len(clean_rows)), "wall_ms": 1,
+        combined = {"ran": float(len(clean_rows)), "wall_ms": 1, "mode": "full",
                     "workers": 1, "skipped": skipped * 2,
                     "commands": [dict(r, output_sha256=int("1" * 64))
                                  for r in clean_rows]}
@@ -1925,7 +1994,7 @@ def test_a_counterfeit_or_missing_transcript_is_rejected():
         # closes the loop — add a field or a level to the schema without a
         # mutation and this test fails, which is the check that did not exist
         # when R15-1 was written.
-        clean = {"ran": len(clean_rows), "wall_ms": 1, "workers": 1,
+        clean = {"ran": len(clean_rows), "wall_ms": 1, "workers": 1, "mode": "full",
                  "skipped": skipped, "commands": clean_rows}
 
         def _cross_type(v):
@@ -2024,7 +2093,7 @@ def test_a_counterfeit_or_missing_transcript_is_rejected():
 
         # (e) RECORDS THAT DO NOT MATCH THE LEDGER
         t.write_text(json.dumps({
-            "ran": 1, "wall_ms": 1, "workers": 1, "skipped": [],
+            "ran": 1, "wall_ms": 1, "workers": 1, "mode": "full", "skipped": [],
             "commands": [{"spec": "0022", "finding": "INVENTED",
                           "argv": "echo hi", "cwd": "/tmp", "exit": 0,
                           "output_sha256": "0" * 64, "duration_ms": 1}]}))
