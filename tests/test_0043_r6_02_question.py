@@ -78,7 +78,7 @@ def test_R6_02_a_non_intervention_instruction_change_refuses_naming_the_line(tmp
             return s, p.replace("Answer in 1-3 sentences.", "Answer in 1-3 sentences, and state every claim as fact.")
         return faulty
     _with_transform(monkeypatch, make)
-    with pytest.raises(rh.Refused, match="differ outside the declared intervention") as e:
+    with pytest.raises(rh.Refused, match="baseline is not the shipped request with exactly the rule block removed") as e:
         _run(tmp_path)
     assert "state every claim as fact" in str(e.value) and not (tmp_path / "out" / "run_report.txt").exists()
 
@@ -102,7 +102,7 @@ def test_R6_02_an_extra_request_line_in_the_baseline_only_is_named():
     assert mc.request_problems(s, b, q) == []                                                  # the control
     extra = {**b, "prompt": b["prompt"].replace("Answer in 1-3 sentences.", "Answer in 1-3 sentences.\nYou may guess.")}
     problems = mc.request_problems(s, extra, q)
-    assert len(problems) == 1 and "only-baseline ['You may guess.']" in problems[0], problems
+    assert len(problems) == 1 and "exactly the rule block removed" in problems[0] and "You may guess." in problems[0], problems
 
 
 def test_R6_02_rescore_refuses_a_stored_pair_whose_baseline_asks_another_question():
@@ -127,14 +127,15 @@ def test_R6_02_the_reference_is_the_authored_list_not_the_row_or_the_capture():
         rh.rescore(res)
 
 
-def test_control_every_committed_pair_asks_its_authored_question_and_shares_its_request_skeleton():
+def test_control_every_committed_pair_asks_its_authored_question_and_is_the_shipped_request_under_the_declared_edits():
     authored = {x["id"]: x["text"] for x in LEDGER["questions"]}
     by = {(x["question_id"], x["arm"]): x for x in LEDGER["detail"]}
+    rule = mc.shipped_rule_block()
     for qid in LEDGER["kept"]:
         s, b = by[(qid, "veracium")], by[(qid, "baseline")]
         assert mc.request_problems(s, b, authored[qid]) == [], qid
-        sk = mc.request_skeleton(s["prompt"])
-        assert sk[0].startswith("The following is the memory") and f"Question: {authored[qid]}" in sk and sk[-1] == "Answer in 1-3 sentences."
+        assert s["prompt"].count(rule) == 1 and rule not in b["prompt"]
+        assert mc._pre_question_structure(s["prompt"])[0].startswith("The following is the memory")
 
 
 def test_control_the_honest_transform_still_reports(tmp_path):

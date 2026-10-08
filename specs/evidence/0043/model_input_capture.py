@@ -265,7 +265,41 @@ INTERVENTION_RENAMED_LINES = {"GROUNDED MEMORY (verified — you may state these
 INTERVENTION_REMOVED_LINES = ("UNVERIFIED CLAIMS (received from third parties / unconfirmed — NEVER assert these",
                               "as fact; they record that a claim was *made*, not that it is true):",
                               "## UNVERIFIED THIRD-PARTY CLAIMS (never assert as fact)", "(none)")
-INTERVENTION_REMOVED_BLOCK_HEAD = "Answer using this rule:"     # with every following "- " line and its "  " continuations
+INTERVENTION_REMOVED_RULE_BLOCK = "the gate's rule block, read from veracium.gate.GATE_PROMPT by shipped_rule_block()"
+
+def shipped_rule_block() -> str:
+    """The rule block the intervention REMOVES, read from the SHIPPED RENDERING SEAM (`veracium.gate.GATE_PROMPT`: from
+    'Answer using this rule:' up to 'Answer in 1-3 sentences.'), never from `baseline_transform`. 0043 round 7 (R7-01): the
+    first form ignored ANY block under that heading, in BOTH arms, so an instruction added to the baseline inside such a
+    block was invisible. The reviewer: bind the removable segment to the shipped seam and enforce the edit directionally."""
+    from veracium.gate import GATE_PROMPT
+    i, j = GATE_PROMPT.index("Answer using this rule:\n"), GATE_PROMPT.index("Answer in 1-3 sentences.")
+    block = GATE_PROMPT[i:j]
+    if GATE_PROMPT.count(block) != 1:                  # the seam must name ONE block, or "remove it" names nothing exact
+        raise ValueError("the gate's rule block does not occur exactly once in GATE_PROMPT")
+    return block
+
+
+def declaration_problems() -> list[str]:
+    """The declared intervention bound to what the shipped code RENDERS (research's round-7 refinement): every declared
+    literal must occur where the shipped path produces it, so the contract and the seam cannot drift apart silently and
+    the declaration stays the reference, never derived from the code under test."""
+    import inspect
+    import veracium
+    from veracium import gate
+    p = []
+    if gate.GATE_SYSTEM.count(INTERVENTION_SYSTEM_SENTENCE) != 1:
+        p.append("the declared system sentence is not in the gate's rendered GATE_SYSTEM exactly once")
+    for line in list(INTERVENTION_RENAMED_LINES) + [l for l in INTERVENTION_REMOVED_LINES if l != "(none)"
+                                                     and not l.startswith("## ")]:
+        if gate.GATE_PROMPT.count(line) != 1:
+            p.append(f"the declared line {line!r} is not in the gate's GATE_PROMPT exactly once")
+    if "## UNVERIFIED THIRD-PARTY CLAIMS (never assert as fact)" in INTERVENTION_REMOVED_LINES and \
+            "## UNVERIFIED THIRD-PARTY CLAIMS (never assert as fact)" not in inspect.getsource(veracium):
+        p.append("the declared section header is not rendered by the shipped context builder")
+    if "(none)" in INTERVENTION_REMOVED_LINES and '"(none)"' not in inspect.getsource(gate.render_gate_input):
+        p.append("the declared '(none)' line is not rendered by render_gate_input")
+    return p
 
 
 def _is_evidence_line(line: str) -> bool:
@@ -275,33 +309,29 @@ def _is_evidence_line(line: str) -> bool:
                 or l.startswith("The following is the memory") or l.startswith("UNVERIFIED CLAIMS (") or l.startswith("as fact; they record"))
 
 
-def request_skeleton(prompt: str) -> list[str]:
-    """Every non-blank line of a captured prompt that is NEITHER an evidence line NOR an enumerated intervention segment,
-    in order, with the enumerated renames applied. Every line classifies as exactly one of the three; the skeleton is what
-    the intervention leaves untouched, so two arms of one valid comparison have EQUAL skeletons — an added, dropped or
-    altered request line (an instruction, the question, anything not listed) shows here by name."""
-    lines, out, i, before_q = prompt.split("\n"), [], 0, True
-    while i < len(lines):
-        line = lines[i]
+def _pre_question_structure(prompt: str) -> list[str]:
+    """Every non-blank line before the Question line that is NOT an evidence line (headers, the memory preamble, the
+    UNVERIFIED preamble, '(none)'), in order. Evidence lines are compared by `evidence_units`."""
+    out = []
+    for line in prompt.split("\n"):
         if line.startswith("Question:"):
-            before_q = False
-        if line.strip() == INTERVENTION_REMOVED_BLOCK_HEAD:
-            i += 1
-            while i < len(lines) and (lines[i].startswith("- ") or lines[i].startswith("  ")):
-                i += 1
-            continue
-        if not line.strip() or line.strip() in INTERVENTION_REMOVED_LINES or (before_q and _is_evidence_line(line)):
-            i += 1
-            continue
-        out.append(INTERVENTION_RENAMED_LINES.get(line, line))
-        i += 1
+            break
+        if line.strip() and not _is_evidence_line(line):
+            out.append(line)
     return out
 
 
 def request_problems(shipped: dict, baseline: dict, question: str) -> list[str]:
-    """R6-02: the arms ask the AUTHORED question and differ in nothing outside the declared intervention. `question` is the
-    authored text (the examiner's question list, frozen before any capture — never a field read back from a capture)."""
-    p = []
+    """R6-02 and R7-01: the baseline is the shipped request with EXACTLY the declared edits applied, and nothing else.
+    DIRECTED, with the shipped capture as the reference (a symmetric normalisation of both arms can hide an addition):
+      (a) the baseline's system is the shipped system minus exactly the declared grounding sentence;
+      (b) each arm asks the AUTHORED question once (the examiner's list, frozen before any capture);
+      (c) BEFORE the question, the baseline's non-evidence lines are the shipped ones with the declared renames applied
+          and the declared removed lines dropped, in order, compared as they are (no erasure on the baseline side);
+      (d) FROM the question on, the shipped text carries the seam's rule block exactly once, where the seam renders it
+          (right after the question line and a blank line), and the baseline text is that shipped text with that ONE
+          block removed, byte for byte: a block retained, added, altered or moved fails, and so does a plain added line."""
+    p = list(declaration_problems())                  # a declaration that drifted from the seam refuses every comparison
     want = shipped["system"].replace(" " + INTERVENTION_SYSTEM_SENTENCE, "", 1)
     if shipped["system"].count(INTERVENTION_SYSTEM_SENTENCE) != 1 or baseline["system"] != want:
         p.append("the baseline's system is not the shipped system minus exactly the declared grounding sentence")
@@ -309,11 +339,23 @@ def request_problems(shipped: dict, baseline: dict, question: str) -> list[str]:
         asked = [l for l in cap["prompt"].split("\n") if l.startswith("Question:")]
         if asked != [f"Question: {question}"]:
             p.append(f"the {arm} arm does not ask the authored question once: asks {asked!r}, authored {question!r}")
-    ks, kb = request_skeleton(shipped["prompt"]), request_skeleton(baseline["prompt"])
-    if ks != kb:
-        only_s = [l for l in ks if l not in kb]; only_b = [l for l in kb if l not in ks]
-        p.append(f"the arms' requests differ outside the declared intervention: only-shipped {only_s!r} only-baseline {only_b!r}"
-                 + ("" if only_s or only_b else " (the same lines, in another order)"))
+    expected = [INTERVENTION_RENAMED_LINES.get(l, l) for l in _pre_question_structure(shipped["prompt"])
+                if l.strip() not in INTERVENTION_REMOVED_LINES]
+    actual = _pre_question_structure(baseline["prompt"])
+    if actual != expected:
+        p.append(f"before the question, the baseline's request lines are not the shipped ones under the declared edits: "
+                 f"expected {expected!r}, baseline {actual!r}")
+    rule = shipped_rule_block()
+    if "\nQuestion: " in shipped["prompt"] and "\nQuestion: " in baseline["prompt"]:
+        st = shipped["prompt"][shipped["prompt"].index("\nQuestion: "):]
+        bt = baseline["prompt"][baseline["prompt"].index("\nQuestion: "):]
+        qline = st.split("\n")[1]
+        if st.count(rule) != 1 or not st.startswith("\n" + qline + "\n\n" + rule):
+            p.append("the shipped capture does not carry this tree's rule block exactly once where the seam renders it: the run "
+                     "predates the current gate, or the capture is not the gate's (fail closed; a STATED limit)")
+        elif bt != st.replace(rule, "", 1):
+            p.append(f"from the question on, the baseline is not the shipped request with exactly the rule block removed: "
+                     f"expected {st.replace(rule, '', 1)!r}, baseline {bt!r}")
     return p
 
 
