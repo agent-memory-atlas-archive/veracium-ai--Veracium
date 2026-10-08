@@ -16,10 +16,16 @@ ROLE_MODEL = {
     "distill": "claude-haiku-4-5",
     "compile": "claude-sonnet-5",
     "gate": "claude-sonnet-5",
+    # the acceptance eval's judge (tests/eval/run_eval.py): a role of its own, never "gate" (the model under test);
+    # claude-haiku-5-5 is validated for CONTENT questions only, and the reference judge is kept for comparison
+    "judge": "claude-haiku-5-5",
+    "judge_reference": "claude-sonnet-5",
 }
 
 
 class ClaudeCLIComplete:
+    _models = ROLE_MODEL          # the model each role maps to, declared (the eval reads it to record its judge)
+
     def __call__(self, prompt: str, *, system: Optional[str] = None,
                  role: str = "compile", json_schema: Optional[dict] = None) -> str:
         cmd = ["claude", "-p", "--model", ROLE_MODEL.get(role, "claude-sonnet-4-5")]
