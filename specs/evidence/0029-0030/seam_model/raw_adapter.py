@@ -215,28 +215,6 @@ def _check_derived(model, name, value) -> bool:
     return True
 
 
-def _nonempty_str(v) -> bool:
-    return isinstance(v, str) and v != ""
-
-
-def _identity_field(v) -> bool:
-    """`origin`/`source_id`: None, or a 1..IDENTITY_MAX-char string.
-
-    The bound is SHIPPED, not invented: `IDENTITY_MAX = 512` (scope.py:96) and
-    `Provenance.source_id/origin: Optional[str], min_length=1, max_length=512`
-    (schema.py:134-135). Round-4 F2: the reviewer fed `source_id=[]`, the
-    PRESENCE-only schema check accepted it, and the real `ScopeView` raised
-    `ScopeError: identity field must be a 1..512-char string or None`.
-    THE ADAPTER MUST NOT PASS ANYTHING ITS CONSUMER WILL RAISE ON -- a
-    presence check asks whether a key exists and never what it holds.
-    """
-    return v is None or (isinstance(v, str) and 1 <= len(v) <= IDENTITY_MAX)
-
-
-def _optional_str(v) -> bool:
-    return v is None or isinstance(v, str)
-
-
 def adapt(state_text: str, *, expect_id: str, expect_user: str) -> Optional[Adapted]:
     """TEXT -> Adapted, or None. `None` is the single failure value; the caller
     maps it to MALFORMED, or to SCOPE_HIDDEN on the current leg before

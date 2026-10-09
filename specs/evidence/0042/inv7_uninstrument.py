@@ -1261,11 +1261,6 @@ def _leaf(obj, tp: type, identity, seen: dict) -> tuple:
                           f"it cannot be described faithfully without executing it, so it is refused")
 
 
-def _normal_code(co) -> tuple:
-    """A code object by the recursive rule's code branch (kept by name for its callers and cells)."""
-    return _normalise(co, {})[1]
-
-
 def _normal_value(v, seen=None) -> tuple:
     """A value in vars(Site), by the recursive rule. `seen` carries the Site class itself, so a reference back to it (a
     slot's __objclass__) is recorded by position rather than describing the class again inside its own member."""
@@ -2373,20 +2368,6 @@ def declared_names(tree: ast.Module) -> tuple[set[str], set[str]]:
             # derived gate now refuses.
             aliases.add(a.asname or a.name)
     return declared, aliases
-
-
-def _statement_keys(tree: ast.AST) -> list:
-    """Every non-instrumentation statement, as (qualname, kind, unparsed text) — the material the transform must PRESERVE."""
-    keys = []
-    def walk(node, qual):
-        for child in ast.iter_child_nodes(node):
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                keys.append((".".join(qual), type(child).__name__, child.name)); walk(child, qual + [child.name]); continue
-            if isinstance(child, ast.stmt):
-                keys.append((".".join(qual), type(child).__name__, None))
-            walk(child, qual)
-    walk(tree, [])
-    return keys
 
 
 def uninstrument_source(text: str, filename: str = "<twin>") -> tuple[str, dict]:

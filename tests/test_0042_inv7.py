@@ -2371,7 +2371,8 @@ def test_r18_the_constant_cell_changes_only_a_constant():
     un = _load("inv7_uninstrument_r18c", EVIDENCE / "inv7_uninstrument.py")
     ref = un.REFERENCE_CENSUS.read_text()
     h, r = un._realized_site(_r17_after(_R18_EXIT_CONST)(ref), "_x").__exit__, un._realized_site(ref, "_x").__exit__
-    hn, rn = dict(un._normal_code(h.__code__)), dict(un._normal_code(r.__code__))
+    normal_code = lambda co: un._normalise(co, {})[1]          # the code branch of the recursive rule (was un._normal_code)
+    hn, rn = dict(normal_code(h.__code__)), dict(normal_code(r.__code__))
     assert [k for k in rn if hn[k] != rn[k]] == ["co_consts"], [k for k in rn if hn[k] != rn[k]]
 
 

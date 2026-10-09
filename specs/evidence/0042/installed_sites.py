@@ -69,18 +69,6 @@ _scope = _sibling("scope_resolution")
 Resolver, UnresolvableScope = _scope.Resolver, _scope.UnresolvableScope
 
 
-def _binding_bodies(src: str, filename: str = "<scan>") -> dict:
-    """{NAME: the (consult|fire) methods used on the MODULE-LEVEL site NAME inside ONE function body, unioned over
-    bodies carrying BOTH}. Round 5 made the scan per-body; round 6 made it resolve through enclosing scopes; ROUND 7
-    (F2) stops enumerating the forms that bind a name at all. The previous version hand-listed assignments, loop
-    targets, imports, with-as, except-as and parameters, and the reviewer found the two rungs it had not reached —
-    an assignment expression (`S := …`) and a `match` capture — each reading `bound=True` while the declared site's
-    counters never moved. The set of forms that bind a name is defined by the LANGUAGE, so the question now goes to
-    CPython's own scope analysis (`scope_resolution.Resolver`, symtable): a use counts only where the name resolves
-    to the MODULE binding, which is false for a local, a parameter, or a name bound by an enclosing function."""
-    return _binding_scan(src, filename)[0]
-
-
 def binding_body_defs(src: str, filename: str = "<scan>") -> list:
     """The function nodes whose bodies BIND a site (consult and fire on the module-level site in ONE body) — the
     bodies `bound` rests on. ROUND 13's verdict F2: the scan-to-runtime check compared the functions it happened to
