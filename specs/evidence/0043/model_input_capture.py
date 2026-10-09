@@ -337,25 +337,17 @@ def _pre_question_lines(prompt: str) -> list[str]:
     return out
 
 
-def _pre_question_structure(prompt: str) -> list[str]:
-    """Every non-blank line before the Question line that is NOT an evidence line (headers, the memory preamble, the
-    UNVERIFIED preamble, '(none)'), in order. Evidence lines are compared by `evidence_units`."""
-    out = []
-    for line in prompt.split("\n"):
-        if line.startswith("Question:"):
-            break
-        if line.strip() and not _is_evidence_line(line):
-            out.append(line)
-    return out
-
-
 def request_problems(shipped: dict, baseline: dict, question: str) -> list[str]:
-    """R6-02 and R7-01: the baseline is the shipped request with EXACTLY the declared edits applied, and nothing else.
+    """R6-02, R7-01 and R8-01: the baseline is the shipped request with EXACTLY the declared edits applied, and nothing else.
     DIRECTED, with the shipped capture as the reference (a symmetric normalisation of both arms can hide an addition):
       (a) the baseline's system is the shipped system minus exactly the declared grounding sentence;
       (b) each arm asks the AUTHORED question once (the examiner's list, frozen before any capture);
-      (c) BEFORE the question, the baseline's non-evidence lines are the shipped ones with the declared renames applied
-          and the declared removed lines dropped, in order, compared as they are (no erasure on the baseline side);
+      (c) BEFORE the question, ONE directed sequence over every non-blank line, evidence included: each shipped line,
+          in order, is dropped if a declared removal, renamed if a declared rename, put through `declared_evidence_edit`
+          if it is evidence, else kept as it is; the baseline's non-blank lines, as they are, must equal that sequence
+          (no erasure on the baseline side). Evidence order, and evidence placement among the retained lines, are
+          therefore compared. Whitespace-only lines are skipped on both sides: a formatting waiver (the round-9
+          verdict), not a claim that formatting cannot affect a model;
       (d) FROM the question on, the shipped text carries the seam's rule block exactly once, where the seam renders it
           (right after the question line and a blank line), and the baseline text is that shipped text with that ONE
           block removed, byte for byte: a block retained, added, altered or moved fails, and so does a plain added line."""

@@ -135,7 +135,7 @@ def test_control_every_committed_pair_asks_its_authored_question_and_is_the_ship
         s, b = by[(qid, "veracium")], by[(qid, "baseline")]
         assert mc.request_problems(s, b, authored[qid]) == [], qid
         assert s["prompt"].count(rule) == 1 and rule not in b["prompt"]
-        assert mc._pre_question_structure(s["prompt"])[0].startswith("The following is the memory")
+        assert mc._pre_question_lines(s["prompt"])[0].startswith("The following is the memory")
 
 
 def test_control_the_honest_transform_still_reports(tmp_path):
