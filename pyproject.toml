@@ -39,6 +39,11 @@ packages = ["src/veracium"]
 # list still lands in the published tarball. `CLAUDE.md` is exactly that: it
 # is internal multi-session workflow, deliberately untracked, and it was on
 # its way to PyPI, where a release cannot be withdrawn and re-cut.
+# ⚠️ 2026-10-09: it had already reached PyPI, in the 0.1.2–0.15.0 sdists (33
+# of them; found by downloading every published artifact, with no secrets in
+# the five versions of the file). The owner's ruling, reaffirmed for that
+# full range: left as-is. This exclude applies from 0.16.0. `.claude/` is
+# excluded whole since 221ed83.
 #
 # Keep this list in step with `.git/info/exclude` —
 # `test_the_sdist_excludes_every_locally_excluded_file` fails if they drift.
