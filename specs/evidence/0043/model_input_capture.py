@@ -309,6 +309,34 @@ def _is_evidence_line(line: str) -> bool:
                 or l.startswith("The following is the memory") or l.startswith("UNVERIFIED CLAIMS (") or l.startswith("as fact; they record"))
 
 
+def declared_evidence_edit(line: str) -> str:
+    """0043 round 8 (R8-01): ONE evidence line under the DECLARED edits — every bracketed trust marker the render layer
+    attaches removed, and the quarantine construction made plain — written on the CHECK side, beside the declaration, and
+    never called by `baseline_transform` (which has its own path: `strip_markers` and its regex). A shared helper would be
+    a shared oracle: a fault in it would be applied to the shipped side by the check and to the baseline by the transform,
+    and they would agree. The marker DATA is the seam-derived set (`examiner_projection.derive_forbidden_markers`, read
+    from the render code); the application below is written independently of `strip_markers`."""
+    ep = _load("examiner_projection"); prose = ep.derive_forbidden_markers()["prose"]
+    origins = set(prose.get("graph.py:_ORIGIN_LABELS", [])) | set(prose.get("graph.py:_origin_label", []))
+    for frag in sorted({f for fr in prose.values() for f in fr if f != "unconfirmed"}, key=lambda f: (-len(f), f)):
+        line = line.replace("[" + frag + "] ", "").replace("[" + frag + "]", "")
+    for o in sorted(origins, key=lambda o: (-len(o), o)):
+        line = line.replace(" [" + o + "; unconfirmed]", "").replace("[" + o + "; unconfirmed]", "")
+    m = re.fullmatch(r"(?:\S+ )?claims: (\S+) (.+?) \((\d{4}-\d{2}-\d{2})\)", line)
+    return f"{m.group(1)}: {m.group(2)} (since {m.group(3)})" if m else line
+
+
+def _pre_question_lines(prompt: str) -> list[str]:
+    """Every non-blank line before the Question line, in order, as it is (whitespace-only lines are the one allowance)."""
+    out = []
+    for line in prompt.split("\n"):
+        if line.startswith("Question:"):
+            break
+        if line.strip():
+            out.append(line)
+    return out
+
+
 def _pre_question_structure(prompt: str) -> list[str]:
     """Every non-blank line before the Question line that is NOT an evidence line (headers, the memory preamble, the
     UNVERIFIED preamble, '(none)'), in order. Evidence lines are compared by `evidence_units`."""
@@ -339,11 +367,18 @@ def request_problems(shipped: dict, baseline: dict, question: str) -> list[str]:
         asked = [l for l in cap["prompt"].split("\n") if l.startswith("Question:")]
         if asked != [f"Question: {question}"]:
             p.append(f"the {arm} arm does not ask the authored question once: asks {asked!r}, authored {question!r}")
-    expected = [INTERVENTION_RENAMED_LINES.get(l, l) for l in _pre_question_structure(shipped["prompt"])
-                if l.strip() not in INTERVENTION_REMOVED_LINES]
-    actual = _pre_question_structure(baseline["prompt"])
+    # R8-01: ONE directed sequence over EVERY non-blank line before the question — evidence and structure together, so
+    # an evidence line reordered, or moved across a retained header, fails (the first form compared the non-evidence lines
+    # and, separately, the evidence as SORTED units: both projections equal, the request not). The shipped line under its
+    # declared edit, in order; the baseline's line as it is.
+    expected = []
+    for l in _pre_question_lines(shipped["prompt"]):
+        if l.strip() in INTERVENTION_REMOVED_LINES:
+            continue
+        expected.append(INTERVENTION_RENAMED_LINES.get(l) or (declared_evidence_edit(l) if _is_evidence_line(l) else l))
+    actual = _pre_question_lines(baseline["prompt"])
     if actual != expected:
-        p.append(f"before the question, the baseline's request lines are not the shipped ones under the declared edits: "
+        p.append(f"before the question, the baseline is not the shipped request under the declared edits, in order: "
                  f"expected {expected!r}, baseline {actual!r}")
     rule = shipped_rule_block()
     if "\nQuestion: " in shipped["prompt"] and "\nQuestion: " in baseline["prompt"]:
