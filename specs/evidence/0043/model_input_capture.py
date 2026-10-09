@@ -309,6 +309,26 @@ def _is_evidence_line(line: str) -> bool:
                 or l.startswith("The following is the memory") or l.startswith("UNVERIFIED CLAIMS (") or l.startswith("as fact; they record"))
 
 
+_DECLARED_EDIT_DATA: dict = {}
+
+
+def _declared_edit_data() -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """The marker data `declared_evidence_edit` applies, in its order (longest first, ties by text): the bracketed
+    fragments, then the origin labels. Derived once per tree and memoised on the BYTES it is derived from
+    (examiner_projection.py, src/veracium/graph.py, src/veracium/introspect.py), as `_marker_patterns` is (e3be0d3):
+    re-deriving per evidence line re-parsed graph.py 14 times per comparison. The memo is the CHECK side's own, separate
+    from the transform's `_MARKER_PATTERNS`, so the check never reaches the transform's path; a changed or mutant tree
+    has other bytes and re-derives."""
+    src = HERE.parents[2] / "src" / "veracium"
+    key = hashlib.sha256(b"\0".join(p.read_bytes() for p in (HERE / "examiner_projection.py", src / "graph.py", src / "introspect.py"))).hexdigest()
+    if key not in _DECLARED_EDIT_DATA:
+        ep = _load("examiner_projection"); prose = ep.derive_forbidden_markers()["prose"]
+        origins = set(prose.get("graph.py:_ORIGIN_LABELS", [])) | set(prose.get("graph.py:_origin_label", []))
+        _DECLARED_EDIT_DATA[key] = (tuple(sorted({f for fr in prose.values() for f in fr if f != "unconfirmed"}, key=lambda f: (-len(f), f))),
+                                    tuple(sorted(origins, key=lambda o: (-len(o), o))))
+    return _DECLARED_EDIT_DATA[key]
+
+
 def declared_evidence_edit(line: str) -> str:
     """0043 round 8 (R8-01): ONE evidence line under the DECLARED edits — every bracketed trust marker the render layer
     attaches removed, and the quarantine construction made plain — written on the CHECK side, beside the declaration, and
@@ -316,11 +336,10 @@ def declared_evidence_edit(line: str) -> str:
     a shared oracle: a fault in it would be applied to the shipped side by the check and to the baseline by the transform,
     and they would agree. The marker DATA is the seam-derived set (`examiner_projection.derive_forbidden_markers`, read
     from the render code); the application below is written independently of `strip_markers`."""
-    ep = _load("examiner_projection"); prose = ep.derive_forbidden_markers()["prose"]
-    origins = set(prose.get("graph.py:_ORIGIN_LABELS", [])) | set(prose.get("graph.py:_origin_label", []))
-    for frag in sorted({f for fr in prose.values() for f in fr if f != "unconfirmed"}, key=lambda f: (-len(f), f)):
+    frags, origins = _declared_edit_data()
+    for frag in frags:
         line = line.replace("[" + frag + "] ", "").replace("[" + frag + "]", "")
-    for o in sorted(origins, key=lambda o: (-len(o), o)):
+    for o in origins:
         line = line.replace(" [" + o + "; unconfirmed]", "").replace("[" + o + "; unconfirmed]", "")
     m = re.fullmatch(r"(?:\S+ )?claims: (\S+) (.+?) \((\d{4}-\d{2}-\d{2})\)", line)
     return f"{m.group(1)}: {m.group(2)} (since {m.group(3)})" if m else line
