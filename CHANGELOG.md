@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Accepted: the implementation of specs/0043, the refusal harness, at external round 9 — "ACCEPT —
+  IMPLEMENTATION at the reviewed pin. R8-01 is closed. No new blocking finding."** The implementation review ran
+  rounds 5 to 9 on round 4's design acceptance. The accepted code is pin `f7a1a42`, reviewed as the round-9 package;
+  the reviewer's own offline run read 5,458 passed and 48 skips, each explained, with no failures. The design
+  accepted at round 4 is unchanged (INV-3–6: the ledger, blindness, adjudication and arm contracts). Rounds 5 to 8
+  raised 10 findings; each is a row in the spec's generated Review closure ledger, closed by a test a reader can run,
+  and each round's package and verdict are rows in `specs/reviews.py`. The spec moves to v6.10, which records what
+  was accepted and the limits the acceptance keeps: the published refusal rates (veracium 12/24, baseline 1/24) are
+  results on a five-fact fixture, not production estimates; the arm comparison waives whitespace-only lines before
+  the question as formatting, which is not proof that formatting cannot affect a model; and the marker set the arm
+  check removes is derived from the renderer, so an error in that derivation would affect both sides. The
+  corrections are in the harness (`specs/evidence/0043/`) and its tests; **no 0043 correction touched `src/`**:
+  0043's one product surface, `gate.render_gate_input` with the harness-only `render=` parameter (recorded under
+  tranche 1 below), is byte-identical since the round-5 pin. Nobody needs to upgrade for this entry.
+
 - **Accepted: the implementation of specs/0041, targeted redaction, at external round 14 — "Verdict: ACCEPTED. The
   implementation at this pin closes both round-13 findings and the shared-carrier observation. No new blocking or
   nonblocking finding is raised."** The implementation review ran rounds 9 to 14 on round 8's design acceptance.

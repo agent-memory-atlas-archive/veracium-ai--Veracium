@@ -4,7 +4,7 @@
 
 # Spec status
 
-**42 specs · 37 accepted · 433 external review
+**42 specs · 37 accepted · 438 external review
 rounds · 0 blocking questions open.**
 
 **Only `accepted` authorises implementation** (`PROCESS.md` §4a), and external
@@ -50,7 +50,7 @@ is the number that decides what can be built.
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
 | **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-10-06 | 0 | 14 | 0 | 0 | 0 | — |
 | **0042** | exercised guarantees — measuring whether what we specify is what runs | `accepted` | 2026-10-02 | 0 | 23 | 0 | 0 | 0 | — |
-| **0043** | the refusal harness — measuring whether the gate declines when it should | `accepted` | 2026-10-09 | 0 | 4 | 0 | 0 | 0 | — |
+| **0043** | the refusal harness — measuring whether the gate declines when it should | `accepted` | 2026-10-09 | 0 | 9 | 0 | 0 | 0 | — |
 | **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
 | **0045** | the declarative grounding axis — was a fact STATED, or did we work it out? | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
 | **0046** | the correction receipt — a corrected fact names what still rests on it | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
@@ -59,7 +59,7 @@ is the number that decides what can be built.
 **Review archives** — the exact package sent for each round, with a sha256 per
 archive — are indexed in `specs/archives/INDEX.md`.
 
-**Per-finding closure ledger — 508 findings across the
+**Per-finding closure ledger — 518 findings across the
 14 tracked specs** (0001, 0022, 0023, 0024, 0025, 0028, 0030, 0031, 0037, 0038, 0039, 0041, 0042, 0043), derived from
 `specs/closure_findings.py` and validated against `specs/reviews.py` by
 `specs/render_closure.py --check`. This total is rendered HERE ONLY (owner's
