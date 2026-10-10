@@ -1,0 +1,62 @@
+{
+ "applied": {
+  "check_side": {
+   "fragments": [
+    "UNVERIFIED third-party claim, never assert as fact",
+    "possibly stale \u2014 confirm before relying on it",
+    "possible extraction error",
+    "third-party-reported",
+    "assistant-generated",
+    "third-party-derived",
+    "unverified-origin",
+    "SUPERSEDED"
+   ],
+   "origins": [
+    "third-party-reported",
+    "assistant-generated",
+    "third-party-derived",
+    "unverified-origin"
+   ]
+  },
+  "transform_side": {
+   "marker_patterns": [
+    "\\[UNVERIFIED\\ third\\-party\\ claim,\\ never\\ assert\\ as\\ fact\\] ?",
+    "\\[possibly\\ stale\\ \u2014\\ confirm\\ before\\ relying\\ on\\ it\\] ?",
+    "\\[possible\\ extraction\\ error\\] ?",
+    "\\[third\\-party\\-reported\\] ?",
+    "\\[assistant\\-generated\\] ?",
+    "\\[third\\-party\\-derived\\] ?",
+    "\\[unverified\\-origin\\] ?",
+    "\\[SUPERSEDED\\] ?",
+    " ?\\[third\\-party\\-reported; unconfirmed\\]",
+    " ?\\[assistant\\-generated; unconfirmed\\]",
+    " ?\\[third\\-party\\-derived; unconfirmed\\]",
+    " ?\\[unverified\\-origin; unconfirmed\\]"
+   ]
+  }
+ },
+ "body_sha256": "a4b64f6761f8450f9388f09ec70c5f68da341b39c967787d5c92900450540f35",
+ "prose": {
+  "graph.py:_ORIGIN_LABELS": [
+   "assistant-generated",
+   "third-party-reported"
+  ],
+  "graph.py:_origin_label": [
+   "third-party-derived",
+   "unverified-origin"
+  ],
+  "graph.py:_outcome_note": [],
+  "graph.py:render_edges": [
+   "SUPERSEDED",
+   "UNVERIFIED third-party claim, never assert as fact",
+   "possible extraction error",
+   "possibly stale \u2014 confirm before relying on it",
+   "unconfirmed"
+  ]
+ },
+ "sources": {
+  "specs/evidence/0043/examiner_projection.py": "20e377208c8eef24eb27da34a546fb7e1005946f3d5970a22297aca6f07cc3c2",
+  "src/veracium/graph.py": "671bc8341904cf09fda40a9895bb31749ae0458fa49e0e73e26d14e83fc415eb",
+  "src/veracium/introspect.py": "c28341b4c5eeba987c52f792d66956b4177a7712556ab0b400260689ab106068"
+ }
+}

@@ -2349,6 +2349,11 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # run_ledger.json) — its exclusion screen, class join and support mapping are the
         # decisions a mutant would move; the matrix drives them on canned inputs
         root / "specs" / "evidence" / "0043" / "run_harness.py",
+        # specs/0043 round-9 follow-up: the derived-marker snapshot's `--check` verifies a committed artifact against a
+        # fresh derivation, which makes it a checker whatever its name says (0041's fixture precedent above)
+        root / "specs" / "evidence" / "0043" / "derived_markers.py",
+        # ...and the mechanism mutation table: its `--check` asserts a committed table current and every row good
+        root / "specs" / "evidence" / "0043" / "mutation_campaign.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

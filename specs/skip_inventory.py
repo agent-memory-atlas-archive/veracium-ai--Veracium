@@ -249,6 +249,10 @@ INVENTORY = [
      "git-checkout", "specs/0042 INV-7 (round 9, F2): the pin is a commit here but the "
      "harness blob at it is not fetchable (a shallow or partial clone), which is a fact "
      "about the checkout and not about the harness"),
+    ("tests/test_0043_mutation_campaign.py", "skipif", "not _is_checkout()",
+     "git-checkout", "specs/0043 round-9 follow-up: the one-row reproduction snapshots the TRACKED tree "
+     "(git ls-files); a git-less copy (an sdist, the reviewer's tree/) has none, so the row cannot be "
+     "re-run there — CI is a checkout, where it always runs"),
     ("tests/test_0043_run.py", "skip",
      "the run's pin cannot be checked against history",
      "git-checkout", "specs/0043 tranche 2: the committed run report pins the commit it "
