@@ -78,8 +78,12 @@ def _questions(body: str):
         # A `watch` row is a recorded trigger for a FUTURE condition, not an open
         # question blocking acceptance (round-6 contract D: 0003 Q2a was counted as
         # the sole open Q though the spec calls it "not an open question").
+        # "ratified" (2026-10-10, the owner's accuracy check of this table): 0023 Q2 —
+        # "v2 says NO … and the ruling is RATIFIED", pinned by N13 — was counted open
+        # because only "ruled" was recognised. Swept first: it is the only question row
+        # in any spec that mentions ratification, so this moves exactly that count.
         if (struck or "resolved" in low or "moved" in low or "ruled" in low
-                or "watch" in low):
+                or "ratified" in low or "watch" in low):
             continue
         open_q += 1
         if "blocking" in low:
