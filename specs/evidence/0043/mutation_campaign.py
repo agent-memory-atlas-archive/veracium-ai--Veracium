@@ -343,7 +343,7 @@ def campaign() -> dict:
     head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no"], capture_output=True, text=True).stdout.split("\n")
     body = {
-        "header": {"commit": head, "tracked_changes": sorted(l[3:] for l in dirty if l.strip()),
+        "header": {"spec": "0043", "commit": head, "tracked_changes": sorted(l[3:] for l in dirty if l.strip()),
                    "python": platform.python_version(), "platform": platform.platform(),
                    "digests": _digests(ROOT), "definitions": {m[0]: definition_sha(m) for m in MUTANTS},
                    "cells": nodes,

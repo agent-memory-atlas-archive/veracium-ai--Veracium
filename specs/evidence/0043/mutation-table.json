@@ -1,5 +1,5 @@
 {
- "body_sha256": "7aa037276d4f15bc2170dccd9d718e20f0d46bc63ac400a5ebda211a01b7a64a",
+ "body_sha256": "6721d27be7623712822886d96d3d64425f94aa8df44bc2fd41b08cd65d76318d",
  "header": {
   "cells": {
    "0043-R5-01": [
@@ -119,7 +119,7 @@
     "score": "pass"
    }
   },
-  "commit": "cb5715bc472a74bb297e36fa6aaae9725aa8df45",
+  "commit": "0f9384015fed1479688c088e944e18368a664ad0",
   "definitions": {
    "R5-01a": "b2b4b14dc13dff98ae960b4860b78a1858f1289123f7e05450c22ec20cd41d8a",
    "R5-01b": "615793c75038393cb88b7afb89804f8f1bf8b88d5ef2b8595febc9fd800aed67",
@@ -145,7 +145,7 @@
   "digests": {
    "specs/evidence/0043/interpreter.py": "d5e014439e216e63cc76a6247a21d126599bd3f013a947536c4bad57d78386ef",
    "specs/evidence/0043/model_input_capture.py": "30bd0b5648223f185f95b74070222653fd39891c1c99c4978a8c6664c32a94c3",
-   "specs/evidence/0043/mutation_campaign.py": "c8227a26c33b7ce63b7ddba1e2ed4bb93e46fffff7bcc73b28012d0b86d36605",
+   "specs/evidence/0043/mutation_campaign.py": "abaeb3afae23353cce72f3c54d30a9ad8322d313184c12a08f355eb1e4426396",
    "specs/evidence/0043/request_manifest.py": "c5f636852a95b3843fb3c411768c4a9a0d5a32eb9e33da2e7161dc996b45210b",
    "specs/evidence/0043/run_harness.py": "b1679c3752bc901619bc3485ce9d7a817cb81a387f7f35fc452e606577dbfaee",
    "tests/test_0043_r6_01_publication.py": "0433a1e2f7a4d09272548d7926d5eeba0b5e6e4cf99960780bdf4d52f7b05ff6",
@@ -164,18 +164,11 @@
   },
   "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
   "python": "3.14.7",
+  "spec": "0043",
   "tracked_changes": [
-   "specs/0043-refusal-harness.md",
-   "specs/STATUS.md",
-   "specs/closure_findings.py",
-   "specs/evidence/0043/derived-markers.json",
-   "specs/evidence/0043/derived_markers.py",
-   "specs/evidence/0043/mutation-table.json",
    "specs/evidence/0043/mutation_campaign.py",
    "specs/skip_inventory.py",
-   "tests/test_0043_derived_markers.py",
-   "tests/test_0043_mutation_campaign.py",
-   "tests/test_spec_gate.py"
+   "tests/test_closure_mutants.py"
   ]
  },
  "rows": [
@@ -197,7 +190,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 2 passed in 4.57s",
+   "pytest": "1 failed, 2 passed in 4.44s",
    "what": "row references treated as the requested facts without adjudicating the question (the event-time step skipped: q006 classes on its located_at row)"
   },
   {
@@ -218,7 +211,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 2 passed in 4.47s",
+   "pytest": "1 failed, 2 passed in 4.44s",
    "what": "no ambiguity path (an ambiguous question is scored as if it were not)"
   },
   {
@@ -239,7 +232,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 26 passed in 1.62s",
+   "pytest": "1 failed, 26 passed in 1.54s",
    "what": "an answer-wide refusal-cue fallback (a refusal cue anywhere withholds every fact)"
   },
   {
@@ -261,7 +254,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "2 failed, 25 passed in 1.59s",
+   "pytest": "2 failed, 25 passed in 1.53s",
    "what": "keyword hedges anywhere before a fact (the frame read over the answer's whole text up to the fact, not its clause; research's form, stage-1)"
   },
   {
@@ -283,7 +276,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "2 failed, 2 passed in 7.01s",
+   "pytest": "2 failed, 2 passed in 6.83s",
    "what": "run discards the calibration probe's independent arm problems"
   },
   {
@@ -304,7 +297,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 3 passed in 4.61s",
+   "pytest": "1 failed, 3 passed in 4.37s",
    "what": "run discards each question's captured-pair arm problems"
   },
   {
@@ -325,7 +318,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 6 passed in 8.20s",
+   "pytest": "1 failed, 6 passed in 7.89s",
    "what": "rescoring takes the denominator from the surviving rows (the frozen (question, arm) set not enforced)"
   },
   {
@@ -346,7 +339,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 6 passed in 6.64s",
+   "pytest": "1 failed, 6 passed in 6.51s",
    "what": "rescoring passes delivered=None (no delivered-evidence check)"
   },
   {
@@ -367,7 +360,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 3 passed in 2.15s",
+   "pytest": "1 failed, 3 passed in 2.12s",
    "what": "reverify trusts the baseline's declared digest without binding it to the captured bytes"
   },
   {
@@ -389,7 +382,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "2 failed, 3 passed in 8.56s",
+   "pytest": "2 failed, 3 passed in 8.61s",
    "what": "published scoring bypasses capture integrity (the labelled path skips the capture accounting)"
   },
   {
@@ -410,7 +403,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 4 passed in 9.39s",
+   "pytest": "1 failed, 4 passed in 9.22s",
    "what": "published scoring reads cached support: published_rates takes each row's support from the STORED ledger row, not the re-derived one (round 6's own mutant form; a first form in _score's ledger rows moved nothing published \u2014 an equivalent mutant, not a gap)"
   },
   {
@@ -434,7 +427,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "4 failed, 5 passed in 8.78s",
+   "pytest": "4 failed, 5 passed in 8.61s",
    "what": "the independent arm check accepts a different question"
   },
   {
@@ -457,7 +450,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "3 failed, 13 passed in 23.35s",
+   "pytest": "3 failed, 13 passed in 22.97s",
    "what": "compiler reverification does not bind the recorded bytes"
   },
   {
@@ -483,7 +476,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "6 failed, 10 passed in 23.45s",
+   "pytest": "6 failed, 10 passed in 23.70s",
    "what": "compiler reverification does not compare the configuration"
   },
   {
@@ -507,7 +500,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "4 failed, 8 passed in 7.72s",
+   "pytest": "4 failed, 8 passed in 7.64s",
    "what": "added baseline instructions disappear: every 'Answer using this rule:' block erased from BOTH arms"
   },
   {
@@ -534,7 +527,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "7 failed, 28 passed in 29.57s",
+   "pytest": "7 failed, 28 passed in 28.74s",
    "what": "the pre-question sequence compared SORTED (the reviewer's sorted-unit comparison)"
   },
   {
@@ -561,7 +554,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "7 failed, 28 passed in 29.50s",
+   "pytest": "7 failed, 28 passed in 29.65s",
    "what": "non-evidence lines and sorted evidence compared as SEPARATE projections"
   },
   {
@@ -583,7 +576,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "2 failed, 33 passed in 22.51s",
+   "pytest": "2 failed, 33 passed in 20.44s",
    "what": "the check's marker removal is the transform's own strip_markers (a shared oracle); the claims rewrite kept, so honest data passes (equal on all 504 committed evidence lines) and only the independence cells can catch it"
   },
   {
@@ -624,7 +617,7 @@
    "kill_kind": "assertion",
    "kind": "fail-closed",
    "outcome": "KILLED",
-   "pytest": "21 failed, 14 passed in 6.46s",
+   "pytest": "21 failed, 14 passed in 7.22s",
    "what": "FAIL-CLOSED: evidence compared unnormalised (the declared marker removal not applied). On honest data the baseline carries no markers and the shipped side does, so its ONLY observable is that every honest pair refuses: a real kill by the honest controls, but no test of whether the comparison discriminates an undeclared change"
   },
   {
@@ -655,7 +648,7 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "11 failed, 24 passed in 30.16s",
+   "pytest": "11 failed, 24 passed in 31.33s",
    "what": "the pre-question sequence check removed"
   }
  ],

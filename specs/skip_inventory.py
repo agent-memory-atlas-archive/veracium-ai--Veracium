@@ -249,6 +249,15 @@ INVENTORY = [
      "git-checkout", "specs/0042 INV-7 (round 9, F2): the pin is a commit here but the "
      "harness blob at it is not fetchable (a shallow or partial clone), which is a fact "
      "about the checkout and not about the harness"),
+    ("tests/test_closure_mutants.py", "skip",
+     "rows are subject by date, and telling a code fix needs the git history of their fix commits",
+     "git-checkout", "the owner's closure-mutant rule (2026-10-10, \"Code fixes only\"): a row is subject when its FIX "
+     "commits touch code, which only git history can say; a git-less copy (an sdist, the reviewer's tree/) cannot "
+     "classify — CI is a checkout, where it always runs. It skips only when a row is subject by date."),
+    ("tests/test_closure_mutants.py", "skip",
+     "telling a code fix needs the git history of the fix commits",
+     "git-checkout", "the closure-mutant rule's real-data control classifies 0043's rows by their fix commits, which "
+     "needs git history; a git-less copy has none"),
     ("tests/test_0043_mutation_campaign.py", "skipif", "not _is_checkout()",
      "git-checkout", "specs/0043 round-9 follow-up: the one-row reproduction snapshots the TRACKED tree "
      "(git ls-files); a git-less copy (an sdist, the reviewer's tree/) has none, so the row cannot be "
