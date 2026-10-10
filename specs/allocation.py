@@ -19,16 +19,36 @@ Contested cells are RECORDED, not hidden: a collision that exists today is
 named with its date and the ruling it awaits, and the gate refuses only a
 collision that is not so recorded — the registry names the known state and
 blocks the next one.
+
+THE PEER TREE (2026-10-10). The number 0048 was claimed three times: twice
+by drafts in the research tree (one with a built review package) and once by
+a spec dispatched for review the same day. Every claim was made in good faith
+from this registry, which saw only `specs/` — a numbered draft that lives
+only in the peer seat's tree was neither a holder nor a reservation. So a
+draft now claims its number WHERE IT IS WRITTEN: `peer_problems()` scans the
+peer tree (named by the environment or this clone's git config, never by a
+path in code) with the same keys as `specs/`, `next_number()` steps past
+every peer claim, and `--next` REFUSES to answer without the peer unless
+told `--repo-only`. The render stays repo-only so the rendered table cannot
+depend on which machine wrote it; the peer scan is a separate gate
+(`--peer-check`), run by every seal's stage script.
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SPECS = ROOT / "specs"
-OUT = SPECS / "ALLOCATION.md"
+#: `VERACIUM_SPECS_DIR` points the registry at another clone's live specs/
+#: (the peer seat runs an exported copy of this script against dev's tree,
+#: read-only, to see a spec adopted but not yet committed). Under it the
+#: render is refused: a table derived from another tree is not this tree's.
+SPECS_OVERRIDE = os.environ.get("VERACIUM_SPECS_DIR")
+SPECS = pathlib.Path(SPECS_OVERRIDE) if SPECS_OVERRIDE else ROOT / "specs"
+OUT = ROOT / "specs" / "ALLOCATION.md"
 STATUS = re.compile(r"^Spec-Status:\s*(\S[^\n]*)$", re.M)
 NUMBER = re.compile(r"^(\d{4})-")
 
@@ -119,6 +139,153 @@ SPENT: dict[str, dict] = {
         "spent_on": "2026-09-08",
     },
 }
+
+
+#: PEER_CONTESTED — a number claimed by two or more DIFFERENT spec titles
+#: across the two trees, recorded with the exact set of titles, its date and
+#: the ruling it awaits. The record covers exactly the titles it names: a
+#: further title on the same number is a new collision and refused, and a
+#: record whose collision is gone is stale and refused.
+PEER_CONTESTED: dict[str, dict] = {}
+
+#: The keys a document claims a number by, in either tree. A file named
+#: `NNNN-…` claims NNNN when, within its first HEAD_LINES lines, it carries
+#: a spec heading (`# Feature spec:` or `# Feature spec NNNN:` — that claim
+#: has a TITLE, compared across claims) or a `Spec-Status:` line (a
+#: withdrawn draft rewrites its heading and keeps its status: that claim
+#: BLOCKS the number and takes no part in the title comparison). Anything
+#: else named `NNNN-…` — rulings, legs, dated scans — is an artifact ABOUT a
+#: number or no number at all, and claims nothing. A heading below line
+#: HEAD_LINES is not seen; that bound is the key's stated limit.
+HEAD_LINES = 15
+HEADING = re.compile(r"^# Feature spec(?: (\d{4}))?:\s*(\S.*)$")
+STATUS_LINE = re.compile(r"^Spec-Status:")
+
+
+def norm_title(raw: str) -> str:
+    """A title's identity: the heading text before its subtitle (the first
+    spaced dash), without markup, lower-cased — so a spec's versions, whose
+    subtitles and emphasis drift, are one title."""
+    t = raw.replace("`", "").replace("*", "").strip()
+    t = re.split(r"\s+[—–-]\s+", t, maxsplit=1)[0]
+    return t.strip().lower()
+
+
+def file_claim(path: pathlib.Path, label: str) -> dict | None:
+    """The claim one `NNNN-…` document makes, or None."""
+    m = NUMBER.match(path.name)
+    if not m:
+        return None
+    try:
+        head = path.read_text(encoding="utf-8", errors="replace").splitlines()[:HEAD_LINES]
+    except OSError:
+        return None
+    heading = next((h for h in (HEADING.match(x) for x in head) if h), None)
+    status = any(STATUS_LINE.match(x) for x in head)
+    if not heading and not status:
+        return None
+    return {"number": m.group(1), "file": label,
+            "title": norm_title(heading.group(2)) if heading else None,
+            "heading_number": heading.group(1) if heading else None}
+
+
+class PeerTreeError(Exception):
+    """The peer tree is configured but cannot be read as a git work tree."""
+
+
+def peer_tree() -> pathlib.Path | None:
+    """The peer seat's tree: `VERACIUM_PEER_TREE`, else this clone's
+    `git config --local veracium.peerTree`. No default: a path in code is a
+    path only one machine has. `VERACIUM_PEER_TREE=` (set, empty) is an
+    explicit "none", so a test can see the unconfigured case in any clone."""
+    if "VERACIUM_PEER_TREE" in os.environ:          # set and EMPTY means "no peer", over the git config
+        env = os.environ["VERACIUM_PEER_TREE"]
+        return pathlib.Path(env).expanduser() if env else None
+    try:
+        r = subprocess.run(["git", "-C", str(ROOT), "config", "--local", "--get", "veracium.peerTree"],
+                           capture_output=True, text=True)
+    except OSError:
+        return None
+    return pathlib.Path(r.stdout.strip()).expanduser() if r.returncode == 0 and r.stdout.strip() else None
+
+
+def peer_claims(peer: pathlib.Path) -> list[dict]:
+    """Every claim in the peer tree, over the files git sees there —
+    tracked AND untracked-not-ignored, because a draft written and not yet
+    committed is exactly the race this scan exists for."""
+    r = subprocess.run(["git", "-C", str(peer), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+                       capture_output=True)
+    if r.returncode != 0:
+        raise PeerTreeError(f"{peer} is not a readable git work tree: "
+                            f"{r.stderr.decode(errors='replace').strip()}")
+    claims = []
+    for rel in sorted(set(r.stdout.decode(errors="replace").split("\0")) - {""}):
+        f = peer / rel
+        if f.suffix == ".md" and NUMBER.match(f.name) and f.is_file():
+            c = file_claim(f, f"peer:{rel}")
+            if c:
+                claims.append(c)
+    return claims
+
+
+def repo_claims() -> list[dict]:
+    return [c for c in (file_claim(f, f"specs/{f.name}") for f in sorted(SPECS.glob("[0-9][0-9][0-9][0-9]-*.md"))) if c]
+
+
+def peer_problems(peer: pathlib.Path) -> list[str]:
+    """Every collision the two trees make together. Empty means: no number
+    carries two different titles unless PEER_CONTESTED records exactly that
+    set; no claim takes a SPENT number with a title or sits in a live
+    reservation; no heading's own number disagrees with its filename; and no
+    status-only claim blocks a number nothing else accounts for."""
+    try:
+        peer_c = peer_claims(peer)
+    except PeerTreeError as e:
+        return [f"peer tree: {e}"]
+    problems: list[str] = []
+    claims = repo_claims() + peer_c
+    held = {r["number"] for r in holders()}
+    live = [x for x in RESERVATIONS if x.get("released") is None]
+    by_number: dict[str, list[dict]] = {}
+    for c in claims:
+        by_number.setdefault(c["number"], []).append(c)
+        if c["heading_number"] and c["heading_number"] != c["number"]:
+            problems.append(f"{c['file']}: its heading says {c['heading_number']} but its filename says {c['number']}")
+    for c in peer_c:
+        for x in live:
+            if _in_range(c["number"], x["range"]):
+                problems.append(f"{c['file']} claims {c['number']} inside the live reservation "
+                                f"{x['range'][0]}–{x['range'][1]} ({x['holder']})")
+        if c["number"] in SPENT and c["title"]:
+            problems.append(f"{c['file']} claims SPENT number {c['number']} with a spec heading — a withdrawn number was reused")
+    for n, cs in sorted(by_number.items()):
+        titles = {c["title"] for c in cs if c["title"]}
+        if len(titles) > 1:
+            rec = PEER_CONTESTED.get(n)
+            if rec is None or set(rec.get("titles", ())) != titles:
+                where = "; ".join(f"{t!r} in {', '.join(c['file'] for c in cs if c['title'] == t)}" for t in sorted(titles))
+                problems.append(f"number {n} is claimed by {len(titles)} different specs and "
+                                f"{'the record names a different set' if rec else 'is NOT recorded'}: {where}")
+        if not titles and n not in held and n not in SPENT and n not in PEER_CONTESTED:
+            problems.append(f"number {n} is blocked by a status-only draft ({', '.join(c['file'] for c in cs)}) "
+                            f"that no spec, SPENT entry or record accounts for — record it as SPENT, or give it its heading")
+    for n, rec in PEER_CONTESTED.items():
+        titles = {c["title"] for c in by_number.get(n, []) if c["title"]}
+        if len(titles) < 2:
+            problems.append(f"PEER_CONTESTED {n} records a collision the trees no longer carry — stale entry; remove it")
+        for key in ("titles", "since", "awaits"):
+            if not rec.get(key):
+                problems.append(f"PEER_CONTESTED {n}: missing {key}")
+    return problems
+
+
+def next_number(peer: pathlib.Path | None, after: str | None = None) -> str:
+    """The number a new spec may take: above every number held in specs/,
+    SPENT, or claimed in the peer tree (heading or status), stepped past
+    live reservations and SPENT numbers. `peer=None` is the repo-only answer
+    (`--repo-only`), which can hand out a number a peer draft already holds."""
+    tops = [after or "0000"] + [c["number"] for c in peer_claims(peer)] if peer is not None else [after or "0000"]
+    return next_uncontested(max(tops))
 
 
 def holders() -> list[dict]:
@@ -235,13 +402,28 @@ def render() -> str:
             "| number | what | ruling | where the record lives | gist of the reasoning | spent on |", "|---|---|---|---|---|---|"]
     for n, s in SPENT.items():
         out.append(f"| {n} | {s['what']} | {s['ruling']} | {s['record']} | {s['gist']} | {s['spent_on']} |")
-    out += ["", f"**Next uncontested number for a new spec:** `{next_uncontested()}`", ""]
+    out += ["", "## Collisions across the two trees, recorded", "",
+            "*A number claimed by two different spec titles across `specs/` and the peer seat's tree "
+            "(`allocation.py --peer-check`). Listing one is a disclosure, not a permission.*", ""]
+    if PEER_CONTESTED:
+        out += ["| number | titles | since | awaits |", "|---|---|---|---|"]
+        for n, rec in sorted(PEER_CONTESTED.items()):
+            out.append(f"| {n} | {'; '.join(rec['titles'])} | {rec['since']} | {rec['awaits']} |")
+    else:
+        out.append("none")
+    out += ["", f"**Next number from this tree alone:** `{next_uncontested()}`. *A new spec takes its number "
+            "from `allocation.py --next`, which also steps past every draft in the peer seat's tree and "
+            "refuses to answer without it — run it before the first numbered file is created, in either tree.*", ""]
     problems = allocation_problems()
     out += ["## Registry state", "", "no problems" if not problems else "\n".join(f"- {p}" for p in problems), ""]
     return "\n".join(out)
 
 
 def main(argv: list[str]) -> int:
+    if SPECS_OVERRIDE and ("--write" in argv or "--check" in argv):
+        print(f"REFUSED: VERACIUM_SPECS_DIR={SPECS_OVERRIDE} — the rendered table is this tree's; "
+              "use --next or --peer-check against another specs/")
+        return 2
     text = render()
     if "--write" in argv:
         OUT.write_text(text, encoding="utf-8"); print(f"wrote {OUT.relative_to(ROOT)}")
@@ -250,10 +432,23 @@ def main(argv: list[str]) -> int:
             print("ALLOCATION.md is stale — run allocation.py --write"); return 1
         print("ALLOCATION.md is current")
     problems = allocation_problems()
+    wants_peer = "--peer-check" in argv or ("--next" in argv and "--repo-only" not in argv)
+    peer = peer_tree()
+    if wants_peer:
+        if peer is None or not peer.is_dir():
+            print("REFUSED: " + ("no peer tree configured" if peer is None else f"the peer tree {peer} does not exist")
+                  + " — set VERACIUM_PEER_TREE, or `git config --local veracium.peerTree <path>` in this clone. "
+                  "A number taken without the peer tree is how 0048 was claimed three times; "
+                  "`--next --repo-only` answers from specs/ alone and says so.")
+            return 2
+        problems += peer_problems(peer)
+        print(f"peer tree: CHECKED {peer}")
+    elif "--next" in argv:
+        print("peer tree: NOT CHECKED (--repo-only) — the number below ignores every draft outside specs/")
     for p in problems:
         print("PROBLEM:", p)
     if "--next" in argv:
-        print(next_uncontested())
+        print(next_number(None if "--repo-only" in argv else peer))
     return 1 if problems else 0
 
 
