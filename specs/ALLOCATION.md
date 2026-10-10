@@ -48,6 +48,7 @@
 | 0045 | `0045-declarative-grounding.md` | `draft` | the declarative grounding axis — was a fact STATED, or did we work it out? |  |
 | 0046 | `0046-correction-receipt.md` | `draft` | the correction receipt — a corrected fact names what still rests on it |  |
 | 0047 | `0047-subject-reply.md` | `draft` | the subject's right of reply — the record stands, and the reply travels with it |  |
+| 0048 | `0048-decay-never-raises-confidence.md` | `draft` | maintenance never raises confidence — the decay bounds (0002's N4, carried) |  |
 
 ## Reservations (claimed, not drafted)
 
@@ -61,7 +62,7 @@
 |---|---|---|---|---|---|
 | 0040 | procedural text at the choke point — the store inferring content kind from text shape (research's proposal) | Quentin, 2026-09-08, "Withdraw 0040 with the reasoning recorded" (ledger [Quentin, research session] 19:40Z): Q1 answered NO — the store does not infer kind from text shape | the withdrawn proposal in the research tree, Spec-Status: withdrawn, kept as a record so the next person with the idea finds the argument rather than making it again | Q1: may the store infer content kind from text shape? NO. 0037's recognition rule (`matches_executable_detail`) is safe because §4a-ii runs it as the LAST conjunct behind `stamp consistent`, inside the set a host already declared procedural — a false positive there withholds one description. The same function outside the declared set suppresses something a user asserted: identical code, categorically different blast radius, and the difference is in what the rule is allowed to decide, not in the rule. The §1 hazard stands (procedural text under an ordinary relation still renders as fact): the guarantee is about DECLARED provenance, not content safety. The real lever is adoption of `record_procedure`, not inference. | 2026-09-08 |
 
-**Next uncontested number for a new spec:** `0048`
+**Next uncontested number for a new spec:** `0049`
 
 ## Registry state
 
