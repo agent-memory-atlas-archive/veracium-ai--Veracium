@@ -590,6 +590,25 @@ def test_watch_rows_are_not_counted_as_open_questions():
     assert open_q == 1, f"a watch row was counted as open: open_q={open_q}"
 
 
+def test_a_skip_word_inside_a_longer_word_does_not_close_a_question():
+    """The skip words are WHOLE words: 0048's Q3 asks whether DECAY should "be removed", and as a substring "moved"
+    closed it, so STATUS under-counted a deferred, open question. "unresolved" would likewise have read as
+    "resolved". The honest rows beside them still skip."""
+    import sys, pathlib, importlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    import render_index
+    importlib.reload(render_index)
+    body = ("## 10. Open questions\n\n"
+            "| # | question | who | by when | class |\n"
+            "|---|---|---|---|---|\n"
+            "| **Q1** | should it stay, or be removed? | owner | — | deferred |\n"
+            "| **Q2** | still unresolved; blocking | owner | soon | blocking |\n"
+            "| **Q3** | **RESOLVED**: yes | owner | — | resolved |\n"
+            "| **Q4** | moved to 0047 | — | — | moved |\n")
+    assert render_index._questions(body) == (2, 1)
+
+
 def test_the_rule_gives_the_right_assistant_answers_when_assistant_exists():
     """The four cases v1 inverted, asserted against the RULE rather than the
     shipped enum — `ASSISTANT` arrives with specs/0001, which is deferred.
@@ -2400,6 +2419,10 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # package II's model citations: refuses a §6 row whose "(model Gn)" no mutant of model II answers, and the
         # reverse; its matrix breaks each carrier once
         root / "specs" / "evidence" / "0045" / "model_citations.py",
+        # specs/0048 §2c-ii row 8: the census exits 1 on a confidence write it cannot resolve; row 12's reproductions
+        # exit 1 when one stops reproducing. Checkers by what they do, whatever their names say
+        root / "specs" / "evidence" / "0048" / "census_0048.py",
+        root / "specs" / "evidence" / "0048" / "pin_repro.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

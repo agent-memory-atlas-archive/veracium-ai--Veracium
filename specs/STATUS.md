@@ -5,7 +5,7 @@
 # Spec status
 
 **43 specs · 37 accepted · 438 external review
-rounds · 0 blocking questions open.**
+rounds · 1 blocking questions open.**
 
 **Only `accepted` authorises implementation** (`PROCESS.md` §4a), and external
 review is required to reach it. **37 of 43 are accepted**, which
@@ -55,7 +55,7 @@ is the number that decides what can be built.
 | **0045** | the declarative grounding axis — was a fact STATED, or not shown to be? | `draft` | 2026-10-11 | 0 | 0 | 0 | 0 | 0 | — |
 | **0046** | the correction receipt — a corrected fact names what still rests on it | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
 | **0047** | the subject's right of reply — the record stands, and the reply travels with it | `draft` | 2026-10-11 | 0 | 0 | 0 | 0 | 0 | — |
-| **0048** | maintenance never raises confidence — the decay bounds (0002's N4, carried) | `draft` | 2026-10-10 | 0 | 0 | 0 | 0 | 0 | — |
+| **0048** | maintenance never raises confidence — the decay bounds (0002's N4, carried) | `draft` | 2026-10-11 | 0 | 0 | 3 | 🔴 1 | 0 | — |
 
 **Review archives** — the exact package sent for each round, with a sha256 per
 archive — are indexed in `specs/archives/INDEX.md`.

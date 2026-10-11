@@ -82,8 +82,10 @@ def _questions(body: str):
         # "v2 says NO … and the ruling is RATIFIED", pinned by N13 — was counted open
         # because only "ruled" was recognised. Swept first: it is the only question row
         # in any spec that mentions ratification, so this moves exactly that count.
-        if (struck or "resolved" in low or "moved" in low or "ruled" in low
-                or "ratified" in low or "watch" in low):
+        # WHOLE WORDS (2026-10-11): as substrings, "moved" matched "removed", so 0048's Q3 ("…or be removed?",
+        # deferred and open) was skipped, and "unresolved" would read as "resolved". A sweep of every spec found
+        # exactly one row moved by the change, 0048 Q3.
+        if struck or re.search(r"\b(?:resolved|moved|ruled|ratified|watch)\b", low):
             continue
         open_q += 1
         if "blocking" in low:
