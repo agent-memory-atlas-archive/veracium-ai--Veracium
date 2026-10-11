@@ -151,7 +151,7 @@ def migrate_user(s: Store, user: str, rules: Rules, op_id: str, crash_at: str | 
             "successor_evidence": ("pointer", succ) if succ else ("none", []), "undone_at": None, "op_id": op_id}
         if out == "restored":
             e.active, e.invalidated_at, e.reason = True, None, None
-            tx.journal.append(("reinstated", e.id, t, "arity_reclassified"))
+            journal_reinstated(tx, e.id, "arity_reclassified")          # through the 0029 choke point
         n += 1
         if crash_at == "mid_user" and n == 1:
             raise Crash("before commit")
@@ -326,3 +326,28 @@ def contested_pairs(s: Store) -> list:
         if s.edges[prior].active and s.edges[incoming].active:
             out.append((prior, incoming))
     return out
+
+
+# ----------------------------------------------------------------------------------------------- the 0029 amendment
+REINSTATEMENT_REASONS = ("source_restored", "arity_reclassified")   # research ac3cf4fc: closed, enforced at the choke point
+
+
+def journal_reinstated(s: Store, edge_id: str, reason):
+    """The journal choke point (0029's L298 contract, extended): a `reinstated` event's reason must be in the closed
+    set; NULL or an outside value is REFUSED and nothing is written."""
+    if reason not in REINSTATEMENT_REASONS:
+        raise Refused(f"reinstated with reason {reason!r} — outside {REINSTATEMENT_REASONS}")
+    s.journal.append(("reinstated", edge_id, s.tick(), reason))
+
+
+def reinstated_reason(event) -> str:
+    """The read side: an OLD event written before the amendment (NULL reason) reads as `source_restored` — an inference
+    from code history (0022's verb was the only writer), stated as such; the stored event is never rewritten."""
+    return event[3] if len(event) > 3 and event[3] is not None else "source_restored"
+
+
+def restore_source(s: Store, edge_id: str):
+    """0022's verb (L852, today's only `reinstated` writer) under the amendment: writes `source_restored`."""
+    e = s.edges[edge_id]
+    e.active, e.invalidated_at, e.reason = True, None, None
+    journal_reinstated(s, edge_id, "source_restored")

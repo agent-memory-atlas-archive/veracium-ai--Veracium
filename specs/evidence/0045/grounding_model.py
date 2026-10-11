@@ -1,18 +1,15 @@
 """Reference model for package II (0045 grounding × 0047 replies × confirmations): research's
-GROUNDING-REPLY-TRANSITIONS-DRAFT (draft 2, research 93b0d285, sha256 d9ec36f4…), executed.
+GROUNDING-REPLY-TRANSITIONS-DRAFT draft 3.3 (research b06368d5, sha16 5cefe166) with the owner's 2026-10-11 rulings
+"Label, don't block" and "Add the link" (an edge records its source episode), executed.
 
-A MODEL, not product code: no `veracium` import. One function per rule section. Ambiguities are named switches
-(`Rules`); the run executes both settings and reports, never resolving them silently.
+A MODEL, not product code: no `veracium` import. One function per rule section. Ambiguities and the alternatives the
+owner rejected are named switches (`Rules`); the run executes them as mutants or probes, never silently.
 """
 from __future__ import annotations
 
-import copy
-import hashlib
-import hmac
 from dataclasses import dataclass, field
 
 MARKER = "\x00redacted\x00"
-GROUNDING_VERSION = 16        # the schema version at which the grounding predicate became the write gate (§2)
 
 
 @dataclass
@@ -21,13 +18,14 @@ class Edge:
     user: str
     relation: str
     obj: str
-    ungrounded: bool
-    version: int                       # the schema version it was written at (§2's version evidence)
-    flag_by: str = "predicate"         # who set `ungrounded`: "predicate" | "absorption_or" (0019/0014's OR rule)
+    att: str | None                    # §1–2: attested | not_attested | None (legacy) — written ONCE at insert
+    ungrounded: bool = False           # 0019's flag: the MARKER, orthogonal to the axis
+    source_episode: str | None = None  # "Add the link": written once at insert; NULL for legacy and default import
     active: bool = True
-    author: str = "user"               # effective author: user | assistant | third_party
+    author: str = "user"
     disclosure: str = "mentionable"
-    origin: str = "local"              # local | imported (default import) | restored (trusted)
+    origin: str = "local"
+    procedural: bool = False           # 0037's floor (record_kind == "procedural" or basis set): no att, no g(e)
 
 
 @dataclass
@@ -37,7 +35,7 @@ class Reply:
     kind: str                          # challenge | context | withdrawn-consent | resolve
     text: str
     t: int
-    target: str | None = None          # resolve -> challenge id
+    target: str | None = None
     origin: str = "local"
 
 
@@ -46,9 +44,6 @@ class Confirmation:
     id: str
     edge: str
     t: int
-    actor: str
-    correlation_id: str
-    digest: str
     origin: str = "local"
 
 
@@ -57,14 +52,11 @@ class Store:
     edges: dict = field(default_factory=dict)
     replies: list = field(default_factory=list)
     confirmations: list = field(default_factory=list)
-    clock: int = 100
-    key: bytes = b"store-key-1"
     redacted_episodes: set = field(default_factory=set)
-    revoked_sources: set = field(default_factory=set)
-    forgotten_users: set = field(default_factory=set)
-    corr: dict = field(default_factory=dict)       # (user, correlation_id) -> (digest, result)
-    counts: dict = field(default_factory=lambda: {"unattested_refused": 0, "unattested_proposed": 0,
-                                                  "unattested_unproposable": 0})
+    clock: int = 100
+    counts: dict = field(default_factory=lambda: {"nonuser_ungrounded_refused": 0})
+    corr: dict = field(default_factory=dict)       # (user, correlation_id) -> (request digest, result): 0008's rule, one
+                                                   # user-scoped id space shared by confirm() and add_reply() (INV-R15)
 
     def tick(self):
         self.clock += 1
@@ -73,27 +65,52 @@ class Store:
 
 @dataclass
 class Rules:
-    unknown_with_challenge: str = "assertable_with_unit"   # §10.2: alt "not_assertable"
-    unknown_renders_marker_if_flagged: bool = True          # draft 2: the axis and the flag are orthogonal (G3)
-    absorption_or_post_version: bool = False                # draft 2 (G2, option (a)): post-version survivor keeps the INCOMING's flag
-    legacy_flag_precedence: str = "flag_first"              # draft 2 (G1): the STORED FLAG decides first; draft 1: "unknown"
+    source_redacted_scope: str = "not_attested"   # the confirm() refusal: "not_attested" (drafted) | "all" (the uniform alternative)
+    absorption_or: bool = True                    # draft 3 §7: the 0019/0014 OR rule kept (G2's verifier amendment withdrawn)
 
 
-# ----------------------------------------------------------------------------------------------- §2 grounding
-def grounding(s: Store, e: Edge, rules: Rules, at: int | None = None) -> str:
-    confirmed = any(c.edge == e.id and (at is None or c.t <= at) for c in s.confirmations)
-    if rules.legacy_flag_precedence == "flag_first":
-        if e.ungrounded:
-            return "confirmed" if confirmed else "inferred"            # whatever the version (G1)
-        return "unknown" if e.version < GROUNDING_VERSION else "attested"
-    # draft 1's precedence, kept executable as the mutant/alternative
-    if e.version < GROUNDING_VERSION:
-        if e.ungrounded and confirmed and rules.legacy_flag_precedence == "confirmed":
-            return "confirmed"
-        return "unknown"
-    if not e.ungrounded:
-        return "attested"
-    return "confirmed" if confirmed else "inferred"
+class Refused(Exception):
+    pass
+
+
+# ----------------------------------------------------------------------------------------------- §1–2 the axis
+def grounding(s: Store, e: Edge, at: int | None = None) -> str | None:
+    """g(e) = confirmed if any confirmation (written at or before `at`), else the STORED axis; NULL reads unknown.
+    The axis never reads the 0019 flag (G3 by construction)."""
+    if e.procedural:
+        return None                                    # rules draft 3.3: declarative-only; 0037's basis grounds it
+    if any(c.edge == e.id and (at is None or c.t <= at) for c in s.confirmations):
+        return "confirmed"
+    return e.att or "unknown"
+
+
+# ----------------------------------------------------------------------------------------------- §2a the write path
+def user_effective(author: str, context: str | None) -> bool:
+    """The owner's ruling (2026-10-11, "Only declared-direct calls"): USER-effective iff the effective author is USER AND
+    the context is DECLARED direct — the product's own _resolve_context/_disclosure_for. Absence is never the trusted
+    cell: `remember(author=USER)` with no context, and MCP at capability NONE, are NOT user-effective."""
+    return author == "user" and context == "direct"
+
+
+def write(s: Store, e: Edge, *, author: str, attested_by_predicate: bool, context: str | None = "direct"):
+    """§2a ("Label, don't block"): a USER-effective statement is ALWAYS stored — attested only if the strict predicate
+    recognised it, else not_attested. Anything else (non-user, or USER without a declared-direct context): flag UNSET →
+    stored not_attested; flag SET → REFUSED, counted."""
+    if e.procedural:
+        e.att = None                                   # rules draft 3.3: ATTEST never runs on the procedural path;
+        e.author = author                              # an att-less PROCEDURAL insert is admitted, never refused
+        s.edges[e.id] = e
+        return e
+    if user_effective(author, context):
+        e.att = "attested" if attested_by_predicate else "not_attested"
+    elif e.ungrounded:
+        s.counts["nonuser_ungrounded_refused"] += 1
+        return None
+    else:
+        e.att = "not_attested"
+    e.author = author
+    s.edges[e.id] = e
+    return e
 
 
 # ----------------------------------------------------------------------------------------------- §4 challenges
@@ -103,17 +120,31 @@ def active_challenges(s: Store, e: Edge, at: int | None = None) -> list:
     return sorted((r for r in rs if r.kind == "challenge" and r.id not in resolved), key=lambda r: (r.t, r.id))
 
 
-class Refused(Exception):
-    pass
+def _replay(s: Store, user: str, correlation_id, digest: str):
+    """0008's rule: same id + same request → the first result; same id + a DIFFERENT request (any verb) → refused."""
+    if correlation_id is None:
+        return None
+    rec = s.corr.get((user, correlation_id))
+    if rec is None:
+        return None
+    if rec[0] == digest:
+        return rec
+    raise Refused("integrity conflict: same correlation id, different request")
 
 
-def add_reply(s: Store, e: Edge, kind: str, text: str, target: str | None = None) -> Reply:
+def add_reply(s: Store, e: Edge, kind: str, text: str, target: str | None = None, correlation_id=None) -> Reply:
+    digest = f"add_reply|{e.user}|{e.id}|{kind}|{text}|{target}"
+    rec = _replay(s, e.user, correlation_id, digest)
+    if rec is not None:
+        return rec[1]
     if kind not in ("challenge", "context", "withdrawn-consent", "resolve"):
         raise Refused("kind outside the closed set")
     if MARKER in text:
         raise Refused("a marker in an ordinary reply")
     if MARKER in (e.relation, e.obj):
-        raise Refused("reply to a redacted edge")                     # R1 (owner/reviewer): refuse
+        raise Refused("reply to a redacted edge")
+    if e.procedural:
+        raise Refused("store.reply.procedural-edge")   # 0047 v1.4 ruling (1); a procedural right of reply deferred (R6)
     if kind == "resolve":
         c = next((r for r in s.replies if r.id == target), None)
         if c is None or c.edge != e.id or c.kind != "challenge":
@@ -122,130 +153,85 @@ def add_reply(s: Store, e: Edge, kind: str, text: str, target: str | None = None
             raise Refused("challenge already resolved")
     r = Reply(id=f"r{len(s.replies) + 1}", edge=e.id, kind=kind, text=text, t=s.tick(), target=target)
     s.replies.append(r)
+    if correlation_id is not None:
+        s.corr[(e.user, correlation_id)] = (digest, r)
     return r
 
 
 # ----------------------------------------------------------------------------------------------- §5 the gate
-def gate(s: Store, e: Edge, rules: Rules, existing_ok: bool = True, at: int | None = None) -> str:
-    """'assertable' | 'assertable_with_unit' | 'inference_with_marker' | 'not_assertable' (additional restriction)."""
+def gate(s: Store, e: Edge, existing_ok: bool = True, at: int | None = None) -> str:
+    """Additional restriction only. Unchallenged: assertable (every grounding value; not_attested is today's line).
+    Challenged: assertable ONLY if attested, and then only with the unit."""
     if not existing_ok:
-        return "not_assertable"                                       # never promotes an ineligible edge
-    g = grounding(s, e, rules, at)
-    ch = bool(active_challenges(s, e, at))
-    if g == "attested":
-        return "assertable_with_unit" if ch else "assertable"
-    if g in ("confirmed", "inferred"):
-        return "not_assertable" if ch else "inference_with_marker"
-    # unknown
-    if ch:
-        return "assertable_with_unit" if rules.unknown_with_challenge == "assertable_with_unit" else "not_assertable"
+        return "not_assertable"
+    if active_challenges(s, e, at):
+        return "assertable_with_unit" if grounding(s, e, at) == "attested" else "not_assertable"
     return "assertable"
 
 
-def render(s: Store, e: Edge, rules: Rules, budget: int, at: int | None = None) -> str | None:
-    """§6: the mandatory unit, or withheld. The count is computed BEFORE budget selection."""
-    gt = gate(s, e, rules, at=at)
-    if gt == "not_assertable":
+def render(s: Store, e: Edge, budget: int, at: int | None = None) -> str | None:
+    """§6: the mandatory unit or withheld; the 0019 marker follows the FLAG, whatever the axis; the count is all open
+    challenges, computed before budget selection."""
+    if gate(s, e, at=at) == "not_assertable":
         return None
-    g = grounding(s, e, rules, at)
-    marker = ""
-    if g in ("inferred", "confirmed") or (e.ungrounded and (g != "unknown" or rules.unknown_renders_marker_if_flagged)):
-        marker = " [possible extraction error]"
-    line = f"{e.relation}: {e.obj}{marker}"
+    line = f"{e.relation}: {e.obj}" + (" [possible extraction error]" if e.ungrounded else "")
     ch = active_challenges(s, e, at)
     if ch:
         line += f" [challenged by the subject: {len(ch)} open; latest: {ch[-1].text[:20]}]"
-    return line if len(line) <= budget else None                     # never rendered without its unit
+    return line if len(line) <= budget else None
 
 
-# ----------------------------------------------------------------------------------------------- §3 proposals
-def canonical(p: dict) -> bytes:
-    fields = ("user", "relation", "obj", "episode", "source", "minted_at")
-    return b"veracium.proposal.v1\0" + "\0".join(str(p[k]) for k in fields).encode()
-
-
-def mint(s: Store, user: str, relation: str, obj: str, episode: str | None, source: str, author: str = "user"):
-    """§3: only from a USER-effective event WITH an episode carrier; otherwise refused and counted."""
-    if author != "user":
-        s.counts["unattested_refused"] += 1
-        return None
-    if not episode:
-        s.counts["unattested_unproposable"] += 1
-        return None
-    p = {"user": user, "relation": relation, "obj": obj, "episode": episode, "source": source, "minted_at": s.tick()}
-    p["token"] = hmac.new(s.key, canonical(p), hashlib.sha256).hexdigest()
-    s.counts["unattested_proposed"] += 1
-    return p
-
-
-def confirm_inference(s: Store, p: dict, *, actor: str, call_path: str, correlation_id: str):
-    """§3/§3a: replay first; then the lifetime checks INSIDE the write transaction; then the fresh edge + row."""
-    digest = hashlib.sha256(b"confirm_inference|" + canonical(p) + f"|{actor}|{call_path}".encode()).hexdigest()
-    rec = s.corr.get((p["user"], correlation_id))
+# ----------------------------------------------------------------------------------------------- confirmation (0008)
+def confirm(s: Store, e: Edge, rules: Rules, correlation_id=None):
+    """0008's confirm(), as rules draft 3.3 leaves it (with "Add the link"): refused while a challenge is open; refused for a
+    not_attested edge (scope per Rules) whose RECORDED source episode is redacted — "state it anew"."""
+    digest = f"confirm|{e.user}|{e.id}"
+    rec = _replay(s, e.user, correlation_id, digest)
     if rec is not None:
-        if rec[0] == digest:
-            return rec[1]
-        raise Refused("integrity conflict: same id, different request")
-    tx = copy.deepcopy(s)                                            # BEGIN IMMEDIATE
-    if not hmac.compare_digest(p.get("token", ""), hmac.new(tx.key, canonical(p), hashlib.sha256).hexdigest()):
-        raise Refused("token")
-    if p["episode"] in tx.redacted_episodes:
-        raise Refused("source redacted")
-    if p["source"] in tx.revoked_sources:
-        raise Refused("source revoked")
-    if p["user"] in tx.forgotten_users:
-        raise Refused("forgotten")
-    eid = f"c-{p['episode']}-{p['obj']}"
-    e = Edge(id=eid, user=p["user"], relation=p["relation"], obj=p["obj"], ungrounded=True, version=GROUNDING_VERSION)
-    tx.edges[eid] = e
-    tx.confirmations.append(Confirmation(id=f"k{len(tx.confirmations) + 1}", edge=eid, t=tx.tick(), actor=actor,
-                                         correlation_id=correlation_id, digest=digest))
-    result = {"edge": eid}
-    tx.corr[(p["user"], correlation_id)] = (digest, result)
-    s.__dict__.update(tx.__dict__)                                    # COMMIT
-    return result
-
-
-def confirm(s: Store, e: Edge, *, actor="host", correlation_id="x"):
-    """0008's confirm(), with the renamed refusal site: an edge with an open challenge is refused."""
+        return rec[1]
     if active_challenges(s, e):
         raise Refused("store.confirm.active-challenge")
-    s.confirmations.append(Confirmation(id=f"k{len(s.confirmations) + 1}", edge=e.id, t=s.tick(), actor=actor,
-                                        correlation_id=correlation_id, digest="d"))
+    scoped = rules.source_redacted_scope == "all" or grounding(s, e) == "not_attested"
+    if scoped and e.source_episode is not None and e.source_episode in s.redacted_episodes:
+        raise Refused("store.confirm.source-redacted: state it anew")
+    c = Confirmation(id=f"k{len(s.confirmations) + 1}", edge=e.id, t=s.tick())
+    s.confirmations.append(c)
+    if correlation_id is not None:
+        s.corr[(e.user, correlation_id)] = (digest, c)
+    return c
 
 
 # ----------------------------------------------------------------------------------------------- §7 identity transitions
 def absorb(s: Store, prior: Edge, incoming: Edge, rules: Rules) -> str:
-    """§7: absorption is REFUSED when the prior carries a confirmation or reply; otherwise today's behaviour, where the
-    survivor's flag is the OR of the incoming and absorbed flags (0019/0014)."""
+    """§7: refused when the prior carries a confirmation or a reply; otherwise the survivor's AXIS is the incoming's own
+    (never laundered from the prior), and its 0019 flag is the OR (kept: it only adds a marker)."""
     acts = any(c.edge == prior.id for c in s.confirmations) or any(r.edge == prior.id for r in s.replies)
     s.edges[incoming.id] = incoming
     if acts:
         return "not_absorbed"
     prior.active = False
-    if (rules.absorption_or_post_version or incoming.version < GROUNDING_VERSION) and prior.ungrounded and not incoming.ungrounded:
-        incoming.ungrounded, incoming.flag_by = True, "absorption_or"
+    if rules.absorption_or and prior.ungrounded:
+        incoming.ungrounded = True
     return "absorbed"
 
 
 # ----------------------------------------------------------------------------------------------- §8 import
 def import_rows(s: Store, edges: list, confirmations: list, replies: list, mode: str):
-    """§8: preflight against destination ∪ incoming; default import refuses acts aimed at PRE-EXISTING local edges."""
-    local = set(s.edges)
-    incoming = {e.id for e in edges}
+    """§8: default import writes att = not_attested and source_episode = NULL whatever the file says, and refuses acts
+    aimed at PRE-EXISTING local edges; trusted restore writes as recorded. Preflighted against destination ∪ incoming."""
+    import copy
+    local, incoming = set(s.edges), {e.id for e in edges}
     for row in confirmations + replies:
-        tgt = row.edge
-        if tgt not in local | incoming:
+        if row.edge not in local | incoming:
             raise Refused(f"orphan act {row.id}")
-        if tgt in local and mode == "default":
+        if row.edge in local and mode == "default":
             raise Refused(f"an untrusted file acting on a local edge ({row.id})")
-    tx = copy.deepcopy(s)
     for e in edges:
         e2 = copy.deepcopy(e)
         if mode == "default":
+            e2.att, e2.source_episode = "not_attested", None
             e2.author, e2.disclosure, e2.origin = "third_party", "use_only", "imported"
-        tx.edges[e2.id] = e2
+        s.edges[e2.id] = e2
     for row in confirmations + replies:
         r2 = copy.deepcopy(row); r2.origin = "imported" if mode == "default" else "restored"
-        (tx.confirmations if isinstance(r2, Confirmation) else tx.replies).append(r2)
-    s.__dict__.update(tx.__dict__)
+        (s.confirmations if isinstance(r2, Confirmation) else s.replies).append(r2)

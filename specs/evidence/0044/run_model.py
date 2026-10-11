@@ -242,10 +242,45 @@ def inv_retained_refusals(rules=R):
     return kept and ended and M.contested_pairs(s2) == []
 
 
+def inv_j1_closed_reason(rules=R):
+    """INV-J1 (0029 amendment): a `reinstated` write with NULL or an outside reason is refused and writes nothing; the
+    two admitted reasons write."""
+    s = plan(base())
+    n0 = len(s.journal)
+    refused = 0
+    for bad in (None, "other", ""):
+        try:
+            M.journal_reinstated(s, "p", bad)
+        except M.Refused:
+            refused += 1
+    M.journal_reinstated(s, "p", "source_restored"); M.journal_reinstated(s, "p", "arity_reclassified")
+    return refused == 3 and len(s.journal) == n0 + 2
+
+
+def inv_j2_old_nulls(rules=R):
+    """INV-J2: an old NULL-reason event reads as `source_restored` and is NOT rewritten."""
+    ev = ("reinstated", "p", 1, None)
+    s = M.Store(); s.journal.append(ev)
+    return M.reinstated_reason(s.journal[0]) == "source_restored" and s.journal[0] == ev
+
+
+def inv_j3_writers(rules=R):
+    """INV-J3: each writer writes ITS reason — 0022's restoration `source_restored`, the arity migration
+    `arity_reclassified`."""
+    s = plan(base()); M.migrate(s, rules)
+    arity = [j for j in s.journal if j[0] == "reinstated" and j[1] == "p"]
+    s2 = base(); s2.edges["p"].active = False
+    M.restore_source(s2, "p")
+    src = [j for j in s2.journal if j[0] == "reinstated"]
+    return ([M.reinstated_reason(j) for j in arity] == ["arity_reclassified"]
+            and [M.reinstated_reason(j) for j in src] == ["source_restored"])
+
+
 INVARIANTS = {"INV-M1": inv_revocation, "INV-M2": inv_once_per_plan, "INV-M3": inv_successor_evidence,
               "INV-M4": inv_undo_identity, "INV-M5": inv_custom_registry, "INV-M6": inv_doctor,
               "INV-M7": inv_portability, "INV-M8": inv_redaction, "INV-M9": inv_order_key,
-              "INV-M10": inv_undo_id_scope, "INV-M11": inv_idless_duplicate, "INV-M12": inv_retained_refusals}
+              "INV-M10": inv_undo_id_scope, "INV-M11": inv_idless_duplicate, "INV-M12": inv_retained_refusals,
+              "INV-J1": inv_j1_closed_reason, "INV-J2": inv_j2_old_nulls, "INV-J3": inv_j3_writers}
 
 
 # ----------------------------------------------------------------------------------------------- mutants
@@ -282,6 +317,9 @@ MUTANTS = {
     "the effective_at time test applied to imported rows (F5)": ("INV-M7", None),
     "default import's testimony earns the doctor exemption (§11.3)": ("INV-M7", None),
     "retained refusals expire after a time (§11.4)": ("INV-M12", None),
+    "the journal accepts any reason, NULL included (0029 J1)": ("INV-J1", lambda: setattr(M, "journal_reinstated", lambda s, e, r: s.journal.append(("reinstated", e, s.tick(), r)))),
+    "old NULL events read as 'unknown' (0029 J2)": ("INV-J2", lambda: setattr(M, "reinstated_reason", lambda ev: ev[3] if len(ev) > 3 and ev[3] is not None else "unknown")),
+    "the writers' reasons swapped (0029 J3)": ("INV-J3", lambda: _install_swapped_reasons()),
 }
 
 
@@ -404,6 +442,15 @@ def _rules_swap(**kw):
         setattr(M, name, wrap())
 
 
+def _install_swapped_reasons():
+    orig = M.restore_source
+
+    def restore_source(s, edge_id):
+        e = s.edges[edge_id]; e.active, e.invalidated_at, e.reason = True, None, None
+        M.journal_reinstated(s, edge_id, "arity_reclassified")         # swapped
+    M.restore_source = restore_source
+
+
 def _install_expiring_refusals():
     orig = M.contested_pairs
     M.contested_pairs = lambda st: [pr for pr in orig(st) if st.clock - next(t for a, b, _r, t in st.refusals if (a, b) == pr) < 20]
@@ -437,7 +484,8 @@ def run_mutants() -> dict:
     out = {}
     pristine = {k: getattr(M, k) for k in ("would_be_revoked", "consider", "write_plan", "order_key", "receipt",
                                            "undo", "doctor_refs", "import_file", "redact", "migrate",
-                                           "migrate_user", "contested_pairs")}
+                                           "migrate_user", "contested_pairs", "journal_reinstated",
+                                           "reinstated_reason", "restore_source")}
     for name, (owner, install) in MUTANTS.items():
         (install or INSTALL[name])()
         try:
