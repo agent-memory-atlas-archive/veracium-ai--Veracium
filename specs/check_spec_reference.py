@@ -174,6 +174,36 @@ _CLOSURE = re.compile(r"^##+\s*Review closure", re.M)
 # clears unaudited through the old path. Accepting 0008 alone would authorise an
 # unsafe partial cut.
 _REQUIRES = re.compile(r"^Spec-Requires:\s*([0-9, ]+)$", re.M)
+# 2026-10-11 (external review, 0044 round 1 R1-10 and 0045-0047 round 1 R1-10; the owner chose CONTENT binding over a
+# version floor, because a floor names an ORDER — any later version, an unrelated one included, would satisfy it): a
+# prerequisite may name the exact AMENDMENT it must already have folded in — `Spec-Requires: 0045, 0041[0047/0041-replies]`.
+# Folding an amendment into an accepted spec writes its id into that spec's cumulative `Folds:` line; the gate reads only
+# that line, so it never depends on the shape of a Version cell. An id not present there is "has not landed" (fail
+# closed). A line that STARTS `Spec-Requires:` but does not parse is a refusal — the old pattern simply failed to match
+# it, so a typo silently dropped the requirement (a check that weakens as its subject breaks).
+_REQUIRES_LINE = re.compile(r"^Spec-Requires:(.*)$", re.M)
+_REQUIRES_ITEM = re.compile(r"^(\d{4})(?:\[([A-Za-z0-9][A-Za-z0-9/._-]*)\])?$")
+_FOLDS_LINE = re.compile(r"^Folds:(.*)$", re.M)
+
+
+def _parse_requires(body: str):
+    """[(dep, amendment_id_or_None)], or raises ValueError naming the item that does not parse."""
+    out = []
+    for m in _REQUIRES_LINE.finditer(body):
+        for raw in m.group(1).split(","):
+            item = raw.strip()
+            if not item:
+                continue
+            mi = _REQUIRES_ITEM.match(item)
+            if not mi:
+                raise ValueError(item)
+            out.append((mi.group(1), mi.group(2)))
+    return out
+
+
+def _folds(body: str) -> set:
+    """Every amendment id the spec's `Folds:` line(s) record."""
+    return {x.strip() for m in _FOLDS_LINE.finditer(body) for x in m.group(1).split(",") if x.strip()}
 
 MIN_REASON_CHARS = 12
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -263,11 +293,14 @@ def _validate_spec_ref(sha: str, value: str) -> list[str]:
             f"{extra}. Land the spec first, or use `Spec-Exception:` if this "
             f"commit is docs/tests/a revert rather than implementing it.")
     else:
-        for dep in (_REQUIRES.search(body).group(1).split(",")
-                    if _REQUIRES.search(body) else []):
-            dep = dep.strip()
-            if not dep:
-                continue
+        try:
+            requires = _parse_requires(body)
+        except ValueError as bad:
+            problems.append(
+                f"`{value}` has a `Spec-Requires:` item that does not parse: `{bad}` — each item is NNNN or "
+                f"NNNN[amendment-id]; an unparsed requirement is a refusal, never silently ignored.")
+            requires = []
+        for dep, amendment in requires:
             # Read the prerequisite from the SAME commit's tree, so the check
             # reflects the state that held when the change was written.
             names = [n for n in _git("ls-tree", "--name-only", f"{sha}:specs").split()
@@ -283,6 +316,10 @@ def _validate_spec_ref(sha: str, value: str) -> list[str]:
                     f"`{dep_state}`. Accepting a spec whose prerequisite is "
                     f"unresolved authorises a partial cut — see its "
                     f"`Spec-Requires:` line for why.")
+            elif amendment is not None and amendment not in _folds(_git("show", f"{sha}:specs/{names[0]}")):
+                problems.append(
+                    f"`{value}` requires `{dep}[{amendment}]`, but `{names[0]}`'s `Folds:` line does not record "
+                    f"`{amendment}` — the amendment it depends on has not landed.")
     if state in IMPLEMENTABLE and not _CLOSURE.search(body):
         problems.append(
             f"`{value}` is `accepted` but carries no `## Review closure` "

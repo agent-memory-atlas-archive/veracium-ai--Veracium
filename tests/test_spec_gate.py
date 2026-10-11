@@ -763,6 +763,46 @@ def test_a_spec_cannot_be_accepted_while_its_prerequisite_is_unresolved(repo):
     assert "requires `0020`" in out
 
 
+def _req_specs(repo, dep_extra, requires):
+    (repo.path / "specs").mkdir(exist_ok=True)
+    (repo.path / "specs/0020-dep.md").write_text(
+        f"# Spec\n\nSpec-Status: accepted\n{dep_extra}\n| | |\n|---|---|\n| **Version** | 16 |\n\nbody\n"
+        "\n## Review closure\n\n| f | evidence |\n|---|---|\n| 1 | `x` |\n")
+    (repo.path / "specs/0021-needs.md").write_text(
+        f"# Spec\n\nSpec-Status: accepted\nSpec-Requires: {requires}\n\nbody\n"
+        "\n## Review closure\n\n| f | evidence |\n|---|---|\n| 1 | `x` |\n")
+    return repo.commit("implement", ["Spec: specs/0021-needs.md"], touch=["src/veracium/graph.py"]).check()
+
+
+def test_a_required_amendment_must_be_folded_into_its_prerequisite__with_its_controls(tmp_path):
+    """R1-10 (0044 r1 and 0045-0047 r1), CONTENT binding: `Spec-Requires: 0020[0047/0020-replies]` refuses until
+    0020's `Folds:` line records exactly that id. A LATER unrelated fold does not satisfy it (the version-floor form's
+    flaw: an order is not a content); a later fold beside it does not break it; the bare number is the control; the
+    prerequisite's Version cell is never read (0020 here carries a bare, unbolded `16`, the shape 12 accepted specs
+    use)."""
+    cases = [("", "0020[0047/0020-replies]", False),                                  # nothing folded
+             ("Folds: 0099/0020-unrelated\n", "0020[0047/0020-replies]", False),     # a later, unrelated fold
+             ("Folds: 0047/0020-replies\n", "0020[0047/0020-replies]", True),
+             ("Folds: 0047/0020-replies, 0099/0020-later\n", "0020[0047/0020-replies]", True),
+             ("", "0020", True)]                                                      # the bare number, unchanged
+    for i, (extra, req, ok) in enumerate(cases):
+        code, out = _req_specs(Repo(tmp_path / f"f{i}"), extra, req)
+        if ok:
+            assert code == 0, (extra, req, out)
+        else:
+            assert code == POLICY_FAIL and "has not landed" in out, (extra, req, out)
+
+
+def test_an_unparsed_requirement_is_refused_not_ignored(tmp_path):
+    """A `Spec-Requires:` line the old pattern could not match was IGNORED, so a typo silently dropped the
+    requirement. Each malformed form now refuses, naming the item; a well-formed line is the control."""
+    for i, bad in enumerate(("0020>=v7", "0020@v7", "20", "0020[]", "0020[a b]", "0020[x]extra", "0020, banana")):
+        code, out = _req_specs(Repo(tmp_path / f"b{i}"), "Folds: x\n", bad)
+        assert code == POLICY_FAIL and "does not parse" in out, (bad, out)
+    code, out = _req_specs(Repo(tmp_path / "good"), "Folds: x\n", "0020[x]")
+    assert code == 0, out
+
+
 def test_a_spec_claiming_a_test_is_measured_today_must_have_it():
     """A row that says "measured today" must cite a test that exists.
 

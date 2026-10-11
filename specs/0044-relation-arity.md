@@ -1,6 +1,7 @@
 # Feature spec: relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be
 
 Spec-Status: draft
+Spec-Requires: 0003[0044/0003-contested-order], 0018[0044/0018-data-migration], 0029[0044/0029-reinstated-reason]
 
 | | |
 |---|---|
@@ -13,7 +14,7 @@ Spec-Status: draft
 | **Path** | **full** |
 | **Number** | 0044 — from `allocation.py --next` at adoption, 2026-09-20. |
 | **Predecessor** | none. Occasioned by `TRACK-B-RENDER-PATH-RESULT.md` §5–6 (fix **B**, *“stop treating multi-valued attributes as functional”*, recorded there as *“the real modelling question and the owner's”*). **Travels with** the 0003 contested-order amendment in one review package (the owner's grouping, 2026-09-19: the two share the contested-render surface a reviewer needs whole) |
-| **Requires** *(version-bound; the machine-checked form is dev's gate, R1-10)* | the 0018 amendment (a per-user data-migration operation); a 0029 amendment (a closed reason for `reinstated`, §4j). The 0003 amendment requires THIS version. |
+| **Requires** | **Machine-checked by the `Spec-Requires:` line above** (R1-10; the gate binds by CONTENT — each id must appear on the prerequisite's `Folds:` line, which its fold writes in the same commit as the folded text; the owner, 2026-10-11, "Bind by content"). The three amendments travel in this package: `0044/0003-contested-order`, `0044/0018-data-migration`, `0044/0029-reinstated-reason`. The folded 0003 carries `Spec-Requires: 0044` in return, so the two flip together. |
 
 ---
 
