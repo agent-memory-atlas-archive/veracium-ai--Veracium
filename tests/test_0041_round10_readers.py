@@ -27,7 +27,9 @@ _spec.loader.exec_module(tt)
 U = "u"
 SECRET = "SECRET-READER-4471"
 OLD = datetime.now(timezone.utc) - timedelta(days=3000)
-TODAY = date.today().isoformat()
+# the UTC date, as `Episode.valid_now` compares it: a local `date.today()` made `ep-1` future-dated wherever the local
+# date is ahead of UTC (the 0048 round-1 reviewer's R1-05, reproduced under Australia/Brisbane)
+TODAY = datetime.now(timezone.utc).date().isoformat()
 
 
 def _prov(**kw):

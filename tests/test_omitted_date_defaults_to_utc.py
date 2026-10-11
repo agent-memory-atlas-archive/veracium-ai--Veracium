@@ -160,3 +160,46 @@ def test_every_omitted_date_default_uses_the_utc_clock():
                 if isinstance(sub, ast.Call) and getattr(sub.func, "id", None) == "_today_utc":
                     callers.add(node.name)
     assert callers == {"remember", "dispute", "confirm", "record_outcome", "correct"}, callers
+
+
+def _local_calendar_calls(tree):
+    """`<x>.today()` (date.today, datetime.today) and an argument-less `datetime.now()`: each reads the LOCAL calendar."""
+    import ast
+    out = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr == "today" and not node.args and not node.keywords:
+                out.append(node.lineno)
+            elif node.func.attr == "now" and not node.args and not node.keywords:
+                out.append(node.lineno)
+    return out
+
+
+def test_no_test_fixture_takes_its_date_from_the_local_calendar():
+    """The package's guard above covers src/ only, and a fixture in tests/ did exactly this: the round-10 readers'
+    `TODAY = date.today()` dated an episode by the LOCAL calendar while `Episode.valid_now` compares the UTC date, so the
+    control failed wherever the local date was ahead of UTC (0048 round 1, R1-05, reproduced under Australia/Brisbane).
+    Every test module is parsed; a local-calendar call anywhere in tests/ is refused."""
+    import ast
+    tests = pathlib.Path(__file__).resolve().parent
+    hits = [(p.name, ln) for p in sorted(tests.rglob("*.py")) for ln in _local_calendar_calls(ast.parse(p.read_text()))]
+    assert hits == [], hits
+
+
+def test_the_round10_readers_fixture_dates_by_utc_on_both_sides_of_the_date_line():
+    """R1-05's boundary regression: the fixture module is imported afresh in a zone AHEAD of UTC (Etc/GMT-14) and one
+    BEHIND it (Etc/GMT+12). At any instant the local date differs from the UTC date in at least one of them, so a fixture
+    reading the local calendar fails here whatever the hour; the one reading UTC passes in both."""
+    import importlib.util
+    from datetime import datetime, timezone
+    path = pathlib.Path(__file__).resolve().parent / "test_0041_round10_readers.py"
+    differs = []
+    for zone in ("Etc/GMT-14", "Etc/GMT+12"):
+        with _under_zone(zone):
+            import datetime as _dt
+            differs.append(_dt.date.fromtimestamp(time.time()).isoformat() != datetime.now(timezone.utc).date().isoformat())
+            spec = importlib.util.spec_from_file_location(f"r10_readers_{zone.replace('/', '_').replace('-', 'm').replace('+', 'p')}", path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            assert mod.TODAY == datetime.now(timezone.utc).date().isoformat(), (zone, mod.TODAY)
+    assert any(differs), "neither zone's local date differed from UTC — the regression would have no teeth"
