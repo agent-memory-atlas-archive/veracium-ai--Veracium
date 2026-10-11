@@ -2394,6 +2394,12 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         root / "specs" / "evidence" / "0043" / "derived_markers.py",
         # ...and the mechanism mutation table: its `--check` asserts a committed table current and every row good
         root / "specs" / "evidence" / "0043" / "mutation_campaign.py",
+        # specs/0047 §4d: the carrier inventory by complement REFUSES an unclassified, stale or undecided render site —
+        # a checker whatever its name says; its matrix drives each refusal on a planted source tree
+        root / "specs" / "evidence" / "0047" / "carrier_inventory.py",
+        # package II's model citations: refuses a §6 row whose "(model Gn)" no mutant of model II answers, and the
+        # reverse; its matrix breaks each carrier once
+        root / "specs" / "evidence" / "0045" / "model_citations.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

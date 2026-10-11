@@ -1,0 +1,962 @@
+[
+ {
+  "id": "h001",
+  "relation": "works_as",
+  "object": "nurse",
+  "text": "Honestly, these days I'm basically a full-time nurse, 12 hour shifts at St Vincent's are wrecking me.",
+  "gold": true,
+  "note": "hedge-word but affirmative current role"
+ },
+ {
+  "id": "h002",
+  "relation": "works_as",
+  "object": "paralegal",
+  "text": "I work as a paralegal at a small firm downtown so formal emails are my whole life lol",
+  "gold": true,
+  "note": "direct statement with extra clause"
+ },
+ {
+  "id": "h003",
+  "relation": "works_as",
+  "object": "dentist",
+  "text": "my sister's a dentist and she keeps telling me to floss more",
+  "gold": false,
+  "note": "role belongs to sister"
+ },
+ {
+  "id": "h004",
+  "relation": "works_as",
+  "object": "barista",
+  "text": "I used to be a barista before I went back to school, so I'm picky about espresso.",
+  "gold": false,
+  "note": "past-only role, used to"
+ },
+ {
+  "id": "h005",
+  "relation": "works_as",
+  "object": "electrician",
+  "text": "Should I become an electrician? the pay seems decent and I like working with my hands",
+  "gold": false,
+  "note": "question about possible career"
+ },
+ {
+  "id": "h006",
+  "relation": "works_as",
+  "object": "teacher",
+  "text": "been teaching high school chemistry for about six years now, any tips for keeping 16 year olds awake?",
+  "gold": true,
+  "note": "indirect: been teaching for years"
+ },
+ {
+  "id": "h007",
+  "relation": "works_as",
+  "object": "Shopify",
+  "text": "Just started at Shopify last month as a backend dev, still learning the codebase.",
+  "gold": true,
+  "note": "employer stated, started recently"
+ },
+ {
+  "id": "h008",
+  "relation": "works_as",
+  "object": "lawyer",
+  "text": "I'm not a lawyer, but does this contract clause seem weird to you?",
+  "gold": false,
+  "note": "negated role"
+ },
+ {
+  "id": "h009",
+  "relation": "works_as",
+  "object": "accountant",
+  "text": "I'm an accountant so tax season is basically me not sleeping for 3 months",
+  "gold": true,
+  "note": "direct statement, casual"
+ },
+ {
+  "id": "h010",
+  "relation": "works_as",
+  "object": "project manager",
+  "text": "Starting Monday I'll be a project manager, which is honestly terrifying.",
+  "gold": false,
+  "note": "future role, plan"
+ },
+ {
+  "id": "h011",
+  "relation": "measures",
+  "object": "78 kg",
+  "text": "I'm at 78 kg this morning, down from 82 in June!",
+  "gold": true,
+  "note": "current weight, past value also mentioned"
+ },
+ {
+  "id": "h012",
+  "relation": "measures",
+  "object": "95 kg",
+  "text": "I weighed 95 kg back in college, wild to think about now",
+  "gold": false,
+  "note": "past-only value"
+ },
+ {
+  "id": "h013",
+  "relation": "measures",
+  "object": "page 214",
+  "text": "currently on page 214 of Middlemarch and it's finally getting good",
+  "gold": true,
+  "note": "current reading page"
+ },
+ {
+  "id": "h014",
+  "relation": "measures",
+  "object": "$10,000",
+  "text": "My goal is to get my savings to $10,000 by December, can you help me budget?",
+  "gold": false,
+  "note": "target value, not current"
+ },
+ {
+  "id": "h015",
+  "relation": "measures",
+  "object": "742",
+  "text": "Got my credit score checked today, it's 742. Is that decent?",
+  "gold": true,
+  "note": "current score with question after"
+ },
+ {
+  "id": "h016",
+  "relation": "measures",
+  "object": "52 bpm",
+  "text": "my husband's resting heart rate is like 52 bpm, such a show-off",
+  "gold": false,
+  "note": "quantity belongs to husband"
+ },
+ {
+  "id": "h017",
+  "relation": "measures",
+  "object": "70 kg",
+  "text": "What would my BMI be if I got down to 70 kg? I'm 175cm.",
+  "gold": false,
+  "note": "hypothetical value"
+ },
+ {
+  "id": "h018",
+  "relation": "measures",
+  "object": "$3,400",
+  "text": "running total in the emergency fund is $3,400 as of today",
+  "gold": true,
+  "note": "current savings, no pronoun"
+ },
+ {
+  "id": "h019",
+  "relation": "measures",
+  "object": "10,000 steps",
+  "text": "I'm nowhere near 10k steps a day, more like 4k on a good day",
+  "gold": false,
+  "note": "negated value"
+ },
+ {
+  "id": "h020",
+  "relation": "measures",
+  "object": "120/80",
+  "text": "the doctor said I should aim for 120/80 but it's been running higher",
+  "gold": false,
+  "note": "reported target, not current reading"
+ },
+ {
+  "id": "h021",
+  "relation": "prefers",
+  "object": "window seats",
+  "text": "I always prefer window seats, aisle seats make me feel trapped somehow",
+  "gold": true,
+  "note": "direct standing preference"
+ },
+ {
+  "id": "h022",
+  "relation": "prefers",
+  "object": "dark mode",
+  "text": "I like dark mode way better than light mode for basically everything",
+  "gold": true,
+  "note": "comparative preference, speaker's own"
+ },
+ {
+  "id": "h023",
+  "relation": "prefers",
+  "object": "tea",
+  "text": "My wife prefers tea but I can't function without coffee",
+  "gold": false,
+  "note": "preference belongs to wife"
+ },
+ {
+  "id": "h024",
+  "relation": "prefers",
+  "object": "cold pizza",
+  "text": "Is it weird to prefer cold pizza?",
+  "gold": false,
+  "note": "question, not assertion"
+ },
+ {
+  "id": "h025",
+  "relation": "prefers",
+  "object": "horror movies",
+  "text": "I used to love horror movies but they just stress me out now",
+  "gold": false,
+  "note": "past-only preference"
+ },
+ {
+  "id": "h026",
+  "relation": "prefers",
+  "object": "bullet points",
+  "text": "give me bullet points, not paragraphs, that's just how my brain works",
+  "gold": true,
+  "note": "imperative implying standing preference, stated"
+ },
+ {
+  "id": "h027",
+  "relation": "prefers",
+  "object": "aisle seat",
+  "text": "I'd probably prefer an aisle seat if it's long-haul, but honestly I'm not sure",
+  "gold": false,
+  "note": "hedged conditional"
+ },
+ {
+  "id": "h028",
+  "relation": "prefers",
+  "object": "mornings",
+  "text": "Morning person here, I get everything important done before 9",
+  "gold": true,
+  "note": "indirect self-label"
+ },
+ {
+  "id": "h029",
+  "relation": "prefers",
+  "object": "mechanical keyboards",
+  "text": "I'm a total mechanical keyboard snob, can't go back to laptop keys",
+  "gold": true,
+  "note": "indirect preference via self-label"
+ },
+ {
+  "id": "h030",
+  "relation": "prefers",
+  "object": "meetings",
+  "text": "oh sure, I just LOVE meetings that could've been an email",
+  "gold": false,
+  "note": "sarcasm"
+ },
+ {
+  "id": "h031",
+  "relation": "located_at",
+  "object": "Brisbane",
+  "text": "Brisbane-based here, so time zones are always a nightmare for US meetings",
+  "gold": true,
+  "note": "compound adjective location"
+ },
+ {
+  "id": "h032",
+  "relation": "located_at",
+  "object": "Leeds",
+  "text": "I live in Leeds, any good weekend hikes nearby?",
+  "gold": true,
+  "note": "direct statement"
+ },
+ {
+  "id": "h033",
+  "relation": "located_at",
+  "object": "Denver",
+  "text": "We're moving to Denver in March, what neighborhoods should I look at?",
+  "gold": false,
+  "note": "planned move"
+ },
+ {
+  "id": "h034",
+  "relation": "located_at",
+  "object": "Ohio",
+  "text": "I grew up in Ohio but haven't been back in years",
+  "gold": false,
+  "note": "past-only location"
+ },
+ {
+  "id": "h035",
+  "relation": "located_at",
+  "object": "Lisbon",
+  "text": "My parents are in Lisbon and I'm trying to plan a visit for christmas",
+  "gold": false,
+  "note": "location of parents"
+ },
+ {
+  "id": "h036",
+  "relation": "located_at",
+  "object": "Vancouver",
+  "text": "ugh, another rainy day here in Vancouver. recommend me a cozy indoor activity?",
+  "gold": true,
+  "note": "indirect: here in X"
+ },
+ {
+  "id": "h037",
+  "relation": "located_at",
+  "object": "Tokyo",
+  "text": "Visiting Tokyo for a week, what should I eat?",
+  "gold": false,
+  "note": "visit, not where based"
+ },
+ {
+  "id": "h038",
+  "relation": "located_at",
+  "object": "Berlin",
+  "text": "Been in Berlin almost 4 years now and my German is still terrible",
+  "gold": true,
+  "note": "duration phrasing, current"
+ },
+ {
+  "id": "h039",
+  "relation": "located_at",
+  "object": "Austin",
+  "text": "Is Austin a good place to live for someone who works remote?",
+  "gold": false,
+  "note": "question about possible location"
+ },
+ {
+  "id": "h040",
+  "relation": "located_at",
+  "object": "Glasgow",
+  "text": "home is a tiny flat in Glasgow with a very loud radiator",
+  "gold": true,
+  "note": "indirect: home is"
+ },
+ {
+  "id": "h041",
+  "relation": "health_state",
+  "object": "type 1 diabetes",
+  "text": "I have type 1 diabetes so I need recipes I can carb count easily",
+  "gold": true,
+  "note": "direct current condition"
+ },
+ {
+  "id": "h042",
+  "relation": "health_state",
+  "object": "asthma",
+  "text": "I carry an inhaler everywhere just in case",
+  "gold": false,
+  "note": "inference only, not stated"
+ },
+ {
+  "id": "h043",
+  "relation": "health_state",
+  "object": "high blood pressure",
+  "text": "My dad has high blood pressure, what foods should he avoid?",
+  "gold": false,
+  "note": "condition belongs to dad"
+ },
+ {
+  "id": "h044",
+  "relation": "health_state",
+  "object": "sprained ankle",
+  "text": "Still dealing with this stupid sprained ankle, week 3 now",
+  "gold": true,
+  "note": "ongoing, no explicit pronoun"
+ },
+ {
+  "id": "h045",
+  "relation": "health_state",
+  "object": "covid",
+  "text": "I had covid back in January and lost my sense of smell for a month",
+  "gold": false,
+  "note": "past-only condition"
+ },
+ {
+  "id": "h046",
+  "relation": "health_state",
+  "object": "ADHD",
+  "text": "Do you think I might have ADHD? I can never focus on anything",
+  "gold": false,
+  "note": "question, self-speculation"
+ },
+ {
+  "id": "h047",
+  "relation": "health_state",
+  "object": "migraines",
+  "text": "got diagnosed with migraines last year and they're still pretty bad",
+  "gold": true,
+  "note": "past diagnosis, still current"
+ },
+ {
+  "id": "h048",
+  "relation": "health_state",
+  "object": "anemia",
+  "text": "I'm not anemic, the blood test came back totally fine",
+  "gold": false,
+  "note": "negated condition"
+ },
+ {
+  "id": "h049",
+  "relation": "health_state",
+  "object": "pregnant",
+  "text": "I'm pregnant (14 weeks!) so no soft cheese for me",
+  "gold": true,
+  "note": "direct, parenthetical detail"
+ },
+ {
+  "id": "h050",
+  "relation": "health_state",
+  "object": "burnout",
+  "text": "my therapist thinks it could be burnout but idk",
+  "gold": false,
+  "note": "reported, hedged by other"
+ },
+ {
+  "id": "h051",
+  "relation": "has_pet",
+  "object": "Rufus",
+  "text": "we've got a dog, Rufus, and he hates the vacuum",
+  "gold": true,
+  "note": "we've got, appositive name"
+ },
+ {
+  "id": "h052",
+  "relation": "has_pet",
+  "object": "Miso",
+  "text": "My cat Miso just knocked my coffee off the desk again",
+  "gold": true,
+  "note": "possessive with name"
+ },
+ {
+  "id": "h053",
+  "relation": "has_pet",
+  "object": "Kiwi",
+  "text": "My neighbor's parrot Kiwi screams every morning at 6",
+  "gold": false,
+  "note": "neighbor's pet"
+ },
+ {
+  "id": "h054",
+  "relation": "has_pet",
+  "object": "Biscuit",
+  "text": "We had a hamster named Biscuit when I was a kid",
+  "gold": false,
+  "note": "past-only pet"
+ },
+ {
+  "id": "h055",
+  "relation": "has_pet",
+  "object": "Pickles",
+  "text": "Thinking of adopting a greyhound, maybe call him Pickles",
+  "gold": false,
+  "note": "planned pet"
+ },
+ {
+  "id": "h056",
+  "relation": "has_pet",
+  "object": "Juniper",
+  "text": "Juniper (my rabbit) has started chewing the cables, help",
+  "gold": true,
+  "note": "parenthetical ownership"
+ },
+ {
+  "id": "h057",
+  "relation": "has_pet",
+  "object": "Max",
+  "text": "I'm not really a pet person, my roommate's dog Max is enough for me",
+  "gold": false,
+  "note": "roommate's pet, speaker negates"
+ },
+ {
+  "id": "h058",
+  "relation": "has_pet",
+  "object": "Salt",
+  "text": "two cats, Salt and Pepper, both terrible at sharing. how do I stop the food fights?",
+  "gold": true,
+  "note": "verbless fragment, list of names"
+ },
+ {
+  "id": "h059",
+  "relation": "has_pet",
+  "object": "Oscar",
+  "text": "RIP Oscar, best goldfish I ever had",
+  "gold": false,
+  "note": "deceased pet, past"
+ },
+ {
+  "id": "h060",
+  "relation": "has_pet",
+  "object": "Waffles",
+  "text": "what's a good name for a corgi? I'm thinking Waffles",
+  "gold": false,
+  "note": "naming question, no pet yet"
+ },
+ {
+  "id": "h061",
+  "relation": "has_diet",
+  "object": "vegan",
+  "text": "been vegan for 3 years now, so no dairy in the suggestions please",
+  "gold": true,
+  "note": "duration phrasing, no pronoun"
+ },
+ {
+  "id": "h062",
+  "relation": "has_diet",
+  "object": "gluten-free",
+  "text": "I'm gluten-free (celiac), does this brand of oats work?",
+  "gold": true,
+  "note": "direct with parenthetical reason"
+ },
+ {
+  "id": "h063",
+  "relation": "has_diet",
+  "object": "vegetarian",
+  "text": "My girlfriend is vegetarian so I need a dinner idea that works for both of us",
+  "gold": false,
+  "note": "diet belongs to girlfriend"
+ },
+ {
+  "id": "h064",
+  "relation": "has_diet",
+  "object": "keto",
+  "text": "I tried keto for like two months last year, never again",
+  "gold": false,
+  "note": "past-only diet"
+ },
+ {
+  "id": "h065",
+  "relation": "has_diet",
+  "object": "intermittent fasting",
+  "text": "Should I try intermittent fasting? Everyone at work swears by it",
+  "gold": false,
+  "note": "question, others practice it"
+ },
+ {
+  "id": "h066",
+  "relation": "has_diet",
+  "object": "no pork",
+  "text": "I don't eat pork, for religious reasons",
+  "gold": true,
+  "note": "negation expresses the restriction"
+ },
+ {
+  "id": "h067",
+  "relation": "has_diet",
+  "object": "pescatarian",
+  "text": "I'm gonna try going pescatarian in the new year",
+  "gold": false,
+  "note": "planned diet"
+ },
+ {
+  "id": "h068",
+  "relation": "has_diet",
+  "object": "intermittent fasting",
+  "text": "I do intermittent fasting, 16:8, so I don't eat before noon",
+  "gold": true,
+  "note": "direct practice statement"
+ },
+ {
+  "id": "h069",
+  "relation": "has_diet",
+  "object": "vegan",
+  "text": "I'm not vegan, I just like oat milk better",
+  "gold": false,
+  "note": "negated diet"
+ },
+ {
+  "id": "h070",
+  "relation": "has_diet",
+  "object": "paleo",
+  "text": "kinda paleo-ish? I mean I still eat bread sometimes lol",
+  "gold": false,
+  "note": "hedged, self-undercut"
+ },
+ {
+  "id": "h071",
+  "relation": "partner_of",
+  "object": "Dev",
+  "text": "My husband Dev keeps stealing my chargers",
+  "gold": true,
+  "note": "possessive with name"
+ },
+ {
+  "id": "h072",
+  "relation": "partner_of",
+  "object": "Priya",
+  "text": "Me and my girlfriend Priya are planning a trip to Portugal, any tips?",
+  "gold": true,
+  "note": "partner named inside a plan"
+ },
+ {
+  "id": "h073",
+  "relation": "partner_of",
+  "object": "Luke",
+  "text": "My best friend Sam just got engaged to her boyfriend Luke!",
+  "gold": false,
+  "note": "friend's partner"
+ },
+ {
+  "id": "h074",
+  "relation": "partner_of",
+  "object": "Jordan",
+  "text": "My ex, Jordan, still texts me sometimes",
+  "gold": false,
+  "note": "former partner"
+ },
+ {
+  "id": "h075",
+  "relation": "partner_of",
+  "object": "Alex",
+  "text": "Is it too soon to call Alex my boyfriend? we've been on 3 dates",
+  "gold": false,
+  "note": "question, unestablished relationship"
+ },
+ {
+  "id": "h076",
+  "relation": "partner_of",
+  "object": "Tom",
+  "text": "Tom and I have been together 9 years, married for 4",
+  "gold": true,
+  "note": "no role noun, married stated"
+ },
+ {
+  "id": "h077",
+  "relation": "partner_of",
+  "object": "Chris",
+  "text": "I wish Chris would ask me out already",
+  "gold": false,
+  "note": "wish"
+ },
+ {
+  "id": "h078",
+  "relation": "partner_of",
+  "object": "Hana",
+  "text": "my wife, Hana, is the one who actually cooks in this house",
+  "gold": true,
+  "note": "appositive name"
+ },
+ {
+  "id": "h079",
+  "relation": "partner_of",
+  "object": "Mei",
+  "text": "My brother's wife Mei is pregnant, what's a good gift?",
+  "gold": false,
+  "note": "brother's partner"
+ },
+ {
+  "id": "h080",
+  "relation": "partner_of",
+  "object": "Marco",
+  "text": "we split last spring, so Marco's not in the picture anymore",
+  "gold": false,
+  "note": "ended relationship"
+ },
+ {
+  "id": "h081",
+  "relation": "relative_of",
+  "object": "Leila",
+  "text": "My sister Leila is getting married in June and I'm the maid of honor",
+  "gold": true,
+  "note": "possessive with name"
+ },
+ {
+  "id": "h082",
+  "relation": "relative_of",
+  "object": "Carol",
+  "text": "my mum, Carol, just got her first smartphone and I'm tech support now",
+  "gold": true,
+  "note": "appositive name"
+ },
+ {
+  "id": "h083",
+  "relation": "relative_of",
+  "object": "Ethan",
+  "text": "My friend's brother Ethan is a pilot, should I ask him about flight school?",
+  "gold": false,
+  "note": "friend's relative"
+ },
+ {
+  "id": "h084",
+  "relation": "relative_of",
+  "object": "Kevin",
+  "text": "Ugh, my brother-in-law Kevin is staying with us for two weeks",
+  "gold": true,
+  "note": "in-law relation named"
+ },
+ {
+  "id": "h085",
+  "relation": "relative_of",
+  "object": "Iris",
+  "text": "If I ever have a daughter I'd name her Iris",
+  "gold": false,
+  "note": "hypothetical child"
+ },
+ {
+  "id": "h086",
+  "relation": "relative_of",
+  "object": "Arjun",
+  "text": "Helping my son Arjun with his math homework and I'm completely lost",
+  "gold": true,
+  "note": "possessive with name"
+ },
+ {
+  "id": "h087",
+  "relation": "relative_of",
+  "object": "Ben",
+  "text": "Ben (my twin, not my husband lol) is visiting this weekend",
+  "gold": true,
+  "note": "parenthetical relation with distractor"
+ },
+ {
+  "id": "h088",
+  "relation": "relative_of",
+  "object": "Richard",
+  "text": "My boyfriend's dad Richard is kind of intimidating",
+  "gold": false,
+  "note": "partner's relative"
+ },
+ {
+  "id": "h089",
+  "relation": "relative_of",
+  "object": "Felix",
+  "text": "The main character in my novel has a brother named Felix, does that name feel dated?",
+  "gold": false,
+  "note": "fictional character's relative"
+ },
+ {
+  "id": "h090",
+  "relation": "relative_of",
+  "object": "Dana",
+  "text": "my roommate Dana is basically like a sister to me",
+  "gold": false,
+  "note": "comparison, not family"
+ },
+ {
+  "id": "h091",
+  "relation": "works_on",
+  "object": "Postgres migration",
+  "text": "I'm working on a migration from Postgres 12 to 16 this sprint",
+  "gold": true,
+  "note": "direct current project"
+ },
+ {
+  "id": "h092",
+  "relation": "works_on",
+  "object": "checkout redesign",
+  "text": "currently heads-down on the checkout redesign, so ignore anything about onboarding",
+  "gold": true,
+  "note": "idiom, no pronoun"
+ },
+ {
+  "id": "h093",
+  "relation": "works_on",
+  "object": "billing rewrite",
+  "text": "My team lead is on the billing rewrite but I'm not involved",
+  "gold": false,
+  "note": "other person's project, negated"
+ },
+ {
+  "id": "h094",
+  "relation": "works_on",
+  "object": "iOS app",
+  "text": "I was on the iOS app last quarter but got moved off it",
+  "gold": false,
+  "note": "past-only project"
+ },
+ {
+  "id": "h095",
+  "relation": "works_on",
+  "object": "search relevance",
+  "text": "Next quarter I'll probably be on the search relevance project",
+  "gold": false,
+  "note": "planned, hedged"
+ },
+ {
+  "id": "h096",
+  "relation": "works_on",
+  "object": "recipe app",
+  "text": "My side project is a little recipe app in Flutter, it's coming along",
+  "gold": true,
+  "note": "side project, current"
+ },
+ {
+  "id": "h097",
+  "relation": "works_on",
+  "object": "data warehouse",
+  "text": "Should I volunteer for the data warehouse project or is it a career trap?",
+  "gold": false,
+  "note": "question about joining"
+ },
+ {
+  "id": "h098",
+  "relation": "works_on",
+  "object": "thesis",
+  "text": "writing my thesis on coral bleaching, chapter 3 is killing me",
+  "gold": true,
+  "note": "ongoing activity, no subject pronoun"
+ },
+ {
+  "id": "h099",
+  "relation": "works_on",
+  "object": "Android launch",
+  "text": "Everyone else on my team is on the Android launch, I'm stuck doing support tickets",
+  "gold": false,
+  "note": "teammates' project, contrasted"
+ },
+ {
+  "id": "h100",
+  "relation": "works_on",
+  "object": "design system",
+  "text": "I'm the one maintaining the internal design system, for my sins",
+  "gold": true,
+  "note": "cleft construction, wry aside"
+ },
+ {
+  "id": "h101",
+  "relation": "uses_tool",
+  "object": "Notion",
+  "text": "I keep all my notes in Notion, can you help me set up a reading tracker?",
+  "gold": true,
+  "note": "indirect use statement"
+ },
+ {
+  "id": "h102",
+  "relation": "uses_tool",
+  "object": "Jira",
+  "text": "We use Jira at work and I hate it",
+  "gold": true,
+  "note": "we use, with dislike"
+ },
+ {
+  "id": "h103",
+  "relation": "uses_tool",
+  "object": "Todoist",
+  "text": "My manager swears by Todoist but I've never tried it",
+  "gold": false,
+  "note": "manager uses, speaker negates"
+ },
+ {
+  "id": "h104",
+  "relation": "uses_tool",
+  "object": "Evernote",
+  "text": "I switched from Evernote years ago and never looked back",
+  "gold": false,
+  "note": "past tool"
+ },
+ {
+  "id": "h105",
+  "relation": "uses_tool",
+  "object": "Obsidian",
+  "text": "Is Obsidian better than Notion for a zettelkasten?",
+  "gold": false,
+  "note": "comparison question"
+ },
+ {
+  "id": "h106",
+  "relation": "uses_tool",
+  "object": "VS Code",
+  "text": "VS Code is open on my laptop basically 24/7",
+  "gold": true,
+  "note": "indirect, tool as subject"
+ },
+ {
+  "id": "h107",
+  "relation": "uses_tool",
+  "object": "Linear",
+  "text": "I'm thinking about trying Linear for my side project",
+  "gold": false,
+  "note": "plan, considering"
+ },
+ {
+  "id": "h108",
+  "relation": "uses_tool",
+  "object": "Figma",
+  "text": "Figma's my daily driver for wireframes",
+  "gold": true,
+  "note": "idiom daily driver"
+ },
+ {
+  "id": "h109",
+  "relation": "uses_tool",
+  "object": "Excel",
+  "text": "used to live in Excel, now everything's in Google Sheets",
+  "gold": false,
+  "note": "past tool, other tool current"
+ },
+ {
+  "id": "h110",
+  "relation": "uses_tool",
+  "object": "YNAB",
+  "text": "I do all my budgeting in YNAB, it's the only thing that's ever worked for me",
+  "gold": true,
+  "note": "direct use"
+ },
+ {
+  "id": "h111",
+  "relation": "avoids_tool",
+  "object": "Facebook",
+  "text": "I don't use Facebook anymore, deleted it in 2019",
+  "gold": true,
+  "note": "current avoidance via negation"
+ },
+ {
+  "id": "h112",
+  "relation": "avoids_tool",
+  "object": "Google Docs",
+  "text": "please no Google Docs suggestions, I refuse to use anything Google",
+  "gold": true,
+  "note": "refusal covering the tool"
+ },
+ {
+  "id": "h113",
+  "relation": "avoids_tool",
+  "object": "WhatsApp",
+  "text": "My dad won't touch WhatsApp, so I have to text him normally",
+  "gold": false,
+  "note": "dad avoids, not speaker"
+ },
+ {
+  "id": "h114",
+  "relation": "avoids_tool",
+  "object": "Teams",
+  "text": "I avoided Teams for ages but now my job makes me use it daily",
+  "gold": false,
+  "note": "past avoidance, now uses"
+ },
+ {
+  "id": "h115",
+  "relation": "avoids_tool",
+  "object": "Instagram",
+  "text": "Should I quit Instagram? it's eating my evenings",
+  "gold": false,
+  "note": "question, currently uses"
+ },
+ {
+  "id": "h116",
+  "relation": "avoids_tool",
+  "object": "TikTok",
+  "text": "I stay off TikTok on purpose, it's way too good at hooking me",
+  "gold": true,
+  "note": "idiom stay off"
+ },
+ {
+  "id": "h117",
+  "relation": "avoids_tool",
+  "object": "Chrome",
+  "text": "I'm going to stop using Chrome after this update, it's a memory hog",
+  "gold": false,
+  "note": "planned avoidance"
+ },
+ {
+  "id": "h118",
+  "relation": "avoids_tool",
+  "object": "ChatGPT",
+  "text": "I don't avoid ChatGPT exactly, I just prefer talking to you",
+  "gold": false,
+  "note": "negated avoidance"
+ },
+ {
+  "id": "h119",
+  "relation": "avoids_tool",
+  "object": "Zoom",
+  "text": "nope, not touching Zoom again after the last breach thing",
+  "gold": true,
+  "note": "elliptical refusal"
+ },
+ {
+  "id": "h120",
+  "relation": "avoids_tool",
+  "object": "Outlook",
+  "text": "Hate is a strong word but I'm not a fan of Outlook... I still use it every day though",
+  "gold": false,
+  "note": "dislike but uses it"
+ }
+]
