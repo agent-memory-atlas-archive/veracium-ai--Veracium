@@ -31,6 +31,16 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS = ROOT / "specs"
 TRACKED = ("0001", "0022", "0023", "0024", "0025", "0028", "0030", "0031", "0037", "0038", "0039", "0041", "0042", "0043")     # the specs whose ledgers this gate governs — the L-pair joined at acceptance (round 12); 0001 at its first sealed RETURN (round 3)
 
+# Specs whose returned verdicts are recorded WITHOUT `raised`, on purpose, and why. A design-accepted spec whose verdicts
+# raised implementation obligations cannot declare them yet: every declared id needs a closure row (completeness), and
+# the ledger has no "open" state. The commitment to declare them is not left in prose: test_spec_gate refuses a returned
+# external verdict without `raised` outside TRACKED and this map (from RULE_DATE on), and refuses a spec here whose
+# Decision cell says IMPLEMENTATION ACCEPTED, so the implementation fold cannot land without moving it to TRACKED.
+DEFERRED_RAISED = {
+    "0048": "design accepted at external round 2 (2026-10-12) with two implementation obligations (R2-01, R2-02); "
+            "R1-01..R1-05 and R2-01..R2-02 are declared, with their closure rows, at the implementation-acceptance fold",
+}
+
 
 def _is_sent(row) -> bool:
     """A SENT row is a DISPATCH record: it names the findings it is answering,

@@ -1851,6 +1851,80 @@ def test_a_returned_verdict_must_declare_what_it_raised():
         victim["raised"] = saved
 
 
+def test_a_returned_verdict_without_raised_is_tracked_deferred_or_before_the_rule():
+    """A returned external verdict recorded with no `raised` names its findings only in prose, where no gate reads them.
+    From the closure-mutant rule's date on, that is allowed only for a spec in render_closure.DEFERRED_RAISED, whose
+    declaration is owed at its implementation fold (and a TRACKED spec must declare, R8-1). Matrix: a planted untracked
+    row after the date refuses; the same row before the date, or for a deferred spec, passes."""
+    import sys, pathlib, importlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    import render_closure, reviews
+    importlib.reload(render_closure)
+    import importlib.util
+    cm = importlib.util.spec_from_file_location("cm_rule_date", root / "tests" / "test_closure_mutants.py")
+    cm_mod = importlib.util.module_from_spec(cm)
+    cm.loader.exec_module(cm_mod)
+    rule_date = cm_mod.RULE_DATE   # one definition: the closure-mutant rule's own
+
+    def offenders(rows, deferred):
+        return [(r["spec"], r["round"], r["date"]) for r in rows
+                if r["kind"] == "external" and not render_closure._is_sent(r) and "raised" not in r
+                and r["date"] >= rule_date and r["spec"] not in render_closure.TRACKED and r["spec"] not in deferred]
+
+    assert not offenders(reviews.REVIEWS, render_closure.DEFERRED_RAISED), offenders(
+        reviews.REVIEWS, render_closure.DEFERRED_RAISED)
+    planted = dict(spec="0099", round=1, kind="external", date=rule_date, verdict="RETURNED: R1-01")
+    assert offenders([planted], {}) == [("0099", 1, rule_date)]
+    assert not offenders([{**planted, "date": "2026-10-09"}], {})
+    assert not offenders([planted], {"0099": "a reason"})
+    assert not offenders([{**planted, "raised": []}], {})
+    assert not offenders([{**planted, "verdict": "SENT (a package)"}], {})
+    for spec, why in render_closure.DEFERRED_RAISED.items():
+        assert spec not in render_closure.TRACKED, f"{spec} is both TRACKED and DEFERRED_RAISED"
+        assert why.strip(), f"{spec}: a deferral states its reason"
+
+
+def test_a_deferred_spec_cannot_reach_implementation_acceptance():
+    """The DEFERRED_RAISED promise, made a refusal: a spec whose implementation has been accepted has had its
+    implementation fold, and that fold declares its raised ids and moves it to TRACKED. One still deferred has skipped
+    that step. Acceptance is read from BOTH carriers, because a status cell has lagged its verdict before: the Decision
+    cell and every returned external verdict row of the spec in specs/reviews.py, in either word order and any case
+    ("IMPLEMENTATION ACCEPTED", 0041's and 0043's Decision cells; "ACCEPTED — THE IMPLEMENTATION", 0043's verdict row).
+    Matrix (research's RR-02 mutants, and the design-only controls): each form refuses in each carrier; "ACCEPTED —
+    DESIGN" does not."""
+    import sys, pathlib, importlib, re
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    import render_closure, reviews
+    importlib.reload(render_closure)
+    DECISION = re.compile(r"^\| \*\*Decision \+ date\*\* \|(.*)$", re.M)
+    IMPL = re.compile(r"IMPLEMENTATION\W+ACCEPTED|ACCEPTED\W+(?:THE\s+)?IMPLEMENTATION", re.I)
+
+    def implementation_accepted(spec, text, rows):
+        m = DECISION.search(text)
+        assert m, f"{spec}: no Decision cell"
+        return bool(IMPL.search(m.group(1))) or any(
+            IMPL.search(r["verdict"]) for r in rows
+            if r["spec"] == spec and r["kind"] == "external" and not render_closure._is_sent(r))
+
+    for spec in render_closure.DEFERRED_RAISED:
+        (path,) = (root / "specs").glob(f"{spec}-*.md")
+        assert not implementation_accepted(spec, path.read_text(), reviews.REVIEWS), (
+            f"{spec} records its implementation accepted but is still in DEFERRED_RAISED: declare its raised ids in "
+            f"specs/reviews.py, write their closure rows, and move it to TRACKED")
+    design = "| **Decision + date** | **ACCEPTED — DESIGN 2026-10-12** (external round 2) |\n"
+    verdict = dict(spec="0099", round=2, kind="external", date="2026-10-12", verdict="🏁 ACCEPTED — DESIGN (v3.3)")
+    assert not implementation_accepted("0099", design, [verdict])
+    for form in ("**IMPLEMENTATION ACCEPTED 2026-11-01**", "ACCEPTED — IMPLEMENTATION", "implementation accepted",
+                 "🏁 ACCEPTED — THE IMPLEMENTATION"):
+        assert implementation_accepted("0099", design.replace(" |\n", f". {form} |\n"), [verdict]), form
+        late = dict(verdict, round=3, verdict=form)
+        assert implementation_accepted("0099", design, [verdict, late]), f"verdict row: {form}"
+    # a SENT row naming the words is a dispatch, not an acceptance
+    sent = dict(verdict, round=3, verdict="SENT (the implementation round; ACCEPTED — IMPLEMENTATION is what it asks)")
+    assert not implementation_accepted("0099", design, [verdict, sent])
+
 def test_the_rendered_finding_count_comes_from_raised_not_the_legacy_field():
     """R8-1's other half: the column is labelled "findings raised" and was fed
     by the legacy `findings=`, which disagrees with `raised` in four rows. The

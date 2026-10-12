@@ -4,7 +4,7 @@
 
 # Spec status
 
-**43 specs · 38 accepted · 438 external review
+**43 specs · 38 accepted · 440 external review
 rounds · 1 blocking questions open.**
 
 **Only `accepted` authorises implementation** (`PROCESS.md` §4a), and external
@@ -55,7 +55,7 @@ is the number that decides what can be built.
 | **0045** | the declarative grounding axis — was a fact STATED, or not shown to be? | `draft` | 2026-10-11 | 0 | 0 | 0 | 0 | 0 | — |
 | **0046** | the correction receipt — a corrected fact names what still rests on it | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
 | **0047** | the subject's right of reply — the record stands, and the reply travels with it | `draft` | 2026-10-11 | 0 | 0 | 0 | 0 | 0 | — |
-| **0048** | maintenance never raises confidence — the decay bounds (0002's N4, carried) | `accepted` | 2026-10-12 | 0 | 0 | 2 | 0 | 0 | — |
+| **0048** | maintenance never raises confidence — the decay bounds (0002's N4, carried) | `accepted` | 2026-10-12 | 0 | 2 | 2 | 0 | 0 | — |
 
 **Review archives** — the exact package sent for each round, with a sha256 per
 archive — are indexed in `specs/archives/INDEX.md`.
@@ -69,7 +69,7 @@ own count and rows, never the cross-spec total, so a spec joining the set or
 closing a finding rewrites no other spec's text.
 
 **Rounds recorded outside the ledger** — so a `0` in *ext* is not read as
-"never reviewed": **0027** — accepted at external round 9 per its own header; those rounds predate `specs/reviews.py` and are recorded in the spec; **0029** — its rounds are housed in **0030**'s ledger (one ledger for the joint review stream; each row names its target); **0032** — no rounds in `specs/reviews.py` and no round named in its header (owner-accepted under PROCESS §4a's second path, or a gap); **0048** — accepted at external round 2 per its own header; those rounds predate `specs/reviews.py` and are recorded in the spec.
+"never reviewed": **0027** — accepted at external round 9 per its own header; those rounds predate `specs/reviews.py` and are recorded in the spec; **0029** — its rounds are housed in **0030**'s ledger (one ledger for the joint review stream; each row names its target); **0032** — no rounds in `specs/reviews.py` and no round named in its header (owner-accepted under PROCESS §4a's second path, or a gap).
 A `draft` spec under the hand-assembled seal shows `0` here until acceptance:
 that protocol writes its `specs/reviews.py` rows and one closure row per
 finding AT the acceptance fold (0037, 0038, 0039), and until then the spec's
