@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Mutation-Matrix: tests/test_spec_gate.py::test_render_index_question_rows_mutation_matrix
 """Generate specs/STATUS.md — every spec at a glance, for Quentin and coordination.
 
 GENERATED, deliberately. A hand-maintained status table is the thing this
@@ -27,6 +28,7 @@ import pathlib
 import re
 import subprocess
 import sys
+from typing import NamedTuple, Optional
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS = ROOT / "specs"
@@ -35,7 +37,19 @@ sys.path.insert(0, str(SPECS))
 
 STATUS = re.compile(r"^Spec-Status:\s*(\S[^\n]*)$", re.M)
 TITLE = re.compile(r"^#\s+(.+)$", re.M)
-QROW = re.compile(r"^\|\s*(~{0,2})\*\*([A-Z]{0,2}-?Q\d+[a-z]?)\*\*~{0,2}\s*\|(.*)$", re.M)
+# A question row: a table row whose FIRST CELL begins with a question id. Groups: (strike, id, the rest of the row).
+# The id may be bold or not, struck or not, back-ticked, and prefixed (`S-Q1`), and the cell may carry text after it
+# (`~~**Q6** `actor`~~`). The first form needed the id in bold and so read 54 question rows in 16 specs as no rows at all,
+# 0044's open, blocking Q8 among them (found by research, 2026-10-11). The strike group is the cell's own `~~`, never
+# the bold, so an unstruck bold id cannot read as struck.
+QROW = re.compile(r"^\|\s*[*`]*(~{1,2})?[*`\s]*([A-Z]{0,2}-?Q\d+[a-z]?)\b[^|\n]*\|(.*)$", re.M)
+# A table's header row is its first row when a separator row (`|---|`) follows it.
+SEP = re.compile(r"^\|(?:\s*:?-+:?\s*\|)+\s*$")
+# Disposition sections are history, not open questions. Matches ONLY a review-disposition section, not any heading
+# containing "review": the looser pattern also matched "Brief for the external reviewer" and "Scope inherited from
+# 0003's reviews", silently truncating 27-61% of four specs -- a coverage loss inside a check that exists to prevent
+# coverage loss.
+DISPOSITIONS = re.compile(r"^##+ \d+\w*\.\s*(?:Review history\b|[^\n]*review[^\n]*disposition\b)", re.M | re.I)
 
 
 def _updated(path: pathlib.Path) -> str:
@@ -63,33 +77,72 @@ def _updated(path: pathlib.Path) -> str:
     return r.stdout.strip() or "(no git)"
 
 
-def _questions(body: str):
-    """(open, blocking) — a row is open unless struck or marked resolved/moved."""
-    # Matches ONLY a review-disposition section, not any heading containing
-    # "review". The looser pattern also matched "Brief for the external
-    # reviewer" and "Scope inherited from 0003's reviews", silently
-    # truncating 27-61% of four specs -- a coverage loss inside a check that
-    # exists to prevent coverage loss.
-    body = re.split(
-        r"^##+ \d+\w*\.\s*(?:Review history\b|[^\n]*review[^\n]*disposition\b)", body, flags=re.M | re.I)[0]
-    open_q = blocking = 0
-    for struck, _qid, rest in QROW.findall(body):
-        low = rest.lower()
-        # A `watch` row is a recorded trigger for a FUTURE condition, not an open
-        # question blocking acceptance (round-6 contract D: 0003 Q2a was counted as
-        # the sole open Q though the spec calls it "not an open question").
-        # "ratified" (2026-10-10, the owner's accuracy check of this table): 0023 Q2 —
-        # "v2 says NO … and the ruling is RATIFIED", pinned by N13 — was counted open
-        # because only "ruled" was recognised. Swept first: it is the only question row
-        # in any spec that mentions ratification, so this moves exactly that count.
-        # WHOLE WORDS (2026-10-11): as substrings, "moved" matched "removed", so 0048's Q3 ("…or be removed?",
-        # deferred and open) was skipped, and "unresolved" would read as "resolved". A sweep of every spec found
-        # exactly one row moved by the change, 0048 Q3.
-        if struck or re.search(r"\b(?:resolved|moved|ruled|ratified|watch)\b", low):
+class QuestionRow(NamedTuple):
+    """One question row. `index` is the row's line number in the spec's text (0-based), `header` its OWN table's header
+    cells, lower-cased and stripped, or None when the row's block has no header row. A consumer that reads a column by
+    name (the who-decides cell) reads it from `header`, so the header that made the row a question is the header it
+    reads."""
+    index: int
+    line: str
+    strike: str
+    qid: str
+    rest: str
+    header: Optional[list]
+
+
+def question_rows(text: str) -> list:
+    """Every question row before the first disposition section, as QuestionRow.
+
+    A row whose table has a header row with no `question` column is not a question, whatever its first cell says:
+    0031's threat table numbers its vectors Q1-Q6, and 0048's closure table names Q4 as a finding it closed. A row in
+    a block with no header row (0006's Q4 sits one blank line below its question table) is still counted."""
+    lines = DISPOSITIONS.split(text)[0].splitlines()   # a prefix of text.splitlines(), so indices are the text's
+    out = []
+    for i, ln in enumerate(lines):
+        m = QROW.match(ln)
+        if not m:
             continue
-        open_q += 1
-        if "blocking" in low:
-            blocking += 1
+        j = i
+        while j > 0 and lines[j - 1].startswith("|"):
+            j -= 1
+        head = None
+        if j + 1 < len(lines) and SEP.match(lines[j + 1]):
+            head = [c.strip().lower() for c in lines[j].strip().strip("|").split("|")]
+            if not any("question" in h for h in head):
+                continue
+        out.append(QuestionRow(i, ln, *m.groups(), head))
+    return out
+
+
+def row_state(row: QuestionRow) -> tuple:
+    """(open, blocking) for ONE question row — a row is open unless struck or marked closed by a closure word. The
+    table rule is question_rows' job: call this only on rows it returned."""
+    low = row.rest.lower()
+    # A `watch` row is a recorded trigger for a FUTURE condition, not an open
+    # question blocking acceptance (round-6 contract D: 0003 Q2a was counted as
+    # the sole open Q though the spec calls it "not an open question").
+    # "ratified" (2026-10-10, the owner's accuracy check of this table): 0023 Q2 —
+    # "v2 says NO … and the ruling is RATIFIED", pinned by N13 — was counted open
+    # because only "ruled" was recognised. Swept first: it is the only question row
+    # in any spec that mentions ratification, so this moves exactly that count.
+    # WHOLE WORDS (2026-10-11): as substrings, "moved" matched "removed", so 0048's Q3 ("…or be removed?",
+    # deferred and open) was skipped, and "unresolved" would read as "resolved". A sweep of every spec found
+    # exactly one row moved by the change, 0048 Q3.
+    # "scoped elsewhere" (2026-10-12, when the unbolded rows became visible): 0037 Q6 was answered by the owner
+    # ("Scope Q6 as option b", a sibling spec) and its class cell says so; it is the only question row in any
+    # spec carrying the phrase.
+    if row.strike or re.search(r"\b(?:resolved|moved|ruled|ratified|watch|scoped elsewhere)\b", low):
+        return False, False
+    return True, "blocking" in low
+
+
+def _questions(body: str):
+    """(open, blocking) — counts of row_state over question_rows."""
+    open_q = blocking = 0
+    for row in question_rows(body):
+        o, b = row_state(row)
+        open_q += o
+        blocking += b
     return open_q, blocking
 
 

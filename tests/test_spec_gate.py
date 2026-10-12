@@ -609,6 +609,110 @@ def test_a_skip_word_inside_a_longer_word_does_not_close_a_question():
     assert render_index._questions(body) == (2, 1)
 
 
+def test_render_index_question_rows_mutation_matrix():
+    """render_index.py's question-row rule, attacked by form. Its first grammar needed a bold id and so saw no row of
+    54 in 16 specs (0044's blocking Q8 among them); lint_rulings.py carried the same grammar. Each cell below is a
+    form the rule must see, or must not, and the strike flag must come from the first cell alone."""
+    import sys, pathlib, importlib, itertools
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    import render_index
+    importlib.reload(render_index)
+    QROW, rows, questions = render_index.QROW, render_index.question_rows, render_index._questions
+
+    # (1) the first cell's domain: every wrapper nesting x every id shape x a trailing annotation, or none
+    wrappers = [("", ""), ("**", "**"), ("`", "`"), ("~~", "~~"), ("~", "~")]
+    ids = ["Q1", "Q12a", "S-Q3", "XY-Q4", "IQ2"]
+    seen = 0
+    for (o1, c1), (o2, c2), qid, trail in itertools.product(wrappers, wrappers, ids, ["", " `actor`"]):
+        if (o1 and o1 == o2) or ("~" in o1 and "~" in o2):   # a wrapper inside itself; a strike inside a strike
+            continue
+        line = f"| {o1}{o2}{qid}{c2}{trail}{c1} | text | deferred |"
+        m = QROW.match(line)
+        assert m, f"a question row unseen: {line!r}"
+        assert m.group(2) == qid, (line, m.group(2))
+        assert bool(m.group(1)) == ("~" in o1 + o2), f"strike misread: {line!r}"
+        seen += 1
+    assert seen == 19 * 5 * 2, seen   # 25 nestings less 4 self-nested and 2 strike-in-strike
+
+    # (2) first cells that merely MENTION an id, or are not ids, are not question rows
+    for line in ["| **W8** the exclusion is PINNED (W-Q1) | x |", "| **V-OUT-OF-PATH** (F2 + Q1) | x |",
+                 "| I6 Q1 | x |", "| QA1 | x |", "| q1 | x |", "| Q | x |", "| ABC-Q1 | x |", "| xQ1 | x |",
+                 "Q1 | not a table row |", "| | Q1 |"]:
+        assert not QROW.match(line), f"read as a question row: {line!r}"
+
+    # (3) a strike in a LATER cell is not the row's strike: open unless a closure word says otherwise
+    assert questions("| Q1 | ~~withdrawn wording~~ still open | deferred |\n") == (1, 0)
+    assert questions("| Q1 | ~~old~~ **RULED**: no | resolved |\n") == (0, 0)
+
+    # (4) the table rule: a header with no `question` column drops its rows; a headerless block keeps them
+    q_table = "| # | question | class |\n|---|---|---|\n| Q1 | a | deferred |\n| **Q2** | b | blocking |\n"
+    threat = "| # | vector | response |\n|---|---|---|\n| Q1 | a hostile vector | blocking |\n"
+    loose = "\n| **Q4** | a future option, detached from its table | deferred |\n"
+    other_q = "| # | open question | who |\n|:--|---|--:|\n| Q5 | c | owner |\n"
+    mixed = q_table + "\n" + threat + loose + "\n" + other_q
+    got = rows(mixed)
+    assert [r.qid for r in got] == ["Q1", "Q2", "Q4", "Q5"]
+    # each row carries its line index in the text and its OWN table's header (None when its block has none), so a
+    # consumer reading a column by name reads the header that made the row a question
+    lines = mixed.splitlines()
+    assert all(lines[r.index] == r.line for r in got)
+    assert [r.header for r in got] == [["#", "question", "class"]] * 2 + [None, ["#", "open question", "who"]]
+    # the index is the TEXT's: rows below a long preamble keep their place
+    pre = "# title\n\nprose\n\n"
+    assert [r.index for r in rows(pre + q_table)] == [6, 7]
+    assert questions(threat) == (0, 0)
+    assert questions(q_table) == (2, 1)
+    # the header must be a header: a Q-row table whose first row is followed by no separator is headerless
+    assert [(r.qid, r.header) for r in rows("| Q7 | x |\n| Q8 | y |\n")] == [("Q7", None), ("Q8", None)]
+
+    # (5) rows after a disposition section are history
+    assert questions(q_table + "\n## 11. Review history\n\n" + q_table) == (2, 1)
+
+    # (6) the closure words are whole words and phrases; "scoped elsewhere" closes, "scoped" alone does not
+    assert questions("| Q1 | x | scoped elsewhere |\n") == (0, 0)
+    assert questions("| Q1 | scoped to v1 | deferred |\n") == (1, 0)
+    for word in ["resolved", "moved", "ruled", "ratified", "watch"]:
+        assert questions(f"| Q1 | x | {word} |\n") == (0, 0), word
+
+    # (7) row_state is the per-row decision _questions sums: open, open+blocking, struck, closed by a word
+    state = {r.qid: render_index.row_state(r) for r in rows(
+        "| # | question | class |\n|---|---|---|\n| Q1 | a | deferred |\n| Q2 | b | blocking |\n"
+        "| ~~Q3~~ | c | blocking |\n| Q4 | d, blocking once | resolved |\n")}
+    assert state == {"Q1": (True, False), "Q2": (True, True), "Q3": (False, False), "Q4": (False, False)}, state
+
+
+def test_every_question_id_row_in_the_specs_is_seen_or_classified():
+    """Over the real specs, by separate mechanics (split on pipes, strip the wrappers): every table row whose first
+    cell begins with a question id is matched by render_index's grammar, and the only ones its table rule drops are
+    this snapshot, each in a table with no `question` column. A new table of Q-ids that is not a question table fails
+    here until it is classified."""
+    import sys, pathlib, importlib, re, collections
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    import render_index
+    importlib.reload(render_index)
+    DROPPED = collections.Counter({("0031", f"Q{n}"): 1 for n in range(1, 7)})   # 0031's threat table: vectors
+    DROPPED[("0048", "Q4")] = 1                                                  # 0048's closure table: a finding
+    unseen, id_rows, kept = [], collections.Counter(), collections.Counter()
+    for f in sorted((root / "specs").glob("[0-9][0-9][0-9][0-9]-*.md")):
+        num, text = f.name[:4], f.read_text()
+        for ln in render_index.DISPOSITIONS.split(text)[0].splitlines():
+            if not ln.startswith("|") or ln.count("|") < 2:
+                continue
+            m = re.match(r"([A-Z]{0,2}-?Q\d+[a-z]?)(?![0-9])", ln.split("|")[1].strip().lstrip("~*` "))
+            if not m:
+                continue
+            id_rows[(num, m.group(1))] += 1
+            if not render_index.QROW.match(ln):
+                unseen.append(f"{num} {ln[:80]}")
+        for row in render_index.question_rows(text):
+            kept[(num, row.qid)] += 1
+    assert not unseen, "question-id rows the grammar does not see:\n" + "\n".join(unseen)
+    assert id_rows - kept == DROPPED, f"dropped by the table rule: {dict(id_rows - kept)}"
+    assert not kept - id_rows, f"kept rows the independent reading did not find: {dict(kept - id_rows)}"
+
+
 def test_the_rule_gives_the_right_assistant_answers_when_assistant_exists():
     """The four cases v1 inverted, asserted against the RULE rather than the
     shipped enum — `ASSISTANT` arrives with specs/0001, which is deferred.
@@ -2431,6 +2535,9 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # reads is the trace reader's committed OUTPUT (manual_cli_driver's precedent above): both carry matrices
         root / "specs" / "evidence" / "offline" / "stdlib_preflight.py",
         root / "specs" / "evidence" / "offline" / "stdlib_extensions_from_trace.py",
+        # the status index: `--check` refuses a stale STATUS.md, research's blocking-question check imports its row
+        # rule, and its first grammar produced a finding (54 question rows unseen, 2026-10-11)
+        root / "specs" / "render_index.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

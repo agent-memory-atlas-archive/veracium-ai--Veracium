@@ -28,25 +28,23 @@ SPECS = ROOT / "specs"
 COORD = pathlib.Path.home() / "Documents" / "veracium" / "COORDINATION.md"
 
 RULED = re.compile(r"\bRULED\s+(\d{4})-([A-Z]{0,2}-?Q\d+[a-z]?)\b", re.I)
-# a table row: | **Q1** | ... | class | who | when |
-# ids come in bare (`Q1`) and prefixed (`S-Q1`, `I-Q1`, `X-Q2`, `W-Q1`) forms,
-# and struck rows may close the emphasis before or after the tildes. A pattern
-# that only saw bare ids found 3 questions out of 30.
-ROW = re.compile(r"^\|\s*~{0,2}\*\*([A-Z]{0,2}-?Q\d+[a-z]?)\*\*~{0,2}\s*\|(.*)$", re.M)
+# Which rows are questions is render_index's rule, imported, never restated: this file carried its own copy of the
+# row grammar (bold ids only) and a looser section split, and so read 8 spec questions while STATUS.md read 57 and
+# the specs held 104 (2026-10-12).
+sys.path.insert(0, str(SPECS))
+from render_index import question_rows  # noqa: E402
 
 
 def _spec_questions() -> dict:
     out = {}
     for f in sorted(SPECS.glob("[0-9][0-9][0-9][0-9]-*.md")):
         num = f.name[:4]
-        body = re.split(r"^##+ \d+\w*\..*review", f.read_text(), flags=re.M | re.I)[0]
-        for m in ROW.finditer(body):
-            qid, rest = m.group(1), m.group(2)
-            out[(num, qid)] = dict(
-                blocking="blocking" in rest.lower(),
-                ruled=bool(RULED.search(rest)),
-                struck=rest.strip().startswith("**RULED") or "~~" in m.group(0)[:12],
-                text=rest.strip()[:90])
+        for row in question_rows(f.read_text()):
+            out[(num, row.qid)] = dict(
+                blocking="blocking" in row.rest.lower(),
+                ruled=bool(RULED.search(row.rest)),
+                struck=row.rest.strip().startswith("**RULED") or bool(row.strike),
+                text=row.rest.strip()[:90])
     return out
 
 

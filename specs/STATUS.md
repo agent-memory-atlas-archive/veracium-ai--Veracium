@@ -5,7 +5,7 @@
 # Spec status
 
 **43 specs · 37 accepted · 438 external review
-rounds · 0 blocking questions open.**
+rounds · 1 blocking questions open.**
 
 **Only `accepted` authorises implementation** (`PROCESS.md` §4a), and external
 review is required to reach it. **37 of 43 are accepted**, which
@@ -14,7 +14,7 @@ is the number that decides what can be built.
 | # | spec | status | updated | int | ext | open Q | blocking | findings | code |
 |---|---|---|---|---|---|---|---|---|---|
 | **0001** | generated-content trust class (`EvidenceAuthor.ASSISTANT`) | `accepted` | 2026-09-17 | 1 | 18 | 2 | 0 | 0 | — |
-| **0002** | the maintenance provenance invariant | `deferred` | 2026-09-11 | 2 | 8 | 0 | 0 | 10 | 8/10 |
+| **0002** | the maintenance provenance invariant | `deferred` | 2026-09-11 | 2 | 8 | 2 | 0 | 10 | 8/10 |
 | **0003** | supersession authority | `accepted` | 2026-08-26 | 1 | 12 | 0 | 0 | 0 | — |
 | **0004** | derived views must not outlive a revoked trust decision | `accepted` | 2026-08-22 | 1 | 3 | 1 | 0 | 1 | 1/1 |
 | **0005** | import has no trust boundary | `accepted` | 2026-08-14 | 1 | 5 | 1 | 0 | 2 | 2/2 |
@@ -32,8 +32,8 @@ is the number that decides what can be built.
 | **0017** | token-usage telemetry over the Metered wrapper | `accepted` | 2026-08-14 | 1 | 10 | 0 | 0 | 0 | — |
 | **0018** | the release-migration orchestrator | `accepted` | 2026-09-18 | 1 | 4 | 0 | 0 | 0 | — |
 | **0019** | the `ungrounded` flag — evidence-grounding at ingest | `accepted` | 2026-08-16 | 1 | 4 | 0 | 0 | 0 | — |
-| **0020** | scoped recall — the principal boundary (S1) | `accepted` | 2026-08-16 | 2 | 14 | 0 | 0 | 0 | — |
-| **0021** | scope under derivation and consolidation (S2) | `accepted` | 2026-08-20 | 1 | 14 | 0 | 0 | 0 | — |
+| **0020** | scoped recall — the principal boundary (S1) | `accepted` | 2026-08-16 | 2 | 14 | 2 | 0 | 0 | — |
+| **0021** | scope under derivation and consolidation (S2) | `accepted` | 2026-08-20 | 1 | 14 | 3 | 0 | 0 | — |
 | **0022** | source revocation — the standing state and the sweep (A3a) | `accepted` | 2026-09-13 | 4 | 21 | 5 | 0 | 0 | — |
 | **0023** | non-revival under maintenance — a revoked source cannot re-enter (A3b) | `accepted` | 2026-09-17 | 3 | 21 | 2 | 0 | 0 | — |
 | **0024** | the user's own words are not third-party testimony (L1) | `accepted` | 2026-09-17 | 2 | 24 | 3 | 0 | 0 | — |
@@ -45,13 +45,13 @@ is the number that decides what can be built.
 | **0030** | time-relative trust classification | `accepted` | 2026-09-20 | 0 | 18 | 0 | 0 | 0 | — |
 | **0031** | the agent-facing trust surface | `accepted` | 2026-09-08 | 0 | 16 | 0 | 0 | 0 | — |
 | **0032** | the valid-time predicate at the present | `accepted` | 2026-09-04 | 0 | 0 | 0 | 0 | 0 | — |
-| **0037** | procedural records and the `basis` axis (stages 1–3) | `accepted` | 2026-09-15 | 0 | 5 | 0 | 0 | 0 | — |
+| **0037** | procedural records and the `basis` axis (stages 1–3) | `accepted` | 2026-09-15 | 0 | 5 | 3 | 0 | 0 | — |
 | **0038** | the extraction's speech-act discipline | `accepted` | 2026-09-14 | 0 | 4 | 0 | 0 | 0 | — |
 | **0039** | degradation visibility — what a caller and an operator learn when veracium degrades instead of failing | `accepted` | 2026-09-11 | 0 | 9 | 0 | 0 | 0 | — |
 | **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-10-06 | 0 | 14 | 0 | 0 | 0 | — |
 | **0042** | exercised guarantees — measuring whether what we specify is what runs | `accepted` | 2026-10-02 | 0 | 23 | 0 | 0 | 0 | — |
 | **0043** | the refusal harness — measuring whether the gate declines when it should | `accepted` | 2026-10-10 | 0 | 9 | 0 | 0 | 0 | — |
-| **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `draft` | 2026-10-11 | 0 | 0 | 0 | 0 | 0 | — |
+| **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `draft` | 2026-10-11 | 0 | 0 | 3 | 🔴 1 | 0 | — |
 | **0045** | the declarative grounding axis — was a fact STATED, or not shown to be? | `draft` | 2026-10-11 | 0 | 0 | 0 | 0 | 0 | — |
 | **0046** | the correction receipt — a corrected fact names what still rests on it | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
 | **0047** | the subject's right of reply — the record stands, and the reply travels with it | `draft` | 2026-10-11 | 0 | 0 | 0 | 0 | 0 | — |
