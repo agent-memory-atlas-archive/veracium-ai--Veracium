@@ -2423,6 +2423,8 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # exit 1 when one stops reproducing. Checkers by what they do, whatever their names say
         root / "specs" / "evidence" / "0048" / "census_0048.py",
         root / "specs" / "evidence" / "0048" / "pin_repro.py",
+        # ...and round 2's token tripwire, whose hits a classified snapshot compares: a new one fails the suite
+        root / "specs" / "evidence" / "0048" / "tripwire_0048.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

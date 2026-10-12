@@ -1,0 +1,287 @@
+# tripwire_0048_classified.tsv: every hit of specs/evidence/0048/tripwire_0048.py on this tree, classified by hand.
+# Rows: <class> TAB <file> TAB <trigger> TAB <the hit's line, whitespace-joined>; no line numbers, so a moved line
+# still matches. tests/test_0048_evidence.py compares these rows, as a multiset, with the tripwire's --sites output:
+# a new hit, or an edit to a hit's line, fails until it is classified here. Written at 1e80d4c by dev, after reading
+# every site; research samples the classifications. The verb trigger (`str:sql-write`) and the
+# last three classes were added with it, research's stage 2b.
+#
+# Classes (closed; the test refuses any other):
+#   census-writer               a token of one of the five confidence writers census_0048 counts (§2c-ii row 8):
+#                               the model_copy call, or its `confidence` key and value
+#   edge-json-writer            one of the seven edge json writers census_0048 counts (§2c-ii row 8)
+#   copy-other-fields           model_copy whose update names no `confidence` (or a deep copy with no update);
+#                               scope_read.py's whole-provenance replacement is resolved by the census to
+#                               {derived_from, disclosure}
+#   read                        reads a confidence value into a comparison, message, journal record or projection;
+#                               writes no Provenance
+#   field-name                  `confidence` as a field name in a tuple, a check or a message
+#   fold-checked                store/revocation_sweep.py's recompute: min/max over inputs whose domain [0, 1] is
+#                               checked (refusing otherwise) at its payload check; the result reaches the store only
+#                               through the census writer at store/sqlite.py (the `float(values['confidence'])` key)
+#   declaration                 Provenance's own field declaration, with its bounds
+#   other-object                the trigger names something that is not a Provenance: getattr on a config, client or
+#                               record attribute; `copy` as a local path; object.__setattr__ inside the __init__ of a
+#                               non-pydantic immutable class (PolicyLane, EvidenceContext, SuccessorLookup), and those
+#                               classes' refusing __setattr__
+#   edges-sql-not-a-json-write  SQL that reads, defines or deletes edges, writing no json; the `"edges" if … else
+#                               "episodes"` table selectors feed SELECTs only, and the one in _redact_in_txn is
+#                               assigned and never read
+#   edges-text                  `edges` as a word in a message, a dict key, a label or a site name
+#   episode-json-writer         a SQL write of an episode row's json: outside C on the owner's ruling (0048 §10
+#                               Q6, edges only), the named follow-up of §8 (the ten in store/sqlite.py, and
+#                               store/migration.py's one-time conversion)
+#   sql-write-other-table       a SQL write to a table other than edges and episodes (journals, ledgers,
+#                               receipts, redactions, embeddings, the wiki, counters, identity)
+#   verb-as-text                `update`, `insert` or `replace` as a word that is not SQL: prose, a word list, an
+#                               operation name, a codec's error handler
+census-writer	src/veracium/graph.py	confidence	"confidence": max(incoming.provenance.confidence,
+census-writer	src/veracium/graph.py	confidence	prior.provenance.confidence),
+census-writer	src/veracium/graph.py	model_copy	incoming.provenance = incoming.provenance.model_copy(update={
+census-writer	src/veracium/graph.py	str:confidence	"confidence": max(incoming.provenance.confidence,
+census-writer	src/veracium/lifecycle.py	confidence	"confidence": e.provenance.confidence * config.decay_factor})
+census-writer	src/veracium/lifecycle.py	model_copy	e.provenance = e.provenance.model_copy(update={
+census-writer	src/veracium/lifecycle.py	str:confidence	"confidence": e.provenance.confidence * config.decay_factor})
+census-writer	src/veracium/store/sqlite.py	confidence	"confidence": (min(e.provenance.confidence for e in inputs)
+census-writer	src/veracium/store/sqlite.py	confidence	"confidence": max(edge.provenance.confidence, 0.9)})
+census-writer	src/veracium/store/sqlite.py	confidence	if inputs else base.confidence),
+census-writer	src/veracium/store/sqlite.py	model_copy	edge.provenance = edge.provenance.model_copy(update={ # frozen Provenance (0037 v23)
+census-writer	src/veracium/store/sqlite.py	model_copy	edge.provenance = edge.provenance.model_copy(update={ # frozen Provenance (0037 v23)
+census-writer	src/veracium/store/sqlite.py	model_copy	prov = base.model_copy(update={
+census-writer	src/veracium/store/sqlite.py	str:confidence	"confidence": (min(e.provenance.confidence for e in inputs)
+census-writer	src/veracium/store/sqlite.py	str:confidence	"confidence": float(values["confidence"])})
+census-writer	src/veracium/store/sqlite.py	str:confidence	"confidence": float(values["confidence"])})
+census-writer	src/veracium/store/sqlite.py	str:confidence	"confidence": max(edge.provenance.confidence, 0.9)})
+copy-other-fields	src/veracium/budgets.py	model_copy	e = edge.model_copy(deep=True)
+copy-other-fields	src/veracium/graph.py	model_copy	incoming = edge.model_copy(deep=True)
+copy-other-fields	src/veracium/graph.py	model_copy	noted = prior.model_copy(deep=True)
+copy-other-fields	src/veracium/portability.py	model_copy	capped = model.model_copy(update={
+copy-other-fields	src/veracium/scope_read.py	model_copy	return record.model_copy(
+copy-other-fields	src/veracium/scope_read.py	model_copy	update={"provenance": p.model_copy(update=update)})
+copy-other-fields	src/veracium/store/migration.py	model_copy	converted = ep.model_copy(update={"seq": 1, "supersedes_episode": None,
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	bound = ep.model_copy(update={"claimed_by": op.operation_id,
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	clean = ep.model_copy(update={"claimed_by": None, "operation_id": None})
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	return out.model_copy(update={"replayed": True})
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	return self._confirmation_from_row(other).model_copy(
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	self._write_op(op.model_copy(update={"lease_expires_at": expires}))
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	self._write_op(op.model_copy(update={"state": ConsolidationState.ABANDONED}))
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	self._write_op(op.model_copy(update={"state": S.FINALIZED}))
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	self._write_op(op.model_copy(update={"state": S.GENERATING}))
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	self._write_op(op.model_copy(update={"state": S.OUTPUTS_DURABLE}))
+declaration	src/veracium/schema.py	confidence	confidence: float = Field(default=0.9, ge=0.0, le=1.0)
+edge-json-writer	src/veracium/store/sqlite.py	str:edges	"INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
+edge-json-writer	src/veracium/store/sqlite.py	str:edges	"INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
+edge-json-writer	src/veracium/store/sqlite.py	str:edges	"UPDATE edges SET json=?, subject=?, relation=?, object=?, quarantined=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:edges	self._conn.execute("UPDATE edges SET active=0, json=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:edges	self._conn.execute("UPDATE edges SET active=1, json=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:edges	self._conn.execute("UPDATE edges SET json=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:edges	self._conn.execute("UPDATE edges SET json=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
+edge-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT OR REPLACE INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
+edge-json-writer	src/veracium/store/sqlite.py	str:sql-write	"UPDATE edges SET json=?, subject=?, relation=?, object=?, quarantined=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE edges SET active=0, json=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE edges SET active=1, json=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE edges SET json=? WHERE id=?",
+edge-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE edges SET json=? WHERE id=?",
+edges-sql-not-a-json-write	src/veracium/doctor.py	str:edges	for r in conn.execute(f"SELECT id, user_id, active, quarantined, json FROM edges {where}", args):
+edges-sql-not-a-json-write	src/veracium/doctor.py	str:edges	users = [r[0] for r in conn.execute("SELECT DISTINCT user_id FROM edges UNION "
+edges-sql-not-a-json-write	src/veracium/store/current_state.py	str:edges	"SELECT json FROM edges WHERE user_id=? AND id=?", (user_id, edge_id)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/edge_events.py	str:edges	"SELECT DISTINCT user_id FROM edges ORDER BY user_id")]
+edges-sql-not-a-json-write	src/veracium/store/edge_events.py	str:edges	"SELECT id, json FROM edges WHERE user_id=? ORDER BY rowid",
+edges-sql-not-a-json-write	src/veracium/store/revocation.py	str:edges	"SELECT json FROM edges WHERE user_id=?", (user_id,))]
+edges-sql-not-a-json-write	src/veracium/store/schema_version.py	str:edges	"CREATE INDEX ix_edges_subj_rel ON edges(user_id, subject, relation, active)",
+edges-sql-not-a-json-write	src/veracium/store/schema_version.py	str:edges	"CREATE INDEX ix_edges_user_active ON edges(user_id, active)", REBUILDABLE),
+edges-sql-not-a-json-write	src/veracium/store/schema_version.py	str:edges	SchemaObject("table", "edges", """CREATE TABLE edges (
+edges-sql-not-a-json-write	src/veracium/store/schema_version.py	str:edges	SchemaObject("table", "edges", """CREATE TABLE edges ( id TEXT PRIMARY KEY, user_id TEXT NOT NULL, subject TEXT, relation TEXT, object TEXT, active INTEGER NOT NULL, quarantined INTEGER NOT NULL, json TEXT NOT NULL )""", REQUIRED),
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	" SELECT user_id, COUNT(*) AS e, 0 AS p FROM edges GROUP BY user_id"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"JOIN edges e ON e.id = ee.edge_id AND e.user_id = ee.user_id "
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT COUNT(*) FROM edges WHERE user_id=?", (user_id,)).fetchone()[0]
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT json FROM edges WHERE id=? AND user_id=?",
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT json FROM edges WHERE id=? AND user_id=?",
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT json FROM edges WHERE id=?",
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT json FROM edges WHERE id=?", (draft.contributor_id,)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT json FROM edges WHERE id=?", (edge.id,)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT user_id FROM edges WHERE id=?",
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT user_id FROM edges WHERE id=?", (d.prior_edge_id,)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT user_id FROM edges WHERE id=?", (eid,)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT user_id, json FROM edges WHERE id=?", (edge.id,)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	for eid, js in self._conn.execute("SELECT id, json FROM edges WHERE user_id=?", (user_id,)):
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	p = self._conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (prior, user_id)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	pred = self._conn.execute("SELECT json FROM edges WHERE id=?", (edge.supersedes,)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	q = "SELECT json FROM edges WHERE user_id=?"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (target_id, user_id)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._conn.execute("SELECT json, user_id FROM edges WHERE id=?",
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._conn.execute("SELECT json, user_id FROM edges WHERE id=?",
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._conn.execute("SELECT json, user_id FROM edges WHERE id=?", (edge_id,)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	tbl = "edges" if kind == "edge" else "episodes"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	tbl = "edges" if n["target_kind"] == "edge" else "episodes"
+edges-text	src/veracium/__init__.py	str:edges	self._record("export", {"edges": r["edges"], "episodes": r["episodes"]}, user_id)
+edges-text	src/veracium/__init__.py	str:edges	self._record("export", {"edges": r["edges"], "episodes": r["episodes"]}, user_id)
+edges-text	src/veracium/__init__.py	str:edges	self._record("forget", {"edges": r["edges"], "episodes": r["episodes"]}, user_id)
+edges-text	src/veracium/__init__.py	str:edges	self._record("forget", {"edges": r["edges"], "episodes": r["episodes"]}, user_id)
+edges-text	src/veracium/__init__.py	str:edges	self._record("import", {"edges": r["edges"], "episodes": r["episodes"],
+edges-text	src/veracium/__init__.py	str:edges	self._record("import", {"edges": r["edges"], "episodes": r["episodes"],
+edges-text	src/veracium/cli.py	str:edges	"references and supersession chains, unjournaled edges, "
+edges-text	src/veracium/cli.py	str:edges	help="instead of an id: list edges whose subject, relation or object contains TEXT")
+edges-text	src/veracium/cli.py	str:edges	print(f"erased {r['edges']} edges + {r['episodes']} episodes for '{args.user}'")
+edges-text	src/veracium/cli.py	str:edges	print(f"erased {r['edges']} edges + {r['episodes']} episodes for '{args.user}'")
+edges-text	src/veracium/cli.py	str:edges	print(f"exported {r['edges']} edges + {r['episodes']} episodes -> {r['path']}")
+edges-text	src/veracium/cli.py	str:edges	print(f"exported {r['edges']} edges + {r['episodes']} episodes -> {r['path']}")
+edges-text	src/veracium/cli.py	str:edges	print(f"imported {r['edges']} edges + {r['episodes']} episodes into "
+edges-text	src/veracium/cli.py	str:edges	print(f"imported {r['edges']} edges + {r['episodes']} episodes into "
+edges-text	src/veracium/doctor.py	str:edges	f"edges {rep.counts.get('edges', 0)} ({rep.counts.get('active_edges', 0)} active) "
+edges-text	src/veracium/doctor.py	str:edges	f"edges {rep.counts.get('edges', 0)} ({rep.counts.get('active_edges', 0)} active) "
+edges-text	src/veracium/doctor.py	str:edges	rep.counts = {"edges": len(edges), "episodes": len(episodes),
+edges-text	src/veracium/portability.py	str:edges	plan = {"edges": plan_edges, "episodes": plan_eps,
+edges-text	src/veracium/portability.py	str:edges	return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records), "path": str(path)}
+edges-text	src/veracium/portability.py	str:edges	return {"edges": result["edges"],
+edges-text	src/veracium/portability.py	str:edges	return {"edges": result["edges"],
+edges-text	src/veracium/scope_read.py	str:edges	_SITE_NARROW_EDGES = declare_site("scope-read.narrow-edges")
+edges-text	src/veracium/store/migration.py	str:edges	for table, kind in (("edges", "edge"), ("episodes", "episode")):
+edges-text	src/veracium/store/sqlite.py	str:edges	"edges writer runs inside _write_txn (specs/0029 §4a)")
+edges-text	src/veracium/store/sqlite.py	str:edges	"edges", "episodes", "wiki", "write_counter",
+edges-text	src/veracium/store/sqlite.py	str:edges	"ruling": "erasure: deletes the user's edges AND the user's events in "
+edges-text	src/veracium/store/sqlite.py	str:edges	"ruling": "imports edges through the choke point (created for new ids, "
+edges-text	src/veracium/store/sqlite.py	str:edges	_SITE_EDGES_READ_FENCE = declare_site("store.edges.read-fence")
+edges-text	src/veracium/store/sqlite.py	str:edges	edges = plan.get("edges", [])
+edges-text	src/veracium/store/sqlite.py	str:edges	return [{"user_id": u, "edges": int(e or 0), "episodes": int(p or 0)}
+edges-text	src/veracium/store/sqlite.py	str:edges	return {"edges": len(edges), "episodes": len(episodes),
+edges-text	src/veracium/store/sqlite.py	str:edges	return {"edges": n_edges, "episodes": n_eps, "confirmations": n_conf}
+edges-text	src/veracium/telemetry.py	str:edges	"forget": {"edges", "episodes"},
+episode-json-writer	src/veracium/store/migration.py	str:sql-write	conn.execute("UPDATE episodes SET json=? WHERE id=?",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT OR REPLACE INTO episodes(id,user_id,date,json) "
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT OR REPLACE INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?", (new_json, target_id))
+field-name	src/veracium/combining.py	str:confidence	"RECOMPUTED_FIELDS (valid_from, observed_at, confidence) to one edge. "
+field-name	src/veracium/combining.py	str:confidence	"the survivor row whose valid_from/observed_at/confidence/ungrounded "
+field-name	src/veracium/contribution.py	str:confidence	RECOMPUTED_PROV_FIELDS = ("observed_at", "confidence", "basis")
+field-name	src/veracium/contribution.py	str:confidence	_INPUT_MANDATORY = ("observed_at", "confidence", "disclosure",
+field-name	src/veracium/contribution.py	str:confidence	_SIDE_MANDATORY = ("observed_at", "confidence", "valid_from", "disclosure")
+field-name	src/veracium/dryrun.py	str:confidence	"confidence", "evidence_ref")
+field-name	src/veracium/store/revocation_sweep.py	str:confidence	"observed_at", "confidence", "ungrounded")
+field-name	src/veracium/store/revocation_sweep.py	str:confidence	RECOMPUTED_FIELDS = ("valid_from", "observed_at", "confidence")
+field-name	src/veracium/store/revocation_sweep.py	str:confidence	f"payload[{which!r}].confidence: {v!r} outside the "
+field-name	src/veracium/store/revocation_sweep.py	str:confidence	f"{'a json_datetime string' if field != 'confidence' else 'a number'},"
+field-name	src/veracium/store/revocation_sweep.py	str:confidence	if field == "confidence":
+field-name	src/veracium/store/revocation_sweep.py	str:confidence	ok = (isinstance(v, str) if field != "confidence"
+field-name	src/veracium/store/sqlite.py	str:confidence	"confidence; journals on the FULL-STATE delta (mutated)"},
+field-name	src/veracium/why.py	str:confidence	"confidence", "derived_from", "source_id", "origin", "record_kind",
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	"confidence": base["confidence"]}
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	"confidence": base["confidence"]}
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	if (want["confidence"] >= cur["confidence"]
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	if (want["confidence"] >= cur["confidence"]
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	out["confidence"] = max(out["confidence"], s["confidence"])
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	out["confidence"] = max(out["confidence"], s["confidence"])
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	out["confidence"] = max(out["confidence"], s["confidence"])
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	out["confidence"] = min(out["confidence"], full["confidence"])
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	out["confidence"] = min(out["confidence"], full["confidence"])
+fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	out["confidence"] = min(out["confidence"], full["confidence"])
+other-object	src/veracium/__init__.py	__setattr__	object.__setattr__(self, "tags_matched", tuple(self.tags_matched))
+other-object	src/veracium/__init__.py	getattr	add = getattr(llm, "add_usage_listener", None)
+other-object	src/veracium/__init__.py	getattr	and getattr(llm, "metering_capability", None) == METERING_CAPABILITY):
+other-object	src/veracium/__init__.py	getattr	local = getattr(self.store, "local_origin", None)
+other-object	src/veracium/__init__.py	getattr	remove = getattr(self.llm, "remove_usage_listener", None)
+other-object	src/veracium/asof/adapter.py	getattr	mn = getattr(m, "min_length", mn)
+other-object	src/veracium/asof/adapter.py	getattr	mx = getattr(m, "max_length", mx)
+other-object	src/veracium/cli.py	getattr	route = getattr(e, "readback_route", "pre-mint")
+other-object	src/veracium/compile.py	getattr	if getattr(llm, "_veracium_no_llm", False): # I10l: provider-free reader
+other-object	src/veracium/doctor.py	copy	copy = os.path.join(tmpdir, "snapshot.db")
+other-object	src/veracium/doctor.py	copy	shutil.copy2(path, copy)
+other-object	src/veracium/doctor.py	copy	store = SqliteStore(copy, allow_adopt=False)
+other-object	src/veracium/dryrun.py	copy	copy = os.path.join(tmpdir, "snapshot.db")
+other-object	src/veracium/dryrun.py	copy	mem = Memory(llm=llm, config=MemoryConfig(db_path=copy, wiki_recompile_after_writes=0),
+other-object	src/veracium/dryrun.py	copy	shutil.copy2(db_path, copy)
+other-object	src/veracium/ingest.py	getattr	if context is not None and getattr(context, "basis", None) is not None:
+other-object	src/veracium/lifecycle.py	getattr	lease = getattr(config, "consolidate_lease_seconds", 300)
+other-object	src/veracium/llm/anthropic.py	getattr	text = "".join(b.text for b in content if getattr(b, "type", None) == "text")
+other-object	src/veracium/mcp_server.py	getattr	return {"ok": False, "refusal": getattr(exc, "reason", "malformed"),
+other-object	src/veracium/mcp_server.py	getattr	return {"ok": False, "refusal": getattr(exc, "reason", "malformed"),
+other-object	src/veracium/proactive.py	getattr	_cap = getattr(config, "item_cap_tokens", 512)
+other-object	src/veracium/proactive.py	getattr	cap = getattr(config, "item_cap_tokens", 512)
+other-object	src/veracium/proactive.py	getattr	getattr(config, "group_heading_allowance_tokens", 48))
+other-object	src/veracium/proactive.py	getattr	getattr(unit, "id", repr(unit)))) # ONE item, typed
+other-object	src/veracium/proactive.py	getattr	if getattr(config, "item_cap_tokens", 512) < MIN_ITEM_ALLOWANCE:
+other-object	src/veracium/proactive.py	getattr	token_budget = getattr(config, "proactive_default_budget_tokens", 1200)
+other-object	src/veracium/registry.py	getattr	eff = {k: FrozenRel(v.name, bool(v.functional), getattr(v, "desc", ""),
+other-object	src/veracium/registry.py	getattr	getattr(v, "relation_kind", "declarative"))
+other-object	src/veracium/registry.py	getattr	or getattr(v, "desc", "") != canon.desc):
+other-object	src/veracium/schema.py	__setattr__	def __setattr__(self, name, value):
+other-object	src/veracium/schema.py	__setattr__	def __setattr__(self, name, value):
+other-object	src/veracium/schema.py	__setattr__	object.__setattr__(self, "basis", basis)
+other-object	src/veracium/schema.py	__setattr__	object.__setattr__(self, "derived_from", derived_from)
+other-object	src/veracium/schema.py	__setattr__	object.__setattr__(self, "disposition", disposition)
+other-object	src/veracium/schema.py	__setattr__	object.__setattr__(self, "kind", kind)
+other-object	src/veracium/schema.py	__setattr__	object.__setattr__(self, "successors", tuple(successors))
+other-object	src/veracium/schema.py	getattr	and getattr(self, "basis", None) == getattr(other, "basis", None))
+other-object	src/veracium/schema.py	getattr	and getattr(self, "basis", None) == getattr(other, "basis", None))
+other-object	src/veracium/schema.py	getattr	basis = getattr(self, "basis", None)
+other-object	src/veracium/schema.py	getattr	prov = getattr(record, "provenance", None)
+other-object	src/veracium/schema.py	getattr	return hash((self.kind, self.derived_from, getattr(self, "basis", None)))
+other-object	src/veracium/schema.py	getattr	return r is not None and getattr(r, "relation_kind", "declarative") == "procedural"
+other-object	src/veracium/scope_read.py	getattr	"lineage": bool(getattr(record, "lineage", None))}
+other-object	src/veracium/scope_read.py	getattr	lineage = getattr(record, "lineage", None)
+other-object	src/veracium/semantic.py	getattr	dimf = getattr(embed, "dim", None)
+other-object	src/veracium/semantic.py	getattr	ident = getattr(embed, "id", None)
+other-object	src/veracium/store/release_migration.py	getattr	if getattr(event, "event", None) == "migration_attempted":
+read	src/veracium/contribution.py	str:confidence	or sprov.get("confidence") != iprov["confidence"]
+read	src/veracium/contribution.py	str:confidence	or sprov.get("confidence") != iprov["confidence"]
+read	src/veracium/contribution.py	str:confidence	or sprov.get("confidence") != pre.get("confidence")
+read	src/veracium/contribution.py	str:confidence	or sprov.get("confidence") != pre.get("confidence")
+read	src/veracium/graph.py	confidence	"confidence": incoming.provenance.confidence,
+read	src/veracium/graph.py	str:confidence	"confidence": incoming.provenance.confidence,
+read	src/veracium/lifecycle.py	confidence	if e.provenance.confidence < config.confidence_floor:
+read	src/veracium/store/revocation.py	confidence	"confidence": float(e.provenance.confidence),
+read	src/veracium/store/revocation.py	confidence	"confidence": float(ep.provenance.confidence),
+read	src/veracium/store/revocation.py	str:confidence	"confidence": float(e.provenance.confidence),
+read	src/veracium/store/revocation.py	str:confidence	"confidence": float(ep.provenance.confidence),
+read	src/veracium/store/sqlite.py	confidence	"confidence": contributor.provenance.confidence,
+read	src/veracium/store/sqlite.py	confidence	"confidence": inp.provenance.confidence,
+read	src/veracium/store/sqlite.py	str:confidence	"confidence": contributor.provenance.confidence,
+read	src/veracium/store/sqlite.py	str:confidence	"confidence": inp.provenance.confidence,
+read	src/veracium/why.py	str:confidence	f"confidence={_fmt(prov.get('confidence'))} observed_at={_fmt(prov.get('observed_at'))}",
+read	src/veracium/why.py	str:confidence	f"confidence={_fmt(prov.get('confidence'))} observed_at={_fmt(prov.get('observed_at'))}",
+sql-write-other-table	src/veracium/store/edge_events.py	str:sql-write	"INSERT OR IGNORE INTO store_epoch(id, started_at, schema_at) VALUES(1, ?, ?)",
+sql-write-other-table	src/veracium/store/edge_events.py	str:sql-write	EVENT_INSERT_SQL = ("INSERT INTO edge_event(user_id,seq,txn,edge_id,kind,reason,state,"
+sql-write-other-table	src/veracium/store/revocation.py	str:sql-write	"INSERT INTO source_revocations(user_id, seq, identity_digest,"
+sql-write-other-table	src/veracium/store/revocation.py	str:sql-write	"UPDATE source_revocations SET reason=? WHERE user_id=? AND identity_digest=? AND reason<>? AND ("
+sql-write-other-table	src/veracium/store/schema_version.py	str:sql-write	"INSERT OR IGNORE INTO store_identity(id, origin) VALUES(1, ?)",
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO contribution_ledger(id,user_id,"
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO contribution_ledger(id,user_id,survivor_type,"
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO contribution_ledger(id,user_id,survivor_type,"
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO contribution_ledger(id,user_id,survivor_type,survivor_id,"
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO edge_embedding(edge_id, user_id, embedder_id, "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO episode_event(user_id, seq, txn, episode_id, kind, reason, state, recorded_at) "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO policy_receipt(user_id,recall_id,policy_id,policy_version,"
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO supersession_operations(user_id,operation_id,"
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO supersession_refusals(refusal_id,user_id,prior_edge_id,"
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO write_counter(user_id, n) VALUES(?, 1) "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT OR REPLACE INTO wiki(user_id,text,store_version) "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"ON CONFLICT(user_id) DO UPDATE SET n = n + 1", (user_id,))
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"UPDATE contribution_ledger SET identity_digest=NULL, evidence_ref_digest=NULL "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"UPDATE contribution_ledger SET identity_digest=NULL, evidence_ref_digest=NULL "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"UPDATE redactions SET fields=?, marker_version=?, store_version_before=?, store_version_after=?, "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"UPDATE supersession_refusals SET relation=? WHERE user_id=? AND (prior_edge_id=? OR incoming_edge_id=?) "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	f"INSERT INTO confirmations({_COLS}) VALUES(?,?,?,?,?,?,?,?)",
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	f"INSERT OR REPLACE INTO consolidation_ops({', '.join(self._OP_COLS)}) "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	n = self._conn.execute("UPDATE confirmations SET request_digest=? WHERE user_id=? AND edge_id=?",
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	n = self._conn.execute("UPDATE edge_event SET state=? WHERE user_id=? AND edge_id=? AND state<>?",
+verb-as-text	src/veracium/diagnostics.py	str:sql-write	text = data.decode("utf-8", "replace")
+verb-as-text	src/veracium/procedures.py	str:sql-write	IMPERATIVE_OPENERS = frozenset(""" add adjust allow always apply ask assign avoid back backfill build bump cancel clean clear close compile configure confirm cordon create deactivate delete deny deploy disable do document drain enable ensure escalate fetch fix flush freeze generate ignore install keep kill migrate move never notify open pause put quarantine re-run rebase reboot rebuild redeploy refresh reinstall reject reload remove rename replace reproduce restart restore retry revert review revoke roll rollback rotate run submit tag take throttle toggle turn unfreeze uninstall unlock unpin unset update upgrade validate verify widen """.split())
+verb-as-text	src/veracium/redaction.py	str:sql-write	REPLACE, CLEAR, DELETE, PRESERVE = "REPLACE", "CLEAR", "DELETE", "PRESERVE"
+verb-as-text	src/veracium/selfcheck.py	str:sql-write	c5src.remember(uid, "Feed update: the user moved to Lisbon.",
+verb-as-text	src/veracium/selfcheck.py	str:sql-write	c5src.remember(uid, "Feed update: the user works at Acme.",
+verb-as-text	src/veracium/selfcheck.py	str:sql-write	mem.remember(uid, "Feed update: the user moved to Lisbon.",
+verb-as-text	src/veracium/selfcheck.py	str:sql-write	r1 = mem.remember(uid, "Feed update: the user moved to Lisbon.",
+verb-as-text	src/veracium/selfcheck.py	str:sql-write	r2 = mem.remember(uid, "Feed update: the user moved to Porto.",
+verb-as-text	src/veracium/selfcheck.py	str:sql-write	r3 = mem.remember(uid, "Feed update: the user adopted a cat.",
