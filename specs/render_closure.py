@@ -31,12 +31,15 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS = ROOT / "specs"
 TRACKED = ("0001", "0022", "0023", "0024", "0025", "0028", "0030", "0031", "0037", "0038", "0039", "0041", "0042", "0043")     # the specs whose ledgers this gate governs — the L-pair joined at acceptance (round 12); 0001 at its first sealed RETURN (round 3)
 
-# Specs whose returned verdicts are recorded WITHOUT `raised`, on purpose, and why. A design-accepted spec whose verdicts
-# raised implementation obligations cannot declare them yet: every declared id needs a closure row (completeness), and
+# Specs whose returned verdicts are recorded WITHOUT `raised`, on purpose, and why. A spec still in design review, or
+# design-accepted with implementation obligations, cannot declare its raised ids yet: every declared id needs a closure row (completeness), and
 # the ledger has no "open" state. The commitment to declare them is not left in prose: test_spec_gate refuses a returned
 # external verdict without `raised` outside TRACKED and this map (from RULE_DATE on), and refuses a spec here whose
 # Decision cell says IMPLEMENTATION ACCEPTED, so the implementation fold cannot land without moving it to TRACKED.
 DEFERRED_RAISED = {
+    "0044": "design under review: returned at external rounds 1 and 2 (2026-10-10, 2026-10-11), the 0029 amendment's design accepted at round 2; raised 0044-R1-01..0044-R1-10 (R1-07..R1-09 on the 0003 amendment, R1-10 shared) and 0044-R2-01..0044-R2-09 (R2-03 on the 0018 amendment and R2-09 on the 0003 amendment alone), declared, with their closure rows, at the implementation-acceptance fold",
+    "0045": "design under review: returned at external rounds 1 and 2 (2026-10-10, 2026-10-11), the 0019 nonuser-refusal amendment's narrowed design accepted at round 2; raised 0045-R1-01, -02, -03, -04, -05, -08, -09, -10 (R1-04, R1-05, R1-08, R1-09 via the 0019 amendment; R1-03, R1-05, R1-08, R1-10 are also 0047's) and 0045-R2-01, declared, with their closure rows, at the implementation-acceptance fold",
+    "0047": "design under review: returned at external rounds 1 and 2 (2026-10-10, 2026-10-11); raised 0047-R1-03, -05, -06, -07, -08, -10 and 0047-R2-02..0047-R2-06 (R2-01 is 0045's by the verdict's table), declared, with their closure rows, at the implementation-acceptance fold",
     "0048": "design accepted at external round 2 (2026-10-12) with two implementation obligations (R2-01, R2-02); "
             "R1-01..R1-05 and R2-01..R2-02 are declared, with their closure rows, at the implementation-acceptance fold",
 }

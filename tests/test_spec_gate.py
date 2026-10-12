@@ -1944,6 +1944,8 @@ def test_a_deferred_spec_cannot_reach_implementation_acceptance():
     importlib.reload(render_closure)
     DECISION = re.compile(r"^\| \*\*Decision \+ date\*\* \|(.*)$", re.M)
     IMPL = re.compile(r"IMPLEMENTATION\W+ACCEPTED|ACCEPTED\W+(?:THE\s+)?IMPLEMENTATION", re.I)
+    # FAILS CLOSED ON PROSE: design-acceptance text must not put "implementation" directly after ACCEPTED ("ACCEPTED; implementation
+    # checks remain owed" reads as implementation acceptance and refuses). Write "ACCEPTED on <scope> (… checks remain owed".
 
     def implementation_accepted(spec, text, rows):
         m = DECISION.search(text)
