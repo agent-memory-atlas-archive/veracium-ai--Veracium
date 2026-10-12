@@ -1545,6 +1545,18 @@ def test_the_count_of_closure_evidence_unrunnable_in_a_package_is_pinned():
         "behaviour that no longer exists and must be rewritten, not deleted")
 
 
+def _evidence_child_env(py, environ=None) -> dict:
+    """The environment every closure-evidence child runs in. A child pytest is its own single-process session, never an
+    xdist worker: under a parallel parent (the two-phase local suite, adopted 2026-10-12) the worker's PYTEST_XDIST_*
+    variables leaked into the child and the 0029/0030 seam gate refused its topology — row 0030-R17-1, the only row
+    that runs the gate. The reviewer runs each row by hand in a plain shell, where none of these variables exist, so
+    stripping them restores the reviewer's conditions. Regression, both directions:
+    test_an_evidence_child_is_never_an_xdist_worker_and_the_seam_gate_still_refuses_one."""
+    environ = os.environ if environ is None else environ
+    return dict({k: v for k, v in environ.items() if not k.startswith("PYTEST_XDIST_")}, PY=str(py),
+                VERACIUM_EVIDENCE_CHILD="1", PYTEST_ADDOPTS="-p no:cacheprovider")
+
+
 _SHELL_META = ("|", "&", ";", "<", ">", "`", "$(")
 
 
@@ -1599,6 +1611,39 @@ def test_a_collect_only_transcript_is_refused_unless_explicitly_allowed():
         assert any("`mode`" in p for p in validate(t, d / "specs", allow_collect=True))
 
 
+def test_an_evidence_child_is_never_an_xdist_worker_and_the_seam_gate_still_refuses_one():
+    """Research's condition on adopting the two-phase parallel suite (2026-10-12): the strip is proved both ways, on
+    the one row it exists for. (a) Under an xdist worker's variables the child env carries none of them, and row
+    0030-R17-1 runs GREEN. (b) The same row run with the variables the superseded env (`dict(os.environ, ...)`) would
+    have passed on is REFUSED by the seam gate with its own message: the strip moves the child out of the condition, it
+    does not weaken the gate. The variables are set by hand so this runs in CI, which has no xdist; the real `-n 2`
+    refusal is probed by the two-phase runner before every parallel suite."""
+    root = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    from closure_findings import CLOSURES
+    rows = [c for c in CLOSURES if c[3] == "0030-R17-1"]
+    assert len(rows) == 1, rows
+    evidence = rows[0][6]
+    assert "test_seam_model_0029_0030_store.py::" in evidence, evidence   # the row still runs the gate's own file
+    py = Path(sys.executable)
+    worker = dict(os.environ, PYTEST_XDIST_WORKER="gw1", PYTEST_XDIST_WORKER_COUNT="2",
+                  PYTEST_XDIST_TESTRUNUID="0" * 32)
+    stripped = _evidence_child_env(py, worker)
+    kept = [k for k in stripped if k.startswith("PYTEST_XDIST_")]
+    assert not kept, kept
+    assert (stripped["PY"], stripped["VERACIUM_EVIDENCE_CHILD"]) == (str(py), "1")
+
+    def run(env):
+        r = subprocess.run(evidence, shell=True, capture_output=True, text=True, cwd=root, env=env, timeout=600)
+        return r.returncode, r.stdout + r.stderr
+
+    rc, out = run(stripped)
+    assert rc == 0, f"(a) the stripped child is not green:\n{out[-3000:]}"
+    leaked = dict(worker, PY=str(py), VERACIUM_EVIDENCE_CHILD="1", PYTEST_ADDOPTS="-p no:cacheprovider")
+    rc, out = run(leaked)
+    assert rc != 0 and "UNSUPPORTED TOPOLOGY" in out, f"(b) the seam gate did not refuse a worker:\n{out[-3000:]}"
+
+
 def test_every_closure_evidence_command_actually_runs():
     """External round 7, R7-1. Four of the ledger's evidence commands could not
     run as written — three said `python3 -m pytest` and a bare python3 has no
@@ -1641,8 +1686,7 @@ def test_every_closure_evidence_command_actually_runs():
     # output. This is the most plausible mechanism I can name, not a diagnosis.
     # CI runs the suite on every push and the transcript now records per-command
     # durations, so a load-induced failure has somewhere to show up.
-    env = dict(os.environ, PY=str(py), VERACIUM_EVIDENCE_CHILD="1",
-               PYTEST_ADDOPTS="-p no:cacheprovider")
+    env = _evidence_child_env(py)
 
     # THE LOCAL OPT-IN (2026-10-07; the owner kept the per-commit local full suite and agreed this speed-up, research's
     # conditions). FULL is the default and is what CI, the seal and the reviewer run. A local run may set
