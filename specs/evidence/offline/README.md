@@ -15,6 +15,11 @@ VERACIUM_PYTHON=<a CPython 3.14 interpreter> bash specs/evidence/offline/run_off
 - **`VERACIUM_PYTHON`** chooses the interpreter. The launcher builds a fresh venv (it refuses to reuse one), installs
   the locked wheels with no network, then asks the repository's own predicate (`runtime_supported()`, specs/0007)
   whether that runtime is qualified, and **refuses** if it is not.
+- **The import preflight comes first.** Before building anything, the launcher has that interpreter import every
+  compiled standard-library module in `stdlib_extensions.txt`: the set the launcher's own run loaded, measured by
+  tracing every process it started (`stdlib_extensions_from_trace.py` says how). A build missing one (a CPython built
+  without libffi has no `_ctypes`) is refused by name in seconds, not found partway through the suite.
+  `VERACIUM_PREFLIGHT=warn` reports the same list and runs anyway, for a module only an accelerated path uses.
 - **Any further arguments go to pytest unchanged**, after the launcher's own `-q tests -p no:randomly -rs`: the suite runs in definition order, every skip with its reason.
 - **`--basetemp` on the package's filesystem.** One test,
   `tests/test_0026_relay_lexicon.py::test_bootstrap_paths_cannot_alias_and_worklists_stay_local`, hard-links a file of

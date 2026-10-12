@@ -2425,6 +2425,12 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         root / "specs" / "evidence" / "0048" / "pin_repro.py",
         # ...and round 2's token tripwire, whose hits a classified snapshot compares: a new one fails the suite
         root / "specs" / "evidence" / "0048" / "tripwire_0048.py",
+        # ...and round 2's contract harness, a model of §4 that exits 1 on a surviving or crashed mutant
+        root / "specs" / "evidence" / "0048" / "contract_harness_0048.py",
+        # the offline launcher's import preflight REFUSES an interpreter missing a measured module, and the list it
+        # reads is the trace reader's committed OUTPUT (manual_cli_driver's precedent above): both carry matrices
+        root / "specs" / "evidence" / "offline" / "stdlib_preflight.py",
+        root / "specs" / "evidence" / "offline" / "stdlib_extensions_from_trace.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

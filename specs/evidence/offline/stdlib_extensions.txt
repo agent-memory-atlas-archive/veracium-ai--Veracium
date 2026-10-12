@@ -1,0 +1,52 @@
+# The compiled standard-library modules the offline launcher's run loaded, measured: stdlib_preflight.py
+# refuses an interpreter that cannot import one of them. Made by stdlib_extensions_from_trace.py from a run of
+# run_offline.sh traced with strace -f (every process it started); see that script's docstring for the commands.
+# 46 modules from lib-dynload of the traced interpreter; 0 shared objects from any other
+# interpreter's lib-dynload were opened and are not listed.
+# measured: at 39c5b08, the launcher's full run (5567 passed, 24 skipped) with VERACIUM_PYTHON = CPython 3.14.7, SQLite 3.45.1, 2026-10-12
+_asyncio
+_bisect
+_blake2
+_bz2
+_codecs_cn
+_codecs_hk
+_codecs_iso2022
+_codecs_jp
+_codecs_kr
+_codecs_tw
+_csv
+_ctypes
+_decimal
+_elementtree
+_hashlib
+_heapq
+_hmac
+_interpreters
+_json
+_lzma
+_multibytecodec
+_multiprocessing
+_pickle
+_posixshmem
+_posixsubprocess
+_queue
+_random
+_socket
+_sqlite3
+_ssl
+_struct
+_uuid
+_zoneinfo
+_zstd
+array
+binascii
+fcntl
+grp
+math
+mmap
+pyexpat
+readline
+select
+termios
+unicodedata
+zlib

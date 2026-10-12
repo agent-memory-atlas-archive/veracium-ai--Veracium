@@ -53,6 +53,13 @@ if [ -e "$VENV" ]; then
   exit 2
 fi
 
+# IMPORT PREFLIGHT (0048 round 1's package note): the reviewer's own CPython build lacked `_ctypes`, and the suite
+# found out partway through a long run. Every compiled standard-library module this launcher's own run loaded, traced
+# across every process it started (stdlib_extensions.txt, measured, never hand-listed), is imported by the requested
+# interpreter FIRST, before anything is built. A missing one refuses with its name; VERACIUM_PREFLIGHT=warn runs anyway.
+echo "== preflight: the compiled standard-library modules the suite loads =="
+"$PY" "$HERE/stdlib_preflight.py" "$HERE/stdlib_extensions.txt" || exit 2
+
 # NO-ENSUREPIP BOOTSTRAP (impl-review rounds 1+3 standing ask; previously a
 # refusal). A qualified interpreter without ensurepip — the reviewer's
 # /usr/bin/python3, twice — now gets a HASH-LOCKED NO-PIP environment: venv

@@ -367,3 +367,66 @@ def test_pin_repro_reports_a_planted_fix_as_not_reproduced(tmp_path):
     pairs = zip(honest.stdout.splitlines(), r.stdout.splitlines())
     flipped = [(h[:14].strip(), m[:14].strip(), h[15:50]) for h, m in pairs if h[:14] != m[:14]]
     assert flipped == [("REPRODUCED", "NOT REPRODUCED", "R1-01 factor 2.0 on 0.3: persisted ")], flipped
+
+
+# --- the contract harness (round 1's request: a small runnable model of §4) ---------------------------------------------
+
+def _harness(tmp_path, harness=EV / "contract_harness_0048.py"):
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src"), "TMPDIR": str(tmp_path)}
+    return subprocess.run([sys.executable, str(harness), str(ROOT)], cwd=ROOT, env=env, capture_output=True,
+                          text=True, timeout=600)
+
+
+def _s6_mutant_rows():
+    """§6's mutant table as (mutant, killing cell) pairs, the two N4c rows aside: those are held by the census and the
+    tripwire over the tree, and the harness's docstring states that complement."""
+    s6 = SPEC.read_text()
+    s6 = s6[s6.index("\n## 6."):s6.index("\n## 7.")]
+    cells = lambda ln: [x.strip() for x in re.split(r"(?<!\\)\|", ln)[1:-1]]
+    lines = [ln for ln in s6.splitlines() if ln.startswith("|")]
+    (h,) = [k for k, ln in enumerate(lines) if [x.lower() for x in cells(ln)] == ["mutant", "reintroduces", "killed by"]]
+    rows = []
+    for ln in lines[h + 2:]:
+        c = cells(ln)
+        if len(c) != 3:
+            break
+        rows.append(c)
+    return {(m, k) for m, why, k in rows if not why.startswith("N4c")}, len(rows)
+
+
+def test_contract_harness_0048_counts_only_a_refusal_as_a_kill(tmp_path):
+    """contract_harness_0048.py's mutation matrix. On the tree it runs exactly §6's mutant rows (by row text and killing
+    cell, both ways; the per-writer bypass row once per model writer, so two more MUTANT lines than rows), kills every
+    one and passes every control. Then three planted copies of the harness: a mutation that changes nothing must
+    SURVIVE; a mutation that only crashes the model must read CRASHED, never KILLED (a crash is not the cell's refusal);
+    a model line moved under a mutant's anchor must stop the run as a HARNESS ERROR. Each exits non-zero."""
+    want, n_rows = _s6_mutant_rows()
+    r = _harness(tmp_path)
+    assert r.returncode == 0, r.stdout[-2000:] + r.stderr
+    mutants = [ln.split(" | ") for ln in r.stdout.splitlines() if ln.startswith("MUTANT ")]
+    assert {(m[1], m[2]) for m in mutants} == want, {(m[1], m[2]) for m in mutants} ^ want
+    n = len(want) + 2
+    assert len(mutants) == n and all(m[0] == "MUTANT KILLED" for m in mutants), [m[:3] for m in mutants]
+    tally = re.findall(r"^TALLY: mutants (\d+)/(\d+) killed; controls (\d+)/(\d+) pass$", r.stdout, re.M)
+    assert tally and tally[0][0] == tally[0][1] == str(n) and tally[0][2] == tally[0][3] and int(tally[0][3]) > 0, tally
+    assert n_rows == len(want) + 2, "the N4c complement is no longer exactly two rows: restate the harness's docstring"
+
+    src = (EV / "contract_harness_0048.py").read_text()
+    anchor = '"    return Edge.model_validate(e.model_dump()).model_dump_json()\\n", "    return e.model_dump_json()\\n"'
+    assert src.count(anchor) == 1, "the mutator's anchor moved: re-anchor this test"
+    planted = {
+        "no-op": src.replace(anchor, anchor.split(", ")[0] + ", " + anchor.split(", ")[0]),
+        "crash": src.replace(anchor, anchor.split(", ")[0] + ", \"    raise RuntimeError('a crash, not a refusal')\\n\""),
+    }
+    model_line = "    return Edge.model_validate(e.model_dump()).model_dump_json()\n"
+    assert src.count(model_line) == 1, "the model line moved: re-anchor this test"
+    planted["drift"] = src.replace(model_line, "    return Edge.model_validate(e.model_dump()).model_dump_json()  # moved\n")
+    out = {}
+    for name, text in planted.items():
+        f = tmp_path / f"harness_{name}.py"
+        f.write_text(text)
+        out[name] = _harness(tmp_path, f)
+    line = lambda r: [ln for ln in r.stdout.splitlines() if "| the store helper serialises without validating |" in ln]
+    assert out["no-op"].returncode == 1 and line(out["no-op"])[0].startswith("MUTANT SURVIVED"), out["no-op"].stdout[-800:]
+    assert out["crash"].returncode == 1 and line(out["crash"])[0].startswith("MUTANT CRASHED"), out["crash"].stdout[-800:]
+    assert out["drift"].returncode == 2 and "HARNESS ERROR" in out["drift"].stderr, out["drift"].stdout[-400:] + out["drift"].stderr
