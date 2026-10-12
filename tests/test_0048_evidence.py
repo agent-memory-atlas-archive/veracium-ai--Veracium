@@ -405,7 +405,7 @@ def test_contract_harness_0048_counts_only_a_refusal_as_a_kill(tmp_path):
     assert r.returncode == 0, r.stdout[-2000:] + r.stderr
     mutants = [ln.split(" | ") for ln in r.stdout.splitlines() if ln.startswith("MUTANT ")]
     assert {(m[1], m[2]) for m in mutants} == want, {(m[1], m[2]) for m in mutants} ^ want
-    n = len(want) + 2
+    n = len(want) + 2 + 8          # the per-writer bypass row x3 (+2); the unresolved-connection-form row x9 (+8), R2-01
     assert len(mutants) == n and all(m[0] == "MUTANT KILLED" for m in mutants), [m[:3] for m in mutants]
     tally = re.findall(r"^TALLY: mutants (\d+)/(\d+) killed; controls (\d+)/(\d+) pass$", r.stdout, re.M)
     assert tally and tally[0][0] == tally[0][1] == str(n) and tally[0][2] == tally[0][3] and int(tally[0][3]) > 0, tally

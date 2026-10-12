@@ -3,8 +3,9 @@
     python contract_harness_0048.py <tree-root>
 
 <tree-root>/src/veracium must exist: the harness imports `veracium.schema` (Edge, Provenance, EvidenceAuthor,
-Volatility, ExpiryBehavior, DEFAULT_EXPIRY) and nothing else from the tree. Stdlib sqlite3 plus pydantic. No other
-argument is taken; a missing or wrong one is refused (exit 2). About 40 s.
+Volatility, ExpiryBehavior, DEFAULT_EXPIRY) for the model; N4i's baseline arm also imports `veracium.lifecycle` and
+`veracium.store.sqlite`. Stdlib sqlite3 plus pydantic. No other argument is taken; a missing or wrong one is refused
+(exit 2). About 40 s.
 
 WHAT THIS IS. A MODEL of the design under review, not the implementation, in the shape of the round-1 reviewer's
 isolated model. Every name in the MODEL section (`check_bound`, `ModelConfig`, `ModelStore`, `serialise_edge`,
@@ -15,9 +16,14 @@ isolated model. Every name in the MODEL section (`check_bound`, `ModelConfig`, `
 - B  `expire()` reads the three policy values once and validates the pair at entry, before any read of the store;
      the decayed stamp is built by `Provenance.model_validate` (defence in depth).
 - C  `serialise_edge` is `Edge.model_validate(e.model_dump()).model_dump_json()`; every edges `json` write in
-     `ModelStore` binds its return value, which the N4f gate checks over this file's MODEL section.
+     `ModelStore` binds its return value, which the N4f gate checks over this file's MODEL section. The gate fails
+     CLOSED by the connection's receiver (R2-01): every reference to the store's connection is a form it resolves, or
+     it is refused.
 - D  one transition per due edge, decided from the row read INSIDE `BEGIN IMMEDIATE` (the only form from v3.3).
-     The store keeps a journal and counters, so N4d's snapshot covers more than the edges table.
+     The store keeps a journal and counters, so N4d's snapshot covers more than the edges table. DECAY keeps the
+     shipped result (R2-02, v4): `decayed` counts decay-triggered invalidations only, and below the floor the row as
+     read is retired with its stored confidence unchanged. N4i checks the model against a fixed table AND against the
+     tree's own `expire()` on a real store.
 N4h's schedule is §6's: A paused after its listing, B commits, A resumes; the serial control runs B, then A.
 
 WHAT A KILL MEANS HERE. Each §6 mechanism mutant is applied to the MODEL section as exact-once text replacements, and
@@ -31,13 +37,22 @@ dropped and not counted, which matches no serial order: on N4h's decay case B co
 serial control gives 0.1125. v3.3 removes the permission and adds the mutant row "a conditional write on the row as
 read in place of the in-transaction read"; its MUTANT line below prints those three values.
 
+ROUND 2'S VERDICT (2026-10-12, design ACCEPTED; folded in v4). R2-01: this file's first gate visited only attribute
+calls named `execute`/`executescript` and skipped every other call, so `executemany`, an alias of `execute`,
+`getattr(conn, "execute")` and `conn.cursor().executemany` each passed it while storing confidence 1.8 (the reviewer
+found two, research two more). The gate now refuses any reference to the connection it does not resolve, and nine
+forms are mutants of one §6 row. R2-02: the model counted every decay and stored the decayed value below the floor;
+the shipped `expire()` does neither (proposals/evidence-0048/r2-verdict/r2_02_matrix.py in the research tree: 7 of 13
+branches differed, all from those two mechanisms). The model now keeps the shipped meaning, and N4i holds it.
+
 §6 MUTANT ROWS OUTSIDE THIS MODEL (the complement, stated): the two N4c rows,
   "a copy site writing `confidence` removed from the declared table" and
   "a writer of a form the census does not see, its trigger tokens left unclassified".
 They are held by the census and the tripwire (specs/evidence/0048/census_0048.py, tripwire_0048.py, and
 tests/test_0048_evidence.py) over the tree, not over a model. Every other §6 mutant row is run here; the row
 "**for each of the declared edge writers:** that writer bypasses the helper" runs once per model edge writer
-(add_edge, confirm, transition).
+(add_edge, confirm, transition), and the row "**for each connection form the gate does not resolve:** a writer
+reaches the connection that way" once per form (nine).
 
 OUTPUT GRAMMAR (dev's test asserts on it; do not reword without telling dev):
   CONTROL <PASS|FAIL> | `<cell>`[ | <failing cases>]
@@ -222,10 +237,12 @@ def _decide_on(raw, eid, user_id, policy, now, store):
     if behaviour == ExpiryBehavior.LAPSE:
         return _invalidated(e, now, "lapsed"), "lapsed"
     if behaviour == ExpiryBehavior.DECAY:
+        # R2-02: the shipped meaning. Strictly below the floor, the row AS READ is retired, its stored confidence
+        # unchanged, and counted; otherwise the decayed edge is written, and a retained decay is not counted.
+        if e.provenance.confidence * factor < floor:
+            return _invalidated(e, now, "decayed"), "decayed"
         e.provenance = Provenance.model_validate({**e.provenance.model_dump(),
                                                   "confidence": e.provenance.confidence * factor})
-        if e.provenance.confidence < floor:
-            return _invalidated(e, now, "decayed"), "decayed"
         return e, "decayed_kept"
     if e.needs_confirmation:
         return None
@@ -249,8 +266,8 @@ def expire(store, user_id, config, *, now):
     counts = {"lapsed": 0, "decayed": 0, "flagged_for_confirmation": 0}
     for eid, listed_raw in store.due_candidates(user_id, lifetimes, now):
         moved = store.transition(eid, user_id, policy, now, listed_raw)
-        if moved is not None:
-            counts["decayed" if moved == "decayed_kept" else moved] += 1
+        if moved is not None and moved != "decayed_kept":     # R2-02: `decayed` counts decay invalidations only
+            counts[moved] += 1
     return counts
 # ======================================== MODEL END ========================================
 
@@ -346,8 +363,12 @@ def _raises_naming(fn, field):
 
 
 # ------------------------------------------------ the §6 cells, over the model ------------------------------------------------
+# Each cell is `model_<§6 test name>`, never the §6 name itself: specs/citation_debt.py resolves an accepted spec's
+# cited `test_*` names to `^def test_...(` anywhere under specs/evidence/, so a model cell carrying the name would
+# make the implementation's owed test read as written (found at the v4 fold, 2026-10-12). Output lines print the
+# §6 name.
 
-def test_no_maintenance_op_raises_confidence(m, fx):
+def model_test_no_maintenance_op_raises_confidence(m, fx):
     decay_mapped(m)
     rng = random.Random(48)
     bad = []
@@ -373,14 +394,14 @@ def test_no_maintenance_op_raises_confidence(m, fx):
         raise CellFailure(bad[:3])
 
 
-def test_config_bounds_are_validated(m, fx):
+def model_test_config_bounds_are_validated(m, fx):
     bad = [f"{f}={v!r}" for f in m.BOUNDED for v in REJECTED
            if not _raises_naming(lambda: m.ModelConfig(**{f: v}), f)]
     if bad:
         raise CellFailure(bad)
 
 
-def test_boundary_configs_are_still_valid(m, fx):
+def model_test_boundary_configs_are_still_valid(m, fx):
     bad = []
     for f in m.BOUNDED:
         for v in (0.0, 1.0, 0, 1):
@@ -396,7 +417,7 @@ def test_boundary_configs_are_still_valid(m, fx):
         raise CellFailure(bad)
 
 
-def test_config_bounds_hold_on_assignment(m, fx):
+def model_test_config_bounds_hold_on_assignment(m, fx):
     bad = []
     for f in m.BOUNDED:
         for v in REJECTED:
@@ -410,7 +431,7 @@ def test_config_bounds_hold_on_assignment(m, fx):
         raise CellFailure(bad)
 
 
-def test_decay_config_refusal_writes_nothing(m, fx):
+def model_test_decay_config_refusal_writes_nothing(m, fx):
     decay_mapped(m)
     bad = []
     configs = [("factor", v, duck(factor=v)) for v in (2.0, -1.0, float("nan"), True, "0.5")] + \
@@ -438,7 +459,7 @@ def test_decay_config_refusal_writes_nothing(m, fx):
         raise CellFailure(bad)
 
 
-def test_a_later_failure_keeps_the_processed_prefix(m, fx):
+def model_test_a_later_failure_keeps_the_processed_prefix(m, fx):
     decay_mapped(m)
     s = fx.store()
     s.add_edge(edge(m, "t", m.Volatility.TRANSIENT, 0.9))
@@ -464,7 +485,7 @@ def test_a_later_failure_keeps_the_processed_prefix(m, fx):
         raise CellFailure(bad)
 
 
-def test_valid_decay_never_raises(m, fx):
+def model_test_valid_decay_never_raises(m, fx):
     decay_mapped(m)
     bad = []
     for f, fl in itertools.product((0.0, 0.25, 0.5, 1.0, 0, 1), (0.0, 0.3, 1.0, 0, 1)):
@@ -500,11 +521,71 @@ def _sql(node):
     return None
 
 
-def test_every_edge_write_goes_through_the_validating_serialiser(m, fx, src=None):
-    tree = ast.parse(src)
+CONN_CALLS = ("execute", "executescript")         # the only connection methods the gate resolves
+DYNAMIC = ("getattr", "setattr", "delattr", "vars", "eval", "exec", "compile", "__import__", "globals", "locals")
+
+
+def _is_self_conn(n):
+    return isinstance(n, ast.Attribute) and n.attr == "conn" and isinstance(n.value, ast.Name) and n.value.id == "self"
+
+
+def _unresolved(tree):
+    """R2-01: fail CLOSED by the connection's RECEIVER, not by a method name. Every reference to the store's connection
+    is one the gate resolves (a direct call `self.conn.execute(...)` / `self.conn.executescript(...)`, or the one
+    assignment in `ModelStore.__init__`); `sqlite3` is used only for that connection; no dynamic attribute access
+    outside `ModelConfig`. Anything else (an alias, `executemany`, a cursor, `getattr`, the unbound method, the
+    connection passed as an argument, `__dict__`, a second connection) is refused, never skipped."""
+    parent = {ch: node for node in ast.walk(tree) for ch in ast.iter_child_nodes(node)}
+
+    def enclosing(node, kind):
+        while node in parent:
+            node = parent[node]
+            if isinstance(node, kind):
+                return node
+        return None
+
+    def in_store_init(node):
+        fn, cls = enclosing(node, ast.FunctionDef), enclosing(node, ast.ClassDef)
+        return fn is not None and fn.name == "__init__" and cls is not None and cls.name == "ModelStore"
+
     bad = []
     for node in ast.walk(tree):
-        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+        line = getattr(node, "lineno", "?")
+        cls = enclosing(node, ast.ClassDef)
+        if isinstance(node, ast.ImportFrom) and node.module == "sqlite3":
+            bad.append(f"line {line}: sqlite3 used other than for the store's one connection (from-import)")
+        elif isinstance(node, ast.Name) and node.id == "sqlite3":
+            p = parent.get(node)
+            call = parent.get(p)
+            ok = (isinstance(p, ast.Attribute) and p.attr == "connect" and isinstance(call, ast.Call)
+                  and call.func is p and isinstance(parent.get(call), ast.Assign)
+                  and any(_is_self_conn(t) for t in parent[call].targets) and in_store_init(node))
+            if not ok:
+                bad.append(f"line {line}: sqlite3 used other than for the store's one connection")
+        elif isinstance(node, ast.Attribute) and node.attr == "conn":
+            p = parent.get(node)
+            if not _is_self_conn(node):
+                bad.append(f"line {line}: the connection reached through something other than `self`")
+            elif isinstance(p, ast.Assign) and node in p.targets:
+                if not in_store_init(node):
+                    bad.append(f"line {line}: the connection rebound outside ModelStore.__init__")
+            elif not (isinstance(p, ast.Attribute) and p.attr in CONN_CALLS and isinstance(parent.get(p), ast.Call)
+                      and parent[p].func is p):
+                bad.append(f"line {line}: the connection is reached in a form the gate does not resolve")
+        if cls is not None and cls.name == "ModelConfig":
+            continue
+        if isinstance(node, ast.Name) and node.id in DYNAMIC:
+            bad.append(f"line {line}: dynamic access (`{node.id}`) outside ModelConfig")
+        elif isinstance(node, ast.Attribute) and node.attr in ("__dict__", "__setattr__", "__getattribute__"):
+            bad.append(f"line {line}: dynamic access (`{node.attr}`) outside ModelConfig")
+    return bad
+
+
+def model_test_every_edge_write_goes_through_the_validating_serialiser(m, fx, src=None):
+    tree = ast.parse(src)
+    bad = _unresolved(tree)
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and _is_self_conn(node.func.value)):
             continue
         if node.func.attr == "executescript":
             if not (len(node.args) == 1 and isinstance(node.args[0], ast.Name) and node.args[0].id == "DDL"):
@@ -531,7 +612,7 @@ def test_every_edge_write_goes_through_the_validating_serialiser(m, fx, src=None
         raise CellFailure(bad)
 
 
-def test_the_store_refuses_an_out_of_bound_edge(m, fx):
+def model_test_the_store_refuses_an_out_of_bound_edge(m, fx):
     s = fx.store()
     s.add_edge(edge(m, "ok", m.Volatility.SLOW, 0.5))
     before = snapshot(s)
@@ -549,7 +630,7 @@ def test_the_store_refuses_an_out_of_bound_edge(m, fx):
         raise CellFailure(bad)
 
 
-def test_factor_is_validated_whatever_the_confidence(m, fx):
+def model_test_factor_is_validated_whatever_the_confidence(m, fx):
     decay_mapped(m)
     bad = []
     for c, f in itertools.product((0.0, 0.3, 0.9), (2.0, NEAR_ABOVE_1, -1.0, float("nan"), True)):
@@ -584,7 +665,7 @@ N4H_CASES = (  # name, volatility, observed, confidence, B's operations (on B's 
 )
 
 
-def test_expiry_is_decided_from_the_current_row(m, fx):
+def model_test_expiry_is_decided_from_the_current_row(m, fx):
     bad = []
     for name, vol, observed, conf, b_ops in N4H_CASES:
         if name == "decay":
@@ -646,12 +727,61 @@ def test_expiry_is_decided_from_the_current_row(m, fx):
         raise CellFailure(bad)
 
 
-CELLS = [test_no_maintenance_op_raises_confidence, test_config_bounds_are_validated,
-         test_boundary_configs_are_still_valid, test_config_bounds_hold_on_assignment,
-         test_decay_config_refusal_writes_nothing, test_a_later_failure_keeps_the_processed_prefix,
-         test_valid_decay_never_raises, test_every_edge_write_goes_through_the_validating_serialiser,
-         test_the_store_refuses_an_out_of_bound_edge, test_factor_is_validated_whatever_the_confidence,
-         test_expiry_is_decided_from_the_current_row]
+N4I_CASES = (  # name, confidence, flagged, factor, floor -> the shipped result: (decayed, active, confidence, flagged)
+    ("retained", 0.9, False, 0.5, 0.3, (0, True, 0.45, False)),
+    ("below the floor", 0.9, False, 0.5, 0.5, (1, False, 0.9, False)),
+    ("exactly at the floor", 0.6, False, 0.5, 0.3, (0, True, 0.3, False)),
+    ("factor 1.0", 0.9, False, 1.0, 0.3, (0, True, 0.9, False)),
+    ("factor 0, floor 0", 0.9, False, 0.0, 0.0, (0, True, 0.0, False)),
+    ("factor 0, floor 0.3", 0.9, False, 0.0, 0.3, (1, False, 0.9, False)),
+    ("already flagged, retained", 0.9, True, 0.5, 0.3, (0, True, 0.45, True)),
+)
+
+
+def _n4i_result(counts, e):
+    return (counts["decayed"], e.invalidated_at is None, round(e.provenance.confidence, 9), e.needs_confirmation)
+
+
+def model_test_decay_keeps_the_shipped_result(m, fx):
+    """N4i (R2-02): SLOW mapped to DECAY, one due edge per case. The model's returned `decayed` count and stored
+    edge equal the shipped result table; and the table is the tree's: its own `expire()` on a real store gives it too
+    (the baseline arm, so the table cannot drift from what the tree does)."""
+    from veracium import lifecycle
+    from veracium.schema import DEFAULT_EXPIRY
+    from veracium.store.sqlite import SqliteStore
+    bad = []
+    for name, c, flagged, f, fl, want in N4I_CASES:
+        e0 = edge(m, "e", m.Volatility.SLOW, c)
+        e0.needs_confirmation = flagged
+        decay_mapped(m)
+        s = fx.store()
+        s.add_edge(e0)
+        got = _n4i_result(m.expire(s, U, m.ModelConfig(decay_factor=f, confidence_floor=fl), now=NOW),
+                          m.Edge.model_validate_json(s.read("e", U)))
+        unmapped(m)
+        if got != want:
+            bad.append(f"{name}: model {got}, shipped {want}")
+        saved = DEFAULT_EXPIRY[m.Volatility.SLOW]
+        DEFAULT_EXPIRY[m.Volatility.SLOW] = m.ExpiryBehavior.DECAY      # as a host maps it (§2c row 4)
+        try:
+            st = SqliteStore(fx.path(f"n4i-{name}"))
+            st.add_edge(e0)
+            bc = lifecycle.expire(st, U, duck(factor=f, floor=fl), now=NOW)
+            base = _n4i_result(bc, [x for x in st.edges(U, active_only=False) if x.id == "e"][0])
+        finally:
+            DEFAULT_EXPIRY[m.Volatility.SLOW] = saved
+        if base != want:
+            bad.append(f"{name}: the tree's own expire() gives {base}, the table says {want} (the table is stale)")
+    if bad:
+        raise CellFailure(bad)
+
+
+CELLS = [model_test_no_maintenance_op_raises_confidence, model_test_config_bounds_are_validated,
+         model_test_boundary_configs_are_still_valid, model_test_config_bounds_hold_on_assignment,
+         model_test_decay_config_refusal_writes_nothing, model_test_a_later_failure_keeps_the_processed_prefix,
+         model_test_valid_decay_never_raises, model_test_every_edge_write_goes_through_the_validating_serialiser,
+         model_test_the_store_refuses_an_out_of_bound_edge, model_test_factor_is_validated_whatever_the_confidence,
+         model_test_expiry_is_decided_from_the_current_row, model_test_decay_keeps_the_shipped_result]
 
 # ------------------------------------------------ §6's mutants ------------------------------------------------
 # (§6 mutant cell, §6 killing cell, instance, required failing case(s) or None,
@@ -708,6 +838,25 @@ for inst, old in (("add_edge", "                              (e.id, e.user_id, 
     MUTANTS.append((BYPASS, GATE, inst, None,
                     [(old, old.replace("serialise_edge(e)", "e.model_dump_json()")
                            .replace("serialise_edge(new)", "new.model_dump_json()"))]))
+INSERT = ('            self.conn.execute("INSERT INTO edges (id, user_id, json) VALUES (?, ?, ?) "\n'
+          '                              "ON CONFLICT(id, user_id) DO UPDATE SET json = excluded.json",\n'
+          '                              (e.id, e.user_id, serialise_edge(e)))\n')
+_SQL = '"INSERT INTO edges (id, user_id, json) VALUES (?, ?, ?) ON CONFLICT(id, user_id) DO UPDATE SET json = excluded.json"'
+_P = "(e.id, e.user_id, e.model_dump_json())"
+_I = "            "
+FORMS = "**for each connection form the gate does not resolve:** a writer reaches the connection that way"
+for inst, need, new in (
+        ("executemany", "does not resolve", f"{_I}self.conn.executemany({_SQL}, [{_P}])\n"),
+        ("a bound execute alias", "does not resolve", f"{_I}_x = self.conn.execute\n{_I}_x({_SQL}, {_P})\n"),
+        ("getattr(conn, 'execute')", "dynamic access", f"{_I}getattr(self.conn, 'execute')({_SQL}, {_P})\n"),
+        ("cursor().executemany", "does not resolve", f"{_I}self.conn.cursor().executemany({_SQL}, [{_P}])\n"),
+        ("SQL held in a variable", "not a literal", f"{_I}_q = {_SQL}\n{_I}self.conn.execute(_q, {_P})\n"),
+        ("parameters held in a variable", "not bound", f"{_I}_p = {_P}\n{_I}self.conn.execute({_SQL}, _p)\n"),
+        ("the unbound sqlite3.Connection.execute", "sqlite3 used",
+         f"{_I}sqlite3.Connection.execute(self.conn, {_SQL}, {_P})\n"),
+        ("a second connection", "sqlite3 used", f"{_I}sqlite3.connect(':memory:').execute({_SQL}, {_P})\n"),
+        ("the instance __dict__", "dynamic access", f"{_I}self.__dict__['conn'].execute({_SQL}, {_P})\n")):
+    MUTANTS.append((FORMS, GATE, inst, need, [(INSERT, new)]))
 MUTANTS += [
     ("a writer calls the helper and ignores its return value", GATE, "add_edge", None,
      [("        self._begin()\n        try:\n            self.conn.execute(\"INSERT INTO edges",
@@ -741,6 +890,25 @@ MUTANTS += [
       (TXN_WRITE,
        '            n = self.conn.execute("UPDATE edges SET json=? WHERE id=? AND user_id=? AND json=?",\n'
        "                                  (serialise_edge(new), eid, user_id, raw)).rowcount")]),
+    # v4 (R2-02): the model's pre-verdict decay semantics, each a departure from the shipped result
+    ("a retained decay counted as `decayed`", "`test_decay_keeps_the_shipped_result` (`retained`)", "-", "retained:",
+     [('        if moved is not None and moved != "decayed_kept":     # R2-02: `decayed` counts decay invalidations only\n'
+       "            counts[moved] += 1\n",
+       "        if moved is not None:\n"
+       '            counts["decayed" if moved == "decayed_kept" else moved] += 1\n')]),
+    ("below the floor, the decayed confidence stored", "`test_decay_keeps_the_shipped_result` (`below the floor`)",
+     "-", "below the floor:",
+     [('        if e.provenance.confidence * factor < floor:\n'
+       '            return _invalidated(e, now, "decayed"), "decayed"\n'
+       '        e.provenance = Provenance.model_validate({**e.provenance.model_dump(),\n'
+       '                                                  "confidence": e.provenance.confidence * factor})\n',
+       '        e.provenance = Provenance.model_validate({**e.provenance.model_dump(),\n'
+       '                                                  "confidence": e.provenance.confidence * factor})\n'
+       '        if e.provenance.confidence < floor:\n'
+       '            return _invalidated(e, now, "decayed"), "decayed"\n')]),
+    ("the floor comparison inclusive (`<=`)", "`test_decay_keeps_the_shipped_result` (`exactly at the floor`)", "-",
+     "exactly at the floor:",
+     [("        if e.provenance.confidence * factor < floor:\n", "        if e.provenance.confidence * factor <= floor:\n")]),
 ]
 
 
@@ -750,7 +918,7 @@ def run_cell(cell, m, src):
     signature) crashes, and a crash is not the cell detecting the defect (H-02, dev, 2026-10-12; the 0045 r2 class)."""
     fx = Fixture(m)
     try:
-        if cell is test_every_edge_write_goes_through_the_validating_serialiser:
+        if cell is model_test_every_edge_write_goes_through_the_validating_serialiser:
             cell(m, fx, src=src)
         else:
             cell(m, fx)
@@ -766,14 +934,14 @@ def run_cell(cell, m, src):
 
 def main():
     src0 = model_source()
-    by_name = {c.__name__: c for c in CELLS}
+    by_name = {c.__name__.removeprefix("model_"): c for c in CELLS}
     k = n = c = mm = crashed = 0
     m = load(src0)
     for cell in CELLS:
         outcome, fails = run_cell(cell, m, src0)
         mm += 1
         c += outcome == "passed"
-        print(f"CONTROL {'PASS' if outcome == 'passed' else 'FAIL'} | `{cell.__name__}`"
+        print(f"CONTROL {'PASS' if outcome == 'passed' else 'FAIL'} | `{cell.__name__.removeprefix('model_')}`"
               + ("" if outcome == "passed" else f" | {outcome}: {'; '.join(fails)[:400]}"))
     for row, killer, inst, need, reps in MUTANTS:
         src = src0

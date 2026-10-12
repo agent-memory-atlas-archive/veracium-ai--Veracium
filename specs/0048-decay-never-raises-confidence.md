@@ -1,17 +1,17 @@
 # Feature spec: maintenance never raises confidence — the decay bounds (0002's N4, carried)
 
-Spec-Status: draft
+Spec-Status: accepted
 
 *<!-- canonical machine-readable state; the header table below carries the narrative. Only `accepted` authorises implementation. -->*
 
 | | |
 |---|---|
 | **Author / session** | research (veracium-research-d5), the candidate's author → dev, adopted at rest and re-read from the file: v2 2026-10-10 from `0048-decay-never-raises-confidence-CANDIDATE.md` (sha16 f7336e49d33d1494); v3 2026-10-11 from `0048-decay-never-raises-confidence-CANDIDATE.md` (sha16 e3053ec1828ec62f) |
-| **Version** | **v3.3 — 2026-10-12: §4D's "equivalent form" removed (H-01, found by round 2's contract harness).** v3.2 permitted a write conditional on the whole row as read, where zero rows meant no write, not counted. When that write loses a race, a transition still due on the committed row is dropped, which matches no serial order of the overlapping operations, contrary to §4D's own statement and to N4h's serial control. Modelled, N4h's `decay` case leaves B's 0.225 where the serial control gives 0.1125 (`specs/evidence/0048/contract_harness_0048.py`). The in-transaction read is now the only form. One §6 mutant row is added, and the round-1 closure's archive row names the harness. No other change. Prior: **v3.2 — 2026-10-11: §6 N4c narrowed to what its instruments catch.** v3.1's (iii) said "A new writer without an entry fails the test" of an AST census that, planted with unvalidated-write forms it was not written for, missed every one (research's round-2 stage 2, `S2-01`; dev's campaign found more against the widened census). (iii) is now two instruments that do not share a scope, the census and a token tripwire compared with a hand-classified snapshot, and the residual both miss is named. One §6 mutant row added. No other change. Prior: **v3.1 — 2026-10-11: Q6 resolved, "Q6 - edges only"** (the owner, 2026-10-11T20:04:32Z, first-hand in the dev session, relayed by dev; coordination ledger `9cdd856`), on research's and dev's joint recommendation. C stays edge-only; storage bounds for every other `Provenance` carrier, starting with the episode path, are a named follow-up (§8, §10). No other change. Prior: **v3 — 2026-10-11: round 1 returned v2 for amendment (R1-01..R1-04 and the finite-decay note; R1-05 was a baseline fixture, fixed in the tree at `6c0eab6`).** Each finding was reproduced against the shipped code at `4ea1ce5` by dev before this fold, with honest controls. **(R1-01)** one shared validator for BOTH numeric fields, run at `expire()`'s ENTRY on every config, independent of any edge's confidence, its result captured once (§4A–B). **(R1-02)** the expiry transition is decided from the CURRENT row inside one write transaction (new §4D). Research found the class wider than the verdict's decay case: the same stale read-decide-write reverts a user's `confirm()` and lapses a fact just confirmed, through the CONFIRM and LAPSE behaviours of the **shipped** expiry table (§2c-ii row 11). 🔴 **Scope: §4D covers all three behaviours, on the owner's ruling "All 3" (2026-10-11T19:10:51Z, first-hand in the dev session, relayed by dev; coordination ledger `2b930e2`; §10 Q5).** **(R1-03)** one unit of refusal: configuration refusal at entry, before any edge; later ordinary failures keep the stated per-edge prefix behaviour (§4B, §7, N4d). **(R1-04)** the persistence guarantee is scoped to EDGES; §2c-ii row 8 is a generated AST census (five confidence writers, not four); consolidation's confidence is in range by its inputs, stated as a dependency (§4C). **(The finite-decay note.)** §5 promises non-increase only; finite-time invalidation is real-arithmetic intuition, not a runtime guarantee. **Q4 resolved** as the reviewer answered, with dev's co-decision (§10). §2c-ii's prose rows are now scripts (`specs/evidence/0048/`, landing with this version). Prior: **v2 — 2026-10-10.** v2 folded the owner's answer to Q1, "Yes, guard the store" (2026-10-10, first-hand in the dev session, relayed by dev): part C and N4f are IN, unconditional. v1: research 2c134739, never adopted. A standalone carrier for one invariant of `specs/0002-maintenance-provenance-invariant.md` (Spec-Status `deferred`), on the owner's decision of 2026-10-10 (relayed by dev, given first-hand in the dev session): **"B"**, a small standalone spec, so the fix reaches `lifecycle.py` (guarded) through review rather than through an exception. No Spec-Exception fits: the hostile value is the host's own configuration, not an attacker's, so `security-hotfix` does not apply. |
+| **Version** | **v4 — 2026-10-12: ACCEPTED (design), external round 2, with the verdict's two obligations folded.** The verdict accepted v3.3 on the frozen surface N4 (confidence half), N4b, N4b′, N4b-assign, N4c within its scope, N4d, N4d-prefix, N4e, N4f, N4g and N4h, under §4 A–D and §7–§8. **R2-01** (medium): the contract harness's writer gate passed `executemany` and an alias of `execute` while storing confidence 1.8; research found two more forms (`getattr`, a cursor). N4f's gate now fails closed by the connection's receiver, and nine forms are mutants of one §6 row. **R2-02** (medium): the model counted every decay and stored the decayed value below the floor, where the shipped `expire()` does neither; diffed over thirteen branches, seven differed, all from those two mechanisms. §2 and §4D now state the shipped meaning (the accepted "no meaning changes" contract; adopting the model's would be the owner's explicit behaviour change), and **N4i** holds it with a fixed table and three mutants. Editorial: §9's R1-02 row counts four D mutants; §5's fixed point is at the floor. No design change. Prior: **v3.3 — 2026-10-12: §4D's "equivalent form" removed (H-01, found by round 2's contract harness).** v3.2 permitted a write conditional on the whole row as read, where zero rows meant no write, not counted. When that write loses a race, a transition still due on the committed row is dropped, which matches no serial order of the overlapping operations, contrary to §4D's own statement and to N4h's serial control. Modelled, N4h's `decay` case leaves B's 0.225 where the serial control gives 0.1125 (`specs/evidence/0048/contract_harness_0048.py`). The in-transaction read is now the only form. One §6 mutant row is added, and the round-1 closure's archive row names the harness. No other change. Prior: **v3.2 — 2026-10-11: §6 N4c narrowed to what its instruments catch.** v3.1's (iii) said "A new writer without an entry fails the test" of an AST census that, planted with unvalidated-write forms it was not written for, missed every one (research's round-2 stage 2, `S2-01`; dev's campaign found more against the widened census). (iii) is now two instruments that do not share a scope, the census and a token tripwire compared with a hand-classified snapshot, and the residual both miss is named. One §6 mutant row added. No other change. Prior: **v3.1 — 2026-10-11: Q6 resolved, "Q6 - edges only"** (the owner, 2026-10-11T20:04:32Z, first-hand in the dev session, relayed by dev; coordination ledger `9cdd856`), on research's and dev's joint recommendation. C stays edge-only; storage bounds for every other `Provenance` carrier, starting with the episode path, are a named follow-up (§8, §10). No other change. Prior: **v3 — 2026-10-11: round 1 returned v2 for amendment (R1-01..R1-04 and the finite-decay note; R1-05 was a baseline fixture, fixed in the tree at `6c0eab6`).** Each finding was reproduced against the shipped code at `4ea1ce5` by dev before this fold, with honest controls. **(R1-01)** one shared validator for BOTH numeric fields, run at `expire()`'s ENTRY on every config, independent of any edge's confidence, its result captured once (§4A–B). **(R1-02)** the expiry transition is decided from the CURRENT row inside one write transaction (new §4D). Research found the class wider than the verdict's decay case: the same stale read-decide-write reverts a user's `confirm()` and lapses a fact just confirmed, through the CONFIRM and LAPSE behaviours of the **shipped** expiry table (§2c-ii row 11). 🔴 **Scope: §4D covers all three behaviours, on the owner's ruling "All 3" (2026-10-11T19:10:51Z, first-hand in the dev session, relayed by dev; coordination ledger `2b930e2`; §10 Q5).** **(R1-03)** one unit of refusal: configuration refusal at entry, before any edge; later ordinary failures keep the stated per-edge prefix behaviour (§4B, §7, N4d). **(R1-04)** the persistence guarantee is scoped to EDGES; §2c-ii row 8 is a generated AST census (five confidence writers, not four); consolidation's confidence is in range by its inputs, stated as a dependency (§4C). **(The finite-decay note.)** §5 promises non-increase only; finite-time invalidation is real-arithmetic intuition, not a runtime guarantee. **Q4 resolved** as the reviewer answered, with dev's co-decision (§10). §2c-ii's prose rows are now scripts (`specs/evidence/0048/`, landing with this version). Prior: **v2 — 2026-10-10.** v2 folded the owner's answer to Q1, "Yes, guard the store" (2026-10-10, first-hand in the dev session, relayed by dev): part C and N4f are IN, unconditional. v1: research 2c134739, never adopted. A standalone carrier for one invariant of `specs/0002-maintenance-provenance-invariant.md` (Spec-Status `deferred`), on the owner's decision of 2026-10-10 (relayed by dev, given first-hand in the dev session): **"B"**, a small standalone spec, so the fix reaches `lifecycle.py` (guarded) through review rather than through an exception. No Spec-Exception fits: the hostile value is the host's own configuration, not an attacker's, so `security-hotfix` does not apply. |
 | **Status** | *see `Spec-Status:` at the top — canonical.* |
 | **Internal reviewers** | research (author) · dev |
-| **External review** | required: the change touches two guarded files, `src/veracium/lifecycle.py` and `src/veracium/store/sqlite.py` |
-| **Decision + date** | — |
+| **External review** | required: the change touches two guarded files, `src/veracium/lifecycle.py` and `src/veracium/store/sqlite.py`. **Round 1** (package `f147f044…` @ `4ea1ce5`, v2): RETURNED for amendment, 2026-10-10 (R1-01..R1-04; R1-05 a baseline fixture), folded at v3. **Round 2** (package `c8ca80f4…` @ `c1c9ecf`, v3.3): DESIGN ACCEPTED, 2026-10-12, with two implementation and evidence obligations (R2-01, R2-02), folded at v4 |
+| **Decision + date** | **ACCEPTED — DESIGN 2026-10-12** (external round 2, pin `c1c9ecf`; Spec-Status flipped by dev, the acceptor, at the v4 fold; the verdict banked as `0048-round2-verdict-verbatim.md`). Implementation follows; its review is the next round |
 | **Path** | full |
 
 ---
@@ -93,7 +93,7 @@ L727–731) into an enforced one on the two numeric knobs that can widen it.
 | `MemoryConfig.confidence_floor` | read by `expire()` | "below this, a decayed fact is invalidated" (`config.py`) | `lifecycle.py` only | yes: values outside [0, 1] could never be a floor of a value in [0, 1] |
 | `Provenance.confidence` | written by `expire()`'s decay | `Field(default=0.9, ge=0.0, le=1.0)` (`schema.py`) | 8 files in `src/` (`why`, `lifecycle`, `dryrun`, `store/revocation`, `store/revocation_sweep`, `store/sqlite`, `contribution`, `graph`) | yes: the change makes the declared bound hold on a path where it did not |
 | `Edge.needs_confirmation`, `Provenance.observed_at`, the edge's activity | written by `expire()` (CONFIRM sets the flag; LAPSE and the floor invalidate); written by `confirm()` and others | 0008 (`confirm()` is the only path that clears the flag); 0012 (each edge ages against its own `observed_at`) | `confirm_edge`, recall, `doctor`, the wiki | yes, and newly: an expiry write can no longer restore a value another operation replaced (§4D) |
-| `expire()`'s return (`lapsed`, `decayed`, `flagged_for_confirmation`) | read by `maintain()` and its audit event | counts of transitions applied | 0021's `maintain` event mapping | yes: no key is added or removed. An edge that is no longer due when its transition runs is not counted, which is what a serial run after the other operation reports |
+| `expire()`'s return (`lapsed`, `decayed`, `flagged_for_confirmation`) | read by `maintain()` and its audit event | the shipped meaning (R2-02): `lapsed` counts LAPSE invalidations; `decayed` counts **decay-triggered invalidations only**, an edge whose decayed confidence falls strictly below the floor, **not** a retained decay; `flagged_for_confirmation` counts flags newly set | 0021's `maintain` event mapping | yes: no key is added or removed, and no count changes meaning (N4i). An edge that is no longer due when its transition runs is not counted, which is what a serial run after the other operation reports |
 
 Consumers enumerated by `grep -rcE '\.confidence\b|"confidence"' src/veracium --include=*.py | grep -v ':0$'` and
 `grep -rn 'decay_factor\|confidence_floor' src/veracium`. **No meaning changes**, so no documentation states an old
@@ -163,7 +163,8 @@ confidence or write one outside [0, 1], **and c is the confidence committed when
 listed earlier**.
 
 §4D changes **when** each behaviour decides, not **what** it does: LAPSE still invalidates, CONFIRM still sets the
-flag. Neither reads the class either.
+flag, and DECAY keeps the shipped result, its count and its below-floor stored state included (R2-02, N4i).
+None of them reads the class.
 
 - Can it make a **user-asserted fact non-assertable**? Yes, by design: a DECAY fact below the floor is invalidated
   ("decayed"), and a LAPSE fact is invalidated. **After §4D, never on the strength of a state another operation has
@@ -172,8 +173,9 @@ flag. Neither reads the class either.
   class. **After: no.** That is the change.
 - Can it **clear `needs_confirmation`**? No. **Can it re-set a flag a user's `confirm()` just cleared?** Today, yes
   (§2c-ii row 11). After §4D: only if the edge is due again by its current `observed_at`.
-- Does it **merge, drop or overwrite provenance**? It replaces the stamp with a copy differing only in `confidence`,
-  built from the current row; every other field is the current row's.
+- Does it **merge, drop or overwrite provenance**? A retained decay replaces the stamp with a copy differing only in
+  `confidence`, built from the current row; every other field is the current row's. Below the floor no new stamp
+  is written: the current row is retired with its stored confidence unchanged (R2-02).
 
 **Write-time or maintain-time?** Maintain-time: no new evidence arrives, so the only permitted direction is down.
 
@@ -207,7 +209,10 @@ serialises an edge for storage after re-validating it **from its dumped data** (
 or equivalent; accepting an existing instance is not revalidation, since a nested model can be built unvalidated).
 Every SQL write of the edges table's `json` column in `src/veracium/store/sqlite.py` (the seven of §2c-ii row 8, and
 §4D's) binds the helper's **return value** to its `json` parameter, and a gate refuses any edges write whose `json`
-value has another source, or whose form it does not recognise. **A refusal raises before the SQL statement runs**, so
+value has another source, or whose form it does not recognise. The gate **fails closed by the connection's receiver**
+(R2-01): every reference to the store's connection is a form it resolves, a direct call whose SQL and bound values
+it reads, or one the binding inventory lists as a non-write with its reason; any other reference fails, whatever
+the method is called. **A refusal raises before the SQL statement runs**, so
 nothing is written; inside a transaction the existing rollback applies. With A and B in place, C never fires on a
 valid configuration; it is the defence for every path that computes a bounded value for an edge, present or future.
 
@@ -229,8 +234,10 @@ transition per edge**, which inside `_write_txn` (`BEGIN IMMEDIATE`):
    lifetimes and `now`; the behaviour from `DEFAULT_EXPIRY` for its current volatility; **not due → no write, not
    counted**;
 3. applies the behaviour to that row: **LAPSE** invalidates it; **CONFIRM** sets `needs_confirmation` if it is not
-   already set; **DECAY** computes `c·f` from the row's **current** confidence, invalidates below the captured floor,
-   and otherwise writes the decayed edge;
+   already set; **DECAY** computes `c·f` from the row's **current** confidence; **strictly below** the captured floor
+   it invalidates that row **with its stored confidence unchanged** and counts it in `decayed`; otherwise it writes
+   the decayed edge, which is **not** counted. That is the shipped meaning (R2-02, N4i); a decay exactly at the
+   floor is retained;
 4. writes through C's helper and the same in-transaction bodies the existing writes use, so 0029's journal, 0041's
    attestation refusal and the wiki invalidation apply unchanged.
 
@@ -250,7 +257,7 @@ only form. Not permitted:**
 
 **Interfaces:** `MemoryConfig` construction and assignment can now raise `ValueError` for the two fields; `expire()`
 and `maintain()` can raise it at entry for a duck-typed config. No CLI, MCP or export-format change; `expire()`'s
-return keys are unchanged. **Rendering:** none.
+return keys and their meaning are unchanged (§2, N4i). **Rendering:** none.
 
 **Migration:** none for stores written under the shipped expiry table (§2c-ii row 3: they cannot contain a decayed
 out-of-range value). For a host that mapped DECAY with a factor > 1 or NaN **before** this fix, rows already written
@@ -262,8 +269,8 @@ remain unreadable; that is §10 Q2, unchanged by A–D.
 
 - **Repeated maintenance runs compound**: c·fⁿ, non-increasing for f ∈ [0, 1]. **That is the guarantee.** In real
   arithmetic the floor is reached in finitely many runs whenever f < 1 and the floor is > 0, but **this is not a
-  runtime guarantee**: floating-point products can reach a fixed point above the floor (`5e-324 × 0.9 == 5e-324`, a
-  floor of `5e-324`, round 1's finite-decay note), so an edge can stay active indefinitely. No progress rule is specified; eventual
+  runtime guarantee**: floating-point products can reach a fixed point at or above the floor (`5e-324 × 0.9 == 5e-324`,
+  at a floor of `5e-324`, round 1's finite-decay note), so an edge can stay active indefinitely. No progress rule is specified; eventual
   invalidation is not promised. Tested by running `expire()` repeatedly (N4).
 - **The boundaries**: f = 1.0 never decays; f = 0.0 drives confidence to 0 in one run (invalidated if floor > 0);
   floor = 0.0 never invalidates by decay; floor = 1.0 invalidates every decayed fact below 1.0. All four are tested
@@ -296,8 +303,9 @@ remain unreadable; that is §10 Q2, unchanged by A–D.
 | **N4d** configuration refusal is one unit: nothing is written | `test_decay_config_refusal_writes_nothing` — a **mixed-volatility ordered fixture** (an expired TRANSIENT edge listed before an expired SLOW edge, SLOW mapped to DECAY) under a duck-typed config whose factor is each of {2.0, −1.0, nan, True, "0.5"} and, separately, whose floor is each of {2.0, −0.5, nan}: `expire()` raises `ValueError`, and a **complete store snapshot** (every table, the counters and 0029's journal included) is byte-identical to before; the same on an **empty** store | CI |
 | **N4d-prefix** a later ordinary failure keeps the stated prefix behaviour | `test_a_later_failure_keeps_the_processed_prefix` — a valid config, an injected store failure on the second due edge: the first edge's transition is committed, the second's is not, and the error propagates | CI |
 | **N4e** a valid config never makes B raise | `test_valid_decay_never_raises` — every factor/floor pair on a grid including both boundaries, over confidences {0, 0.3, 0.9, 1.0}: `expire()` completes and every stored row reads back | CI |
-| **N4f** no edge write bypasses the validating serialiser, and the serialiser refuses an out-of-bound edge | `test_every_edge_write_goes_through_the_validating_serialiser` — AST over `src/veracium/store/sqlite.py`: every write of the edges table's `json` column binds the helper's return value to that parameter, and an unrecognised write form fails; `test_the_store_refuses_an_out_of_bound_edge` — an edge whose provenance carries confidence 1.8, **its nested `Provenance` built with `model_construct`** as a buggy path would, is refused by `add_edge`, and the table is unchanged | CI |
+| **N4f** no edge write bypasses the validating serialiser, and the serialiser refuses an out-of-bound edge | `test_every_edge_write_goes_through_the_validating_serialiser` — AST over `src/veracium/store/sqlite.py`: every write of the edges table's `json` column binds the helper's return value to that parameter, an unrecognised write form fails, and **every reference to the store's connection is one the gate resolves** (a direct call whose SQL and bound values it reads, or a non-write listed in the binding inventory with its reason); any other reference fails: an alias, `executemany`, a cursor, `getattr`, the unbound method, the connection passed as an argument, the instance `__dict__`, a second connection (R2-01); `test_the_store_refuses_an_out_of_bound_edge` — an edge whose provenance carries confidence 1.8, **its nested `Provenance` built with `model_construct`** as a buggy path would, is refused by `add_edge`, and the table is unchanged | CI |
 | **N4g** the factor is validated independently of the current confidence | `test_factor_is_validated_whatever_the_confidence` — confidences {0.0, 0.3, 0.9} × factors {2.0, the nearest float above 1.0, −1.0, nan, True}: each refuses at entry. **`0.3 × 2.0 → 0.6` is the retained regression** that a range-only implementation must fail; `0.9 × 2.0` alone cannot distinguish them | CI |
+| **N4i** DECAY keeps the shipped result (R2-02) | `test_decay_keeps_the_shipped_result` — SLOW mapped to DECAY, one due edge per case, against this table of the shipped `expire()` (`decayed`, active, stored confidence, flag): retained 0.9 × 0.5, floor 0.3 → 0, active, 0.45; **below the floor** 0.9 × 0.5, floor 0.5 → 1, retired, **0.9**; **exactly at the floor** 0.6 × 0.5, floor 0.3 → 0, active, 0.3; factor 1.0 → 0, active, 0.9; factor 0, floor 0 → 0, active, 0.0; factor 0, floor 0.3 → 1, retired, 0.9; an already-flagged edge, retained → 0, active, 0.45, still flagged. The returned counts and the stored edge equal the table. The table was read from the shipped `expire()` at `c1c9ecf` (the contract harness checks it against the tree it runs on). Also assert the side effects of the retiring case: its journal row and the wiki drop | CI |
 | **N4h** the expiry transition decides from the row committed when it runs | `test_expiry_is_decided_from_the_current_row` — two real connections, A paused deterministically after its listing, B committing, A resuming, for the four cases of §2c-ii row 11 (`confirm`, `confirm95`, `lapse`, `decay`): **B's committed state is kept** and A applies only what is due on it; the **serial control** (B, then A) gives the same committed state; and a **legacy-bytes control**: a row stored with valid, non-canonical `json` (keys reordered) is processed, not skipped | CI |
 
 **Planned mechanism mutants** (the closure-mutant rule of 2026-10-10 applies). Each must be killed by the cells named,
@@ -320,11 +328,15 @@ with the honest controls passing:
 | the store helper serialises without validating | N4f | `test_the_store_refuses_an_out_of_bound_edge` |
 | the helper accepts an instance without revalidating nested data | N4f | `test_the_store_refuses_an_out_of_bound_edge` |
 | **for each of the declared edge writers:** that writer bypasses the helper | N4f | `test_every_edge_write_goes_through_the_validating_serialiser` |
+| **for each connection form the gate does not resolve:** a writer reaches the connection that way | N4f (R2-01: `executemany`; an alias of `execute`; `getattr`; a cursor; SQL held in a variable; parameters held in a variable; the unbound `Connection.execute`; a second connection; the instance `__dict__`) | `test_every_edge_write_goes_through_the_validating_serialiser` |
 | a writer calls the helper and ignores its return value | N4f | `test_every_edge_write_goes_through_the_validating_serialiser` |
 | the transition decides from the listing (read outside the transaction) | N4h | `test_expiry_is_decided_from_the_current_row` (all four cases) |
 | a write conditional on (confidence, active) as read | N4h | `test_expiry_is_decided_from_the_current_row` (`confirm95`) |
 | a conditional write binding the read model re-serialised | N4h | `test_expiry_is_decided_from_the_current_row` (legacy-bytes control) |
 | a conditional write on the row as read in place of the in-transaction read | N4h | `test_expiry_is_decided_from_the_current_row` (`decay`) |
+| a retained decay counted as `decayed` | N4i (R2-02) | `test_decay_keeps_the_shipped_result` (`retained`) |
+| below the floor, the decayed confidence stored | N4i (R2-02) | `test_decay_keeps_the_shipped_result` (`below the floor`) |
+| the floor comparison inclusive (`<=`) | N4i | `test_decay_keeps_the_shipped_result` (`exactly at the floor`) |
 
 **Reproducer retention:** §2c-ii row 5's run becomes the honest control of N4d (DECAY mapped, factor 0.5 → 0.45, read
 succeeds); row 11's serial control is N4h's.
@@ -389,18 +401,28 @@ not reached."*
   that the duck-typed `config` is a documented extension point (then B is the primary control, not defence in depth).
 - **Reviewer-safe copy:** nothing generalised.
 
-### Round 1 closure
+### Review closure — round 1
 
 | finding | v3 |
 |---|---|
 | **R1-01** validating the product does not validate the factor | §4A–B: one validator, both fields, at entry, independent of confidence, captured once; N4g with `0.3 × 2.0`; mutant "entry validation removed, B and C intact". Reproduced at `4ea1ce5` (§2c-ii row 12) |
-| **R1-02** a concurrent decay can overwrite a lower committed confidence | §4D: decided from the current row inside one write transaction; §5 concurrency; N4h with two connections, a serial control and a legacy-bytes control; three mutants. **Wider than reported:** the shipped CONFIRM and LAPSE behaviours lose a `confirm()` the same way (§2c-ii row 11); in scope on the owner's ruling (§10 Q5). The redaction skip moves inside the transaction. No monotonic guard in `add_edge` |
+| **R1-02** a concurrent decay can overwrite a lower committed confidence | §4D: decided from the current row inside one write transaction; §5 concurrency; N4h with two connections, a serial control and a legacy-bytes control; four mutants (three at v3, the fourth added at v3.3 by H-01). **Wider than reported:** the shipped CONFIRM and LAPSE behaviours lose a `confirm()` the same way (§2c-ii row 11); in scope on the owner's ruling (§10 Q5). The redaction skip moves inside the transaction. No monotonic guard in `add_edge` |
 | **R1-03** refusal and partial failure disagree | §4B, §7, N4d, N4d-prefix: configuration refusal at entry (whole-run, store byte-identical, empty store included); later failures keep the per-edge prefix |
 | **R1-04** the bounded-write claim exceeds C's edge-only boundary | C scoped to edges (§4C, §8); five writers by an AST census that also lists whole-`provenance` replacements (§2c-ii row 8); consolidation in range by its inputs, bound by the existing test; per-writer bypass and ignored-return mutants; nested revalidation (N4f); episodes stay outside C on the owner's ruling, a named follow-up (§10 Q6) |
 | **R1-05** (baseline fixture, not 0048) | fixed in the tree at `6c0eab6`, separately from this spec |
 | the finite-decay note (the verdict's low-severity note on §5) | §5: non-increase promised; finite time stated as real-arithmetic intuition; `5e-324` fixed point named |
 | Q4 | resolved: the narrow `__setattr__`, as answered (§10) |
 | archive notes | §2c-ii's prose rows are scripts with recorded outputs; the generated inventories ship; the runnable contract harness of §4, a model with every §6 mechanism mutant outside N4c run against it, ships as `specs/evidence/0048/contract_harness_0048.py`; the capture's offline command, skip inventory and interpreter preflight are the package's (dev) |
+
+### Review closure — round 2 (v4; the verdict ACCEPTED the design of v3.3)
+
+| finding | v4 |
+|---|---|
+| **R2-01** (medium; implementation and evidence obligation) the model's writer gate passes `executemany` and a bound `execute` alias | §4C and N4f: the gate fails closed by the connection's receiver; nine forms (the reviewer's two, `getattr` and a cursor found by research, and five more of the class) are mutants of one §6 row. Over the model, `specs/evidence/0048/contract_harness_0048.py` kills all nine. At implementation the same rule runs over the store's connection, with the binding inventory naming each non-write form it resolves |
+| **R2-02** (medium; compatibility obligation) the model's decay count and below-floor stored state differ from the shipped baseline | §2, §3 and §4D state the shipped meaning; N4i holds it with a fixed table of seven cases (the reviewer's two and five more from research's two-arm diff over thirteen branches, which found no third mechanism) and three mutants. The harness's model now keeps that meaning, and N4i checks its table against the tree's own `expire()` |
+| editorial: §9's R1-02 row said three mutants | four, with when each was added |
+| editorial: §5's fixed point is at the floor | "at or above the floor" |
+| owed at implementation (the verdict, not reopened) | the actual N4 results; the per-writer mutant matrix and binding inventory over the real store, D's new writer included; current-row traces with journal, count and cache effects; the no-op and current-volatility branches; the store interface's declaration of the transition and an explicit contract for other backends; the baseline reproduction tests that assert today's defects, inverted or replaced |
 
 ---
 

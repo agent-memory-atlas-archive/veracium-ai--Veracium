@@ -48,7 +48,7 @@
 | 0045 | `0045-declarative-grounding.md` | `draft` | the declarative grounding axis — was a fact STATED, or not shown to be? |  |
 | 0046 | `0046-correction-receipt.md` | `draft` | the correction receipt — a corrected fact names what still rests on it |  |
 | 0047 | `0047-subject-reply.md` | `draft` | the subject's right of reply — the record stands, and the reply travels with it |  |
-| 0048 | `0048-decay-never-raises-confidence.md` | `draft` | maintenance never raises confidence — the decay bounds (0002's N4, carried) |  |
+| 0048 | `0048-decay-never-raises-confidence.md` | `accepted` | maintenance never raises confidence — the decay bounds (0002's N4, carried) |  |
 
 ## Reservations (claimed, not drafted)
 

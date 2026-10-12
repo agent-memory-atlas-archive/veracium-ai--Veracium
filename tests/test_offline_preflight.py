@@ -33,20 +33,52 @@ def _preflight(tmp_path, listfile, shadow=(), **env):
                           capture_output=True, text=True, timeout=120)
 
 
+def _missing(tmp_path, names, shadow=()):
+    """The listed modules THIS interpreter cannot import, under the same shadow, asked of a clean subprocess: the
+    truth the preflight's verdict is compared with."""
+    sh = tmp_path / "shadow"
+    sh.mkdir(exist_ok=True)
+    for name in shadow:
+        (sh / f"{name}.py").write_text(f"raise ImportError('planted: {name} is not built')\n")
+    probe = ("import importlib, sys\nfor n in sys.argv[1:]:\n    try:\n        importlib.import_module(n)\n"
+             "    except Exception:\n        print(n)\n")
+    e = {**{k: v for k, v in os.environ.items() if k != "VERACIUM_PREFLIGHT"}, "PYTHONPATH": str(sh)}
+    r = subprocess.run([sys.executable, "-c", probe, *names], env=e, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stderr
+    return r.stdout.split()
+
+
+# the five compiled modules 0048 round 2's reviewer's CPython 3.14.7 build lacked; its full run was green without them
+REVIEWER_LACKED = ("_bz2", "_lzma", "_uuid", "_zstd", "readline")
+
+
 def test_stdlib_preflight_refuses_a_missing_extension(tmp_path):
-    """stdlib_preflight.py's mutation matrix. The honest interpreter passes the measured list; with `_ctypes` made
-    missing (the reviewer's build) it exits 2 and names `_ctypes`; VERACIUM_PREFLIGHT=warn reports the same and lets
-    the run continue; a name no build carries is refused by name; an empty list is refused (a list that names nothing
-    checks nothing)."""
+    """stdlib_preflight.py's mutation matrix. Its verdict on the measured list equals the interpreter's own truth: exit
+    0 when every listed module imports, else exit 2 naming exactly the ones that do not. The honest control is that
+    comparison, not "every module imports": round 2's reviewer ran an interpreter lacking five listed modules, and an
+    honest control that assumed a complete build failed the suite even under VERACIUM_PREFLIGHT=warn, the mode that
+    exists to let the run go on. It runs twice, as found and with the reviewer's five shadowed. With `_ctypes` made
+    missing (round 1's build) it exits 2 and names `_ctypes`; VERACIUM_PREFLIGHT=warn reports the same and lets the run
+    continue; a name no build carries is refused by name; an empty list is refused (a list that names nothing checks
+    nothing)."""
     names = _names()
     assert "_ctypes" in names and "_sqlite3" in names, names
-    honest = _preflight(tmp_path, LIST)
-    assert honest.returncode == 0, honest.stdout + honest.stderr
-    assert f"{len(names)} of {len(names)} compiled standard-library modules import" in honest.stdout
+    assert set(REVIEWER_LACKED) <= set(names), set(REVIEWER_LACKED) - set(names)
+    for shadow in ((), REVIEWER_LACKED):
+        lacking = _missing(tmp_path, names, shadow)
+        assert set(shadow) <= set(lacking), (shadow, lacking)
+        honest = _preflight(tmp_path, LIST, shadow=shadow)
+        named = re.findall(r"^  ([A-Za-z0-9_.]+): \w+: ", honest.stderr, re.M)
+        assert named == lacking, (shadow, named, lacking)
+        assert honest.returncode == (2 if lacking else 0), honest.stdout + honest.stderr
+        assert f"{len(names) - len(lacking)} of {len(names)} compiled standard-library modules import" in (
+            honest.stdout + honest.stderr), honest.stdout + honest.stderr
+    base = _missing(tmp_path, names)
     gone = _preflight(tmp_path, LIST, shadow=["_ctypes"])
     assert gone.returncode == 2 and "REFUSED" in gone.stderr, gone.stderr
     missing = re.findall(r"^  ([A-Za-z0-9_.]+): \w+: ", gone.stderr, re.M)
-    assert missing == ["_ctypes"] and "planted: _ctypes is not built" in gone.stderr, gone.stderr
+    assert missing == [n for n in names if n == "_ctypes" or n in base], (missing, base)
+    assert "planted: _ctypes is not built" in gone.stderr, gone.stderr
     warned = _preflight(tmp_path, LIST, shadow=["_ctypes"], VERACIUM_PREFLIGHT="warn")
     assert warned.returncode == 0 and "WARNING" in warned.stderr and "_ctypes" in warned.stderr, warned.stderr
     bogus = tmp_path / "bogus.txt"
