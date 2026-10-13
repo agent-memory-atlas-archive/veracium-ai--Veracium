@@ -292,7 +292,7 @@ def add_reply(s: Store, e: Edge, kind: str, text: str, target: str | None = None
 # ----------------------------------------------------------------------------------------------- §5 the gate
 def gate(s: Store, e: Edge, existing_ok: bool = True, at: int | None = None) -> str:
     """Additional restriction only. Unchallenged: assertable (every grounding value; not_attested is today's line).
-    Challenged: assertable ONLY if attested, and then only with the unit."""
+    Challenged: not_assertable for every grounding value (0047 v1.8 §4c, the owner's option 3)."""
     if not existing_ok or (at is not None and not held_at(e, at)):
         return "not_assertable"
     if active_challenges(s, e, at):

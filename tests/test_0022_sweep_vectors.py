@@ -23,7 +23,12 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "specs" / "evidence" / "0022"))
 
-import vector_harness as VH                                   # noqa: E402
+# by FILE under a unique name: 0020 and 0022 both ship a `vector_harness.py`, and a bare name binds once per process
+# (tests/test_import_name_collisions.py, after the round-3 run_model.py collision)
+import importlib.util as _ilu                                    # noqa: E402
+_vh = _ilu.spec_from_file_location("vector_harness_0022", ROOT / "specs" / "evidence" / "0022" / "vector_harness.py")
+VH = _ilu.module_from_spec(_vh)
+_vh.loader.exec_module(VH)
 from reference_revocation import (RevocationError as RefError,  # noqa: E402
                                   apply_effects as ref_apply,
                                   sweep as ref_sweep)
