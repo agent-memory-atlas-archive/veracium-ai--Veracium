@@ -57,17 +57,20 @@ CARRIERS = {
     "Store.act_counter": ("the 0008 amendment's act counter row", "act_ordinal"),
     "Store.schema_v16": ("schema version (0013)", "none"), "Store.revoked": ("source_revocations (0022)", "none"),
     "Store.refusals": ("supersession_refusals", "none"), "Store.inventory": ("arity_inventory (retirements)", "none"),
-    "Store.refusal_inventory": ("arity_inventory (refusals)", "none"), "Store.header": ("plan_header", "none"),
+    "Store.refusal_inventory": ("refusal_inventory(refusal_id, user_id) (0044 v1.5 §4f)", "none"), "Store.header": ("plan_header", "none"),
     "Store.plan": ("reclassification_plan rows", "none"), "Store.runs": ("migration_run", "none"),
     "Store.outcomes": ("migration_outcome", "none"), "Store.registry": ("request_registry (0008am)", "none"),
     "Store.confirmations": ("confirmations (0008)", "none"), "Store.journal": ("edge_event (0029, never exported)", "none"),
+    "Store.migration_ops": ("migration_op (0018am v4 §4b.1b)", "none"),
 }
 # names that carry a domain wherever they appear in the model's source (attributes, dict keys, tuple slots)
 NAME_DOMAINS = {"invalidated_at": "valid", "valid_from": "valid", "pre_invalidated_at": "valid", "at_valid": "valid",
-                "txn": "transaction", "written_txn": "transaction", "act_counter": "act_ordinal"}
+                "txn": "transaction", "written_txn": "transaction", "act_counter": "act_ordinal",
+                "undone_at": "transaction", "admitted_at": "transaction"}
 
 # --------------------------------------------------------------------------------------------- the rows
-# (document, row id) -> model invariants that exercise it, or ("PRODUCT", why)
+# (document, row id) -> model invariants that exercise it, or ("PRODUCT", why), or ("MODEL-II", why); a row with a model
+# part AND another owner is a dict: {"model": [...], "product": why} or {"model": [...], "model_ii": why}
 ROWS = {
     ("0044", "INV-A1"): ["INV-M21"], ("0044", "INV-A2"): ["INV-M21"], ("0044", "INV-A3"): ["INV-M21"],
     ("0044", "INV-A4"): ["INV-M21"], ("0044", "INV-A5"): ["INV-M5"], ("0044", "INV-A6"): ["INV-M12"],
@@ -80,12 +83,17 @@ ROWS = {
     ("0044", "INV-A20"): {"model": ["INV-M18"], "product": "the census: any `DELETE FROM edges` outside the per-user "
                                                            "erasure loop fails (research, construction §3)"},
     ("0044", "INV-A21"): ["INV-M14"],
+    ("0044", "INV-A22"): {"model": ["INV-M23", "INV-M13", "INV-M16"],
+                          "product": "every EDGE_WRITE_SITE_RULINGS entry carries a `lifetime` disposition — the store's "
+                                     "coverage test, at the implementation gate (0044 v1.5 §4f-ii; src/ is unchanged here)"},
+    ("0044", "INV-A23"): ["INV-M24"],
     ("0018am", "I24"): ("PRODUCT", "a byte comparison of a real v15 store through the real step; the model's step "
                                    "writes only its inventory tables, which is the design claim — the byte check is "
                                    "the implementation's"),
     ("0018am", "I25"): ["INV-M14"], ("0018am", "I26"): ["INV-M2"], ("0018am", "I27"): ["INV-M14", "INV-M15"],
-    ("0018am", "I28"): ["INV-M2"], ("0018am", "I29"): ["INV-M15"], ("0018am", "I30"): ["INV-M14"],
+    ("0018am", "I28"): ["INV-M2"], ("0018am", "I29"): ["INV-M15", "INV-M26"], ("0018am", "I30"): ["INV-M14"],
     ("0018am", "I31"): ("PRODUCT", "0018's existing I13–I23 tests, run unmodified"),
+    ("0018am", "I32"): ["INV-M25"],
     ("0003am", "INV-O1"): ("PRODUCT", "narrowed (owner, 2026-10-12): the renderer ships unchanged; bound to the shipped "
                                       "build and render path at implementation"),
     ("0003am", "INV-O2"): ("PRODUCT", "narrowed: determinism of the shipped render path"),
@@ -101,10 +109,16 @@ ROWS = {
     ("0008am", "INV-Q3"): ("MODEL-II", "the confirmations backfill"),
     ("0008am", "INV-Q4′"): ("MODEL-II", "internal act keys"),
     ("0008am", "INV-Q5"): ["INV-M19"], ("0008am", "INV-Q6"): ["INV-M18"],
-    ("0008am", "INV-Q7"): ("MODEL-II", "digest treatment of acts"), ("0008am", "INV-Q8"): ["INV-M22"],
+    ("0008am", "INV-Q7"): {"model": ["INV-M27"], "model_ii": "digest treatment of acts"},   # undo here, acts there
+    ("0008am", "INV-Q8"): ["INV-M22"],
     ("0008am", "INV-Q9"): ("MODEL-II", "the act ordinal and the origin check"),
     ("0008am", "INV-I1"): ("MODEL-II", "repeat import of acts"), ("0008am", "INV-I2"): ("MODEL-II", "changed act"),
     ("0008am", "INV-I3"): ("MODEL-II", "exact replay and the held target"),
+    ("0008am", "INV-I4"): ("MODEL-II", "notice treatment before equality"),
+    ("0008am", "INV-I5"): ("MODEL-II", "the one notice transition and all-or-nothing coverage"),
+    ("0008am", "INV-I6"): ("MODEL-II", "HELD is the staged union"),
+    ("0008am", "INV-I7"): ("MODEL-II", "an unredacted unit refuses; default-mode held acts untouched, the notice pending"),
+    ("0008am", "INV-Q10"): ("MODEL-II", "chronology over the merged history"),
 }
 
 # paths that must never subscript live edge state (the store may have erased or never held the edge)
@@ -135,9 +149,12 @@ def check_rows(docs: dict, mutants: dict) -> list:
                 if target[0] not in ("PRODUCT", "MODEL-II") or not target[1].strip():
                     problems.append(f"ROWS {doc} {row}: a non-model mapping must be ('PRODUCT' or 'MODEL-II', reason)")
                 continue
-            if isinstance(target, dict):                # a row with a model part AND a product part
-                if not target.get("product", "").strip() or not target.get("model"):
-                    problems.append(f"ROWS {doc} {row}: a two-part mapping needs both `model` and a `product` reason")
+            if isinstance(target, dict):                # a row with a model part AND a product or model II part
+                other = set(target) - {"model"}
+                if (not target.get("model") or len(other) != 1 or not other <= {"product", "model_ii"}
+                        or not str(target[next(iter(other))]).strip()):
+                    problems.append(f"ROWS {doc} {row}: a two-part mapping needs `model` and exactly one reasoned "
+                                    "`product` or `model_ii` part")
                     continue
                 target = target["model"]
             for inv in target:
@@ -244,7 +261,8 @@ def check_shared(doc_0008am: str, mutants_ii: dict) -> list:
     rows, doc_level = model_citations.parse(doc_0008am)[:2]
     problems = []
     for (doc, row), target in ROWS.items():
-        if doc != "0008am" or not (isinstance(target, tuple) and target[0] == "MODEL-II"):
+        if doc != "0008am" or not ((isinstance(target, tuple) and target[0] == "MODEL-II")
+                                   or (isinstance(target, dict) and "model_ii" in target)):
             continue
         # an amendment cites its model at document level ("*MODEL: … (its G11)*") or per row ("(model G11)")
         cites = {f"MODEL-{g}" for g in rows.get(row, set()) | doc_level}

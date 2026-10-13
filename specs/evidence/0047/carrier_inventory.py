@@ -12,9 +12,9 @@ A function is keyed by its QUALIFIED name within its module (`Memory.correct`, `
 shares a name with a classified one is a new site, not a silent member of the old classification.
 
 Each censused function must carry a DISPOSITION from 0047 §4d (research's rules draft 3.3, sha16 5cefe166):
-  RENDER       model-visible text: render the mandatory unit or withhold the fact
-  CONTESTED    contested-group construction/render: the same unit rule inside the group
-  PROACTIVE    the proactive surface: render-or-withhold where it renders the fact at all
+  RENDER       an assertion surface: a challenged fact is WITHHELD there, whatever its grounding value (0047 v1.8 §4d)
+  CONTESTED    contested-group construction/render: an assertion surface, so a challenged member is withheld there too
+  PROACTIVE    the proactive surface: an assertion surface, so a challenged fact is withheld wherever it renders facts
   WIKI         compiled-wiki input selection: challenged facts EXCLUDED; eviction + in-flight fence on a reply write
   ASOF         historical rendering: the unit from the CURRENT acts — T is valid time and selects facts, never acts
                (0047 INV-R20; the round-2 verdict's correction #1)

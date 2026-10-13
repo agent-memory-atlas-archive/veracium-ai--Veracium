@@ -1,5 +1,6 @@
-"""Runs the 0044 stage-1 reference model (v2, package I round 3): every invariant on the drafted rules, every declared
-mutant, the exhaustive result-domain enumeration (R2-03), and the probes. Writes results only where `--out` says.
+"""Runs the 0044 stage-1 reference model (v3, package I round 4): every invariant on the drafted rules, every declared
+mutant, the exhaustive result-domain enumeration (R2-03; v4's admission dimension added), and the probes. Writes
+results only where `--out` says.
 
 A KILL IS SEMANTIC (the 0044 round-2 verdict, R2-08; model II's rule, now shared): the owning invariant RETURNS False
 AND the mutated function was CALLED while it ran. An owner that RAISES is a harness failure, never a kill — v1 counted
@@ -9,6 +10,7 @@ claim is that the OWNER kills it, not that only the owner does (v1's "exactly" p
 Exit 0 iff every invariant holds and every mutant is killed by its owner."""
 from __future__ import annotations
 
+
 import copy
 import itertools
 import json
@@ -17,6 +19,17 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import arity_model as M  # noqa: E402
+
+
+def _strict_pairs(pairs):
+    """0026's evidence-boundary rule: a duplicate key is a REFUSAL, never last-wins."""
+    out = {}
+    for k, v in pairs:
+        if k in out:
+            raise ValueError(f"duplicate key {k!r}")
+        out[k] = v
+    return out
+
 
 R = M.Rules()
 _O = {k: getattr(M, k) for k in dir(M) if callable(getattr(M, k)) and not k.startswith("__")
@@ -121,7 +134,8 @@ def inv_undo_identity(rules=R):
     """INV-M4 (R1-05, P-7): an ordinary mutation and a confirmation keep undo eligibility; undo restores the retirement
     fields ONLY; same id + same request replays; a later retirement by another operation ends eligibility."""
     s = base(); run(s)
-    s.edges["p"].counters += 3; s.journal.append(("mutated", "p", s.begin(), None))   # a harmless, journaled mutation
+    bumped = copy.deepcopy(s.edges["p"]); bumped.counters += 3
+    M.add_edge(s, bumped)                                  # a harmless mutation through the store's own upsert
     M.confirm(s, "u", "p", cid="k1")
     r1 = attempt(M.undo, s, "u", "p", rules, correlation_id="c1")
     kept = s.edges["p"].counters == 3 and s.edges["p"].reason == "superseded" and not s.edges["p"].active
@@ -251,22 +265,36 @@ def inv_retained_refusals(rules=R):
 
 
 # ================================================================================ round 3: the findings, one by one
+def _upsert_lifetime(s, edge_id, active, at, reason):
+    """A same-id `add_edge` upsert carrying the given lifetime fields (round 3's R3-01 path)."""
+    e = copy.deepcopy(s.edges[edge_id])
+    e.active, e.invalidated_at, e.reason = active, at, reason
+    M.add_edge(s, e)
+
+
 def inv_era_boundary(rules=R):
-    """INV-M13 (R2-01; research C-4 and its residual): eligibility is INVENTORY membership, never a clock comparison.
-    A pre-upgrade retirement dated 2050 IS eligible; a post-upgrade retirement dated 1990 is NOT; an inventoried edge
-    reinstated and then re-retired with an IDENTICAL (invalidated_at, reason) is NOT."""
+    """INV-M13 (R2-01; research C-4 and its residual; v3: R3-01): eligibility is INVENTORY membership, never a clock
+    comparison. A pre-upgrade retirement dated 2050 IS eligible; a post-upgrade retirement dated 1990 is NOT; an
+    inventoried edge reinstated and then re-retired with an IDENTICAL (invalidated_at, reason) is NOT — whether the
+    reinstatement was the reinstate method's or a same-id `add_edge` upsert's (membership ends at WHICHEVER write makes
+    the row active again)."""
     s = M.Store()
     fut = E("fut", obj="weight 78"); s.edges["fut"] = fut
     M.supersede_single(s, fut, E("fn", obj="weight 80", vf=2050))                 # pre-upgrade, valid-time 2050
     re = E("re", obj="weight 60"); s.edges["re"] = re
     M.supersede_single(s, re, E("rn", obj="weight 61", vf=5))                     # pre-upgrade, then reinstated ...
+    up = E("up", obj="weight 50"); s.edges["up"] = up
+    M.supersede_single(s, up, E("un", obj="weight 51", vf=7))                     # pre-upgrade, then UPSERTED active ...
     M.schema_step(s)
     late = E("late", rel="measures", obj="weight 70"); s.edges["late"] = late
     M.supersede_single(s, late, E("ln", obj="weight 71", vf=1990))                # post-upgrade, valid-time 1990
     M.restore_source(s, "re")                                                     # ... reinstated (any reason) ...
-    s.edges["re"].active, s.edges["re"].invalidated_at, s.edges["re"].reason = False, 5, "superseded"   # ... same tuple
+    _upsert_lifetime(s, "re", False, 5, "superseded")                            # ... re-retired, the same tuple
+    _upsert_lifetime(s, "up", True, None, None)                                  # the upsert reinstatement ...
+    _upsert_lifetime(s, "up", False, 7, "superseded")                            # ... re-retired, the same tuple
     run(s)
-    return s.edges["fut"].active and not s.edges["late"].active and not s.edges["re"].active
+    return (s.edges["fut"].active and not s.edges["late"].active and not s.edges["re"].active
+            and not s.edges["up"].active)
 
 
 def inv_plan_states(rules=R):
@@ -294,72 +322,117 @@ def inv_plan_states(rules=R):
     plan_only = (po["outcome"] == "planned" and po["store_changed"] and not s2.edges["p"].active
                  and po2["outcome"] == "already-planned" and not po2["store_changed"])
     incomplete = M.doctor_data_migration(s2)[0] == "warn"
-    run(s2)
+    run(s2, op_id="op-r")                     # a restoration is its own operation (v4: op-1 was admitted plan-only)
     complete = M.doctor_data_migration(s2)[0] == "none"
+    # 0018am v4 §4b.2 (I25): the digest covers the THREE reclassified declarations only — an unrelated change
+    # (`works_as` single → multi, round 3's witness) is admitted; a change to one of the three is refused
+    s3 = base(); run(s3, plan_only=True, op_id="plan")
+    unrelated = run(s3, custom(works_as={"arity": "multi", "functional": False}), op_id="next")
+    related = run(s3, custom(prefers=SINGLE), op_id="other")
+    narrow = unrelated["outcome"] == "migrated" and s3.edges["p"].active and related["outcome"] == "registry-changed"
     return (pre_phase and empty and empty_info and refused and same_continues and pre_refused and plan_only
-            and incomplete and complete)
+            and incomplete and complete and narrow)
+
+
+def _freeze(v):
+    """A hashable, order-insensitive value of a durable state (dicts and sets compare by content, not insertion
+    order). Generic over every field, so a new Store field cannot be left out of `_durable`."""
+    if isinstance(v, dict):
+        return frozenset((k, _freeze(x)) for k, x in v.items())
+    if isinstance(v, (set, frozenset)):
+        return frozenset(_freeze(x) for x in v)
+    if isinstance(v, (list, tuple)):
+        return tuple(_freeze(x) for x in v)
+    if isinstance(v, M.Edge):
+        return tuple(vars(v).items())                    # every Edge field is immutable
+    return v
 
 
 def _durable(s):
-    d = copy.deepcopy(vars(s))
-    d.pop("txn"); d.pop("act_counter")
-    return d
+    """The store's durable state: every field but the two counters (0029's txn, the 0008 amendment's act ordinal),
+    which a no-op never advances in the model but which are not what `store_changed` reports."""
+    return _freeze({k: v for k, v in vars(s).items() if k not in ("txn", "act_counter")})
+
+
+PRIOR_CALLS = ("none", "same", "other-registry", "other-mode")
 
 
 def enumerate_results() -> list:
-    """R2-03: the WHOLE small domain — schema version × attestation × header before (none / equal / different) ×
-    plan-only × 0–3 users × every failing subset. Each call's result must be a row of the closed table, its
-    `store_changed` must equal whether the store's durable state changed, its named failures must be exactly the
-    failing users, and operation_status must recover its commits from durable facts alone."""
+    """R2-03, re-enumerated for 0018am v4: the WHOLE small domain — schema version × attestation × header before
+    (none / equal / different) × an EARLIER call under the same op_id (none; the same inputs; another registry; the
+    other mode — v4's admission dimension) × plan-only × 0–3 users × every failing subset. Each call's result must be a
+    valid carrier (the validating constructor) and a row of the closed table, its `store_changed` must equal whether
+    the store's durable state changed, its named failures must be exactly the failing users, and the status read must
+    return the operation's CUMULATIVE commits, or `unknown-op` exactly when no call under the id wrote durably.
+    Bounded, with the reason: the earlier call runs only on a v16 store (below v16 every call refuses before writing,
+    so it cannot change state), and it fails no user (a resume after a FAILED user, the invocation-vs-cumulative split,
+    is INV-M25's own check); each mutant re-runs this domain, so its size is the runner's cost."""
     cases = []
-    for v16, attested, before, plan_only, n in itertools.product((True, False), (True, False),
-                                                                 ("none", "equal", "different"), (False, True),
-                                                                 range(4)):
+    for v16, attested, before, prior, plan_only, n in itertools.product((True, False), (True, False),
+                                                                        ("none", "equal", "different"), PRIOR_CALLS,
+                                                                        (False, True), range(4)):
+        if not v16 and prior != "none":
+            continue
         users = [f"u{i}" for i in range(n)]
-        for k in range(n + 1):
-            for fails in itertools.combinations(users, k):
-                s = M.Store()
-                for u in users:
-                    p = E(f"p-{u}", user=u, obj="weight 78"); s.edges[p.id] = p
-                    M.supersede_single(s, p, E(f"n-{u}", user=u, obj="weight 80"))
-                if v16:
-                    M.schema_step(s)
-                    if before == "equal":
-                        M.write_plan(s, dict(M.DEFAULT_REGISTRY), "op-0")
-                    elif before == "different":
-                        M.write_plan(s, custom(measures=SINGLE), "op-0")
-                pre = _durable(s)
-                res = M.run_data_migration(s, dict(M.DEFAULT_REGISTRY), op_id="op-1", plan_only=plan_only,
-                                           attested=attested, fail_users=fails)
-                st = M.operation_status(s, "op-1")
-                cases.append({"case": (v16, attested, before, plan_only, n, list(fails)), "result": res,
-                              "changed": _durable(s) != pre, "status": st})
+        prior_fails = [()]
+        for pf in prior_fails:
+            for k in range(n + 1):
+                for fails in itertools.combinations(users, k):
+                    s = M.Store()
+                    for u in users:
+                        p = E(f"p-{u}", user=u, obj="weight 78"); s.edges[p.id] = p
+                        M.supersede_single(s, p, E(f"n-{u}", user=u, obj="weight 80"))
+                    if v16:
+                        M.schema_step(s)
+                        if before == "equal":
+                            M.write_plan(s, dict(M.DEFAULT_REGISTRY), "op-0")
+                        elif before == "different":
+                            M.write_plan(s, custom(measures=SINGLE), "op-0")
+                    first = None
+                    if prior != "none":
+                        reg = custom(measures=SINGLE) if prior == "other-registry" else dict(M.DEFAULT_REGISTRY)
+                        mode = (not plan_only) if prior == "other-mode" else plan_only
+                        first = M.run_data_migration(s, reg, op_id="op-1", plan_only=mode, fail_users=pf)
+                    pre = _durable(s)
+                    res = M.run_data_migration(s, dict(M.DEFAULT_REGISTRY), op_id="op-1", plan_only=plan_only,
+                                               attested=attested, fail_users=fails)
+                    st = M.data_migration_status(s, "op-1")
+                    cases.append({"case": (v16, attested, before, prior, list(pf), plan_only, n, list(fails)),
+                                  "first": first, "result": res, "changed": _durable(s) != pre, "status": st})
     return cases
 
 
 def inv_result_totality(rules=R):
-    """INV-M15 (R2-03): over the enumerated domain, every result is in the closed table; `store_changed` is honest
-    (equal to whether durable state changed, including a plan-only commit and an all-failed call that wrote the
-    header); named failures equal the failing users; operation discovery recovers exactly the committed users; and
-    the all-failed and plan-only cases are reached (a domain that never reaches them proves nothing about them)."""
+    """INV-M15 (R2-03; 0018am v4 I29/I32): over the enumerated domain, every result is a VALID carrier (it passes the
+    validating constructor, `plan_written` included) and a row of the closed table; `store_changed` is honest (equal
+    to whether durable state changed, including a plan-only commit and an all-failed call that wrote the header);
+    named failures equal the failing users; the status read returns the operation's cumulative commits over both calls,
+    and `unknown-op` exactly when neither call under the id wrote; and all ten outcomes are reached (a domain that
+    never reaches one proves nothing about it)."""
     seen = set()
     for c in enumerate_results():
         r = c["result"]
-        if r["outcome"] not in M.RESULT_ROWS:
+        try:
+            if M.make_result(**r) != r:
+                return False
+        except M.Refused:
             return False
         want = M.RESULT_ROWS[r["outcome"]]
         if want is not None and r["store_changed"] is not want:
             return False
         if r["store_changed"] != c["changed"]:
             return False
-        if c["status"]["committed"] != sorted(r["committed"]):
+        first = c["first"] or {"store_changed": False, "committed": []}
+        if first["store_changed"] or r["store_changed"]:
+            if c["status"].get("committed") != sorted(set(first["committed"]) | set(r["committed"])):
+                return False
+        elif c["status"] != {"outcome": "unknown-op"}:
             return False
-        v16, attested, before, plan_only, n, fails = c["case"]
+        fails = [u for u in c["case"][-1] if u not in first["committed"]]     # a user with a run row is not re-run
         if r["outcome"] in ("migrated", "partial", "failed") and sorted(r["failed"]) != sorted(fails):
             return False
         seen.add(r["outcome"])
-    return {"failed", "planned", "already-planned", "partial", "migrated", "complete", "registry-changed",
-            "requires-schema-step", "preflight-refused"} <= seen
+    return set(M.RESULT_ROWS) <= seen
 
 
 def inv_applicability(rules=R):
@@ -375,14 +448,27 @@ def inv_applicability(rules=R):
     except M.Refused as x:
         undo_refused = "not applicable" in str(x)
     s2 = base(); run(s2)
-    s2.edges["p"].counters += 1; M.confirm(s2, "u", "p", cid="k")
+    bumped = copy.deepcopy(s2.edges["p"]); bumped.counters += 1
+    M.add_edge(s2, bumped); M.confirm(s2, "u", "p", cid="k")
     kept = s2.outcomes[("plan-1", "p")]["applicable"]
     s3 = base(); run(s3); M.redact(s3, "p")
     try:
         M.undo(s3, "u", "p", rules); red_refused = False
     except M.Refused:
         red_refused = True
-    return active_again and no_exempt and undo_refused and kept and red_refused
+    # v3 (R3-01): a retirement by a same-id upsert ends the episode as the invalidate method's does
+    s4 = base(); run(s4)
+    _upsert_lifetime(s4, "p", False, 2050, "superseded")
+    _upsert_lifetime(s4, "p", True, None, None)
+    upsert_ended = s4.outcomes[("plan-1", "p")]["applicable"] is False and "refused" in attempt(M.undo, s4, "u", "p", rules)
+    # v3 (§4i v1.5, defensive): the edge row's removal while its outcome is kept ends the episode, so a later insert
+    # under the same id — active, as restored — finds `applicable` already cleared: no undo, no doctor exemption
+    s5 = base(); run(s5)
+    again = copy.deepcopy(s5.edges["p"])
+    M.remove_edge(s5, "p"); M.add_edge(s5, again)
+    removal_ended = (s5.outcomes[("plan-1", "p")]["applicable"] is False and s5.edges["p"].active
+                     and "refused" in attempt(M.undo, s5, "u", "p", rules) and ("info", "n", "p") not in M.doctor_refs(s5))
+    return active_again and no_exempt and undo_refused and kept and red_refused and upsert_ended and removal_ended
 
 
 def inv_shared_id_space(rules=R):
@@ -424,13 +510,24 @@ def inv_erasure(rules=R):
     s.edges["p"] = E("p", obj="weight 78"); M.supersede_single(s, s.edges["p"], E("n", obj="weight 80"))
     run(s, op_id="op-2")
     recreated = not s.edges["p"].active
-    s2 = base(); run(s2); del s2.edges["p"]
+    s2 = base(); run(s2); M.remove_edge(s2, "p")          # the defensive removal (§4g; unreachable at the pin)
     try:
         rows = M.receipt(s2, "u")
         rendered = rows and rows[0]["object"] == "no longer held"
     except KeyError:
         rendered = False
-    return gone and not_replayed and recreated and bool(rendered)
+    # v3 (R3-03): the refusal inventory and refusals on the erased user's edges go too, so a recreated user with the
+    # same edge ids has no protected historical pair; another user's retained refusal is the control
+    s3 = M.Store()
+    for i, u in (("rp", "u"), ("ri", "u"), ("wp", "w"), ("wi", "w")):
+        s3.edges[i] = E(i, user=u, obj=f"weight {i}")
+    s3.refusals += [("rp", "ri", "measures", 1), ("wp", "wi", "measures", 1)]
+    M.schema_step(s3)
+    M.forget_user(s3, "u")
+    for i in ("rp", "ri"):
+        s3.edges[i] = E(i, user="u", obj=f"new {i}")
+    refusals_gone = M.contested_pairs(s3) == [("wp", "wi")] and s3.refusal_inventory == {(("wp", "wi"), "w")}
+    return gone and not_replayed and recreated and bool(rendered) and refusals_gone
 
 
 def inv_testimony(rules=R):
@@ -543,6 +640,253 @@ def inv_j3_writers(rules=R):
             and [M.reinstated_reason(j) for j in src] == ["source_restored"])
 
 
+# ================================================================================ round 4: the round-3 findings
+# the lifetime domain of one row: (active, invalidated_at, reason, redacted); None = no persisted row
+_LIFE_DOMAIN = [None] + [(a, at, r, d) for a in (True, False) for at in (None, 0, 5)
+                         for r in (None, "superseded", "disputed") for d in (False, True)]
+
+
+def _transition_oracle(prior, new):
+    """0044 v1.5 §4f-ii's table and §4i's defensive removal, written from the TEXT, independently of the model's
+    `derive_transition`."""
+    if prior is None:
+        return None                                       # row 1: an insert, a row arriving retired included
+    if new is None:
+        return "removal"                                  # §4i: the row removed while its outcome is retained
+    if new[3] and not prior[3]:
+        return "redaction"                                # row 5
+    flip = {(False, True): "reinstatement", (True, False): "retirement"}.get((prior[0], new[0]))
+    if flip:
+        return flip                                       # rows 2 and 3
+    if not prior[0] and not new[0] and (prior[1], prior[2]) != (new[1], new[2]):
+        return "re-retirement"                            # row 4
+    return None                                           # row 6, and an unchanged row
+
+
+def inv_lifetime_transitions(rules=R):
+    """INV-M23 (0044 v1.5 INV-A22, R3-01): every lifetime transition is derived from the persisted prior and the new row
+    at the emission choke point, by every writer. The derivation equals §4f-ii's table over the whole lifetime domain
+    (a row ARRIVING retired is no transition); round 3's sequence through the same-id `add_edge` upsert — on an
+    inventoried row, the upsert reinstatement ends membership and a re-retirement with the identical tuple is not
+    restored; on a restored row, the upsert retirement clears `applicable`, a later upsert reinstatement never sets it
+    back, and undo and the doctor exemption end — and a NEW row inserted retired changes no outcome or inventory row."""
+    table = all(M.derive_transition(p, n) == _transition_oracle(p, n) for p in _LIFE_DOMAIN for n in _LIFE_DOMAIN)
+    s = base()
+    _upsert_lifetime(s, "p", True, None, None)
+    membership_ended = "p" not in s.inventory
+    _upsert_lifetime(s, "p", False, 0, "superseded")      # base's exact retirement tuple, re-written
+    run(s)
+    not_restored = not s.edges["p"].active
+    s2 = base(); run(s2)
+    _upsert_lifetime(s2, "p", False, 2050, "superseded")
+    cleared = s2.outcomes[("plan-1", "p")]["applicable"] is False
+    _upsert_lifetime(s2, "p", True, None, None)
+    _upsert_lifetime(s2, "p", False, 2050, "superseded")
+    ended = (s2.outcomes[("plan-1", "p")]["applicable"] is False and "refused" in attempt(M.undo, s2, "u", "p", rules))
+    s3 = base(); run(s3)
+    before = (copy.deepcopy(s3.outcomes), dict(s3.inventory))
+    fresh = E("fresh", obj="weight 99"); fresh.active, fresh.invalidated_at, fresh.reason = False, 3, "superseded"
+    M.add_edge(s3, fresh)
+    arriving = (s3.outcomes, s3.inventory) == before
+    return table and membership_ended and not_restored and cleared and ended and arriving
+
+
+def _migrated(origin="store-A"):
+    s = M.Store(origin=origin)
+    p = E("p", obj="weight 78"); s.edges["p"] = p
+    M.supersede_single(s, p, E("n", obj="weight 80", vf=2050))
+    M.schema_step(s); run(s)
+    return s
+
+
+def _planned(origin):
+    d = M.Store(origin=origin); M.schema_step(d); run(d, plan_only=True, op_id="plan")
+    return d
+
+
+def _refuses(f, *a, **kw):
+    """True iff the verb REFUSES (a domain refusal); any other exception propagates (a harness failure, never a kill)."""
+    try:
+        f(*a, **kw)
+        return False
+    except M.Refused:
+        return True
+
+
+def inv_outcome_replay(rules=R):
+    """INV-M24 (0044 v1.5 INV-A23, R3-02): an outcome's replay is decided by COMPARING canonical projections over the
+    staged union. Round 3's negative probe (one field changed under the same uid, beside an unrelated new edge) refuses
+    the WHOLE unit; an unchanged file imports again as a no-op in both modes; under user and id remapping too; an ended
+    local episode is never revived (held not applicable, arriving applicable: a no-op, the flag stays down, no undo);
+    a second hop back into the origin is a no-op although the origin's row holds a store-local `undo_request_ref`; one
+    outcome per slot — a second uid on a held slot refuses, and so do two uids for one slot in one unit; two EQUAL
+    copies of one uid in a unit are one outcome."""
+    a = _migrated(); f = M.export(a, "u")
+    uid = f["outcomes"][("plan-1", "p")]["outcome_uid"]
+    dst = _planned("store-B"); M.import_file(dst, f, "trusted")
+    changed = copy.deepcopy(f)
+    changed["outcomes"][("plan-1", "p")]["pre_invalidated_at"] = 1990
+    changed["edges"].append(M.Edge("new", "u", "uses_tool", "tool"))
+    negative = (_refuses(M.import_file, dst, changed, "trusted") and "new" not in dst.edges
+                and dst.outcomes[("plan-1", "p")]["pre_invalidated_at"] == 2050)
+    replay = True
+    for mode in ("default", "trusted"):
+        d = _planned("store-B"); M.import_file(d, f, mode)
+        snap = _durable(d)
+        rec = M.import_file(d, f, mode)
+        replay = replay and _durable(d) == snap and rec["outcomes_replayed"] == [uid]
+    rm = {"users": {"u": "v"}, "ids": {"p": "p2", "n": "n2"}}
+    d = _planned("store-B"); M.import_file(d, f, "trusted", remap=rm)
+    row = d.outcomes.get(("plan-1", "p2"))
+    snap = _durable(d)
+    M.import_file(d, f, "trusted", remap=rm)
+    remapped = (row is not None and row["user"] == "v" and row["successor_evidence"] == ["pointer", ["n2"]]
+                and _durable(d) == snap)
+    d = _planned("store-B"); M.import_file(d, f, "trusted")
+    M.revoke_source(d, "src-a"); M.lift_source(d, "src-a")         # the episode ends; the edges are as exported again
+    M.import_file(d, f, "trusted")
+    ended = d.outcomes[("plan-1", "p")]["applicable"] is False and "refused" in attempt(M.undo, d, "u", "p", rules)
+    a2 = _migrated(); M.undo(a2, "u", "p", rules, correlation_id="c1")
+    b = _planned("store-B"); M.import_file(b, M.export(a2, "u"), "default")
+    second_hop = not _refuses(M.import_file, a2, M.export(b, "u"), "trusted")
+    other = copy.deepcopy(f); other["outcomes"][("plan-1", "p")]["outcome_uid"] = M.canonical_uid("store-Z", "u", "plan-1", "p")
+    held_slot = _refuses(M.import_file, dst, other, "trusted")
+    twin = copy.deepcopy(f); twin["outcomes"][("plan-1", "p", "dup")] = copy.deepcopy(other["outcomes"][("plan-1", "p")])
+    unit_slot = _refuses(M.import_file, _planned("store-C"), twin, "trusted")
+    copies = copy.deepcopy(f); copies["outcomes"][("plan-1", "p", "copy")] = copy.deepcopy(f["outcomes"][("plan-1", "p")])
+    d = _planned("store-C")
+    equal_copies = not _refuses(M.import_file, d, copies, "trusted") and len(d.outcomes) == 1
+    return (negative and replay and remapped and ended and second_hop and held_slot and unit_slot and equal_copies
+            and _stage_cells(f["outcomes"][("plan-1", "p")]) and _stage_imports(rules))
+
+
+def _at_stage(row, st, undone_at):
+    return dict(row, applicable=(st == "live"), undone_at=(undone_at if st == "undone" else None))
+
+
+def _stage_oracle(held, arr):
+    """§4l v1.5, from the TEXT: equal stages replay; a `live` arrival over a held ending is older evidence (a no-op);
+    every other stage difference — an ending over `live`, `ended` over `undone` and the reverse — refuses."""
+    return held == arr or (arr == "live" and held in ("ended", "undone"))
+
+
+def _stage_cells(row):
+    """All nine (held × arriving) stage cells through the import's own decision, with DIFFERENT `undone_at` values on
+    the two sides (each store's own clock: the value never decides)."""
+    return all(M.replay_decision(_at_stage(row, h, 7), _at_stage(row, a, 99)) == _stage_oracle(h, a)
+               for h in M.STAGES for a in M.STAGES)
+
+
+def _stage_imports(rules):
+    """The cells an import can reach with record-equal edges (0009 decides the rest first): two stores that each undid
+    the episode, at different times, replay; an `ended` arrival over an `undone` held row, the reverse, and an ending
+    over a held `live` row each refuse the whole unit."""
+    a = _migrated(); b = _planned("store-B"); M.import_file(b, M.export(a, "u"), "trusted")
+    M.undo(a, "u", "p", rules)
+    for _ in range(10):
+        b.begin()                                                # b's clock is elsewhere: the values must differ
+    M.undo(b, "u", "p", rules)
+    times = a.outcomes[("plan-1", "p")]["undone_at"] != b.outcomes[("plan-1", "p")]["undone_at"]
+    both_undone = times and not _refuses(M.import_file, b, M.export(a, "u"), "trusted")
+    src = _migrated(); dst = _planned("store-B"); M.import_file(dst, M.export(src, "u"), "trusted")
+    M.retire(src, "p", "superseded", at_valid=2050)              # src: ENDED, the edge retired as the pre-state
+    M.undo(dst, "u", "p", rules)                                 # dst: UNDONE, the same edge record
+    ended_over_undone = _refuses(M.import_file, dst, M.export(src, "u"), "trusted")
+    undone_over_ended = _refuses(M.import_file, src, M.export(dst, "u"), "trusted")
+    s1 = _migrated(); live = _planned("store-B"); M.import_file(live, M.export(s1, "u"), "trusted")
+    M.revoke_source(s1, "src-a"); M.lift_source(s1, "src-a")     # s1: ENDED, its edges as exported
+    ending_over_live = _refuses(M.import_file, live, M.export(s1, "u"), "trusted")
+    return both_undone and ended_over_undone and undone_over_ended and ending_over_live
+
+
+def inv_op_admission(rules=R):
+    """INV-M25 (0018am v4 I32): an op_id is bound to its inputs digest and mode by a durable admission record holding no
+    user content. Equal inputs RESUME (exactly the users with no run row); the status read returns the operation's
+    CUMULATIVE commits while a result's `committed` names the invocation's; a changed request under the reused id
+    returns `op-id-conflict` and writes nothing; plan-only and restoration never share an id; a call refused before
+    any durable write leaves no record (`unknown-op`)."""
+    s = M.Store()
+    for u in ("u0", "u1"):
+        p = E(f"p-{u}", user=u, obj="weight 78"); s.edges[p.id] = p
+        M.supersede_single(s, p, E(f"n-{u}", user=u, obj="weight 80"))
+    M.schema_step(s)
+    r1 = run(s, op_id="op-A", fail_users=("u1",))
+    rec = s.migration_ops.get("op-A") or {}
+    no_content = set(rec) == {"op_id", "mode", "inputs_digest", "admitted_at"} and rec.get("mode") == "restore"
+    r2 = run(s, op_id="op-A")
+    st = M.data_migration_status(s, "op-A")
+    resumed = (r1["outcome"] == "partial" and r2["outcome"] == "migrated" and r2["committed"] == ["u1"]
+               and st.get("committed") == ["u0", "u1"])
+    pre = _durable(s)
+    r3 = run(s, custom(prefers=SINGLE), op_id="op-A")
+    conflict = r3["outcome"] == "op-id-conflict" and _durable(s) == pre
+    s2 = base(); run(s2, plan_only=True, op_id="op-P")
+    r4 = run(s2, op_id="op-P")
+    modes = r4["outcome"] == "op-id-conflict" and not s2.edges["p"].active
+    s3 = base(); run(s3, custom(measures=SINGLE), plan_only=True, op_id="x")
+    r5 = run(s3, op_id="fresh")
+    no_record = r5["outcome"] == "registry-changed" and M.data_migration_status(s3, "fresh") == {"outcome": "unknown-op"}
+    # a call that writes nothing writes no record: `complete`, `already-planned`, and all-failed over an existing header
+    s4 = base(); run(s4, op_id="first")
+    quiet = [run(s4, op_id="c")["outcome"], run(s4, plan_only=True, op_id="ap")["outcome"]]
+    s5 = base(); run(s5, plan_only=True, op_id="plan")
+    quiet.append(run(s5, op_id="af", fail_users=("u",))["outcome"])
+    nothing_written = (quiet == ["complete", "already-planned", "failed"]
+                       and all(M.data_migration_status(x, op) == {"outcome": "unknown-op"}
+                               for x, op in ((s4, "c"), (s4, "ap"), (s5, "af"))))
+    # the record is not per-user: user erasure keeps it, so the id still conflicts afterwards
+    M.forget_user(s, "u0"); M.forget_user(s, "u1")
+    kept = "op-A" in s.migration_ops and run(s, custom(prefers=SINGLE), op_id="op-A")["outcome"] == "op-id-conflict"
+    # an op_id outside the caller grammar is refused at entry: before any read or write, no result constructed
+    s6 = base(); pre6 = _durable(s6)
+    entry = _refuses(M.run_data_migration, s6, dict(M.DEFAULT_REGISTRY), op_id="bad id!") and _durable(s6) == pre6
+    return no_content and resumed and conflict and modes and no_record and nothing_written and kept and entry
+
+
+def _carrier(outcome, pw=False, c=(), fl=(), op="op-1", sc=None):
+    return {"outcome": outcome, "store_changed": (pw or bool(c)) if sc is None else sc, "plan_written": pw,
+            "committed": list(c), "failed": list(fl), "op_id": op}
+
+
+def inv_result_constructor(rules=R):
+    """INV-M26 (0018am v4 I29, §4c's rejection matrix): the validating constructor builds every row of the outcome
+    table with consistent fields (the positive control), and refuses each row of the matrix: an unlisted outcome
+    (round 3's `_result('unlisted', …)`), a missing field (`plan_written`), a dishonest `store_changed`, `failed` and
+    `committed` on the wrong rows, a user both committed and failed, `plan_written` on the wrong rows, and an op_id
+    outside the caller grammar."""
+    good = [_carrier(o) for o in ("requires-schema-step", "preflight-refused", "registry-changed", "op-id-conflict",
+                                  "already-planned", "complete")]
+    good += [_carrier("planned", pw=True), _carrier("migrated", c=["u"]), _carrier("migrated", pw=True, c=["u"]),
+             _carrier("partial", c=["u"], fl=["v"]), _carrier("failed", fl=["v"]), _carrier("failed", pw=True, fl=["v"])]
+    builds = all(not _refuses(M.make_result, **g) for g in good) and {g["outcome"] for g in good} == set(M.RESULT_ROWS)
+    missing = _carrier("complete"); del missing["plan_written"]
+    bad = [_carrier("unlisted"), missing, _carrier("complete", sc=True), _carrier("migrated", c=["u"], fl=["v"]),
+           _carrier("partial", c=["u"]), _carrier("complete", c=["u"], sc=True), _carrier("migrated"),
+           _carrier("partial", c=["u"], fl=["u"]), _carrier("complete", pw=True), _carrier("planned"),
+           _carrier("complete", op="bad id!")]
+    refuses = all(_refuses(M.make_result, **b) for b in bad)
+    witness = _refuses(M._result, "unlisted", False, ["u"], ["u"], "bad")
+    return builds and refuses and witness
+
+
+def inv_redacted_requests_terminal(rules=R):
+    """INV-M27 (0008am v1.3 INV-Q7, the `undo` verb's side, which model II does not represent): an edge's redaction
+    replaces the digest of every registry row on it — `undo` included — and a retry under such an id returns the
+    terminal `request_redacted`, which takes precedence over replay; the id stays held (another verb still conflicts);
+    a request on an unredacted edge still replays, and the same rule holds for `confirm`."""
+    s = base(); run(s)
+    M.undo(s, "u", "p", rules, correlation_id="undo-request")
+    M.confirm(s, "u", "n", cid="conf-request")
+    M.redact(s, "p")
+    digest_gone = s.registry[("u", "undo-request")]["digest"] == M.MARKER
+    terminal = attempt(M.undo, s, "u", "p", rules, correlation_id="undo-request") == {"terminal": "request_redacted"}
+    held = "held by undo" in attempt(M.confirm, s, "u", "p", cid="undo-request").get("refused", "")
+    replays = attempt(M.confirm, s, "u", "n", cid="conf-request") == {"replayed": "conf:n"}
+    M.redact(s, "n")
+    conf_terminal = attempt(M.confirm, s, "u", "n", cid="conf-request") == {"terminal": "request_redacted"}
+    return digest_gone and terminal and held and replays and conf_terminal
+
+
 INVARIANTS = {"INV-M1": inv_revocation, "INV-M2": inv_once_per_plan, "INV-M3": inv_successor_evidence,
               "INV-M4": inv_undo_identity, "INV-M5": inv_custom_registry, "INV-M6": inv_doctor,
               "INV-M7": inv_portability, "INV-M8": inv_redaction, "INV-M9": inv_order_key,
@@ -550,6 +894,8 @@ INVARIANTS = {"INV-M1": inv_revocation, "INV-M2": inv_once_per_plan, "INV-M3": i
               "INV-M13": inv_era_boundary, "INV-M14": inv_plan_states, "INV-M15": inv_result_totality,
               "INV-M16": inv_applicability, "INV-M17": inv_shared_id_space, "INV-M18": inv_erasure,
               "INV-M19": inv_testimony, "INV-M20": inv_collision, "INV-M21": inv_arity, "INV-M22": inv_canonical_uid,
+              "INV-M23": inv_lifetime_transitions, "INV-M24": inv_outcome_replay, "INV-M25": inv_op_admission,
+              "INV-M26": inv_result_constructor, "INV-M27": inv_redacted_requests_terminal,
               "INV-J1": inv_j1_closed_reason, "INV-J2": inv_j2_old_nulls, "INV-J3": inv_j3_writers}
 
 
@@ -586,11 +932,165 @@ def _consider_valid_time(orig):
 
 
 def _reinstate_keeps_membership(orig):
-    def journal_reinstated(s, edge_id, reason, t=None):
-        if reason not in M.REINSTATEMENT_REASONS:
-            raise M.Refused("bad reason")
-        s.journal.append(("reinstated", edge_id, t if t is not None else s.begin(), reason))
-    return journal_reinstated
+    """C-4's residual: the reinstatement transition is derived but no longer ends inventory membership."""
+    def apply_transition(s, edge_id, transition):
+        if transition == "reinstatement":
+            return
+        return orig(s, edge_id, transition)
+    return apply_transition
+
+
+def _kind_gated(effect, kind_needed):
+    """Round 3's binding: the transition's EFFECT applied only when the writer is the named method (its site kind), so
+    a same-id upsert, which journals `mutated`, passes unseen. `effect` is the transition the gate restricts."""
+    def make(orig):
+        def journal_edge_write(s, edge_id, prior, *, kind=None, reason=None, t=None):
+            saved = M.apply_transition
+
+            def gated(s2, eid, transition):
+                if transition in effect and kind != kind_needed:
+                    return None
+                return saved(s2, eid, transition)
+            M.apply_transition = gated
+            try:
+                return orig(s, edge_id, prior, kind=kind, reason=reason, t=t)
+            finally:
+                M.apply_transition = saved
+        return journal_edge_write
+    return make
+
+
+def _transition_from_kind(orig):
+    """Infer the transition from the journal kind (`invalidated` → retirement, `reinstated` → reinstatement,
+    `redacted` → redaction): a changed same-id upsert journals `mutated`, so its transition is hidden."""
+    def journal_edge_write(s, edge_id, prior, *, kind=None, reason=None, t=None):
+        new = M._snap(s.edges.get(edge_id))
+        M.apply_transition(s, edge_id, {"invalidated": "retirement", "reinstated": "reinstatement",
+                                        "redacted": "redaction"}.get(kind))
+        if prior is not None and prior == new and kind != "redacted":
+            return None
+        t = t if t is not None else s.txn
+        kind = "created" if prior is None else (kind or "mutated")
+        if kind == "reinstated":
+            M.journal_reinstated(s, edge_id, reason, t)
+        else:
+            s.journal.append((kind, edge_id, t, reason))
+        return kind
+    return journal_edge_write
+
+
+def _upsert_bypasses_choke_point(orig):
+    """Hook only the invalidate and reinstate methods: `add_edge` writes the row and journals, but derives no
+    transition (round 3's shipped shape)."""
+    def add_edge(s, edge):
+        t = s.begin()
+        prior = s.edges.get(edge.id)
+        s.edges[edge.id] = copy.deepcopy(edge)
+        s.journal.append(("created" if prior is None else "mutated", edge.id, t, None))
+        return "mutated"
+    return add_edge
+
+
+def _inactive_insert_is_retirement(orig):
+    def derive_transition(prior, new):
+        if prior is None and new is not None and not new[0]:
+            return "retirement"
+        return orig(prior, new)
+    return derive_transition
+
+
+def _uid_alone_replays(orig):
+    return lambda o: json.dumps(o.get("outcome_uid"))          # equal uid ⇒ "equal projection" (round 3's witness)
+
+
+def _projection_with_request_ref(orig):
+    def outcome_projection(o):
+        return json.dumps({**json.loads(orig(o), object_pairs_hook=_strict_pairs), "undo_request_ref": o.get("undo_request_ref")}, sort_keys=True,
+                          default=list)
+    return outcome_projection
+
+
+def _arrival_revives(orig):
+    def episode_replay(held, arr):
+        r = orig(held, arr)
+        if r:
+            held["applicable"], held["undone_at"] = arr["applicable"], arr["undone_at"]
+        return r
+    return episode_replay
+
+
+def _projection_with_undone_value(orig):
+    def outcome_projection(o):
+        return json.dumps({**json.loads(orig(o), object_pairs_hook=_strict_pairs), "undone_at": o.get("undone_at")}, sort_keys=True, default=list)
+    return outcome_projection
+
+
+def _endings_as_one(orig):
+    """v1.4's wording: `ended` read as an earlier stage of `undone`, so an ended arrival over an undone held row
+    replays."""
+    def episode_replay(held, arr):
+        if M.stage(held) == "undone" and M.stage(arr) == "ended":
+            return M.outcome_projection({**arr, "applicable": held["applicable"], "undone_at": held["undone_at"]}) \
+                == M.outcome_projection(held)
+        return orig(held, arr)
+    return episode_replay
+
+
+def _removal_keeps_applicable(orig):
+    def apply_transition(s, edge_id, transition):
+        if transition == "removal":
+            return None
+        return orig(s, edge_id, transition)
+    return apply_transition
+
+
+def _install_last_invocation_status():
+    """Status returns only the LAST invocation's commits (the mutant tracks invocations itself; the model does not)."""
+    last = {}
+    orig_run, orig_st = _O["run_data_migration"], _O["data_migration_status"]
+
+    def run_data_migration(s, registry, **kw):
+        r = orig_run(s, registry, **kw)
+        last[(id(s), r["op_id"])] = list(r["committed"])
+        return r
+
+    def data_migration_status(s, op_id):
+        st = orig_st(s, op_id)
+        if "committed" in st and (id(s), op_id) in last:
+            st = dict(st, committed=sorted(last[(id(s), op_id)]))
+        return st
+    M.run_data_migration, M.data_migration_status = run_data_migration, data_migration_status
+
+
+def _carrier_without_plan_written(orig):
+    def run_data_migration(s, registry, **kw):
+        r = orig(s, registry, **kw)
+        r.pop("plan_written", None)
+        return r
+    return run_data_migration
+
+
+def _undo_digest_kept(orig):
+    """The 0044 review's witness: a redaction replaces the digests of `confirm` requests only; an undo's survives, and
+    its retained result reference replays."""
+    def redact_request_digests(s, edge_id):
+        for rec in s.registry.values():
+            if rec["target"] == edge_id and rec["verb"] == "confirm":
+                rec["digest"] = M.MARKER
+    return redact_request_digests
+
+
+def _no_terminal_rule(orig):
+    def _replay(s, user, cid, verb, digest):
+        if cid is None:
+            return None
+        rec = s.registry.get((user, cid))
+        if rec is None:
+            return None
+        if rec["verb"] == verb and rec["digest"] == digest:
+            return {"replayed": rec["result_ref"]}
+        raise M.Refused(f"integrity conflict: correlation id held by {rec['verb']}")
+    return _replay
 
 
 def _header_only_when_nonempty(orig):
@@ -604,22 +1104,22 @@ def _header_only_when_nonempty(orig):
 
 
 def _no_digest_check(orig):
-    def write_plan(s, registry, op_id):
+    def write_plan(s, registry, op_id, admission=None):
         if s.header is not None:
             s.header = None; s.plan.clear()                  # re-plan whatever the stored digest
-        return orig(s, registry, op_id)
+        return orig(s, registry, op_id, admission)
     return write_plan
 
 
 def _import_before_plan_silent(orig):
-    def import_file(s, f, mode, op_id="op-import"):
+    def import_file(s, f, mode, op_id="op-import", remap=None):
         if f["format"] == "pre" and s.header is None:
             s.header = {"plan_id": "plan-0", "registry_digest": "", "op_id": op_id, "written_txn": s.txn}
             try:
-                return orig(s, f, mode, op_id)
+                return orig(s, f, mode, op_id, remap)
             finally:
                 s.header = None
-        return orig(s, f, mode, op_id)
+        return orig(s, f, mode, op_id, remap)
     return import_file
 
 
@@ -722,14 +1222,14 @@ def _erasure_keeps_registry(orig):
 def _receipt_reads_live(orig):
     def receipt(s, user):
         return [{"edge": eid, "outcome": o["outcome"], "object": s.edges[eid].obj,
-                 "replaced_by": "unknown", "undone": o["undone"]}
+                 "replaced_by": "unknown", "undone": o["undone_at"] is not None}
                 for (pid, eid), o in sorted(s.outcomes.items()) if o["user"] == user]
     return receipt
 
 
 def _trust_from_mode(orig):
-    def import_file(s, f, mode, op_id="op-import"):
-        rec = orig(s, f, mode, op_id)
+    def import_file(s, f, mode, op_id="op-import", remap=None):
+        rec = orig(s, f, mode, op_id, remap)
         if mode == "trusted":
             for o in s.outcomes.values():
                 o["origin"] = "local" if o["origin"] == "imported" else o["origin"]
@@ -747,21 +1247,21 @@ def _undo_from_testimony(orig):
 
 
 def _skip_unit_validation(orig):
-    def import_file(s, f, mode, op_id="op-import"):
+    def import_file(s, f, mode, op_id="op-import", remap=None):
         f2 = copy.deepcopy(f)
         for e in f2["edges"]:
             e.active = True                                   # the validation's inputs neutralised: nothing reads as bad
         f2["outcomes"] = {k: v for k, v in f2["outcomes"].items()
                           if k[1] in {e.id for e in f2["edges"]} and k[0] == "plan-1"}
-        return orig(s, f2, mode, op_id)
+        return orig(s, f2, mode, op_id, remap)
     return import_file
 
 
 def _skip_every_collision(orig):
-    def import_file(s, f, mode, op_id="op-import"):
+    def import_file(s, f, mode, op_id="op-import", remap=None):
         f2 = copy.deepcopy(f)
         f2["edges"] = [e for e in f2["edges"] if e.id not in s.edges]
-        return orig(s, f2, mode, op_id)
+        return orig(s, f2, mode, op_id, remap)
     return import_file
 
 
@@ -832,8 +1332,8 @@ def _blanket_exemption(orig):
 
 
 def _rescan_local(orig):
-    def import_file(s, f, mode, op_id="op-import"):
-        rec = orig(s, f, mode, op_id)
+    def import_file(s, f, mode, op_id="op-import", remap=None):
+        rec = orig(s, f, mode, op_id, remap)
         if f["format"] == "pre":
             for e in s.edges.values():
                 if e.reason == "superseded" and e.relation in s.plan:
@@ -902,7 +1402,8 @@ MUTANTS = {
     "a duplicate id-less undo is refused (F3)": ("INV-M11", _wrap("undo", _idless_refuse)),
     "historical refusals by timestamp, not the step's inventory (C-5)": ("INV-M12", _wrap("contested_pairs", _refusals_by_timestamp)),
     "eligibility by invalidated_at < the step's time (R2-01)": ("INV-M13", _wrap("consider", _consider_valid_time)),
-    "a reinstatement keeps inventory membership (C-4 residual)": ("INV-M13", _wrap("journal_reinstated", _reinstate_keeps_membership)),
+    "a reinstatement keeps inventory membership (C-4 residual)": ("INV-M13", _wrap("apply_transition", _reinstate_keeps_membership)),
+    "end membership only in the reinstate method (round 3's upsert reinstatement keeps it)": ("INV-M13", _wrap("journal_edge_write", _kind_gated(("reinstatement",), "reinstated"))),
     "an empty plan writes no header (R2-02)": ("INV-M14", _wrap("run_data_migration", _header_only_when_nonempty)),
     "a later registry re-plans, no digest check (R2-02)": ("INV-M14", _wrap("write_plan", _no_digest_check)),
     "a pre-format import before any plan converts silently (Q9)": ("INV-M14", _wrap("import_file", _import_before_plan_silent)),
@@ -912,6 +1413,7 @@ MUTANTS = {
     "applicability = the current active bit (R2-04)": ("INV-M16", _wrap("undo", _applicable_is_active_bit)),
     "applicability cleared only by `superseded` retirements (R2-04)": ("INV-M16", _wrap("retire", _clear_only_on_superseded)),
     "redaction keeps applicability (C-6)": ("INV-M16", _wrap("redact", _redaction_keeps_applicable)),
+    "clear the flag only in the invalidate method (round 3's upsert re-retirement keeps it)": ("INV-M16", _wrap("journal_edge_write", _kind_gated(("retirement", "re-retirement"), "invalidated"))),
     "undo reads the edge before the registry (R2-04 ¶3)": ("INV-M17", _wrap("undo", _edge_before_registry)),
     "erasure keeps registry rows (R2-07, INV-Q6)": ("INV-M18", _wrap("forget_user", _erasure_keeps_registry)),
     "the receipt reads the live edge (R2-07)": ("INV-M18", _wrap("receipt", _receipt_reads_live)),
@@ -925,6 +1427,25 @@ MUTANTS = {
     "identity by separator join (C-3)": ("INV-M22", _wrap("canonical_uid", _separator_uid)),
     "the journal accepts any reason (0029 J1)": ("INV-J1", _set("journal_reinstated", lambda s, e, r, t=None: s.journal.append(("reinstated", e, s.begin(), r)))),
     "old NULL events read 'unknown' (0029 J2)": ("INV-J2", _set("reinstated_reason", lambda ev: ev[3] if len(ev) > 3 and ev[3] is not None else "unknown")),
+    "hook only the invalidate and reinstate methods: the upsert derives nothing (R3-01)": ("INV-M23", _wrap("add_edge", _upsert_bypasses_choke_point)),
+    "infer the transition from the journal kind: `mutated` hides it (R3-01)": ("INV-M23", _wrap("journal_edge_write", _transition_from_kind)),
+    "treat an inactive insert as a retirement (R3-01)": ("INV-M23", _wrap("derive_transition", _inactive_insert_is_retirement)),
+    "equal outcome_uid alone admits (round 3's changed-outcome witness)": ("INV-M24", _wrap("outcome_projection", _uid_alone_replays)),
+    "replace the slot's row on a different uid (R3-02)": ("INV-M24", _set("slot_taken", lambda staged, row: False)),
+    "an arriving applicable copy sets applicable again (R3-02)": ("INV-M24", _wrap("episode_replay", _arrival_revives)),
+    "compare undone_at by value: two stores that each undid the episode refuse (§4l v1.5)": ("INV-M24", _wrap("outcome_projection", _projection_with_undone_value)),
+    "an ended arrival over an undone held row as an earlier stage: two endings read as one (§4l v1.5)": ("INV-M24", _wrap("episode_replay", _endings_as_one)),
+    "the edge row's removal keeps applicable (§4i v1.5)": ("INV-M16", _wrap("apply_transition", _removal_keeps_applicable)),
+    "compare undo_request_ref: a second hop conflicts (R3-02)": ("INV-M24", _wrap("outcome_projection", _projection_with_request_ref)),
+    "grammar-only idempotency: a changed request under a reused id runs (I32)": ("INV-M25", _set("same_operation", lambda held, adm: True)),
+    "one id admitted for plan-only then for restoration: the digest ignores the mode (I32)": ("INV-M25", _set("inputs_digest", lambda canon, mode: M.canonical_uid(M.plan_input_digest(canon)))),
+    "status returns only the last invocation's commits (I32)": ("INV-M25", _install_last_invocation_status),
+    "an unlisted carrier constructs (round 3's `_result('unlisted', …)`, I29)": ("INV-M26", _set("make_result", lambda **f: dict(f))),
+    "the carrier omits plan_written (I29)": ("INV-M15", _wrap("run_data_migration", _carrier_without_plan_written)),
+    "hash the whole registry: an unrelated declaration trips registry-changed (I25)": ("INV-M14", _set("plan_input_digest", lambda canon: M.registry_digest(canon))),
+    "keep an undo's digest after redaction and replay its result_ref (0008am INV-Q7)": ("INV-M27", _wrap("redact_request_digests", _undo_digest_kept)),
+    "the terminal rule omitted: a redacted retry reads as a conflict (0008am INV-Q7)": ("INV-M27", _wrap("_replay", _no_terminal_rule)),
+    "erasure keeps the refusal inventory (R3-03)": ("INV-M18", _wrap("forget_user", lambda o: (lambda s, user: (lambda keep, keep2: (o(s, user), setattr(s, "refusal_inventory", keep), setattr(s, "refusals", keep2)))(set(s.refusal_inventory), list(s.refusals))))),
     "the writers' reasons swapped (0029 J3)": ("INV-J3", _wrap("restore_source", lambda o: (lambda s, eid: (setattr(s.edges[eid], "active", True), M.journal_reinstated(s, eid, "arity_reclassified"))))),
 }
 
@@ -939,35 +1460,37 @@ def run_invariants(rules=R) -> dict:
     return res
 
 
-def run_mutants() -> dict:
-    """Each mutant is installed, then judged. A KILL is semantic: the owner RETURNS False and the mutated function was
-    CALLED while it ran (model II's rule; R2-08)."""
-    out = {}
-    for name, (owner, install) in MUTANTS.items():
-        install()
-        calls = {"n": 0}
-        for k in [k for k in _O if getattr(M, k) is not _O[k]]:
-            f = getattr(M, k)
+def run_mutant(name: str, others: bool = True) -> dict:
+    """One mutant installed, then judged. A KILL is semantic: the owner RETURNS False and the mutated function was
+    CALLED while it ran (model II's rule; R2-08). `others`: also run every invariant under it (`killed_by`)."""
+    owner, install = MUTANTS[name]
+    install()
+    calls = {"n": 0}
+    for k in [k for k in _O if getattr(M, k) is not _O[k]]:
+        f = getattr(M, k)
 
-            def counted(*a, _f=f, **kw):
-                calls["n"] += 1
-                return _f(*a, **kw)
-            setattr(M, k, counted)
+        def counted(*a, _f=f, **kw):
+            calls["n"] += 1
+            return _f(*a, **kw)
+        setattr(M, k, counted)
+    try:
         try:
-            try:
-                ov = INVARIANTS[owner](R)
-                owner_outcome = "failed" if ov is False else ("held" if ov is True else f"returned {ov!r}")
-            except Exception as x:
-                owner_outcome = f"raised {type(x).__name__}: {x}"
-            reached = calls["n"] > 0
-            res = run_invariants()
-        finally:
-            for k, v in _O.items():
-                setattr(M, k, v)
-        killed = sorted(k for k, v in res.items() if v is not True)
-        out[name] = {"owner": owner, "owner_outcome": owner_outcome, "mutated_path_reached": reached,
-                     "killed_by": killed, "killed_by_owner": owner_outcome == "failed" and reached}
-    return out
+            ov = INVARIANTS[owner](R)
+            owner_outcome = "failed" if ov is False else ("held" if ov is True else f"returned {ov!r}")
+        except Exception as x:
+            owner_outcome = f"raised {type(x).__name__}: {x}"
+        reached = calls["n"] > 0
+        res = run_invariants() if others else {}
+    finally:
+        for k, v in _O.items():
+            setattr(M, k, v)
+    killed = sorted(k for k, v in res.items() if v is not True)
+    return {"owner": owner, "owner_outcome": owner_outcome, "mutated_path_reached": reached,
+            "killed_by": killed, "killed_by_owner": owner_outcome == "failed" and reached}
+
+
+def run_mutants() -> dict:
+    return {name: run_mutant(name) for name in MUTANTS}
 
 
 def probes() -> dict:
@@ -982,7 +1505,54 @@ def probes() -> dict:
         ks = {n: M.order_key(g, negative=neg) for n, g in (("negative(2R,3O)", [(2, "R"), (3, "O")]),
                                                             ("pair(2,1)", [(2, "R"), (1, "R")]))}
         p[f"QO4_negative[{neg}]"] = sorted(ks, key=ks.get)
+    # v1.5 as first issued named "derive after the unchanged-bytes return" under INV-A22; it is EQUIVALENT (an unchanged
+    # row has no transition: derive(x, x) is None over the whole domain) and the re-issue dropped it. Kept as a probe
+    # that claims nothing, with the invariants run under it.
+    p["equivalent: derive after the unchanged-bytes return"] = {
+        "derive(x, x) is None over the lifetime domain": all(M.derive_transition(x, x) is None
+                                                             for x in _LIFE_DOMAIN if x is not None),
+        "invariants failing under it": _under(_wrap("journal_edge_write", _derive_after_return))}
+    # INV-A22's "treat an inactive insert as a retirement" is killed at the derivation's table (INV-M23); this records
+    # which OTHER invariants see an effect of it (an outcome can only exist for a held row, so none is expected)
+    p["inactive insert as retirement: invariants failing besides INV-M23"] = [
+        k for k in _under(_wrap("derive_transition", _inactive_insert_is_retirement)) if k != "INV-M23"]
+    # §4l v1.5 compares the STAGE, never `undone_at`'s value (each store's own clock): two stores that each undid the
+    # same episode, at different times, compare equal, and the later import of one into the other is a replay.
+    a = _migrated(); b = _planned("store-B"); M.import_file(b, M.export(a, "u"), "trusted")
+    M.undo(a, "u", "p")
+    for _ in range(10):
+        b.begin()
+    M.undo(b, "u", "p")
+    p["undone_at values in the two stores"] = [a.outcomes[("plan-1", "p")]["undone_at"], b.outcomes[("plan-1", "p")]["undone_at"]]
+    p["undone_at compared across stores: both undo, then import a into b"] = (
+        "refused" if _refuses(M.import_file, b, M.export(a, "u"), "trusted") else "admitted")
     return p
+
+
+def _derive_after_return(orig):
+    def journal_edge_write(s, edge_id, prior, *, kind=None, reason=None, t=None):
+        new = M._snap(s.edges.get(edge_id))
+        if prior is not None and prior == new and kind != "redacted":
+            return None                                   # the return FIRST ...
+        M.apply_transition(s, edge_id, M.derive_transition(M._life(prior), M._life(new)))   # ... then the derivation
+        t = t if t is not None else s.txn
+        kind = "created" if prior is None else (kind or "mutated")
+        if kind == "reinstated":
+            M.journal_reinstated(s, edge_id, reason, t)
+        else:
+            s.journal.append((kind, edge_id, t, reason))
+        return kind
+    return journal_edge_write
+
+
+def _under(install) -> list:
+    """The invariants that fail with `install` in place (a probe; nothing here is a claimed kill)."""
+    install()
+    try:
+        return sorted(k for k, v in run_invariants().items() if v is not True)
+    finally:
+        for k, v in _O.items():
+            setattr(M, k, v)
 
 
 def main() -> int:

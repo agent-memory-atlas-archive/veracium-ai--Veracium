@@ -215,7 +215,11 @@ def test_the_obligation_map_refuses_each_broken_carrier():
         "an invariant that kills no mutant": (rows_with(muts={k: dict(v, killed_by_owner=False) if v["owner"] == owner else v for k, v in muts.items()}),
                                               f"{owner} owns no killed mutant"),
         "a PRODUCT mapping with no reason": (rows_with(set={model_row: ("PRODUCT", " ")}), "must be ('PRODUCT' or 'MODEL-II', reason)"),
-        "a two-part mapping with no product reason": (rows_with(set={model_row: {"model": [owner], "product": ""}}), "needs both"),
+        "a two-part mapping with no product reason": (rows_with(set={model_row: {"model": [owner], "product": ""}}), "exactly one reasoned"),
+        "a two-part mapping with no model II reason": (rows_with(set={model_row: {"model": [owner], "model_ii": " "}}), "exactly one reasoned"),
+        "a two-part mapping with no model part": (rows_with(set={model_row: {"model": [], "model_ii": "acts"}}), "exactly one reasoned"),
+        "a two-part mapping with both other parts": (rows_with(set={model_row: {"model": [owner], "product": "p", "model_ii": "m"}}), "exactly one reasoned"),
+        "a two-part mapping with an unknown part": (rows_with(set={model_row: {"model": [owner], "produkt": "p"}}), "exactly one reasoned"),
         "a model invariant no row claims": (rows_with(set={unclaimed_row: ("PRODUCT", "moved")}), f"{ob.ROWS[unclaimed_row][0]} is claimed by no row"),
     }
     for name, (problems, expect) in cases.items():
@@ -249,6 +253,11 @@ def test_the_obligation_map_refuses_each_broken_carrier():
         cited = _s6(shared_row, extra=f"*MODEL: dev's reference model II encodes it (its {owner2.split('-', 1)[1]}).*\n")
         assert any(f"SHARED 0008am {shared_row}: handed to model II, but the row cites no" in p for p in ob.check_shared(uncited, m2))
         assert not [p for p in ob.check_shared(cited, m2) if shared_row in p]
+        # a TWO-OWNER row (model I's part plus a model II part) is handed to model II too: its model II half is
+        # refused uncited exactly as a whole MODEL-II row is (the dict form must not escape check_shared)
+        mixed = next(r for (d, r), v in ob.ROWS.items() if d == "0008am" and isinstance(v, dict) and "model_ii" in v)
+        assert any(f"SHARED 0008am {mixed}: handed to model II, but the row cites no" in p
+                   for p in ob.check_shared(_s6(mixed), m2))
     finally:
         sys.path.remove(str(ROOT / "specs" / "evidence" / "0045"))
 
