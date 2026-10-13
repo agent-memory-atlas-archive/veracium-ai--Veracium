@@ -645,7 +645,8 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_notice_binding_hotfix.py", "test_a_redacted_record_arriving_new_is_still_redacted_in_the_same_transaction"): "default",
     ("test_0041_notice_binding_hotfix.py", "test_a_trusted_restore_of_a_newer_backup_still_redacts_the_held_older_record"): "restore",
     ("test_0041_notice_binding_hotfix.py", "test_a_repeat_untrusted_import_stays_inert"): "default",
-    ("test_0041_notice_binding_hotfix.py", "_legacy_standing"): "restore",   # writes a standing notice as v0.26.x did
+    ("test_0041_notice_binding_hotfix.py", "_legacy_standing"): "restore",   # writes a standing notice as the earlier code did
+    ("test_0041_notice_binding_hotfix.py", "test_ii_a_default_REDACTED_arrival_from_another_origin_is_refused_by_the_origin_check_alone"): "default",
     ("test_0041_notice_binding_hotfix.py", "test_ii_an_unredacted_arrival_under_a_standing_notice_refuses_even_on_restore"): "restore",
     ("test_0041_notice_binding_hotfix.py", "test_7a_a_poisoned_export_default_imported_refuses_and_redacts_nothing"): "default",
     ("test_0041_notice_binding_hotfix.py", "test_7b_a_poisoned_export_restored_into_a_fresh_store_refuses_and_redacts_nothing"): "restore",

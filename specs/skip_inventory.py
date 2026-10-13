@@ -262,6 +262,10 @@ INVENTORY = [
      "git-checkout", "specs/0043 round-9 follow-up: the one-row reproduction snapshots the TRACKED tree "
      "(git ls-files); a git-less copy (an sdist, the reviewer's tree/) has none, so the row cannot be "
      "re-run there — CI is a checkout, where it always runs"),
+    ("tests/test_0041_mutation_campaign.py", "skipif", "not _is_checkout()",
+     "git-checkout", "specs/0041 0041-PA1 (the notice-binding hotfix's mutation table): the one-row reproduction "
+     "snapshots the TRACKED tree (git ls-files); a git-less copy (an sdist, a reviewer's tree/) has none, so the row "
+     "cannot be re-run there — CI is a checkout, where it always runs"),
     ("tests/test_0043_run.py", "skip",
      "the run's pin cannot be checked against history",
      "git-checkout", "specs/0043 tranche 2: the committed run report pins the commit it "

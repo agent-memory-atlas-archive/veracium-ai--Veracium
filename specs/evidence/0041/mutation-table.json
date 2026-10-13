@@ -1,0 +1,356 @@
+{
+ "body_sha256": "a6b334e0222cdb2f183905dee3f169ec307ae260703bea69e68c57496862742c",
+ "header": {
+  "cells": {
+   "0041-PA1": [
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_never_redacts_the_users_own_held_fact",
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_never_redacts_a_held_episode",
+    "tests/test_0041_notice_binding_hotfix.py::test_the_victims_exact_record_in_the_file_does_not_unlock_the_notice",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_held_different_version_under_an_untrusted_notice_is_kept_and_reported",
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_for_an_absent_id_leaves_no_standing_row",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_later_record_of_that_id_is_not_redacted_on_arrival",
+    "tests/test_0041_notice_binding_hotfix.py::test_i_a_legacy_standing_notice_never_refuses_the_users_own_write",
+    "tests/test_0041_notice_binding_hotfix.py::test_i_a_legacy_standing_notice_never_refuses_the_users_own_episode_write",
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_a_default_arrival_from_another_origin_is_refused_whole",
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_a_default_REDACTED_arrival_from_another_origin_is_refused_by_the_origin_check_alone",
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_an_unredacted_arrival_under_a_standing_notice_refuses_even_on_restore",
+    "tests/test_0041_notice_binding_hotfix.py::test_7a_a_poisoned_export_default_imported_refuses_and_redacts_nothing",
+    "tests/test_0041_notice_binding_hotfix.py::test_7b_a_poisoned_export_restored_into_a_fresh_store_refuses_and_redacts_nothing",
+    "tests/test_0041_notice_binding_hotfix.py::test_7c_a_poisoned_store_restoring_its_own_export_refuses_and_keeps_the_fact",
+    "tests/test_0041_notice_binding_hotfix.py::test_7_the_default_path_reports_a_held_target_before_it_would_refuse",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_notice_only_restore_onto_a_held_record_is_not_applied",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_repeat_untrusted_import_stays_inert",
+    "tests/test_0041_notice_binding_hotfix.py::test_the_cli_prints_the_notices_it_did_not_apply",
+    "tests/test_0041_notice_binding_hotfix.py::test_the_attest_only_branch_is_restore_only_on_a_default_import",
+    "tests/test_0041_notice_binding_hotfix.py::test_the_primitive_defaults_to_the_narrow_scope"
+   ]
+  },
+  "clean": {
+   "cells_passed": 20,
+   "honest": "pass"
+  },
+  "commit": "af1f9347f6f0cfd1a5c0f52c31cc21b21fb3b4f2",
+  "definitions": {
+   "PA1-arrival-created": "dea078946c4bd16d764bbe4eda3e1c0673a14fc5f73ea3052e79542c6cdca84d",
+   "PA1-arrival-refusal": "24aa271154d59b0babbe817dc303665b47c50b27c6146bb9d8478213ece0854a",
+   "PA1-attest-held": "4bd1d79f98f74404bfbbe3175202e2a8709a001a7f8b5a0cfed269dd8c3feb6b",
+   "PA1-created": "1917c633cb8c91286dbb464c6d7f9659021be9ae79f7e4890116e6b1b2fd6ae3",
+   "PA1-default": "df8c853f593b69788139f989a3c99139a24adf99a5624c0344ad3b36e78a58ad",
+   "PA1-fixedpoint": "c81e5417b5b50953c99bcebbfe4e74fe0d210ad10a75883375dfc15f74b7430a",
+   "PA1-infile": "ed6a98cd2a85e58bc38700d0c22f71f25a8bb9a06b33e0a5c497fac6c33cb0d4",
+   "PA1-origin": "6826b256a2a5ce358f06a642cc994f2b5a6f91f3961bcc9e177befcb02d8ba8a",
+   "PA1-pair-refusal": "4efc7ef133ff2e72061b67663d044f6e74177c7b34d847ac19b0f823aa5c87f0",
+   "PA1-readers": "fc4e1cc67a8557fc7ddcd3f40da32ad3d2fcaf2bdb3f00cc46f088e7e23585e4",
+   "PA1-scope": "371606ecb90c7becfaaf315ae16219331a52ad49e0129fc59fbea21fa937652d",
+   "PA1-writer-edge": "25b9cf0e8a720ffaed9a27a9c2f2b5fc1acf004fc5cc6d48163aeb2eee36214e",
+   "PA1-writer-episode": "ad9d9567acb19f057484a5c93fff7a88b4330674ca5b82a093ed963923d24edd"
+  },
+  "digests": {
+   "specs/evidence/0041/mutation_campaign.py": "9b089f3397ea65d3e4b3bae479a4a1c0ce4275512717511b8b6e5c7ec699b0b9",
+   "src/veracium/portability.py": "5acbb8e8fb9a0d92f1bc2893f0be663585fb22a0854b08b077f456e70e3a2c4d",
+   "src/veracium/redaction.py": "d2d1714639d3d3f28068f285b4fccfa09bcaf978bbf42afc565c52c865f3356a",
+   "src/veracium/store/sqlite.py": "ec311fe5c0358f6734da6b6e90eb665ad2499af602f5b59006e03ba86dafbb93",
+   "tests/test_0041_notice_binding_hotfix.py": "a56dcf330ece12d8e4430516ebc185095e271bd9cba72bc424b5c97b4601bee9"
+  },
+  "honest_nodes": [
+   "tests/test_0041_notice_binding_hotfix.py::test_a_redacted_record_arriving_new_is_still_redacted_in_the_same_transaction",
+   "tests/test_0041_notice_binding_hotfix.py::test_a_trusted_restore_of_a_newer_backup_still_redacts_the_held_older_record",
+   "tests/test_0041_notice_binding_hotfix.py::test_ii_a_default_arrival_from_the_notices_own_origin_completes_it",
+   "tests/test_0041_notice_binding_hotfix.py::test_ii_on_restore_completion_needs_an_inserted_shown_record_and_not_its_origin"
+  ],
+  "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
+  "python": "3.14.7",
+  "spec": "0041",
+  "tracked_changes": [
+   "specs/0041-targeted-redaction.md",
+   "specs/closure_findings.py",
+   "specs/reviews.py",
+   "tests/test_0005_import_boundary.py",
+   "tests/test_0041_import_contract.py",
+   "tests/test_0041_notice_binding_hotfix.py"
+  ]
+ },
+ "rows": [
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_7_the_default_path_reports_a_held_target_before_it_would_refuse",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_held_different_version_under_an_untrusted_notice_is_kept_and_reported",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_later_record_of_that_id_is_not_redacted_on_arrival",
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_for_an_absent_id_leaves_no_standing_row",
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_never_redacts_a_held_episode",
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_never_redacts_the_users_own_held_fact",
+    "tests/test_0041_notice_binding_hotfix.py::test_the_attest_only_branch_is_restore_only_on_a_default_import",
+    "tests/test_0041_notice_binding_hotfix.py::test_the_primitive_defaults_to_the_narrow_scope"
+   ],
+   "definition_sha256": "1917c633cb8c91286dbb464c6d7f9659021be9ae79f7e4890116e6b1b2fd6ae3",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-created",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "8 failed, 12 passed in 4.43s",
+   "what": "the default path's created-only gate removed: an untrusted notice redacts a HELD record and writes a standing row"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_7_the_default_path_reports_a_held_target_before_it_would_refuse",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_held_different_version_under_an_untrusted_notice_is_kept_and_reported",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_later_record_of_that_id_is_not_redacted_on_arrival",
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_for_an_absent_id_leaves_no_standing_row",
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_never_redacts_a_held_episode",
+    "tests/test_0041_notice_binding_hotfix.py::test_an_untrusted_notice_never_redacts_the_users_own_held_fact",
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_a_default_REDACTED_arrival_from_another_origin_is_refused_by_the_origin_check_alone",
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_a_default_arrival_from_another_origin_is_refused_whole",
+    "tests/test_0041_notice_binding_hotfix.py::test_the_attest_only_branch_is_restore_only_on_a_default_import"
+   ],
+   "definition_sha256": "371606ecb90c7becfaaf315ae16219331a52ad49e0129fc59fbea21fa937652d",
+   "file": "src/veracium/portability.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-scope",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "9 failed, 11 passed in 4.41s",
+   "what": "the import passes the restore scope on the default path: the shipped bare-id binding, through the caller"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_the_primitive_defaults_to_the_narrow_scope"
+   ],
+   "definition_sha256": "df8c853f593b69788139f989a3c99139a24adf99a5624c0344ad3b36e78a58ad",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-default",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "1 failed, 19 passed in 4.10s",
+   "what": "the primitive's default scope widened: a plan with no scope binds a notice to a bare id (fail-open)"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_7a_a_poisoned_export_default_imported_refuses_and_redacts_nothing",
+    "tests/test_0041_notice_binding_hotfix.py::test_7b_a_poisoned_export_restored_into_a_fresh_store_refuses_and_redacts_nothing",
+    "tests/test_0041_notice_binding_hotfix.py::test_7c_a_poisoned_store_restoring_its_own_export_refuses_and_keeps_the_fact",
+    "tests/test_0041_notice_binding_hotfix.py::test_a_notice_only_restore_onto_a_held_record_is_not_applied",
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_an_unredacted_arrival_under_a_standing_notice_refuses_even_on_restore"
+   ],
+   "definition_sha256": "c81e5417b5b50953c99bcebbfe4e74fe0d210ad10a75883375dfc15f74b7430a",
+   "file": "src/veracium/redaction.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-fixedpoint",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "5 failed, 15 passed in 4.26s",
+   "what": "every record 'shows' every redaction: a notice beside an unredacted record applies (case 7 destroys the fact)"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_a_notice_only_restore_onto_a_held_record_is_not_applied"
+   ],
+   "definition_sha256": "ed6a98cd2a85e58bc38700d0c22f71f25a8bb9a06b33e0a5c497fac6c33cb0d4",
+   "file": "src/veracium/portability.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-infile",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "1 failed, 19 passed in 4.14s",
+   "what": "a notice with no record in the file counts as shown: a notice-only restore redacts an unredacted held record"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_7a_a_poisoned_export_default_imported_refuses_and_redacts_nothing",
+    "tests/test_0041_notice_binding_hotfix.py::test_7b_a_poisoned_export_restored_into_a_fresh_store_refuses_and_redacts_nothing",
+    "tests/test_0041_notice_binding_hotfix.py::test_7c_a_poisoned_store_restoring_its_own_export_refuses_and_keeps_the_fact"
+   ],
+   "definition_sha256": "4efc7ef133ff2e72061b67663d044f6e74177c7b34d847ac19b0f823aa5c87f0",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-pair-refusal",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "3 failed, 17 passed in 4.17s",
+   "what": "a file pairing a notice with its record UNREDACTED is not refused (the poisoned export imports)"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_an_unredacted_arrival_under_a_standing_notice_refuses_even_on_restore"
+   ],
+   "definition_sha256": "24aa271154d59b0babbe817dc303665b47c50b27c6146bb9d8478213ece0854a",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-arrival-refusal",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "1 failed, 19 passed in 4.01s",
+   "what": "a standing notice completes on an UNREDACTED arrival: it removes content from a record arriving in a restore"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_7_the_default_path_reports_a_held_target_before_it_would_refuse",
+    "tests/test_0041_notice_binding_hotfix.py::test_i_a_legacy_standing_notice_never_refuses_the_users_own_write"
+   ],
+   "definition_sha256": "dea078946c4bd16d764bbe4eda3e1c0673a14fc5f73ea3052e79542c6cdca84d",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-arrival-created",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "2 failed, 18 passed in 4.28s",
+   "what": "a standing notice completes on ANY present record, not only one this import inserted (the user's own later write)"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_a_default_REDACTED_arrival_from_another_origin_is_refused_by_the_origin_check_alone",
+    "tests/test_0041_notice_binding_hotfix.py::test_ii_a_default_arrival_from_another_origin_is_refused_whole"
+   ],
+   "definition_sha256": "6826b256a2a5ce358f06a642cc994f2b5a6f91f3961bcc9e177befcb02d8ba8a",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-origin",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "2 failed, 18 passed in 4.06s",
+   "what": "on the default path a standing notice completes on a record from ANY origin (a third store's record redacted)"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_a_notice_only_restore_onto_a_held_record_is_not_applied"
+   ],
+   "definition_sha256": "4bd1d79f98f74404bfbbe3175202e2a8709a001a7f8b5a0cfed269dd8c3feb6b",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-attest-held",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "1 failed, 19 passed in 4.17s",
+   "what": "with no copy in the file, a notice applies to a HELD record that does not show the redaction (the primitive's own check, the only one a plan arriving by another route than the import has)"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_7_the_default_path_reports_a_held_target_before_it_would_refuse",
+    "tests/test_0041_notice_binding_hotfix.py::test_7a_a_poisoned_export_default_imported_refuses_and_redacts_nothing",
+    "tests/test_0041_notice_binding_hotfix.py::test_7b_a_poisoned_export_restored_into_a_fresh_store_refuses_and_redacts_nothing",
+    "tests/test_0041_notice_binding_hotfix.py::test_7c_a_poisoned_store_restoring_its_own_export_refuses_and_keeps_the_fact",
+    "tests/test_0041_notice_binding_hotfix.py::test_i_a_legacy_standing_notice_never_refuses_the_users_own_write"
+   ],
+   "definition_sha256": "25b9cf0e8a720ffaed9a27a9c2f2b5fc1acf004fc5cc6d48163aeb2eee36214e",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-writer-edge",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "5 failed, 15 passed in 4.63s",
+   "what": "a standing notice refuses the user's own edge write of its id again"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_i_a_legacy_standing_notice_never_refuses_the_users_own_episode_write"
+   ],
+   "definition_sha256": "ad9d9567acb19f057484a5c93fff7a88b4330674ca5b82a093ed963923d24edd",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-writer-episode",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "1 failed, 19 passed in 4.32s",
+   "what": "a standing notice refuses the user's own episode write of its id again"
+  },
+  {
+   "anchor_count": 1,
+   "cells": 20,
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0041_notice_binding_hotfix.py::test_i_a_legacy_standing_notice_never_refuses_the_users_own_episode_write",
+    "tests/test_0041_notice_binding_hotfix.py::test_i_a_legacy_standing_notice_never_refuses_the_users_own_write"
+   ],
+   "definition_sha256": "fc4e1cc67a8557fc7ddcd3f40da32ad3d2fcaf2bdb3f00cc46f088e7e23585e4",
+   "file": "src/veracium/store/sqlite.py",
+   "finding": "0041-PA1",
+   "good": true,
+   "honest": "pass",
+   "id": "PA1-readers",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "outcome": "KILLED",
+   "pytest": "2 failed, 18 passed in 4.21s",
+   "what": "a standing notice's id is in redacted_targets() again: the readers hide a record no notice reached"
+  }
+ ],
+ "summary": {
+  "good": 13,
+  "killed_by_assertion": 13,
+  "rows": 13,
+  "survived": 0
+ }
+}

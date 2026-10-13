@@ -144,7 +144,7 @@ def test_a_notice_before_its_record_is_a_standing_notice_and_the_record_is_redac
     assert any("standing redaction notice" in f.message for f in rep.findings)
     # A STANDING notice is not an attestation of anything this store holds (the 2026-10-13 notice-binding hotfix, the
     # owner's ruling): it is not in the readers' exclusion set and refuses no ordinary write of its id — that write
-    # being ADMITTED is pinned in test_0041_notice_binding_hotfix (an earlier release refused it here, standing or not)
+    # being ADMITTED is pinned in test_0041_notice_binding_hotfix (the earlier code refused it here, standing or not)
     dst = _mem(tmp_path, "dst.db"); st = dst.store
     assert "e-red" not in st.redacted_targets(U, "edge") and "ep-red" not in st.redacted_targets(U, "episode")
     # the records arrive: redacted ON ARRIVAL, the standing rows completed in place, one row per notice

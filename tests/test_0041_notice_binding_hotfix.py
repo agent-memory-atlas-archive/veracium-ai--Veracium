@@ -1,5 +1,6 @@
 """specs/0041 §4g — the notice-binding HOTFIX (internal finding 2026-10-13, the owner's rulings: fail closed, all three
-arms, including the standing notices earlier releases already wrote). Shipped 0041 bound an imported redaction notice
+arms, including the standing notices the earlier code already wrote). 0041 as implemented on main since 8ea59e7 (never
+in a release) bound an imported redaction notice
 to a bare target id, so an UNTRUSTED (default-mode) file carrying nothing but a notice could (1) permanently redact the
 destination user's OWN held fact, (2) leave a STANDING notice for an absent id that refused the user's own later write
 of it and listed it as redacted, and (3) redact a later record of that id on arrival. Found by the 0045–0047 round-4
@@ -8,7 +9,7 @@ probe_standing_notice.py).
 
 THE RULES. On the default path a notice is applied ONLY to a record THIS import inserts; every other notice is not
 applied, writes no standing row, and is reported in `notices_not_applied` as [kind, id] (`inconsistent_notices` keeps
-its meaning: a held version that WAS redacted). A standing notice — already written by an earlier release, or by a
+its meaning: a held version that WAS redacted). A standing notice — already written by the earlier code, or by a
 restore — (i) never refuses the user's own write of its id and is not in `redacted_targets()`; (ii) completes only on
 a record an import INSERTS, and on the default path only when that record's own resolved origin equals the notice's
 origin, byte for byte (a different origin refuses the import). A trusted restore (`restore=True`, the operator's own
@@ -186,9 +187,10 @@ def test_a_later_record_of_that_id_is_not_redacted_on_arrival(tmp_path):
     victim.close()
 
 
-# ----------------------------------------------- (i) and (ii): a standing notice an earlier release already wrote
+# --------------------------------------------- (i) and (ii): a standing notice the earlier code already wrote
 def _legacy_standing(tmp_path, store, edge_id):
-    """A standing notice exactly as v0.26.x's default import wrote it (its commit had no scope narrowing): through the
+    """A standing notice exactly as the earlier code's default import wrote it (main since 8ea59e7, never released; its
+    commit had no scope narrowing): through the
     primitive's restore scope, which is still the path that writes one. Returns that notice's origin."""
     _full, notices, _recs, origin = _export_cuts(tmp_path, f"legacy-{edge_id}", edge_id=edge_id)
     r = port.import_memory(store, notices, restore=True)
@@ -223,11 +225,26 @@ def test_i_a_legacy_standing_notice_never_refuses_the_users_own_episode_write(tm
 def test_ii_a_default_arrival_from_another_origin_is_refused_whole(tmp_path):
     victim = _mem(tmp_path, "victim.db")
     _legacy_standing(tmp_path, victim.store, "e-x")
-    with pytest.raises(ValueError, match="standing redaction notice from origin"):
+    with pytest.raises(ValueError, match="the record's own origin is not that origin"):
         port.import_memory(victim.store, _plain_export(tmp_path, "third", "e-x", "tea"))
     assert _row(victim.store, "edge", "e-x") is None                  # nothing written
     assert victim.store._conn.execute(
         "SELECT event_ref FROM redactions WHERE target_id='e-x'").fetchone()[0] is None   # still standing
+    victim.close()
+
+
+def test_ii_a_default_REDACTED_arrival_from_another_origin_is_refused_by_the_origin_check_alone(tmp_path):
+    """The origin check's own cell: store B's arrival of that id already SHOWS the redaction (B redacted its own copy),
+    so the fixed point is satisfied and only the origin decides — on the default path a notice from A reaches only A's
+    records, so the import refuses, naming the notice. (The untreated-arrival test above is refused by the fixed point
+    too, so it cannot tell whether the origin check runs.)"""
+    victim = _mem(tmp_path, "victim.db")
+    _legacy_standing(tmp_path, victim.store, "e-x")
+    _full, _n, b_records, _ob = _export_cuts(tmp_path, "b", edge_id="e-x", obj="B's own value")
+    with pytest.raises(ValueError, match="the record's own origin is not that origin"):
+        port.import_memory(victim.store, b_records)                    # DEFAULT
+    assert _row(victim.store, "edge", "e-x") is None
+    assert victim.store._conn.execute("SELECT event_ref FROM redactions WHERE target_id='e-x'").fetchone()[0] is None
     victim.close()
 
 
@@ -267,7 +284,7 @@ def test_ii_an_unredacted_arrival_under_a_standing_notice_refuses_even_on_restor
 
 # ------------------------------------- case 7 (research's probe of candidate 1): the hostile notice rides an export
 def _poisoned_export(tmp_path):
-    """A store an earlier release poisoned (a legacy standing notice for e-mine), whose user — now admitted by (i) —
+    """A store the earlier code poisoned (a legacy standing notice for e-mine), whose user — now admitted by (i) —
     writes their own e-mine, and exports: the file carries the hostile notice beside the user's UNTREATED fact."""
     v = _mem(tmp_path, "poisoned.db")
     _legacy_standing(tmp_path, v.store, "e-mine")
@@ -389,3 +406,18 @@ def test_the_attest_only_branch_is_restore_only_on_a_default_import(tmp_path):
     held.store.add_edge(Edge(id="e-own", user_id=U, subject="user", relation="lives_in", object="Porto", provenance=_prov()))
     assert _obj(held.store, "e-own") == "Porto"                        # still writable: nothing attested it
     held.close()
+
+
+def test_the_primitive_defaults_to_the_narrow_scope(tmp_path):
+    """A plan that names no `notice_scope` reaches the commit primitive by another route than the import: it gets the
+    NARROW scope (fail closed) — a notice for a record the commit did not insert is not applied and writes nothing."""
+    victim = _own_fact(tmp_path)
+    before = _row(victim.store, "edge", "e-own")
+    notice = {"origin": "o", "source_user": U, "source_event_ref": "u:1", "target_kind": "edge", "target_id": "e-own",
+              "fields": ["object"], "marker_version": 1, "reason": "subject_request", "_shown": True}
+    r = victim.store.commit_outcome_import_plan(U, {"edges": [], "episodes": [], "contributions": [], "redactions": [notice]},
+                                                {"edge_ids": {}, "episode_records": {}, "chain_heads": {},
+                                                 "contribution_state": {}})
+    assert r["notices_applied"] == 0 and r["notices_not_applied"] == [["edge", "e-own", "held-target"]]
+    assert _row(victim.store, "edge", "e-own") == before and _redaction_rows(victim.store, "e-own") == 0
+    victim.close()
