@@ -597,6 +597,25 @@ on files you exported yourself or have independently verified, record by
 record. `restore` must be a real bool and is mutually exclusive with
 `user_id` (a restore never remaps).
 
+**Redaction notices (specs/0041 §4g).** A file's redaction notices are applied in
+the same transaction as its records. On the default path a notice is applied
+**only to a record this import inserts**: a notice naming a record you already
+hold, or one you do not hold at all, is not applied, leaves no standing notice,
+and is listed in the result's `notices_not_applied` (`[kind, id, reason]`; the
+CLI prints the count). In both modes a notice applies only where the file
+**shows** the redaction — it carries the record already redacted — and a file
+that carries the record unredacted beside its notice is refused whole wherever
+that record would be admitted under the notice (a restore, or a default import
+that creates it), unless this store already holds that notice as applied. An untrusted file can therefore never redact data you hold —
+the cost is that a genuine redaction made by another store does not reach your
+existing copy of its record on this path. `restore=True` applies a notice to a
+held record when the file shows it redacted (or the held record already is), and
+keeps one for an absent record as a standing notice. A standing notice completes
+only on a record an import inserts that shows the redaction, and on the default
+path only when that record's own origin is the notice's; a different origin, or an
+unredacted arrival, refuses the import. It never refuses your own write of that
+id and is not in `redacted_targets()`.
+
 ### `close()`
 
 Close the underlying store.

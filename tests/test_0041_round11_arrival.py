@@ -91,6 +91,21 @@ def _files(tmp_path, eid="ep-1"):
     return combined, new, record_only
 
 
+def _attested_from_new(tmp_path, new, combined, restore=False):
+    """The 2026-10-13 notice-binding hotfix: a file pairing a notice with its record UNREDACTED refuses the whole
+    import, both modes — so `combined` can no longer CREATE the attestation; it is established from the genuine treated
+    export `new`, and `combined` is asserted to refuse on a fresh store, nothing written."""
+    fresh = tt._mem(tmp_path, f"fresh-{int(restore)}.db")
+    with pytest.raises(ValueError, match="UNREDACTED beside"):
+        import_memory(fresh.store, combined, restore=restore)
+    assert _ep(fresh.store, "ep-1") is None and _attestation(fresh.store) == []
+    fresh.close()
+    dst = tt._mem(tmp_path, "dst.db")
+    import_memory(dst.store, new, restore=restore)
+    assert _attestation(dst.store) and _ep(dst.store, "ep-1")["summary"] == R.MARKER
+    return dst
+
+
 def _assert_treated(st, eid):
     d = _ep(st, eid)
     assert d is not None and d["summary"] == R.MARKER and SECRET not in json.dumps(d)
@@ -104,9 +119,10 @@ def test_R10_02_public_import_cannot_repopulate_a_deleted_attested_episode(tmp_p
     """The verdict's named regression, as ACCEPTANCE: the pre-redaction record plus its genuine notice, re-imported
     after delete_episode, SUCCEEDS — written treated, the attestation untouched, no new redaction event, and the next
     receipt is the ORIGINAL, repeated."""
-    combined, _new, _r = _files(tmp_path)
-    dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, combined, restore=restore)
+    combined, new, _r = _files(tmp_path)
+    # (B) the R10-02 property is the RE-arrival under a completed attestation; `combined` was only the setup that
+    # created the attestation, and since the 2026-10-13 hotfix it refuses there — the attestation comes from `new`
+    dst = _attested_from_new(tmp_path, new, combined, restore)
     first = dst.redact(U, episode_id="ep-1", reason="subject_request")
     att0, ev0 = _attestation(dst.store), _redaction_events(dst.store)
     dst.store.delete_episode("ep-1")
@@ -154,9 +170,9 @@ def test_an_honest_full_backup_of_several_redacted_episodes_restores_after_one_i
 
 @pytest.mark.parametrize("restore", [False, True])
 def test_control_re_arrival_without_a_notice_still_refuses(tmp_path, restore):
-    combined, _new, record_only = _files(tmp_path)
-    dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, combined, restore=restore)
+    combined, new, record_only = _files(tmp_path)
+    # (B) the refusal of a re-arrival with no notice; the attestation is set up from `new` (the 2026-10-13 hotfix)
+    dst = _attested_from_new(tmp_path, new, combined, restore)
     dst.store.delete_episode("ep-1")
     with pytest.raises(ValueError, match="redacted here"):
         import_memory(dst.store, record_only, restore=restore)
@@ -164,9 +180,9 @@ def test_control_re_arrival_without_a_notice_still_refuses(tmp_path, restore):
 
 
 def test_control_an_ordinary_write_of_the_deleted_attested_episode_is_refused(tmp_path):
-    combined, _new, _r = _files(tmp_path)
-    dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, combined)
+    combined, new, _r = _files(tmp_path)
+    # (B) INV-11 on an ordinary write; the attestation is set up from `new` (the 2026-10-13 hotfix)
+    dst = _attested_from_new(tmp_path, new, combined)
     dst.store.delete_episode("ep-1")
     with pytest.raises(ValueError, match="redacted"):
         dst.store.add_episode(Episode(id="ep-1", user_id=U, date="2026-10-01", summary=SECRET, provenance=tt._prov()))
@@ -175,8 +191,8 @@ def test_control_an_ordinary_write_of_the_deleted_attested_episode_is_refused(tm
 
 def test_notice_only_after_the_delete_inserts_nothing(tmp_path):
     combined, new, _r = _files(tmp_path)
-    dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, combined)
+    # (B) a held notice met again with no record: existing, nothing inserted; the attestation is set up from `new`
+    dst = _attested_from_new(tmp_path, new, combined)
     dst.store.delete_episode("ep-1")
     r = import_memory(dst.store, _write(tmp_path / "n.jsonl", _head(_lines(new)) + _notices(_lines(new))))
     assert r["notices_existing"] == 1 and _ep(dst.store, "ep-1") is None
@@ -186,9 +202,9 @@ def test_notice_only_after_the_delete_inserts_nothing(tmp_path):
 
 def test_the_doctor_reads_a_deleted_attested_episode_as_information(tmp_path):
     from veracium import doctor as doc
-    combined, _new, _r = _files(tmp_path)
-    dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, combined)
+    combined, new, _r = _files(tmp_path)
+    # (B) the doctor's reading; the attestation is set up from `new` (the 2026-10-13 hotfix)
+    dst = _attested_from_new(tmp_path, new, combined)
     dst.store.delete_episode("ep-1")
     dst.close()
     rep = doc.diagnose(str(tmp_path / "dst.db"))

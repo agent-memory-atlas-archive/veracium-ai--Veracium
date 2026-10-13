@@ -44,6 +44,7 @@ from .schema import (DEFAULT_RELATIONS, Disclosure, Edge, Episode, EvidenceAutho
 from .scope_linkage import (derive_absorbed_by, plan_row_id,
                             reconstruct_absorption_rows)
 from .source_identity import resolve_origin
+from . import redaction as _redaction
 from .store.base import DESTINATION_CHANGED, NON_QUIESCENT
 from .census import declare_site
 
@@ -119,7 +120,8 @@ _RESTORE_WARNING = (
     "import refused: existing records differ from the capped incoming form. "
     "If - and only if - this file is your own store's export, --restore "
     "imports it with trust preserved. --restore trusts every record in the "
-    "file exactly as written; use it only on a file you exported yourself or "
+    "file exactly as written, and applies its redaction notices to the records "
+    "you hold; use it only on a file you exported yourself or "
     "have independently verified, record by record (specs/0005 §4d)")
 
 
@@ -292,7 +294,10 @@ def held_differs_verdict(attested_complete: bool, noticed: bool) -> str:
         boundary);
       • the file's notice names it → "inconsistent": content-derived divergence is no ground to keep content the
         source says was redacted — the held version is redacted anyway (the notice applies in the commit), the
-        incoming copy is not written, and the import flags it in `inconsistent_notices`;
+        incoming copy is not written, and the import flags it in `inconsistent_notices` — on a RESTORE; on the
+        default path (the 2026-10-13 notice-binding hotfix) the notice names a record this import did not insert, so
+        it is NOT applied: the held version is kept, the incoming copy is still not written, and the target is
+        reported in `notices_not_applied` instead;
       • otherwise → "conflict", refused with the branch's own message and census label.
     Pure: the caller fires the refusal, so each census id stays in the one function that declares it."""
     if attested_complete and not noticed:
@@ -784,6 +789,16 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         for n in notice_list:
             n["target_id"] = _remap(n["target_id"])
         notice_targets = {(n["target_kind"], n["target_id"]) for n in notice_list}
+        # the 2026-10-13 notice-binding hotfix (the owner's ruling, BOTH modes): the file must SHOW the redaction it
+        # claims — a notice may apply only to a record this file carries, already in the notice's treated shape. Flagged
+        # here, against the file's own copy, before the 0014 rider rebinds a notice to a held output; the commit applies
+        # no notice that is not flagged shown.
+        _file_recs = {("edge", r.get("id")): r for r in edge_recs}
+        _file_recs.update({("episode", r.get("id")): r for r in ep_recs})
+        for n in notice_list:
+            rec = _file_recs.get((n["target_kind"], n["target_id"]))
+            n["_shown"] = rec is not None and _redaction.shows_redaction(n["target_kind"], rec, n["fields"])
+            n["_unshown"] = None if n["_shown"] else ("record-not-in-file" if rec is None else "record-untreated")
 
         # (2a) specs/0020 §4a-iii — PRE-COMMIT absorption reconstruction over the
         # linkage snapshot: structured `absorbed_by_id` first (the FORMAT-7 rider
@@ -1165,8 +1180,10 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                                             capped_path=not restore, notices=notice_list)
             if outcome is not DESTINATION_CHANGED:
                 if redaction_arrivals:                 # the rider's arrivals: the held output treated, flagged (§4g)
+                    _na = {(x[0], x[1]) for x in outcome.get("notices_not_applied", [])}
+                    treated = {i for i in redaction_arrivals if ("episode", i) not in _na}   # only where it WAS applied
                     outcome = {**outcome, "inconsistent_notices": sorted(set(outcome.get("inconsistent_notices", []))
-                                                                         | set(redaction_arrivals))}
+                                                                         | treated)}
                 return {**outcome, "capped": capped_count,
                         # specs/0041 §4g: what the notices did, and the tombstones that came without one
                         "unattested_markers": unattested_markers,
@@ -1222,7 +1239,7 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                             f"carries no notice for it — an import may not repopulate it (specs/0041 §4b-ii, INV-11; §4g)"), "attested-redaction")
                     if _v == "conflict":
                         raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: edge {edge.id!r} already exists with different content — refuse (specs/0009 §4c){_tail}"), "edge-conflict")
-                    inconsistent.append(edge.id)                     # "inconsistent": skip, the notice treats the held version
+                    inconsistent.append(("edge", edge.id))           # "inconsistent": skip, the notice treats the held version
                 skipped += 1
                 edge_ids_expected[edge.id] = True
             else:
@@ -1252,7 +1269,7 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                             f"carries no notice for it — an import may not repopulate it (specs/0041 §4b-ii, INV-11; §4g)"), "attested-redaction")
                     if _v == "conflict":
                         raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: episode {ep.id!r} already exists with different content — refuse (specs/0009 §4c){_tail}"), "episode-conflict")
-                    inconsistent.append(ep.id)                     # "inconsistent": skip, the notice treats the held version
+                    inconsistent.append(("episode", ep.id))        # "inconsistent": skip, the notice treats the held version
                 skipped += 1
             else:
                 plan_eps.append(ep)
@@ -1288,7 +1305,7 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                                 f"carries no notice for it — an import may not repopulate it (specs/0041 §4b-ii, INV-11; §4g)"), "attested-redaction")
                         if _v == "conflict":
                             raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(f"{path}: outcome link {m.id!r} already exists with different content — refuse the whole import (specs/0009 §4c){_tail}"), "outcome-link-conflict")
-                        inconsistent.append(m.id)                     # "inconsistent": skip, the notice treats the held version
+                        inconsistent.append(("episode", m.id))        # "inconsistent": skip, the notice treats the held version
                     skipped += 1
                 else:
                     new_members.append(m)
@@ -1323,7 +1340,10 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
             contribution_state[sid] = sorted(current)
 
         plan = {"edges": plan_edges, "episodes": plan_eps,
-                "contributions": contrib_rows, "redactions": notices}
+                "contributions": contrib_rows, "redactions": notices,
+                # the notice-binding hotfix (2026-10-13): only a trusted restore lets a notice reach a held or absent
+                # record; on the default path it binds to a record this import inserts, or is reported, never applied
+                "notice_scope": "created" if capped_path else "any"}
         expected = {"edge_ids": edge_ids_expected,
                     "episode_records": ep_records_expected,
                     "chain_heads": chain_heads_expected,
@@ -1338,4 +1358,9 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                 "notices_applied": result.get("notices_applied", 0),
                 "notices_standing": result.get("notices_standing", 0),
                 "notices_existing": result.get("notices_existing", 0),
-                "inconsistent_notices": sorted(inconsistent)}
+                # the 2026-10-13 notice-binding hotfix: `inconsistent_notices` keeps its meaning (the held version WAS
+                # redacted), so a target whose notice the default path did not apply is not in it; those are in
+                # `notices_not_applied` ([kind, id]): named no record this import inserted — never applied, never standing
+                "inconsistent_notices": sorted({i for k, i in inconsistent
+                                                if (k, i) not in {(x[0], x[1]) for x in result.get("notices_not_applied", [])}}),
+                "notices_not_applied": result.get("notices_not_applied", [])}

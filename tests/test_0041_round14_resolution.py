@@ -71,6 +71,24 @@ def _setup(tmp_path, restore):
     return dst, a, b
 
 
+# the 2026-10-13 notice-binding hotfix's report and its two direct checks: a default-path notice that is not applied
+# is listed in `notices_not_applied` as [kind, id] (never in `inconsistent_notices`, which keeps "the held version was
+# redacted anyway", a restore-only outcome now); the held bytes are compared on the WHOLE json; rows are counted directly
+def _not_applied(r, kind, tid):
+    return [kind, tid] in [list(x)[:2] for x in r["notices_not_applied"]] and tid not in r["inconsistent_notices"]
+
+
+def _held_json(st, kind, tid):
+    row = st._conn.execute(f"SELECT json FROM {'edges' if kind == 'edge' else 'episodes'} WHERE id=?", (tid,)).fetchone()
+    return row[0] if row else None
+
+
+def _redaction_rows(st, tid=None):
+    if tid is None:
+        return st._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0]
+    return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
+
+
 def _summary(dst, eid):
     (j,) = dst.store._conn.execute("SELECT json FROM episodes WHERE id=?", (eid,)).fetchone()
     return json.loads(j, object_pairs_hook=_strict_pairs)["summary"]
@@ -144,12 +162,20 @@ def test_control_permuted_ids_with_BOTH_notices_treat_both_held_outputs(tmp_path
     notices' source identities included) equal, `recorded_at` alone excepted. A relabelled copy is resolved, never
     refused merely for being relabelled."""
     dst, a, b = _setup(tmp_path, restore)
+    held = {x: _held_json(dst.store, "episode", x) for x in (a, b)}
     twin = tt._mem(tmp_path, "twin.db"); import_memory(twin.store, tmp_path / "before.jsonl", restore=restore)
     want = import_memory(twin.store, tmp_path / "after.jsonl", restore=restore)
     got = import_memory(dst.store, _write(tmp_path / "p.jsonl", _permute(_lines(tmp_path / "after.jsonl"), a, b, keep_a_notice=True)),
                         restore=restore)
-    assert got == want and got["notices_applied"] == 2 and got["unattested_markers"] == []
-    assert _state(dst.store) == _state(twin.store)
+    assert got == want and _state(dst.store) == _state(twin.store)       # relabelled == unrelabelled, in both modes
+    if not restore:
+        # (A) attack-shaped on the default path: notices reaching HELD outputs are what the 2026-10-13 notice-binding
+        # hotfix closes — neither held output treated, nothing attested, no row, both targets reported
+        assert {x: _held_json(dst.store, "episode", x) for x in (a, b)} == held and _redaction_rows(dst.store) == 0
+        assert not any(dst.store._attested_fields(U, "episode", x) for x in (a, b)) and got["notices_applied"] == 0
+        assert _not_applied(got, "episode", a) and _not_applied(got, "episode", b)
+        return
+    assert got["notices_applied"] == 2 and got["unattested_markers"] == []
     assert _summary(dst, a) == R.MARKER and _summary(dst, b) == R.MARKER
     fa, fb = dst.store._attested_fields(U, "episode", a), dst.store._attested_fields(U, "episode", b)
     assert "summary" in fa and fa == fb
@@ -162,10 +188,23 @@ def test_control_a_notice_naming_a_held_target_with_no_arrival_applies_to_it(tmp
     """A's arrival is absent from the unit; A's notice names held `a` directly; B arrives with its own notice."""
     dst, a, b = _setup(tmp_path, restore)
     recs = [r for r in _lines(tmp_path / "after.jsonl") if not (r.get("lineage") and r.get("id") == a)]
+    held = {x: _held_json(dst.store, "episode", x) for x in (a, b)}
     r = import_memory(dst.store, _write(tmp_path / "h.jsonl", recs), restore=restore)
-    assert _summary(dst, a) == R.MARKER and _summary(dst, b) == R.MARKER
-    assert r["notices_applied"] == 2 and r["unattested_markers"] == []
-    assert all("summary" in dst.store._attested_fields(U, "episode", x) for x in (a, b))
+    if not restore:
+        # (A) attack-shaped on the default path: A's notice naming the HELD output directly, and B's rebound onto its
+        # held output, are what the 2026-10-13 notice-binding hotfix closes — neither applied, both held byte-identical
+        assert {x: _held_json(dst.store, "episode", x) for x in (a, b)} == held and _redaction_rows(dst.store) == 0
+        assert not any(dst.store._attested_fields(U, "episode", x) for x in (a, b)) and r["notices_applied"] == 0
+        assert _not_applied(r, "episode", a) and _not_applied(r, "episode", b)
+        return
+    # (A) the restore leg's property WAS application to the untreated held `a` from a notice with no copy in the file;
+    # the hotfix's fixed-point rule (both modes) closes exactly that — `a` not applied, reported record-not-in-file,
+    # held byte-identical — while `b`, whose treated arrival is in the file, still resolves and applies
+    assert _held_json(dst.store, "episode", a) == held[a] and _summary(dst, a) != R.MARKER
+    assert not dst.store._attested_fields(U, "episode", a) and _redaction_rows(dst.store, a) == 0
+    assert ["episode", a, "record-not-in-file"] in [list(x) for x in r["notices_not_applied"]]
+    assert _summary(dst, b) == R.MARKER and "summary" in dst.store._attested_fields(U, "episode", b)
+    assert r["notices_applied"] == 1 and r["unattested_markers"] == []
 
 
 def test_control_a_repeated_user_remap_binds_both_notices_to_the_surviving_copies(tmp_path):

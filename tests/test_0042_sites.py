@@ -1182,8 +1182,10 @@ _EMPTY_EXPECT = {"edge_ids": {}, "episode_records": {}, "chain_heads": {}, "cont
 def _standing_notice_held():
     # 0041 round 10 (R9-04): a notice committed once (its target absent here, so it stands) under one source identity
     s = _store()
-    s.commit_outcome_import_plan(U, {"edges": [], "episodes": [], "contributions": [], "redactions": [dict(_NOTICE)]},
-                                 dict(_EMPTY_EXPECT))
+    # a STANDING notice is a trusted-restore state since the 2026-10-13 notice-binding hotfix: the default scope binds
+    # a notice only to a record the commit inserts, so the fixture names the restore scope
+    s.commit_outcome_import_plan(U, {"edges": [], "episodes": [], "contributions": [], "redactions": [dict(_NOTICE)],
+                                     "notice_scope": "any"}, dict(_EMPTY_EXPECT))
     return (s,)
 
 
@@ -1194,9 +1196,33 @@ def _contradictory_notice(s):
     s.close()
 
 
+def _origin_mismatched_arrival(s):
+    # the 2026-10-13 notice-binding hotfix: the standing notice (origin "o", target "absent") meets a DEFAULT-scope
+    # arrival of that id whose own origin is this store's — not the notice's — so the import refuses whole
+    e = _edge("absent")
+    with pytest.raises(ValueError, match="standing redaction notice from origin"):
+        s.commit_outcome_import_plan(U, {"edges": [e], "episodes": [], "contributions": [], "redactions": []},
+                                     dict(_EMPTY_EXPECT, edge_ids={"absent": False}))
+    s.close()
+
+
+def _unredacted_arrival_on_restore_scope(s):
+    # the 2026-10-13 hotfix: the standing notice's record ARRIVES (restore scope, so no origin check) carrying its
+    # content — a record that does not show the redaction under a notice for it refuses the import whole
+    e = _edge("absent")
+    with pytest.raises(ValueError, match="arrives UNREDACTED under a standing redaction notice"):
+        s.commit_outcome_import_plan(U, {"edges": [e], "episodes": [], "contributions": [], "redactions": [],
+                                         "notice_scope": "any"}, dict(_EMPTY_EXPECT, edge_ids={"absent": False}))
+    s.close()
+
+
 DECLINES.update({
     "store.import.attested-redaction": TwoPhase(lambda mp: _redacted_then_plan(), lambda st: _import_plan_repopulates(*st)),
     "store.import.notice-body-conflict": TwoPhase(lambda mp: _standing_notice_held(), lambda st: _contradictory_notice(*st)),
+    "store.import.standing-notice-origin-mismatch": TwoPhase(lambda mp: _standing_notice_held(),
+                                                             lambda st: _origin_mismatched_arrival(*st)),
+    "store.import.notice-record-unredacted": TwoPhase(lambda mp: _standing_notice_held(),
+                                                      lambda st: _unredacted_arrival_on_restore_scope(*st)),
 })
 
 

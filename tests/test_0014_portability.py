@@ -366,11 +366,25 @@ def _rider_edit(path, tmp_path, *, output=None, drop_notice=False):
 
 def test_rider_a_named_field_at_the_marker_WITH_the_notice_resolves_and_treats_the_held_output(tmp_path):
     before, after = _rider_files(tmp_path)
-    dst = _rider_held(tmp_path, before)
+    # (A) the rider treating a HELD output is, since the 2026-10-13 notice-binding hotfix, a trusted restore's: the
+    # resolution property is asserted under restore=True, unchanged ...
+    dst = _rider_memory(tmp_path, f"rider-dst-{uuid.uuid4().hex[:6]}.db")
+    P.import_memory(dst.store, before, restore=True)            # held in the restore shape: the arrival's projection
     (held,) = [e for e in dst.store.episodes("u") if e.lineage]
-    P.import_memory(dst.store, after)
+    P.import_memory(dst.store, after, restore=True)
     (now,) = [e for e in dst.store.episodes("u") if e.lineage]
     assert now.id == held.id and "RIDER-SECRET" not in now.summary
+    # ... and on the default path the held output is kept, the arrival still not installed, the target reported
+    dflt = _rider_held(tmp_path, before)
+    (held_d,) = [e for e in dflt.store.episodes("u") if e.lineage]
+    sql_json = lambda st, i: st._conn.execute("SELECT json FROM episodes WHERE id=?", (i,)).fetchone()[0]
+    held_bytes = sql_json(dflt.store, held_d.id)
+    r = P.import_memory(dflt.store, after)
+    (now_d,) = [e for e in dflt.store.episodes("u") if e.lineage]
+    assert now_d.id == held_d.id and sql_json(dflt.store, held_d.id) == held_bytes and "RIDER-SECRET" in now_d.summary
+    assert dflt.store._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0] == 0 and r["notices_applied"] == 0
+    assert ["episode", held_d.id] in [list(x)[:2] for x in r["notices_not_applied"]]
+    assert held_d.id not in r["inconsistent_notices"]                 # that key keeps "redacted anyway" (restore only)
 
 
 def test_rider_the_same_difference_WITHOUT_the_notice_rejects(tmp_path):

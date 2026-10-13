@@ -207,6 +207,24 @@ def already_treated(kind: str, dump: dict) -> list:
     return out
 
 
+# bookkeeping paths an attestation may name that are not a record's content carriers (§4h(i), the journal tombstone)
+_NOT_RECORD_CARRIERS = frozenset({"journal.state", "provenance.disclosure"})
+
+
+def shows_redaction(kind: str, dump: dict, fields) -> bool:
+    """The 2026-10-13 notice-binding hotfix (the owner's ruling, both import modes): a record SHOWS the redaction a
+    notice claims when the treatment would change NONE of the record carriers the notice names — each is already at its
+    treated value, or absent. A genuine export carries a redacted record in exactly that shape; a notice beside an
+    untreated record (an earlier release's hostile standing notice exported next to the user's own fact) does not.
+    Bookkeeping and side-table paths are not record carriers and are not tested. Pure."""
+    from .schema import DISPOSITIONED_REASONS
+    if kind == "edge":
+        _new, would = treat_edge(dump, reason_registry=DISPOSITIONED_REASONS)
+    else:
+        _new, would = treat_episode(dump, reason_registry=DISPOSITIONED_REASONS, recognised_kinds=RECOGNISED_EPISODE_KINDS)
+    return not ((set(would) & set(fields)) - _NOT_RECORD_CARRIERS)
+
+
 def treat_episode(dump: dict, *, reason_registry, recognised_kinds) -> tuple:
     """The episode's carriers (rows 39-52): summary REPLACE; kind PRESERVE-if-recognised else REPLACE (row 46,
     v6); retired_reason THREE-CASE (row 49, v11 — `None` stays `None` and the episode stays ACTIVE)."""

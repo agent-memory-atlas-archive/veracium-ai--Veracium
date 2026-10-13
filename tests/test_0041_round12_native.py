@@ -88,7 +88,10 @@ def test_the_stores_own_event_relayed_back_honestly_is_existing_not_a_second_row
     """The class sweep's C2: the same body, the same bound target as the native row — one row stays one."""
     m, recs = _own(tmp_path)
     other = tt._mem(tmp_path, "other.db")
-    import_memory(other.store, _write(tmp_path / "n.jsonl", _head(recs) + _notices(recs)))
+    # (B) the C2 identity property, independent of trust: `other` must HOLD the notice standing to relay it, and a
+    # standing notice is a trusted restore's state since the 2026-10-13 notice-binding hotfix; the relay back into
+    # the native store stays on the default path (its own event, matched before any binding: existing)
+    import_memory(other.store, _write(tmp_path / "n.jsonl", _head(recs) + _notices(recs)), restore=True)
     relay = tmp_path / "relay.jsonl"
     export_memory(other.store, U, relay)
     before = _rows(m.store)
@@ -127,7 +130,10 @@ def test_control_the_stores_own_export_re_imported_is_existing(tmp_path):
 def test_control_a_witnessed_contradiction_still_refuses(tmp_path):
     _m, recs = _own(tmp_path)
     dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, _write(tmp_path / "n.jsonl", _head(recs) + _notices(recs)))
+    # (B) body integrity of a WITNESSED row, independent of trust: the default path holds a notice only for a record
+    # the import inserts (the 2026-10-13 notice-binding hotfix), so the witnessed row is made by the full export
+    import_memory(dst.store, _write(tmp_path / "all.jsonl", recs))
+    assert _rows(dst.store)                                           # the witnessed row exists to be contradicted
     with pytest.raises(ValueError, match="different body"):
         import_memory(dst.store, _write(tmp_path / "c.jsonl", _head(recs) + [dict(_notices(recs)[0], reason="operator_policy")]))
 

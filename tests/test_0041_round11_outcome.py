@@ -30,6 +30,24 @@ U = "u"
 SECRET = "SECRET-OUTCOME-R11"
 
 
+# the 2026-10-13 notice-binding hotfix's report and its two direct checks: a default-path notice that is not applied
+# is listed in `notices_not_applied` as [kind, id] (never in `inconsistent_notices`, which keeps "the held version was
+# redacted anyway", a restore-only outcome now); the held bytes are compared on the WHOLE json; rows are counted directly
+def _not_applied(r, kind, tid):
+    return [kind, tid] in [list(x)[:2] for x in r["notices_not_applied"]] and tid not in r["inconsistent_notices"]
+
+
+def _held_json(st, kind, tid):
+    row = st._conn.execute(f"SELECT json FROM {'edges' if kind == 'edge' else 'episodes'} WHERE id=?", (tid,)).fetchone()
+    return row[0] if row else None
+
+
+def _redaction_rows(st, tid=None):
+    if tid is None:
+        return st._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0]
+    return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
+
+
 def _strict(pairs):
     out = {}
     for k, v in pairs:
@@ -98,7 +116,15 @@ def test_R10_01_full_export_applies_notice_to_held_outcome(tmp_path, restore):
     dst = tt._mem(tmp_path, "dst.db")
     import_memory(dst.store, p1, restore=restore)
     assert SECRET in _summary(dst.store, tid)
+    held = _held_json(dst.store, "episode", tid)
     r = import_memory(dst.store, p2, restore=restore)
+    if not restore:
+        # (A) attack-shaped on the default path: a notice reaching a HELD record is what the 2026-10-13 notice-binding
+        # hotfix closes — not applied, the held bytes unchanged, nothing attested, no row, reported as not applied
+        assert _held_json(dst.store, "episode", tid) == held and _redaction_rows(dst.store, tid) == 0
+        assert not dst.store._attested_fields(U, "episode", tid) and r["notices_applied"] == 0
+        assert _not_applied(r, "episode", tid)
+        return
     assert SECRET not in _summary(dst.store, tid)
     assert dst.store._attested_fields(U, "episode", tid) and r["notices_applied"] == 1 and tid in r["inconsistent_notices"]
 

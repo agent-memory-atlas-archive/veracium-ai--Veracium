@@ -123,15 +123,31 @@ report("R1-03 prefix written before the refusal", raised is not None and after !
        f"order {order}; raised {raised}; before {before} after {after}")
 
 # --- R1-04: five confidence-writing model_copy sites, one of them episode provenance ------------------------------
-sites = []
+# Each site is named by its ENCLOSING FUNCTION, not its line (2026-10-13: the check named sqlite.py:2454, so an edit
+# above that line in an unrelated change read as "not reproduced"); lines are printed for the reader only.
+sites, where = [], []
 for p in sorted((PIN / "src").rglob("*.py")):
-    for n in ast.walk(ast.parse(p.read_text())):
+    tree = ast.parse(p.read_text())
+    owner = {}
+    for c in ast.walk(tree):
+        if isinstance(c, ast.ClassDef):
+            for f in c.body:
+                if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    for x in ast.walk(f):
+                        owner[id(x)] = f"{c.name}.{f.name}"
+    for f in ast.walk(tree):
+        if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for x in ast.walk(f):
+                owner.setdefault(id(x), f.name)
+    for n in ast.walk(tree):
         if (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == "model_copy"
                 and any(k.arg == "update" and isinstance(k.value, ast.Dict)
                         and any(isinstance(x, ast.Constant) and x.value == "confidence" for x in k.value.keys)
                         for k in n.keywords)):
             sites.append(f"{p.relative_to(PIN)}:{n.lineno}")
-report("R1-04 census", len(sites) == 5 and "src/veracium/store/sqlite.py:2454" in sites, f"{len(sites)} sites {sites}")
+            where.append(f"{p.relative_to(PIN)}:{owner.get(id(n), '<module>')}")
+report("R1-04 census", len(sites) == 5 and "src/veracium/store/sqlite.py:SqliteStore._derive_output_metadata" in where,
+       f"{len(sites)} sites {sites} in {sorted(where)}")
 st, path = fresh()
 bad = Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref="x", observed_at=OLD).model_copy(
     update={"confidence": 1.8})

@@ -57,6 +57,24 @@ def _notices(recs):
     return [r for r in recs if r.get("record") == "redaction"]
 
 
+# the 2026-10-13 notice-binding hotfix's report and its two direct checks: a default-path notice that is not applied
+# is listed in `notices_not_applied` as [kind, id] (never in `inconsistent_notices`, which keeps "the held version was
+# redacted anyway", a restore-only outcome now); the held bytes are compared on the WHOLE json; rows are counted directly
+def _not_applied(r, kind, tid):
+    return [kind, tid] in [list(x)[:2] for x in r["notices_not_applied"]] and tid not in r["inconsistent_notices"]
+
+
+def _held_json(st, kind, tid):
+    row = st._conn.execute(f"SELECT json FROM {'edges' if kind == 'edge' else 'episodes'} WHERE id=?", (tid,)).fetchone()
+    return row[0] if row else None
+
+
+def _redaction_rows(st, tid=None):
+    if tid is None:
+        return st._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0]
+    return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
+
+
 def _edge_store(tmp_path, name="src.db"):
     m = tt._mem(tmp_path, name)
     m.store.add_edge(Edge(id="e-x", user_id=U, subject="user", relation="lives_at", object=SECRET, provenance=tt._prov()))
@@ -124,7 +142,9 @@ def test_control_a_genuine_imported_notice_keeps_the_sources_facts(tmp_path):
     export_memory(m.store, U, p)
     (n,) = _notices(_lines(p))
     dst = _edge_store(tmp_path, "dst.db")
-    import_memory(dst.store, p)
+    # (B) the witnessed receipt keeping the source's facts is a property of an APPLIED notice, independent of trust;
+    # the default path no longer applies a notice to a held record (the 2026-10-13 notice-binding hotfix)
+    import_memory(dst.store, p, restore=True)
     rec = dst.redact(U, edge_id="e-x", reason="subject_request")        # the repeat returns the attestation's receipt
     assert rec.repeated and rec.reconstructed is True and rec.reason == "legal_obligation"
     assert rec.event_ref == n["source_event_ref"] and rec.recorded_at == n["recorded_at"]
@@ -145,7 +165,26 @@ def test_R10_04_a_hand_built_notice_claiming_this_stores_own_identity_still_read
     dst = _edge_store(tmp_path, "dst.db")
     (n0,) = _notices(recs)
     forged = dict(n0, origin=dst.store.local_origin(), source_user=U, source_event_ref=f"{U}:1")
-    import_memory(dst.store, _write(tmp_path / "f.jsonl", _head(recs) + [forged]))
+    ffile = _write(tmp_path / "f.jsonl", _head(recs) + [forged])
+    # (A) a hand-built notice over the destination's HELD record: on the default path the 2026-10-13 notice-binding
+    # hotfix applies nothing at all — no row, the content kept, the target reported ...
+    dflt = _edge_store(tmp_path, "dflt.db")
+    held = _held_json(dflt.store, "edge", "e-x")
+    r = import_memory(dflt.store, ffile)
+    assert _redaction_rows(dflt.store) == 0 and _held_json(dflt.store, "edge", "e-x") == held
+    assert r["notices_applied"] == 0 and _not_applied(r, "edge", "e-x")
+    # ... a notice-only file on a trusted restore no longer applies to an UNTREATED held record either (the hotfix's
+    # fixed-point rule, both modes): not applied, reported record-not-in-file, the held bytes unchanged ...
+    rst = _edge_store(tmp_path, "rst.db")
+    held_r = _held_json(rst.store, "edge", "e-x")
+    rr = import_memory(rst.store, ffile, restore=True)
+    assert _redaction_rows(rst.store) == 0 and _held_json(rst.store, "edge", "e-x") == held_r
+    assert rr["notices_applied"] == 0 and ["edge", "e-x", "record-not-in-file"] in [list(x) for x in rr["notices_not_applied"]]
+    # ... and the provenance property — a forged notice that DOES apply still reads as witnessed — is held where it can
+    # apply: a trusted restore whose file SHOWS the redaction (the record beside it, in its treated shape), unchanged
+    (treated,) = [x for x in recs if x.get("record") == "edge" and x.get("id") == "e-x"]
+    assert treated["object"] == R.MARKER                               # the source's export carries it treated
+    import_memory(dst.store, _write(tmp_path / "ft.jsonl", _head(recs) + [treated, forged]), restore=True)
     held = dst.store._conn.execute("SELECT source_origin, source_user, source_event_ref FROM redactions").fetchone()
     assert held == (dst.store.local_origin(), U, f"{U}:1")
     rec = dst.redact(U, edge_id="e-x", reason="subject_request")
@@ -168,8 +207,23 @@ def test_R10_04_a_hand_built_notice_cannot_clear_its_own_provenance(tmp_path, ex
     recs = _lines(p)
     (n0,) = _notices(recs)
     dst = _edge_store(tmp_path, "dst.db")
+    hfile = _write(tmp_path / "f.jsonl", _head(recs) + [dict(n0, **extra)])
+    # (A) a hand-built notice over the destination's HELD record: on the default path the 2026-10-13 notice-binding
+    # hotfix applies nothing — refused, or reported — and never writes a row ...
+    dflt = _edge_store(tmp_path, "dflt.db")
+    held = _held_json(dflt.store, "edge", "e-x")
     try:
-        import_memory(dst.store, _write(tmp_path / "f.jsonl", _head(recs) + [dict(n0, **extra)]))
+        r = import_memory(dflt.store, hfile)
+        assert r["notices_applied"] == 0 and _not_applied(r, "edge", "e-x")
+    except ValueError:
+        pass
+    assert _redaction_rows(dflt.store) == 0 and _held_json(dflt.store, "edge", "e-x") == held
+    # ... and the provenance property is held under a trusted restore whose file SHOWS the redaction (the record beside
+    # the notice in its treated shape — the hotfix's fixed-point rule, both modes), where such a notice can apply
+    (treated,) = [x for x in recs if x.get("record") == "edge" and x.get("id") == "e-x"]
+    assert treated["object"] == R.MARKER
+    try:
+        import_memory(dst.store, _write(tmp_path / "ft.jsonl", _head(recs) + [treated, dict(n0, **extra)]), restore=True)
     except ValueError:
         assert dst.store._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0] == 0
         return
@@ -204,7 +258,9 @@ def test_the_doctor_calls_a_notice_standing_by_its_missing_event_and_never_a_loc
     export_memory(src.store, U, p)
     recs = _lines(p)
     dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, _write(tmp_path / "n.jsonl", _head(recs) + _notices(recs)))     # standing
+    # (B) the doctor's wording, independent of trust: a STANDING notice is a trusted restore's state since the
+    # 2026-10-13 notice-binding hotfix (the default path writes none)
+    import_memory(dst.store, _write(tmp_path / "n.jsonl", _head(recs) + _notices(recs)), restore=True)     # standing
     dst.close()
     rep = doc.diagnose(str(tmp_path / "dst.db"))
     assert not [f for f in rep.findings if f.level == "error"] and \

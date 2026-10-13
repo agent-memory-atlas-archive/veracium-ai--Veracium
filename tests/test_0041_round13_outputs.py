@@ -71,6 +71,24 @@ def _source(tmp_path):
     return src, oid
 
 
+# the 2026-10-13 notice-binding hotfix's report and its two direct checks: a default-path notice that is not applied
+# is listed in `notices_not_applied` as [kind, id] (never in `inconsistent_notices`, which keeps "the held version was
+# redacted anyway", a restore-only outcome now); the held bytes are compared on the WHOLE json; rows are counted directly
+def _not_applied(r, kind, tid):
+    return [kind, tid] in [list(x)[:2] for x in r["notices_not_applied"]] and tid not in r["inconsistent_notices"]
+
+
+def _held_json(st, kind, tid):
+    row = st._conn.execute(f"SELECT json FROM {'edges' if kind == 'edge' else 'episodes'} WHERE id=?", (tid,)).fetchone()
+    return row[0] if row else None
+
+
+def _redaction_rows(st, tid=None):
+    if tid is None:
+        return st._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0]
+    return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
+
+
 def _outputs(st, uid=U):
     return [e for e in st.episodes(uid) if e.lineage]
 
@@ -89,8 +107,16 @@ def test_R12_01_indexed_output_redaction_reaches_held_output(tmp_path, restore):
     dst = tt._mem(tmp_path, "dst.db")
     import_memory(dst.store, tmp_path / "before.jsonl", restore=restore)
     (held,) = _outputs(dst.store)
+    held_bytes = _held_json(dst.store, "episode", held.id)
     r = import_memory(dst.store, tmp_path / "after.jsonl", restore=restore)
     (after,) = _outputs(dst.store)
+    if not restore:
+        # (A) attack-shaped on the default path: the rider rebinding a notice onto a HELD output is what the
+        # 2026-10-13 notice-binding hotfix closes — the held bytes unchanged, the arrival still not installed, no row
+        assert after.id == held.id and _held_json(dst.store, "episode", held.id) == held_bytes
+        assert not dst.store._attested_fields(U, "episode", held.id) and _redaction_rows(dst.store) == 0
+        assert r["notices_applied"] == 0 and _not_applied(r, "episode", held.id)
+        return
     assert after.id == held.id and SECRET not in after.summary                 # the HELD output, treated in place
     assert after.lineage == held.lineage and after.consolidation_output_index == held.consolidation_output_index
     assert after.operation_id == held.operation_id and after.date == held.date   # structure preserved
@@ -102,12 +128,17 @@ def test_the_held_output_keeps_every_field_the_notice_does_not_name(tmp_path):
     but the notice's carriers."""
     _src, oid = _source(tmp_path)
     dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, tmp_path / "before.jsonl")
+    # (B) field preservation is a property of an APPLIED treatment. On the default path the 2026-10-13 notice-binding
+    # hotfix no longer treats a held output, which made this subset check pass on an EMPTY difference — vacuous — so
+    # it runs under restore, and the treatment is required to have happened
+    import_memory(dst.store, tmp_path / "before.jsonl", restore=True)
     held = json.loads(_outputs(dst.store)[0].model_dump_json())
-    import_memory(dst.store, tmp_path / "after.jsonl")
+    import_memory(dst.store, tmp_path / "after.jsonl", restore=True)
     after = json.loads(_outputs(dst.store)[0].model_dump_json())
     (n,) = [x for x in _lines(tmp_path / "after.jsonl") if x.get("record") == "redaction"]
-    assert {k for k in held if held[k] != after[k]} <= set(n["fields"])
+    changed = {k for k in held if held[k] != after[k]}
+    assert changed and SECRET not in after["summary"]                          # the treatment happened: not vacuous
+    assert changed <= set(n["fields"])
 
 
 @pytest.mark.parametrize("native", [False, True])
@@ -129,6 +160,11 @@ def test_every_redaction_row_names_a_record_after_held_earlier_and_repeat(tmp_pa
     for f in ("before.jsonl", "after.jsonl", "after.jsonl"):
         import_memory(dst.store, tmp_path / f, restore=restore)
     ids = {e.id for e in dst.store.episodes(U)}
+    if not restore:
+        # (A) on the default path the 2026-10-13 notice-binding hotfix applies no notice to the held output and writes
+        # no standing row, so there is no row at all — nothing dangling, nothing applied
+        assert _rows(dst.store) == [] and _redaction_rows(dst.store) == 0
+        return
     assert _rows(dst.store) and all(t in ids for (t,) in _rows(dst.store))
 
 
@@ -153,13 +189,15 @@ def test_a_contradictory_body_on_the_rebound_notice_still_refuses_whole_import(t
     """Research's (b): after the rebind, R11-03's body comparison runs on the rebound notice like any other."""
     _source(tmp_path)
     dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, tmp_path / "before.jsonl")
-    import_memory(dst.store, tmp_path / "after.jsonl")                         # the held output attested, body B
+    # (B) body-conflict integrity, independent of trust: the default path no longer attests a held output (the
+    # 2026-10-13 notice-binding hotfix), so the attested body B is set up, and contradicted, under restore
+    import_memory(dst.store, tmp_path / "before.jsonl", restore=True)
+    import_memory(dst.store, tmp_path / "after.jsonl", restore=True)           # the held output attested, body B
     recs = _lines(tmp_path / "after.jsonl")
     recs = [dict(r, reason="operator_policy") if r.get("record") == "redaction" else r for r in recs]
     before = _snapshot(dst.store)
     with pytest.raises(ValueError, match="different body"):
-        import_memory(dst.store, _write(tmp_path / "c.jsonl", recs))
+        import_memory(dst.store, _write(tmp_path / "c.jsonl", recs), restore=True)
     assert _snapshot(dst.store) == before
 
 

@@ -118,8 +118,10 @@ def test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices
     a = dict(n0, origin="origin\u001fpart", source_user="owner", source_event_ref="event")
     b = dict(n0, origin="origin", source_user="part\u001fowner", source_event_ref="event")
     dst = tt._mem(tmp_path, "dst.db")
-    ra = import_memory(dst.store, _write(tmp_path / "a.jsonl", _head(recs) + [a]))
-    rb = import_memory(dst.store, _write(tmp_path / "b.jsonl", _head(recs) + [b]))
+    # (B) identity injectivity, independent of trust: a STANDING notice is a trusted restore's state since the
+    # 2026-10-13 notice-binding hotfix (the default path writes none), so the two triples stand under restore
+    ra = import_memory(dst.store, _write(tmp_path / "a.jsonl", _head(recs) + [a]), restore=True)
+    rb = import_memory(dst.store, _write(tmp_path / "b.jsonl", _head(recs) + [b]), restore=True)
     assert ra["notices_standing"] == 1 and rb["notices_standing"] == 1 and rb["notices_existing"] == 0
     held = dst.store._conn.execute("SELECT source_origin, source_user, source_event_ref FROM redactions").fetchall()
     assert sorted(held) == sorted([("origin\u001fpart", "owner", "event"), ("origin", "part\u001fowner", "event")])
@@ -169,7 +171,11 @@ def test_R10_03_c_a_changed_body_under_the_same_source_identity_refuses(tmp_path
     recs = _lines(p)
     (n0,) = _notices(recs)
     dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, _write(tmp_path / "n1.jsonl", _head(recs) + [n0]))
+    # (B) body integrity under one source identity, independent of trust: since the 2026-10-13 notice-binding hotfix
+    # the default path holds a notice only for a record the import inserts, so the first body is held through the
+    # full export (record + notice), then contradicted by a notice-only file, still on the default path
+    import_memory(dst.store, p)
+    assert dst.store._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0] == 1    # body B is held
     changed = dict(n0, reason="legal_obligation")
     assert changed["reason"] != n0["reason"]
     rows_before = dst.store._conn.execute("SELECT * FROM redactions").fetchall()
@@ -185,7 +191,11 @@ def test_R10_03_c_the_comparison_crosses_a_destination_remap_for_a_NUL_identity(
     recs = _lines(p)
     (n0,) = _notices(recs)
     dst = tt._mem(tmp_path, "dst.db")
-    import_memory(dst.store, _write(tmp_path / "n1.jsonl", _head(recs) + [n0]), user_id="d1")
+    # (B) the cross-remap body comparison, independent of trust; restore refuses a user remap (P13), so the first body
+    # is held on the default path through the full export, whose record this import inserts (the 2026-10-13
+    # notice-binding hotfix holds no notice for any other record)
+    import_memory(dst.store, p, user_id="d1")
+    assert dst.store._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0] == 1
     with pytest.raises(ValueError, match="different body"):
         import_memory(dst.store, _write(tmp_path / "n2.jsonl", _head(recs) + [dict(n0, reason="legal_obligation")]),
                       user_id="d2")

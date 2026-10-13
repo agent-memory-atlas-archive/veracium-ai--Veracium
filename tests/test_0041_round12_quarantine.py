@@ -57,6 +57,24 @@ def _notices(recs):
     return [r for r in recs if r.get("record") == "redaction"]
 
 
+# the 2026-10-13 notice-binding hotfix's report and its two direct checks: a default-path notice that is not applied
+# is listed in `notices_not_applied` as [kind, id] (never in `inconsistent_notices`, which keeps "the held version was
+# redacted anyway", a restore-only outcome now); the held bytes are compared on the WHOLE json; rows are counted directly
+def _not_applied(r, kind, tid):
+    return [kind, tid] in [list(x)[:2] for x in r["notices_not_applied"]] and tid not in r["inconsistent_notices"]
+
+
+def _held_json(st, kind, tid):
+    row = st._conn.execute(f"SELECT json FROM {'edges' if kind == 'edge' else 'episodes'} WHERE id=?", (tid,)).fetchone()
+    return row[0] if row else None
+
+
+def _redaction_rows(st, tid=None):
+    if tid is None:
+        return st._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0]
+    return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
+
+
 def _edge_json(st, eid):
     r = st._conn.execute("SELECT json, quarantined FROM edges WHERE id=?", (eid,)).fetchone()
     return (r[0], r[1]) if r else (None, None)
@@ -133,9 +151,17 @@ def test_R11_01_quarantine_redaction_export_applies_to_held_target(tmp_path, res
     dst.store.add_edge(_q_edge())
     p = tmp_path / "x.jsonl"
     export_memory(src.store, U, p)
-    import_memory(dst.store, p, restore=restore)
+    held = _edge_json(dst.store, "e-q")
+    r = import_memory(dst.store, p, restore=restore)
     js, quarantined = _edge_json(dst.store, "e-q")
-    assert SECRET not in js and quarantined == 1 and dst.store._attested_fields(U, "edge", "e-q")
+    if restore:
+        assert SECRET not in js and quarantined == 1 and dst.store._attested_fields(U, "edge", "e-q")
+    else:
+        # (A) attack-shaped on the default path: the notice reaching the destination's own HELD edge is what the
+        # 2026-10-13 notice-binding hotfix closes — not applied, the held bytes unchanged, nothing attested, no row
+        assert (js, quarantined) == held and _redaction_rows(dst.store, "e-q") == 0
+        assert not dst.store._attested_fields(U, "edge", "e-q") and r["notices_applied"] == 0
+        assert _not_applied(r, "edge", "e-q")
     (tmp_path / "rt").mkdir()
     _round_trip(tmp_path / "rt", src.store, "e-q", restore)
 
@@ -167,10 +193,31 @@ def test_a_destination_holding_the_relation_only_shape_moves_and_attests_its_own
     recs = _lines(p)
     (n,) = _notices(recs)
     assert "provenance.disclosure" not in n["fields"]
-    import_memory(dst.store, _write(tmp_path / "n.jsonl", _head(recs) + [n]))
+    # (A) the treatment-union property needs the notice APPLIED to the HELD pre-closure record: since the 2026-10-13
+    # notice-binding hotfix that is a trusted restore whose file SHOWS the redaction (the source's treated record beside
+    # the notice; the fixed-point rule, both modes) ...
+    notice_file = _write(tmp_path / "n.jsonl", _head(recs) + [n])
+    (treated,) = [x for x in recs if x.get("record") == "edge" and x.get("id") == eid]
+    assert treated["object"] == R.MARKER
+    ra = import_memory(dst.store, _write(tmp_path / "nt.jsonl", _head(recs) + [treated, n]), restore=True)
+    assert ra["notices_applied"] == 1
     js, quarantined = _edge_json(dst.store, eid)
     assert quarantined == 1 and json.loads(js)["provenance"]["disclosure"] == Disclosure.QUARANTINED.value
     assert "provenance.disclosure" in dst.store._attested_fields(U, "edge", eid)
+    # ... and the default path, on a second copy of the same frozen store, applies nothing to the held record
+    (tmp_path / "dflt").mkdir()
+    dflt = tt._frozen_memory(tmp_path / "dflt")
+    before = _edge_json(dflt.store, eid)
+    r = import_memory(dflt.store, notice_file)
+    assert _edge_json(dflt.store, eid) == before and not dflt.store._attested_fields(U, "edge", eid)
+    assert r["notices_applied"] == 0 and _redaction_rows(dflt.store, eid) == 0 and _not_applied(r, "edge", eid)
+    # ... and the notice-only file on restore no longer applies to the UNTREATED held record either: reported
+    (tmp_path / "rst").mkdir()
+    rst = tt._frozen_memory(tmp_path / "rst")
+    before_r = _edge_json(rst.store, eid)
+    rr = import_memory(rst.store, notice_file, restore=True)
+    assert _edge_json(rst.store, eid) == before_r and _redaction_rows(rst.store, eid) == 0 and rr["notices_applied"] == 0
+    assert ["edge", eid, "record-not-in-file"] in [list(x) for x in rr["notices_not_applied"]]
 
 
 def test_control_an_ordinary_relation_with_a_quarantined_disclosure_round_trips(tmp_path):
@@ -230,8 +277,16 @@ def test_every_writer_reachable_edge_state_reaches_a_destination_holding_it_earl
     dst = tt._mem(tmp_path, "dst.db")
     import_memory(dst.store, tmp_path / "before.jsonl", restore=restore)
     assert SECRET in _edge_json(dst.store, "t")[0]                     # the destination HOLDS the earlier edge
-    import_memory(dst.store, tmp_path / "after.jsonl", restore=restore)
+    held = _edge_json(dst.store, "t")
+    r = import_memory(dst.store, tmp_path / "after.jsonl", restore=restore)
     js, quarantined = _edge_json(dst.store, "t")
+    if not restore:
+        # (A) attack-shaped on the default path: the notice reaching a HELD edge is what the 2026-10-13 notice-binding
+        # hotfix closes — not applied (a genuine propagation to a held record waits for round 4's origin binding)
+        assert (js, quarantined) == held and _redaction_rows(dst.store, "t") == 0
+        assert not dst.store._attested_fields(U, "edge", "t") and r["notices_applied"] == 0
+        assert _not_applied(r, "edge", "t")
+        return
     assert SECRET not in js and dst.store._attested_fields(U, "edge", "t")
     assert quarantined == (cell["relation"] == QUARANTINE_RELATION)
     assert not any(SECRET in (st or "") for (st,) in dst.store._conn.execute("SELECT state FROM edge_event WHERE edge_id='t'"))

@@ -142,10 +142,11 @@ def test_a_notice_before_its_record_is_a_standing_notice_and_the_record_is_redac
     rep = doc.diagnose(str(tmp_path / "dst.db"))
     assert not [f for f in rep.findings if f.level == "error"], doc.render(rep)
     assert any("standing redaction notice" in f.message for f in rep.findings)
-    # an ORDINARY write of a notice-covered id is refused (INV-11 keys on the attestation, standing or not)
+    # A STANDING notice is not an attestation of anything this store holds (the 2026-10-13 notice-binding hotfix, the
+    # owner's ruling): it is not in the readers' exclusion set and refuses no ordinary write of its id — that write
+    # being ADMITTED is pinned in test_0041_notice_binding_hotfix (an earlier release refused it here, standing or not)
     dst = _mem(tmp_path, "dst.db"); st = dst.store
-    with pytest.raises(ValueError, match="redacted"):
-        st.add_edge(Edge(id="e-red", user_id=U, subject="user", relation="works_as", object="the content again", provenance=_prov()))
+    assert "e-red" not in st.redacted_targets(U, "edge") and "ep-red" not in st.redacted_targets(U, "episode")
     # the records arrive: redacted ON ARRIVAL, the standing rows completed in place, one row per notice
     r2 = port.import_memory(st, records_file, restore=True)
     assert r2["notices_applied"] == 2 and r2["notices_standing"] == 0

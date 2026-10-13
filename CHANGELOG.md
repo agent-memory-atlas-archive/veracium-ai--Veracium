@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+- **Fixed (trust surface): an untrusted import file could permanently redact your own data (specs/0041 §4g).**
+  **Never in a published release:** the notice import landed on `main` on 2026-09-20 (0041 tranche 4b, `8ea59e7`),
+  after v0.26.1, and is fixed here before any release carries it. In that code an imported redaction notice was bound
+  to its target by id alone. So a
+  default-mode (untrusted) import file carrying nothing but one notice could: (1) permanently redact a fact or episode
+  your store already held, including your own; (2) for an id you did not hold, leave a "standing" notice that later
+  refused your own write of that id and hid it from recall; and (3) redact a later-arriving record of that id. Edge ids
+  are random, but they are not secret: every export carries them and the MCP `record_procedure` tool returns them.
+  Found while building the round-4 reference model for 0045–0047 (2026-10-13), and reproduced on the shipped code.
+  **Who is affected:** only stores run from unreleased `main` between 2026-09-20 and this fix that imported a file
+  they did not export themselves; no PyPI release is.
+  - **The new rule.** On the default path a notice is applied **only to a record this import inserts**, and in both
+    modes **only where the file shows the redaction**: the file carries the record, already in its redacted form (a
+    genuine export always does). **A file that carries the record UNredacted beside its notice is refused whole**
+    wherever that record would be admitted under the notice — a restore, or a default import that creates it (on the
+    default path a record you already hold is reported `held-target` first and kept; nothing lands either way). The
+    one exception is a notice this store already holds as applied (its own redaction, or the same witnessed notice):
+    the arrival is then written in its redacted shape, as before.
+    applying the notice could destroy a fact the file does not show redacted (a hostile notice beside your own fact),
+    and skipping it would land content its source says it redacted (a stale copy beside a genuine notice) — the two
+    look identical without authenticated origins, so neither happens; the error names the notice. Every other notice
+    is not applied, writes nothing, and is listed in the result's new `notices_not_applied` (`[kind, id, reason]`;
+    reasons `held-target`, `absent-target`, `record-not-in-file`); the CLI prints the count. `inconsistent_notices`
+    keeps its meaning: a held version that WAS redacted.
+  - **Notices earlier releases already stored.** A standing notice (a notice for a record never held here) no longer
+    refuses your own write of its id and is no longer in `redacted_targets()`, so it no longer hides anything from
+    recall. It completes only on a record an import inserts that shows the redaction, and on the default path only
+    when that record's own origin is the notice's; a different origin, or an inserted record that arrives unredacted
+    (in either mode), refuses the import, naming the notice.
+  - **What this costs.** On the default path, a genuine redaction made by another store no longer reaches your
+    existing copy of its record (it still reaches a record arriving new, in the same file). A standing notice no
+    longer removes content from any later arrival, in either mode: an unredacted arrival under it refuses instead.
+    `restore=True` is unchanged for your own exports: it still applies a notice to a record you hold when the file
+    carries that record redacted, or when the record you hold already is. A restore of a notice with no record beside
+    it, over a record you hold unredacted — a shape a genuine export never produces — is reported, not applied. Also: a store B that redacts a record it got from store A writes a notice with B's
+    origin, so if that notice stands somewhere, a later default import of A's record there refuses rather than
+    completing it — visible, and fail-closed; the next design round makes such a notice pending instead.
+  - **Residual.** A store that already imported a hostile file keeps its standing notices; with this release they are
+    inert here (they block no write, hide nothing, and apply to nothing a file does not show redacted). If you have
+    since written your own record under such an id, that store's exports pair the notice with your unredacted record
+    and are refused whole by this release (remove the notice line to move the data); a receiver running the
+    unreleased code would apply them. `veracium doctor`
+    lists standing notices.
+
 - **Fixed: historical recall now shows the possible-extraction-error marker (specs/0019, U5).** Since 0019 landed,
   `recall(as_of=...)` and `facts_valid_at` rendered a fact the extraction check had flagged WITHOUT
   `[possible extraction error]`, although every current-recall surface shows it. A model reading a historical answer

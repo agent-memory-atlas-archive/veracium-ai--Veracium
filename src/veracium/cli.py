@@ -162,6 +162,13 @@ def _portability(args) -> int:
             tail = "" if args.restore else f"; {r['capped']} capped to third-party trust"
             print(f"imported {r['edges']} edges + {r['episodes']} episodes into "
                   f"'{r['user_id']}' ({r['skipped']} already present, skipped{tail})")
+            # the 2026-10-13 notice-binding hotfix: a notice the default path did not apply is the only signal that a
+            # source's redaction did not reach a record held here, so it is printed, never only returned
+            not_applied = r.get("notices_not_applied", [])
+            if not_applied:
+                print(f"{len(not_applied)} redaction notice(s) NOT applied: an untrusted import applies a notice only "
+                      f"to a record it inserts and the file shows redacted ({', '.join(f'{k} {i}: {why}' for k, i, why in not_applied)}); "
+                      f"apply a notice to records you hold only with --restore on your own export")
         return 0
     finally:
         store.close()

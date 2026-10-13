@@ -635,6 +635,29 @@ def test_cli_import_line_carries_capped_only_on_the_default_path(tmp_path, capsy
 #              re-import, byte-level chain preservation).
 #   both     — exercises the two paths deliberately (this file's own tests).
 _CALLSITE_DISPOSITIONS = {
+    # the 2026-10-13 notice-binding hotfix: the untrusted path is its subject; one restore control
+    ("test_0041_notice_binding_hotfix.py", "test_an_untrusted_notice_never_redacts_the_users_own_held_fact"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_an_untrusted_notice_never_redacts_a_held_episode"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_the_victims_exact_record_in_the_file_does_not_unlock_the_notice"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_a_held_different_version_under_an_untrusted_notice_is_kept_and_reported"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_an_untrusted_notice_for_an_absent_id_leaves_no_standing_row"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_a_later_record_of_that_id_is_not_redacted_on_arrival"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_a_redacted_record_arriving_new_is_still_redacted_in_the_same_transaction"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_a_trusted_restore_of_a_newer_backup_still_redacts_the_held_older_record"): "restore",
+    ("test_0041_notice_binding_hotfix.py", "test_a_repeat_untrusted_import_stays_inert"): "default",
+    ("test_0041_notice_binding_hotfix.py", "_legacy_standing"): "restore",   # writes a standing notice as v0.26.x did
+    ("test_0041_notice_binding_hotfix.py", "test_ii_an_unredacted_arrival_under_a_standing_notice_refuses_even_on_restore"): "restore",
+    ("test_0041_notice_binding_hotfix.py", "test_7a_a_poisoned_export_default_imported_refuses_and_redacts_nothing"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_7b_a_poisoned_export_restored_into_a_fresh_store_refuses_and_redacts_nothing"): "restore",
+    ("test_0041_notice_binding_hotfix.py", "test_7c_a_poisoned_store_restoring_its_own_export_refuses_and_keeps_the_fact"): "restore",
+    ("test_0041_notice_binding_hotfix.py", "test_a_notice_only_restore_onto_a_held_record_is_not_applied"): "restore",
+    ("test_0041_notice_binding_hotfix.py", "test_7_the_default_path_reports_a_held_target_before_it_would_refuse"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_the_attest_only_branch_is_restore_only_on_a_default_import"): "default",
+    ("test_0041_notice_binding_hotfix.py", "test_i_a_legacy_standing_notice_never_refuses_the_users_own_write"): "both",
+    ("test_0041_notice_binding_hotfix.py", "test_i_a_legacy_standing_notice_never_refuses_the_users_own_episode_write"): "restore",
+    ("test_0041_notice_binding_hotfix.py", "test_ii_a_default_arrival_from_another_origin_is_refused_whole"): "both",
+    ("test_0041_notice_binding_hotfix.py", "test_ii_a_default_arrival_from_the_notices_own_origin_completes_it"): "both",
+    ("test_0041_notice_binding_hotfix.py", "test_ii_on_restore_completion_needs_an_inserted_shown_record_and_not_its_origin"): "restore",
     # specs/0037 §4e: the procedural boundary — the default path REFUSES a
     # record as procedural on any of three raw signals (the six §2c cells and
     # the format-10 8-cell matrix, through the `run` helper); `restore=True`
@@ -661,24 +684,23 @@ _CALLSITE_DISPOSITIONS = {
     # 0041 round 10, the notice across the import boundary (R9-04/05/08 on the capping path; R9-06 restores the
     # frozen store's own treated history)
     ("test_0041_round11_provenance.py", "test_R10_04_every_admitted_local_reason_round_trips"): "restore",
-    ("test_0041_round11_provenance.py", "test_control_a_genuine_imported_notice_keeps_the_sources_facts"): "default",
-    ("test_0041_round11_provenance.py", "test_R10_04_a_hand_built_notice_claiming_this_stores_own_identity_still_reads_as_witnessed"): "default",
-    ("test_0041_round11_provenance.py", "test_R10_04_a_hand_built_notice_cannot_clear_its_own_provenance"): "default",
+    ("test_0041_round11_provenance.py", "test_control_a_genuine_imported_notice_keeps_the_sources_facts"): "restore",
+    ("test_0041_round11_provenance.py", "test_R10_04_a_hand_built_notice_claiming_this_stores_own_identity_still_reads_as_witnessed"): "both",
+    ("test_0041_round11_provenance.py", "test_R10_04_a_hand_built_notice_cannot_clear_its_own_provenance"): "both",
     ("test_0041_round11_provenance.py", "test_R10_04_a_notice_whose_own_reason_is_the_witness_label_is_refused"): "default",
-    ("test_0041_round11_provenance.py", "test_the_doctor_calls_a_notice_standing_by_its_missing_event_and_never_a_local_row"): "default",
+    ("test_0041_round11_provenance.py", "test_the_doctor_calls_a_notice_standing_by_its_missing_event_and_never_a_local_row"): "restore",
     ("test_0041_round11_outcome.py", "test_R10_01_full_export_applies_notice_to_held_outcome"): "both",
     ("test_0041_round11_outcome.py", "test_the_treated_held_outcome_keeps_its_chain"): "both",
     ("test_0041_round11_outcome.py", "test_A2_an_already_treated_held_outcome_meeting_its_old_record_ends_existing_with_no_new_event"): "default",
     ("test_0041_round11_outcome.py", "test_outcome_and_interaction_give_the_same_result_for_the_same_difference"): "default",
     ("test_0041_round11_outcome.py", "test_control_a_changed_outcome_with_no_notice_still_refuses"): "default",
     ("test_0041_round11_outcome.py", "test_control_a_topology_conflict_refuses_notice_or_not"): "default",
+    ("test_0041_round11_arrival.py", "_attested_from_new"): "both",   # the 2026-10-13 hotfix: `new` sets up; `combined` refuses
     ("test_0041_round11_arrival.py", "test_R10_02_public_import_cannot_repopulate_a_deleted_attested_episode"): "both",
     ("test_0041_round11_arrival.py", "test_a_backup_taken_after_the_redaction_restores_after_a_delete"): "both",
     ("test_0041_round11_arrival.py", "test_an_honest_full_backup_of_several_redacted_episodes_restores_after_one_is_deleted"): "restore",
     ("test_0041_round11_arrival.py", "test_control_re_arrival_without_a_notice_still_refuses"): "both",
-    ("test_0041_round11_arrival.py", "test_control_an_ordinary_write_of_the_deleted_attested_episode_is_refused"): "default",
     ("test_0041_round11_arrival.py", "test_notice_only_after_the_delete_inserts_nothing"): "default",
-    ("test_0041_round11_arrival.py", "test_the_doctor_reads_a_deleted_attested_episode_as_information"): "default",
     ("test_0041_round11_arrival.py", "test_an_arrival_needing_treatment_in_a_carrier_the_attestation_never_named_is_refused"): "default",
     ("test_0041_round11_attestation.py", "_unattested_marker_episode"): "default",
     ("test_0041_round11_attestation.py", "test_its_export_round_trips"): "restore",
@@ -686,13 +708,13 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round12_quarantine.py", "_round_trip"): "both",
     ("test_0041_round12_quarantine.py", "test_the_notice_domain_stays_closed"): "default",
     ("test_0041_round12_quarantine.py", "test_R11_01_quarantine_redaction_export_applies_to_held_target"): "both",
-    ("test_0041_round12_quarantine.py", "test_a_destination_holding_the_relation_only_shape_moves_and_attests_its_own_disclosure"): "default",
+    ("test_0041_round12_quarantine.py", "test_a_destination_holding_the_relation_only_shape_moves_and_attests_its_own_disclosure"): "both",
     ("test_0041_round12_surface.py", "test_a_history_only_redaction_exports_a_notice_another_store_applies"): "both",
-    ("test_0041_round12_surface.py", "test_a_notice_WITHOUT_the_journal_path_still_treats_the_destinations_journal"): "default",
-    ("test_0041_round12_surface.py", "test_an_applied_notice_attests_each_path_once"): "default",
+    ("test_0041_round12_surface.py", "test_a_notice_WITHOUT_the_journal_path_still_treats_the_destinations_journal"): "both",
+    ("test_0041_round12_surface.py", "test_an_applied_notice_attests_each_path_once"): "restore",
     # 0041 round 12 (R11-03): one projection for native and witnessed rows — every call on the default path
     ("test_0041_round12_native.py", "test_R11_03_contradiction_with_native_source_event_refuses_atomically"): "default",
-    ("test_0041_round12_native.py", "test_the_stores_own_event_relayed_back_honestly_is_existing_not_a_second_row"): "default",
+    ("test_0041_round12_native.py", "test_the_stores_own_event_relayed_back_honestly_is_existing_not_a_second_row"): "both",
     ("test_0041_round12_native.py", "test_a_self_import_under_a_remap_attests_the_copy_as_a_witnessed_row"): "default",
     ("test_0041_round12_native.py", "test_control_the_stores_own_export_re_imported_is_existing"): "default",
     ("test_0041_round12_native.py", "test_control_a_witnessed_contradiction_still_refuses"): "default",
@@ -702,18 +724,18 @@ _CALLSITE_DISPOSITIONS = {
     # 0041 round 13 (R12-01 / N12-01, the 0014 §2c rider): a held consolidation output reached by its redaction; the
     # rider's paired oracle cells live in the 0014 file. By AST, helpers included.
     ("test_0014_portability.py", "_rider_held"): "default",
-    ("test_0014_portability.py", "test_rider_a_named_field_at_the_marker_WITH_the_notice_resolves_and_treats_the_held_output"): "default",
+    ("test_0014_portability.py", "test_rider_a_named_field_at_the_marker_WITH_the_notice_resolves_and_treats_the_held_output"): "both",
     ("test_0014_portability.py", "test_rider_the_same_difference_WITHOUT_the_notice_rejects"): "default",
     ("test_0014_portability.py", "test_rider_a_field_the_notice_does_NOT_name_rejects"): "default",
     ("test_0014_portability.py", "test_rider_a_named_field_at_a_NON_marker_value_rejects"): "default",
     ("test_0014_portability.py", "test_rider_a_lineage_difference_rejects_notice_or_not"): "default",
     ("test_0014_portability.py", "test_rider_a_treated_held_output_meeting_its_untreated_arrival_with_the_notice_is_existing"): "default",
     ("test_0041_round13_outputs.py", "test_R12_01_indexed_output_redaction_reaches_held_output"): "both",
-    ("test_0041_round13_outputs.py", "test_the_held_output_keeps_every_field_the_notice_does_not_name"): "default",
+    ("test_0041_round13_outputs.py", "test_the_held_output_keeps_every_field_the_notice_does_not_name"): "restore",
     ("test_0041_round13_outputs.py", "test_N12_01_a_repeated_remapped_import_binds_the_notice_to_the_existing_copy"): "default",
     ("test_0041_round13_outputs.py", "test_every_redaction_row_names_a_record_after_held_earlier_and_repeat"): "both",
     ("test_0041_round13_outputs.py", "test_a_notice_for_a_DIFFERENT_record_does_not_admit_the_output_difference"): "default",
-    ("test_0041_round13_outputs.py", "test_a_contradictory_body_on_the_rebound_notice_still_refuses_whole_import"): "default",
+    ("test_0041_round13_outputs.py", "test_a_contradictory_body_on_the_rebound_notice_still_refuses_whole_import"): "restore",
     ("test_0041_round13_outputs.py", "test_control_the_unchanged_first_export_still_reimports_idempotently"): "default",
     ("test_0041_round13_outputs.py", "test_control_the_redacted_export_without_its_notice_still_refuses"): "default",
     # 0041 round 13 (N12-02): the frozen store's redacted episode, isolated, into a fresh destination
@@ -732,7 +754,7 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_round14_resolution.py", "test_control_a_repeated_user_remap_binds_both_notices_to_the_surviving_copies"): "default",
     # 0041 round 13 (the round-12 verdict's evidence-scope note): the generated edge matrix into a HELD destination
     ("test_0041_round12_quarantine.py", "test_every_writer_reachable_edge_state_reaches_a_destination_holding_it_earlier"): "both",
-    ("test_0041_round11_identity.py", "test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices"): "default",
+    ("test_0041_round11_identity.py", "test_R10_03_a_two_source_triples_that_encoded_equal_are_two_standing_notices"): "restore",
     ("test_0041_round11_identity.py", "test_R10_03_b_a_relay_preserves_the_native_source_triple"): "default",
     ("test_0041_round11_identity.py", "test_the_original_and_its_relay_are_held_as_one_source_identity"): "default",
     ("test_0041_round11_identity.py", "test_R10_03_c_a_changed_body_under_the_same_source_identity_refuses"): "default",

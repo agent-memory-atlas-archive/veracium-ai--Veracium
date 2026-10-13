@@ -52,6 +52,24 @@ def _journal(st, eid="t"):
     return [s for (s,) in st._conn.execute("SELECT state FROM edge_event WHERE edge_id=? ORDER BY seq", (eid,))]
 
 
+# the 2026-10-13 notice-binding hotfix's report and its two direct checks: a default-path notice that is not applied
+# is listed in `notices_not_applied` as [kind, id] (never in `inconsistent_notices`, which keeps "the held version was
+# redacted anyway", a restore-only outcome now); the held bytes are compared on the WHOLE json; rows are counted directly
+def _not_applied(r, kind, tid):
+    return [kind, tid] in [list(x)[:2] for x in r["notices_not_applied"]] and tid not in r["inconsistent_notices"]
+
+
+def _held_json(st, kind, tid):
+    row = st._conn.execute(f"SELECT json FROM {'edges' if kind == 'edge' else 'episodes'} WHERE id=?", (tid,)).fetchone()
+    return row[0] if row else None
+
+
+def _redaction_rows(st, tid=None):
+    if tid is None:
+        return st._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0]
+    return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
+
+
 def _content_in_journal(st, eid="t"):
     return sum(SECRET in (s or "") for s in _journal(st, eid))
 
@@ -105,7 +123,15 @@ def test_a_history_only_redaction_exports_a_notice_another_store_applies(tmp_pat
     (n,) = [r for r in _lines(p) if r.get("record") == "redaction"]
     assert n["fields"] and "journal.state" in n["fields"]
     dst = _emptied(tmp_path, name="dst.db")                     # the destination holds the same history
-    import_memory(dst.store, p, restore=restore)
+    held, journal = _held_json(dst.store, "edge", "t"), _journal(dst.store, "t")
+    r = import_memory(dst.store, p, restore=restore)
+    if not restore:
+        # (A) attack-shaped on the default path: a notice reaching the destination's HELD record is what the
+        # 2026-10-13 notice-binding hotfix closes — not applied, the row and its journal byte-identical, no row
+        assert _held_json(dst.store, "edge", "t") == held and _journal(dst.store, "t") == journal
+        assert not dst.store._attested_fields(U, "edge", "t") and _redaction_rows(dst.store, "t") == 0
+        assert r["notices_applied"] == 0 and _not_applied(r, "edge", "t")
+        return
     assert dst.store._attested_fields(U, "edge", "t") and _content_in_journal(dst.store) == 0
 
 
@@ -119,12 +145,35 @@ def test_a_notice_WITHOUT_the_journal_path_still_treats_the_destinations_journal
     export_memory(src.store, U, p)
     recs = _lines(p)
     (n,) = [r for r in recs if r.get("record") == "redaction"]
-    dst = tt._mem(tmp_path, "dst.db")
-    dst.store.add_edge(Edge(id="t", user_id=U, subject="user", relation="lives_at", object=SECRET, provenance=tt._prov()))
     head = [r for r in recs if r.get("kind") == "veracium-export"]
     # the OLDER form, built explicitly: the record's carriers only, as every round-11 notice was
-    import_memory(dst.store, _write(tmp_path / "n.jsonl", head + [dict(n, fields=["object", "relation", "subject"])]))
-    assert _content_in_journal(dst.store) == 0
+    older = _write(tmp_path / "n.jsonl", head + [dict(n, fields=["object", "relation", "subject"])])
+    # (A) the property — an older notice naming only the record's carriers still makes the destination tombstone its
+    # journal — needs the notice APPLIED: since the 2026-10-13 notice-binding hotfix that is a trusted restore whose
+    # file SHOWS the redaction (the record beside the notice, treated; the fixed-point rule, both modes) ...
+    (treated,) = [r for r in recs if r.get("record") == "edge" and r.get("id") == "t"]
+    assert treated["object"] == R.MARKER
+    dst = tt._mem(tmp_path, "dst.db")
+    dst.store.add_edge(Edge(id="t", user_id=U, subject="user", relation="lives_at", object=SECRET, provenance=tt._prov()))
+    ra = import_memory(dst.store, _write(tmp_path / "nt.jsonl", head + [treated, dict(n, fields=["object", "relation", "subject"])]),
+                       restore=True)
+    assert ra["notices_applied"] == 1 and _content_in_journal(dst.store) == 0
+    # ... the notice-only file on restore no longer applies to the UNTREATED held record: reported, nothing changed ...
+    rst = tt._mem(tmp_path, "rst.db")
+    rst.store.add_edge(Edge(id="t", user_id=U, subject="user", relation="lives_at", object=SECRET, provenance=tt._prov()))
+    held_r, journal_r = _held_json(rst.store, "edge", "t"), _journal(rst.store, "t")
+    rr = import_memory(rst.store, older, restore=True)
+    assert _held_json(rst.store, "edge", "t") == held_r and _journal(rst.store, "t") == journal_r
+    assert rr["notices_applied"] == 0 and _redaction_rows(rst.store, "t") == 0
+    assert ["edge", "t", "record-not-in-file"] in [list(x) for x in rr["notices_not_applied"]]
+    # ... and the default path applies nothing to the held record: its journal keeps the content, the target reported
+    dflt = tt._mem(tmp_path, "dflt.db")
+    dflt.store.add_edge(Edge(id="t", user_id=U, subject="user", relation="lives_at", object=SECRET, provenance=tt._prov()))
+    held, journal = _held_json(dflt.store, "edge", "t"), _journal(dflt.store, "t")
+    r = import_memory(dflt.store, older)
+    assert _held_json(dflt.store, "edge", "t") == held and _journal(dflt.store, "t") == journal
+    assert _content_in_journal(dflt.store) >= 1 and not dflt.store._attested_fields(U, "edge", "t")
+    assert r["notices_applied"] == 0 and _redaction_rows(dflt.store, "t") == 0 and _not_applied(r, "edge", "t")
 
 
 def test_a_record_with_nothing_anywhere_is_still_refused_with_nothing_written(tmp_path):
@@ -169,7 +218,9 @@ def test_an_applied_notice_attests_each_path_once(tmp_path):
     src.redact(U, edge_id="t", reason="subject_request")
     export_memory(src.store, U, tmp_path / "x.jsonl")
     dst = held("dst.db")
-    import_memory(dst.store, tmp_path / "x.jsonl")
+    # (B) attest-once is a property of an APPLIED notice, independent of trust: the default path no longer applies a
+    # notice to a held record (the 2026-10-13 notice-binding hotfix), so the property is exercised under restore
+    import_memory(dst.store, tmp_path / "x.jsonl", restore=True)
     (fields,) = dst.store._conn.execute("SELECT fields FROM redactions").fetchone()
     fields = json.loads(fields)
     assert {"confirmations.request_digest", "journal.state"} <= set(fields)

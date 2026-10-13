@@ -69,6 +69,24 @@ def _setup(tmp_path, restore):
     return dst, a, b
 
 
+# the 2026-10-13 notice-binding hotfix's report and its two direct checks: a default-path notice that is not applied
+# is listed in `notices_not_applied` as [kind, id] (never in `inconsistent_notices`, which keeps "the held version was
+# redacted anyway", a restore-only outcome now); the held bytes are compared on the WHOLE json; rows are counted directly
+def _not_applied(r, kind, tid):
+    return [kind, tid] in [list(x)[:2] for x in r["notices_not_applied"]] and tid not in r["inconsistent_notices"]
+
+
+def _held_json(st, kind, tid):
+    row = st._conn.execute(f"SELECT json FROM {'edges' if kind == 'edge' else 'episodes'} WHERE id=?", (tid,)).fetchone()
+    return row[0] if row else None
+
+
+def _redaction_rows(st, tid=None):
+    if tid is None:
+        return st._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0]
+    return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
+
+
 def _summary(dst, eid):
     (j,) = dst.store._conn.execute("SELECT json FROM episodes WHERE id=?", (eid,)).fetchone()
     return json.loads(j, object_pairs_hook=_strict_pairs)["summary"]
@@ -109,7 +127,16 @@ def test_R13_02_a_value_that_merely_CONTAINS_the_marker_refuses_whole_import(tmp
 @pytest.mark.parametrize("restore", [False, True])
 def test_control_the_exact_marker_with_the_notices_is_admitted_and_treats_both(tmp_path, restore):
     dst, a, b = _setup(tmp_path, restore)
+    held = {x: _held_json(dst.store, "episode", x) for x in (a, b)}
     r = import_memory(dst.store, tmp_path / "after.jsonl", restore=restore)
+    if not restore:
+        # (A) attack-shaped on the default path: notices rebound onto HELD outputs are what the 2026-10-13
+        # notice-binding hotfix closes — both held outputs byte-identical, nothing attested, no row, both not applied
+        assert {x: _held_json(dst.store, "episode", x) for x in (a, b)} == held
+        assert R.MARKER not in (_summary(dst, a), _summary(dst, b)) and _redaction_rows(dst.store) == 0
+        assert not any(dst.store._attested_fields(U, "episode", x) for x in (a, b)) and r["notices_applied"] == 0
+        assert _not_applied(r, "episode", a) and _not_applied(r, "episode", b)
+        return
     assert _summary(dst, a) == R.MARKER and _summary(dst, b) == R.MARKER
     assert r["notices_applied"] == 2 and r["unattested_markers"] == []
     assert all("summary" in dst.store._attested_fields(U, "episode", x) for x in (a, b))
