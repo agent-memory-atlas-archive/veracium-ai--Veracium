@@ -1338,24 +1338,30 @@ def test_the_operation_consumes_the_bytes_the_authority_bound(monkeypatch,
     assert sqlite3.connect(p).execute("PRAGMA user_version").fetchone()[0] == 1
 
 
-def test_a_nested_context_never_silently_swaps_artifacts():
+def test_a_nested_context_never_silently_swaps_artifacts(monkeypatch, tmp_path):
     """v8's second variant: an outer context on A, a B-bound authority, and
     the nested migration silently consumed A. A pinned nested context that
-    disagrees with the installed digest refuses."""
-    backup = m13.EVIDENCE_FILE.read_bytes()
-    try:
-        with m13._draft():                               # installs A
-            art_b = json.loads(backup)
-            art_b["generated_at"] = "2026-01-01T00:00:00+00:00"
-            m13.EVIDENCE_FILE.write_text(
-                json.dumps(art_b, indent=1, sort_keys=True))
-            p = _v1_store()
-            auth = m13.make_authority(p)                 # binds B
-            assert m13.migrate_store(p, auth) == "migration-evidence-missing"
-            assert sqlite3.connect(p).execute(
-                "PRAGMA user_version").fetchone()[0] == 1
-    finally:
-        m13.EVIDENCE_FILE.write_bytes(backup)
+    disagrees with the installed digest refuses.
+
+    On a PRIVATE copy of the evidence file (2026-10-13): this test once
+    rewrote the TRACKED file and restored it, and a parallel worker reading it
+    in that window saw a foreign or torn artifact (the two-phase suite)."""
+    real = m13.EVIDENCE_FILE
+    backup = real.read_bytes()
+    private = tmp_path / real.name
+    private.write_bytes(backup)
+    monkeypatch.setattr(m13, "EVIDENCE_FILE", private)
+    with m13._draft():                                   # installs A
+        art_b = json.loads(backup)
+        art_b["generated_at"] = "2026-01-01T00:00:00+00:00"
+        m13.EVIDENCE_FILE.write_text(
+            json.dumps(art_b, indent=1, sort_keys=True))
+        p = _v1_store()
+        auth = m13.make_authority(p)                     # binds B
+        assert m13.migrate_store(p, auth) == "migration-evidence-missing"
+        assert sqlite3.connect(p).execute(
+            "PRAGMA user_version").fetchone()[0] == 1
+    assert real.read_bytes() == backup                   # the tracked file was never touched
 
 
 # --- round 7, finding 2: framed, full-length release identity --------------

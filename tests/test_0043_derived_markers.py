@@ -65,10 +65,10 @@ def test_derived_markers_check_refuses_each_tampered_snapshot(tmp_path):
     assert dm.problems(f) == []                                                  # control: an untouched copy passes
 
 
-def _decisions():
+def _decisions(evidence=EVIDENCE):
     """Everything the check and the transform decide on the committed pairs, plus refusing edits of one pair."""
-    mc = _load(EVIDENCE / "model_input_capture.py", "dm_mc")
-    ledger = json.loads((EVIDENCE / "run_ledger.json").read_text(encoding="utf-8"))
+    mc = _load(evidence / "model_input_capture.py", "dm_mc")
+    ledger = json.loads((evidence / "run_ledger.json").read_text(encoding="utf-8"))
     authored = {q["id"]: q["text"] for q in ledger["questions"]}
     by = {(x["question_id"], x["arm"]): x for x in ledger["detail"]}
     out = []
@@ -85,21 +85,29 @@ def _decisions():
     return out
 
 
-def test_the_snapshot_is_not_an_authority_garbage_or_absence_changes_no_decision():
+def test_the_snapshot_is_not_an_authority_garbage_or_absence_changes_no_decision(tmp_path):
     """The claim itself, by behaviour: with the snapshot replaced by garbage, and then deleted, the arm check, the
     transform and the check-side normaliser decide exactly as they do with it — on all 24 committed pairs and on two
-    refusing edits. Each module is loaded afresh, so no cache carries the first answer over."""
+    refusing edits. Each module is loaded afresh, so no cache carries the first answer over.
+
+    On a PRIVATE COPY of specs/evidence/0043, laid out as the tree is (the modules find src/ by relative position, so
+    tmp/src links the real one, read-only): the test once rewrote and deleted the TRACKED snapshot and restored it,
+    which a parallel worker reading that file could observe mid-test (2026-10-13, the two-phase suite)."""
+    import shutil
+    mirror = tmp_path / "specs" / "evidence" / "0043"
+    shutil.copytree(EVIDENCE, mirror, ignore=shutil.ignore_patterns("__pycache__"))
+    (tmp_path / "src").symlink_to(ROOT / "src", target_is_directory=True)
+    snapshot = mirror / dm.SNAPSHOT.name
     original = dm.SNAPSHOT.read_bytes()
-    reference = _decisions()
+    assert snapshot.read_bytes() == original                                     # the copy starts as the tree's
+    reference = _decisions(mirror)
+    assert reference == _decisions()                                             # and decides as the tree does
     assert any(d[0] == "refuse" and d[2] for d in reference)                    # the refusing edits do refuse
-    try:
-        dm.SNAPSHOT.write_text('{"applied": {"check_side": {"fragments": ["MEMORY"]}}}', encoding="utf-8")
-        assert _decisions() == reference
-        dm.SNAPSHOT.unlink()
-        assert _decisions() == reference
-    finally:
-        dm.SNAPSHOT.write_bytes(original)
-    assert dm.SNAPSHOT.read_bytes() == original
+    snapshot.write_text('{"applied": {"check_side": {"fragments": ["MEMORY"]}}}', encoding="utf-8")
+    assert _decisions(mirror) == reference
+    snapshot.unlink()
+    assert _decisions(mirror) == reference
+    assert dm.SNAPSHOT.read_bytes() == original                                  # the tracked file was never touched
 
 
 def test_no_module_names_the_snapshot_but_its_generator():
