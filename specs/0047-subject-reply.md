@@ -5,8 +5,8 @@ Spec-Requires: 0045, 0041[0047/0041-replies], 0008[0047/0008-request-registry]
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-2b), adopted at rest and re-read from the file: v1.2 2026-09-20 from `0047-subject-reply-CANDIDATE.md` (sha16 e8daf82c70cb4031); v1.3 2026-10-10 from `0047-subject-reply-CANDIDATE.md` (sha16 c5f61f2972e97a58); v1.7 2026-10-11 from `0047-subject-reply-CANDIDATE.md` (sha16 c2651accfcc5dc39) |
-| **Version** | **v1.7 — 2026-10-11: an imported act's file id is evidence in `recorded_correlation_id`** (the 0008 amendment v1.1's additive construction, dev's as schema owner); INV-R20, R21 and R22 cite their model invariants (G13, G10, G14), and §6's claim list gains G13 and G14. Prior, same day: **v1.6 — four of the 0044 round-2 verdict's classes, found in this spec before its seal and folded.** **(1) The shared id space is CONSTRUCTED** by a new 0008 amendment, `0047/0008-request-registry` (in `Spec-Requires:`). v1.5's INV-R15 promised one id space with `confirm()`, but the product's replay lookup reads only `confirmations`, so a reply's id was invisible to `confirm()` (R2-04's class). **(2) Historical recall renders the CURRENT acts**, never “written at or before T”: T is valid time and `written_at` is commit time (R2-01's class; INV-R20). **(3) An act's `origin` is stored** and never upgraded, and only `local` and `restored` confirmations count toward `g(e)`. v1.5's “testimony (`origin = imported`)” had no column (R2-05's class; INV-R21). **(4) User erasure removes replies** with their registry rows (R2-07's class; INV-R22). Exporting confirmations reverses 0008 §6d's “excluded”, which v1.5 did without an amendment; the 0008 amendment now says so (R2-06's class). Prior, same day: **v1.5 — INV-R6's mutant cites model G4** (dev's carrier read, T1: §6 claimed G4 as this spec's and no row cited it; the model now runs R6's mutant, the open count derived from the budget-selected challenges, and G4 kills it). Prior, same day: **v1.4 — round 1 returned (R1-03, R1-05..R1-08, R1-10 owned here); the reviewer's answers to R1 and R2 adopted; aligned to 0045 v1.5.** Base: the tree's adopted copy at `cfb4151` (v1.3); the Author and Number cells are dev's and are carried verbatim. 🔴 **v1.3's §0 (the 0041 amendment) is now its OWN document**, `0047/0041-replies`, bound by this spec's `Spec-Requires:` line (R1-10; the owner's “Bind by content”); it answers R1-07 through 0041's existing attested-carriage path. 🔴 **The reply kind `disputed` is renamed `challenge`** (R2, the reviewer's preference) and a structured **`resolve`** kind is added (R1-06): context text never clears a challenge, and v1.3's “a `context` reply saying the dispute no longer stands” recovery is WITHDRAWN — the reviewer showed it could not work. 🔴 **§4c's grid reads 0045 v1.5's four values** (`attested` · `confirmed` · `not_attested` · `unknown`), and is stated as an ADDITIONAL restriction only (R1-05). **§4d is the rendering construction R1-05 asked for:** a deterministic mandatory unit, withholding on overflow, wiki exclusion with atomic eviction and an in-flight fence, historical semantics at T. **§4e–§4f are R1-03's and R1-08's matrices.** **One narrowing, stated:** v1.3 rendered `context` and `withdrawn-consent` replies beside the edge in recall; v1.4 confines them to `why` and the structured returns, so the recall unit has ONE deterministic shape (R1-05) — §9 names it as least sure. **§0a is decided** (the reviewer agreed with refusing a new content reply to a redacted edge; restoring an already-redacted reply is the amendment's notice path). The rules are a separate artifact executed by dev's reference model (§6). Prior: v1.3 · v1.2 · v1.1 (the joint candidate's Part B). |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-2b), adopted at rest and re-read from the file: v1.2 2026-09-20 from `0047-subject-reply-CANDIDATE.md` (sha16 e8daf82c70cb4031); v1.3 2026-10-10 from `0047-subject-reply-CANDIDATE.md` (sha16 c5f61f2972e97a58); v1.7 2026-10-11 from `0047-subject-reply-CANDIDATE.md` (sha16 c2651accfcc5dc39); v1.8 2026-10-12 from `0047-subject-reply-CANDIDATE.md` (sha16 39286844f0a82358) |
+| **Version** | **v1.8 — 2026-10-12, round-3 fold (re-issued the same day: §4c's `attested` × challenged cell is NOT ASSERTABLE, the owner's ruling on 0045 R2-01, option 3, after ATTEST-3's holdout result; §3's bullet, §4c's rationale, §5's regime rows and §9 follow); **re-issued again: NOT ASSERTABLE means WITHHELD** for every value, so §4d's assertion surfaces withhold a challenged fact and the unit lives where the record is inspected; INV-R3, R6 and R20 restated; §8's claim follows (dev's model II run found §4c and §4d disagreeing): round 2 returned v1.7 for amendment (R2-02..R2-06 bind this spec, with the 0008 and 0041 amendments).** **R2-02:** an imported act's own key is an internal `#act:` key outside the caller grammar (§2, §4f). **R2-03:** the restore rule reads POSITION (`pos = (origin_store, act_seq)`, the 0008 amendment §6f), never `confirmed_at`, and refuses an order it cannot establish; INV-R23 (§4b, §4f). **R2-04:** exact replay by `act_uid` and projection is a no-op checked before the held-target refusal, and a changed row refuses the file (§4f). **R2-05:** `replies.request_digest` and the registry's digest are treated at redaction (the 0041 amendment v1.3, the 0008 amendment §6g). **R2-06:** an ordinary reply onto a target redacted under a notice that does not cover `replies.text` is refused (§4f). The verdict's bounded corrections: **#2** reinforcement writes a new edge id at the pin, so acts stay on the prior's identity (§4e); **#3** the `unknown` cell states its NEW restriction (§4c); **#5** the reply request's canonical identity is closed, INV-R24 (§4b). *#1, the carrier inventory's ASOF wording, is in dev's generated disposition text, not in this document.* §9 is the round-3 brief. Prior: **v1.7 — 2026-10-11: an imported act's file id is evidence in `recorded_correlation_id`** (the 0008 amendment v1.1's additive construction, dev's as schema owner); INV-R20, R21 and R22 cite their model invariants (G13, G10, G14), and §6's claim list gains G13 and G14. Prior, same day: **v1.6 — four of the 0044 round-2 verdict's classes, found in this spec before its seal and folded.** **(1) The shared id space is CONSTRUCTED** by a new 0008 amendment, `0047/0008-request-registry` (in `Spec-Requires:`). v1.5's INV-R15 promised one id space with `confirm()`, but the product's replay lookup reads only `confirmations`, so a reply's id was invisible to `confirm()` (R2-04's class). **(2) Historical recall renders the CURRENT acts**, never “written at or before T”: T is valid time and `written_at` is commit time (R2-01's class; INV-R20). **(3) An act's `origin` is stored** and never upgraded, and only `local` and `restored` confirmations count toward `g(e)`. v1.5's “testimony (`origin = imported`)” had no column (R2-05's class; INV-R21). **(4) User erasure removes replies** with their registry rows (R2-07's class; INV-R22). Exporting confirmations reverses 0008 §6d's “excluded”, which v1.5 did without an amendment; the 0008 amendment now says so (R2-06's class). Prior, same day: **v1.5 — INV-R6's mutant cites model G4** (dev's carrier read, T1: §6 claimed G4 as this spec's and no row cited it; the model now runs R6's mutant, the open count derived from the budget-selected challenges, and G4 kills it). Prior, same day: **v1.4 — round 1 returned (R1-03, R1-05..R1-08, R1-10 owned here); the reviewer's answers to R1 and R2 adopted; aligned to 0045 v1.5.** Base: the tree's adopted copy at `cfb4151` (v1.3); the Author and Number cells are dev's and are carried verbatim. 🔴 **v1.3's §0 (the 0041 amendment) is now its OWN document**, `0047/0041-replies`, bound by this spec's `Spec-Requires:` line (R1-10; the owner's “Bind by content”); it answers R1-07 through 0041's existing attested-carriage path. 🔴 **The reply kind `disputed` is renamed `challenge`** (R2, the reviewer's preference) and a structured **`resolve`** kind is added (R1-06): context text never clears a challenge, and v1.3's “a `context` reply saying the dispute no longer stands” recovery is WITHDRAWN — the reviewer showed it could not work. 🔴 **§4c's grid reads 0045 v1.5's four values** (`attested` · `confirmed` · `not_attested` · `unknown`), and is stated as an ADDITIONAL restriction only (R1-05). **§4d is the rendering construction R1-05 asked for:** a deterministic mandatory unit, withholding on overflow, wiki exclusion with atomic eviction and an in-flight fence, historical semantics at T. **§4e–§4f are R1-03's and R1-08's matrices.** **One narrowing, stated:** v1.3 rendered `context` and `withdrawn-consent` replies beside the edge in recall; v1.4 confines them to `why` and the structured returns, so the recall unit has ONE deterministic shape (R1-05) — §9 names it as least sure. **§0a is decided** (the reviewer agreed with refusing a new content reply to a redacted edge; restoring an already-redacted reply is the amendment's notice path). The rules are a separate artifact executed by dev's reference model (§6). Prior: v1.3 · v1.2 · v1.1 (the joint candidate's Part B). |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — it adds a CONTENT-CARRYING table and a gate on what the agent may assert. Round 2. |
@@ -81,8 +81,8 @@ an episode. Rejecting a reply-as-edge shortcut is justified.”*
 
 | field / site | read / written | its documented contract | preserved? |
 |---|---|---|---|
-| `replies` *(new table)*: `id`, `user_id`, `edge_id`, `kind` ∈ {`challenge`, `context`, `withdrawn-consent`, `resolve`}, `target` (a `resolve`'s challenge id, else NULL), `text` (NULL for `resolve`), `actor`, `correlation_id`, `request_digest`, `origin` ∈ {`local`, `imported`, `restored`}, `recorded_correlation_id` (NULL for `local`), `written_at` | written by the reply verb (`origin = local`, with a request-registry row in the same transaction) and by import (§4f); read by the gate, render, `why`, `doctor`, export; **erased with the user** (`_ERASE_TABLES`, INV-R22) | — | new; append-only (INV-R2) |
-| the request registry (the 0008 amendment `0047/0008-request-registry`) | written by `add_reply` and `confirm`, each in its own transaction; read FIRST by both | 0008 §6c: one user-scoped id space | **constructed**: one `UNIQUE(user_id, correlation_id)` across both verbs (INV-R15) |
+| `replies` *(new table)*: `id`, `user_id`, `edge_id`, `kind` ∈ {`challenge`, `context`, `withdrawn-consent`, `resolve`}, `target` (a `resolve`'s challenge id, else NULL), `text` (NULL for `resolve`), `actor`, `correlation_id`, `request_digest`, `origin` ∈ {`local`, `imported`, `restored`}, `recorded_correlation_id` (NULL for `local`; else the ORIGINAL request's id), `written_at`, and (v1.8) **`act_uid`** and **`pos = (origin_store, act_seq)`** with `origin_user` as provenance (the 0008 amendment §6e–§6f) | written by the reply verb (`origin = local`, with a request-registry row in the same transaction) and by import (§4f); read by the gate, render, `why`, `doctor`, export; **erased with the user** (`_ERASE_TABLES`, INV-R22) | — | new; append-only (INV-R2) |
+| the request registry (the 0008 amendment `0047/0008-request-registry`) | written by `add_reply` and `confirm`, each in its own transaction; read FIRST by both | 0008 §6c: one user-scoped id space | **constructed**: one `UNIQUE(user_id, correlation_id)` across every verb (`confirm`, `reply`, 0044's `undo`; INV-R15); an imported act's own key is an internal `#act:` key outside the caller grammar (the 0008 amendment §6e, R2-02) |
 | 0041's treatment map and enumeration | — | — | **amended by `0047/0041-replies`** |
 | the render of an edge, on every surface §4d lists | reads | an edge renders in its partition | **Qualified (§4c–§4d)** |
 | 0045's grounding `g(e)` | read | `attested` · `confirmed` · `not_attested` · `unknown` | read only |
@@ -103,7 +103,7 @@ an episode. Rejecting a reply-as-edge shortcut is justified.”*
 | **the target `edge_id`** | refused | refused | absent for that user → refused | **a redacted edge** → refused (§0); **a PROCEDURAL edge** → refused (§4d's ruling) | **INV-R9**, **INV-R19** |
 | 🔴 **who wrote it** — the `actor` | refused | refused | outside the closed set → refused | **an assistant-authored reply LABELLED as the subject's is NOT detected**: the store enforces the label until authenticated principals exist (0050). *Enforced today: a reply labelled assistant or extractor is refused, and the verb is not reachable by the model (§3b)* | **INV-R2**, **INV-R10** |
 | **`correlation_id`** | generated; no retry protection | — | — | same id + a different request OR a different verb → refused, in both orders (the request registry, the 0008 amendment) | **INV-R15** |
-| **an import file's replies and confirmations** | — | the existing import refusals | — | **a reply or confirmation aimed at a PRE-EXISTING local edge under default import → refused** (R1-08's reply-only attack) | **INV-R11**, **INV-R16** |
+| **an import file's replies and confirmations** | — | the existing import refusals | — | **a reply or confirmation aimed at a PRE-EXISTING local edge under default import → refused** (R1-08's reply-only attack); **v1.8:** a default file claiming THIS store's origin → refused, so its positions cannot order an act before a local challenge; a position the restore rule cannot order → refused; an act under a held `act_uid` is an exact replay (no-op) or a conflict (the whole file refused); an ordinary reply onto a target redacted under a notice that does not cover `replies.text` → refused | **INV-R11**, **INV-R16**, **INV-R23**, the 0008 amendment's **INV-Q9** and **INV-I1..I3**, the 0041 amendment's notice-coverage invariant |
 
 ### 2c-ii. Assertions about reach — REQUIRED
 
@@ -137,7 +137,9 @@ mentionable, use_only, quarantined.
 | user · third_party · system · assistant | the edge is unchanged (INV-R1); an active challenge restricts its render per §4c | same | not assertable today; the reply is stored and shown in `why`; nothing becomes assertable |
 
 - Can it make a **user-asserted fact non-assertable**? **Yes:** a `confirmed`, `not_attested` or `unknown` fact with
-  an active challenge (§4c). An `attested` fact stays assertable with its challenge rendered.
+  an active challenge (§4c). **Since v1.8 this includes an `attested` fact** (the owner, 2026-10-12): the record
+  stands and the reply travels with it in `why`, but no grounding value keeps a fact assertable over the subject's
+  open challenge.
 - Can **non-user content gain user-grade authority**? **No.** A reply is not evidence for the fact.
 - Can it **clear `needs_confirmation`**, or **merge, drop or overwrite provenance**? No (INV-R1). It REFUSES one
   absorption that would move a person's act (§4e).
@@ -178,8 +180,16 @@ mentionable, use_only, quarantined.
   row in its own transaction under the one `UNIQUE(user_id, correlation_id)` that `confirm` also writes under. Same
   id + same verb + same request → the first result; the id under a different verb or request → refused, in both
   orders. The registry is read BEFORE any live edge state.
+- **The reply request's canonical identity is closed (correction #5):** `(verb = reply, user_id, edge_id, kind,
+  target, text)`, with `kind` in its closed set, `target` present iff `kind = resolve`, and `text` NULL iff `kind =
+  resolve`. A retry under the same id after the edge changed, was invalidated or was redacted returns this verb's
+  own recorded result, or the terminal `request_redacted` after a redaction (the 0008 amendment §6g), never another
+  verb's result (INV-R24). Its portable comparison projection is the 0008 amendment's (§6e).
 - **Ordering:** each reply write and each confirmation runs in `BEGIN IMMEDIATE` and re-reads `active_challenges`
-  inside the transaction; the serial order of commits IS the order.
+  inside the transaction; the serial order of commits IS the local order, and each act records it as its POSITION,
+  `pos = (origin_store, act_seq)` (the 0008 amendment §6f, R2-03). **No order is ever read from a caller's date**:
+  `confirmed_at` is the caller's admitted `date=` (a valid 2025 date can be given in 2026), and `written_at` is a
+  local clock that does not travel as an order.
 
 ### 4c. 🔴 THE GATE — with 0045 v1.5's four values
 
@@ -188,14 +198,12 @@ activity, temporal. **A cell saying “assertable” never promotes an otherwise
 
 | `g(e)` | `active_challenges(e) = ∅` | `active_challenges(e) ≠ ∅` |
 |---|---|---|
-| **`attested`** | assertable — today's behaviour | 🔴 **assertable ONLY with the challenge unit rendered (§4d).** *The claim stands; the subject's answer travels with it — A8's counterweight* |
+| **`attested`** | assertable — today's behaviour | 🔴 **NOT ASSERTABLE** (v1.8, the owner's ruling on 0045 R2-01) |
 | **`confirmed`** | assertable — today's line | 🔴 **NOT ASSERTABLE** |
 | **`not_attested`** | assertable — today's line | 🔴 **NOT ASSERTABLE** |
-| **`unknown`** | assertable — today's behaviour | 🔴 **NOT ASSERTABLE** — no regression: no legacy row can carry a challenge |
+| **`unknown`** | assertable — today's behaviour | 🔴 **NOT ASSERTABLE** — *a NEW restriction, stated (correction #3):* a challenge written after this feature can target an old declarative row, and that row then stops being assertable until the challenge is resolved. A legacy row with no challenge is unchanged |
 
-*Why `attested` alone survives a challenge: against the subject's challenge, the store asserts only what it can
-show the speaker said. `not_attested` and `unknown` are equally unattested, so they gate identically. The reviewer
-endorsed `attested + challenge` as assertable-with-attached-answer and recommended against a universal subject veto.*
+*Why no value survives a challenge (v1.8).* Round 2's reviewer showed ATTEST-2 attesting six strings that state nothing of the kind, and with `attested` the one value that stayed assertable under a challenge, a false attestation kept a challenged fact asserted. The owner chose a repaired predicate first (ATTEST-3, 0045 v1.8), and it was measured once on a fresh blind holdout: 1 false attestation in 67 negatives (one-sided 95% upper bound ≈ 6.9%), a later-sentence retraction phrased outside its closed list, an open-ended class. **So the label carries no privilege: the owner ruled (2026-10-12) that `attested` gates like every other value.** *This is the verdict's offered route, "narrow the label's meaning and its downstream privilege". It is not the universal veto round 1's reviewer advised against: nothing is deleted or hidden from the record, the subject's answer stays attached, and the subject's own `resolve` restores assertability. What changes is that, while a challenge is open, the store asserts nothing the subject disputes. A8's counterweight still holds: the record stands, the claim is never asserted while the subject disputes it, and wherever the record is inspected the reply is attached (§4d).*
 
 **`confirm()` REFUSES an edge with an active challenge** (`store.confirm.active-challenge`, INV-R13), in every row; no
 confirmation can post-date an unresolved challenge. **After a `resolve`, confirmation is admitted again.** The rule
@@ -203,7 +211,13 @@ is *“an unresolved challenge blocks confirmation”*, and resolution is the ex
 
 ### 4d. Rendering — the mandatory unit, and every carrier — R1-05
 
-**The mandatory unit** for an edge with an active challenge:
+**v1.8: NOT ASSERTABLE means WITHHELD, for every value** (§4c). Under an active challenge a fact reaches NO
+assertion surface (recall detail, contested groups, proactive, the wiki, as-of). The report line counts what was
+withheld, so the silence is not silent. **Wherever the record is INSPECTED** (`why`, `introspect`, the structured
+returns), it carries the mandatory unit. *v1.7 rendered an `attested` fact WITH the unit on assertion surfaces;
+that was the privilege the owner removed, and no disputed-rendering outcome replaces it.*
+
+**The mandatory unit** for an edge with an active challenge, wherever the record is inspected:
 `fact line + 0019's marker where flagged + "[challenged by the subject: N open; latest: <clamped text>]"`.
 
 | rule | |
@@ -211,7 +225,7 @@ is *“an unresolved challenge blocks confirmation”*, and resolution is the ex
 | order | challenges by `(written_at, id)`; the LATEST open challenge's text is rendered |
 | count | N counts ALL open challenges, computed BEFORE any budget selection — **budget never decides whether a challenge exists** |
 | clamp | the challenge text is clamped to its class cap; the marker is never clamped away (0019's rule); marker and challenge clamp together |
-| overflow | if the unit cannot fit, the fact is **WITHHELD** (counted in the report line), never rendered without its unit |
+| on an assertion surface | the fact is **WITHHELD**, at every budget, and counted in the report line (v1.8); the count of withheld challenged facts is computed before any budget selection |
 | `context` / `withdrawn-consent` | rendered in `why` and the structured returns; they do not enter the recall unit |
 
 **The surface list is GENERATED, not written:** dev's carrier inventory (it lands as `specs/evidence/0047/carrier_inventory.py`
@@ -224,10 +238,10 @@ STALE one**. At 2026-10-11 it lists 65 functions. The dispositions it uses:
 
 | surface | disposition |
 |---|---|
-| recall detail, contested groups, proactive (where it renders the fact) | render the mandatory unit, or withhold |
+| recall detail, contested groups, proactive (where it renders the fact) | **withhold** a challenged fact, counted in the report line (v1.8; v1.7 rendered an `attested` one with the unit) |
 | **compiled wiki** | **EXCLUDE challenged facts from compiler input** (a free-text compiler cannot be made to carry the unit — 0019's own reason for flagged facts); **a reply write atomically evicts the user's wiki and bumps its version**; the in-flight return fence (§2c-ii row 3, today redaction-only) **also withholds a body compiled before a reply to a fact it drew on** |
-| **as-of / historical recall** (`render_line`, `facts_valid_at`) | the unit computed from the **CURRENT** replies and confirmations (the query snapshot's), **never filtered by T**: T is valid time (`facts_valid_at` selects `valid_from ≤ T < invalidated_at`) and an act's `written_at` is commit time. v1.5's “written at or before T” mixed the two, and hid a challenge raised after T from a query about a time before it (INV-R20). With 0019's marker (landed, `84b50c2`) |
-| **raw structured returns** (`Recall.edges`, `AsOfFact`) | carry `active_challenges` count and `g(e)`; the consumer contract says a caller rendering these must render the unit |
+| **as-of / historical recall** (`render_line`, `facts_valid_at`) | **withhold** a fact that is challenged NOW, whatever T: the challenge state is read from the **CURRENT** replies and confirmations (the query snapshot's), **never filtered by T**: T is valid time (`facts_valid_at` selects `valid_from ≤ T < invalidated_at`) and an act's `written_at` is commit time. v1.5's “written at or before T” mixed the two, and hid a challenge raised after T from a query about a time before it (INV-R20). With 0019's marker (landed, `84b50c2`) |
+| **raw structured returns** (`Recall.edges`, `AsOfFact`) and inspection (`why`, `introspect`) | carry the mandatory unit, the `active_challenges` count and `g(e)`; the consumer contract says a caller must not assert a challenged fact, and must show the unit wherever it shows the record |
 
 **The census's five RULING sites, decided:**
 
@@ -240,7 +254,7 @@ STALE one**. At 2026-10-11 it lists 65 functions. The dispositions it uses:
 
 | operation | prior carries a confirmation or reply? | rule |
 |---|---|---|
-| reinforcement (same value, no new id) | either | allowed — no identity moves |
+| reinforcement (same value) | either | allowed. *At the pin `graph.apply_supersession` writes an incoming reinforcement as a NEW edge id under 0012 (correction #2):* the incoming edge carries its OWN grounding and source values, and the prior keeps its acts on its own identity. No act moves |
 | absorption (new survivor id) | **no** | allowed; the survivor's `att`/`src` are the incoming's (0045 §4e) |
 | absorption | **yes** | 🔴 **NOT absorbed**: the incoming edge is written as its own record; the prior keeps its acts. The store's absorption verifier is amended in the same change (the reviewer: “changing the planner alone will be refused by the store”) |
 | supersession (functional, new value) | either | allowed; the prior's acts STAY on the prior — a confirmation of the old value is not one of the new |
@@ -258,11 +272,13 @@ included); never the derived `g(e)`, and never the request registry. *Exporting 
 | | default import | trusted restore (0005's explicit trust) |
 |---|---|---|
 | a confirmation or reply for an edge in the SAME file | imported as **testimony**: stored `origin = imported` whatever the file says; shown in `why`; **not counted in `g(e)`** | imported with its recorded origin mapped **`local → restored`**, `restored` and `imported` kept, **never upgraded** (INV-R21); shape and chronology validated |
-| an act's `correlation_id` | the file's id is kept as evidence in `recorded_correlation_id`; the act's own `correlation_id` is store-generated and **writes no registry row**, so a file cannot consume or collide with this store's ids | same |
-| a confirmation or reply aimed at a **PRE-EXISTING local edge** | 🔴 **REFUSED** — an untrusted file cannot act as the subject over a local fact (R1-08's reply-only attack) | admitted only if chronologically consistent with local rows (e.g. no confirmation after a local open challenge); else refused |
+| an act's `correlation_id` | the ORIGINAL request's id is kept as evidence in `recorded_correlation_id`; the act's own key is an internal `#act:` key outside the caller grammar and **writes no registry row**, so a file cannot consume or collide with this store's ids (R2-02; the 0008 amendment §6e) | same |
+| an act claiming THIS store's origin | **refused** (the 0008 amendment §6e rule 0): only a trusted restore of own history may carry it | admitted under the matrix |
+| a confirmation or reply aimed at a **PRE-EXISTING local edge**, and NEW here (its `act_uid` not held) | 🔴 **REFUSED** — an untrusted file cannot act as the subject over a local fact (R1-08's reply-only attack) | admitted only if consistent with local rows **by POSITION** (R2-03): an incoming confirmation against an OPEN destination challenge is admitted only if its position is ordered before that challenge's (the same `origin_store`); **an order that cannot be established (another origin, or a legacy unknown position) is REFUSED**; a RESOLVED destination challenge needs no order (INV-R23) |
 | a redacted reply (`text` = the marker) | admitted only through the amendment's notice path | same |
+| an ordinary reply onto a target attested redacted by a notice that does NOT cover `replies.text` | **refused** (R2-06; the 0041 amendment §4): never admitted with content, never by rewriting the foreign notice | same |
 | an orphan (no edge in destination ∪ file) | **the whole file refused** | same |
-| id collision | identical content → no-op; different → refused | same |
+| an act whose `act_uid` is already held | **exact replay** (equal projection, the 0008 amendment §6e) → **no-op**, checked BEFORE the held-target refusal, so an unchanged file imports twice as a no-op; a **changed** row → the whole file refused; an exact replay admits no new act on its target (R2-04; INV-I1..I3) | same |
 
 **Never manufacture a confirmation** from a three-valued summary: an import that carries only `g(e)` creates no
 confirmation row (R1-08).
@@ -275,8 +291,7 @@ confirmation row (R1-08).
 |---|---|
 | **no replies** | byte-identical to today |
 | **`context` / `withdrawn-consent`** | shown in `why` and structured returns; assertability unchanged |
-| **active challenge on `attested`** | assertable, with the unit |
-| **active challenge on any other value** | not assertable; visible in `why` |
+| **an active challenge, on any value** | not assertable; the record and the reply are visible in `why` and the structured returns (v1.8: `attested` included) |
 | **challenge then `resolve`** | the challenge is inactive; confirmation admitted again; both rows kept |
 | **edge redacted after a reply** | reply texts replaced in the same transaction (the amendment) |
 | **reply attempted after redaction** | refused (§0) |
@@ -297,25 +312,27 @@ conflating them is withdrawn.*
 |---|---|---|
 | **INV-R1** | **A reply mutates nothing** | **Mutant: let a reply set `invalidated_at` → FAILS** |
 | **INV-R2** | **Append-only, subject-labelled** | **Mutant: allow an edit in place → FAILS** |
-| **INV-R3** | 🔴 **An edge with an active challenge never renders without its unit, on any surface §4d lists** | **Mutant: omit the unit in ONE renderer → FAILS** (the reviewer's mutant) |
+| **INV-R3** | 🔴 **An edge with an active challenge reaches NO assertion surface §4d lists, whatever its grounding value; wherever it is inspected, its unit is present** (v1.8) | **Mutants: render a challenged fact on ONE assertion surface (v1.7's `attested` cell included); omit the unit from ONE inspection carrier → each FAILS** (the reviewer's mutant, restated) |
 | **INV-R5** | **An orphan reply is reachable and reportable** | **Mutant: silence `doctor`'s row → FAILS** |
-| **INV-R6** | **The unit is deterministic, and budget never decides a challenge exists** | **Mutant: derive challenge state from budget-selected replies → FAILS** (model G4); large reply sets; both truncation orders |
+| **INV-R6** | **The unit is deterministic, and budget never decides a challenge exists**: the open count in the unit, and the report line's count of withheld challenged facts, are computed before any budget selection | **Mutant: derive challenge state from budget-selected replies → FAILS** (model G4); large reply sets; both truncation orders |
 | **INV-R7** | **A marker-carrying ordinary reply is refused** (with the amendment's INV-RR1) | **Mutant: accept it → FAILS** |
 | **INV-R8** | **`kind` is closed at the write path** | **Mutant: accept an out-of-set kind → FAILS** |
 | **INV-R9** | **A reply to a redacted or absent edge is refused** | **Mutant: accept it → FAILS** |
 | **INV-R10** | **The reply verb is not reachable over MCP** | **Mutant: register it → FAILS** |
 | **INV-R11** | **An import with an orphan is refused whole, before any write** | **Mutant: import the rest → FAILS** |
-| **INV-R12** | **§4c's grid, all eight cells, restriction-only** | **Mutant: let an “assertable” cell promote an ineligible edge → FAILS** (model G3) |
+| **INV-R12** | **§4c's grid, all eight cells, restriction-only; under an active challenge NO value is assertable** (v1.8) | **Mutants: let an “assertable” cell promote an ineligible edge; keep `attested` assertable under a challenge (v1.7's cell) → each FAILS** (model G3) |
 | **INV-R13** | **`confirm()` is refused under an active challenge and admitted after `resolve`** | **Mutant: drop the refusal → FAILS**; control: resolve → reconfirm succeeds (model G2) |
 | **INV-R14** | **Only a `resolve` clears a challenge, and only the one it names** | **Mutant: any `context` reply clears all challenges → FAILS**; multiple challenges with one resolved (model G2) |
-| **INV-R15** | **Replies and `confirm()` share ONE request registry** (the 0008 amendment): an id held by either verb is refused to the other, in both orders (model G11) | **Mutants: same id + different request returns the first result; each verb checks only its own table → FAIL** |
+| **INV-R15** | **Replies, `confirm()` and 0044's `undo` share ONE request registry** (the 0008 amendment): an id held by any verb is refused to the others, in both orders (model G11) | **Mutants: same id + different request returns the first result; each verb checks only its own table → FAIL** |
 | **INV-R16** | **Default import cannot act as the subject over a local edge** | **Mutant: apply the edge cap while trusting every incoming side-row act → FAILS** (the reviewer's mutant; model G10) |
 | **INV-R17** | **Acts stay where they were made** (§4e) | **Mutants: copy every confirmation to a more specific proposition; drop a contributor's reply when selecting its survivor → FAIL** (model G5) |
 | **INV-R18** | **The wiki never serves a fact challenged since its compile** | **Mutants: remove the eviction; allow a stale in-flight return → FAIL**; a scripted compiler that drops every reply; warm-cache and two-connection races |
 | **INV-R19** | **A reply to a procedural edge is refused**, and writes nothing | **Mutant: accept it → FAILS** (model G12) |
-| **INV-R20** | **Historical recall renders each fact with the CURRENT acts**, whatever T (model G13) | **Mutant: filter acts by the valid-time T → FAILS** on a fixture whose challenge is written after T about a fact valid before it |
+| **INV-R20** | **Historical recall reads the CURRENT acts**, whatever T: a fact challenged now is withheld as of any T (model G13) | **Mutant: filter acts by the valid-time T → FAILS** on a fixture whose challenge is written after T about a fact valid before it (the fact would render as of T) |
 | **INV-R21** | **An act's origin never upgrades, and only `local` and `restored` confirmations count toward `g(e)`** (model G10) | **Mutants: count `imported` confirmations; trusted restore writes recorded acts as `local`; default import keeps the file's origin → FAIL**; the chain local → export → default import → export → trusted restore still reads `imported` |
 | **INV-R22** | **User erasure removes the user's replies and registry rows** with their confirmations, atomically; a post-erasure retry is not a replay (model G14) | **Mutants: keep replies after `forget_user`; keep registry rows after erasure → FAIL** |
+| **INV-R23** | **The restore rule reads POSITION, never `confirmed_at`**: an incoming confirmation is admitted against an OPEN destination challenge only when ordered before it within one origin; an order it cannot establish is refused; a resolved challenge needs none (R2-03) (model G16) | **Mutants: order by `confirmed_at` (the verdict's 2025-dated confirmation sorts before a 2026 challenge); treat an unknown position as earliest → FAIL** |
+| **INV-R24** | **A reply retry replays only its own verb's result** after the edge changed, was invalidated or was redacted (then `request_redacted`); the canonical request is closed (correction #5) (model G18) | **Mutants: replay by edge state; return a `confirm` result under a reply id → FAIL** |
 
 *INV-R4 (v1.3: the reply survives redaction as a row) moves to the amendment as INV-RR2.* **Each check is
 demonstrated RED against its mutant before acceptance**; the model's run is machine-readable and travels in the
@@ -337,8 +354,9 @@ package.
 
 ## 8. Claims and limits
 
-**Claimed:** a subject's answer to a record about them is as durable as the record; an active challenge travels
-wherever the record is rendered, or the record is withheld; only the subject's explicit `resolve` withdraws it.
+**Claimed:** a subject's answer to a record about them is as durable as the record; while a challenge is open,
+the record is withheld from every assertion surface, and wherever the record is inspected it carries the challenge;
+only the subject's explicit `resolve` withdraws it.
 
 **NOT claimed:**
 - **not deniability** — it lets a person answer, durably, not unsay.
@@ -349,31 +367,36 @@ wherever the record is rendered, or the record is withheld; only the subject's e
 - **that the surface list is complete beyond what the census keys see** — functions reading `.object`, whole-model
   serialisation, fact-carrying result types (§4d).
 - **that the tension is resolved** — it is named and answered.
+- **that a restore admits every history it could order with more information** (v1.8): an incoming confirmation whose
+  order against an OPEN local challenge cannot be established from positions (another origin, or a legacy unknown
+  position) is refused, not guessed (R2-03).
 
 ---
 
-## 9. Brief for the external reviewer — ROUND 2
+## 9. Brief for the external reviewer — ROUND 3
 
-**Closure ledger for this document's findings:**
+**The question this round asks: do v1.8 and the 0008 and 0041 amendments (v1.2, v1.3) close R2-02 to R2-06, with the
+bounded corrections folded?** R2-01 is 0045's; its contract names this spec's §4c, and **§4c's `attested` cell is now NOT ASSERTABLE**:
+ATTEST-3 measured 1/67 false attestations on its fresh holdout, and the owner ruled that the label carries no privilege
+(the verdict's narrowing route).
 
 | finding | closure |
 |---|---|
-| R1-03 (replies) | §4e: absorption refused over acts; collapse never merges acts; INV-R17; model G5 |
-| R1-05 | §4c restriction-only; §4d the unit, overflow, wiki exclusion + eviction + fence, historical at T, structured returns; dev's census by complement; INV-R3/R6/R18 |
-| R1-06 | §4b `resolve` and the active-challenge predicate; context never clears; INV-R13/R14; model G2 |
-| R1-07 | the amendment `0047/0041-replies`: preflight over destination ∪ incoming; the notice path for redacted replies |
-| R1-08 | §4f: default import vs trusted restore for both carriers; testimony; no manufactured confirmations; INV-R16 |
-| R1-10 | `Spec-Requires:` content-bound; model checks vs product tests separated (§6) |
-| R1 / R2 (round 1's questions) | adopted as the reviewer recommended (§0, §1d) |
+| R2-02 | an imported act's own key is an internal `#act:` key outside the caller grammar (§2, §4f; the 0008 amendment §6e, INV-Q4′) |
+| R2-03 | the restore rule reads POSITION and refuses an order it cannot establish, never `confirmed_at` (§4b, §4f; INV-R23; the 0008 amendment §6f) |
+| R2-04 | exact replay by `act_uid` and projection is a no-op, checked before the held-target refusal; a changed row refuses the file (§4f; INV-I1–I3) |
+| R2-05 | reply and registry digests REPLACED at redaction; terminal `request_redacted` (the 0041 amendment v1.3; the 0008 amendment §6g) |
+| R2-06 | an ordinary reply onto a target redacted under a notice that does not cover `replies.text` refuses the unit (§4f; the 0041 amendment INV-RR6) |
+| corrections #2, #3, #5 | §4e (reinforcement writes a new edge id at the pin); §4c (the `unknown` cell's new restriction, stated); §4b (the reply request's closed canonical identity, INV-R24) |
+| correction #1 | the carrier inventory's generated disposition text (dev's generator), not this document |
+| correction #6 | §6 keeps the MODEL/PRODUCT split; model II v2 names what it does not represent |
 
-- **Least sure of:** (1) `context` and `withdrawn-consent` stay out of the recall unit — only challenges qualify the
-  fact; (2) withholding a fact whose unit cannot fit, rather than rendering a shorter unit.
-- **What we are NOT asking:** whether the reply needs the 0041 amendment (agreed in round 1), or a universal subject
-  veto (rejected, the reviewer concurring).
+- **Least sure of:**
+  1. Refusing a restore whose order against an OPEN local challenge cannot be established (§4f, §8), rather than
+     admitting it as testimony.
+  2. Correction #3's new restriction on legacy rows, which a NEW challenge triggers.
+- **What we are NOT asking:** a cross-store merge of positions (refused by design), or a universal subject veto.
 - **Reviewer-safe copy:** nothing generalised.
-
-**Joint acceptance (R1-10):** machine-checked — `Spec-Requires: 0045, 0041[0047/0041-replies]`; 0045 requires 0047 in
-turn. *v1.3's “carried VERBATIM into README and PIN” sentence is withdrawn.*
 
 ---
 

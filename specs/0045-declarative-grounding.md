@@ -5,8 +5,8 @@ Spec-Requires: 0047, 0019[0045/0019-nonuser-refusal], 0008[0047/0008-request-reg
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-2b), adopted at rest and re-read from the file: v1.3 2026-09-20 from `0045-declarative-grounding-CANDIDATE.md` (sha16 bca55cc31018d5de); v1.4 2026-10-10 from `0045-declarative-grounding-CANDIDATE.md` (sha16 7e306b4bcd327921); v1.7 2026-10-11 from `0045-declarative-grounding-CANDIDATE.md` (sha16 e7ef2f26ad8af86e) |
-| **Version** | **v1.7 — 2026-10-11: `confirmed` counts only `local` and `restored` confirmations.** An `imported` one is testimony: 0047 v1.6 stores an act's `origin` by the 0008 amendment `0047/0008-request-registry`, now in `Spec-Requires:`. v1.6's “any 0008 confirmation” would have read an imported confirmation as the user's own act (the 0044 round-2 verdict's R2-05 class, found here before the seal). §6 cites rules draft 3.4. Prior, same day: **v1.6 — the ATTEST evidence lands WITH this spec, at `specs/evidence/0045/attest/`** (dev's README read: v1.5's §4a said the implementation gate and its §9 said with the spec; G1 is blocking and its closure is that measurement, so a reviewer must be able to re-run it). §4a, §4a's measurement line and §9's R1-01 row name the landed path. Prior, same day: **v1.5 — round 1 returned (R1-01..R1-03 owned here), and the owner's “Label, don't block” and “Add the link” folded.** Base: the tree's adopted copy at `cfb4151` (v1.4); the Author and Number cells are dev's and are carried verbatim. 🔴 **v1.4's central argument is WITHDRAWN:** §1c said this spec “EXTENDS 0019 and adds no field” by widening 0019's predicate from specifics to terms. **R1-01** showed a terms test cannot establish that the user asserted the relation (“I do not work as a dental technician” passes it). **R1-02** showed `ungrounded = False` never meant “stated”. And the reviewer's closing note: *the no-new-field preference is useful only while the available state supports the promised meaning*. So v1.5 adds **two stored per-edge values**, `att` (the attestation verdict) and `src` (the source episode it judged), and **leaves 0019's predicate unchanged**. **R1-01's construction is measured**: a bounded relation-specific grammar, ATTEST-2, scored on a blind 120-item holdout. It falsely attested **0 of 66** negatives, and it recognised **9 of 54** genuine statements. **That measurement produced the owner's ruling** (2026-10-11, “Label, don't block”): an unrecognised USER statement is STORED and labelled `not_attested`, not refused. **This reverses v1.4's persistence line for USER-effective events.** The proposal mechanism of v1.4's companion amendment is withdrawn with it. The upgrade to `confirmed` is 0008's existing `confirm()` on the stored edge, and the source link (“Add the link”, 2026-10-11) keeps the owner's R1-04 ruling. The transition rules are a separate artifact, executed by dev's reference model (§6). **The label is `not_attested`** (renamed from `not_verified` after dev's carrier read, before adoption): see §4c. Prior: v1.4 · v1.3 · v1.2 · v1.1 · v1. |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-2b), adopted at rest and re-read from the file: v1.3 2026-09-20 from `0045-declarative-grounding-CANDIDATE.md` (sha16 bca55cc31018d5de); v1.4 2026-10-10 from `0045-declarative-grounding-CANDIDATE.md` (sha16 7e306b4bcd327921); v1.7 2026-10-11 from `0045-declarative-grounding-CANDIDATE.md` (sha16 e7ef2f26ad8af86e); v1.8 2026-10-12 from `0045-declarative-grounding-CANDIDATE.md` (sha16 1da099c906128cdf) |
+| **Version** | **v1.8 — 2026-10-12, round-3 fold: round 2 returned v1.7 for amendment (R2-01, with a joint dependency on 0047).** **R2-01:** ATTEST-3 replaces ATTEST-2: one supported construction instead of a blacklist (§4a), frozen before its fresh blind holdout H2, scored once: 1 / 67 false attestations (one-sided 95% upper bound ≈ 6.9%) and 12 / 53 recall, against ATTEST-2's 5 / 67 and 16 / 53 on the same H2. Every R2-01 negative stays non-attested, and 8 mechanism mutants are killed. **The owner's rulings:** ATTEST-3 in round 3 (2026-10-12, option A); then, on its result, **`attested` is a LABEL with no challenge-gate privilege** (2026-10-12T23:40Z, option 3, the verdict's narrowing route; 0047 v1.8 §4c). §2c, §3, §4c, §6 (INV-G2), §7, §8, §9 and §10 (G1) follow. Prior: **v1.7 — 2026-10-11: `confirmed` counts only `local` and `restored` confirmations.** An `imported` one is testimony: 0047 v1.6 stores an act's `origin` by the 0008 amendment `0047/0008-request-registry`, now in `Spec-Requires:`. v1.6's “any 0008 confirmation” would have read an imported confirmation as the user's own act (the 0044 round-2 verdict's R2-05 class, found here before the seal). §6 cites rules draft 3.4. Prior, same day: **v1.6 — the ATTEST evidence lands WITH this spec, at `specs/evidence/0045/attest/`** (dev's README read: v1.5's §4a said the implementation gate and its §9 said with the spec; G1 is blocking and its closure is that measurement, so a reviewer must be able to re-run it). §4a, §4a's measurement line and §9's R1-01 row name the landed path. Prior, same day: **v1.5 — round 1 returned (R1-01..R1-03 owned here), and the owner's “Label, don't block” and “Add the link” folded.** Base: the tree's adopted copy at `cfb4151` (v1.4); the Author and Number cells are dev's and are carried verbatim. 🔴 **v1.4's central argument is WITHDRAWN:** §1c said this spec “EXTENDS 0019 and adds no field” by widening 0019's predicate from specifics to terms. **R1-01** showed a terms test cannot establish that the user asserted the relation (“I do not work as a dental technician” passes it). **R1-02** showed `ungrounded = False` never meant “stated”. And the reviewer's closing note: *the no-new-field preference is useful only while the available state supports the promised meaning*. So v1.5 adds **two stored per-edge values**, `att` (the attestation verdict) and `src` (the source episode it judged), and **leaves 0019's predicate unchanged**. **R1-01's construction is measured**: a bounded relation-specific grammar, ATTEST-2, scored on a blind 120-item holdout. It falsely attested **0 of 66** negatives, and it recognised **9 of 54** genuine statements. **That measurement produced the owner's ruling** (2026-10-11, “Label, don't block”): an unrecognised USER statement is STORED and labelled `not_attested`, not refused. **This reverses v1.4's persistence line for USER-effective events.** The proposal mechanism of v1.4's companion amendment is withdrawn with it. The upgrade to `confirmed` is 0008's existing `confirm()` on the stored edge, and the source link (“Add the link”, 2026-10-11) keeps the owner's R1-04 ruling. The transition rules are a separate artifact, executed by dev's reference model (§6). **The label is `not_attested`** (renamed from `not_verified` after dev's carrier read, before adoption): see §4c. Prior: v1.4 · v1.3 · v1.2 · v1.1 · v1. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — it changes what the agent may ASSERT about a person, and what ingest records about how it knows. Round 2. |
@@ -100,8 +100,8 @@ procedural by floor**, which is 0037's anti-laundering invariant working as desi
 | uncontrolled input | empty | malformed | unrecognised | adversarial | **invariant that pins it** |
 |---|---|---|---|---|---|
 | **extractor output**, including any field claiming the triple's grounding | no triple | the extractor's refusal | outside the vocabulary → unclassified route | **a model-supplied grounding claim is IGNORED**; `att` comes only from ATTEST over the raw text | **INV-G1** |
-| **the source event's raw text** (host-supplied) | `not_attested` | `not_attested` | a construction outside the grammar → `not_attested` (the safe direction) | whoever authors the event text authors what ATTEST reads; **ATTEST recognises only first-person USER statements in enumerated forms, so it can be fooled into `attested` only by text that states the fact in those forms** (0019 §8 limit 1, inherited) | **INV-G2**, §4a |
-| **the source event's author** | — | — | — | non-user events never earn `attested` under ATTEST-2 | **INV-G2** |
+| **the source event's raw text** (host-supplied) | `not_attested` | `not_attested` | a construction outside the grammar → `not_attested` (the safe direction) | whoever authors the event text authors what ATTEST reads; **ATTEST recognises only first-person USER statements in one supported construction, so it can be fooled into `attested` only by text that states the fact in that construction** (0019 §8 limit 1, inherited), *or, as H2 measured once in 67, by a retraction phrased outside its closed list (§4a); which is why `attested` carries no privilege* | **INV-G2**, §4a |
+| **the source event's author** | — | — | — | non-user events never earn `attested` under ATTEST-3 | **INV-G2** |
 | **the query** (recall) | — | — | — | the persistence line does not reach query time | **INV-G6** |
 | **data written by an older version** | `att` NULL → `unknown`; never re-derived | — | — | **treating an old False or missing flag as attested is the mutant R1-02 names** | **INV-G7** |
 | **an import file's `att` / `src`** | — | — | — | default import writes `not_attested` and NULL whatever the file says; trusted restore as recorded, with a referential check on `src` | **INV-G9** |
@@ -141,7 +141,7 @@ USER call gets the user path (§10 G5).
 | source event (effective) | 0019 flag unset | 0019 flag set |
 |---|---|---|
 | **user** | stored; `att = attested` if ATTEST recognises the statement, else `not_attested` | stored with 0019's marker; `att` as on the left |
-| **system** · **assistant** · **third_party** (any disclosure) | stored; `att = not_attested` (ATTEST-2 covers first-person USER statements only, so a statement in a third-party event is never attributed to the user, R1-02) | **refused and counted** (`nonuser_ungrounded_refused`) — the 0019 amendment |
+| **system** · **assistant** · **third_party** (any disclosure) | stored; `att = not_attested` (ATTEST-3 covers first-person USER statements only, so a statement in a third-party event is never attributed to the user, R1-02) | **refused and counted** (`nonuser_ungrounded_refused`) — the 0019 amendment |
 
 - Can it make a **user-asserted fact non-assertable**? **No**, the reversal of v1.4. An unrecognised user statement
   is stored and assertable exactly as today (0047's gate restricts only challenged facts).
@@ -159,34 +159,49 @@ No new surface. `confirm()` keeps 0008's authorization; MCP gains no tool (§2c-
 
 ## 4. Behaviour
 
-### 4a. Attestation is a bounded, versioned grammar — R1-01
+### 4a. Attestation is a bounded, versioned construction — R1-01, R2-01
 
-**The predicate, ATTEST-2** (frozen, sha256 `e1e1e3d3…`, in research's 0045 evidence set, landed with this spec at
-`specs/evidence/0045/attest/` so that every figure below can be re-run):
+**The predicate, ATTEST-3** (frozen before its holdout existed, sha256 `b1329a81…`; research's 0045 evidence set,
+landed with this spec at `specs/evidence/0045/attest/`, so that every figure below can be re-run). ATTEST-2 matched a
+trigger anywhere in a sentence and then excluded bad contexts with a finite blacklist; round 2's reviewer showed six
+strings it attested that state nothing of the kind (R2-01). **ATTEST-3 accepts ONE positive construction and nothing
+else:**
 
-| R1-01 asked to define | ATTEST-2 |
+| R2-01 asked for | ATTEST-3 |
 |---|---|
-| scope | `subject = user` and a declarative relation with a trigger table. **The procedural path is exempt explicitly**: 0037's quote gate governs it, and it is never passed here. Any other subject or relation → `UNSUPPORTED` → `not_attested` |
-| subject and speaker | bound by the trigger: a first-person phrase (“i work as”, “my partner”) per relation. Third-person or other-possessor forms do not match |
-| relation | per-relation trigger tables; a relation absent from the table is unsupported |
-| object | must be the trigger's **immediate complement** (after an optional article), not merely present in the sentence |
-| polarity | negation anywhere in the sentence outside the trigger disqualifies (`not`, `n't`, `never`, `no longer`, …) |
-| modality and conditionals | `if`, `would`, `might`, `will`, `planning to`, `used to`, … disqualify |
-| quoted and reported speech | quoted spans are removed before matching; `said`, `told me`, `according to`, … disqualify |
-| questions | a sentence ending `?` asserts nothing |
-| tokenisation and normalisation (enumerated, and only these) | case-fold; curly to straight apostrophes; whitespace collapsed; digit–unit spacing removed (`78 kg` = `78kg`); trailing punctuation stripped; leading article dropped from the object |
-| dates | **not normalised**: a date in another form does not match → `not_attested` (the safe direction) |
+| scope | `subject = user` and a declarative relation with a trigger table. **The procedural path is exempt**: 0037's quote gate governs it, and it is never passed here. Any other subject or relation → `UNSUPPORTED` → `not_attested` |
+| quotation | double-quoted text is removed from the WHOLE event before it is split into sentences, so a quote spanning sentences is removed whole; an unbalanced quote removes the rest (fail closed). *Single quotes cannot be told from apostrophes and are NOT removed: stated* |
+| assertion scope | the trigger must BEGIN its sentence; before it, only a closed set of discourse fillers (“yes,”, “honestly,”, “these days”). Any other frame (“Suppose”, “It is false that”, “He wrote:”, “Example sentence:”) puts the trigger inside it, and nothing is attested |
+| the complete complement | the object must be the trigger's WHOLE complement: after it, the end of the sentence, clause punctuation, or a closed list of function words. A following content word, a possessive or a hyphen means the object named only part of what was said (“dentist assistant”, “dentist's receptionist”, “dentist-in-training”) |
+| binding the relation | a SPECIFIC trigger binds its relation (“I work as”, “I live in”); a GENERIC one (“I'm a”, “I am”, “I have”) binds it only through that relation's closed lexicon (occupations, diets, conditions, animals). “I am a diabetic” is not an occupation; “I am tired” is not a diet |
+| polarity, modality, reported speech | ATTEST-2's lists, kept as defence in depth, over the rest of the sentence |
+| questions; retraction | a sentence ending `?` asserts nothing; a retraction ANYWHERE in the event (a closed list: “just kidding”, “not really”, …) attests nothing from it |
+| normalisation (enumerated, and only these) | case-fold; curly to straight apostrophes; whitespace collapsed; a number and a unit from a closed list joined (`78 kg` = `78kg`); trailing punctuation stripped; a leading article dropped from the object |
 | empty input | `not_attested` |
 
-**The measurement, in the order it happened** (the evidence set at `specs/evidence/0045/attest/`, its README; research commits c17224b7 → 00cc1f9d, in research's repository, which a reviewer cannot open: the files are the evidence, and the README is the account of their order):
+**The measurement, in the order it happened** (the evidence set's README is the account; the commits are in research's
+repository, which a reviewer cannot open, so the files are the evidence):
 
 | step | result |
 |---|---|
-| ATTEST-1 on a 68-item corpus written WITH it | 0 false attestations, a development-set artifact |
-| ATTEST-1 on 12 probes written after | **6 of 7 negatives falsely attested** (the object could sit in another clause) |
-| ATTEST-2 frozen; holdout H1 (120 items) written blind by an independent author with no tool access; a second blind labelling | the two labellings agree 120/120. *Both are the same model, so this shows H1 is unambiguous to it: **it is not a human inter-rater ceiling*** |
-| **ATTEST-2 on H1** | **0 / 66 false attestations** (95% upper bound ≈ 4.5%); **9 / 54 genuine statements recognised (17%)** |
-| R1-01's mutants | drop polarity, swap subject, terms presence: **each KILLED** (drop polarity only after a minimal-pair fixture with negation outside the span; on the first 200 items it SURVIVED, because adjacency subsumes in-span negation). “Trust the extractor's field” has no subject in the predicate; it is INV-G1's |
+| ATTEST-1 on a corpus written with it, then 12 probes written after | 0 false attestations, then **6 of 7 negatives falsely attested** |
+| ATTEST-2 frozen; holdout H1 (120 items) written blind by an independent author with no tool access; a second blind labelling | 120/120 agreement; **0 / 66 false attestations, 9 / 54 recall** |
+| Round 2's reviewer, and research's same-class probes | **ATTEST-2 attests 6 + 17 negatives** (R2-01) |
+| ATTEST-3 frozen with its development gate | the 23 negatives and 12 more of the same classes stay non-attested; the earlier development sets give 0 false attestations in 56 negatives. **Tuned on development sets only** |
+| ATTEST-3's mechanism mutants, one per rule above plus R1-01's three (drop polarity, swap subject, terms presence) | **all 8 KILLED** on development negatives only; control clean first and last |
+| holdout **H2** (120 items, 53 true), written by an independent author with no tool access from the gold question and relation glosses only, then a second blind labelling (120/120 agreement); scored ONCE | **ATTEST-3: 1 / 67 false attestations** (one-sided 95% upper bound ≈ 6.9%), **12 / 53 recall (23%)**. ATTEST-2 on the same H2: 5 / 67 and 16 / 53 |
+| H1, as regression only | ATTEST-3: 0 / 66, 5 / 54 |
+
+**The one false attestation on H2** is “I use Obsidian. Actually wait, no, I switched to Logseq last month, ignore
+that.” A retraction in a later sentence, phrased outside ATTEST-3's closed retraction list: an OPEN-ENDED class, and
+the same structural weakness the reviewer named in ATTEST-2. It is reported, not repaired; a repair is a new version
+with a fresh holdout.
+
+**What `attested` therefore means, and what it does not (the owner's ruling, 2026-10-12, R2-01's narrowing route):**
+`attested` is a LABEL, “ATTEST-3's construction matched a first-person statement of this fact in the user's own
+event”, **never proof of what the speaker stated**. It carries **no downstream privilege**: under an active challenge it
+gates like every other value (0047 v1.8 §4c). Its gain over ATTEST-2 (5 → 1 false attestations on H2, and every R2-01
+negative refused) stays in the label.
 
 **Versioning:** a later version ships only after it is measured on a FRESH holdout, with its false-attestation rate
 reported beside the version. A version change never rewrites stored `att`.
@@ -205,7 +220,7 @@ reported beside the version. A version change never rewrites stored `att`.
 
 | `g(e)` | when | meaning claimed | rendered |
 |---|---|---|---|
-| **`attested`** | `att = attested`, no confirmation | ATTEST recognised the statement in the source event | today's line; a renderer may say “you said” |
+| **`attested`** | `att = attested`, no confirmation | **a LABEL:** ATTEST-3's construction matched a first-person statement of it in the source event, never proof (§4a; 1 / 67 false on H2) | today's line; `why` names the label and its version; **no “you said” claim**, and no challenge-gate privilege (0047 §4c) |
 | **`confirmed`** | any 0008 confirmation of `origin` `local` or `restored` | the user confirmed it | today's line; “you confirmed” |
 | **`not_attested`** | `att = not_attested`, no confirmation | **only that ATTEST did not attest it** — the predicate cannot tell a casual true statement from an extractor's inference, so the label never says “inferred” or “unstated” | today's line, **no new inline marker** |
 | **`unknown`** | `att` NULL (written before this spec), no confirmation | grounding was never recorded | today's line |
@@ -276,14 +291,14 @@ no usefulness claim about it (the reviewer's G2 note).
 **MODEL checks** run against the transition rules (research's grounding × reply × confirmation
 transition rules, draft 3.4, sha16 b697bda6) in dev's executable reference model II **before design acceptance**: every invariant holds
 and every declared mutant is killed by its own invariant — the counts are the model's machine-readable run result in the
-package, not restated here (they moved three times while this text was written). **PREDICATE checks** run against frozen ATTEST-2 on the labelled
-sets (§4a). **PRODUCT tests** are named here and land at the implementation gate. *v1.4's sentence that conflated the
+package, not restated here (they moved three times while this text was written). **PREDICATE checks** run against frozen ATTEST-3: its development gate, its mechanism
+mutants, and the blind holdout H2 (§4a). **PRODUCT tests** are named here and land at the implementation gate. *v1.4's sentence that conflated the
 model and product checks is withdrawn.*
 
 | | invariant | check, and the MUTANT it must fail on |
 |---|---|---|
 | **INV-G1** | **`att` comes only from ATTEST, never from the model** | an extractor output claiming its grounding is ignored. **Mutant: honour the field → FAILS** |
-| **INV-G2** | **ATTEST attests only what the source states** | predicate checks on H1 and the fixtures. **Mutants: drop polarity · swap subject · terms presence → each KILLED** (§4a) |
+| **INV-G2** | **ATTEST attests only its supported construction, and `attested` is a label with no downstream privilege** (R2-01) | predicate checks: every R2-01 negative and its classes stay non-attested; the blind holdout H2 is reported as measured (1 / 67). **Mutants: quotes removed after splitting · any material before the trigger · a prefix of the complement · generic triggers without the lexicon · retractions ignored · drop polarity · swap subject · terms presence → each KILLED** (§4a). The privilege's absence is 0047's INV-R12 |
 | **INV-G6** | **The persistence line does not reach query time** | a multi-hop question is still answered. **Mutant: apply the ingest rule at recall → FAILS** |
 | **INV-G7** | **Legacy rows are `unknown`, never re-derived** | **Mutant: read an old False or missing flag as `attested` → FAILS** (model G1) |
 | **INV-G8** | **0019's marker follows the FLAG on every grounding value**, legacy included | **Mutant: suppress the marker on `attested` or `unknown` → FAILS** (model G7) |
@@ -299,11 +314,13 @@ and travels in the package.
 
 ## 7. Failure modes and reversibility
 
-- **Silent failure:** ATTEST is too narrow, so most real statements are `not_attested` (measured: 45 of 54). **Not
+- **Silent failure:** ATTEST is too narrow, so most real statements are `not_attested` (measured on H2: 41 of 53). **Not
   silent and not lossy:** they are stored and assertable, and the label is visible on `why` / `introspect`. The cost
   is a weaker “you said” claim, not a missing fact.
-- **The other direction:** ATTEST attests something not stated. The bound is 0 of 66 on H1 (≈ 4.5% upper bound), on
-  authored chat, not real ingest.
+- **The other direction:** ATTEST attests something not stated. Measured on H2: 1 of 67 (≈ 6.9% upper bound), a
+  retraction outside its closed list; on authored chat, not real ingest. **Its consequence is bounded by design:**
+  `attested` is a label and carries no privilege, so a false attestation changes a word in `why`, never what is asserted
+  under a challenge (§4a, 0047 §4c).
 - **The new refusal:** non-user flagged triples are refused; the count names it.
 - **Reversible?** `att` and `src` are additive and never rewritten. A refused non-user triple stores nothing; its
   evidence is the episode and the count.
@@ -315,8 +332,8 @@ and travels in the package.
 ## 8. Claims and limits
 
 **Claimed:**
-- an attribute is labelled `attested` only if the user's own event states it in a form the pinned grammar
-  recognises;
+- an attribute is labelled `attested` only if the user's own event matches the pinned predicate's construction (a
+  label, not proof: §4a);
 - an unrecognised statement is stored and labelled as not attested, never as stated;
 - grounding is never declared by the model;
 - confirming a not-attested fact whose source the user erased is refused, for post-version edges with a recorded
@@ -325,7 +342,9 @@ and travels in the package.
 **NOT claimed:**
 - **that `not_attested` means inferred.** Most `not_attested` facts are true user statements in forms the grammar
   does not reach.
-- **any rate outside the project.** H1 is authored chat, and its two labellings are the same model. A human labelling
+- **that `attested` is proof of what the speaker stated** (§4a: 1 / 67 on H2), or that it outranks a challenge.
+- **any rate outside the project.** H1 and H2 are authored chat (H2 deliberately hard), and each pair of labellings
+  is the same model family. A human labelling
   and naturally occurring text are owed before a rate is quoted elsewhere.
 - **that query-time derivation is restricted** (§4b).
 - **anything about episodes** (§4b).
@@ -333,27 +352,27 @@ and travels in the package.
 
 ---
 
-## 9. Brief for the external reviewer — ROUND 2
+## 9. Brief for the external reviewer — ROUND 3
 
-**Closure ledger for this document's findings:**
+**The question this round asks: does v1.8 close R2-01, by a repaired predicate measured on a fresh holdout AND the
+narrowing of `attested` to a label with no privilege?**
 
 | finding | closure | evidence |
 |---|---|---|
-| R1-01 | a bounded grammar (§4a); blind holdout measured; the required mutants killed. Its false-negative cost is **accepted by labelling, not by refusal** | research's 0045 evidence set, landed with the spec at `specs/evidence/0045/attest/`: the predicate, H1, both labellings, the scorer, the mutants |
-| R1-02 | an explicit `unknown` for NULL `att`; no re-derivation; `attested` scoped to the user's own event | §4c, INV-G7, model G1 |
-| R1-03 (this spec's state) | the survivor takes the incoming's `att` and `src`; no copying; the OR rule unchanged | §4e, INV-G11, model G5/G6 |
+| R2-01 | **ATTEST-3** (§4a): one supported construction (quotation removed before splitting, the trigger begins its sentence, the complete complement, generic triggers bound by a lexicon, an event-level retraction attests nothing). Every negative you listed, and 29 more of the same classes, stays non-attested; 8 mechanism mutants are killed. **Fresh blind holdout H2: 1 / 67 false attestations, 12 / 53 recall.** The one miss is a retraction outside the closed list, an open-ended class, so **the owner narrowed `attested` to a LABEL with no challenge-gate privilege** (§4a, §4c; 0047 v1.8 §4c, INV-R12) | the evidence set at `specs/evidence/0045/attest/`: the frozen predicate, its development gate and mutants, H2, both labellings, the scorer and the raw result, and the README's account of their order |
+| your G2 answer | accepted as you answered: the narrowed declared-direct boundary, the 0019 amendment's design accepted at round 2, and its v2.2 correction #4 (the diff travels in this package) | the 0019 amendment v2.2 |
+| your G4 answer | the source-redacted guard stays 0045's contract, cross-referenced from the 0008 fold | §4d |
 
 - **Least sure of:**
-  1. leaving `not_attested` with no inline marker. We argue marker inflation, but the reviewer may hold that a
-     reader of the recall line deserves the label too.
-  2. whether the source-redacted refusal is this spec's contract on a state it introduces, or an amendment to
-     accepted 0008's `confirm()`. We wrote it as this spec's: we checked 0008 (accepted) for a closed set of `confirm()` refusals and found none; it says `confirm()` “is unchanged and already carries the correct guard” (assertability), and a refusal added on state THIS spec introduces (`att`, `src`) only restricts and contradicts nothing in 0008 — the same shape as 0047's challenge refusal, which lives in 0047. If the reviewer reads it as 0008's, it travels as a fourth document.
-  3. ATTEST-2's recall. It is low by construction, and grammar growth is measured one version at a time.
-- **Where we may have overstated:** “safe” rests on 66 authored negatives labelled by one model family.
-- **What would change our minds:** a false-attestation rate on naturally occurring text materially above H1's bound.
-- **What we are NOT asking:** whether to label rather than block (ruled), or whether an LLM judge should decide
-  attestation (rejected, §1e).
-- **Reviewer-safe copy:** nothing generalised.
+  1. Whether a label with no privilege is still worth its predicate. We think yes: it is what `why` and the
+     structured returns show, and its false-attestation count fell from 5 to 1 on H2.
+  2. ATTEST-3's recall (23% on H2), lower than ATTEST-2's (30%). Most genuine statements are stored `not_attested` and
+     labelled, under “Label, don't block”.
+- **What would change our minds:** a false-attestation rate on naturally occurring text materially above H2's bound,
+  which would argue for withdrawing the label too.
+- **What we are NOT asking:** label rather than block (ruled); an LLM judge (rejected, §1e).
+- **Reviewer-safe copy:** nothing generalised. A human labelling and naturally occurring text are still owed before
+  any rate is quoted outside the project.
 
 **Joint acceptance (R1-10):** 0045 and 0047 cannot be accepted independently. This is now **machine-checked**, not
 asserted in prose: each document's `Spec-Requires:` line names the other, and the gate refuses a tree in which one is
@@ -367,7 +386,7 @@ it was not verbatim, and the gate replaces it.*
 | # | question | who decides | by when | class |
 |---|---|---|---|---|
 | Q2 | Is a confirmation path intended? **RESOLVED 2026-10-10: yes**; 2026-10-11: it is `confirm()` on the stored edge | owner | — | resolved |
-| G1 | The attestation test (R1-01). **ANSWERED by ATTEST-2 and its measurement (§4a)**; the reviewer judges the closure | external reviewer | round 2 | blocking |
+| G1 | The attestation test (R1-01, R2-01). **ANSWERED by ATTEST-3, its fresh holdout H2, and the owner's narrowing of `attested` to a label with no privilege (§4a)**; the reviewer judges the closure | external reviewer | round 3 | blocking |
 | G2 | Non-user events (R1-01's G2). **ANSWERED: refuse when flagged, label `not_attested` otherwise** | external reviewer | round 2 | blocking |
 | G3 | No inline marker on `not_attested` (§9 (1)) | external reviewer | round 2 | non-blocking |
 | G4 | Source-redacted refusal: this spec's, or an 0008 amendment (§9 (2)) — dev: this spec's (0008 has no closed refusal list) | external reviewer + dev | round 2 | blocking |

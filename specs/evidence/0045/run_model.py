@@ -49,23 +49,29 @@ def inv_g2_resolution(rules=R):
 
 
 def inv_g3_restriction(rules=R):
-    """MODEL-G3 (R1-05): no cell promotes an edge an existing gate refused."""
+    """MODEL-G3 (R1-05; 0047 v1.8 INV-R12): no cell promotes an edge an existing gate refused, and under an active
+    challenge NO value is assertable — `attested` included (the owner's option 3)."""
     e = E("e"); s = store(e)
-    return M.gate(s, e, existing_ok=False) == "not_assertable"
+    restriction = M.gate(s, e, existing_ok=False) == "not_assertable"
+    challenged = []
+    for att in ("attested", "not_attested", None):
+        c = E(f"c{att}", att); s.edges[c.id] = c
+        M.add_reply(s, c, "challenge", "no")
+        challenged.append(M.gate(s, c) == "not_assertable")
+    return restriction and all(challenged)
 
 
 def inv_g4_unit(rules=R):
-    """MODEL-G4 (R1-05): a challenged attested fact renders WITH its unit or not at all; the count is all open, whatever
-    the budget."""
+    """MODEL-G4 (0047 v1.8 INV-R3/R6): a challenged fact is WITHHELD on every assertion surface at every budget, whatever
+    its value; where it is inspected the unit is present and counts EVERY open challenge, whatever budget trims the
+    excerpts shown."""
     e = E("e"); s = store(e)
     for i in range(3):
         M.add_reply(s, e, "challenge", f"no {i}")
-    full = M.render(s, e, 10_000)
-    tight = M.render(s, e, len(f"{e.relation}: {e.obj}") + 2)
-    # 0047 INV-R6: at a budget the unit EXACTLY fits, the count is still every open challenge — the budget decides
-    # whether the unit fits, never how many challenges exist
-    exact = M.render(s, e, len(full)) if full is not None else None
-    return full is not None and "3 open" in full and tight is None and exact == full
+    withheld = all(M.render(s, e, b) is None for b in (5, 40, 10_000))
+    full, tight = M.inspect(s, e), M.inspect(s, e, budget=5)
+    return (withheld and full["open"] == 3 and full["unit"] is not None and "3 open" in full["unit"]
+            and tight["open"] == 3 and "3 open" in (tight["unit"] or "") and len(tight["excerpts"]) < 3)
 
 
 def inv_g5_acts_stay(rules=R):
@@ -144,43 +150,44 @@ def inv_g10_import(rules=R):
     capped = s.edges["x"].att == "not_attested" and s.edges["x"].source_episode is None
     local = E("loc"); s2 = store(local)
     try:
-        M.import_rows(s2, [], [], [M.Reply(id="f", edge="loc", kind="challenge", text="forged", t=1)], "default"); attack = False
+        M.import_rows(s2, [], [], [M.Reply(id="f", edge="loc", kind="challenge", text="forged")], "default"); attack = False
     except M.Refused:
         attack = True
-    s3 = store(); M.import_rows(s3, [E("y")], [], [M.Reply(id="r", edge="y", kind="challenge", text="mine", t=1)], "default")
+    s3 = store(); M.import_rows(s3, [E("y")], [], [M.Reply(id="r", edge="y", kind="challenge", text="mine")], "default")
     try:
-        M.import_rows(store(), [], [], [M.Reply(id="o", edge="nowhere", kind="context", text="", t=1)], "default"); orphan = False
+        M.import_rows(store(), [], [], [M.Reply(id="o", edge="nowhere", kind="context", text="")], "default"); orphan = False
     except M.Refused:
         orphan = True
     # the 0041 amendment's reply rows (INV-RR3): a REDACTED export round-trips through its notice; a marker reply with no
     # notice is a fabricated tombstone and refuses the unit; an ordinary reply under a notice is written treated
     red = E("z", obj=M.MARKER); s4 = store()
     try:
-        M.import_rows(s4, [red], [], [M.Reply(id="m", edge="z", kind="challenge", text=M.MARKER, t=1)], "default",
+        M.import_rows(s4, [red], [], [M.Reply(id="m", edge="z", kind="challenge", text=M.MARKER)], "default",
                       notices={"z"})
         round_trip = [r.text for r in s4.replies] == [M.MARKER]
     except M.Refused:
         round_trip = False                              # the redacted round trip R1-07 found refused
     try:
-        M.import_rows(store(), [E("w")], [], [M.Reply(id="f2", edge="w", kind="challenge", text=M.MARKER, t=1)], "default")
+        M.import_rows(store(), [E("w")], [], [M.Reply(id="f2", edge="w", kind="challenge", text=M.MARKER)], "default")
         fabricated = False
     except M.Refused:
         fabricated = True
     s5 = store()
-    M.import_rows(s5, [E("v")], [], [M.Reply(id="o2", edge="v", kind="context", text="I never said that", t=1)], "default",
+    M.import_rows(s5, [E("v")], [], [M.Reply(id="o2", edge="v", kind="context", text="I never said that")], "default",
                   notices={"v"})
     treated = [r.text for r in s5.replies] == [M.MARKER]
     # the 0008 amendment's origin rule (INV-Q5; 0047 INV-R21): local → export → DEFAULT import (imported, testimony,
     # not counted) → export → TRUSTED restore — still imported; a local act restored by its own history is `restored`
     # and counts; and a file's correlation id never occupies the destination's id space (INV-Q4)
-    src = store(E("h", "not_attested")); M.confirm(src, src.edges["h"], rules, correlation_id="X1")
+    src = store(E("h", "not_attested")); src.origin = "store-S"     # a FOREIGN source (rule 0 refuses an own-origin claim)
+    M.confirm(src, src.edges["h"], rules, correlation_id="X1")
     b1 = store(); M.import_rows(b1, *M.export(src, "u"), "default")
     testimony = [c.origin for c in b1.confirmations] == ["imported"] and M.grounding(b1, b1.edges["h"]) == "not_attested"
     b2 = store(); M.import_rows(b2, *M.export(b1, "u"), "trusted")
     chain = [c.origin for c in b2.confirmations] == ["imported"] and M.grounding(b2, b2.edges["h"]) == "not_attested"
     b3 = store(); M.import_rows(b3, *M.export(src, "u"), "trusted")
     own = [c.origin for c in b3.confirmations] == ["restored"] and M.grounding(b3, b3.edges["h"]) == "confirmed"
-    lying = M.Confirmation(id="kf", edge="g2", t=1, origin="local", correlation_id="X2")
+    lying = M.Confirmation(id="kf", edge="g2", origin="local", correlation_id="X2")
     b4 = store(); M.import_rows(b4, [E("g2", "not_attested")], [lying], [], "default")
     no_lie = [c.origin for c in b4.confirmations] == ["imported"]
     try:
@@ -229,7 +236,7 @@ def inv_g11_replay(rules=R):
         before_live = False
     # INV-Q3: a store whose confirmation predates the registry; after the migration its id conflicts on a reply
     f_ = E("f"); s3 = store(f_)
-    s3.confirmations.append(M.Confirmation(id="k-old", edge="f", t=1, correlation_id="old1"))
+    s3.confirmations.append(M.Confirmation(id="k-old", edge="f", correlation_id="old1"))
     M.migrate_registry(s3)
     try:
         M.add_reply(s3, f_, "context", "z", correlation_id="old1"); backfilled = False
@@ -256,20 +263,21 @@ def inv_g12_procedural(rules=R):
     return admitted and refused and M.grounding(s, d) == "attested"
 
 
-def inv_g13_historical(rules=R):
-    """MODEL-G13 (0047 INV-R20; rules draft 3.4): two clocks. T is VALID time and selects facts; acts carry COMMIT time
-    and are never filtered by T. A fact valid from 10, challenged at commit time >100, queried as of T=20: an attested
-    fact renders WITH the unit, an unattested one is withheld — never the plain line. A fact not held at T is not
-    rendered at all (the control)."""
+def inv_g13_historical(rules=R):  # 0047 v1.8 INV-R20
+    """MODEL-G13 (0047 v1.8 INV-R20): two clocks. T is VALID time and selects facts; acts carry a POSITION (the 0008
+    amendment's act ordinal) and are never filtered by T. A fact valid from 10 and challenged NOW (late in act order) is
+    WITHHELD as of T=20, attested or not; an unchallenged fact held at T renders (the control); a fact not held at T
+    does not."""
     att = E("ha", "attested"); att.valid_from = 10
     na = E("hn", "not_attested"); na.valid_from = 10
+    ok = E("ho", "attested"); ok.valid_from = 10
     later = E("hl", "attested"); later.valid_from = 50
-    s = store(att, na, later)
+    s = store(att, na, ok, later)
+    s.act_counter = 100                    # the challenges are written LATE in the store's act order (positions >100)
     for e in (att, na):
         M.add_reply(s, e, "challenge", "that is wrong")
-    a = M.render(s, att, 10_000, at=20); n = M.render(s, na, 10_000, at=20)
-    return (a is not None and "[challenged by the subject: 1 open" in a and n is None
-            and M.render(s, later, 10_000, at=20) is None)
+    return (M.render(s, att, 10_000, at=20) is None and M.render(s, na, 10_000, at=20) is None
+            and M.render(s, ok, 10_000, at=20) is not None and M.render(s, later, 10_000, at=20) is None)
 
 
 def inv_g14_erasure(rules=R):
@@ -287,11 +295,204 @@ def inv_g14_erasure(rules=R):
     return gone and fresh
 
 
+
+# ================================================================================ round 3 (package II round-2 verdict)
+def _admitted(s, *rows, mode="trusted"):
+    """An import the invariant asserts is ADMITTED: a domain refusal is that property failing, returned as False; any
+    other exception propagates (a harness defect is never read as a kill)."""
+    try:
+        M.import_rows(s, *rows, mode)
+        return True
+    except M.Refused:
+        return False
+
+
+def _foreign(*edges, origin="store-S"):
+    s = store(*edges); s.origin = origin
+    return s
+
+
+def inv_g15_key_domains(rules=R):
+    """MODEL-G15 (II R2-02; 0008am INV-Q4′): internal act keys fail the caller grammar and caller keys pass it; the
+    verdict's sequence — restore a confirmation, then a LOCAL confirm on another edge with a caller id equal to anything
+    a prior model generated — is admitted; the reverse order (a local id, then an import whose ORIGINAL id is the same)
+    is admitted; repeated imports and both verbs never occupy the caller namespace."""
+    src = _foreign(E("e1"), E("e2")); M.confirm(src, src.edges["e1"], rules, correlation_id="c-src")
+    M.add_reply(src, src.edges["e2"], "context", "note", correlation_id="r-src")
+    dst = store(E("e9"))
+    M.import_rows(dst, *M.export(src, "u"), "trusted")
+    M.import_rows(dst, *M.export(src, "u"), "trusted")                 # repeated
+    keys = [a.correlation_id for a in dst.confirmations + dst.replies]
+    grammar = all(not M.CALLER_ID.fullmatch(k) for k in keys) and all(k.startswith("#act:") for k in keys)
+    ok = []
+    for cid in ("imp-1", "c-src", "r-src", "gen-1"):
+        try:
+            M.confirm(dst, dst.edges["e9"], rules, correlation_id=cid); ok.append(True)
+            dst.confirmations = [c for c in dst.confirmations if c.correlation_id != cid]
+            dst.registry.pop(("u", cid), None)
+        except M.Refused:
+            ok.append(False)
+    rev = store(E("e7")); M.confirm(rev, rev.edges["e7"], rules, correlation_id="c-src")
+    try:
+        M.import_rows(rev, *M.export(src, "u"), "trusted"); reverse = True
+    except M.Refused:
+        reverse = False
+    try:
+        M.confirm(dst, dst.edges["e9"], rules, correlation_id=keys[0]); forged = False
+    except M.Refused:
+        forged = True                                                   # a caller cannot present an internal key
+    return grammar and all(ok) and reverse and forged and not any(k[1].startswith("#") for k in dst.registry)
+
+
+def inv_g16_chronology(rules=R):
+    """MODEL-G16 (II R2-03; 0047 INV-R23; 0008am INV-Q9): the restore rule reads POSITION, never the caller's date. A
+    same-origin confirmation ordered before an open destination challenge is admitted, one after it refused; an
+    incomparable one (another origin, or a legacy unknown position) is refused against an OPEN challenge and admitted
+    against a RESOLVED one; a confirmation dated 2025 (`confirmed_at`) made after a 2026 challenge is refused; a default
+    file cannot claim the destination's origin; the store-wide counter is never reset by erasure."""
+    a = store(E("f")); a.origin = "store-S"
+    early = M.confirm(a, a.edges["f"], rules, correlation_id="k1", date=2025)
+    M.add_reply(a, a.edges["f"], "challenge", "wrong")
+    edges, confs, reps = M.export(a, "u")
+    d1 = store(); d1.origin = "store-D"
+    M.import_rows(d1, edges, [], reps, "trusted")                     # the challenge arrives first, open
+    try:
+        M.import_rows(d1, [], confs, [], "trusted"); before = True
+    except M.Refused:
+        before = False
+    b = store(E("g")); b.origin = "store-S"
+    M.add_reply(b, b.edges["g"], "challenge", "wrong")
+    late = M.Confirmation(id="kl", edge="g", pos=M.next_pos(b), confirmed_at=2025, act_uid=("store-S", "u", "kl"),
+                          request_digest="d")                         # made AFTER the challenge, dated BEFORE it
+    edges_b, _c, reps_b = M.export(b, "u")
+    d2 = store(); d2.origin = "store-D"; M.import_rows(d2, edges_b, [], reps_b, "trusted")
+    try:
+        M.import_rows(d2, [], [late], [], "trusted"); after_refused = False
+    except M.Refused:
+        after_refused = True
+    d3 = store(E("h")); d3.origin = "store-D"; M.add_reply(d3, d3.edges["h"], "challenge", "mine")
+    other = M.Confirmation(id="ko", edge="h", pos=("store-X", 1), act_uid=("store-X", "u", "ko"), request_digest="d")
+    legacy = M.Confirmation(id="kg", edge="h", pos=None, act_uid=("store-X", "u", "kg"), request_digest="d")
+    refused = []
+    for c in (other, legacy):
+        try:
+            M.import_rows(d3, [], [c], [], "trusted"); refused.append(False)
+        except M.Refused:
+            refused.append(True)
+    ch = d3.replies[0]; M.add_reply(d3, d3.edges["h"], "resolve", None, target=ch.id)
+    resolved_ok = _admitted(d3, [], [other], []) and any(c.id == "ko" for c in d3.confirmations)
+    d4 = store(); d4.origin = "store-D"
+    forged = M.Confirmation(id="kz", edge="z", pos=("store-D", 0), act_uid=("store-D", "u", "kz"), request_digest="d")
+    try:
+        M.import_rows(d4, [E("z")], [forged], [], "default"); rule0 = False
+    except M.Refused:
+        rule0 = True
+    c5 = store(E("m")); M.confirm(c5, c5.edges["m"], rules, correlation_id="q1")
+    exported = c5.confirmations[0].pos
+    M.forget_user(c5, "u"); c5.edges["m"] = E("m")
+    again = M.confirm(c5, c5.edges["m"], rules, correlation_id="q1")
+    never_reset = again.pos[1] > exported[1]
+    return before and after_refused and all(refused) and resolved_ok and rule0 and never_reset
+
+
+def inv_g17_repeat_import(rules=R):
+    """MODEL-G17 (II R2-04; 0008am INV-I1–I3): importing one file twice, in either mode, leaves the destination
+    byte-identical after the first; a changed row under a held act_uid refuses the whole unit; a NEW default act over a
+    held fact refuses even when an exact replay on that fact was a no-op; a second hop keeps act_uid and the ORIGINAL
+    request id."""
+    src = _foreign(E("x"), E("y")); M.confirm(src, src.edges["x"], rules, correlation_id="orig-1")
+    M.add_reply(src, src.edges["y"], "challenge", "no", correlation_id="orig-2")
+    f = M.export(src, "u")
+    import copy as _c
+    same = []
+    for mode in ("default", "trusted"):
+        d = store()
+        first = _admitted(d, *f, mode=mode)
+        snap = _c.deepcopy(vars(d))
+        same.append(first and _admitted(d, *f, mode=mode) and vars(d) == snap)
+    d = store(); M.import_rows(d, *f, "trusted")
+    changed = _c.deepcopy(f); changed[1][0].confirmed_at = 1999
+    try:
+        M.import_rows(d, *changed, "trusted"); conflict = False
+    except M.Refused:
+        conflict = True
+    dd = store(); M.import_rows(dd, *f, "default")
+    newact = M.Reply(id="r-new", edge="x", kind="challenge", text="new", pos=("store-S", 99), act_uid=("store-S", "u", "r-new"))
+    try:
+        M.import_rows(dd, [], f[1], [newact], "default"); grant = False
+    except M.Refused:
+        grant = True
+    hop1 = store(); hop1.origin = "store-B"; M.import_rows(hop1, *f, "default")
+    hop2 = store(); hop2.origin = "store-C"; M.import_rows(hop2, *M.export(hop1, "u"), "trusted")
+    k2 = hop2.confirmations[0]
+    second_hop = k2.act_uid == ("store-S", "u", "k1") and k2.recorded_correlation_id == "orig-1"
+    return all(same) and conflict and grant and second_hop
+
+
+def inv_g18_redacted_requests(rules=R):
+    """MODEL-G18 (II R2-05; 0008am INV-Q7; 0041am INV-RR5/RR7; 0047 INV-R24): after an edge's redaction no request
+    digest on it survives in confirmations, replies or the registry; a retry under either id returns request_redacted
+    for the SAME and for a DIFFERENT payload; a different verb under that id still conflicts; the registry step backfills
+    an already-redacted confirmation with the marker; before redaction a reply retry replays its own result after the
+    edge changed."""
+    s = store(E("e"))
+    M.confirm(s, s.edges["e"], rules, correlation_id="kc")
+    r1 = M.add_reply(s, s.edges["e"], "context", "my words", correlation_id="kr")
+    s.edges["e"].obj = "changed"
+
+    def retry(text, cid):
+        try:
+            return M.add_reply(s, s.edges["e"], "context", text, correlation_id=cid)
+        except M.Refused as x:                                          # a refusal is this property failing
+            return f"refused: {x}"
+    replay = retry("my words", "kr") is r1
+    M.redact_edge(s, "e")
+    digests = ([c.request_digest for c in s.confirmations] + [r.request_digest for r in s.replies]
+               + [v[1] for v in s.registry.values()])
+    clean = all(d == M.MARKER for d in digests)
+    same = retry("my words", "kr") == M.REQUEST_REDACTED
+    diff = retry("other", "kr") == M.REQUEST_REDACTED
+    cross = str(retry("x", "kc")).startswith("refused: integrity conflict")
+    old = store(E("o")); M.confirm(old, old.edges["o"], rules, correlation_id="ko")
+    old.registry.clear(); M.redact_edge(old, "o"); M.migrate_registry(old)
+    backfill = old.registry[("u", "ko")][1] == M.MARKER
+    return replay and clean and same and diff and cross and backfill
+
+
+def inv_g19_notice_coverage(rules=R):
+    """MODEL-G19 (II R2-06; 0041am INV-RR6): an ordinary reply onto a target held redacted under a notice that does NOT
+    cover replies.text refuses the unit, and the foreign notice is not rewritten; under a covering notice it is written
+    treated; an unredacted target admits it (the positive control)."""
+    src = _foreign(E("h")); r = M.add_reply(src, src.edges["h"], "context", "my real employer is Acme")
+    old = store(E("h")); M.redact_edge(old, "h", covers_replies=False)
+    try:
+        M.import_rows(old, [], [], [r], "trusted"); refused = False
+    except M.Refused:
+        refused = True
+    untouched = "h" not in old.notices and not old.replies
+    cov = store(E("h")); M.redact_edge(cov, "h", covers_replies=True)
+    M.import_rows(cov, [], [], [r], "trusted")
+    treated = [x.text for x in cov.replies] == [M.MARKER]
+    plain = store(E("h")); M.import_rows(plain, [], [], [r], "trusted")
+    control = [x.text for x in plain.replies] == ["my real employer is Acme"]
+    return refused and untouched and treated and control
+
+
+def inv_g20_canonical(rules=R):
+    """MODEL-G20 (0008am INV-Q8): act identity is hashed over a canonical JSON array — a separator inside a field, a NUL
+    and an empty field each give distinct internal keys."""
+    pairs = [(("a", "b:c", "d"), ("a:b", "c", "d")), (("a", "b\x00c"), ("a\x00b", "c")), (("a", "", "b"), ("a", "b", ""))]
+    return all(M.internal_key(x) != M.internal_key(y) for x, y in pairs)
+
+
 INVARIANTS = {"MODEL-G1": inv_g1_legacy, "MODEL-G2": inv_g2_resolution, "MODEL-G3": inv_g3_restriction, "MODEL-G4": inv_g4_unit,
               "MODEL-G5": inv_g5_acts_stay, "MODEL-G6": inv_g6_survivor_axis, "MODEL-G7": inv_g7_marker_follows_flag,
               "MODEL-G8": inv_g8_write_path, "MODEL-G9": inv_g9_source_redacted, "MODEL-G10": inv_g10_import,
               "MODEL-G11": inv_g11_replay, "MODEL-G12": inv_g12_procedural,
-              "MODEL-G13": inv_g13_historical, "MODEL-G14": inv_g14_erasure}
+              "MODEL-G13": inv_g13_historical, "MODEL-G14": inv_g14_erasure,
+              "MODEL-G15": inv_g15_key_domains, "MODEL-G16": inv_g16_chronology, "MODEL-G17": inv_g17_repeat_import,
+              "MODEL-G18": inv_g18_redacted_requests, "MODEL-G19": inv_g19_notice_coverage,
+              "MODEL-G20": inv_g20_canonical}
 
 
 def run_invariants(rules=R) -> dict:
@@ -305,8 +506,11 @@ def run_invariants(rules=R) -> dict:
 
 
 # ----------------------------------------------------------------------------------------------- mutants
-_O = {k: getattr(M, k) for k in ("grounding", "active_challenges", "gate", "render", "absorb", "write", "confirm",
-                                   "import_rows", "_replay", "add_reply", "forget_user", "migrate_registry")}
+# every function the model module defines — DERIVED, never listed: a hand list went stale when round 3 added
+# ordered_before, next_pos, _proj, redact_edge and internal_key (mutants of them found no original, and their calls
+# were never counted as reaching the mutated path)
+_O = {k: v for k, v in vars(M).items()
+      if callable(v) and not isinstance(v, type) and getattr(v, "__module__", None) == M.__name__}
 
 
 def _set(name, fn):
@@ -323,7 +527,7 @@ def _absorb_launders(s, prior, incoming, rules):
 def _absorb_copies(s, prior, incoming, rules):
     s.edges[incoming.id] = incoming; prior.active = False
     for c in [c for c in s.confirmations if c.edge == prior.id]:
-        s.confirmations.append(M.Confirmation(id=c.id + "'", edge=incoming.id, t=c.t))
+        s.confirmations.append(M.Confirmation(id=c.id + "'", edge=incoming.id, pos=c.pos))
     return "absorbed"
 
 
@@ -338,11 +542,18 @@ def _render_axis_marker(s, e, budget, at=None):
     return line
 
 
-def _render_drops_unit(s, e, budget, at=None):
-    line = _O["render"](s, e, 10_000, at)
-    if line is None:
-        return None
-    return line if len(line) <= budget else line.split(" [challenged")[0]
+def _inspect_drops_unit(s, e, budget=None):
+    """0047 v1.8 INV-R3's inspection mutant: the unit omitted from an inspection carrier."""
+    out = _O["inspect"](s, e, budget)
+    return dict(out, unit=None)
+
+
+def _gate_v17_attested(s, e, existing_ok=True, at=None):
+    """v1.7's cell: a challenged `attested` fact stays assertable (with its unit) — the privilege option 3 removed."""
+    r = _O["gate"](s, e, existing_ok, at)
+    if r == "not_assertable" and existing_ok and M.active_challenges(s, e, at) and M.grounding(s, e, at) == "attested":
+        return "assertable_with_unit"
+    return r
 
 
 def _challenges_context_clears(s, e, at=None):
@@ -419,11 +630,11 @@ def _confirm_reads_edge_first(s, e, rules, correlation_id=None):
 
 
 def _render_filters_acts_by_valid_t(s, e, budget, at=None):
-    """0047 INV-R20's mutant: acts filtered by the VALID-time T, as if their commit time were valid time."""
+    """0047 INV-R20's mutant: acts filtered by the VALID-time T, as if their position were valid time."""
     if at is None:
         return _O["render"](s, e, budget, at)
     saved = M.active_challenges
-    M.active_challenges = lambda s_, e_, at_=None: [r for r in saved(s_, e_) if r.t <= at]
+    M.active_challenges = lambda s_, e_, at_=None: [r for r in saved(s_, e_) if (r.pos or ("", 0))[1] <= at]
     try:
         return _O["render"](s, e, budget, at)
     finally:
@@ -486,7 +697,7 @@ def _migrate_without_backfill(s):
 def _confirm_ignores_source(s, e, rules, correlation_id=None):
     if M.active_challenges(s, e):
         raise M.Refused("store.confirm.active-challenge")
-    s.confirmations.append(M.Confirmation(id=f"k{len(s.confirmations) + 1}", edge=e.id, t=s.tick()))
+    s.confirmations.append(M.Confirmation(id=f"k{len(s.confirmations) + 1}", edge=e.id, pos=M.next_pos(s)))
 
 
 def _import_keeps_file_axis(s, edges, confirmations, replies, mode, notices=()):
@@ -496,20 +707,11 @@ def _import_keeps_file_axis(s, edges, confirmations, replies, mode, notices=()):
         s.edges[i].att, s.edges[i].source_episode = a, ep
 
 
-def _render_counts_selected(s, e, budget, at=None):
-    """0047 INV-R6's mutant: the open count derived from the challenges whose text fits the budget, not from all."""
-    line = _O["render"](s, e, 10_000, at)
-    if line is None or " [challenged" not in line:
-        return line if line is None or len(line) <= budget else None
-    base = line.split(" [challenged")[0]
-    ch = M.active_challenges(s, e, at)
-    room, kept = budget - len(base) - len(" [challenged by the subject:  open; latest: ]") - 1, 0
-    for c in ch:
-        if room - len(c.text[:20]) < 0:
-            break
-        room -= len(c.text[:20]); kept += 1
-    out = f"{base} [challenged by the subject: {kept} open; latest: {ch[-1].text[:20]}]"
-    return out if len(out) <= budget else None
+def _inspect_counts_selected(s, e, budget=None):
+    """0047 INV-R6's mutant: the open count derived from the excerpts the budget selected, not from all."""
+    out = _O["inspect"](s, e, budget)
+    n = len(out["excerpts"])
+    return dict(out, open=n, unit=(out["unit"] or "").replace(f"{out['open']} open", f"{n} open") or None)
 
 
 def _absorb_ignores_replies(s, prior, incoming, rules):
@@ -590,6 +792,142 @@ def _write_refuses_flagged_user(s, e, *, author, attested_by_predicate, context=
     return _O["write"](s, e, author=author, attested_by_predicate=attested_by_predicate, context=context)
 
 
+# ---------------------------------------------------------------------------------------------- round-3 mutants
+def _add_reply_digest_of_edge_state(s, e, kind, text, target=None, correlation_id=None):
+    """0047 INV-R24's first mutant, "replay by edge state": the request digest folds in the edge's current content, so a
+    retry after the edge changed is a DIFFERENT request and conflicts instead of replaying."""
+    saved = M.canonical_uid
+    M.canonical_uid = lambda *parts: saved(*parts, e.obj) if parts and parts[0] == "add_reply" else saved(*parts)
+    try:
+        return _O["add_reply"](s, e, kind, text, target, correlation_id)
+    finally:
+        M.canonical_uid = saved
+
+
+def _import_imp_keys(s, edges, confs, reps, mode, notices=()):
+    """The round-2 model: an imported act keyed `imp-N`, an admissible caller id (II R2-02)."""
+    _O["import_rows"](s, edges, confs, reps, mode, notices)
+    for n, a in enumerate(s.confirmations + s.replies, 1):
+        if a.origin != "local":
+            a.correlation_id = f"imp-{n}"
+
+
+def _import_orders_by_date(s, edges, confs, reps, mode, notices=()):
+    """Order by the caller's `confirmed_at` (II R2-03, the verdict's countermodel)."""
+    import copy as _c
+    confs = [_c.copy(c) for c in confs]
+    for c in confs:
+        c.pos = (c.pos[0] if c.pos else "?", c.confirmed_at)
+    return _O["import_rows"](s, edges, confs, reps, mode, notices)
+
+
+def _ordered_unknown_earliest(a, b):
+    r = _O["ordered_before"](a, b)
+    return True if r is None else r
+
+
+def _import_no_origin_check(s, edges, confs, reps, mode, notices=()):
+    import copy as _c
+    if mode == "default":
+        confs, reps = [_c.copy(x) for x in confs], [_c.copy(x) for x in reps]
+        for x in confs + reps:
+            if x.pos and x.pos[0] == s.origin:
+                x.pos = ("elsewhere", x.pos[1])
+            if x.act_uid and x.act_uid[0] == s.origin:
+                x.act_uid = ("elsewhere",) + tuple(x.act_uid[1:])
+    return _O["import_rows"](s, edges, confs, reps, mode, notices)
+
+
+def _next_pos_max_live(s):
+    live = [a.pos[1] for a in s.confirmations + s.replies if a.pos and a.pos[0] == s.origin]
+    s.act_counter = 1 + max(live, default=0)
+    return (s.origin, s.act_counter)
+
+
+def _proj_full_rows(row):
+    return tuple(sorted((k, repr(v)) for k, v in vars(row).items()))
+
+
+def _import_drops_act_uid(s, edges, confs, reps, mode, notices=()):
+    import copy as _c
+    confs, reps = [_c.copy(x) for x in confs], [_c.copy(x) for x in reps]
+    for x in confs + reps:
+        x.act_uid = None
+    return _O["import_rows"](s, edges, confs, reps, mode, notices)
+
+
+def _proj_uid_only(row):
+    return (row.act_uid,)
+
+
+def _import_replay_grants(s, edges, confs, reps, mode, notices=()):
+    """An exact replay on a held fact read as permission for the file's other acts on it (INV-I3's mutant)."""
+    held = {a.act_uid: a for a in s.confirmations + s.replies}
+    rows = confs + reps
+    replays = [r for r in rows if r.act_uid in held and M._proj(held[r.act_uid]) == M._proj(r)]
+    if mode == "default" and replays:
+        _O["import_rows"](s, edges, [r for r in confs if r in replays], [r for r in reps if r in replays], mode, notices)
+        return _O["import_rows"](s, [], [r for r in confs if r not in replays], [r for r in reps if r not in replays],
+                                 "trusted", notices)
+    return _O["import_rows"](s, edges, confs, reps, mode, notices)
+
+
+def _redact_text_only(s, edge_id, *, covers_replies=True):
+    e = s.edges[edge_id]; e.relation, e.obj = M.MARKER, M.MARKER
+    for r in s.replies:
+        if r.edge == edge_id and r.text is not None:
+            r.text = M.MARKER
+    if covers_replies:
+        s.notices.add(edge_id)
+
+
+def _replay_compares_treated(s, user, cid, verb, digest):
+    if cid is None:
+        return None
+    rec = s.registry.get((user, cid))
+    if rec is None:
+        return None
+    if rec[0] == verb and rec[1] == digest:
+        return rec[2]
+    raise M.Refused(f"integrity conflict: correlation id held by {rec[0]}")
+
+
+def _replay_ignores_verb(s, user, cid, verb, digest):
+    rec = s.registry.get((user, cid)) if cid is not None else None
+    if rec is not None and rec[1] == M.MARKER:
+        return M.REQUEST_REDACTED
+    return _O["_replay"](s, user, cid, verb, digest)
+
+
+def _backfill_live_digest(s):
+    for c in s.confirmations:
+        if c.origin == "local" and c.correlation_id is not None:
+            s.registry.setdefault((c.user, c.correlation_id),
+                                  ("confirm", M.canonical_uid("confirm", c.user, c.edge), c, c.edge))
+
+
+def _import_absent_field_permits(s, edges, confs, reps, mode, notices=()):
+    saved = {}
+    for r in reps:
+        t = s.edges.get(r.edge)
+        if t is not None and M.MARKER in (t.relation, t.obj) and r.edge not in s.notices:
+            saved[r.edge] = (t.relation, t.obj); t.relation, t.obj = "rel", "obj"
+    try:
+        return _O["import_rows"](s, edges, confs, reps, mode, notices)
+    finally:
+        for k, (rel, obj) in saved.items():
+            if k in s.edges:
+                s.edges[k].relation, s.edges[k].obj = rel, obj
+
+
+def _import_rewrites_notice(s, edges, confs, reps, mode, notices=()):
+    for r in reps:
+        t = s.edges.get(r.edge)
+        if t is not None and M.MARKER in (t.relation, t.obj):
+            s.notices.add(r.edge)
+    return _O["import_rows"](s, edges, confs, reps, mode, notices)
+
+
 # name -> (owning model invariant, installer, the spec rows whose named mutant this is). The third element is what
 # model_citations.py checks against each document's §6: a row that cites "model Gn" must have a mutant answering it,
 # owned by MODEL-Gn, and a mutant may answer only a row that cites its owner.
@@ -599,8 +937,9 @@ MUTANTS = {
     "any context reply clears all challenges (R1-06, the reviewer's)": ("MODEL-G2", _set("active_challenges", _challenges_any_context_clears), ("0047 INV-R14",)),
     "confirm() drops the active-challenge refusal": ("MODEL-G2", _set("confirm", _confirm_drops_challenge_refusal), ("0047 INV-R13",)),
     "a grid cell promotes an ineligible edge (R1-05)": ("MODEL-G3", _set("gate", lambda s, e, existing_ok=True, at=None: "assertable"), ("0047 INV-R12",)),
-    "budget selection drops the unit to fit (R1-05)": ("MODEL-G4", _set("render", _render_drops_unit), ()),
-    "the open count derived from the budget-selected challenges": ("MODEL-G4", _set("render", _render_counts_selected), ("0047 INV-R6",)),
+    "an inspection carrier omits the unit (R1-05, v1.8 INV-R3)": ("MODEL-G4", _set("inspect", _inspect_drops_unit), ()),
+    "keep `attested` assertable under a challenge (v1.7's cell)": ("MODEL-G3", _set("gate", _gate_v17_attested), ("0047 INV-R12",)),
+    "the open count derived from the budget-selected challenges": ("MODEL-G4", _set("inspect", _inspect_counts_selected), ("0047 INV-R6",)),
     "absorption copies confirmations to the survivor (R1-03)": ("MODEL-G5", _set("absorb", _absorb_copies), ("0047 INV-R17",)),
     "survivor selection ignores a contributor's reply": ("MODEL-G5", _set("absorb", _absorb_ignores_replies), ("0047 INV-R17",)),
     "an attested prior launders the survivor's axis (§7)": ("MODEL-G6", _set("absorb", _absorb_launders), ("0045 INV-G11",)),
@@ -622,8 +961,8 @@ MUTANTS = {
     "only the new verb's direction is checked": ("MODEL-G11", _set("_replay", _replay_one_direction), ("0008am INV-Q1",)),
     "live edge state read before the registry": ("MODEL-G11", _set("confirm", _confirm_reads_edge_first), ("0008am INV-Q2",)),
     "the migration without the backfill": ("MODEL-G11", _set("migrate_registry", _migrate_without_backfill), ("0008am INV-Q3",)),
-    "an imported act occupies the id space": ("MODEL-G10", _set("import_rows", _import_occupies_ids), ("0008am INV-Q4",)),
-    "an imported row keeps the file's id as its correlation_id": ("MODEL-G10", _set("import_rows", _import_keeps_file_id), ("0008am INV-Q4",)),
+    "an imported act occupies the id space": ("MODEL-G10", _set("import_rows", _import_occupies_ids), ("0008am INV-Q4′",)),
+    "an imported row keeps the file's id as its correlation_id": ("MODEL-G10", _set("import_rows", _import_keeps_file_id), ("0008am INV-Q4′",)),
     "count imported confirmations toward g(e)": ("MODEL-G10", _set("grounding", _grounding_counts_imported), ("0047 INV-R21",)),
     "trusted restore writes recorded acts as local": ("MODEL-G10", _set("import_rows", _restore_writes_local), ("0047 INV-R21", "0008am INV-Q5")),
     "default import keeps the file's origin": ("MODEL-G10", _set("import_rows", _default_keeps_file_origin), ("0047 INV-R21", "0008am INV-Q5")),
@@ -632,6 +971,23 @@ MUTANTS = {
     "keep registry rows after erasure": ("MODEL-G14", _set("forget_user", _forget_keeps_registry), ("0047 INV-R22", "0008am INV-Q6")),
     "draft 3.2's rule: an att-less insert is refused, procedural included": ("MODEL-G12", _set("write", _write_refuses_procedural), ("0045 INV-G12",)),
     "a reply attaches to a procedural edge (0047 R19)": ("MODEL-G12", lambda: _install_reply_on_procedural(), ("0047 INV-R19",)),
+    "imported acts keyed imp-N, an admissible caller id (II R2-02)": ("MODEL-G15", _set("import_rows", _import_imp_keys), ("0008am INV-Q4′",)),
+    "order by the caller's confirmed_at (II R2-03)": ("MODEL-G16", _set("import_rows", _import_orders_by_date), ("0047 INV-R23",)),
+    "an incomparable or unknown position read as earliest": ("MODEL-G16", _set("ordered_before", _ordered_unknown_earliest), ("0047 INV-R23",)),
+    "compare positions without the origin check (C-1)": ("MODEL-G16", _set("import_rows", _import_no_origin_check), ("0008am INV-Q9",)),
+    "the act ordinal as MAX over live rows (C-2)": ("MODEL-G16", _set("next_pos", _next_pos_max_live), ("0008am INV-Q9",)),
+    "compare full rows, not the projection (II R2-04)": ("MODEL-G17", _set("_proj", _proj_full_rows), ("0008am INV-I1",)),
+    "no exact-replay rule: identity dropped": ("MODEL-G17", _set("import_rows", _import_drops_act_uid), ("0008am INV-I1",)),
+    "a changed row under a held act_uid admitted": ("MODEL-G17", _set("_proj", _proj_uid_only), ("0008am INV-I2",)),
+    "an exact replay grants a new act on its target": ("MODEL-G17", _set("import_rows", _import_replay_grants), ("0008am INV-I3",)),
+    "redaction treats replies.text only (II R2-05)": ("MODEL-G18", _set("redact_edge", _redact_text_only), ("0008am INV-Q7", "0041am INV-RR5")),
+    "replay 'same payload' against a treated digest": ("MODEL-G18", _set("_replay", _replay_compares_treated), ("0008am INV-Q7", "0041am INV-RR5")),
+    "a reply retry returns another verb's result": ("MODEL-G18", _set("_replay", _replay_ignores_verb), ("0047 INV-R24",)),
+    "a reply replays by edge state (its digest folds in the edge)": ("MODEL-G18", _set("add_reply", _add_reply_digest_of_edge_state), ("0047 INV-R24",)),
+    "the backfill copies the live digest": ("MODEL-G18", _set("migrate_registry", _backfill_live_digest), ("0041am INV-RR7",)),
+    "an absent notice field read as permission (II R2-06)": ("MODEL-G19", _set("import_rows", _import_absent_field_permits), ("0041am INV-RR6",)),
+    "the foreign notice rewritten to cover the reply": ("MODEL-G19", _set("import_rows", _import_rewrites_notice), ("0041am INV-RR6",)),
+    "act identity by separator join (C-3)": ("MODEL-G20", _set("internal_key", lambda uid: "#act:" + ":".join(map(str, uid))), ("0008am INV-Q8",)),
 }
 
 

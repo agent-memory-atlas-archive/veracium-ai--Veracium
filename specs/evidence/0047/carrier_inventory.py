@@ -16,7 +16,8 @@ Each censused function must carry a DISPOSITION from 0047 §4d (research's rules
   CONTESTED    contested-group construction/render: the same unit rule inside the group
   PROACTIVE    the proactive surface: render-or-withhold where it renders the fact at all
   WIKI         compiled-wiki input selection: challenged facts EXCLUDED; eviction + in-flight fence on a reply write
-  ASOF         historical rendering: the unit from acts written at or before T
+  ASOF         historical rendering: the unit from the CURRENT acts — T is valid time and selects facts, never acts
+               (0047 INV-R20; the round-2 verdict's correction #1)
   COLLAPSE     render-time duplicate collapse: members whose acts differ are NOT collapsed (§4e)
   RAW          a structured return a caller may render: carries the open-challenge count and g(e)
   EXPORT       portability: §4f (rows carried in full; default import vs trusted restore)
@@ -58,7 +59,7 @@ CLASSIFIED = {
     ("graph.py", "_collapse_survivor_order"): ("COLLAPSE", "orders a collapse group's survivor"),
     ("__init__.py", "Memory._recall"): ("RAW", "builds `Recall` — `Recall.edges` hands whole facts to the caller"),
     ("__init__.py", "Memory._proactive"): ("RAW", "builds the proactive `Recall`"),
-    ("asof/recall.py", "recall_at"): ("RAW", "the as-of `Recall`; its acts as written at or before T"),
+    ("asof/recall.py", "recall_at"): ("RAW", "the as-of `Recall`; it renders the CURRENT acts, whatever T (0047 INV-R20)"),
     ("asof/resolve.py", "resolve_as_of"): ("RAW", "builds `AsOfFact`s — facts_valid_at's return"),
     ("graph.py", "plan_correction"): ("INTERNAL", "builds a `SupersessionPlan`; a plan, not an output"),
     ("why.py", "_edge_dict"): ("RAW", "`veracium why`'s per-edge record"),

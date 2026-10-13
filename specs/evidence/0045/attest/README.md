@@ -57,3 +57,46 @@ With a deterministic grammar, most genuine self-statements (here 45 of 54) do no
 or routing each through a proposal, would put a confirmation burden on the user for ordinary facts. The owner ruled
 "Label, don't block" (2026-10-11): such a statement is stored with `att = not_attested` and labelled. The upgrade to
 `confirmed` is 0008's `confirm()` on the stored edge (0045 §4d). The proposal mechanism was withdrawn.
+
+---
+
+# 0045 v1.8 — ATTEST-3 and holdout H2 (research, 2026-10-12)
+
+Package II's round-2 verdict (R2-01) showed six strings ATTEST-2 attests that state nothing of the kind. The owner
+ruled for a repaired predicate in round 3, measured on a FRESH holdout (2026-10-12). Order of events, all in research's
+repository:
+
+| step | commit | what |
+|---|---|---|
+| 1 | d8d688a1 | ATTEST-3 written and FROZEN (`attest_v3.py`, sha256 `b1329a81…`) with its development gate `regressions_v3.py`: the verdict's 6 negatives, research's 17 (9ead5e9f) and 12 more of the same classes stay non-attested; 9 positives attest; the earlier development sets give 0 false attestations in 56 negatives. Tuned on development sets only |
+| 2 | a86637e0 | `mutants_v3.py`: one mutant per rule of the construction, plus R1-01's three — all 8 KILLED on development negatives only, control clean first and last |
+| 3 | 419df130 | holdout H2 (120 items, 53 true) written by an independent author (a subagent, 0 tool uses) from the gold question and relation glosses only. Committed before ATTEST-3 ran on it. *That commit's message says item h2-022 carries an HTML entity; it does not — the file holds a plain `>`; the entity was only in how the agent's result was displayed to research* |
+| 4 | d86fe60c | a second blind labelling of H2 (a separate subagent, 0 tool uses; no gold, no notes): agrees with the author's gold on 120/120 |
+| 5 | this commit | scored, once: `results_h2.txt` (`score_holdout.py`) |
+
+## Result — ATTEST-3 on H2 (both golds identical)
+
+| | ATTEST-3 | ATTEST-2, same H2 |
+|---|---|---|
+| false attestations among negatives | **1 / 67** (one-sided 95% upper bound ≈ 6.9%) | 5 / 67 (≈ 15.1%) |
+| true self-statements recognised | 12 / 53 (23%) | 16 / 53 (30%) |
+
+**The one false attestation is h2-109:** "I use Obsidian. Actually wait, no, I switched to Logseq last month, ignore
+that." A retraction in a later sentence, phrased outside ATTEST-3's closed retraction list ("actually wait, no",
+"ignore that"). It is the class ATTEST-3 claims to handle, by a list, and the list is open-ended by nature: **the same
+structural weakness the reviewer named in ATTEST-2's blacklist.** It is reported, not repaired: changing the list is a
+new version, and H2 cannot be used to tune it.
+
+H1, as REGRESSION only (it was ATTEST-2's holdout): ATTEST-3 0 / 66 false attestations, 5 / 54 recall (ATTEST-2: 0 / 66,
+9 / 54). The four positives ATTEST-2 found and ATTEST-3 does not are a cost of the sentence-start and
+complete-complement rules.
+
+## Limits of this evidence (stated, not implied)
+
+- **H2 was authored to be hard,** from a brief that named the gold question's failure kinds, so it is not a sample of
+  real ingest; its negatives are denser in hard constructions than real chat is likely to be.
+- **The two labellings are the same model family,** and agree 120/120 on items written to be clear-cut: not a human
+  inter-rater ceiling. A human labelling and naturally occurring text are still owed before any rate is quoted outside
+  this project.
+- **Recall is low by construction** (23% on H2): most genuine statements are stored `not_attested` and labelled, under
+  the owner's "Label, don't block".

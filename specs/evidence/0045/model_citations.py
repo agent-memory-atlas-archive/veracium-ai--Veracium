@@ -33,13 +33,27 @@ import pathlib
 import re
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import run_model  # noqa: E402
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))   # for grounding_model, which the runner imports
 
-_ROW = re.compile(r"^\|\s*\*\*(INV-[A-Z]+\d+)\*\*\s*\|(.*)$")
+
+def _load_runner():
+    """Model II's runner, loaded BY FILE under a unique module name. Both package models name their runner
+    `run_model.py`; a bare `import run_model` returned whichever the process had imported first, and the round-3 suite
+    (shuffled, parallel) handed this module model I's runner — its mutants carry no `answers` (KeyError)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("grounding_run_model_0045",
+                                                  pathlib.Path(__file__).resolve().parent / "run_model.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+run_model = _load_runner()
+
+_ROW = re.compile(r"^\|\s*\*\*(INV-[A-Z]+\d+′?)\*\*\s*\|(.*)$")   # ′: a revised row keeps its id primed (0008am INV-Q4′)
 _CITE = re.compile(r"\bmodel (G\d+)\b")
 _BAD_CITE = re.compile(r"\bmodel G(?!\d)")
-_DOC_CITE = re.compile(r"\(its (G\d+)\)")
+_DOC_CITE = re.compile(r"\(its (G\d+)\b")   # "(its G20)" and "(its G20; model I's … too)" alike
 _CLAIM = re.compile(r"its invariants ((?:G\d+(?:[–-]G\d+)?(?:,\s*|\s+and\s+)?)+) are this spec's")
 
 

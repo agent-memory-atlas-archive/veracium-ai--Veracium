@@ -1,12 +1,12 @@
 # Feature spec: relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be
 
 Spec-Status: draft
-Spec-Requires: 0003[0044/0003-contested-order], 0018[0044/0018-data-migration], 0029[0044/0029-reinstated-reason]
+Spec-Requires: 0003[0044/0003-contested-order], 0018[0044/0018-data-migration], 0029[0044/0029-reinstated-reason], 0008[0047/0008-request-registry]
 
 | | |
 |---|---|
-| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-2b), adopted at rest and re-read from the file: v1.1 2026-09-20 from `0044-relation-arity-CANDIDATE.md` (sha16 3f9f9db8ea92cc0a); v1.2 2026-10-10 from `0044-relation-arity-CANDIDATE.md` (sha16 72cd614748837a31); v1.3 2026-10-11 from `0044-relation-arity-CANDIDATE.md` (sha16 3741b0c83f8bde59) |
-| **Version** | **v1.3 — 2026-10-11: round 1 returned for amendment (R1-01..R1-10); this version is STAGE 1, the accumulation stage, on the owner's ruling (A), “defer keys”** (2026-10-11, first-hand in the dev session, relayed by dev). `single` and `multi` are operational; `keyed` is a reserved word that a registry may not yet declare; `measures`, `prefers` and `health_state` become `multi`; operational keys are a later round, carrying the reviewer's warning that a deterministic rule over a model-chosen object is not a trusted key source. **The restoration of values already retired is rebuilt** to answer R1-01 (standing revocation), R1-03 (completion, restart and receipt — through a companion AMENDMENT TO 0018, a separate host operation), R1-04 (truthful successor evidence), R1-05 (durable operation identity, not “the latest event”), and R1-06 (a persisted plan from the host's effective registry). **The owner made the restoration OPTIONAL, with a warning** (2026-10-11): §4h states the cost. **The authors' P-1..P-8** (the round's addendum, credited by the reviewer as author-disclosed) are folded where each belongs. **Q6 is answered: KEEP the successor's pointer** (the reviewer's recommendation, conditional on R1-04/R1-05, both now met). Every rule in §4 was model-checked before this text: dev's reference model (pure Python, `specs/evidence/0044/` when landed) — every invariant holds on research's rule set and every mechanism mutant is killed by the invariant that names it (the counts are the model's run result in the package, not restated: they moved as the amendments' invariants joined). Prior: v1.2 · v1.1 · v1. |
+| **Author / session** | research (veracium-research-48), the candidate's author → dev (veracium-2b), adopted at rest and re-read from the file: v1.1 2026-09-20 from `0044-relation-arity-CANDIDATE.md` (sha16 3f9f9db8ea92cc0a); v1.2 2026-10-10 from `0044-relation-arity-CANDIDATE.md` (sha16 72cd614748837a31); v1.3 2026-10-11 from `0044-relation-arity-CANDIDATE.md` (sha16 3741b0c83f8bde59); v1.4 2026-10-12 from `0044-relation-arity-CANDIDATE.md` (sha16 5b268c4400197810) |
+| **Version** | **v1.4 — 2026-10-12, round-3 fold IN PROGRESS: round 2 returned for amendment (R2-01, R2-02, R2-04..R2-08 on this document).** Done here: **the owner's 2026-10-12T22:56Z rulings**: Q8 ADOPTED as the reviewer answered, with its three retention cases (§4d); the release text says “no longer supersede incomparable values” in place of “now keep every value” (§8); `Spec-Requires` gains the 0008 amendment, which hosts both shared constructions. **R2-02** in part: a plan HEADER persists the plan's identity and input digest even when its relation set is empty, so uninitialized, initialized-empty and initialized-nonempty are three states (§4e); a pre-arity file imported before any plan exists is REFUSED, naming the 0018 amendment's new PLAN-ONLY mode as the prerequisite (§4l; Q9, the owner, 2026-10-12T23:03Z). The verdict's correction: “new refusals are not created under `multi`” is narrowed to the ordinary supersession path (§4d). **Part 2, on the 0008 amendment's constructions (v2, coordination a8a499a; research's stage-1 read 454a6139):** **R2-01**: eligibility is membership of the schema step's retirement INVENTORY with the retirement unchanged, ended terminally by a reinstatement; no clock is compared (§4f; §4d reads the refusal inventory). **R2-04**: `applicable` is the restoration episode's flag, cleared terminally by any retirement, a redaction or erasure; undo is the registry verb `undo`, sharing ids with `confirm` and `reply` both ways and replaying before it reads the edge (§4i). **R2-05**: outcomes travel under the 0008 amendment's origin matrix, proof vs testimony, never upgraded, with whole-unit validation; no undo from testimony (§4i, §4k, §4l). **R2-06**: 0009's collision rule kept; the only new skip is conversion of an already-admitted row (§4l). **R2-07**: erasure removes every row this feature records, and replay and once-per-plan end there (§4g-ii). §6 gains INV-A19..A21 and revised A6, A12, A13, A16 and A17. **Part 3, R2-08:** §6 states the package's one model/product gate. `specs/evidence/0044/obligations.py` derives the obligation map (the review manifest) from §6, and dev's model I v2 kills every claimed mutant semantically. R2-03 is the 0018 amendment's §4c. §9 is the round-3 brief. Prior: **v1.3 — 2026-10-11: round 1 returned for amendment (R1-01..R1-10); this version is STAGE 1, the accumulation stage, on the owner's ruling (A), “defer keys”** (2026-10-11, first-hand in the dev session, relayed by dev). `single` and `multi` are operational; `keyed` is a reserved word that a registry may not yet declare; `measures`, `prefers` and `health_state` become `multi`; operational keys are a later round, carrying the reviewer's warning that a deterministic rule over a model-chosen object is not a trusted key source. **The restoration of values already retired is rebuilt** to answer R1-01 (standing revocation), R1-03 (completion, restart and receipt — through a companion AMENDMENT TO 0018, a separate host operation), R1-04 (truthful successor evidence), R1-05 (durable operation identity, not “the latest event”), and R1-06 (a persisted plan from the host's effective registry). **The owner made the restoration OPTIONAL, with a warning** (2026-10-11): §4h states the cost. **The authors' P-1..P-8** (the round's addendum, credited by the reviewer as author-disclosed) are folded where each belongs. **Q6 is answered: KEEP the successor's pointer** (the reviewer's recommendation, conditional on R1-04/R1-05, both now met). Every rule in §4 was model-checked before this text: dev's reference model (pure Python, `specs/evidence/0044/` when landed) — every invariant holds on research's rule set and every mechanism mutant is killed by the invariant that names it (the counts are the model's run result in the package, not restated: they moved as the amendments' invariants joined). Prior: v1.2 · v1.1 · v1. |
 | **Status** | *narrative only — the canonical state is the `Spec-Status:` line at the top* |
 | **Internal reviewers** | research (author) · dev |
 | **External review** | **required** — round 2. Round 1: `0044-round1-review-package` (sha256 262e8037…), RETURN FOR AMENDMENT, ten findings. |
@@ -14,7 +14,7 @@ Spec-Requires: 0003[0044/0003-contested-order], 0018[0044/0018-data-migration], 
 | **Path** | **full** |
 | **Number** | 0044 — from `allocation.py --next` at adoption, 2026-09-20. |
 | **Predecessor** | none. Occasioned by `TRACK-B-RENDER-PATH-RESULT.md` §5–6 (fix **B**, *“stop treating multi-valued attributes as functional”*, recorded there as *“the real modelling question and the owner's”*). **Travels with** the 0003 contested-order amendment in one review package (the owner's grouping, 2026-09-19: the two share the contested-render surface a reviewer needs whole) |
-| **Requires** | **Machine-checked by the `Spec-Requires:` line above** (R1-10; the gate binds by CONTENT — each id must appear on the prerequisite's `Folds:` line, which its fold writes in the same commit as the folded text; the owner, 2026-10-11, "Bind by content"). The three amendments travel in this package: `0044/0003-contested-order`, `0044/0018-data-migration`, `0044/0029-reinstated-reason`. The folded 0003 carries `Spec-Requires: 0044` in return, so the two flip together. |
+| **Requires** | **Machine-checked by the `Spec-Requires:` line above** (R1-10; the gate binds by CONTENT — each id must appear on the prerequisite's `Folds:` line, which its fold writes in the same commit as the folded text; the owner, 2026-10-11, "Bind by content"). The three amendments travel in this package: `0044/0003-contested-order`, `0044/0018-data-migration`, `0044/0029-reinstated-reason`. **From round 3, 0044 also requires package II's 0008 amendment (`0047/0008-request-registry`)**, which hosts the two constructions both packages use, the operation order and the import identity with its request registry (the owner, 2026-10-12T22:56Z). Package I carries that amendment at the SAME digest as package II, and 0044's acceptance waits on its acceptance. The folded 0003 carries `Spec-Requires: 0044` in return, so the two flip together. |
 
 ---
 
@@ -112,7 +112,7 @@ census; the slot census adds the sites that group or combine by `(subject, relat
 | **host registry** (`arity`, `functional`) | absent `arity` → derived from `functional` | an `arity` outside the set → refused | **`keyed` → refused** | `functional=True` with `arity=multi` → refused | **INV-A4**, **INV-A10** |
 | **the registry passed to the restoration** (0018 amendment) | refused | refused by 0025's validator | — | a later call with different declarations for the three relations → `registry-changed`, nothing changed | **INV-A15** |
 | **data written by an older version** — rows retired as `superseded` | the plan selects none | an unparseable row aborts that user's transaction | a redacted row (its `relation` is the marker) is never considered | **a row whose source is under standing revocation is never restored** | **INV-A7**, **INV-A11** |
-| **an import file** | — | the existing import refusals | — | a pre-arity file's retired rows are converted; an id already held locally is SKIPPED; a newer file's unexplained retirement is never reinstated by guess; default-import testimony gives no `doctor` exemption | **INV-A16** |
+| **an import file** | — | the existing import refusals | — | a pre-arity file's retired rows are converted (refused while the plan is uninitialized); a held id keeps 0009's rule (equal → skipped, differing → the whole import refused); a newer file's unexplained retirement is never reinstated by guess; default-import testimony gives no `doctor` exemption and no undo, on every hop | **INV-A16**, **INV-A17**, **INV-A21** |
 | **the undo request** (`edge_id`, `correlation_id`) | refused | refused | an edge the restoration did not restore → refused | the same id for a different edge or verb → refused (0008's rule) | **INV-A12**, **INV-A13** |
 | CLI / environment / network | n/a | | | | |
 
@@ -212,10 +212,25 @@ retirement. It is not “strictly better” in every respect.*
 
 ### 4d. Historical refusal protection is RETAINED
 
-A `supersession_refusals` row recorded under one of the three relations **before the plan's `effective_at`** (while the
-relation was `single`) keeps its contested rendering and compiler exclusion. New refusals are not created under
-`multi`. *Stage 1 has no slot evidence to resolve such a pair; it stays contested until an existing verb (correct,
-dispute, redaction) retires a member — no expiry* (INV-A14). *Without this, existing disagreements such as USER
+A `supersession_refusals` row under one of the three relations that is **in the schema step's refusal inventory**
+(§4f: the rows that existed when the v16 step's transaction committed, so recorded while the relation was `single`;
+never decided from a timestamp) keeps its contested rendering and compiler exclusion. **The ordinary supersession path creates no new refusals under `multi`.** The separately
+authorized correction planner can still record a refusal without reading relation arity: a refused correction does
+not insert its replacement, and its record forms no new live `multi` group. *Stage 1 has no slot evidence to resolve
+such a pair; it stays contested until an existing verb (correct, dispute, redaction) retires a member — no expiry*
+(INV-A14).
+
+**Retention (Q8, adopted as the reviewer answered; the owner, 2026-10-12):** a historical refusal is kept while its
+members still satisfy the live-contention predicate, never removed because time passed or because restoration is
+optional. *No expiry* is the refusal's policy; it does not prohibit any existing operation on its members.
+- **Before any plan exists** (uninitialized, §4e): retained. The protection is keyed to the schema step's era, not to
+  the plan, so a host that never runs the optional operation keeps it.
+- **After a completed EMPTY plan** (the host kept its own `single` declaration for the relation): the relation is
+  still `single`, so its refusals, old and new, are ordinary live refusals under the existing rule. None is
+  historical.
+- **After a later lifecycle transition:** an authorized correction, dispute, redaction or other ruled transition that
+  retires a member ends the live pair, and the refusal's protection ends with it. That is the existing resolution
+  path, not a new expiry. *Without this, existing disagreements such as USER
 `weight 78` / SYSTEM `weight 80` would lose their deterministic read-side protection (the reviewer's non-blocking
 note).*
 
@@ -229,38 +244,94 @@ supersessions stay. *Unknown history, stated:* the registry is host configuratio
 used a custom `single` declaration in the past and the default today is indistinguishable from one that always used
 the default. The plan is fixed at its first write; later different declarations are refused (`registry-changed`).
 
-### 4f. Eligibility (R1-01, R1-03)
+**The plan HEADER (R2-02).** The plan's identity is a single header row, `plan_header(plan_id, effective_at,
+registry_digest, op_id)` (the operation that wrote it, R2-03), written in the SAME transaction as the plan's relation rows, **including when the
+relation set is empty**. A host whose own `single` declarations keep all three relations gets a header with no
+relation rows, which records that decision. That gives three durable states:
 
-A row `r` is **considered** iff its `relation` has a plan row, `invalidation_reason = 'superseded'`, and — **for a
-LOCAL row** — `invalidated_at < effective_at`. A considered row is evaluated **inside the user's write transaction**:
+| state | stored | meaning |
+|---|---|---|
+| **uninitialized** | no header | the operation has never planned |
+| **initialized-empty** | a header, no relation rows | planned; nothing reclassified, so nothing to restore |
+| **initialized-nonempty** | a header and ≥1 relation row | planned; restoration applies to those relations |
+
+**Admission:** the plan phase runs in ONE write transaction. Exactly one header can exist (a uniqueness constraint,
+so a second insert fails closed even outside the lock). A call that finds a header compares its own input digest:
+equal continues with no plan write; different returns `registry-changed` and changes nothing. Two concurrent first
+calls therefore produce one header; the second sees it and is admitted or refused by digest. The diagnostic for each
+state, and the result carrier that reports a plan-only commit, are the 0018 amendment's (§4e there; R2-03).
+
+### 4f. Eligibility (R1-01, R1-03; R2-01)
+
+**The operation-era boundary is an INVENTORY, never a clock (R2-01).** The v16 schema step writes, in its own
+transaction, `arity_inventory`: every retirement that is at that moment `superseded` under the three default relation
+names, as `(edge_id, user_id, pre_invalidated_at, pre_reason)`. The same transaction inventories the
+`supersession_refusals` rows that exist (§4d reads that list). *The construction is this spec's (the construction note's §2d,
+hosted here and in the 0018 amendment's step, not in the 0008 amendment).* The old-policy population is exactly the retirements committed before the step's
+transaction, whatever their valid-time endpoints: `invalidated_at` holds the incoming statement's `valid_from` (`graph.py`'s supersession write),
+a valid-time endpoint, not the retirement's commit, so no comparison of it with `effective_at` can say which rule
+retired the row. *Both directions of that error are reproduced at the round-2 pin: a pre-upgrade retirement dated 2050
+was excluded, and a post-upgrade one dated 1990 was admitted.* **A reinstatement of an inventoried edge ends its
+membership terminally**, in the same transaction, at the reinstate write, so a later re-retirement never matches,
+whatever its timestamp. *Legacy history needs no policy: the inventory reads current row state, so a row retired before
+the journal existed is inventoried like any other.*
+
+A row `r` is **considered** iff its `relation` has a plan row, `invalidation_reason = 'superseded'`, it is a member of
+`arity_inventory`, and its current retirement EQUALS the inventoried one (`invalidated_at`, `invalidation_reason`). A
+considered row is evaluated **inside the user's write transaction**:
 
 1. **Redacted** (its carriers hold the marker, or a redaction attestation names it): never considered. *Today a
    redacted row already fails the first test, because 0041 replaces `relation`; this guard is defence in depth.*
 2. **Standing revocation:** if the revocation sweep's OWN predicate — the standing set and its contribution-derived
    basis, evaluated for `r` as if active — yields a `revoked_source` effect, the outcome is **`withheld_revoked`**.
    *One implementation: the sweep's.*
-3. **Once per plan, ever:** if a `migration_outcome` row exists for (plan, `r`), `r` is not considered again. *This is
-   the only guard for a row that returns by re-import after a local undo* (INV-A9).
+3. **Once per plan, ever:** if a `migration_outcome` row exists for (plan, `r`), `r` is not considered again. This
+   holds independently of the inventory (INV-A9).
 4. Otherwise **`restored`**: clear `invalidated_at` and `invalidation_reason` (0022's reinstate write), journal
-   `reinstated` with reason `arity_reclassified` (§4j), and record the outcome.
+   `reinstated` with reason `arity_reclassified` (§4j), and record the outcome with `applicable = true` (§4i).
+
+*An imported row is never in the inventory. §4l's pre-format conversion has its own rule and does not consult it.*
 
 ### 4g. Outcomes and the receipt (R1-04)
 
-`migration_outcome(plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, successor_evidence, undone_at,
-undo_request_digest, undo_op_id)`, written in the same transaction as the restorations.
+`migration_outcome(plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, successor_evidence, applicable,
+origin, outcome_uid, undone_at, undo_request_ref)`, written in the same transaction as the restorations.
+- `applicable` (R2-04) is true when written and is cleared TERMINALLY by the events §4i names.
+- `origin` is `local`, `restored` or `imported`, under the 0008 amendment's origin matrix (§4l).
+- `outcome_uid` is the portable identity `(origin_store, origin_user, plan_id, edge_ref)`, set when the row is written
+  and carried unchanged on every hop (the 0008 amendment §1b, with its canonical encoding).
+- `undo_request_ref` names the undo's row in the 0008 amendment's request registry (§4i). It replaces v1.3's digest
+  and op-id columns.
 
 - **Successor evidence:** `pointer:[ids]` = every row whose `supersedes` names `r` — zero, one or many — and `none`
   when there is none. *`supersedes` is a single field (§2c-ii row 7), so two retired restatements can have one
   successor between them; the evidence is never filled by matching quantity or time.* The receipt says “replaced by:
   unknown” for `none`.
 - **The receipt is a view** over these rows (the 0018 amendment's `data_migration_receipt`): ids, outcomes,
-  timestamps, successor ids; object text is read from the LIVE edge at read time (a redacted edge shows the marker; a
-  forgotten edge shows `no longer held`). *No copy of memory content is stored in the receipt.*
+  timestamps, successor ids; object text is read from the LIVE edge at read time (a redacted edge shows the marker).
+  *No copy of memory content is stored in the receipt.* An absent edge renders `no longer held` from the outcome row
+  alone, without reading the edge. *That is defensive: at the pin no public path removes one edge while its user is
+  retained (§4g-ii).*
+
+### 4g-ii. Erasure (R2-07)
+
+**User erasure ends everything this feature recorded for the user.** `forget_user` deletes, atomically with the user's
+records, the user's `migration_outcome`, `migration_run` and `arity_inventory` rows and their request-registry rows,
+all of which join `_ERASE_TABLES`. *The rule is the 0008 amendment's single erasure rule (its §3), which both packages
+cite.* They are user-linked metadata even though they store no object text.
+- **Replay and once-per-plan end at erasure:** a retry after erasure is a new request.
+- **A recreated user has no inventory rows,** so nothing is restorable for it. Nothing erased is recreated in order to
+  replay an old operation.
+- **An absent edge while the user is retained is unreachable at the pin.** At `e05e4e6` the only statement that
+  deletes from `edges` is the per-user erasure loop (`sqlite.py:3053`, one of 15 `DELETE FROM` statements in `src`),
+  and redaction keeps the row. A census test fails if any other `DELETE FROM edges` appears, which would reopen this
+  case.
 
 ### 4h. The operation — the 0018 amendment (R1-03), OPTIONAL
 
-The schema step v15 → v16 creates the three tables and stamps `effective_at`, changing no row. The restoration is a
-separate host operation, `run_data_migration(path, *, host_attestation, registry)`: the plan once, then one
+The schema step v15 → v16 creates the feature's tables, stamps `effective_at` and writes the two inventories (§4f) in
+its own transaction, changing no edge. The restoration is a
+separate host operation, `run_data_migration(path, *, host_attestation, registry, op_id, plan_only=False)`: the plan once, then one
 transaction per user, continuing past a failing user, idempotent on re-call, with the receipt recoverable at any time
 after each user's commit. Its full contract, result table and failure boundaries are the 0018 amendment's.
 
@@ -268,16 +339,34 @@ after each user's commit. Its full contract, result table and failure boundaries
 retired under the old rule stay hidden and no receipt exists; `doctor` warns and names the operation.** The owner
 accepted that cost explicitly.
 
-### 4i. Undo (R1-05, P-7)
+### 4i. Undo (R1-05, P-7; R2-04, R2-05)
 
 `undo_restoration(user_id, edge_id, *, correlation_id=None)` — host-only.
 
-1. **Replay first.** `correlation_id` is unique per USER and shared with 0008's `confirm()`. Same id + same request
-   digest (operation, user, edge, plan) → the recorded result; same id + different digest — another edge or another
-   verb — → refused. **Without an id**, a call on an already-undone row returns the recorded `already undone at T`.
-2. **Eligibility:** the outcome is `restored`, not undone, and the edge is still active. Ordinary mutations — outcome
-   counters, confirmation, reinforcement — do not affect eligibility; a later retirement by any other operation does,
-   and the refusal names it. *Not “the latest journal event”: an ordinary `record_outcome` changes that (R1-05).*
+1. **Replay first, from the request registry (R2-04).** Undo is a verb, `undo`, of the 0008 amendment's request
+   registry. A `correlation_id` is unique per USER across EVERY verb of that registry (`confirm`, `reply`, `undo`), in
+   both directions: an id held by `confirm` or `reply` is refused on `undo`, and an id held by `undo` is refused on
+   `confirm` or `reply`. Same id + same request digest (operation, user, edge, plan) → the recorded result,
+   **replayed from the registry's result reference (the outcome row) without reading the edge**. It therefore replays
+   after the edge is retired, redacted or absent, and ends at user erasure (§4g-ii). A redacted request returns the
+   terminal `request_redacted` (the 0008 amendment §3). **Without an id**, a call on an already-undone row returns the
+   recorded `already undone at T`.
+2. **Eligibility:** the outcome is `restored`, not undone, **`applicable`**, of origin `local` or `restored`, and the
+   edge is not redacted. It is compared and updated under the write lock.
+   - **`applicable` belongs to this restoration EPISODE (R2-04).** It is cleared TERMINALLY, in the same transaction,
+     by:
+     - any retirement of the edge (the `_invalidate_edge_row` choke point, the store's only non-NULL
+       `invalidated_at` write);
+     - a redaction of the edge, which does not pass that choke point, so its writer clears the flag too;
+     - user erasure, which deletes the row.
+   - A later `reinstated` (a source lift) never sets it back. After restoration → revocation → lift, the edge is
+     active again but the outcome is NOT applicable: no undo and no `doctor` exemption.
+   - Ordinary mutations (outcome counters, confirmation, reinforcement) leave the flag set.
+   - *Neither "the edge is active" nor "the latest journal event is `reinstated`" identifies the episode (R1-05,
+     R2-04).*
+   - **No undo from testimony (R2-05):** an `imported` outcome records what another store did, and this store cannot
+     reverse it. Only the trusted-restore column ever promised undo. *The verdict asked the draft to rule this
+     explicitly. It is a fail-closed design choice, given to the owner as a notice.*
 3. **Per-field restore:** `invalidated_at := pre_invalidated_at`, `invalidation_reason := pre_reason`; every other
    field untouched. One transaction; a concurrent duplicate commits once and replays.
 
@@ -290,21 +379,47 @@ restoration's evidence — `migration_outcome` is.*
 
 ### 4k. `doctor`
 
-The `refs` warning for an active predecessor is **`info`** iff a `migration_outcome` row records it `restored` and not
-undone, under a LOCAL plan or a TRUSTED restore's evidence. Under a default import the warning stays and its text names
-the imported testimony. Every other `doctor` check is unchanged; the revocation check has nothing to report because
-of §4f.2.
+The `refs` warning for an active predecessor is **`info`** iff a `migration_outcome` row records it `restored`, not
+undone and **`applicable`**, with origin `local` or `restored`: that is PROOF. An `imported` outcome is TESTIMONY, so
+the warning stays and its text names the imported testimony (R2-05). Every other `doctor` check is unchanged. The
+revocation check has nothing to report, because of §4f.2.
 
-### 4l. Portability (P-4, P-5)
+### 4l. Portability (P-4, P-5; R2-05, R2-06)
+
+**Outcomes travel under the SAME origin matrix as acts (R2-05):** the 0008 amendment's §3 and §1g, one trust model,
+not two.
+- `local` (written by this store's operation) and `restored` (a trusted restore of this store's own history) are PROOF.
+- `imported` is TESTIMONY.
+- A trusted restore maps `local → restored`, and **never upgrades `imported`**.
+- So the chain *migrate → export → default import → export → trusted restore* still reads `imported` at its end, and
+  permits no undo (INV-A16′). *Round 2's model set the trust bit from the import MODE, which turned the warning into
+  `info` on the second hop.*
+
+**Edges and records keep 0009's collision rule (R2-06).**
+- A record-equal row under a held id is skipped.
+- A DIFFERING row under a held id refuses the whole import.
+- A valid redaction notice for a held record follows 0041's rule.
+- *Round 2's “an incoming id already held locally: SKIPPED” is withdrawn: it contradicted the accepted import
+  boundary.*
+- **The only new skip:** restoration CONVERSION never treats an already-admitted local row as a conversion target, and
+  an import never replays a local undo. No general collision semantics change.
+
+**Whole-unit validation, before any write:**
+- every outcome's `outcome_uid` is unique in the unit;
+- its edge reference is present in the unit or already held;
+- the edge's state in the unit is consistent with the outcome: `restored` + `applicable` ⇒ the edge is active, and
+  `undone` ⇒ the edge is retired with the recorded pre-state;
+- a duplicate `outcome_uid` with a differing projection, an outcome with no edge, a remapped reference that does not
+  resolve, or a mixed-era file whose outcomes do not all bind edges of the same unit → **the whole unit is refused**.
 
 | | default import | trusted restore |
 |---|---|---|
 | edges | capped (today) | as recorded |
-| `migration_outcome` rows for edges IN the file | imported as testimony; no `doctor` exemption | as recorded; exemption and undo apply |
+| `migration_outcome` rows for edges IN the file | origin `imported` (testimony): no `doctor` exemption, no undo | origin `local → restored`, `imported` stays `imported`; exemption and undo only on an applicable `restored` row |
 | outcome rows for edges NOT in the file | refused | refused |
-| a file from a format BEFORE the arity version | **import-time conversion**: its retired rows under plan relations are run through §4f (no time test) under a new operation id, in the import's transaction, with a receipt | same |
+| a file from a format BEFORE the arity version | **if the store's plan is uninitialized (§4e): REFUSED**, `requires-data-migration-plan`, naming the prerequisite: `run_data_migration(…, plan_only=True)`, which writes the plan and restores nothing, so restoration stays optional (R2-02; Q9, the owner). Otherwise **import-time conversion**: its retired rows under plan relations are run through §4f's steps (no inventory, no time test; an incoming row was retired under `single` by construction) under a new operation id, in the import's transaction, with a receipt. An initialized-EMPTY plan has no plan relations, so nothing converts, and the report says so | same |
 | a file at or after the arity version, with a `superseded` row under a plan relation and no outcome row | kept retired; reported `unknown-linkage`; never reinstated by guess | same |
-| an incoming id already held locally | **SKIPPED** — never converted or overwritten; reported `collision: kept local` | same |
+| an incoming record under an id already held locally | 0009's rule: record-equal → skipped; differing → **the whole import is refused**; a valid notice → 0041's rule (R2-06) | same |
 
 *Conversion touches only incoming rows: it never rescans local rows and never reverses a local undo.*
 
@@ -335,11 +450,7 @@ some widened intervals belong to values that were correctly replaced.*
 
 ## 6. Invariants and executable checks — REQUIRED, blocking
 
-Each is a **MODEL check** now — dev's reference model encodes the rules of §4 and kills the named mutant — and a
-named **PRODUCT test** at the implementation gate (R1-10's split). *The model (`specs/evidence/0044/run_model.py`) also carries invariants of the
-amendments that travel with this spec (the 0003 amendment's ordering, and the 0029 amendment's INV-J1–J3). Every invariant
-holds and every mutant is killed by the invariant that owns it; the counts are its machine-readable run result in the
-package, not restated here.*
+**The gate, stated the same way in 0044, the 0003 amendment and the 0018 amendment (R2-08):** before design acceptance, a row is either a MODEL check or a stated PRODUCT obligation. A MODEL check runs in dev's reference model (`specs/evidence/0044/`): each claimed mutant REACHES its mutated path and is killed SEMANTICALLY, by an owning invariant that returns False. An exception is a harness failure, never a kill, and a mutant may have more than one killing invariant. Which kind each row is is not restated here: `specs/evidence/0044/obligations.py` derives the map from this section, and refuses an unmapped row, a mapping to an invariant that owns no killed mutant, and a model invariant no row claims. It is also the package's review manifest. At the implementation gate, every row is in addition a named PRODUCT test, demonstrated red against its mutant. *The model also carries invariants of the amendments that travel with this spec (the 0003 amendment's ordering and the 0029 amendment's INV-J1–J3); its counts are its machine-readable run result in the package, not restated here.*
 
 | | invariant | mechanism mutant that must fail |
 |---|---|---|
@@ -348,19 +459,22 @@ package, not restated here.*
 | **INV-A3** | a registry declaring `keyed` is refused | accept it |
 | **INV-A4** | every registry valid today keeps its meaning (`functional=True ≡ single`) | map `True` to `multi` |
 | **INV-A5** | the plan admits only canonically default declarations | a name-only selector |
-| **INV-A6** | historical refusals keep their protection after reclassification | declassify them |
+| **INV-A6** | historical refusals keep their protection after reclassification, read from the step's refusal inventory (§4d) | declassify them; decide by the refusal's timestamp (a backdated post-step refusal is retained) |
 | **INV-A7** | a redacted row is never restored (both arms) | select by reason alone |
 | **INV-A8** | the receipt names every considered row with honest successor evidence | a guessed successor; a single-pointer-only lookup |
 | **INV-A9** | a row is considered once per plan, ever (re-import after undo) | selector-only completion |
 | **INV-A10** | `functional` and `arity` cannot disagree | accept the disagreement |
 | **INV-A11** | a row under standing revocation is never restored | omit the standing-set check |
-| **INV-A12** | undo eligibility is the outcome row plus “still active” | latest-event eligibility |
-| **INV-A13** | undo restores per field, replays by user-scoped id, and is idempotent without an id | whole-snapshot undo; per-edge id scope |
+| **INV-A12** | undo eligibility is the outcome row plus `applicable`, this restoration EPISODE's flag, cleared terminally by any retirement, a redaction or erasure (R2-04) | the current active bit alone (restoration → revoke → lift is then undoable); latest-event eligibility; clear the flag only on `superseded` retirements; keep it across a redaction |
+| **INV-A13** | undo restores per field, replays by user-scoped id from the request registry BEFORE reading the edge, shares the namespace with `confirm` and `reply` in both directions, and is idempotent without an id (R2-04) | whole-snapshot undo; per-edge id scope; check only the new verb's table (run both ways); read the edge before the registry (a completed undo of an absent edge fails to replay) |
 | **INV-A14** | retained refusals have no expiry | expire them |
 | **INV-A15** | the plan is fixed at its first write | re-plan on each call |
-| **INV-A16** | import converts only incoming pre-arity rows, skips collisions, never reverses a local undo | rescan local rows; overwrite on collision |
-| **INV-A17** | `doctor`'s exemption follows `migration_outcome`, local or trusted only | journal-keyed exemption; default-import exemption |
+| **INV-A16** | import converts only incoming pre-arity rows, keeps 0009's collision rule, never reverses a local undo (R2-06) | rescan local rows; overwrite on collision; skip every collision (a differing own-history restore must refuse) |
+| **INV-A17** | `doctor`'s exemption and undo follow PROOF (`local`/`restored`, applicable); `imported` testimony is never upgraded, so migrate → export → default import → export → trusted restore still reads `imported` (R2-05) | journal-keyed exemption; default-import exemption; the trust bit set from the import mode; undo from testimony |
 | **INV-A18** | `reinstated`'s reason is closed (0029 amendment) | accept any reason |
+| **INV-A19** | the operation-era boundary is the schema step's INVENTORY of retirements: a pre-upgrade retirement is eligible whatever its valid-time endpoint, a post-upgrade one never, however backdated (R2-01) | `invalidated_at < effective_at` (the shipped cutoff: the 2050-dated pre-upgrade and 1990-dated post-upgrade cells both fail it); match the inventory by edge id only; keep membership across a reinstatement (reinstate, then re-retire with an identical `invalidated_at` and reason) |
+| **INV-A20** | user erasure removes the user's outcomes, runs, inventory and registry rows atomically; replay and once-per-plan end there, and a recreated user restores nothing (R2-07) | keep the outcome rows after erasure; replay an erased request; a `DELETE FROM edges` outside the erasure loop (the census) |
+| **INV-A21** | the plan has three durable states under one header: an empty plan is recorded, a later call is admitted or refused by digest, and a pre-arity import into an uninitialized store is refused, naming the plan-only mode (R2-02) | no header for an empty plan (a later default call re-plans); two headers from concurrent first calls; convert silently with no plan |
 
 ---
 
@@ -389,7 +503,7 @@ receipt that names each one and with a per-row undo — when the host runs the r
 - **keyed behaviour** — reserved, refused, a later round;
 - **that `works_as` is right** — retained as a separate question.
 
-**Release text (the owner's costs, in substance):** *“`prefers`, `health_state` and `measures` now keep every value:
+**Release text (the owner's costs, in substance):** *“`prefers`, `health_state` and `measures` no longer supersede incomparable values:
 a second preference, condition or measurement no longer retires the first. One consequence: every measurement you
 have recorded is treated as current. This upgrade does not restore values the old rule already retired; run
 `run_data_migration` to restore them and get a receipt listing each one — some were correctly replaced, and the
@@ -397,22 +511,46 @@ receipt lets you re-retire those. Until you run it, those values stay hidden and
 
 ---
 
-## 9. Brief for the external reviewer — ROUND 2
+## 9. Brief for the external reviewer — ROUND 3
 
-**The question this round asks: is the accumulation stage, with this restoration protocol, acceptable as specified?**
+**The question this round asks: do v1.4 and its three amendments close R2-01 to R2-09 on the amended artifacts, with
+the two shared constructions this package now carries?**
 
-- **Least sure of:** (1) §4d's retained refusals with no expiry — a pair that can never resolve in stage 1;
-  (2) §4e's “canonically default” test as the only evidence of host intent; (3) §4b's residual: absorption of a bare
-  reading into a more specific one of a different quantity.
-- **Where we may have overstated:** §4f.2's reuse of the sweep's predicate as complete over contribution-derived
-  effects — tell us if a derived case escapes it.
-- **What would change our minds:** a host relying on cross-quantity retirement for one of the three relations.
-- **What we are NOT asking:** keys (deferred, the owner); the superset (the owner); optional vs mandatory (the owner);
-  the pointer (Q6, answered as the reviewer recommended).
-- **Round 1, finding by finding:** R1-01 → §4f.2, INV-A11 · R1-02 → (A), §4a–§4b, INV-A1–A3 · R1-03 → §4h and the 0018
-  amendment, INV-A9 · R1-04 → §4g, INV-A8 · R1-05 → §4i, §4k, INV-A12/A17 · R1-06 → §4e, INV-A5/A15 · R1-10 → §6's
-  split and the Requires cell. P-1 → §4c · P-2 → §2 (stage 2) · P-3 → §4b · P-4/P-5 → §4l · P-6 → §4m · P-7 → §4i ·
-  P-8 → §6.
+- **Round 2, finding by finding:**
+  - R2-01 → §4f: eligibility is membership of the schema step's retirement inventory, and nothing compares a clock.
+    INV-A19.
+  - R2-02 → §4e: the plan header and its three states. §4l: a pre-arity import before planning is refused, naming the
+    plan-only mode. The 0018 amendment §4b. INV-A21.
+  - R2-03 → the 0018 amendment §4c: the total carrier, and recovery by `op_id`. I29.
+  - R2-04 → §4i: the `applicable` episode flag, and undo as a registry verb, replaying before it reads the edge.
+    INV-A12, A13.
+  - R2-05 → §4i, §4k, §4l: proof vs testimony under one origin matrix, and no undo from testimony. INV-A17.
+  - R2-06 → §4l: 0009's collision rule is kept. INV-A16.
+  - R2-07 → §4g-ii: one erasure rule, and the census. INV-A20.
+  - R2-08 → §6: the package's one model/product gate. The obligation map (`specs/evidence/0044/obligations.py`) is also the review
+    manifest.
+  - R2-09 → the 0003 amendment §2 and §4c.
+  - The bounded corrections → §4d (refusals under `multi`); the 0003 and 0018 amendments' own briefs.
+- **The two shared constructions are in package II's 0008 amendment** (`0047/0008-request-registry`), which this
+  package carries at the SAME digest (the owner's hosting ruling). 0044 now requires it: `Spec-Requires`.
+  - The operation order is NOT 0029's `txn`. That counter exists only for transactions that journal an edge event, so
+    a store-wide act ordinal that is never reset stands beside it (the owner's rulings, recorded in the 0008
+    amendment §6f). 0029's accepted surface (INV-J1–J3) is untouched.
+  - The era boundary uses no ordinal at all: it is the schema step's inventory.
+- **The owner's rulings since round 2:**
+  - Q8 adopted as you answered (§4d).
+  - QO4 adopted (the 0003 amendment §10).
+  - The release text now reads “no longer supersede incomparable values”.
+  - Q9: refuse a pre-arity import before planning, plus a plan-only mode.
+  - The constructions are hosted in the 0008 amendment.
+- **Least sure of:**
+  1. §4f's terminal end of inventory membership at a reinstatement. Is any reinstatement path NOT at the reinstate
+     choke point?
+  2. §4i's set of terminal events for `applicable`: any retirement, a redaction, erasure. Is there a lifecycle event we
+     have not named?
+  3. §4l's mixed-era rule: a file whose outcomes do not all bind edges of the same unit is refused whole.
+- **What we are NOT asking:** keys, the superset and optional restoration (the owner's, not reopened); the 0029
+  amendment's design (accepted at round 2).
 - **Reviewer-safe copy:** nothing generalised.
 
 ---
@@ -424,7 +562,8 @@ receipt lets you re-retire those. Until you run it, those values stay hidden and
 | Q6 | keep or clear the successor's pointer — **RESOLVED: keep** (round 1's recommendation; R1-04/R1-05 met) | — | — | resolved |
 | Q5 | operational keys (stage 2) | owner + dev | a later round | deferred |
 | Q7 | `works_as` | owner | — | deferred |
-| Q8 | §9 (1): an expiry or resolution path for retained refusals | dev + external reviewer | before acceptance | blocking |
+| Q8 | §9 (1): an expiry or resolution path for retained refusals — **RESOLVED 2026-10-12: no expiry; kept while live-contended**; an existing ruled transition that retires a member ends it (the round-2 reviewer's answer, adopted by the owner, 2026-10-12T22:56Z; §4d's three cases) | owner | — | resolved |
+| Q9 | a pre-arity file imported before any plan exists: refuse, or plan atomically at import — **RESOLVED 2026-10-12: REFUSE** (`requires-data-migration-plan`), **and `run_data_migration` gains a PLAN-ONLY mode** (the plan under the host attestation, nothing restored), which the refusal names; restoration stays optional for importers (the owner, 2026-10-12T23:03Z, on dev's recommendation). Planning at import was rejected: it would fix the store-wide plan as a side effect of one import, without the attestation | owner | — | resolved |
 
 ---
 

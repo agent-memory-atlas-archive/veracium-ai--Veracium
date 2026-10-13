@@ -1,0 +1,89 @@
+ATTEST-3 on holdout_h2.json gold = author {'TP': 12, 'FP': 1, 'FN': 41, 'TN': 66} recall 12/53  false-attest 1/67
+missed h2-002 works_as 'forklift driver' | been driving a forklift for a living since 2019 lol, any tips for back pain?
+missed h2-006 works_as 'paramedic' | Work-wise I'm a paramedic: twelve-hour shifts, three on, four off.
+missed h2-009 works_as 'senior software engineer' | Just got promoted to senior software engineer!! still kinda can't believe it
+missed h2-012 measures '$4,200' | I've got $4,200 saved in my emergency fund right now. Is that enough for a single person?
+missed h2-013 measures 'page 212' | I'm on page 212 of Middlemarch and starting to lose steam.
+missed h2-018 measures '7.5' | Got a 7.5 on IELTS last week, so i'm finally eligible to apply 🎉
+missed h2-019 measures '58 bpm' | My resting heart rate is 58 bpm according to my watch.
+missed h2-021 prefers 'tea' | I prefer tea over coffee, always have.
+missed h2-022 prefers 'window seat' | Honestly window seats > aisle seats for me, no contest.
+missed h2-025 prefers 'paperback' | I'd take a paperback over an e-reader any day of the week.
+missed h2-028 prefers 'morning workouts' | Morning workouts suit me much better than evening ones, fwiw.
+missed h2-032 located_at 'Denver' | Based out of Denver these days, so altitude cooking tips welcome.
+missed h2-036 located_at 'Glasgow' | home is a tiny flat in Glasgow, rains basically every day lol
+missed h2-038 located_at 'Nairobi' | I'm currently living in Nairobi for work, at least through the end of the year.
+missed h2-041 health_state 'type 1 diabetes' | I have type 1 diabetes, so can you double-check the carb counts in this recipe?
+missed h2-042 health_state 'asthma' | my asthma's been acting up with all the wildfire smoke
+missed h2-048 health_state 'chronic back pain' | Living with chronic back pain is exhausting, and today's especially bad.
+missed h2-050 health_state 'hypothyroidism' | I'm hypothyroid and take levothyroxine every morning.
+missed h2-051 has_pet 'golden retriever' | I have a golden retriever named Biscuit who's afraid of the vacuum.
+missed h2-052 has_pet 'Mochi' | Our cat Mochi knocked my coffee off the desk again 🙄
+missed h2-057 has_pet 'greyhound' | two rescue greyhounds currently own my couch, send help
+missed h2-059 has_pet 'neon tetras' | I keep a tank of neon tetras in my office.
+missed h2-062 has_diet 'keto' | Been strictly keto for about four months now.
+missed h2-069 has_diet 'low-FODMAP' | low-FODMAP life over here, so onions and garlic are basically my enemies now
+missed h2-072 partner_of 'Priya' | I've been married to Priya for eight years this June.
+missed h2-076 partner_of 'Hannah' | my wife Hannah thinks I talk to you too much haha
+missed h2-078 partner_of 'Tomás' | Me and Tomás have been together since high school and just moved in together.
+missed h2-082 relative_of 'Rosa' | My grandma Rosa turns 90 next month and I want to make her a photo book.
+missed h2-084 relative_of 'Aisha' | my cousin Aisha just had a baby!! what's a good gift
+missed h2-088 relative_of 'Maya' | I'm helping my daughter, Maya, with her science fair project tonight.
+missed h2-090 relative_of 'Kayla' | Kayla (that's my little sister) wants to learn guitar.
+missed h2-091 works_on 'budgeting app' | I'm building a budgeting app in Flutter and I'm stuck on state management.
+missed h2-092 works_on '1972 Datsun 240Z restoration' | Currently restoring a 1972 Datsun 240Z in my garage.
+missed h2-096 works_on 'kitchen remodel' | Right now I'm knee-deep in a kitchen remodel and the plumber just bailed.
+missed h2-098 works_on 'grant proposal' | I'm writing a grant proposal for our community garden, due Friday.
+missed h2-102 uses_tool 'Lightroom' | Edit my photos in Lightroom mostly, sometimes Photoshop for touch-ups.
+missed h2-106 uses_tool 'vim' | vim user here, pls no emacs propaganda
+missed h2-108 uses_tool 'Trello' | We track everything in Trello at my job and I check it constantly.
+FALSE ATTESTATION h2-109 uses_tool 'Obsidian' | I use Obsidian. Actually wait, no, I switched to Logseq last month, ignore that.
+missed h2-110 uses_tool 'Proxmox' | Running my whole home lab on Proxmox right now.
+missed h2-112 avoids_tool 'TikTok' | I refuse to touch TikTok, I know it'd eat my whole evening.
+missed h2-119 avoids_tool 'Excel' | Excel? Not a chance. I do all my spreadsheets in Google Sheets.
+ATTEST-3 on holdout_h2.json gold = labels_h2_b.json {'TP': 12, 'FP': 1, 'FN': 41, 'TN': 66} recall 12/53  false-attest 1/67
+ATTEST-2 on holdout_h2.json gold = author {'TP': 16, 'FP': 5, 'FN': 37, 'TN': 62} recall 16/53  false-attest 5/67
+missed h2-002 works_as 'forklift driver' | been driving a forklift for a living since 2019 lol, any tips for back pain?
+missed h2-009 works_as 'senior software engineer' | Just got promoted to senior software engineer!! still kinda can't believe it
+missed h2-012 measures '$4,200' | I've got $4,200 saved in my emergency fund right now. Is that enough for a single person?
+missed h2-013 measures 'page 212' | I'm on page 212 of Middlemarch and starting to lose steam.
+missed h2-018 measures '7.5' | Got a 7.5 on IELTS last week, so i'm finally eligible to apply 🎉
+missed h2-019 measures '58 bpm' | My resting heart rate is 58 bpm according to my watch.
+missed h2-022 prefers 'window seat' | Honestly window seats > aisle seats for me, no contest.
+missed h2-025 prefers 'paperback' | I'd take a paperback over an e-reader any day of the week.
+missed h2-028 prefers 'morning workouts' | Morning workouts suit me much better than evening ones, fwiw.
+FALSE ATTESTATION h2-030 prefers 'aisle seats' | I prefer aisle seats. Kidding, I'd literally climb over people to get the window.
+missed h2-032 located_at 'Denver' | Based out of Denver these days, so altitude cooking tips welcome.
+FALSE ATTESTATION h2-034 located_at 'Tokyo' | Pretend I live in Tokyo. What would my monthly rent be roughly?
+missed h2-036 located_at 'Glasgow' | home is a tiny flat in Glasgow, rains basically every day lol
+missed h2-038 located_at 'Nairobi' | I'm currently living in Nairobi for work, at least through the end of the year.
+FALSE ATTESTATION h2-040 located_at 'Paris' | People always assume I live in Paris because of my accent, but nope.
+missed h2-041 health_state 'type 1 diabetes' | I have type 1 diabetes, so can you double-check the carb counts in this recipe?
+missed h2-042 health_state 'asthma' | my asthma's been acting up with all the wildfire smoke
+missed h2-048 health_state 'chronic back pain' | Living with chronic back pain is exhausting, and today's especially bad.
+missed h2-050 health_state 'hypothyroidism' | I'm hypothyroid and take levothyroxine every morning.
+missed h2-052 has_pet 'Mochi' | Our cat Mochi knocked my coffee off the desk again 🙄
+missed h2-057 has_pet 'greyhound' | two rescue greyhounds currently own my couch, send help
+missed h2-059 has_pet 'neon tetras' | I keep a tank of neon tetras in my office.
+missed h2-062 has_diet 'keto' | Been strictly keto for about four months now.
+missed h2-069 has_diet 'low-FODMAP' | low-FODMAP life over here, so onions and garlic are basically my enemies now
+FALSE ATTESTATION h2-070 has_diet 'vegan' | I'm a vegan restaurant critic for a local paper, but personally I eat pretty much everything.
+missed h2-072 partner_of 'Priya' | I've been married to Priya for eight years this June.
+missed h2-076 partner_of 'Hannah' | my wife Hannah thinks I talk to you too much haha
+missed h2-078 partner_of 'Tomás' | Me and Tomás have been together since high school and just moved in together.
+missed h2-080 partner_of 'Ana' | My fiancée, Ana, wants a spring wedding.
+missed h2-082 relative_of 'Rosa' | My grandma Rosa turns 90 next month and I want to make her a photo book.
+missed h2-090 relative_of 'Kayla' | Kayla (that's my little sister) wants to learn guitar.
+missed h2-091 works_on 'budgeting app' | I'm building a budgeting app in Flutter and I'm stuck on state management.
+missed h2-092 works_on '1972 Datsun 240Z restoration' | Currently restoring a 1972 Datsun 240Z in my garage.
+missed h2-096 works_on 'kitchen remodel' | Right now I'm knee-deep in a kitchen remodel and the plumber just bailed.
+missed h2-098 works_on 'grant proposal' | I'm writing a grant proposal for our community garden, due Friday.
+missed h2-102 uses_tool 'Lightroom' | Edit my photos in Lightroom mostly, sometimes Photoshop for touch-ups.
+missed h2-106 uses_tool 'vim' | vim user here, pls no emacs propaganda
+missed h2-108 uses_tool 'Trello' | We track everything in Trello at my job and I check it constantly.
+FALSE ATTESTATION h2-109 uses_tool 'Obsidian' | I use Obsidian. Actually wait, no, I switched to Logseq last month, ignore that.
+missed h2-110 uses_tool 'Proxmox' | Running my whole home lab on Proxmox right now.
+missed h2-112 avoids_tool 'TikTok' | I refuse to touch TikTok, I know it'd eat my whole evening.
+missed h2-119 avoids_tool 'Excel' | Excel? Not a chance. I do all my spreadsheets in Google Sheets.
+ATTEST-3 on holdout_h1.json gold = author {'TP': 5, 'FP': 0, 'FN': 49, 'TN': 66} recall 5/54  false-attest 0/66
+ATTEST-2 on holdout_h1.json gold = author {'TP': 9, 'FP': 0, 'FN': 45, 'TN': 66} recall 9/54  false-attest 0/66

@@ -2643,6 +2643,9 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # package II's model citations: refuses a §6 row whose "(model Gn)" no mutant of model II answers, and the
         # reverse; its matrix breaks each carrier once
         root / "specs" / "evidence" / "0045" / "model_citations.py",
+        # package I's obligation map (R2-08): refuses an unmapped §6 row, a model comparison across time domains, a live
+        # edge read on the replay/receipt paths, and a shared 0008am row model II does not answer
+        root / "specs" / "evidence" / "0044" / "obligations.py",
         # specs/0048 §2c-ii row 8: the census exits 1 on a confidence write it cannot resolve; row 12's reproductions
         # exit 1 when one stops reproducing. Checkers by what they do, whatever their names say
         root / "specs" / "evidence" / "0048" / "census_0048.py",

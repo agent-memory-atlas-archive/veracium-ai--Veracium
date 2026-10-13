@@ -160,3 +160,119 @@ def test_model_ii_counts_neither_a_crash_nor_an_unreached_mutant_as_a_kill():
         assert not got["planted unreached"]["mutated_path_reached"] and not got["planted unreached"]["killed_by_owner"]
     finally:
         _sys.path.remove(str(path.parent))
+
+
+# ---------------------------------------------------------------------------------------------- package I's obligation map
+_OBLIGATIONS = ROOT / "specs" / "evidence" / "0044" / "obligations.py"
+
+
+def _obligations():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("obligations_0044", _OBLIGATIONS)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _s6(*rows, extra=""):
+    body = "".join(f"| **{r}** | x | y |\n" for r in rows)
+    return f"# Doc\n\n## 6. Invariants\n\n| | invariant | mutant |\n|---|---|---|\n{body}\n{extra}\n## 7. Next\n"
+
+
+def test_the_obligation_map_refuses_each_broken_carrier():
+    """obligations.py's mutation matrix (R2-08's map): every refusal fires on its planted break, by the refusal that
+    names it, and the honest control passes. Rows are planted as documents built from the map's own keys, so the map is
+    exercised against its whole domain without naming a §6 id here."""
+    ob = _obligations()
+    muts = ob.RUN.run_mutants()                    # model I's runner, as the module under test loaded it
+    docs = {d: _s6(*[r for dd, r in ob.ROWS if dd == d]) for d in sorted({d for d, _r in ob.ROWS})}
+    assert ob.check_rows(docs, muts) == []                                       # the control: the map's own domain
+    src = {"m": _OBLIGATIONS.with_name("arity_model.py").read_text()}
+    assert ob.check_domains(src) == [] and ob.check_guards(src) == []             # the control: the model is clean
+    first_doc, first_row = next(iter(ob.ROWS))
+    model_row = next(k for k, v in ob.ROWS.items() if isinstance(v, list))
+    owner = ob.ROWS[model_row][0]
+
+    def rows_with(**edit):
+        saved = dict(ob.ROWS)
+        try:
+            ob.ROWS.update(edit.get("set", {}))
+            for k in edit.get("drop", ()):
+                ob.ROWS.pop(k)
+            return ob.check_rows(edit.get("docs", docs), edit.get("muts", muts))
+        finally:
+            ob.ROWS.clear(); ob.ROWS.update(saved)
+
+    unclaimed_row = next(k for k, v in ob.ROWS.items() if isinstance(v, list) and len(v) == 1
+                         and sum(v == w or (isinstance(w, list) and v[0] in w) or (isinstance(w, dict) and v[0] in w["model"])
+                                 for w in ob.ROWS.values()) == 1)
+    cases = {
+        "an unmapped §6 row": (rows_with(docs={**docs, first_doc: docs[first_doc].replace("## 7.", "| **INV-Z99** | a | b |\n\n## 7.")}),
+                               "INV-Z99: unmapped"),
+        "a mapping whose row the document lost": (rows_with(docs={**docs, model_row[0]: docs[model_row[0]].replace(f"| **{model_row[1]}** | x | y |\n", "")}),
+                                                  f"{model_row[1]}: mapped but not in"),
+        "a row mapped to an invariant the model lacks": (rows_with(set={model_row: ["INV-M999"]}), "INV-M999, which the model does not define"),
+        "an invariant that kills no mutant": (rows_with(muts={k: dict(v, killed_by_owner=False) if v["owner"] == owner else v for k, v in muts.items()}),
+                                              f"{owner} owns no killed mutant"),
+        "a PRODUCT mapping with no reason": (rows_with(set={model_row: ("PRODUCT", " ")}), "must be ('PRODUCT' or 'MODEL-II', reason)"),
+        "a two-part mapping with no product reason": (rows_with(set={model_row: {"model": [owner], "product": ""}}), "needs both"),
+        "a model invariant no row claims": (rows_with(set={unclaimed_row: ("PRODUCT", "moved")}), f"{ob.ROWS[unclaimed_row][0]} is claimed by no row"),
+    }
+    for name, (problems, expect) in cases.items():
+        assert any(expect in p for p in problems), f"{name}: expected {expect!r} in {problems}"
+    saved = dict(ob.CARRIERS)
+    try:
+        ob.CARRIERS.pop("Edge.invalidated_at")
+        assert any("Edge.invalidated_at: a model field with no declared carrier" in p for p in ob.check_domains({}))
+    finally:
+        ob.CARRIERS.clear(); ob.CARRIERS.update(saved)
+    planted = {
+        "two clocks compared": ("def consider(s, e):\n    return e.invalidated_at < s.header['written_txn']\n", "compares ['transaction', 'valid']"),
+        "one alias hides the clock": ("def consider(s, e):\n    t = s.txn\n    return e.invalidated_at < t\n", "compares ['transaction', 'valid']"),
+        "an operand of unknown domain": ("def f(s, e, x):\n    return e.invalidated_at < x\n", "with an operand of unknown domain"),
+    }
+    for name, (code, expect) in planted.items():
+        assert any(expect in p for p in ob.check_domains({"p": code})), name
+    direct = "def receipt(s, user):\n    return [s.edges[k].obj for k in s.outcomes]\n"
+    helper = "def _text(s, k):\n    return s.edges[k].obj\n\ndef undo(s, user, k):\n    return _text(s, k)\n"
+    assert any("`receipt`" in p for p in ob.check_guards({"p": direct}))
+    assert any("`_text`" in p for p in ob.check_guards({"p": helper}))
+    shared_row = next(r for (d, r), v in ob.ROWS.items() if d == "0008am" and isinstance(v, tuple) and v[0] == "MODEL-II")
+    sys.path.insert(0, str(ROOT / "specs" / "evidence" / "0045"))
+    try:
+        import importlib.util
+        spec2 = importlib.util.spec_from_file_location("run_model_ii_ob", ROOT / "specs" / "evidence" / "0045" / "run_model.py")
+        rm2 = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(rm2)
+        m2 = rm2.run_mutants()
+        owner2 = next(m["owner"] for m in m2.values() if f"0008am {shared_row}" in m["answers"] and m["killed_by_owner"])
+        uncited = _s6(shared_row)
+        cited = _s6(shared_row, extra=f"*MODEL: dev's reference model II encodes it (its {owner2.split('-', 1)[1]}).*\n")
+        assert any(f"SHARED 0008am {shared_row}: handed to model II, but the row cites no" in p for p in ob.check_shared(uncited, m2))
+        assert not [p for p in ob.check_shared(cited, m2) if shared_row in p]
+    finally:
+        sys.path.remove(str(ROOT / "specs" / "evidence" / "0045"))
+
+
+def test_the_two_runners_never_shadow_each_other_whatever_the_import_order():
+    """Both package models name their runner `run_model.py`. The round-3 suite (shuffled, parallel) loaded package I's
+    obligation map, which imported model I's runner by bare name, and model_citations then got model I's runner — its
+    mutants carry no `answers` (KeyError in two tests, on one seed). Each importer now loads its runner BY FILE under a
+    unique name. Both orders, each in a fresh interpreter: each importer holds its own model's runner."""
+    ob, mc = str(_OBLIGATIONS), str(_CITATIONS)
+    probe = (
+        "import importlib.util, sys\n"
+        "def load(n, p):\n"
+        "    s = importlib.util.spec_from_file_location(n, p); m = importlib.util.module_from_spec(s)\n"
+        "    s.loader.exec_module(m); return m\n"
+        "order = sys.argv[1:]\n"
+        "mods = {}\n"
+        "for k in order:\n"
+        "    mods[k] = load('probe_' + k, {'ob': %r, 'mc': %r}[k])\n"
+        "print(mods['ob'].RUN.__file__); print(mods['mc'].run_model.__file__)\n"
+        "print('run_model' in sys.modules)\n" % (ob, mc))
+    for order in (("ob", "mc"), ("mc", "ob")):
+        r = subprocess.run([sys.executable, "-B", "-c", probe, *order], capture_output=True, text=True, cwd=ROOT)
+        assert r.returncode == 0, r.stdout + r.stderr
+        ob_runner, mc_runner, bare = r.stdout.split()
+        assert ob_runner.endswith("0044/run_model.py") and mc_runner.endswith("0045/run_model.py"), (order, r.stdout)
+        assert bare == "False", (order, "a bare `run_model` entered sys.modules")
