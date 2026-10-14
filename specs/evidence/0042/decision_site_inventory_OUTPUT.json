@@ -3299,49 +3299,86 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 62,
+   "line": 81,
+   "module": "store/migration.py",
+   "qualname": "_refuse_unless"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 86,
+   "module": "store/migration.py",
+   "qualname": "_nested_models"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 169,
+   "module": "store/migration.py",
+   "qualname": "_rows"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 199,
+   "module": "store/migration.py",
+   "qualname": "_migrate_outcome_chains"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 208,
    "module": "store/migration.py",
    "qualname": "_migrate_outcome_chains"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 98,
+   "line": 236,
    "module": "store/migration.py",
    "qualname": "_mig_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 118,
+   "line": 256,
    "module": "store/migration.py",
    "qualname": "_apply_forward"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 172,
+   "line": 320,
    "module": "store/migration.py",
    "qualname": "_apply_forward"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 200,
+   "line": 348,
    "module": "store/migration.py",
    "qualname": "_apply_forward"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 226,
+   "line": 374,
    "module": "store/migration.py",
    "qualname": "_apply_forward"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 414,
+   "module": "store/migration.py",
+   "qualname": "_same_instant"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 416,
+   "module": "store/migration.py",
+   "qualname": "_same_instant"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
-   "line": 299,
+   "line": 520,
    "module": "store/migration.py",
    "qualname": "migrate_store"
   },
@@ -4188,118 +4225,125 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1606,
+   "line": 1608,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1614,
+   "line": 1615,
+   "module": "store/schema_version.py",
+   "qualname": "_validated_current"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1623,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1618,
+   "line": 1627,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1679,
+   "line": 1688,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1684,
+   "line": 1693,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1699,
+   "line": 1708,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1712,
+   "line": 1721,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1716,
+   "line": 1725,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1740,
+   "line": 1749,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1759,
+   "line": 1768,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1767,
+   "line": 1776,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1784,
+   "line": 1793,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1794,
+   "line": 1803,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1810,
+   "line": 1819,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1820,
+   "line": 1829,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1853,
+   "line": 1862,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1862,
+   "line": 1871,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
@@ -5464,10 +5508,10 @@
  ],
  "summary": {
   "by_kind": {
-   "BOOL_RETURN": 73,
-   "FILTER_RETURN": 43,
-   "RAISE": 541,
-   "RETURN_FALSE": 91,
+   "BOOL_RETURN": 74,
+   "FILTER_RETURN": 46,
+   "RAISE": 543,
+   "RETURN_FALSE": 92,
    "RETURN_NONE": 72
   },
   "kinds": [
@@ -5761,10 +5805,10 @@
     "RETURN_NONE": 0
    },
    "store/migration.py": {
-    "BOOL_RETURN": 0,
-    "FILTER_RETURN": 0,
-    "RAISE": 7,
-    "RETURN_FALSE": 0,
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 3,
+    "RAISE": 8,
+    "RETURN_FALSE": 1,
     "RETURN_NONE": 0
    },
    "store/release_migration.py": {
@@ -5791,7 +5835,7 @@
    "store/schema_version.py": {
     "BOOL_RETURN": 3,
     "FILTER_RETURN": 8,
-    "RAISE": 17,
+    "RAISE": 18,
     "RETURN_FALSE": 5,
     "RETURN_NONE": 1
    },
@@ -5810,7 +5854,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 820,
+  "total": 827,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

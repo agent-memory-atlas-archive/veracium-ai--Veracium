@@ -262,6 +262,11 @@ INVENTORY = [
      "git-checkout", "specs/0043 round-9 follow-up: the one-row reproduction snapshots the TRACKED tree "
      "(git ls-files); a git-less copy (an sdist, the reviewer's tree/) has none, so the row cannot be "
      "re-run there — CI is a checkout, where it always runs"),
+    ("tests/test_0013_pa1_retired_keys.py", "skip",
+     "no repository here (a packaged tree)",
+     "git-checkout", "specs/0013 v33 §4f / M-Q6 (ruled by 0016 D2): RETIRED_EPISODE_KEYS is bound to a derivation over "
+     "every release tag's schema.py, which needs the repository's tags; with no .git it skips, while a .git without "
+     "tags FAILS (a tagless clone would read as nothing retired) — CI checks out with fetch-depth 0"),
     ("tests/test_0041_mutation_campaign.py", "skipif", "not _is_checkout()",
      "git-checkout", "specs/0041 0041-PA1 (the notice-binding hotfix's mutation table): the one-row reproduction "
      "snapshots the TRACKED tree (git ls-files); a git-less copy (an sdist, a reviewer's tree/) has none, so the row "

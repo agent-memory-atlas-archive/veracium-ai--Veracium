@@ -33,7 +33,7 @@ Spec-Requires: 0007
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | v32 |
+| **Version** | **v33 — 2026-10-13: post-acceptance revision (internal finding 0013-PA1; no release changes behaviour; `Spec-Status` stays `accepted`). Every migration step's output is checked AT THE STEP (§4f).** A mutation campaign over the whole migration ladder (dev's instrument, research's identical re-run) found six steps whose output nothing checks, on any SQLite build: the version stamp, the `store_identity` and `store_epoch` mints, the v13 baseline journal, the v2→v3 outcome-chain conversion and the v3→v4 wiki cache drop. A wrong stamp makes `migrate_store` report `migrated` and commit a store the next open refuses. The unmutated ladder is correct; these are assurance gaps, not a wrong output in any release. §4f gives each step a postcondition checked inside the migration's transaction, before the next step; M117–M123 are the invariants, and the closure cells are the campaign's perturbations, each KILLED at its own step. The v2→v3 fill of a missing `observed_at` becomes ONE stated clock read per migration instead of a per-row side effect of loading the model. **Respun 2026-10-14 on dev's review (same version, not yet adopted):** "equal" is defined as equal AS THE DECLARED TYPE, since the dump reformats legitimate `+00:00` datetimes; the added keys are DERIVED from the models' constant defaults, 19 measured; the one released-then-removed field, `provenance.source_type`, is named as the only undeclared key the step may drop, under accepted 0016 D2 (M-Q6, closed by it); and a pre-step snapshot is the postcondition's own read. **Owner rulings, 2026-10-14 (Quentin, first-hand in the dev session):** PATH, “Fold on your word”: like the 0041 notice hotfix, internal finding 0013-PA1 is closed with a mutation table whose cells are the campaign's perturbations, each caught at its own step; it lands after review and suite, and is disclosed to the external reviewer in the next package that touches 0013 (the SQLite amendment's); external review of v33 was declined. M-Q5, “Keep the fill” (M-Q5, closed by it). Prior: v32 |
 | **Status** | *see `Spec-Status:` — canonical.* **Prerequisite of every schema-changing spec:** `0006`, `0008`, `0009`, `0010`. |
 | **Internal reviewers** | research — pending |
 | **External review** | required — a bad migration makes stores unopenable |
@@ -216,6 +216,81 @@ evidence records every path individually**, keyed `v<base>:constructor-><dest>`.
 Keying by destination alone can record only one path per destination, while
 different bases producing different exact output at the same destination is the
 entire reason those digests exist.
+
+### 4f. Every step's output is checked at the step (v33, internal finding 0013-PA1)
+
+**The finding.** A mutation campaign perturbed each write of each migration path at its execution (DDL by text, DML by
+data, the stamp by value) and recorded where each perturbation was killed: 44 paths (every accepted shape at every base
+v1–v14, the unstamped legacy store, a HEAD store with its rebuildable indexes dropped), 68 distinct steps, 3,318
+perturbations. Three ALTER sites are checked at the step (their stored DDL byte-matches a reviewed constant, §4c); the
+additive DDL is covered by the end-state check, or absorbed by drift repair and revalidation. **Six steps are checked by
+nothing: every perturbation of them SURVIVED** (a value altered, a row dropped, the statement skipped; 597 data
+perturbations and 43 stamp perturbations). The end-state check reads the shape, never `user_version` and never rows.
+Instrument: dev's steptable.py (sha16 `5b81c3ae0d9f1b9f`); research re-ran it from its own archive of `af1e564` with an
+identical result, and separately reproduced the stamp case. The unmutated ladder is correct on both SQLite builds
+measured; **these are assurance gaps, not a wrong output in any release.** The worst consequence measured: a wrong
+stamp makes `migrate_store` return `migrated` and commit a HEAD-shaped store stamped below HEAD, which the next ordinary
+open then refuses ("stamped v14 … no migration hook"). A false success report and a store that will not open, not a
+silent misread.
+
+**The contract.** Each of the six steps gains a POSTCONDITION, checked inside the migration's transaction immediately
+after the step and before the next one. A failed postcondition refuses the migration with `unsupported-migration`,
+naming the step, and the transaction leaves the store as it was (the existing failure contract). Each postcondition
+reads the database's own bytes, never a value the step computed and kept: a check of the step's own variable would pass
+whatever the step wrote. Where a postcondition needs the state BEFORE its step (the v2→v3 rows' raw JSON, a row present
+before a mint), the postcondition reads it from the database itself, before the step runs, inside the same transaction;
+that snapshot is the check's own read, not a value the step kept.
+
+| step | code at `af1e564` | postcondition |
+|---|---|---|
+| **the stamp** | `PRAGMA user_version = SCHEMA_VERSION` (`_apply_forward`) | `PRAGMA user_version` reads back exactly `SCHEMA_VERSION`. The end-state check also requires it |
+| **`store_identity`** | `_mint_store_identity`: `INSERT OR IGNORE … VALUES(1, uuid4)` | exactly one row, `id = 1`, whose `origin` is a canonical UUIDv4 string. A row present before the step is unchanged, byte for byte |
+| **`store_epoch`** | `mint_store_epoch`: `INSERT OR IGNORE … VALUES(1, now, schema_at)` | exactly one row, `id = 1`. If the step created it: `started_at` equals the migration's one clock read and `schema_at` the value passed. A row present before the step is unchanged |
+| **the v13 baseline** | `journal_baselines`: one `baseline` event per pre-existing edge row | the number of `baseline` events the step wrote equals the number of `edges` rows; for every edge row, exactly one such event whose `edge_id` is its id, whose `state` is byte-equal to the row's `json`, whose `reason` is NULL and whose `recorded_at` is the migration's one clock read; within each user, one `txn` and contiguous `seq` |
+| **the v2→v3 outcome chains** | `_migrate_outcome_chains`: each legacy outcome episode re-serialised with `seq = 1`, `supersedes_episode = None`, `judgment_time_known = False` | for every legacy `outcome` episode, compared with the row's RAW legacy JSON, never a model load of it (a load would refill missing fields and make the check pass vacuously): the three fields carry their new values; every other key present in the raw JSON, at any depth, carries a value EQUAL AS ITS DECLARED FIELD TYPE (below); `observed_at`, if the raw JSON lacked it, equals the migration's ONE recorded clock read, and if present is unchanged in that sense; every key the conversion ADDS is a declared field whose value equals the JSON form of its declared constant default, derived from the model, never listed by hand; a raw key the model does not declare is refused, except the retired fields named below. Non-outcome episodes are byte-unchanged; the converted count equals the legacy outcome count |
+| **the v3→v4 wiki drop** | `_drop_wiki_cache`: `DELETE FROM wiki` | `wiki` has zero rows |
+
+**One stated clock read for `observed_at`.** Today the v2→v3 step fills a missing `observed_at` as a side effect: it loads
+each episode through the model, whose `observed_at` field has `default_factory=utcnow`, so each row receives its own wall
+clock read. The step instead takes ONE clock read per migration, as the v13 baseline already does, passes it to the
+conversion for rows lacking the field, and passes the same value to the postcondition. A bound such as "between the
+migration's start and its commit" was considered and rejected: wall-clock bounds around wall-clock reads refuse a correct
+migration when the clock steps backwards between them, and they miss the mutant that overwrites a row's existing value.
+
+**What "equal" means, and the keys the dump adds** (dev's review of v33, measured by research at `7c8c905` from an
+archive, through the step's own load-copy-dump):
+- **Equal as the declared type, never as text.** The dump reformats legitimate values: `observed_at`
+  `2026-09-03T10:00:00+00:00` and `…T10:00:00.000000+00:00` come back as `…T10:00:00Z`, and `2026-09-03 10:00:00` as
+  `2026-09-03T10:00:00`. `+00:00` is what `datetime.isoformat()` emits, so older writers plausibly stored it. Both sides
+  are parsed by the field's declared type and compared: a datetime as the same instant, and a naive value stays naive
+  (naive never equals aware). A string comparison would refuse every such row on a correct migration.
+- **Added keys are derived.** On a minimal legacy outcome row the dump adds 19 keys: 14 top-level (`claimed_by`,
+  `consolidation_output_index`, `context_ref`, `date_end`, `date_start`, `edge_id`, `judgment_time_known`, `lineage`,
+  `operation_id`, `outcome`, `retired_at`, `retired_reason`, `seq`, `supersedes_episode`) and 5 under `provenance`
+  (`confidence`, `derived_from`, `disclosure`, `origin`, `source_id`). Three of them are the chain fields this step
+  sets. Each of the other 16 equals its field's declared constant default IN JSON FORM (`disclosure` dumps as
+  `"mentionable"`, not the enum). The postcondition derives that set from `Episode` and `Provenance` field defaults. A
+  hand list would drift the day a field is added. `observed_at` is the one clock-sourced default (`default_factory`)
+  in either model.
+- **A retired field is dropped, and only a named one.** Neither model keeps undeclared keys, so the step drops any raw
+  key the current model does not declare. Across the 48 release tags, ONE field was released and later removed:
+  `Provenance.source_type`, declared from v0.1.0 to v0.10.0. Outcome rows reach this step only from stores at schema 1,
+  written by v0.3.0 (the first release with outcome episodes) through v0.4.8 (the last to stamp schema 1), and
+  `source_type` is REQUIRED in every one of those releases. Every such row carries it, and today's step drops it, on outcome rows only (other rows keep it, unread). The postcondition
+  admits the drop of exactly the retired set, `provenance.source_type`, and refuses any other undeclared key. The set is
+  a constant in code, bound by a test to its derivation from the release tags (a field declared in a released
+  `schema.py` and absent now). **The drop itself is already ruled**: accepted 0016's D2
+  (`specs/0016-sourcetype-deletion.md`) deleted the field, and historical `source_type` keys in stored JSON are dropped
+  on read (the D2 note at `src/veracium/schema.py` L72–L77). This step persists what every read of every row already
+  does; the constant cites 0016 D2 as its authority. M-Q6 is closed by it.
+
+**Closure.** 0013-PA1 closes only with a mutation table whose cells are the campaign's perturbations of the six steps,
+each KILLED at its own step's postcondition (not later, by a collateral error or by the end-state check), plus controls:
+the unmutated ladder still migrates every path, on the qualified build and on one unattested build. The v2→v3 controls
+include legacy rows in every datetime form an older writer could produce (at least `isoformat()`'s `+00:00`, pydantic's
+`Z`, a space separator, and a naive value), and an outcome row of the v0.3.0–v0.4.8 shape carrying `source_type`; each
+must migrate. *Instrument limit:* the campaign's legacy episodes were built from the accepted DDL with generic rows, not
+written by old releases. Where an archived release can be installed, a store it writes is the better control.
 
 ---
 
@@ -913,6 +988,13 @@ tests at implementation.
 | **M113** the AUDIT-write commit fact is a truthful TRI-STATE over durable evidence, checked via the low-level primitive `_requested_transition_durable` (NOT the monkeypatchable verifier): the EXACT REQUESTED transition durable → `True` (a verifier FALSE-negative over a real lifecycle cannot erase it, round 27 f2; a DIFFERENT well-formed event, e.g. a `current` record where `migrated` was requested, does NOT prove it, round 28 f3 — v30's `_terminal_event_wellformed` compared no payload); a durable-but-MISMATCHED-or-malformed terminal write that LANDED → `None`, never `False` — an audit write occurred, just not the requested one (round 29, finding 3); a TOTAL absence of any terminal transition with a proven no-write (exact committed=False or a raw no-write failure) → `False` (round 20 f2); only the EXACT `AuditStorageUnavailable` type contributes trusted metadata, so a subclass cannot FABRICATE `True` (round 27 f3); committed=True with no exact durable transition stays contradictory → `None` (round 21 f3) | `test_terminal_committed_true_false_negative_over_a_real_lifecycle` · `test_a_different_well_formed_event_never_proves_the_requested_commit` · `test_a_durable_but_wrong_terminal_write_is_none_not_false` · `test_a_total_absence_of_any_terminal_write_stays_false` · `test_a_committed_true_subclass_never_fabricates_a_commit` · gates `committed-true-with-a-different-payload` · `committed-true-different-payload-raw-exception` — **measured today** (round 27 ff. 2 & 3; round 28 f3; round 29 f3) |
 | **M114** CONSUMPTION is decided by the INDEPENDENT, request-bound `_durable_lifecycle` classifier — NOT the `_durable_row_binds_authority` verifier — so a defect in that verifier (a raise OR a clean FALSE-negative) cannot suppress it: a complete durable `attempted` activation THIS call published (a non-`duplicate`, authority-bound lifecycle) is CONSUMED and terminalizes as `internal-error` WITH a terminal event for EVERY nontrusted carrier — committed-false, committed-none, a raw exception, a wrong-type return, an invalid receipt — closing the M90/M95 gap v30 left for all carriers except the two it special-cased; a genuine `duplicate` still identifies a prior/concurrent consumer and a genuinely absent lifecycle keeps the typed retry distinction | `test_a_complete_durable_activation_terminalizes_for_every_carrier` (5 carriers × 2 verifier modes) · `test_a_prior_complete_run_stays_quiescence_not_reconsumed` · `test_a_genuinely_absent_activation_keeps_the_retry_distinction` · gates `durable-activation-*-verifier-{raises,false-negative}` — **measured today** (round 28, finding 1) |
 | **M115** request-bound durable evidence survives an INVALID return too — the outer post-consumption catch preserves the exact requested `migrated` facts + `audit_committed=True` when EITHER a valid receipt was returned OR `_audit_commit_fact` independently proves the requested transition durable, so an exact transition followed by an invalid return AND a raising verifier is not discarded to fallback `internal-error`/`None` (M86/M108 are not limited to a valid receipt) | `test_an_exact_transition_survives_an_invalid_return_plus_raising_verifier` · gate `exact-transition-invalid-return-verifier-raises` — **measured today** (round 28, finding 2) |
+| **M117** **(v33, 0013-PA1)** the migration stamp is read back and must equal `SCHEMA_VERSION` before commit | the 0013-PA1 mutation table: every stamp perturbation (skip; each lower or higher value) KILLED at the stamp's postcondition |
+| **M118** **(v33)** after the `store_identity` step, exactly one row `id = 1` with a canonical UUIDv4 `origin`; a pre-existing row unchanged | the mutation table: row dropped, value altered, statement skipped, each KILLED at the step |
+| **M119** **(v33)** after the `store_epoch` step, exactly one row `id = 1`; a created row carries the migration's one clock read and the passed `schema_at`; a pre-existing row unchanged | the mutation table, as M118 |
+| **M120** **(v33)** the v13 baseline writes exactly one `baseline` event per pre-existing edge, `state` byte-equal to the edge's `json`, `reason` NULL, `recorded_at` the one clock read, one `txn` and contiguous `seq` per user | the mutation table: an event dropped, a `state` altered, the step skipped, each KILLED at the step |
+| **M121** **(v33)** the v2→v3 conversion, checked against each row's RAW legacy JSON: the three chain fields set; every other present key, at any depth, equal AS ITS DECLARED TYPE (a datetime as the same instant, naive stays naive); a missing `observed_at` equal to the migration's ONE recorded clock read, a present one unchanged in that sense; every added key a declared field equal to the JSON form of its declared constant default, the set derived from the models; an undeclared raw key refused unless it is in the retired set (`provenance.source_type`); non-outcome episodes byte-unchanged | the mutation table, plus six mutants: read the legacy row through the model (the check passes vacuously); re-read the clock per row; overwrite a present `observed_at`; compare present keys as strings (control: a legacy row in `+00:00` form must migrate); add a key with a non-default value; drop an undeclared key outside the retired set |
+| **M122** **(v33)** after the v3→v4 drop, `wiki` has zero rows | the mutation table: a row kept, the statement skipped, each KILLED at the step |
+| **M123** **(v33)** each postcondition runs inside the migration's transaction, immediately after its step and before the next, reads the database's own bytes (a pre-step state it needs is its own read of the database before the step, never a value the step kept), and on failure refuses with `unsupported-migration` naming the step, leaving the store unchanged | a postcondition reading the step's own variable (passes whatever was written); one run only at the end; a failure that commits |
 | **M116** the COMPLETE durable lifecycle is classified before EVERY activation carrier — including the trusted committed=True fast path (M99 extended): an existing valid TERMINAL lifecycle is a consumed replay already complete → `migration-quiescence-required` with NO second terminal-write attempt, never converted into a `MigrationAuditWriteError`; committed=True proves SOME activation committed, never that a pre-existing terminal operation belongs to THIS invocation. (Distinguishing a prior ATTEMPTED-only lifecycle from this call's fresh publication needs invocation-provenance — a deferred `0008` production obligation, §8a — so the draft conservatively terminalizes a non-`duplicate` attempted lifecycle) | `test_a_completed_lifecycle_beats_an_exact_committed_true_carrier` · `test_a_fresh_committed_true_activation_still_terminalizes` — **measured today** (round 29, finding 2) |
 
 ---
@@ -1097,6 +1179,8 @@ for a production planner that repairs in a separate transaction.
 | ~~M-Q1~~ | **RULED by round 9, 2026-08-03: wait.** `0013` must not reach `accepted` before it is reviewed **against an actual migration** — that is the principle that justified the `0007` scope cut, and it applies equally to the replacement. **The first case is `0008`'s `confirmations` table**: accepted, simple, additive, already blocked on `0013`, and independent of `0006`'s unresolved source-identity design. **`0013` may generalise only what that real migration demonstrates.** | resolved | external | — |
 | ~~M-Q2~~ | **RULED (round 1) adopt-with-conditions; condition RESOLVED (round 2) by the offline boundary; boundary APPROVED (round 3) at the library level** with the narrowed claim (§5b: ordinary opening cannot initiate migration; the trusted deployment authority owns quiescence, fencing and backup validity) and the authority binding conditions (exact types, bound to store/migration/operation; release-identity binding at implementation). | resolved | external | — |
 | ~~M-Q3~~ | **RULED by round 9: yes, it belongs here.** The capability comparison exists to decide whether a *migration result* satisfies its destination despite differing DDL, so it is `0013`'s. `0007` retains exact manifestation identity, digest comparison, rebuildable drift and candidate resolution — and `capability_problems()` has been removed from its kernel. | resolved | external | — |
+| ~~M-Q5~~ | **RULED by the owner, 2026-10-14: keep the fill.** Quentin chose “Keep the fill”: “Keep today's behaviour, made explicit and checked: one clock read per migration, recorded.” He declined “Leave it unknown”. The v2→v3 step fills a legacy episode's missing `observed_at` with the migration's ONE recorded clock read (§4f; M121) | semantic | — | resolved |
+| ~~M-Q6~~ | **RULED by accepted 0016 D2** (raised and closed at v33's respin, 2026-10-14): `Provenance.source_type` is deleted, and historical keys in stored JSON are dropped on read. The v2→v3 step's drop of it from outcome rows persists that ruling. v33 admits exactly that key by name and refuses any other undeclared key | semantic | — | resolved |
 | ~~M-Q4~~ | **RULED by round 19: the acceptance boundary is frozen (§8a).** `0013` reviews the abstract migration design and audit *protocol* against six finite, mechanically-gated properties (concrete migration correctness; planner/evidence architecture; closed public semantics; abstract atomic audit protocol; adapter conformance surface; independent gates). It does **not** require the in-process reference to defend against arbitrary direct corruption of its private immutable state, nor an adapter that violates atomicity while returning a success receipt — those are **`0008` adapter-conformance tests**. Ten production obligations (real DDL/constraints, one activation + one compare-and-set transaction, multiprocess consumption, response-loss handling, consistent-snapshot readback, attempted-record immutability, restart-safe reconciliation, malformed-row detection, the `current`-with-repair `committed=True` contract, crash injection) become explicit blocking `0008` gates. The draft is an executable protocol model, not proof that a backend implements the protocol. | resolved | external | — |
 
 ---

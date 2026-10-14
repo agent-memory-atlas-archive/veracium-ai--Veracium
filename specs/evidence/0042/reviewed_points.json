@@ -2559,154 +2559,174 @@
   "line": 340,
   "statement": "raise _SITE_JOURNAL_REDACTION_REASON.fire(ValueError("
  },
- "store/migration.py:_migrate_outcome_chains:62:RAISE": {
+ "store/migration.py:_migrate_outcome_chains:199:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.migration.duplicate-outcome-chain",
   "reviewer": "dev",
   "site": "store.migration.duplicate-outcome-chain",
   "class": "enforcement",
   "key": "store/migration.py:_migrate_outcome_chains:RAISE:1",
-  "line": 62,
+  "line": 199,
   "statement": "raise _SITE_DUPLICATE_OUTCOME_CHAIN.fire(DuplicateOutcomeChainError("
  },
- "store/migration.py:_apply_forward:118:RAISE": {
+ "store/migration.py:_refuse_unless:81:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0013 §4f (v33, 0013-PA1: each step checked at the step) (refuse) through site store.migration.postcondition",
+  "reviewer": "dev",
+  "site": "store.migration.postcondition",
+  "class": "enforcement",
+  "key": "store/migration.py:_refuse_unless:RAISE:1",
+  "line": 81,
+  "statement": "raise _SITE_MIGRATION_POSTCONDITION.fire(MigrationPostconditionError(base, step, problems), step)"
+ },
+ "store/migration.py:_apply_forward:256:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0013 §4 (refuse) through site store.migration.version",
   "reviewer": "dev",
   "site": "store.migration.version",
   "class": "enforcement",
   "key": "store/migration.py:_apply_forward:RAISE:1",
-  "line": 118,
+  "line": 256,
   "statement": "raise _SITE_MIGRATION_VERSION.fire(StoreVersionError("
  },
- "store/migration.py:_apply_forward:172:RAISE": {
+ "store/migration.py:_apply_forward:320:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0013 §4 (refuse) through site store.migration.version",
   "reviewer": "dev",
   "site": "store.migration.version",
   "class": "enforcement",
   "key": "store/migration.py:_apply_forward:RAISE:2",
-  "line": 172,
+  "line": 320,
   "statement": "raise _SITE_MIGRATION_VERSION.fire(StoreVersionError("
  },
- "store/migration.py:_apply_forward:200:RAISE": {
+ "store/migration.py:_apply_forward:348:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0013 §4 (refuse) through site store.migration.version",
   "reviewer": "dev",
   "site": "store.migration.version",
   "class": "enforcement",
   "key": "store/migration.py:_apply_forward:RAISE:3",
-  "line": 200,
+  "line": 348,
   "statement": "raise _SITE_MIGRATION_VERSION.fire(StoreVersionError("
  },
- "store/migration.py:_apply_forward:226:RAISE": {
+ "store/migration.py:_apply_forward:374:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0013 §4 (refuse) through site store.migration.version",
   "reviewer": "dev",
   "site": "store.migration.version",
   "class": "enforcement",
   "key": "store/migration.py:_apply_forward:RAISE:4",
-  "line": 226,
+  "line": 374,
   "statement": "raise _SITE_MIGRATION_VERSION.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:1712:RAISE": {
+ "store/schema_version.py:open_versioned:1721:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a (refuse) through site store.open.invalid-version",
   "reviewer": "dev",
   "site": "store.open.invalid-version",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:4",
-  "line": 1712,
+  "line": 1721,
   "statement": "raise _SITE_OPEN_INVALID_VERSION.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
  },
- "store/schema_version.py:open_versioned:1784:RAISE": {
+ "store/schema_version.py:open_versioned:1793:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4h (refuse) through site store.open.legacy",
   "reviewer": "dev",
   "site": "store.open.legacy",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:9",
-  "line": 1784,
+  "line": 1793,
   "statement": "raise _SITE_OPEN_LEGACY.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:1794:RAISE": {
+ "store/schema_version.py:open_versioned:1803:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4h (refuse) through site store.open.legacy",
   "reviewer": "dev",
   "site": "store.open.legacy",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:10",
-  "line": 1794,
+  "line": 1803,
   "statement": "raise _SITE_OPEN_LEGACY.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:1810:RAISE": {
+ "store/schema_version.py:open_versioned:1819:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4h (refuse) through site store.open.legacy",
   "reviewer": "dev",
   "site": "store.open.legacy",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:11",
-  "line": 1810,
+  "line": 1819,
   "statement": "raise _SITE_OPEN_LEGACY.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:1820:RAISE": {
+ "store/schema_version.py:open_versioned:1829:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4h (refuse) through site store.open.legacy",
   "reviewer": "dev",
   "site": "store.open.legacy",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:12",
-  "line": 1820,
+  "line": 1829,
   "statement": "raise _SITE_OPEN_LEGACY.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:1699:RAISE": {
+ "store/schema_version.py:open_versioned:1708:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a (refuse) through site store.open.locked",
   "reviewer": "dev",
   "site": "store.open.locked",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:3",
-  "line": 1699,
+  "line": 1708,
   "statement": "raise _SITE_OPEN_LOCKED.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:1716:RAISE": {
+ "store/schema_version.py:open_versioned:1725:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a (refuse) through site store.open.newer",
   "reviewer": "dev",
   "site": "store.open.newer",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:5",
-  "line": 1716,
+  "line": 1725,
   "statement": "raise _SITE_OPEN_NEWER.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:1684:RAISE": {
+ "store/schema_version.py:open_versioned:1693:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-viii (refuse) through site store.open.runtime-unsupported",
   "reviewer": "dev",
   "site": "store.open.runtime-unsupported",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:2",
-  "line": 1684,
+  "line": 1693,
   "statement": "raise _SITE_OPEN_RUNTIME_UNSUPPORTED.fire(StoreVersionError("
  },
- "store/schema_version.py:_validated_current:1606:RAISE": {
+ "store/schema_version.py:_validated_current:1608:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-v (refuse) through site store.open.unaccepted-shape",
   "reviewer": "dev",
   "site": "store.open.unaccepted-shape",
   "class": "enforcement",
   "key": "store/schema_version.py:_validated_current:RAISE:1",
-  "line": 1606,
+  "line": 1608,
   "statement": "raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
  },
- "store/schema_version.py:_validated_current:1614:RAISE": {
+ "store/schema_version.py:_validated_current:1615:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-v (refuse) through site store.open.unaccepted-shape",
   "reviewer": "dev",
   "site": "store.open.unaccepted-shape",
   "class": "enforcement",
   "key": "store/schema_version.py:_validated_current:RAISE:2",
-  "line": 1614,
+  "line": 1615,
+  "statement": "raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
+ },
+ "store/schema_version.py:_validated_current:1623:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0007 §4a-v (refuse) through site store.open.unaccepted-shape",
+  "reviewer": "dev",
+  "site": "store.open.unaccepted-shape",
+  "class": "enforcement",
+  "key": "store/schema_version.py:_validated_current:RAISE:3",
+  "line": 1623,
   "statement": "raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
  },
  "store/sqlite.py:SqliteStore.append_outcome_if_head:1858:RAISE": {
@@ -4026,13 +4046,13 @@
   "line": 59,
   "statement": "raise ValueError("
  },
- "store/schema_version.py:open_versioned:1679:RAISE": {
+ "store/schema_version.py:open_versioned:1688:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/schema_version.py:open_versioned:RAISE:1",
-  "line": 1679,
+  "line": 1688,
   "statement": "raise ValueError(f\"store path exceeds {_AUDIT_STRING_CAP} bytes\")"
  },
  "store/sqlite.py:SqliteStore.__init__:178:RAISE": {
@@ -4746,13 +4766,13 @@
   "line": 192,
   "statement": "return None"
  },
- "store/schema_version.py:open_versioned:1853:RAISE": {
+ "store/schema_version.py:open_versioned:1862:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/schema_version.py:open_versioned:RAISE:13",
-  "line": 1853,
+  "line": 1862,
   "statement": "raise"
  },
  "store/sqlite.py:SqliteStore.__init__:196:RAISE": {
@@ -6087,22 +6107,67 @@
   "line": 108,
   "statement": "raise NoOpenReadWindow("
  },
- "store/migration.py:_mig_event:98:RAISE": {
+ "store/migration.py:_mig_event:236:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/migration.py:_mig_event:RAISE:1",
-  "line": 98,
+  "line": 236,
   "statement": "raise ValueError(f\"audit field 'path' exceeds {_AUDIT_STRING_CAP} bytes; \""
  },
- "store/migration.py:migrate_store:299:RAISE": {
+ "store/migration.py:_migrate_outcome_chains:208:FILTER_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/migration.py:_migrate_outcome_chains:FILTER_RETURN:1",
+  "line": 208,
+  "statement": "return {eid for eid, _ in outcome_rows}"
+ },
+ "store/migration.py:_nested_models:86:FILTER_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/migration.py:_nested_models:FILTER_RETURN:1",
+  "line": 86,
+  "statement": "return {k: f.annotation for k, f in model.model_fields.items()"
+ },
+ "store/migration.py:_rows:169:FILTER_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/migration.py:_rows:FILTER_RETURN:1",
+  "line": 169,
+  "statement": "return [tuple(r) for r in conn.execute(sql).fetchall()]"
+ },
+ "store/migration.py:_same_instant:414:BOOL_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/migration.py:_same_instant:BOOL_RETURN:1",
+  "line": 414,
+  "statement": "return (datetime.fromisoformat(v) if isinstance(v, str) else v) == now"
+ },
+ "store/migration.py:_same_instant:416:RETURN_FALSE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/migration.py:_same_instant:RETURN_FALSE:1",
+  "line": 416,
+  "statement": "return False"
+ },
+ "store/migration.py:migrate_store:520:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/migration.py:migrate_store:RAISE:1",
-  "line": 299,
+  "line": 520,
   "statement": "raise PostCommitAuditError(str(path), mid, exc) from exc"
  },
  "store/release_migration.py:MigrationAttestation.__new__:596:RAISE": {
@@ -6978,13 +7043,13 @@
   "line": 1127,
   "statement": "return (isinstance(r, dict)"
  },
- "store/schema_version.py:_validated_current:1618:RETURN_FALSE": {
+ "store/schema_version.py:_validated_current:1627:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:_validated_current:RETURN_FALSE:1",
-  "line": 1618,
+  "line": 1627,
   "statement": "return False"
  },
  "store/schema_version.py:accepted_digests:1429:FILTER_RETURN": {
@@ -7077,40 +7142,40 @@
   "line": 999,
   "statement": "return problems"
  },
- "store/schema_version.py:open_versioned:1740:RAISE": {
+ "store/schema_version.py:open_versioned:1749:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:open_versioned:RAISE:6",
-  "line": 1740,
+  "line": 1749,
   "statement": "raise PackageConsistencyError("
  },
- "store/schema_version.py:open_versioned:1759:RAISE": {
+ "store/schema_version.py:open_versioned:1768:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:open_versioned:RAISE:7",
-  "line": 1759,
+  "line": 1768,
   "statement": "raise PackageConsistencyError("
  },
- "store/schema_version.py:open_versioned:1767:RAISE": {
+ "store/schema_version.py:open_versioned:1776:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:open_versioned:RAISE:8",
-  "line": 1767,
+  "line": 1776,
   "statement": "raise PackageConsistencyError("
  },
- "store/schema_version.py:open_versioned:1862:RAISE": {
+ "store/schema_version.py:open_versioned:1871:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:open_versioned:RAISE:14",
-  "line": 1862,
+  "line": 1871,
   "statement": "raise PostCommitAuditError(spath, committed_event.adoption_id,"
  },
  "store/schema_version.py:rebuildable_keys:623:FILTER_RETURN": {

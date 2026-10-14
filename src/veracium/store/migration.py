@@ -15,11 +15,15 @@ post-commit cleanup failure can never erase a proven commit (`specs/0013` round 
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import sqlite3
 import uuid
 from datetime import datetime, timezone
 from typing import Callable, NamedTuple, Optional
+
+from pydantic import BaseModel, TypeAdapter
 
 from ..schema import Episode
 from .schema_version import (SCHEMA_VERSION, SCHEMAS, OpenResult,
@@ -39,7 +43,133 @@ class DuplicateOutcomeChainError(Exception):
     operator resolves the duplicate identities and retries."""
 
 
-def _migrate_outcome_chains(conn: sqlite3.Connection) -> None:
+# ---- specs/0013 §4f (v33, internal finding 0013-PA1): every step's output is checked AT THE STEP -----------------
+
+def _clock() -> datetime:
+    """THE migration's clock (0013 §4f, M119–M121): `_apply_forward` reads it ONCE, and that one value fills a legacy
+    episode's missing `observed_at`, stamps every v13 baseline event and starts the store epoch — so the value that
+    filled `observed_at` is recorded (`store_epoch.started_at`). A module function so a test can inject a clock."""
+    return datetime.now(timezone.utc)
+
+
+class MigrationPostconditionError(StoreVersionError):
+    """A migration step's postcondition failed (0013 §4f, M123): reason `unsupported-migration`, `step` naming the
+    step EXACTLY. Raised inside the migration's transaction, so the store is left as it was."""
+
+    def __init__(self, base: int, step: str, problems: list):
+        self.step = step
+        self.problems = list(problems)
+        super().__init__("", base, SCHEMA_VERSION, "unsupported-migration",
+                         diff=f"postcondition {step}: " + "; ".join(self.problems[:5])
+                              + (f" (+{len(self.problems) - 5} more)" if len(self.problems) > 5 else ""))
+
+
+# The STEP names a postcondition refusal carries (MigrationPostconditionError.step): fixed words, one per step.
+STEP_STAMP, STEP_IDENTITY, STEP_EPOCH = "stamp", "store-identity", "store-epoch"
+STEP_BASELINE, STEP_CHAINS, STEP_WIKI = "v13-baseline", "v2-v3-outcome-chains", "v3-v4-wiki-drop"
+
+# 0013 §4f / M-Q6 (RULED by accepted 0016 D2): a raw key no current model declares is REFUSED, except these — fields a
+# released schema declared and HEAD no longer does, dropped on read by every load since their deletion. Bound by
+# tests/test_0013_pa1_retired_keys.py to the derivation over every release tag (Provenance.source_type, v0.1.0–v0.10.0).
+RETIRED_EPISODE_KEYS = frozenset({("provenance", "source_type")})
+_CHAIN_FIELDS = {"seq": 1, "supersedes_episode": None, "judgment_time_known": False}
+
+
+def _refuse_unless(base: int, step: str, problems: list) -> None:
+    with _SITE_MIGRATION_POSTCONDITION.consult():
+        if problems:
+            raise _SITE_MIGRATION_POSTCONDITION.fire(MigrationPostconditionError(base, step, problems), step)
+
+
+def _nested_models(model) -> dict:
+    """The fields of `model` typed as a pydantic model, DERIVED from the annotations (0013 §4f "at any depth")."""
+    return {k: f.annotation for k, f in model.model_fields.items()
+            if isinstance(f.annotation, type) and issubclass(f.annotation, BaseModel)}
+
+
+_ADAPTERS: dict = {}
+
+
+def _typed(field, value):
+    a = _ADAPTERS.get(id(field))
+    if a is None:
+        a = _ADAPTERS[id(field)] = (field, TypeAdapter(field.annotation))     # the field kept alive: its id stays its own
+    return a[1].validate_python(value)
+
+
+def _compare_converted(raw: dict, new: dict, model, path: tuple, now: datetime, out: list) -> None:
+    """0013 §4f's v2→v3 postcondition, one level: `raw` is the row's RAW legacy JSON (never a model load of it), `new`
+    the row as the step wrote it. Present keys equal AS THEIR DECLARED FIELD TYPE; keys the dump ADDED equal their
+    declared constant default (the chain fields their new values; `provenance.observed_at` the migration's one clock
+    read); a raw key no model declares is refused unless retired; nested models compared key by key, recursively."""
+    fields, nested = model.model_fields, _nested_models(model)
+    for k in raw:
+        if k not in fields and (path + (k,)) not in RETIRED_EPISODE_KEYS:
+            out.append(f"{'.'.join(path + (k,))}: a key no model declares, not a retired one (0016 D2)")
+    for k in new:
+        if k not in fields:
+            out.append(f"{'.'.join(path + (k,))}: the converted row carries a key no model declares")
+    for k, f in fields.items():
+        where = ".".join(path + (k,))
+        if k not in new and f.is_required():
+            out.append(f"{where}: a required field missing from the converted row")
+            continue
+        if k in nested:
+            if not isinstance(new[k], dict) or (k in raw and not isinstance(raw[k], dict)):
+                out.append(f"{where}: not an object")
+                continue
+            _compare_converted(raw.get(k, {}), new[k], nested[k], path + (k,), now, out)
+            continue
+        try:
+            # a key the model's serializer OMITS (0037 §2: the procedural markers are absent, not null, on a declarative
+            # record) reads as its declared default — so a raw value the dump lost still compares, and fails
+            got = _typed(f, new[k]) if k in new else _typed(f, f.default)
+            if not path and k in _CHAIN_FIELDS:
+                want = _typed(f, _CHAIN_FIELDS[k])
+            elif k in raw:
+                want = _typed(f, raw[k])
+            elif path == ("provenance",) and k == "observed_at":
+                want = _typed(f, now)
+            elif f.default_factory is not None:
+                out.append(f"{where}: a default_factory field other than provenance.observed_at — this step's "
+                           f"contract does not cover it (0013 §4f)")
+                continue
+            else:
+                want = _typed(f, f.default)
+        except Exception as x:                                  # noqa: BLE001 — an unparseable value is a failure
+            out.append(f"{where}: does not parse as its declared type ({type(x).__name__})")
+            continue
+        if got != want:
+            out.append(f"{where}: {new.get(k, '<absent>')!r} != the expected {want!r}")
+
+
+def _check_outcome_chains(conn: sqlite3.Connection, base: int, before: dict, outcome_ids: set, now: datetime) -> None:
+    problems = []
+    after = dict(conn.execute("SELECT id, json FROM episodes").fetchall())
+    if set(after) != set(before):
+        problems.append(f"the episode id set changed ({len(before)} rows before, {len(after)} after)")
+    converted = 0
+    for eid, blob in before.items():
+        if eid not in after:
+            continue
+        if eid not in outcome_ids:
+            if after[eid] != blob:
+                problems.append(f"non-outcome episode {eid!r} changed")
+            continue
+        converted += 1
+        out = []
+        _compare_converted(json.loads(blob), json.loads(after[eid]), Episode, (), now, out)
+        problems += [f"episode {eid!r}: {o}" for o in out]
+    if converted != len(outcome_ids):
+        problems.append(f"converted {converted} outcome rows, the legacy count is {len(outcome_ids)}")
+    _refuse_unless(base, STEP_CHAINS, problems)
+
+
+def _rows(conn, sql) -> list:
+    return [tuple(r) for r in conn.execute(sql).fetchall()]
+
+
+def _migrate_outcome_chains(conn: sqlite3.Connection, now: Optional[datetime] = None) -> set:
     """specs/0009 §4f — convert every legacy outcome episode into an honest chain
     ROOT: `seq=1`, `supersedes_episode=None`, `judgment_time_known=False`. Its `date`
     is the original USE date (the old in-place upgrade path never updated it), NOT a
@@ -47,12 +177,19 @@ def _migrate_outcome_chains(conn: sqlite3.Connection) -> None:
     unknown. Group by identity FIRST: >1 legacy outcome for one chain → REFUSE
     (`DuplicateOutcomeChainError`), never two roots. Runs INSIDE the migration
     transaction, so a refusal rolls the whole migration back (`0013` failure contract)."""
+    now = now if now is not None else _clock()
     groups: dict = {}
     outcome_rows: list = []
+    kind_default = Episode.model_fields["kind"].default
     for eid, blob in conn.execute("SELECT id, json FROM episodes").fetchall():
-        ep = Episode.model_validate_json(blob)
-        if ep.kind != "outcome":
+        raw = json.loads(blob)
+        if raw.get("kind", kind_default) != "outcome":        # classified from the RAW row (0013 §4f), never a load
+            Episode.model_validate_json(blob)                 # still validated, as before: a malformed row refuses
             continue
+        prov = raw.get("provenance")
+        if isinstance(prov, dict) and "observed_at" not in prov:
+            prov["observed_at"] = now.isoformat()             # the ONE stated clock read, never a per-row default
+        ep = Episode.model_validate(raw)
         outcome_rows.append((eid, ep))
         groups.setdefault(
             (ep.user_id, ep.edge_id, ep.provenance.evidence_ref), []).append(eid)
@@ -68,6 +205,7 @@ def _migrate_outcome_chains(conn: sqlite3.Connection) -> None:
                                           "judgment_time_known": False})
         conn.execute("UPDATE episodes SET json=? WHERE id=?",
                      (converted.model_dump_json(), eid))
+    return {eid for eid, _ in outcome_rows}
 
 
 def _drop_wiki_cache(conn: sqlite3.Connection) -> None:
@@ -119,6 +257,10 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
                 "", base, SCHEMA_VERSION, "unsupported-migration",
                 diff=f"no migration path from base {base} to head {SCHEMA_VERSION} "
                      f"is defined"), "unsupported-base")
+        # 0013 §4f (B1): the migration's ONE clock read, before any step — the v2→v3 fill, the v13 baseline and the
+        # store epoch all carry this value, so `store_epoch.started_at` records what filled `observed_at`.
+        now = _clock()
+        now_iso = now.isoformat()
         base_keys = {o.key for o in SCHEMAS[base]}
         for o in SCHEMAS[SCHEMA_VERSION]:
             if o.key not in base_keys:                     # only what the head ADDS over base
@@ -127,7 +269,9 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
         # episodes into honest chain roots (a DATA migration the additive DDL cannot do).
         # Guarded to base<3<=head so a future v3→v4 bump never re-roots valid v3 chains.
         if base < 3 <= SCHEMA_VERSION:
-            _migrate_outcome_chains(conn)
+            before = dict(conn.execute("SELECT id, json FROM episodes").fetchall())
+            outcome_ids = _migrate_outcome_chains(conn, now)
+            _check_outcome_chains(conn, base, before, outcome_ids, now)
         # specs/0003 §4c-ii / §7a: crossing INTO v4 must invalidate every wiki cache. A v3
         # store may hold a wiki compiled under pre-0003 "one current value" semantics over a
         # pair that is now a contention (§4e reorders PRE-EXISTING contentions), and the
@@ -137,6 +281,8 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
         # re-rooting above. Guarded base<4<=head so it fires exactly once, on the v3→v4 cross.
         if base < 4 <= SCHEMA_VERSION:
             _drop_wiki_cache(conn)
+            left = conn.execute("SELECT COUNT(*) FROM wiki").fetchone()[0]
+            _refuse_unless(base, STEP_WIKI, [f"wiki holds {left} row(s) after the drop"] if left else [])
         # specs/0006 §4.2 / Migration: crossing INTO v5 mints the durable `store_identity`
         # origin singleton, transactionally, in the SAME migration transaction. A DATA step
         # the additive `store_identity` table DDL cannot express (the table is empty until
@@ -144,7 +290,9 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
         # `origin` absent and resolve to this singleton at read (§4 rule 6). Guarded
         # base<5<=head so it fires exactly once, on the v4→v5 cross.
         if base < 5 <= SCHEMA_VERSION:
+            pre = _rows(conn, "SELECT id, origin FROM store_identity")
             _mint_store_identity(conn)
+            _refuse_unless(base, STEP_IDENTITY, _identity_problems(pre, _rows(conn, "SELECT id, origin FROM store_identity")))
         # specs/0014 §4b/§7a: crossing INTO v6 ALTERs `supersession_operations` — the repo's
         # FIRST ALTER of an existing table, which the additive diff-by-key above cannot
         # express (the table's typed key exists in the base, so its CHANGED DDL is invisible
@@ -237,9 +385,13 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
         # base<13<=head so it fires exactly once, on the v12→v13 cross.
         if base < 13 <= SCHEMA_VERSION:
             from .edge_events import journal_baselines, mint_store_epoch
-            now_iso = datetime.now(timezone.utc).isoformat()   # ONE clock read
-            journal_baselines(conn, now_iso)
+            edges = _rows(conn, "SELECT user_id, id, json FROM edges")
+            events_before = _rows(conn, "SELECT rowid FROM edge_event")
+            journal_baselines(conn, now_iso)                    # the migration's ONE clock read (B1)
+            _refuse_unless(base, STEP_BASELINE, _baseline_problems(conn, edges, {r[0] for r in events_before}, now))
+            pre = _rows(conn, "SELECT id, started_at, schema_at FROM store_epoch")
             mint_store_epoch(conn, now_iso, 13)
+            _refuse_unless(base, STEP_EPOCH, _epoch_problems(pre, _rows(conn, "SELECT id, started_at, schema_at FROM store_epoch"), now))
         # specs/0041 §4b/§4b-ii (v15): crossing INTO v15 adds `episode_event` and `redactions`
         # — an attestation or an episode event exists only once the operation that writes
         # them runs on an open v15 store, so there is no data step; rows already holding the
@@ -251,6 +403,75 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
         # no pre-existing data to carry and no row to mint. Stated here so the
         # absence of a v14 step reads as a decision, not an omission.
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        stamped = conn.execute("PRAGMA user_version").fetchone()[0]
+        _refuse_unless(base, STEP_STAMP, [f"user_version reads {stamped}, not {SCHEMA_VERSION}"]
+                       if stamped != SCHEMA_VERSION else [])
+
+
+def _same_instant(v, now: datetime) -> bool:
+    """`v` (as stored) is the migration's clock read, as an instant; an unparseable value is simply not it."""
+    try:
+        return (datetime.fromisoformat(v) if isinstance(v, str) else v) == now
+    except (ValueError, TypeError):
+        return False
+
+
+def _identity_problems(pre: list, post: list) -> list:
+    if pre:
+        return [] if post == pre else [f"store_identity changed: {pre!r} -> {post!r}"]
+    if len(post) != 1 or post[0][0] != 1:
+        return [f"store_identity holds {post!r}, not exactly one row id=1"]
+    origin = post[0][1]
+    try:
+        u = uuid.UUID(origin)
+        ok = str(u) == origin and u.version == 4
+    except (ValueError, TypeError, AttributeError):
+        ok = False
+    return [] if ok else [f"store_identity origin {origin!r} is not a canonical UUIDv4"]
+
+
+def _epoch_problems(pre: list, post: list, now: datetime) -> list:
+    if pre:
+        return [] if post == pre else [f"store_epoch changed: {pre!r} -> {post!r}"]
+    if len(post) != 1 or post[0][0] != 1:
+        return [f"store_epoch holds {post!r}, not exactly one row id=1"]
+    _id, started, schema_at = post[0]
+    out = []
+    if not _same_instant(started, now):
+        out.append(f"store_epoch.started_at {started!r} is not the migration's clock read")
+    if schema_at != 13:
+        out.append(f"store_epoch.schema_at {schema_at!r} is not 13")
+    return out
+
+
+def _baseline_problems(conn, edges: list, rowids_before: set, now: datetime) -> list:
+    added = [r for r in _rows(conn, "SELECT rowid, user_id, txn, seq, edge_id, kind, reason, state, recorded_at "
+                                    "FROM edge_event ORDER BY rowid") if r[0] not in rowids_before]
+    out = []
+    if len(added) != len(edges):
+        out.append(f"{len(added)} baseline event(s) written for {len(edges)} edge row(s)")
+    by_edge = {}
+    for _rid, user, txn, seq, edge_id, kind, reason, state, at in added:
+        by_edge.setdefault(edge_id, []).append((user, txn, seq, kind, reason, state, at))
+    for user, eid, blob in edges:
+        evs = by_edge.get(eid, [])
+        if len(evs) != 1:
+            out.append(f"edge {eid!r}: {len(evs)} baseline events, not exactly one")
+            continue
+        euser, _txn, _seq, kind, reason, state, at = evs[0]
+        if kind != "baseline" or reason is not None or state != blob or euser != user or not _same_instant(at, now):
+            out.append(f"edge {eid!r}: its baseline event is not (baseline, NULL reason, the row's bytes, its user, "
+                       f"the migration's clock read)")
+    per_user = {}
+    for _rid, user, txn, seq, *_ in added:
+        per_user.setdefault(user, []).append((txn, seq))
+    for user, ts in per_user.items():
+        if len({t for t, _ in ts}) != 1:
+            out.append(f"user {user!r}: baseline events span {len({t for t, _ in ts})} txns, not one")
+        seqs = [s for _, s in ts]
+        if seqs != list(range(seqs[0], seqs[0] + len(seqs))):
+            out.append(f"user {user!r}: baseline seq is not contiguous")
+    return out
 
 
 def migrate_store(path: str, *,
@@ -320,6 +541,7 @@ from ..census import declare_site
 # decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
 _SITE_MIGRATION_VERSION = declare_site("store.migration.version")
 _SITE_DUPLICATE_OUTCOME_CHAIN = declare_site("store.migration.duplicate-outcome-chain")
+_SITE_MIGRATION_POSTCONDITION = declare_site("store.migration.postcondition")   # specs/0013 §4f (v33, 0013-PA1)
 
 
 def unattested_marker_report(store) -> list:

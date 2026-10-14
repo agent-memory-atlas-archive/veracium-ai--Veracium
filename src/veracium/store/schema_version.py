@@ -1591,15 +1591,24 @@ class OpenResult(str):
         return r
 
 
-def _validated_current(conn: sqlite3.Connection, spath: str, found) -> bool:
+def _validated_current(conn: sqlite3.Connection, spath: str, found, *, require_stamp: bool = False) -> bool:
     """The *current* row's validation: accepted-set membership, typed
     rebuildable drift repair, complete revalidation (§4a-iii, S33). Returns
     whether it repaired drift — the caller reports it as `store_changed`.
 
     Shared by the current branch and the post-migration re-check, so a store a
     migration hook returns is held to exactly the standard a stamped-current
-    store is held to — one validator, not two."""
+    store is held to — one validator, not two. `require_stamp` (0013 §4f, M117; passed only by the two
+    post-migration calls): the end state also requires `user_version` to read SCHEMA_VERSION — an ordinary open
+    already compares the stamp through the version path."""
     with _SITE_OPEN_UNACCEPTED_SHAPE.consult():
+        if require_stamp:
+            stamped = conn.execute("PRAGMA user_version").fetchone()[0]
+            if stamped != SCHEMA_VERSION:
+                raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,
+                                        "stamped-shape-mismatch",
+                                        diff=f"the migrated store's user_version reads {stamped}, not "
+                                             f"{SCHEMA_VERSION} (0013 §4f, M117)"), "stamp")
         accepted = accepted_digests(SCHEMA_VERSION)
         objs = manifest(conn)
         if digest(objs, SCHEMA_VERSION) not in accepted:
@@ -1743,7 +1752,7 @@ def open_versioned(conn: sqlite3.Connection, path: str, *,
                             f"installed; migrating forward is specs/0013's "
                             f"contract")
                     older(conn, spath, found, objs, found)
-                    _validated_current(conn, spath, found)
+                    _validated_current(conn, spath, found, require_stamp=True)
                     result = OpenResult("migrated", store_changed=True,
                                         transaction_committed=True,
                                         resulting_version=SCHEMA_VERSION)
@@ -1798,7 +1807,7 @@ def open_versioned(conn: sqlite3.Connection, path: str, *,
                                  f"(specs/0013 §5b) — quiesce access and run "
                                  f"veracium.store.migration.migrate_store(path)"), "migration-required")
                     older(conn, spath, found, objs, base)
-                    _validated_current(conn, spath, found)
+                    _validated_current(conn, spath, found, require_stamp=True)
                     result = OpenResult("migrated", store_changed=True,
                                         transaction_committed=True,
                                         resulting_version=SCHEMA_VERSION)

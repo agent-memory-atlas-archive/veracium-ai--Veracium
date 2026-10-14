@@ -141,6 +141,7 @@ DECLARATION = (
     ("store.journal.reason-not-dispositioned", "0030", "V-TOTAL", "store/sqlite.py:SqliteStore._journal_edge_write", "refuse"),
     ("store.journal.redaction-reason", "0041", "§4c/§11.2 D1", "store/sqlite.py:SqliteStore._journal_edge_write", "refuse"),
     ("store.migration.duplicate-outcome-chain", "0009", "§4c", "store/migration.py:_migrate_outcome_chains", "refuse"),
+    ("store.migration.postcondition", "0013", "§4f (v33, 0013-PA1: each step checked at the step)", "store/migration.py:_refuse_unless", "refuse"),
     ("store.migration.version", "0013", "§4", "store/migration.py:_apply_forward", "refuse"),
     ("store.open.invalid-version", "0007", "§4a", "store/schema_version.py:open_versioned", "refuse"),
     ("store.open.legacy", "0007", "§4h", "store/schema_version.py:open_versioned", "refuse"),
