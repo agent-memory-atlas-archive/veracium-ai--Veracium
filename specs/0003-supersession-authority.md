@@ -2,6 +2,7 @@
 
 Spec-Status: accepted
 Spec-Requires: 0007, 0013
+Folds: 0044/0003-contested-order
 
 *<!-- canonical machine-readable state; the header table below carries the narrative. Only `accepted` authorises implementation. -->*
 
@@ -88,11 +89,11 @@ Spec-Requires: 0007, 0013
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | **v15 (ACCEPTED)** — *re-read before editing; quote the version you approve.* Round-12 acceptance: one same-commit deletion-pass correction (removed the stale round-9 "`correct()`/lifecycle need not invalidate" sentence that contradicted the round-10 symmetric resolution rule) + §11a heading fixed to the canonical `## Review closure` form + `Spec-Status: accepted`. No behaviour change. Narrow design approved 3–5, re-approved 6–10, architecture approved 11, **accepted 12; broad external architecture review CLOSED.** |
+| **Version** | **v16 — THE CONTESTED-ORDER FOLD (amendment `0044/0003-contested-order`, v1.5, sha16 `b6c87fcbb74bafdf`).** Round 3 of the 0044 package APPROVED its design on INV-O1–O10 with its activation held to 0044's; round 4 accepted it with 0044 (verdict 2026-10-13), and the owner ruled “Accept now, fold next” (2026-10-14). Folded as §4c-iii, labelled by the amendment's own section numbers so its internal references still resolve; pointers added at §2, §4c-ii, §4e and §6. Its reach rows are restated at `af1e564`: rows 1–3 re-executed with identical output, rows 4–8 reading the same lines. Not folded: its review brief, open questions, checklist and version history. Prior: **v15 (ACCEPTED)** — *re-read before editing; quote the version you approve.* Round-12 acceptance: one same-commit deletion-pass correction (removed the stale round-9 "`correct()`/lifecycle need not invalidate" sentence that contradicted the round-10 symmetric resolution rule) + §11a heading fixed to the canonical `## Review closure` form + `Spec-Status: accepted`. No behaviour change. Narrow design approved 3–5, re-approved 6–10, architecture approved 11, **accepted 12; broad external architecture review CLOSED.** |
 | **Status** | *see `Spec-Status:` at the top — canonical.* **Narrowed at v3; the narrow design was approved at external rounds 3 and 4.** Review counts, findings and open questions are generated into `specs/STATUS.md` — this row states none of them. |
 | **Internal reviewers** | research — ladder adopted; R3 and the M5/Q5 rulings applied |
 | **External review** | complete — narrow design approved r3–r5, direction re-approved r6–r10, architecture approved r11, **APPROVED FOR ACCEPTANCE at r12 (broad review closed)**. Round counts and findings are generated into `specs/STATUS.md` from `specs/reviews.py` — this row states none of them. |
-| **Decision + date** | **ACCEPTED 2026-08-08** (round 12, external). Implementation proceeds against the frozen I1–I9 surface (§6); the prospective checks become mandatory implementation/release gates. |
+| **Decision + date** | **ACCEPTED 2026-08-08** (round 12, external). Implementation proceeds against the frozen I1–I9 surface (§6); the prospective checks become mandatory implementation/release gates. **v16, 2026-10-14:** the amendment `0044/0003-contested-order`, approved at round 3 and accepted at round 4 with 0044, folded on the owner's ruling “Accept now, fold next”. |
 | **Path** | full |
 
 > **Advisory disposition is not made here.** v2 argued exploitation *"is not
@@ -180,6 +181,8 @@ $ grep -rn "invalidate_edge\|partition_parts\|render_edges" src/veracium/ | grep
 ```
 
 ---
+
+**v16:** `_build_contested`'s group order changes (§4c-iii.2); `_render_contested` is preserved.
 
 ## 2c. Untrusted inputs — REQUIRED, blocking
 
@@ -726,6 +729,259 @@ unrelated query; forming AND resolving a refusal contention both recompile immed
 cache binds the registry/policy digest; the migration invalidates a pre-v8 cache; and the
 custom-registry path is covered.
 
+**v16:** the contested block's GROUP ORDER is §4c-iii's key (preservation tier, then ambiguity, then visible size, then slot), not the slot alone. This section's rendering rules are unchanged.
+
+---
+
+## 4c-iii. The contested block's group order (v16, amendment `0044/0003-contested-order`)
+
+> **The rule this section adds:** the contested block orders its groups by PRESERVATION TIER, then by ambiguity, then by visible size, then by slot (§4c-iii's “the amendment's §4a” below), instead of by the alphabet of their slots. It governs together with §4c-ii, whose rendering rules it leaves unchanged. **Within this section, a reference to “§1”–“§8”, “§4a”–“§4d” or “§2c-ii row N” means the subsection labelled with that number here** (the amendment's own numbering, kept so its references resolve); a reference to 0003's own sections says “0003”.
+
+### 4c-iii.1 Why (the amendment's §1)
+
+##### 1a. The group order is the alphabet, and the budget cut takes its tail — LIVE
+
+`_build_contested` iterates `for (subject, relation), member_ids in sorted(groups.items())`
+(`__init__.py` L1419 at `4ea1ce5`), appends in that order and returns the list unsorted; `_render_contested`
+walks it until the budget is spent. **The renderer's docstring says “highest-priority-first”, which is true
+WITHIN a group (`exposed.sort(key=lambda e: (-_edge_effective(e), e.id))`, L1438) and false OF the groups.**
+
+**On a fixture anyone can rebuild** (§2c-ii row 1: the suite's own `_contended_store`, 60 groups, a tight budget):
+**6 of 60 groups render, and they are exactly the sorted prefix.**
+
+**On a measured store** — 🔴 **KIND: MEASURED BY DEV on a LoCoMo-derived rebuilt ten-conversation store,
+re-derivable by dev and NOT by the reviewer; the owner ruled 2026-10-10 that such store statistics (composition, not
+fitness) may travel in a dispatched spec:** 60 questions, 103 live groups, delivered identically on every question;
+the rendered 64 are the lexicographic **prefix** on 60/60; the dropped 39 are every subject from `person:Gina` on.
+**No contested fact about Maria, Sam, Tim or `user:Dave` reaches the model on any question, whatever was asked.**
+
+> 🔴 **The sin is not arbitrariness — it is that the order is STATIC.** *An arbitrary
+> order that varied would still show every group sometimes. A static order plus
+> truncation makes the same tail invisible forever, and nothing in the store says which
+> groups those are.*
+
+**And the tail is invisible EVERYWHERE, not only in the block** (§2c-ii row 3): a fact whose group is dropped appears
+in no other section of the context. *The block is the broad channel that replaced the wiki's representation of a
+contested fact (§1c); losing a group from it loses the fact from recall.*
+
+##### 1b. When the block truncates, the model is not told — CLOSED by `c130cbd`
+
+v1 found that the block's dropped groups reached the `Recall.truncated` flag but no model-facing line. **Since
+`c130cbd` (dev, before this amendment's first round) the recall report line states the contested block's losses
+whenever it truncates** — *“54 contested groups / 0 contested values”* on the fixture above (§2c-ii row 2) — and its
+figures are pinned against an independent derivation by that commit's own tests.
+
+**What remains is smaller, and this version does not propose it:** the count sits in the report line, outside the
+block, not beside the block's heading. v1.1 proposed an in-block line that RENDERS the report line's figure. **v1.2
+withdraws it** — one count, one site — and names it in §9 for a reviewer who wants the boundary next to the heading.
+*Two lines carrying one quantity is the drift pattern this project has paid for.*
+
+##### 1c. Why the obvious fix is barred — by 0003's own history
+
+**Ordering the block by query relevance would reintroduce the violation §4c-ii exists to
+prevent.** Its round-7 blocker 1:
+
+> *“query detail is relevance- and budget-limited: with `max_edges=1` and a query about a
+> different fact, the contested prior is selected by neither the wiki (excluded) nor the
+> detail (out-ranked), and a fact that was visible through the broad wiki BEFORE the
+> refusal **disappears from recall entirely AFTER** it — a direct I6a violation. Moving
+> the only broad representation of a fact into a query-dependent channel is not
+> preservation.”*
+
+**The block is query-independent BY DESIGN**: it is the broad channel that replaced the
+wiki's broad representation. §4e's permutation orders contention members *within an
+already relevance-ordered list*; the block is the surface that exists **because**
+relevance-ordered channels lose things. *Research proposed lifting §4e's rule onto the
+block and withdrew it on this passage.*
+
+### 4c-iii.2 Field contracts (the amendment's §2)
+
+| site | read / written | its documented contract | preserved? |
+|---|---|---|---|
+| `_build_contested`'s group order (`__init__.py` L1419) | reads groups, writes the list order | none stated for the groups; the renderer's docstring says *“highest-priority-first”* | **Changed: the order becomes §4a's key.** The docstring becomes true of the groups too. |
+| `_render_contested` (`__init__.py` L1315) | reads the list in order until the budget is spent | best-effort, deterministic, never silent (0003 §4c-ii; 0012 I-10b) | **Preserved**: it still walks the list; only the list's order changes. |
+| the contention group (0003 §4e: *“all active edges under a functional key”*) | read | the group is the slot | **Aligned with 0044 (stage 1):** groups form only under `single` relations, plus refusals recorded while a now-`multi` relation was `single` (§4b). |
+| the recall report line (`c130cbd`) | read | states contested groups and values withheld | **Its code is untouched.** Its figures must be TRUTHFUL for whatever order is used (INV-O3). They need not be unchanged by a reorder that drops the same NUMBER of groups: one singleton and one three-member group, one line rendered, give values withheld 0 or 2 by order (round 1), and a reorder can change how many differently sized groups fit (R2-09). |
+
+### 4c-iii.3 Untrusted inputs (the amendment's §2c)
+
+| uncontrolled input | empty | malformed | unrecognised | adversarial | **invariant that pins it** |
+|---|---|---|---|---|---|
+| **stored edges** — subjects, relations, authors and `derived_from` of the members of each contention group, written by extraction from text the store does not control | no groups, empty block | n/a — the members are validated records | a relation outside the registry is not functional and forms no group | 🔴 **a third-party-derived challenge (effective authority 0, §2c-ii row 4) against a stored fact.** Today: it makes the fact contested, and its subject name decides whether the group survives the cut (the alphabet). **Under v1.1's key it would have ranked every such group LAST** (§1, the Version cell). **Under §4a's key it can only reorder groups whose top member has the SAME authority as the fact it challenged** | **INV-O6** (a challenge can never displace a group with a higher-authority top), **INV-O1** |
+| **the token budget** (caller-supplied) | the floor: with a renderable group, its first line is BEST-EFFORT unconditional (INV-O5); the block renders nothing only when no group has a renderable member. That case is not a budget loss: the unchanged renderer returns `NO_CONTESTED_LOSS` (`__init__.py` `_render_contested`), so the report line states no contested loss. It is kept apart from budget-dropped renderable groups, which the report counts | refused upstream | — | a tiny budget drops the tail, now the least-preserved by §4a's order, and the report line states the count | **INV-O3**, 0012 I-10b (unchanged) |
+| **the query** | — | — | — | **cannot affect the block** — query-independent by design (§1c) | **INV-O4** |
+
+### 4c-iii.4 Assertions about reach (the amendment's §2c-ii)
+
+Re-run from the repository root at `af1e564` (research, 2026-10-14), dev's `.venv` interpreter: rows 1–3 EXECUTED with output identical to the record below, and rows 4–8 read the same lines. Recorded originally at `1054cc4` (src/ unchanged since `4ea1ce5`), research, CPython 3.14.7, 2026-10-10. **EXECUTED** = run and read; **READ** = the cited lines.
+
+| # | assertion | command | result |
+|---|---|---|---|
+| 1 | the rendered groups are the sorted prefix | `PYTHONPATH=src:. python -c "import re,tempfile,pathlib; import tests.test_0012_budgets_render as T; from veracium.budgets import floor_for; m=T._mem(pathlib.Path(tempfile.mkdtemp())); T._contended_store(m, n_groups=60); r=m.recall(T.U, 'unrelated query', token_budget=floor_for('recall')+600); b=r.context.split('## CONTESTED FUNCTIONAL FACTS',1)[1].split(chr(10)+'## ',1)[0]; s=re.findall(r'- (person:[0-9]+)', b); print(len(s), s==[f'person:{i:02d}' for i in range(len(s))])"` | EXECUTED: `6 True` — 6 of 60 render, and they are the first six by key |
+| 2 | the report line states the block's loss (`c130cbd`) and no in-block line exists | `PYTHONPATH=src:. python -c "import re,tempfile,pathlib; import tests.test_0012_budgets_render as T; from veracium.budgets import floor_for; m=T._mem(pathlib.Path(tempfile.mkdtemp())); T._contended_store(m, n_groups=60); r=m.recall(T.U, 'unrelated query', token_budget=floor_for('recall')+600); b=r.context.split('## CONTESTED FUNCTIONAL FACTS',1)[1].split(chr(10)+'## ',1)[0]; print(T._REPORT.search(r.context).group(0)); print('withheld under budget' in b)"` | EXECUTED: `[budget: dropped 0 detail / 0 SAFETY / 54 contested groups / 0 contested values / 0 clamped / wiki kept / 0 episodes]` · `False` |
+| 3 | a dropped group's fact is visible nowhere else in the context | `PYTHONPATH=src:. python -c "import re,tempfile,pathlib; import tests.test_0012_budgets_render as T; from veracium.budgets import floor_for; m=T._mem(pathlib.Path(tempfile.mkdtemp())); T._contended_store(m, n_groups=60, pad=0); r=m.recall(T.U, 'unrelated query', token_budget=floor_for('recall')+600); b=r.context.split('## CONTESTED FUNCTIONAL FACTS',1)[1].split(chr(10)+'## ',1)[0]; o=r.context.replace(b,''); d=[n for n in range(60) if 'grounded value %d' % n not in b]; print(len(d), sum(1 for n in d if 'grounded value %d' % n in o), re.findall('^## [A-Z ]+', r.context, re.M))"` | EXECUTED: `40 0 ['## USER MODEL', '## CONTESTED FUNCTIONAL FACTS ', '## RELEVANT DETAIL']` — 40 dropped, **0 visible elsewhere** |
+| 4 | effective authority is a rung, capped by `derived_from`, and ignores disclosure | `grep -n "_RUNGS: dict" src/veracium/authority.py; grep -n "return min(_RUNGS" src/veracium/authority.py` | READ: user 3, system 2, assistant 1, third_party 0; `min(author, derived_from)` |
+| 5 | a refusal is produced by FOUR mechanisms, not only the ladder — so equal-authority groups (gap 0) exist (R1-07) | `grep -n "if inc_revoked:" src/veracium/graph.py; grep -n 'subject_class(edge.user_id, prior.subject) == "OTHER"' src/veracium/graph.py; grep -n "elif authority.permitted(prior.provenance.author_of_evidence" src/veracium/graph.py; grep -n "refused under" src/veracium/graph.py` | READ at 1054cc4: L554 (0023 revoked-source incoming), L566 (0011 OTHER-subject), L582 (the authority ladder), L335 (a refused correction). The first two refuse regardless of authority: a USER/USER pair has gap 0 |
+| 6 | the group order is `sorted(groups.items())` | `grep -n "sorted(groups.items())" src/veracium/__init__.py` | READ: L1419 |
+| 7 | an UNRESOLVED member is dropped from the group outright (0020), so a reachable group can have ONE visible member (R1-07) | `grep -n "dropped: set = set()" src/veracium/__init__.py; grep -n "view.evidence(e) == _SCOPE_UNRESOLVED" src/veracium/__init__.py` | READ: L1395, L1402 |
+| 8 | the renderer emits ONLY assertable exposed members (R1-08) | `grep -n "grounded = \[e for e in g.exposed if e.assertable\]" src/veracium/__init__.py` | READ: L1260 |
+
+### 4c-iii.5 Trust classes (the amendment's §3)
+
+Classes from the enums at `af1e564` (unchanged since `1054cc4`): `EvidenceAuthor` = user, third_party, system, assistant; `Disclosure` =
+mentionable, use_only, quarantined. **Effective authority is the rung, capped by `derived_from`** (§2c-ii row 4);
+disclosure does not enter it.
+
+**The operation is an ORDER over groups**, so the matrix states where a group ranks by its top RENDERABLE member (the
+fact the block can actually preserve for this principal, §2c-ii row 8) and its strongest other visible member. **v1.2
+said a group exists only when the challenger is strictly lower; that was false (R1-07):** the 0011 and 0023 rules
+refuse equal-authority retirements, so the diagonal is reachable (§2c-ii row 5).
+
+| top renderable member \ strongest other visible member | user (3) | system (2) | assistant (1) | third_party (0) | none visible |
+|---|---|---|---|---|---|
+| **user (3)** | tier 3, gap 0 — **first of all** (0011/0023 refusals) | tier 3, gap 1 | tier 3, gap 2 | tier 3, gap 3 | tier 3, ambiguity +∞ (a singleton) |
+| **system (2)** | tier 2, gap −1 (a higher member that is visible but not renderable) | tier 2, gap 0 | tier 2, gap 1 | tier 2, gap 2 | tier 2, +∞ |
+| **assistant (1)** | tier 1, gap −2 | tier 1, gap −1 | tier 1, gap 0 | tier 1, gap 1 | tier 1, +∞ |
+| **third_party (0)** | tier 0, gap −3 | tier 0, gap −2 | tier 0, gap −1 | tier 0, gap 0 | tier 0, +∞ |
+| **no renderable member** | **sorts LAST; renders nothing** | | | | |
+
+- **A negative gap** arises when the strongest OTHER visible member outranks the top renderable one (e.g. a fenced
+  higher-authority member): the contention is maximally ambiguous for the reader and ranks first within its tier.
+- 🔴 **v1.1's key read only the gap column**, so `assistant (1) × third_party (0)` (gap 1) outranked
+  `user (3) × third_party (0)` (gap 3): **every challenged user fact behind every challenged assistant fact.** §4a's
+  key reads the TIER first.
+- **Quarantined and `use_only` members:** ranked by effective authority like any other (disclosure is not in it);
+  what they RENDER is §4c-ii's existing rule, unchanged.
+- Can it make a **user-asserted fact non-assertable**? No — it orders a block; it changes no record. But it
+  decides which contested facts the model sees, and §4a's purpose is that user-topped groups are the last to be lost.
+- Can **non-user content gain user-grade authority**? No.
+- Can it **clear `needs_confirmation`**, or **merge, drop or overwrite provenance**? No.
+
+**Write-time or maintain-time?** Neither — render-time, over stored state, no write.
+
+**Authorization and scope (the amendment's §3b):** n/a — the block is built per user from that user's own edges; no principal sees anything they could not see before. **What changes is which of the same user's contested facts fit the budget.**
+
+### 4c-iii.6 Behaviour (the amendment's §4)
+
+##### 4a. Order by PRESERVATION TIER, then by ambiguity (shape A, revised)
+
+**A group is ranked by the authority of the fact it preserves, and only then by how ambiguous its contention is:**
+
+    V      = every member of the group VISIBLE to this principal  (exposed ∪ fenced linkage; never policy-HIDDEN
+             linkage, never an UNRESOLVED member — 0020)
+    R ⊆ V  = the members the renderer can EMIT                     (assertable exposed — L1260)
+    t      = the highest-authority member of R                     (ties broken by edge id)
+    group_key(group) = ( authority(t)                              DESC,  # preserve the highest-authority RENDERABLE fact first
+                         authority(t) − max authority over V∖{t}   ASC,   # ambiguity: within a tier, most ambiguous first;
+                                     (+∞ when V∖{t} is empty)            #   0 or negative are reachable (§3)
+                         |V|                                       DESC,  # more visible rivals = more ways to be wrong
+                         slot                                      ASC )  # (subject, relation) — determinism only
+    a group with R empty sorts AFTER every other group and renders nothing.
+
+**Which linkage is in `V` (round 2's correction).** A FENCED member is visible to this principal but not selected for emission; a policy-HIDDEN member is outside this principal's scope. The build path knows the difference today, but only as a LOCAL: at `e05e4e6`, `_build_contested` (`__init__.py`) puts cross-scope members in `withheld` and UNRESOLVED ones in `dropped`, and a fenced, unselected member is its loop's final branch. Both become an identical `ContestedLinkage(edge_id, partition="unverified", authority)`, and the returned group carries nothing that tells them apart. **So a carrier is ADDED at implementation:** a field on `ContestedLinkage`, or the key computed inside `_build_contested`. `withheld` is the existing source of truth. Computing `V` later, from every linkage entry, would let a hidden member change a group's ambiguity (INV-O10).
+
+*v1.3's first wording named the second set `O` ("the other visible members") and wrote the count as `|R ∪ O|`; read
+literally as "visible but NOT emitted", it gave every fully rendered pair an ambiguity of +∞, so ambiguity ordering
+vanished in the normal case (dev's model, both readings executed). The ambiguity is over ALL visible members other
+than the top one — emitted or not.*
+
+**The key is TOTAL (R1-07):** every reachable group — a renderable singleton, an equal-authority pair, a group whose
+strongest visible member is fenced, a group with nothing renderable — has a defined position. *A singleton's
+ambiguity is +∞ (dev's model probe: `0` would sort a visible singleton BEFORE a visible pair at the same tier; `+∞`
+after — nothing visible contends, so for the reader it is the least ambiguous group).* **Ranking by what the renderer
+can emit (R1-08):** a FENCED member with higher authority does not lift its group's tier; it can only make the group
+MORE ambiguous. A policy-HIDDEN or UNRESOLVED member is outside `V` and affects neither. Effective authority is an integer rung, so every component is an integer or +∞.
+
+**Why the tier comes first.** The block is the only broad channel for a contested fact (§1a, §1c). A group with a
+user-authored top preserves a person's own statement; v1.1's ambiguity-first key dropped exactly those groups first
+whenever the challenger was injected content (§3). **With the tier first, a challenge can only compete with groups
+whose top has the same authority as the fact it challenged (INV-O6).** *Residual, stated: among user-topped groups, a
+third-party-challenged fact (gap 3) still ranks after a user-vs-system contention (gap 1). An attacker who can write
+challenges can therefore push a user fact to the tail OF THE USER TIER, and only when there are more user-topped
+contentions than the budget holds. **No floor** (QO1, resolved on the reviewer's recommendation): a floor cannot ensure
+every user group appears when the tier itself exceeds capacity; same-tier starvation is stated, not solved.*
+
+**The last component is the alphabet, kept deliberately** — as a *tiebreak* it is harmless and keeps the surface
+deterministic, which §4c-ii requires. *Today it is the whole rule; here it decides only between groups equal on
+everything else.*
+
+##### 4b. Aligned with 0044: a group is a SLOT
+
+0003 §4e defines the group as *“all active edges under a functional key”*. **0044 is stage 1, the accumulation
+stage (the owner's (A), defer keys):** `single` relations group by `(subject, relation)` as today; the three
+reclassified relations are `multi` and form **no new** contention groups; a `supersession_refusals` row recorded
+under one of them while it was still `single` keeps its group (0044 §4d). `keyed` is a reserved word; slot keys and
+their groups are a later round.
+
+##### 4c. Making the drop loud (shape C) — satisfied by `c130cbd`; the in-block line is withdrawn
+
+v1 proposed C as owed regardless of A. **It landed, as the report line's contested figures** (§1b). This amendment
+adds nothing to it and requires only that those figures stay TRUTHFUL for whatever order is used (INV-O3). The same
+number of dropped groups need not give the same figures (R2-09).
+
+##### 4d. The shapes considered
+
+| shape | what it fixes | what it costs |
+|---|---|---|
+| **A′ — preservation tier, then ambiguity** *(proposed, §4a)* | the tail is the lowest-authority, least ambiguous contentions; a challenge cannot displace a higher-authority fact's group | still static: a permanently low-ranked tail stays unseen — **for a stated reason** |
+| **A — ambiguity alone** *(v1.1, withdrawn)* | as A′ within one tier | 🔴 **ranks every challenged user fact behind every challenged assistant fact** (§3) |
+| **B — rotation with bounded staleness** | every group renders within N recalls; no permanent tail | 🔴 **breaks determinism**: the same query returns different contexts, and §4c-ii's surface is specified as deterministic |
+| **C — make the drop loud** | the model knows its picture is partial | **landed** (`c130cbd`) |
+
+### 4c-iii.7 Regimes (the amendment's §5)
+
+| regime | behaviour |
+|---|---|
+| **everything fits** | order is irrelevant to WHICH groups render; it changes only their sequence |
+| **budget cuts the block** | the tail is the lowest tier, then the largest gaps within it |
+| **all groups user-topped with third-party challengers** (the suite's fixture) | every key ties on tier and gap; the slot decides — the same prefix as today, by design |
+| **mixed tiers** | user-topped groups render before system-, then assistant-topped |
+| **the three `multi` relations (0044)** | no new groups; refusals in the schema step's refusal inventory (recorded while `single`) keep theirs |
+| **a renderable singleton** (its challenger UNRESOLVED or hidden) | ranks by its tier with ambiguity +∞ |
+| **a group with nothing renderable** | sorts last; renders nothing |
+| **repeated recall** | byte-identical (INV-O2) |
+
+### 4c-iii.8 Invariants (the amendment's §6)
+
+| | invariant | check, and the MUTANT it must fail on |
+|---|---|---|
+| **INV-O1** | **Group order is §4a's key, not the slot** | two groups, the slot-later one with a higher tier: it renders FIRST. **Mutant: restore `sorted(groups.items())` → FAILS** |
+| **INV-O2** | **The order is deterministic and total** | equal-key groups order by slot; two runs on one store render identically |
+| **INV-O3** | **The report's figures are TRUTHFUL for whatever order is used** (R1-09) | an independent derivation from the structured groups and the rendered block (renderable groups minus rendered lines; the sum of withheld-value suffixes) equals the report line's contested figures, over varied group sizes, member counts and clamping. **Mutant: copy the pre-reorder counters → FAILS**, while a legitimately changed count PASSES. *v1.2's "same figures after reordering" was false for unequal sizes (round 1: values withheld 0 → 2 under the same budget)* |
+| **INV-O4** | **No query-dependence enters the block** | the same store renders the same groups for two different queries (I6a). **Mutant: sort by query relevance → FAILS** — *the guard against §1c's rejected fix* |
+| **INV-O5** | **The first line stays BEST-EFFORT unconditional** — *the renderer's own word (v1.1's B4)* | §4c-ii's existing rule is untouched: the highest-authority prior is never the line that gets cut |
+| **INV-O6** | **A challenge never displaces a group with a higher-authority top** | a store with N assistant-topped groups challenged by third-party content and one user-topped group challenged the same way, budget for one line: **the user-topped group renders.** 🔴 **Mutant: v1.1's key (gap first) → FAILS** — *the finding of this version, kept as its regression test* |
+| **INV-O7** | **Groups follow 0044's arity: `multi` relations form no new groups; refusals in the schema step's refusal inventory (recorded while `single`) keep theirs** | a differing value under a `multi` relation with a lower-authority challenger forms NO group; a refusal row in the schema step's REFUSAL INVENTORY (0044 §4d, §4f) under the same relation still forms its group, and one recorded after the step does not, whatever its timestamp (v1.5: no time is compared, as in 0044). **Mutants: group `multi` refusals → FAILS; drop the retained historical group → FAILS** |
+| **INV-O8** | **The tier ranks by the renderable top member** (R1-08) | a group whose higher-authority member is hidden or fenced vs a group with a visible higher-authority fact, budget for one line: the RENDERED first fact is the visible higher-authority one. **Mutant: global top authority over exposed ∪ linkage → FAILS** |
+| **INV-O9** | **The key is total** (R1-07) | a renderable singleton, an equal-authority pair (0011 subject rule), a higher-incoming refusal, and a no-renderable group, through the actual build and render path. **Mutants: index the second member without a ruled absence case → FAILS; drop a preserved visible singleton from the domain → FAILS** |
+| **INV-O10** | **A policy-hidden member is outside `V`** (round 2's correction) | the same group with and without a policy-hidden higher-authority linkage member ranks with the same tier AND the same ambiguity; with that member FENCED instead, the ambiguity changes and the tier does not. **Mutant: count every `ContestedLinkage` entry in `V` → FAILS** *Needs the implementation carrier (§4a); until it exists, this check has no input to read.* |
+
+**The gate, stated the same way in 0044, the 0003 amendment and the 0018 amendment (R2-08):** before design acceptance, a row is either a MODEL check or a stated PRODUCT obligation. A MODEL check runs in dev's reference model (`specs/evidence/0044/`): each claimed mutant REACHES its mutated path and is killed SEMANTICALLY, by an owning invariant that returns False. An exception is a harness failure, never a kill, and a mutant may have more than one killing invariant. Which kind each row is is not restated here: `specs/evidence/0044/obligations.py` derives the map from this section, and refuses an unmapped row, a mapping to an invariant that owns no killed mutant, and a model invariant no row claims. It is also the package's review manifest. At the implementation gate, every row is in addition a named PRODUCT test, demonstrated red against its mutant. **For this amendment:** INV-O1–O5 are PRODUCT only, against the SHIPPED renderer (the owner, 2026-10-12: the model's claim for packing and report counts is narrowed). INV-O3's closure in particular is a test of the shipped renderer, with totals derived independently over varied group sizes and member counts, and a mutant that copies the pre-reorder counters (R2-09). INV-O6–O10 are MODEL checks now. *v1.3 said every check must be red before acceptance, without this split.*
+
+### 4c-iii.9 Failure modes, claims and limits (the amendment's §7 and §8)
+
+- **Silent failure:** a static tail. Mitigated by the report line's count (`c130cbd`), which says HOW MANY were
+  dropped, not WHICH. **The first visible symptom of a wrong order** is a contested fact the model never mentions —
+  invisible without a recall audit, which is why INV-O6 is a regression test rather than an observation.
+- **Reversible:** entirely. The change is an order at render time; no record is written. Reverting the key restores
+  today's output byte for byte.
+- **Partial failure:** n/a — a pure function of the stored groups and the budget.
+- **Attack surface:** reduced relative to today and to v1.1 (§2c, §3, INV-O6); the residual within the user tier is
+  stated in §4a.
+
+**Claimed:** that the contested facts a model does not see are the lowest-authority, least ambiguous ones rather than
+the alphabetically last; that a challenge cannot push a higher-authority fact's group out of the block; and that the
+loss is stated (by the landed report line).
+
+**NOT claimed:**
+- **not completeness.** A truncated block is still partial; the order changes WHICH groups are lost.
+- **not resistance to flooding WITHIN a tier** (§4a's residual).
+- **nothing about the share.** `contested_render_share` is a separate decision (`A16`), and this amendment is the
+  reason it cannot be argued from the current tables: they were measured under an order nobody chose.
+- **nothing about relevance.** §1c forecloses it for this surface.
+- **dev's measured-store figures** (§1a) are dev's to re-derive, not the reviewer's; the fixture of §2c-ii row 1 is
+  the reviewer's.
+
 ---
 
 ## 4d. Keeping the edge is not keeping the fact
@@ -784,6 +1040,8 @@ are already both active and already both candidates.
 ---
 
 ## 4e. What a contention group is, and how it is reordered
+
+> **v16 (aligned with 0044, stage 1; §4c-iii, the amendment's §4b):** groups form only under `single` relations; a relation 0044 reclassifies as `multi` forms no new group, and a refusal recorded while it was `single` (in the schema step's refusal inventory) keeps its group.
 
 **Fifth review, finding 4: v5 said *"active edges sharing a `(subject,
 relation)` key"* and that does not establish the group arose from a refusal.**
@@ -1088,6 +1346,8 @@ depends on an earlier one holding:
 5. **I5** — refusal telemetry, which is what makes `0011`'s reconciliation
    possible later.
 6. **I8** — the bench regression gate.
+
+**v16: INV-O1–O10, the contested block's group order, are §4c-iii.8** (O1–O5 PRODUCT checks against the shipped renderer; O6–O10 MODEL checks).
 
 **I1 is generated from `specs/ladder.py`**, so the test and the table in §3
 cannot disagree. v1 wrote that table by hand and inverted two of four
