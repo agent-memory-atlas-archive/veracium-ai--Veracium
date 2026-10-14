@@ -186,6 +186,18 @@ class CutoffDomainError(ValueError):
     refusal; `None` means unbounded."""
 
 
+class RequestRedacted(ValueError):
+    """specs/0008 v7 §6g — the TERMINAL outcome of a retry under a correlation id whose registry row a redaction
+    has marked: the verifier is gone, so the original is not replayed, and the id stays held, so no new act is
+    admitted under it — whatever the payload. For `confirm()`, whose return is a frozen five-key mapping (§6c),
+    the terminal is this named raise. Ends at user erasure, like every replay."""
+
+    def __init__(self, user_id: str, correlation_id: str, verb: str):
+        self.user_id, self.correlation_id, self.verb = user_id, correlation_id, verb
+        super().__init__(f"request_redacted: correlation_id {correlation_id!r} names a {verb!r} request whose "
+                         f"record was redacted; it is neither replayed nor reusable (specs/0008 §6g)")
+
+
 def store_mutator(fn):
     """Marks a Store method that writes persistent state.
 

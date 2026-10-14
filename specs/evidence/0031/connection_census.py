@@ -688,15 +688,16 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 2026-10-14, 0013-PA1 stage-2 (research's F1/F2: the chain postcondition classifies outcome rows from its own pre-step read; an unparseable converted row refuses): moved dotted/dataflow 7,134 -> 7,142, dotted/module-plain 366 -> 365, the rest unchanged.
 #: 2026-10-14, 0029 v12 (the reinstatement reason: REINSTATEMENT_REASONS validated at the emission choke point; 0022's lift writes source_restored; `why` reads a pre-v12 NULL as source_restored): moved dotted/dataflow 7,142 -> 7,146, the rest unchanged.
 #: 2026-10-14, 0019 v7 implemented (a flagged triple from a non-user-effective event refused and counted; user_effective from the resolved trust): moved dotted/dataflow 7,146 -> 7,147, the rest unchanged.
+#: 2026-10-14, 0008 v7's request registry implemented (schema v16: the registry-first replay, the act counter, the v16 migration step and its postconditions): moved dotted/dataflow 7,147 -> 7,195 and dotted/module-protected 51 -> 52, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 7147,
+    "dotted/dataflow": 7195,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 365,
-    "dotted/module-protected": 51,
+    "dotted/module-protected": 52,
     "getattr/dataflow": 33,
 }
-SRC_ATTRIBUTE_TOTAL = 7615
-SRC_DATA_DUNDERS_IN_DATAFLOW = 135   # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
+SRC_ATTRIBUTE_TOTAL = 7664
+SRC_DATA_DUNDERS_IN_DATAFLOW = 136   # 2026-10-14, 0008 v7: +1 — `super().__init__` in store/base.py's RequestRedacted (an exception's message, from ids and a verb)  # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 #   2026-09-20 0042 round 7: +1 — `type(exc).__name__` in `census.Site._measurement_failed` (the failure KIND recorded as a type name, R6-1)
 #   2026-10-14 0013 v33 §4f: +2 — `super().__init__` in `MigrationPostconditionError` and `type(x).__name__` in the

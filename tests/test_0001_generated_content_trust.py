@@ -219,6 +219,12 @@ def test_i13b_stamp_only_across_every_accepted_v10_shape(idx, tmp_path):
     # sqlite_autoindex row whose sql is NULL, which is representation, not DDL
     dump_head = [x for x in dump_head if x]
     dump_v10 = [x for x in dump_v10 if x]
+    # specs/0008 v7 §2a (v16): the ONE delta since v10 that is not an additive object — every accepted v10 shape
+    # holds `confirmations` in SCHEMA_V2's DDL (a base >= 2), so it crosses the v16 ALTER to the frozen literal
+    if sv.SCHEMA_VERSION >= 16:
+        v2_conf = next(o.ddl for o in sv.SCHEMA_V2 if o.name == "confirmations")
+        assert dump_v10.count(v2_conf) == 1, f"shape {idx}: confirmations is not in SCHEMA_V2's DDL at v10"
+        dump_v10 = [sv.ALTER_PATH_V16_CONFIRMATIONS_SQL if x == v2_conf else x for x in dump_v10]
     assert dump_head == sorted(dump_v10 + v12_delta), (
         f"shape {idx} ({recs[idx]['provenance'][:40]}…): the migrated dump "
         f"differs from v10 by more than the additive v12 objects — the "

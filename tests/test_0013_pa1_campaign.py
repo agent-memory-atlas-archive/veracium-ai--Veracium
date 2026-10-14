@@ -42,9 +42,18 @@ def test_the_pa1_table_is_current_and_every_row_good():
     s = t["summary"]
     assert s["rows"] == len(camp.MUTANTS) == s["good"] == s["killed"]
     assert s["controls"] == len(camp.CONTROLS) == s["controls_good"]
-    assert s["perturbations"] == s["perturbations_killed"] and s["perturbations_not_applicable"] == 0
-    assert set(s["per_step"]) == {"stamp", "store-identity", "store-epoch", "v13-baseline", "v2-v3-outcome-chains",
-                                  "v3-v4-wiki-drop"}
+    assert s["perturbations"] == s["perturbations_killed"] + s["perturbations_not_applicable"]
+    # the only not-applicable cells are the v16 registry backfill on a BASE-1 store: no confirmation exists to copy,
+    # so the write changes 0 rows and every perturbation of it is n/a (the step table's own "wrote no row") or
+    # equivalent (a skip of a 0-row write). Anywhere else an n/a is a perturbation that did not land.
+    na = [r for r in t["perturbations"] if r.get("killed") is None]
+    assert len(na) == s["perturbations_not_applicable"]
+    assert {(r["step"], r["path"].split("-")[0]) for r in na} <= {("v16-registry-backfill", "v1#0")}, na
+    import veracium.store.migration as mig
+    writing = {v for k, v in vars(mig).items() if k.startswith("STEP_") and isinstance(v, str)} - set(camp.WRITELESS_STEPS)
+    assert set(s["per_step"]) == writing == {"stamp", "store-identity", "store-epoch", "v13-baseline",
+                                             "v2-v3-outcome-chains", "v3-v4-wiki-drop", "v16-act-counter",
+                                             "v16-registry-backfill"}
 
 
 def test_pa1_table_check_refuses_each_tampered_table(tmp_path):
@@ -78,7 +87,7 @@ def test_pa1_table_check_refuses_each_tampered_table(tmp_path):
         "a perturbation whose refusal changed the store, rebound": (_rebound(edited(lambda t: p0(t, unchanged=False, killed=False))), "not killed"),
         "a perturbation claimed killed with a failed condition, rebound": (_rebound(edited(lambda t: p0(t, position=False))), "not killed"),
         "a step's perturbations dropped, rebound": (_rebound(edited(lambda t: t.update(perturbations=[
-            r for r in t["perturbations"] if r["step"] != "v3-v4-wiki-drop"]))), "not the six"),
+            r for r in t["perturbations"] if r["step"] != "v3-v4-wiki-drop"]))), "not every writing step"),
     }
     f = tmp_path / "mutation-table.json"
     for name, (t, reason) in cases.items():

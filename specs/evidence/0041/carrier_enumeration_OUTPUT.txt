@@ -1,6 +1,6 @@
-A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V15 — 17 tables
+A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 19 tables
 
-   confirmations            id, user_id, edge_id, confirmed_at, actor, call_path, correlation_id, request_digest
+   confirmations            id, user_id, edge_id, confirmed_at, actor, call_path, correlation_id, request_digest, origin, recorded_correlation_id, origin_store, origin_user, origin_act_id
    consolidation_ops        operation_id, user_id, state, owner, lease_expires_at, claimed_ids
    contribution_ledger      id, user_id, survivor_type, survivor_id, site, identity_digest, evidence_ref_digest, payload, op_key, created_at, contributor_type, contributor_ref
    edge_embedding           edge_id, user_id, embedder_id, content_digest, vec, built_at
@@ -10,6 +10,7 @@ A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V15 — 17 tables
    episodes                 id, user_id, date, json
    policy_receipt           user_id, recall_id, policy_id, policy_version, recorded_at, receipt
    redactions               id, user_id, target_kind, target_id, fields, reason, event_ref, recorded_at, source_body, source_origin, source_user, source_event_ref
+   request_registry         user_id, correlation_id, verb, target_edge_id, request_digest, result_ref, written_at
    source_revocations       user_id, identity_digest, action, at, reason
    store_epoch              started_at
    store_identity           origin

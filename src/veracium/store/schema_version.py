@@ -605,12 +605,78 @@ SCHEMA_V15 = SCHEMA_V14 + (
                  REBUILDABLE),
 )
 
+# specs/0008 v7 §2a (amendment `0047/0008-request-registry`; the owner's ruling "One bump, v15->v16", 2026-10-14:
+# the programme's ONE schema step, amended in place until it ships): the per-user REQUEST REGISTRY — every verb of
+# the correlation-id space (`confirm`; 0047's `reply` and 0044's `undo` when they land) writes one row in its own
+# transaction, read FIRST, before any read of live edge state (§6c); the store-wide, never-reset ACT COUNTER, the
+# source of an act's position `act_seq` (§6f); and `confirmations` gains the act columns (§2a's inventory). The
+# registry and the counter are additive objects; the act columns are an ALTER of an existing table, so a migrated
+# store's `confirmations` DDL differs from the constructor's (the v6/v8/v10 shape) — in ONE variant, because every
+# accepted v15 shape holds the table in SCHEMA_V2's single DDL (installed byte-identically by the v1->v2 step).
+_CONFIRMATIONS_V16_SQL = """CREATE TABLE confirmations (
+    id TEXT NOT NULL PRIMARY KEY, user_id TEXT NOT NULL, edge_id TEXT NOT NULL,
+    confirmed_at TEXT NOT NULL, actor TEXT NOT NULL, call_path TEXT NOT NULL,
+    correlation_id TEXT NOT NULL, request_digest TEXT NOT NULL,
+    origin TEXT NOT NULL DEFAULT 'local', recorded_correlation_id TEXT,
+    origin_store TEXT, origin_user TEXT, origin_act_id TEXT, act_seq INTEGER,
+    UNIQUE(user_id, correlation_id)
+)"""
+SCHEMA_V16 = tuple(
+    o if o.name != "confirmations" else SchemaObject("table", "confirmations", _CONFIRMATIONS_V16_SQL, REQUIRED)
+    for o in SCHEMA_V15
+) + (
+    SchemaObject("table", "request_registry", """CREATE TABLE request_registry (
+    user_id        TEXT NOT NULL,
+    correlation_id TEXT NOT NULL,
+    verb           TEXT NOT NULL,
+    target_edge_id TEXT NOT NULL,
+    request_digest TEXT NOT NULL,
+    result_ref     TEXT NOT NULL,
+    written_at     TEXT NOT NULL,
+    UNIQUE(user_id, correlation_id)
+)""", REQUIRED),
+    # non-unique, a lookup for §6g's redaction (the registry's UNIQUE is the TABLE constraint, inside the REQUIRED
+    # table), so REBUILDABLE on the ix_confirmations_edge precedent: correctness never depends on it
+    SchemaObject("index", "ix_request_registry_target",
+                 "CREATE INDEX ix_request_registry_target ON request_registry(user_id, target_edge_id)",
+                 REBUILDABLE),
+    SchemaObject("table", "act_counter", """CREATE TABLE act_counter (
+    id       INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    next_seq INTEGER NOT NULL
+)""", REQUIRED),
+)
+
+# The v15->v16 ALTER, in the v6/v8/v10 convention: the six ADD COLUMNs of §2a's inventory in its order, and the
+# MEASURED result on the qualified SQLite 3.45.1 (ADD COLUMN appends to the last column line, before the table-level
+# UNIQUE) frozen as a literal — the expectation is present in the reviewed tree, never derived by the migration.
+ALTERS_V15_TO_V16 = (
+    "ALTER TABLE confirmations ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'",
+    "ALTER TABLE confirmations ADD COLUMN recorded_correlation_id TEXT",
+    "ALTER TABLE confirmations ADD COLUMN origin_store TEXT",
+    "ALTER TABLE confirmations ADD COLUMN origin_user TEXT",
+    "ALTER TABLE confirmations ADD COLUMN origin_act_id TEXT",
+    "ALTER TABLE confirmations ADD COLUMN act_seq INTEGER",
+)
+ALTER_PATH_V16_CONFIRMATIONS_SQL = (
+    "CREATE TABLE confirmations (\n"
+    "    id TEXT NOT NULL PRIMARY KEY, user_id TEXT NOT NULL, edge_id TEXT NOT NULL,\n"
+    "    confirmed_at TEXT NOT NULL, actor TEXT NOT NULL, call_path TEXT NOT NULL,\n"
+    "    correlation_id TEXT NOT NULL, request_digest TEXT NOT NULL,"
+    " origin TEXT NOT NULL DEFAULT 'local', recorded_correlation_id TEXT,"
+    " origin_store TEXT, origin_user TEXT, origin_act_id TEXT, act_seq INTEGER,\n"
+    "    UNIQUE(user_id, correlation_id)\n"
+    ")"
+)
+ALTER_PATH_V16_CONFIRMATIONS_SHA256 = \
+    "a82ee8e86bb5a4730785a37998e15ed514bc497c3152e5f2243e838b4782fdc8"
+
 SCHEMAS = {1: SCHEMA_V1, 2: SCHEMA_V2, 3: SCHEMA_V3, 4: SCHEMA_V4, 5: SCHEMA_V5,
            6: SCHEMA_V6, 7: SCHEMA_V7, 8: SCHEMA_V8, 9: SCHEMA_V9,
            10: SCHEMA_V10,
-           11: SCHEMA_V11, 12: SCHEMA_V12, 13: SCHEMA_V13, 14: SCHEMA_V14, 15: SCHEMA_V15}
+           11: SCHEMA_V11, 12: SCHEMA_V12, 13: SCHEMA_V13, 14: SCHEMA_V14, 15: SCHEMA_V15,
+           16: SCHEMA_V16}
 
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 """**Declared, not inferred.**
 
 v6 used `max(SCHEMAS)`, so adding or removing a registry entry silently changed
@@ -621,6 +687,14 @@ finding 5). Bumped 1→2 for `specs/0008`'s `confirmations` table, installed by 
 
 def rebuildable_keys(version: int = SCHEMA_VERSION) -> set:
     return {o.key for o in SCHEMAS[version] if o.policy == REBUILDABLE}
+
+
+def mint_act_counter(conn: sqlite3.Connection) -> None:
+    """specs/0008 v7 §6f — the store-wide act counter's ONE row, `(1, 1)`: the next act takes position 1. Idempotent
+    on the fixed `id = 1` (`INSERT OR IGNORE`), so a re-attempted migration or a create-then-open never resets it.
+    Only creation and the v16 migration call it; an act WRITER never does — a lost row refuses there (0008 §6f's
+    never-reset rule: a re-mint would reissue positions already exported)."""
+    conn.execute("INSERT OR IGNORE INTO act_counter(id, next_seq) VALUES(1, 1)")
 
 
 def _mint_store_identity(conn: sqlite3.Connection) -> None:
@@ -657,6 +731,9 @@ def create(conn: sqlite3.Connection, version: int = SCHEMA_VERSION) -> None:
     if version >= 13:
         from .edge_events import mint_store_epoch
         mint_store_epoch(conn, datetime.now(timezone.utc).isoformat(), version)
+    # specs/0008 v7 §6f: a NEW v16+ store's act counter starts at its creation — the first act takes position 1.
+    if version >= 16:
+        mint_act_counter(conn)
 
 
 def manifest(conn: sqlite3.Connection) -> dict:

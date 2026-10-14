@@ -498,6 +498,14 @@ Explicit user-feedback verbs (get `edge_id`s from `Recall.edges`):
   confirmation episode. Only **assertable** facts can be confirmed — elevating
   a quarantined claim by "confirmation" would be a laundering vector; a user
   affirming a claim is new user-authored evidence and belongs in `remember()`.
+  **Retries (specs/0008 §6c, §6g).** Pass a `correlation_id` to make a retry
+  safe. The same id with the same request returns the original result
+  (`replayed=True`), even after the fact was invalidated. The same id with a
+  different request, or an id already held by another verb, raises
+  `ValueError`. Once the fact is redacted, a retry under its id raises
+  `veracium.store.base.RequestRedacted` (a `ValueError`) whatever the
+  payload: it is terminal and never replays. `forget_user` frees the user's
+  ids.
 
 Neither verb is exposed over MCP (an agent-callable suppress/validate verb is a
 prompt-injection target) — wire them to real user actions in your host. Note

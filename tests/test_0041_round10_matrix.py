@@ -198,6 +198,14 @@ DDL_ACCOUNT = {
     "identifier / reference / clock / closed set": {
         "confirmations.id", "confirmations.user_id", "confirmations.edge_id", "confirmations.confirmed_at",
         "confirmations.actor", "confirmations.call_path", "confirmations.correlation_id",
+        # specs/0008 v7 §2a (v16): an act's origin (closed set), the imported request's original id, and the act's
+        # portable identity (a store origin, a user id, an act id) — identifiers; NULL on every local act
+        "confirmations.origin", "confirmations.recorded_correlation_id", "confirmations.origin_store",
+        "confirmations.origin_user", "confirmations.origin_act_id",
+        # specs/0008 v7 §6c (v16): the request registry's ids, closed verb, target, result reference and write time
+        # (its request_digest is a TREATED side path, §6g)
+        "request_registry.user_id", "request_registry.correlation_id", "request_registry.verb",
+        "request_registry.target_edge_id", "request_registry.result_ref", "request_registry.written_at",
         "consolidation_ops.operation_id", "consolidation_ops.user_id", "consolidation_ops.state",
         "consolidation_ops.owner", "consolidation_ops.lease_expires_at", "consolidation_ops.claimed_ids",
         "contribution_ledger.id", "contribution_ledger.user_id", "contribution_ledger.survivor_type",
@@ -393,6 +401,19 @@ def _confirmation(tmp_path):
     return m, "edge", "e-1", check
 
 
+def _registry(tmp_path):
+    m = _mem(tmp_path)
+    m.store.add_edge(Edge(id="e-1", user_id=U, subject="user", relation="lives_in", object="Berlin " + SECRET,
+                          provenance=_prov()))
+    m.confirm(U, "e-1", correlation_id="k-reg")                   # the real writer of the registry row (0008 §6c)
+    assert m.store._conn.execute("SELECT COUNT(*) FROM request_registry WHERE target_edge_id='e-1'").fetchone()[0] == 1
+    def check(st, r):
+        assert st._conn.execute("SELECT request_digest FROM request_registry WHERE target_edge_id='e-1'"
+                                ).fetchone()[0] == R.MARKER
+        assert "request_registry.request_digest" in r.fields_cleared
+    return m, "edge", "e-1", check
+
+
 def _refusal(tmp_path):
     m = _mem(tmp_path)
     m.store.add_edge(Edge(id="e-1", user_id=U, subject="user's sister", relation="lives_in", object="Berlin",
@@ -541,6 +562,7 @@ CELLS = {
     ("edge", "invalidation_reason"): _edge_reason_three_cases,
     ("edge", "agreement.markers"): _markers,
     ("edge", "confirmations.request_digest"): _confirmation,
+    ("edge", "request_registry.request_digest"): _registry,
     ("edge", "supersession_refusals.relation"): _refusal,
     ("edge", "contribution_ledger.identity_digest"): _absorption_ledger,
     ("edge", "contribution_ledger.evidence_ref_digest"): _absorption_ledger,
@@ -555,8 +577,10 @@ CELLS = {
 }
 
 
-def test_the_ddl_only_side_paths_are_exactly_the_revocation_reason():
-    assert _ddl_only_side_paths() == {"source_revocations.reason"}
+def test_the_ddl_only_side_paths_are_exactly_the_revocation_reason_and_the_registry_digest():
+    """No model carrier reaches either table: §11.2's revocation reason, and (v16, 0008 v7 §6g) the request registry's
+    digest — a registry row has no model; the redaction treats it by `target_edge_id`."""
+    assert _ddl_only_side_paths() == {"source_revocations.reason", "request_registry.request_digest"}
 
 
 def test_every_treated_path_has_exactly_one_execution_cell():

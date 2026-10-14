@@ -151,7 +151,19 @@ def _steps():
             mig.STEP_EPOCH: lambda w: ":mint_store_epoch:" in w["by"],
             mig.STEP_BASELINE: lambda w: ":append_event:" in w["by"],
             mig.STEP_CHAINS: lambda w: ":_migrate_outcome_chains:" in w["by"],
-            mig.STEP_WIKI: lambda w: ":_drop_wiki_cache:" in w["by"]}
+            mig.STEP_WIKI: lambda w: ":_drop_wiki_cache:" in w["by"],
+            # 0008 v7 §2a (v16; T3): the counter's mint and the registry backfill. Until 2026-10-14 neither was mapped,
+            # so the first campaign over the v16 step perturbed NEITHER write — found by its own per-step count.
+            mig.STEP_ACT_COUNTER: lambda w: ":mint_act_counter:" in w["by"],
+            mig.STEP_REGISTRY: lambda w: (w["kind"] == "DML" and ":_apply_forward:" in w["by"]
+                                          and "INSERT INTO request_registry" in w["sql"])}
+
+
+# A step that WRITES nothing has no write to perturb: its postcondition checks rows the step must leave alone. Named
+# here with its reason, never silently absent — every other STEP_* in the migration must appear in the cells.
+WRITELESS_STEPS = {"v16-act-columns": "B1: the legacy confirmations' v15 columns are byte-equal and their act columns "
+                                      "(origin 'local', NULL x5) unsynthesized — tests/test_0008_request_registry.py "
+                                      "injects its mutants as TEMP triggers"}
 
 
 def step_of(w):
@@ -258,6 +270,13 @@ def campaign_a(work: str) -> list:
                     row.update(outcome=f"ANCHOR (anchor_ok={plan.anchor_ok})", killed=False)
                 elif plan.applied is None or str(plan.applied).startswith("n/a"):
                     row.update(outcome=f"N/A ({plan.applied})", killed=None)
+                elif mode == "skip" and w["kind"] == "DML" and w.get("rows") == 0 and res["exc"] is None:
+                    # an EQUIVALENT perturbation: the unperturbed write changed 0 rows (the recorder's measured
+                    # total_changes delta), so skipping it removes nothing — e.g. v16's registry backfill on a base-1
+                    # store, which has no confirmation to copy. Whole-store equality is NOT the test: two UNPERTURBED
+                    # runs of one fixture already differ (the clock and minted UUIDs in episodes, store_identity,
+                    # edge_event, store_epoch — measured 2026-10-14), so it would refuse every equivalent.
+                    row.update(outcome="N/A (equivalent: the write changed 0 rows)", killed=None)
                 else:
                     row.update(judge(res, step, writes))
                 rows.append(row)
@@ -630,9 +649,10 @@ def problems(path: pathlib.Path = TABLE) -> list[str]:
                        f"(outcome {r.get('outcome')}, named {r.get('refused_at_step')}, position {r.get('position')}, "
                        f"unchanged {r.get('unchanged')})")
     steps = {r.get("step") for r in pert}
-    want_steps = {"stamp", "store-identity", "store-epoch", "v13-baseline", "v2-v3-outcome-chains", "v3-v4-wiki-drop"}
+    import veracium.store.migration as mig
+    want_steps = {v for k, v in vars(mig).items() if k.startswith("STEP_") and isinstance(v, str)} - set(WRITELESS_STEPS)
     if steps != want_steps:
-        out.append(f"the perturbation cells cover steps {sorted(steps)}, not the six")
+        out.append(f"the perturbation cells cover steps {sorted(steps)}, not every writing step {sorted(want_steps)}")
     return out
 
 

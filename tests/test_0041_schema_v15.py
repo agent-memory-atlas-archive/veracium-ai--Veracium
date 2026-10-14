@@ -21,9 +21,11 @@ def _load_tt():
     m = importlib.util.module_from_spec(spec); sys.modules["tt41"] = m; spec.loader.exec_module(m); return m
 
 
-def test_v15_adds_exactly_the_two_tables_and_their_indexes_and_the_head_is_15():
+def test_v15_adds_exactly_the_two_tables_and_their_indexes():
+    """The v14->v15 delta, exactly. (Until 2026-10-14 this also pinned the HEAD at 15; 0008 v7's registry moved it
+    to 16, and v16's own delta is `tests/test_0008_request_registry.py`'s.)"""
     from veracium.store import schema_version as sv
-    assert sv.SCHEMA_VERSION == 15 and 15 in sv.SCHEMAS
+    assert sv.SCHEMA_VERSION >= 15 and 15 in sv.SCHEMAS
     added = {o.key for o in sv.SCHEMAS[15]} - {o.key for o in sv.SCHEMAS[14]}
     assert added == {("table", "episode_event"), ("index", "ix_episode_event_lookup"), ("table", "redactions"), ("index", "ix_redactions_target")}, added
     policies = {o.key: o.policy for o in sv.SCHEMAS[15] if o.key in added}
@@ -31,10 +33,12 @@ def test_v15_adds_exactly_the_two_tables_and_their_indexes_and_the_head_is_15():
     assert policies[("index", "ix_episode_event_lookup")] == sv.REBUILDABLE and policies[("index", "ix_redactions_target")] == sv.REBUILDABLE
 
 
-def test_the_frozen_v14_store_migrates_to_15_with_its_rows_intact_and_no_data_step(tmp_path):
-    """The crossing is DDL only: the pre-restriction store's rows (its prose kind, its two unattested marker rows,
-    its relation-only quarantine) arrive at v15 byte-identical; the two tables exist and are empty. On a RAW copy
-    of the frozen bytes — the helper that opens the fixture migrates first, so it cannot show this."""
+def test_the_frozen_v14_store_migrates_to_the_head_with_its_rows_intact_and_no_v15_data_step(tmp_path):
+    """The v15 crossing is DDL only: the pre-restriction store's rows (its prose kind, its two unattested marker rows,
+    its relation-only quarantine) arrive at the head byte-identical; the two v15 tables exist and are empty. On a RAW
+    copy of the frozen bytes — the helper that opens the fixture migrates first, so it cannot show this. (The head is
+    16 since 0008 v7, whose data step touches only `confirmations`, the registry and the counter.)"""
+    from veracium.store import schema_version as sv
     from veracium.store.migration import migrate_store
     frozen = tmp_path / "raw.sqlite"; shutil.copy2(EVIDENCE / "pre_restriction.sqlite", frozen)
     c = sqlite3.connect(str(frozen))
@@ -43,9 +47,9 @@ def test_the_frozen_v14_store_migrates_to_15_with_its_rows_intact_and_no_data_st
     before_eps = {r[0]: r[1] for r in c.execute("SELECT id, json FROM episodes")}
     c.close()
     r = migrate_store(str(frozen))
-    assert r == "migrated" and r.resulting_version == 15, r
+    assert r == "migrated" and r.resulting_version == sv.SCHEMA_VERSION, r
     c = sqlite3.connect(str(frozen))
-    assert c.execute("PRAGMA user_version").fetchone()[0] == 15
+    assert c.execute("PRAGMA user_version").fetchone()[0] == sv.SCHEMA_VERSION
     assert {r[0]: r[1] for r in c.execute("SELECT id, json FROM edges")} == before
     assert {r[0]: r[1] for r in c.execute("SELECT id, json FROM episodes")} == before_eps
     assert c.execute("SELECT COUNT(*) FROM episode_event").fetchone()[0] == 0

@@ -196,6 +196,9 @@ COMBINING_SITES = {
     (_STORE, "confirm_edge"): SiteSpec(
         False, why="specs/0008 — clears needs_confirmation on ONE edge and "
                    "records the confirmation; no second record contributes"),
+    (_STORE, "_allocate_act_seq"): SiteSpec(
+        False, why="specs/0008 v7 §6f — advances the store's one act counter; a position, not content, and no "
+                   "record contributes to another"),
     (_STORE, "append_outcome_if_head"): SiteSpec(
         False, why="appends one outcome record at its chain head; the head "
                    "is a POSITION, not a second source of content"),

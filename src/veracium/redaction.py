@@ -97,7 +97,8 @@ EPISODE_REASON_THREE_CASE = ("retired_reason",)                                 
 # the side tables (rows 7, 21, 23, 59/64) and the derived oracle (INV-7), named by table so the receipt can
 # carry them beside the record's own carriers
 SIDE_TABLE_TREATMENTS = {
-    "edge": (("confirmations.request_digest", REPLACE), ("contribution_ledger.identity_digest", CLEAR),
+    "edge": (("confirmations.request_digest", REPLACE), ("request_registry.request_digest", REPLACE),   # 0008 v7 §6g
+             ("contribution_ledger.identity_digest", CLEAR),
              ("contribution_ledger.evidence_ref_digest", CLEAR), ("supersession_refusals.relation", REPLACE),
              ("edge_embedding", DELETE), ("source_revocations.reason", REPLACE)),   # §11.2: no numbered row (R9-02(d))
     # rows 21/23 reach an episode too, as the SURVIVOR of a consolidation's ledger rows (round-9 R9-03: this

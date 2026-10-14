@@ -27,7 +27,7 @@ from ..schema import (ConsolidationOp, ConsolidationOutputDraft, ConsolidationSt
                       SupersessionPlan, SupersessionRefusal, SupersessionResult,
                       is_historical_id, to_historical_id,
                       WIKI_RETAINING_REASONS, DISPOSITIONED_REASONS, as_utc_required)
-from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS,
+from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS, RequestRedacted,
                    DESTINATION_CHANGED, HEAD_MOVED, LEASE_MAX, NON_QUIESCENT,
                    PLAN_STALE, ReceiptSchemaBoundaryError, Store,
                    SupersessionIntegrityError)
@@ -93,6 +93,10 @@ _SITE_CONFIRM_UNKNOWN_EDGE = declare_site("store.confirm.unknown-edge")
 _SITE_CONFIRM_NOT_ASSERTABLE = declare_site("store.confirm.not-assertable")
 _SITE_CONFIRM_REQUEST_DIGEST = declare_site("store.confirm.request-digest")
 _SITE_CONFIRM_CORRELATION = declare_site("store.confirm.correlation")
+_SITE_REGISTRY_REDACTED = declare_site("store.registry.request-redacted")
+_SITE_REGISTRY_VERB_HELD = declare_site("store.registry.verb-held")
+_SITE_ACT_COUNTER = declare_site("store.act-counter.allocate")
+_SITE_REGISTRY_RESULT_MISSING = declare_site("store.registry.result-missing")
 _SITE_CONSOLIDATION_CONTENDED = declare_site("store.consolidation.contended")
 _SITE_DELETE_NOT_CURRENT = declare_site("store.consolidation.delete-not-current")
 _SITE_DELETE_EPISODE_OUTCOME = declare_site("store.delete-episode.outcome")
@@ -129,7 +133,8 @@ _ERASE_TABLES = ("contribution_ledger",
                  "confirmations", "consolidation_ops",
                  "supersession_refusals", "supersession_operations",
                  "edge_embedding", "edge_event", "policy_receipt",
-                 "episode_event", "redactions")          # specs/0041 v15: the episode journal and the attestation record are erasable per user
+                 "episode_event", "redactions",          # specs/0041 v15: the episode journal and the attestation record are erasable per user
+                 "request_registry")                     # specs/0008 v7 §6g: replay ends at erasure; act_counter is NOT here (never reset)
 EDGE_WRITE_SITE_RULINGS = {
     "_upsert_edge_row": {
         "ruling": "reads the persisted prior, upserts, journals through the choke "
@@ -687,11 +692,68 @@ class SqliteStore(Store):
             actor=ConfirmationActor(actor), call_path=ConfirmationCallPath(cpath),
             correlation_id=corr, request_digest=dig)
 
+    def _confirm_replay(self, user_id, correlation_id, request_digest) -> Optional[Confirmation]:
+        """specs/0008 v7 §6c/§6g — the REQUEST REGISTRY, read before any read of live edge state (INV-Q2), and the
+        ONE lookup both the front path and the C8 race fallback use. None: the id is free. Otherwise, in the
+        spec's precedence: a redacted row is TERMINAL for every payload (§6g); an id held by another verb, or by a
+        different canonical request, is an integrity conflict naming the verb; else the original result,
+        reconstructed from `result_ref` without reading the edge, so it replays after the edge retired."""
+        _COLS = ("id, user_id, edge_id, confirmed_at, actor, call_path, "
+                 "correlation_id, request_digest")
+        held = self._conn.execute(
+            "SELECT verb, request_digest, result_ref FROM request_registry WHERE user_id=? AND correlation_id=?",
+            (user_id, correlation_id)).fetchone()
+        if held is None:
+            return None
+        verb, digest, result_ref = held
+        with _SITE_REGISTRY_REDACTED.consult():
+            if digest == _redaction.MARKER:
+                raise _SITE_REGISTRY_REDACTED.fire(RequestRedacted(user_id, correlation_id, verb))
+        with _SITE_REGISTRY_VERB_HELD.consult():
+            if verb != "confirm":
+                raise _SITE_REGISTRY_VERB_HELD.fire(ValueError(
+                    f"correlation_id {correlation_id!r} is held by a {verb!r} request — integrity conflict "
+                    f"(specs/0008 §6c)"))
+        with _SITE_CONFIRM_REQUEST_DIGEST.consult():
+            if digest != request_digest:
+                raise _SITE_CONFIRM_REQUEST_DIGEST.fire(ValueError(
+                    f"correlation_id {correlation_id!r} was already used for a "
+                    f"DIFFERENT request — integrity conflict (specs/0008 §6c)"))
+        row = self._conn.execute(f"SELECT {_COLS} FROM confirmations WHERE id=? AND user_id=?",
+                                 (result_ref, user_id)).fetchone()
+        with _SITE_REGISTRY_RESULT_MISSING.consult():
+            if row is None:
+                raise _SITE_REGISTRY_RESULT_MISSING.fire(ValueError(
+                    f"correlation_id {correlation_id!r}: the registry names confirmation {result_ref!r}, which "
+                    f"does not exist — integrity conflict (specs/0008 §6c)"))
+        return self._confirmation_from_row(row).model_copy(update={"replayed": True})
+
+    def _allocate_act_seq(self) -> int:
+        """specs/0008 v7 §6f — the next act position, inside the act verb's own BEGIN IMMEDIATE. The counter's row
+        is minted only at creation and by the v16 migration; a writer never re-mints it, so an ABSENT row REFUSES
+        (a fresh (1, 1) would reissue positions an earlier act already holds, and exported) and the increment must
+        touch exactly that one row."""
+        row = self._conn.execute("SELECT next_seq FROM act_counter WHERE id=1").fetchone()
+        n = (self._conn.execute("UPDATE act_counter SET next_seq=next_seq+1 WHERE id=1 AND next_seq=?",
+                                (row[0],)).rowcount if row is not None else 0)
+        with _SITE_ACT_COUNTER.consult():
+            if row is None or n != 1:
+                raise _SITE_ACT_COUNTER.fire(RuntimeError(
+                    "the store's act_counter row is absent or did not advance — refusing rather than restarting "
+                    "act positions (specs/0008 §6f: the counter is never reset)"))
+        return row[0]
+
     def confirm_edge(self, user_id, edge_id, *, actor, call_path, correlation_id,
                      request_digest, confirmed_at) -> Confirmation:
         _COLS = ("id, user_id, edge_id, confirmed_at, actor, call_path, "
                  "correlation_id, request_digest")
         with self._lock, self._write_txn():
+            # Idempotency, checked BEFORE any read of live edge state (specs/0008 v7 §6c, INV-Q2): the registry
+            # first, so a retry replays after the edge was invalidated, retired or changed. Before v16 this read
+            # `confirmations` AFTER the edge's assertability check, and such a retry raised "not assertable".
+            prior = self._confirm_replay(user_id, correlation_id, request_digest)
+            if prior is not None:
+                return prior
             row = self._conn.execute(
                 "SELECT json FROM edges WHERE id=? AND user_id=?",
                 (edge_id, user_id)).fetchone()
@@ -706,20 +768,6 @@ class SqliteStore(Store):
                         f"edge {edge_id!r} is not assertable (quarantined/use_only/"
                         f"inactive) — a user affirming a claim is new evidence: ingest "
                         f"it via remember(author=USER) instead"))
-            # Idempotency, checked BEFORE any mutation: a prior confirmation under
-            # this tenant-scoped correlation id is a replay if the canonical request
-            # matches, an integrity conflict otherwise (specs/0008 §6c).
-            prior = self._conn.execute(
-                f"SELECT {_COLS} FROM confirmations WHERE user_id=? AND "
-                f"correlation_id=?", (user_id, correlation_id)).fetchone()
-            if prior is not None:
-                with _SITE_CONFIRM_REQUEST_DIGEST.consult():
-                    if prior[7] != request_digest:
-                        raise _SITE_CONFIRM_REQUEST_DIGEST.fire(ValueError(
-                            f"correlation_id {correlation_id!r} was already used for a "
-                            f"DIFFERENT request — integrity conflict (specs/0008 §6c)"))
-                out = self._confirmation_from_row(prior)
-                return out.model_copy(update={"replayed": True})
             edge.needs_confirmation = False
             edge.provenance = edge.provenance.model_copy(update={      # frozen Provenance (0037 v23)
                 "observed_at": max(edge.provenance.observed_at, confirmed_at),
@@ -755,24 +803,30 @@ class SqliteStore(Store):
                                  author_of_evidence=EvidenceAuthor.USER,
                                  evidence_ref=f"confirm:{edge_id}")
                              ).model_dump_json()))
+                # an act of THIS store: origin 'local', its position from the never-reset counter (§6f), its
+                # portable identity NULL — derived at each export (0008 v7 §6e)
                 self._conn.execute(
-                    f"INSERT INTO confirmations({_COLS}) VALUES(?,?,?,?,?,?,?,?)",
+                    f"INSERT INTO confirmations({_COLS}, origin, act_seq) VALUES(?,?,?,?,?,?,?,?,'local',?)",
                     (cid, user_id, edge_id, confirmed_at.isoformat(), actor_v,
-                     call_v, correlation_id, request_digest))
+                     call_v, correlation_id, request_digest, self._allocate_act_seq()))
+                # the request's registry row, in the verb's own transaction (§6c); written_at is the store's clock
+                # at the write — a write time for every verb, never the caller's date
+                self._conn.execute(
+                    "INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
+                    "result_ref, written_at) VALUES(?,?,'confirm',?,?,?,?)",
+                    (user_id, correlation_id, edge_id, request_digest, cid, self._now().isoformat()))
                 self._bump(user_id)
             except sqlite3.IntegrityError:
                 # C8: a concurrent duplicate won the UNIQUE(user_id, correlation_id)
-                # race. Roll back ours and return the committed original / conflict.
+                # race. Roll back ours and answer from the committed original through the
+                # SAME registry lookup as the front path (research's N2): one rule, not two.
                 self._conn.rollback()
-                other = self._conn.execute(
-                    f"SELECT {_COLS} FROM confirmations WHERE user_id=? AND "
-                    f"correlation_id=?", (user_id, correlation_id)).fetchone()
+                prior = self._confirm_replay(user_id, correlation_id, request_digest)
                 with _SITE_CONFIRM_CORRELATION.consult():
-                    if other is None or other[7] != request_digest:
+                    if prior is None:
                         raise _SITE_CONFIRM_CORRELATION.fire(ValueError(
                             f"correlation_id {correlation_id!r} conflict (specs/0008 §6c)"))
-                return self._confirmation_from_row(other).model_copy(
-                    update={"replayed": True})
+                return prior
             except BaseException:
                 # C7: all-or-nothing — a failure anywhere (e.g. the mandatory record
                 # cannot commit) rolls back EVERY edge field and the episode, so the
@@ -2971,6 +3025,12 @@ class SqliteStore(Store):
                                    (_redaction.MARKER, user_id, target_id)).rowcount
             if n:
                 fields.append("confirmations.request_digest")
+            # specs/0008 v7 §6g / 0041 §2d-iii-bis: every verb's registry row whose target is the edge — after it, a
+            # retry under that id is TERMINAL (`request_redacted`), never a replay
+            n = self._conn.execute("UPDATE request_registry SET request_digest=? WHERE user_id=? AND target_edge_id=?",
+                                   (_redaction.MARKER, user_id, target_id)).rowcount
+            if n:
+                fields.append("request_registry.request_digest")
             # rows 21/23, joined by user, KIND and id in both absorption directions (round-9 R9-03): edges and
             # episodes are independent id namespaces in this table, so a raw-id match cleared an unrelated
             # episode's digests when an edge shared its id

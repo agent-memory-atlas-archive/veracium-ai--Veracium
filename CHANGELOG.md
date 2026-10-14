@@ -2,6 +2,70 @@
 
 ## Unreleased
 
+- **BREAKING for existing stores — schema 15 → 16: the request registry and act positions (specs/0008 v7 §2a,
+  §6c, §6f, §6g; amendment `0047/0008-request-registry`).** The first schema step of the 0044/0045/0047 programme,
+  which ships as one release. Three changes:
+  - **New tables.** `request_registry` holds one row per request, under `UNIQUE(user_id, correlation_id)`, plus a
+    lookup index. `act_counter` holds one row, the store-wide counter that never resets.
+  - **`confirmations` gains six columns:** `origin` (`local` / `imported` / `restored`, NOT NULL DEFAULT `local`),
+    `recorded_correlation_id`, `origin_store`, `origin_user`, `origin_act_id` and `act_seq`.
+  - **Migration data step.** The migration adds one `confirm` registry row per existing confirmation. Its digest is
+    byte-copied, so it is the marker where 0041 already redacted it, and its `written_at` is the migration's one clock
+    read. The counter starts at (1, 1). Every existing confirmation stays `local` with an UNKNOWN position (all five
+    other act columns NULL); no position is synthesized.
+  - **Checked at the step (0013 §4f).** Postconditions compare against the step's own pre-read: the backfill
+    field for field, every legacy confirmation byte-equal and position-less, and the counter unmoved by the backfill.
+  - **Behaviour.**
+    - **Fixed:** retrying a confirmation after its fact was invalidated now returns the original result
+      (`replayed=True`). Before, it raised "not assertable", because the replay lookup ran after the fact's check;
+      the registry is now read before any read of the fact.
+    - **New:** a retry under an id whose fact was since redacted raises `veracium.store.base.RequestRedacted`, for
+      any payload. It is a `ValueError`, it is terminal, and it never replays.
+    - An id held by another verb is an integrity conflict that names the verb; replies and undo will share the id
+      space when they land.
+    - `forget_user` erases registry rows, so a retry after erasure is a new request. The counter is never erased, so
+      a recreated user's acts never reuse a position.
+    - A store whose counter row is missing refuses to confirm and writes nothing.
+  - **Who must act:**
+    - **Operators with an on-disk store** must migrate offline before this build opens it:
+      `veracium migrate --db X --i-have-quiesced --backup REF`, verified v15 → v16 with a confirmation. A store
+      further behind takes `veracium.store.migration.migrate_store`, verified from every base 1–15.
+    - **Hosts implementing `veracium.store.base.Store`:** `confirm_edge` must read the registry before the edge.
+  - **Evidence.**
+    - Store v16 accepts six shapes: the constructor; the constructor with `confirmations` ALTERed; and the four
+      migrated v15 shapes, each ALTERed.
+    - The 0013 step campaign now perturbs both new writing steps: 853 perturbations, 847 killed, and 6 that do not
+      apply, all on a base-1 store, which has no confirmation to copy. It had mapped neither step until this change.
+    - `tests/test_0008_request_registry.py` (34 tests) fails under each of 14 code mutants of the writer and the
+      step.
+- **Changed (trust surface): an inferred number or date that the event does not contain is refused unless the event
+  is the user's own direct statement (specs/0019 v7 §4c; INV-N1–N4).**
+  - **What changed.** 0019 flagged a triple whose object holds a specific (a number, a date) that is absent from the
+    event text, and stored it with the flag. That rule now holds only for USER-effective events: author `user` and
+    a declared direct context, `EvidenceContext.direct()`. Every other event's flagged triple is now refused and
+    counted, and nothing is written:
+    - a third-party or system author;
+    - a derived context;
+    - no declared context at all, which resolves to the floor `derived(THIRD_PARTY)`.
+  - **What is unaffected.** The event's episode is recorded either way, and specifics the text does contain are
+    stored as before.
+  - **Reporting.** The ingest report carries `nonuser_ungrounded_refused` on every path, the unparseable one
+    included. MCP strips it from what the model sees.
+  - **Who must act:** hosts that call `remember()` for the user's own statements without
+    `context=EvidenceContext.direct()` should declare it. Otherwise a figure the extractor adds without textual
+    support is now dropped rather than stored flagged.
+  - **Tests.** 22 existing tests assumed the old rule. Each was fixed without weakening an assertion: fixtures now
+    carry their figure in the event text, two counter inventories gained the key, and 0019's own test declares a
+    direct statement. The spec's five named mutants are killed.
+- **Added: a `reinstated` journal event says why the fact came back (specs/0029 v12; INV-J1–J3).**
+  - The event's `reason` is one of `REINSTATEMENT_REASONS` (`source_restored`, `arity_reclassified`; the second is
+    reserved for 0044's restoration).
+  - It is validated where every event is emitted, and an invalid reason unwinds the whole write.
+  - 0022's revocation lift writes `source_restored`.
+  - An event written before this change carries NULL. `why` reads it as `source_restored`, and the stored row is not
+    rewritten.
+  - The `state` payload, and therefore `edge_state_at`, is unchanged.
+
 - **Fixed (trust surface): an untrusted import file could permanently redact your own data (specs/0041 §4g).**
   **Never in a published release:** the notice import landed on `main` on 2026-09-20 (0041 tranche 4b, `8ea59e7`),
   after v0.26.1, and is fixed here before any release carries it. In that code an imported redaction notice was bound

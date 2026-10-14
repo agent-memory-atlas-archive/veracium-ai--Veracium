@@ -39,7 +39,7 @@ from veracium.asof.carrier import Envelope
 from veracium.config import MemoryConfig
 from veracium.schema import (DEFAULT_RELATIONS, Disclosure, Edge, Episode, EvidenceAuthor,
                              Provenance, Volatility)
-from veracium.store.base import RawEdgeState
+from veracium.store.base import RawEdgeState, RequestRedacted
 from veracium.store.sqlite import SqliteStore
 
 U = "u"
@@ -856,6 +856,11 @@ DECLINES.update({
     "store.confirm.not-assertable": TwoPhase(lambda mp: _quarantined_store(), lambda s: _raises(ValueError, _confirm, s)),
     "store.confirm.request-digest": TwoPhase(lambda mp: _confirmed_once(), lambda s: _raises(ValueError, _confirm, s, request_digest="DIFFERENT")),
     "store.confirm.correlation": lambda mp: _confirm_correlation_race(),
+    # specs/0008 v7 §6c/§6f/§6g (v16): the registry's terminal and verb rules, and the act counter's refusal
+    "store.registry.request-redacted": TwoPhase(lambda mp: _confirmed_then_redacted(), lambda s: _raises(RequestRedacted, _confirm, s)),
+    "store.registry.verb-held": TwoPhase(lambda mp: _id_held_by_a_reply(), lambda s: _raises(ValueError, _confirm, s)),
+    "store.act-counter.allocate": TwoPhase(lambda mp: _counter_row_lost(), lambda s: _raises(RuntimeError, _confirm, s)),
+    "store.registry.result-missing": TwoPhase(lambda mp: _registry_result_lost(), lambda s: _raises(ValueError, _confirm, s)),
     "store.consolidation.contended": TwoPhase(lambda mp: _first_claim(), lambda s: s.create_or_takeover_consolidation(U, ["e2", "e3"], "w2", 60)),
     "store.consolidation.delete-not-current": lambda mp: _delete_not_current(),
     "store.delete-episode.outcome": lambda mp: _delete_outcome_episode(),
@@ -890,6 +895,24 @@ def _quarantined_store():
 
 def _confirmed_once():
     s = _store(); s.add_edge(_edge("c1")); _confirm(s); return s
+
+
+def _confirmed_then_redacted():
+    s = _confirmed_once(); s.redact(U, edge_id="c1", reason="subject_request"); return s
+
+
+def _id_held_by_a_reply():
+    s = _store(); s.add_edge(_edge("c1"))
+    s._conn.execute("INSERT INTO request_registry VALUES (?,?,?,?,?,?,?)", (U, "k1", "reply", "c1", "d1", "r-1", "x"))
+    s._conn.commit(); return s
+
+
+def _registry_result_lost():
+    s = _confirmed_once(); s._conn.execute("DELETE FROM confirmations"); s._conn.commit(); return s
+
+
+def _counter_row_lost():
+    s = _store(); s.add_edge(_edge("c1")); s._conn.execute("DELETE FROM act_counter"); s._conn.commit(); return s
 
 
 def _outcome_chain_state():

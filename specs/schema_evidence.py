@@ -372,7 +372,26 @@ def build_version_artifact(strict: bool = True) -> dict:
         # the constructor manifestation and the migrated-v10-shape stores
         # were refused by the post-migration re-check — the migration was
         # right and the evidence incomplete, the correct direction.)
-        if version in (10, 11, 12, 13, 14, 15):   # specs/0001 I13c (candidate): v11 … v15 (0041's additive bump)
+        # specs/0008 v7 §2a (v16, the one programme bump): `confirmations` gains six columns by ALTER on every base
+        # that HOLDS the table (2..15), in ONE measured variant (SCHEMA_V2's DDL is the table's only v15 shape); a
+        # base-1 store gets it inline from the additive diff. So v16's reachable set is the fresh constructor (also
+        # base 1), the constructor with `confirmations` ALTERed (a base 2/3, or a store born at v10..v15), and the
+        # four migrated v15 shapes, each with `confirmations` ALTERed (bases 4..9 all hold the table) — six.
+        if version >= 16:
+            import copy
+            import hashlib as _h
+            if (_h.sha256(sv.ALTER_PATH_V16_CONFIRMATIONS_SQL.encode()).hexdigest()
+                    != sv.ALTER_PATH_V16_CONFIRMATIONS_SHA256):
+                raise SystemExit("ALTER_PATH_V16_CONFIRMATIONS_SQL does not match its pinned sha256 (0008 §2a) — "
+                                 "refusing to emit evidence")
+            alt = copy.deepcopy(identity(manifest(c)))
+            alt["table:confirmations"] = dict(alt["table:confirmations"], sql=sv.ALTER_PATH_V16_CONFIRMATIONS_SQL)
+            accepted.append({
+                "provenance": f"migrated->v{version} (0008 §2a: confirmations ALTER on a constructor-shaped base, "
+                              f"sha a82ee8e8…)",
+                "digest": sv._digest_of_identity(alt, version),
+                "objects": alt})
+        if version in (10, 11, 12, 13, 14, 15, 16):   # specs/0001 I13c (candidate): v11 … v15 (0041's additive bump); v16 below
             # inherits EVERY accepted v10 manifestation BY CONSTRUCTION —
             # the same 2x2 object manipulation, digested at 11 (SCHEMA_V11
             # is SCHEMA_V10, so exact inheritance is the same code path)
@@ -403,6 +422,9 @@ def build_version_artifact(strict: bool = True) -> dict:
                         alt["table:contribution_ledger"] = dict(
                             alt["table:contribution_ledger"],
                             sql=sv.ALTER_PATH_V8_SQL)
+                    if version >= 16:   # every migrated v15 shape holds `confirmations`, so it crosses the v16 ALTER
+                        alt["table:confirmations"] = dict(
+                            alt["table:confirmations"], sql=sv.ALTER_PATH_V16_CONFIRMATIONS_SQL)
                     accepted.append({
                         "provenance": f"migrated->v{version} (0025 §4b-v: {ops_tag}; "
                                       f"{ledger_tag})"
@@ -410,7 +432,9 @@ def build_version_artifact(strict: bool = True) -> dict:
                                       + (" [v11 shape + the 0027 additive diff — specs/0027 §4f]" if version == 12 else "")
                                       + (" [v12 shape + the 0029 additive diff — specs/0029 §4e]" if version == 13 else "")
                                       + (" [v13 shape + the 0027 v14 additive diff — specs/0027 §4g]" if version == 14 else "")
-                                      + (" [v14 shape + the 0041 v15 additive diff — specs/0041 §4b/§4b-ii]" if version == 15 else ""),
+                                      + (" [v14 shape + the 0041 v15 additive diff — specs/0041 §4b/§4b-ii]" if version == 15 else "")
+                                      + (" [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, "
+                                         "sha a82ee8e8… — specs/0008 §2a]" if version == 16 else ""),
                         "digest": sv._digest_of_identity(alt, version),
                         "objects": alt})
         c.close()

@@ -67,6 +67,7 @@ class MigrationPostconditionError(StoreVersionError):
 # The STEP names a postcondition refusal carries (MigrationPostconditionError.step): fixed words, one per step.
 STEP_STAMP, STEP_IDENTITY, STEP_EPOCH = "stamp", "store-identity", "store-epoch"
 STEP_BASELINE, STEP_CHAINS, STEP_WIKI = "v13-baseline", "v2-v3-outcome-chains", "v3-v4-wiki-drop"
+STEP_ACT_COLUMNS, STEP_ACT_COUNTER, STEP_REGISTRY = "v16-act-columns", "v16-act-counter", "v16-registry-backfill"
 
 # 0013 §4f / M-Q6 (RULED by accepted 0016 D2): a raw key no current model declares is REFUSED, except these — fields a
 # released schema declared and HEAD no longer does, dropped on read by every load since their deletion. Bound by
@@ -426,10 +427,122 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
         # — a receipt is written only by a recall on an open v14 store, so there is
         # no pre-existing data to carry and no row to mint. Stated here so the
         # absence of a v14 step reads as a decision, not an omission.
+        # specs/0008 v7 §2a/§6f/§6g (amendment `0047/0008-request-registry`): crossing INTO v16 — the request
+        # registry, the act counter and the confirmations act columns, ONE step with three guarded blocks in the
+        # order (a) ALTER, (b) mint, (c) backfill. `request_registry` and `act_counter` were created EMPTY by the
+        # additive diff above on every path. Each block owes a postcondition (0013 §4f) read against the step's OWN
+        # pre-read, never against what the step wrote:
+        #   (a) bases 2..15 hold `confirmations` in SCHEMA_V2's DDL and cross the six ADD COLUMNs, byte-matched
+        #       against the frozen measured literal; base 1 had no table, and the additive diff created it in its
+        #       v16 CONSTRUCTOR form (the v6/v8 precedent), which is equally accepted;
+        #   (b) the counter's one row (1, 1): no legacy act receives a position (§6f), so the counter starts here;
+        #   (c) one `confirm` registry row per existing confirmation — its id, its edge, its digest BYTE-COPIED (the
+        #       marker where 0041 already redacted it), result_ref = the confirmation id, written_at = the
+        #       migration's one clock read (a write time, the same meaning for every verb; the original request's
+        #       time stays on the confirmation through result_ref).
+        # Then (research's B1): every pre-existing confirmation is byte-equal in its eight v15 columns, `local`, and
+        # NULL in the five others — an act recorded before the column existed has an UNKNOWN position, never a
+        # synthesized one — and the counter still reads (1, 1): the backfill takes no position.
+        if base < 16 <= SCHEMA_VERSION:
+            from .schema_version import ALTER_PATH_V16_CONFIRMATIONS_SQL, ALTERS_V15_TO_V16, mint_act_counter
+            conf_before = _rows(conn, f"SELECT {_CONF_V15_COLS} FROM confirmations") if base >= 2 else []
+            if base >= 2:
+                for stmt in ALTERS_V15_TO_V16:
+                    conn.execute(stmt)
+                stored = conn.execute(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='confirmations'").fetchone()[0]
+                if stored != ALTER_PATH_V16_CONFIRMATIONS_SQL:
+                    raise _SITE_MIGRATION_VERSION.fire(StoreVersionError(
+                        "", base, SCHEMA_VERSION, "unsupported-migration",
+                        diff="the v15->v16 ALTER produced DDL that does not byte-match the frozen measured "
+                             "expectation (0008 §2a) — the migration or runtime is wrong; the expectation never "
+                             "moves"), "v16-alter-path")
+            counter_before = _rows(conn, "SELECT id, next_seq FROM act_counter")
+            mint_act_counter(conn)
+            _refuse_unless(base, STEP_ACT_COUNTER,
+                           _act_counter_problems(counter_before, _rows(conn, "SELECT id, next_seq FROM act_counter")))
+            registry_before = _rows(conn, f"SELECT {_REGISTRY_COLS} FROM request_registry")
+            conn.execute(
+                "INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
+                "result_ref, written_at) SELECT user_id, correlation_id, 'confirm', edge_id, request_digest, id, ? "
+                "FROM confirmations", (now_iso,))
+            _refuse_unless(base, STEP_REGISTRY, _registry_backfill_problems(
+                conf_before, registry_before, _rows(conn, f"SELECT {_REGISTRY_COLS} FROM request_registry"), now))
+            _refuse_unless(base, STEP_ACT_COLUMNS, _act_column_problems(
+                conf_before, _rows(conn, f"SELECT {_CONF_V15_COLS}, {_CONF_ACT_COLS} FROM confirmations")))
+            _refuse_unless(base, STEP_ACT_COUNTER,
+                           _act_counter_problems(counter_before, _rows(conn, "SELECT id, next_seq FROM act_counter")))
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         stamped = conn.execute("PRAGMA user_version").fetchone()[0]
         _refuse_unless(base, STEP_STAMP, [f"user_version reads {stamped}, not {SCHEMA_VERSION}"]
                        if stamped != SCHEMA_VERSION else [])
+
+
+# the v16 step's columns, by name and in a fixed order: `confirmations`' eight v15 columns, its six act columns
+# (§2a's inventory), and the registry's seven
+_CONF_V15_COLS = "id, user_id, edge_id, confirmed_at, actor, call_path, correlation_id, request_digest"
+_CONF_ACT_COLS = "origin, recorded_correlation_id, origin_store, origin_user, origin_act_id, act_seq"
+_REGISTRY_COLS = "user_id, correlation_id, verb, target_edge_id, request_digest, result_ref, written_at"
+
+
+def _typed_row(row) -> tuple:
+    """A row as (type, value) pairs: BYTE-equal, not merely ==-equal (an INTEGER 1 is not the TEXT '1')."""
+    return tuple((type(v), v) for v in row)
+
+
+def _act_counter_problems(pre: list, post: list) -> list:
+    if pre:
+        return [] if post == pre else [f"act_counter changed: {pre!r} -> {post!r}"]
+    if [_typed_row(r) for r in post] != [_typed_row((1, 1))]:
+        return [f"act_counter holds {post!r}, not exactly the one row (1, 1)"]
+    return []
+
+
+def _registry_backfill_problems(conf_before: list, registry_before: list, post: list, now: datetime) -> list:
+    """(c): exactly one `confirm` row per pre-read confirmation, field for field, written_at the clock read."""
+    out = []
+    if registry_before:
+        out.append(f"request_registry held {len(registry_before)} row(s) before the backfill")
+    want = {(r[1], r[6]): r for r in conf_before}                     # (user_id, correlation_id) -> confirmation
+    got = {}
+    for r in post:
+        if (r[0], r[1]) in got:
+            out.append(f"request_registry holds ({r[0]!r}, {r[1]!r}) twice")
+        got[(r[0], r[1])] = r
+    if len(post) != len(conf_before):
+        out.append(f"request_registry holds {len(post)} row(s) for {len(conf_before)} confirmation(s)")
+    for key in sorted(set(want) | set(got), key=repr):
+        c, g = want.get(key), got.get(key)
+        if c is None:
+            out.append(f"registry row {key!r} has no confirmation")
+            continue
+        if g is None:
+            out.append(f"confirmation {c[0]!r} has no registry row")
+            continue
+        cid, user, edge, _at, _actor, _path, corr, digest = c
+        if _typed_row(g[:6]) != _typed_row((user, corr, "confirm", edge, digest, cid)):
+            out.append(f"registry row {key!r} is {g[:6]!r}, not its confirmation {c!r}")
+        if not _same_instant(g[6], now):
+            out.append(f"registry row {key!r} written_at {g[6]!r} is not the migration's clock read")
+    return out
+
+
+def _act_column_problems(conf_before: list, post: list) -> list:
+    """B1: every pre-existing confirmation is byte-equal in its v15 columns, `local`, and position-less (§6f: an act
+    recorded before the column existed has an UNKNOWN position — never a synthesized one). Base 1's pre-read is the
+    EMPTY case, asserted, not skipped: the table must still be empty."""
+    out = []
+    before = {r[0]: r for r in conf_before}
+    after = {r[0]: r for r in post}
+    if len(post) != len(conf_before) or set(before) != set(after):
+        out.append(f"confirmations went from {sorted(before)!r} to {sorted(after)!r}")
+    for cid in sorted(set(before) & set(after)):
+        a = after[cid]
+        if _typed_row(a[:8]) != _typed_row(before[cid]):
+            out.append(f"confirmation {cid!r} changed: {before[cid]!r} -> {a[:8]!r}")
+        if _typed_row(a[8:]) != _typed_row(("local", None, None, None, None, None)):
+            out.append(f"confirmation {cid!r} act columns are {a[8:]!r}, not ('local', NULL x5)")
+    return out
 
 
 def _same_instant(v, now: datetime) -> bool:
