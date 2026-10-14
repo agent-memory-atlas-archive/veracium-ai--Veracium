@@ -15,11 +15,11 @@ Folds: 0047/0008-request-registry
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | **v6 — THE REQUEST-REGISTRY FOLD (amendment `0047/0008-request-registry`, v1.10, sha16 `550abfaeb4c410fc`).** Its design was ACCEPTED at round 4 of both packages that carried it (0044; 0045–0047; verdicts 2026-10-13), and the owner ruled “Accept now, fold next” (2026-10-14). Folded: §2a (the registry's fields and the migration's carrier inventory), §2c's and §2c-ii's v6 rows, §3a (an act's origin as a trust class), §6b's record origin, §6c's request registry, §6d's SQLite line and two retention rows, C8 and C11, the v6 invariants, the new §6e–§6g, and the v6 regimes, failure modes and claims. Not folded: the amendment's review briefs, open questions and version history, which stay with its research file and `specs/reviews.py`. A version tag of the form vN.N inside the folded text is the amendment's own. Prior: **v5** — *re-read before editing; quote the version you approve.* **The clearing rule has been approved in every round; the deferrals are the contract around it.** |
+| **Version** | **v7 — TWO POST-ACCEPTANCE CORRECTIONS, 2026-10-14, before the registry is implemented.** **(D4, the owner's ruling “Undo is not an act row”, relayed first-hand by dev):** 0044's undo is a verb of the request registry but not an act: it writes no act row, takes no `act_seq` and has no `act_uid`. §2's act-rows and `act_counter` rows and §6f's counter sentence now name `confirm`/`reply` only, and §2's stale “0044's undo rows” names the outcome rows that record an undo (0044 §4g). **(N4, a research reading, dev's plan §5):** a `local` act's `act_uid` is DERIVED at each export from components fixed for the row's life, which meets §6e's “set once” byte for byte and keeps export read-only; the condition under which that stops holding is stated in §6e. Both are disclosed to the external reviewer in the R-I package. Prior: **v6 — THE REQUEST-REGISTRY FOLD (amendment `0047/0008-request-registry`, v1.10, sha16 `550abfaeb4c410fc`).** Its design was ACCEPTED at round 4 of both packages that carried it (0044; 0045–0047; verdicts 2026-10-13), and the owner ruled “Accept now, fold next” (2026-10-14). Folded: §2a (the registry's fields and the migration's carrier inventory), §2c's and §2c-ii's v6 rows, §3a (an act's origin as a trust class), §6b's record origin, §6c's request registry, §6d's SQLite line and two retention rows, C8 and C11, the v6 invariants, the new §6e–§6g, and the v6 regimes, failure modes and claims. Not folded: the amendment's review briefs, open questions and version history, which stay with its research file and `specs/reviews.py`. A version tag of the form vN.N inside the folded text is the amendment's own. Prior: **v5** — *re-read before editing; quote the version you approve.* **The clearing rule has been approved in every round; the deferrals are the contract around it.** |
 | **Status** | *see `Spec-Status:` — canonical.* Split from `0002` §M3/§7b. **`0002` is a retrospective and must be closeable; this is a proposal and is not.** |
 | **Internal reviewers** | research — **R2** (fail-closed rule) and **R3** (strict; not temporary) |
 | **External review** | required — **counts are generated into `specs/STATUS.md` from `specs/reviews.py`; this row states none.** It said *"two rounds complete"* while `reviews.py` recorded three, in a project that built the generation to stop exactly that. |
-| **Decision + date** | **ACCEPTED 2026-08-02, SCOPED** — external round 4: the clearing rule approved across all four rounds; the deferred surfaces (episode inputs, idempotency, storage/API shape, the `0007` interplay) moved to their owning specs rather than holding the rule. *(Row filled 2026-08-22 — the spec-table audit.)* **v6, 2026-10-14:** the amendment `0047/0008-request-registry`, its design accepted at round 4 (2026-10-13), folded on the owner's ruling “Accept now, fold next”. |
+| **Decision + date** | **ACCEPTED 2026-08-02, SCOPED** — external round 4: the clearing rule approved across all four rounds; the deferred surfaces (episode inputs, idempotency, storage/API shape, the `0007` interplay) moved to their owning specs rather than holding the rule. *(Row filled 2026-08-22 — the spec-table audit.)* **v6, 2026-10-14:** the amendment `0047/0008-request-registry`, its design accepted at round 4 (2026-10-13), folded on the owner's ruling “Accept now, fold next”. **v7, 2026-10-14:** D4 (the owner's ruling) and N4 (a research reading), corrections after acceptance; `Spec-Status` stays `accepted`. |
 | **Path** | full |
 
 ---
@@ -88,8 +88,8 @@ other.
 | `Store.confirm_edge` replay lookup (`sqlite.py` L701, L756 at `f98a3a0`) | `confirmations` only | **the registry first**: same id + same verb + same canonical request → the original result (`result_ref`); same id with a different verb or a different request → integrity conflict naming the verb that holds it |
 | export / import of `confirmations` (§6d row; C11 `test_export_excludes_confirmations`) | **excluded** | **carried, with `origin`**, under 0047 §4f's matrix; the registry is never carried |
 | `forget_user()` | deletes and counts confirmations | also deletes the user's registry rows, act rows and 0044's outcome, run and inventory rows (§6g's single rule); replay ends at erasure |
-| **act rows** (`confirmations`, 0047's `replies`, 0044's undo writes) | no portable identity; no position | **gain `act_uid` and `pos = (origin_store, act_seq)`** with `origin_user` as provenance (v1.2, §6e–§6f); an imported or restored act's `correlation_id` is an internal `#act:` key |
-| **`act_counter`** *(new, one row per store)* | — | the store-wide, never-reset source of `act_seq`, incremented inside each act verb's `BEGIN IMMEDIATE` (§6f); not user data, never erased |
+| **act rows** (`confirmations` and 0047's `replies`; **not** 0044's undo, which is recorded on its outcome row, 0044 §4g) | no portable identity; no position | **gain `act_uid` and `pos = (origin_store, act_seq)`** with `origin_user` as provenance (v1.2, §6e–§6f); an imported or restored act's `correlation_id` is an internal `#act:` key |
+| **`act_counter`** *(new, one row per store)* | — | the store-wide, never-reset source of `act_seq`, incremented inside each act verb's `BEGIN IMMEDIATE` (`confirm`, `reply`; §6f); not user data, never erased |
 
 **The migration, additive: the complete carrier inventory (v1.3).** One 0013 schema step writes every carrier this
 amendment adds. v1.2's “one CREATE TABLE, two ADD COLUMN” predated the act identity, the position and the registry
@@ -101,11 +101,11 @@ target, and omitted them.
 | `act_counter` (one row: `next_seq`) | `CREATE TABLE`, one row inserted | — (the counter starts at the step; no legacy act receives a value) |
 | `confirmations.origin` | `ADD COLUMN … NOT NULL DEFAULT 'local'` | `local` |
 | `confirmations.recorded_correlation_id` | `ADD COLUMN` | NULL |
-| `confirmations.origin_store`, `.origin_user`, `.origin_act_id` (the `act_uid`, §6e) | `ADD COLUMN` ×3 | NULL: a legacy local act's identity is this store's, written at its first export (§6e) |
+| `confirmations.origin_store`, `.origin_user`, `.origin_act_id` (the `act_uid`, §6e) | `ADD COLUMN` ×3 | NULL for every `local` act, legacy or new: its identity is this store's, DERIVED at each export (§6e, v7) |
 | `confirmations.act_seq` (with `origin_store`, the position, §6f) | `ADD COLUMN` | **NULL = an UNKNOWN position**, never synthesized (§6f) |
 
 **Not in this step:** `replies` is created whole by 0047's own step (its act columns are this inventory's, §2's table),
-and 0044's undo rows by the 0018 amendment's step. Without the registry backfill, a pre-upgrade confirmation's id could
+and 0044's outcome rows, which record an undo as `undone_at` and `undo_request_ref` (0044 §4g), by the 0018 amendment's step. Without the registry backfill, a pre-upgrade confirmation's id could
 be reused by a reply. The step's number is assigned at implementation: the 0018 amendment also takes a schema step,
 and the two are ordered there.
 
@@ -596,7 +596,13 @@ store recorded it, copied from the file's `recorded_correlation_id` when present
 **Portable identity.** `act_uid = (origin_store, origin_user, origin_act_id)`: the store that first recorded the act
 (its minted `local_origin()`), the user it was recorded for there, and its row id there. It is set once, when a
 `local` act is first exported, and carried unchanged on every later hop. A store never mints an `act_uid` for an act
-it did not originate. 0044's portable outcome rows use the same form:
+it did not originate. *v7, how “set once” is met:* for a `local` act (a confirmation or a reply) every component is
+fixed for the row's life: `origin_store` is this store's `local_origin()`, durable (0006 I11) and rewritten by no writer, and
+`origin_user` and `origin_act_id` are the row's own `user_id` and `id`, which no writer updates. So the export
+DERIVES the identity at every export rather than writing it at the first: the bytes are identical on every
+export, and export stays read-only. A `local` row's `origin_*` columns stay NULL; only an `imported` or `restored`
+act stores its identity. **If any writer ever updates a local act's `id` or `user_id`, or the store's origin, the
+equivalence fails**, and the identity must be written at the first export instead. 0044's portable outcome rows use the same form:
 `outcome_uid = (origin_store, origin_user, plan_id, edge_ref)`. **Both are serialised as a JSON array of strings
 (UTF-8, no whitespace) before hashing**, never joined with a separator, so no two distinct tuples share a key.
 
@@ -684,9 +690,11 @@ rule, as the 0041 amendment v1.5 binds it). **Migration outcomes travel under th
 
 **An act's position** is `pos = (origin_store, act_seq)`, with `origin_user` carried beside it as provenance.
 `act_seq` comes from a **store-wide counter that is never reset**: one counter row per store, incremented by every act
-write (`confirmations`, `replies`, 0044's undo writes) inside the verb's own `BEGIN IMMEDIATE` transaction, which is
+write (`confirmations`, `replies`) inside the verb's own `BEGIN IMMEDIATE` transaction, which is
 0029's V-TXN-ALLOC discipline. 0029's own counter is untouched. The position is recorded on the row at write,
-exported, and carried unchanged on every hop.
+exported, and carried unchanged on every hop. **0044's undo is not an act** (the owner, 2026-10-14): it is a verb of
+the request registry (§6g), but it writes no act row, takes no `act_seq` and has no `act_uid`; 0044 §4g records it
+on the outcome row, store-local, and no rule here orders it.
 - Two positions are **ordered iff their `origin_store` is equal**, across users too. Otherwise they are
   **incomparable**.
 - Nothing is inferred from a caller's date, from `written_at` or from any clock. No position is synthesized, and an
