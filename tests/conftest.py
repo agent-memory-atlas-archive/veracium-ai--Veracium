@@ -31,7 +31,34 @@ if os.environ.get("VERACIUM_FORBID_NETWORK") == "1":
     socket.socket = _ForbiddenSocket
 
 
+import tempfile
+
 import pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _suite_tempdir(tmp_path_factory):
+    """Every temporary name the suite mints lands under pytest's own basetemp, which pytest prunes (it keeps the last
+    three runs), never in the system temp directory, which nothing prunes. Measured 2026-10-14 with the suite run under
+    a private TMPDIR: one full run left 694 entries (97 MB) outside pytest's directory — test stores, exports, package
+    copies, mutant files from bare `mkdtemp`/`mkstemp` calls in some sixty sites — about 12,000 a day across the
+    seats' runs. b6fa646 (2026-09-16) redirected seven files one by one and recorded the rest as remaining; this is the
+    whole-suite form. Both carriers are set: `tempfile.tempdir` for this process, and `TMPDIR` for the evidence scripts
+    and child interpreters the tests launch (a child resolves its own temp directory from the environment). The
+    per-file redirects (`tempfile.tempdir = tmp_path`, restored to the previous value) still nest inside this one.
+    Each xdist worker gets its own directory under its own basetemp."""
+    d = tmp_path_factory.mktemp("systemp", numbered=False)
+    prev_dir, prev_env = tempfile.tempdir, os.environ.get("TMPDIR")
+    tempfile.tempdir = str(d)
+    os.environ["TMPDIR"] = str(d)
+    try:
+        yield d
+    finally:
+        tempfile.tempdir = prev_dir
+        if prev_env is None:
+            os.environ.pop("TMPDIR", None)
+        else:
+            os.environ["TMPDIR"] = prev_env
 
 
 @pytest.hookimpl(trylast=True)
