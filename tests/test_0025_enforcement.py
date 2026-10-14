@@ -344,8 +344,10 @@ def test_public_counter_projection_is_exact():
     # specs/0037 v16 §4a-iii (0025 §4c amended 2026-09-12): the quote-gated
     # capture path's two counters, present on every path
     procedural = {"procedures", "procedural_refused"}
+    # specs/0019 v7 §4c (INV-N4): the non-user refusal counter, present on every path
+    nonuser = {"nonuser_ungrounded_refused"}
     assert set(r) == (pre_0025 | set(PUBLIC_COUNTERS) | q4_audit
-                      | agreement_counters | outcome | procedural)
+                      | agreement_counters | outcome | procedural | nonuser)
     assert r["extraction_unusable"] is False        # a good answer: present, and False
     assert "retry_calls" not in r
 

@@ -489,34 +489,34 @@
   "line": 243,
   "statement": "return _SITE_UNGROUNDED.fire(False)"
  },
- "ingest.py:ingest_event:310:RAISE": {
+ "ingest.py:ingest_event:314:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0037 §4b (refuse) through site ingest.basis-via-remember",
   "reviewer": "dev",
   "site": "ingest.basis-via-remember",
   "class": "enforcement",
   "key": "ingest.py:ingest_event:RAISE:3",
-  "line": 310,
+  "line": 314,
   "statement": "raise _SITE_BASIS_VIA_REMEMBER.fire(ValueError("
  },
- "ingest.py:ingest_event:371:RAISE": {
+ "ingest.py:ingest_event:375:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0039 §2a (downgrade) through site ingest.instructions-not-a-list",
   "reviewer": "dev",
   "site": "ingest.instructions-not-a-list",
   "class": "enforcement",
   "key": "ingest.py:ingest_event:RAISE:4",
-  "line": 371,
+  "line": 375,
   "statement": "raise _SITE_INSTRUCTIONS_TYPE.fire(ValueError(\"instructions: expected a list\"))"
  },
- "ingest.py:ingest_event:299:RAISE": {
+ "ingest.py:ingest_event:303:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §4 rule 9 (refuse) through site ingest.source-id-required",
   "reviewer": "dev",
   "site": "ingest.source-id-required",
   "class": "enforcement",
   "key": "ingest.py:ingest_event:RAISE:2",
-  "line": 299,
+  "line": 303,
   "statement": "raise _SITE_SOURCE_ID_REQUIRED.fire(SourceIdRequired("
  },
  "mcp_server.py:_closed_set:113:RAISE": {
@@ -4164,40 +4164,40 @@
   "line": 83,
   "statement": "raise SystemExit(\"internal: this veracium verb should never invoke the LLM \""
  },
- "mcp_server.py:main:560:RAISE": {
+ "mcp_server.py:main:563:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:1",
-  "line": 560,
+  "line": 563,
   "statement": "raise SystemExit(f\"veracium-mcp: unknown argument {args[0]!r} (see --help). \""
  },
- "mcp_server.py:main:566:RAISE": {
+ "mcp_server.py:main:569:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:2",
-  "line": 566,
+  "line": 569,
   "statement": "raise SystemExit(\"The MCP server needs the SDK: pip install veracium[mcp]\") from e"
  },
- "mcp_server.py:main:570:RAISE": {
+ "mcp_server.py:main:573:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:3",
-  "line": 570,
+  "line": 573,
   "statement": "raise SystemExit(f\"veracium-mcp: failed to start: {e}\\n\""
  },
- "mcp_server.py:main:582:RAISE": {
+ "mcp_server.py:main:585:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:4",
-  "line": 582,
+  "line": 585,
   "statement": "raise SystemExit("
  },
  "__init__.py:Memory._build_scope_policy:392:RETURN_NONE": {

@@ -36,7 +36,9 @@ def _prime(d, db="t.db"):
     mem = Memory(llm=Fake(), config=MemoryConfig(require_source_id=False, db_path=f"{d}/{db}",  # 0006 v8: opted out — measures records that exist (rule 8 / I3 / I13), not the ingest requirement
                                                  wiki_recompile_after_writes=0))
     mem.remember("u", "USER: I'm vegetarian.", date="2026-06-01")
-    mem.remember("u", "From QuickClaim: you owe $2,400.", date="2026-06-04",
+    # the email's text grounds both extracted triples: 0019 v7 §4c refuses a FLAGGED triple from a non-user event,
+    # and this fixture needs its use_only inference stored to round-trip it
+    mem.remember("u", "From QuickClaim: you owe $2,400. Your manager at Acme approved it.", date="2026-06-04",
                  author=EvidenceAuthor.THIRD_PARTY, event_type="email")
     return mem
 

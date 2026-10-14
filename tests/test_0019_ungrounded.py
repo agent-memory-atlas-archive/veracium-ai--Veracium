@@ -81,8 +81,11 @@ def test_ungrounded_never_refuses_or_demotes(monkeypatch):
             else:
                 monkeypatch.undo()
             mem = _mem(d, [_fab()])
+            # 0019 v7 U1: flag-never-refuse holds for a USER-effective event (a
+            # declared-direct user statement); a non-user-effective event's flagged
+            # triple is refused instead (INV-N1, tests/test_0019_nonuser_refusal.py)
             out = mem.remember("u", "the deadline is not decided yet",
-                               date="2026-08-01")
+                               date="2026-08-01", context=EvidenceContext.direct())
             edges = mem.store.edges("u", active_only=True)
             r = mem.recall("u", "deadline")
             mem.close()
@@ -539,8 +542,15 @@ def test_observation_surfaces():
         rep = mem.introspect("u")
         assert rep["ungrounded"] == 1
         # MCP carries no new field beyond the rendered marker: the tool
-        # surface exposes no "ungrounded" key
+        # surface exposes no "ungrounded" key. The one occurrence allowed is
+        # 0019 v7 §2's operator counter `nonuser_ungrounded_refused`, and only
+        # as a member of `_OPERATOR_ONLY` — the list the tool result STRIPS
+        # (0031 §4d), so it is a removal, never an exposure.
         mcp = (ROOT / "src" / "veracium" / "mcp_server.py")
         if mcp.exists():
-            assert "ungrounded" not in mcp.read_text()
+            from veracium import mcp_server
+            assert "nonuser_ungrounded_refused" in mcp_server._OPERATOR_ONLY
+            text = mcp.read_text()
+            assert text.count('"nonuser_ungrounded_refused"') == 1
+            assert "ungrounded" not in text.replace('"nonuser_ungrounded_refused"', "")
         mem.close()

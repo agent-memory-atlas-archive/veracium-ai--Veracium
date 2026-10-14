@@ -83,12 +83,18 @@ def test_third_party_quarantine_and_the_relay_floor_are_reported():
         db = _seed(f"{d}/t.db")
         llm = Fake({"triples": [{"subject": "org:quickclaim", "relation": "third_party_claim",
                                  "object": "user owes $2,400"}], "episode": "A collection email."})
-        dr = dryrun.run(db, llm, U, "email from quickclaim", author=EvidenceAuthor.THIRD_PARTY,
+        dr = dryrun.run(db, llm, U, "email from quickclaim: you owe $2,400", author=EvidenceAuthor.THIRD_PARTY,  # the text grounds the claim's figure: 0019 v7 §4c refuses a FLAGGED triple from a non-user event
                         event_type="email", source_id="quickclaim-inbox", date="2026-09-03")
         assert dr.usable and len(dr.new_edges) == 1
         e = dr.new_edges[0]
         assert e["quarantined"] and e["provenance.disclosure"] == "quarantined" and dr.result["quarantined"] == 1
-        assert "[quarantined; author=third_party; derived_from=third_party; quarantined, ungrounded]" in dryrun.render(dr)
+        assert "[quarantined; author=third_party; derived_from=third_party; quarantined]" in dryrun.render(dr)
+        # 0019 v7 §4c (INV-N1): the same claim from an email whose text does NOT ground its figure is FLAGGED, and a
+        # flagged triple from a non-user event is refused and counted, nothing written — the dry run reports that
+        dr_flagged = dryrun.run(db, llm, U, "email from quickclaim", author=EvidenceAuthor.THIRD_PARTY,
+                                event_type="email", source_id="quickclaim-inbox", date="2026-09-03")
+        assert dr_flagged.usable and dr_flagged.new_edges == []
+        assert dr_flagged.result["nonuser_ungrounded_refused"] == 1 and dr_flagged.result["facts"] == 0
         # the 0026 relay floor: a user fact whose note says it was relayed is demoted
         # MENTIONABLE -> USE_ONLY and the counter says so
         llm2 = Fake({"triples": [{"subject": "user", "relation": "has_condition", "object": "needs rest",

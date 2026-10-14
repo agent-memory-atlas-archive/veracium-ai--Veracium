@@ -1352,21 +1352,21 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 299,
+   "line": 303,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 310,
+   "line": 314,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 371,
+   "line": 375,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
@@ -1466,28 +1466,28 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 560,
+   "line": 563,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 566,
+   "line": 569,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 570,
+   "line": 573,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 582,
+   "line": 585,
    "module": "mcp_server.py",
    "qualname": "main"
   },

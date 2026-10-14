@@ -285,6 +285,10 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
     # THIRD_PARTY floor when the caller declared nothing.
     declared = context is not None or derived_from is not None   # a declaration was MADE
     derived_from = _resolve_context(context, derived_from)
+    # specs/0019 v7 §2 (amendment 0045/0019-nonuser-refusal): USER-effective, from the product's own resolved trust —
+    # the effective author is `user` AND the resolved content source is direct (None, EvidenceContext.direct()).
+    # Every other combination, the absent-context floor derived(THIRD_PARTY) included (INV-N3), is non-user-effective.
+    user_effective = author == EvidenceAuthor.USER and derived_from is None
     # specs/0006 §4 rule 9 (v7): with `require_source_id` on, third-party-AUTHORED
     # evidence and DECLARED third-party-derived content must name their source —
     # refused here, before the LLM runs or anything is written. The 0011 §4d
@@ -406,6 +410,7 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
                 # that never parsed a response — present, zero.
                 "instructions_dropped": 0,
                 "subject_refused": 0,          # specs/0025 (amended 2026-09-08): present, zero
+                "nonuser_ungrounded_refused": 0,   # specs/0019 v7 (INV-N4): present, zero on the unparseable path
                 "procedures": 0, "procedural_refused": 0,   # specs/0037 v16: present, zero
                 "quarantined_at_birth": (1 if revoked_at_birth else 0),
                 "birth_revocation_digest": (_birth_digest if revoked_at_birth
@@ -434,6 +439,7 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
     declared.discard("")
     n_instructions_dropped = 0
     n_subject_refused = 0
+    n_nonuser_refused = 0                       # specs/0019 v7 §4c (INV-N1)
     n_procedures = n_procedural_refused = 0     # specs/0037 v16 §4a-iii
     # specs/0039 §2c, the PRIMARY site (matrix rows 3–7, 10): once the answer is a
     # dict (a bare array having been wrapped above), a missing `triples` key or a
@@ -729,6 +735,13 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
         # A failing edge is STORED with the flag — never refused, never
         # demoted, never re-derived (§4d: immutable for the record's life).
         flagged = grounding.ungrounded(obj, event_text, date)
+        # specs/0019 v7 §4c (amendment 0045/0019-nonuser-refusal; INV-N1): a FLAGGED triple from a NON-user-effective
+        # event is REFUSED and counted, nothing written — A9 refuses an inference from a non-user source, and no
+        # declared-direct user statement is refused. A USER-effective event's flagged triple is stored with the flag,
+        # exactly as before (INV-N2).
+        if flagged and not user_effective:
+            n_nonuser_refused += 1
+            continue
         # specs/0026 §3b/§3c (ACCEPTED): the relay-marker scan over this
         # triple's note+object — pure, lexicon-closed, directional by
         # grammar. RESTRICT-ONLY: a restricting match (inbound or
@@ -811,6 +824,8 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
             # specs/0025 (amended 2026-09-08): triples whose SUBJECT is off the
             # closed grammar — dropped, never written under any subject.
             "subject_refused": n_subject_refused,
+            # specs/0019 v7 §4c (INV-N1/N4): flagged triples refused from a non-user-effective event
+            "nonuser_ungrounded_refused": n_nonuser_refused,
             # specs/0023 Q4 (RESOLVED 2026-08-22, per the recorded leaning):
             # the quarantine-at-birth AUDIT facts — the content-free identity
             # digest answers "which source is still writing" from the audit

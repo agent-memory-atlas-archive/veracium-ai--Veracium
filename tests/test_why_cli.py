@@ -51,7 +51,7 @@ def _seed(db):
                  context=EvidenceContext.direct())
     mem.remember(U, "Actually, give me detailed answers", date="2026-09-02",
                  context=EvidenceContext.direct())
-    mem.remember(U, "email from quickclaim", author=EvidenceAuthor.THIRD_PARTY,
+    mem.remember(U, "email from quickclaim: you owe $2,400", author=EvidenceAuthor.THIRD_PARTY,  # the text grounds the claim's figure: 0019 v7 §4c refuses a FLAGGED triple from a non-user event
                  event_type="email", source_id="quickclaim-inbox", date="2026-09-03")
     return mem
 

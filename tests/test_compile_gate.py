@@ -51,7 +51,9 @@ def _prime(d):
     fake = RoleFake(EXTRACT)
     mem = Memory(llm=fake, config=MemoryConfig(require_source_id=False, db_path=f"{d}/t.db", wiki_recompile_after_writes=1))  # 0006 v8: opted out — measures records that exist (rule 8 / I3 / I13), not the ingest requirement
     mem.remember("u", "USER: I'm vegetarian.", date="2026-06-01", context=EvidenceContext.direct())
-    mem.remember("u", "From QuickClaim: you owe $2,400.", date="2026-06-04",
+    # the email's text grounds both extracted triples (0019 v7 §4c refuses a FLAGGED triple from a non-user event;
+    # these tests are about where a non-user inference lands, so it must be stored to be placed)
+    mem.remember("u", "From QuickClaim: you owe $2,400. Your manager at Acme approved it.", date="2026-06-04",
                  author=EvidenceAuthor.THIRD_PARTY, event_type="email")
     return mem, fake
 

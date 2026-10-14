@@ -30,7 +30,9 @@ class Fake:
 
 
 U = "ida"
-CLAIM = {"triples": [{"subject": "org:acme", "relation": "third_party_claim", "object": "user owes $10"}],
+# the claim's object carries no specifics token the event text ("mail") lacks: these tests are about 0006's source
+# binding, and a FLAGGED third-party triple is refused outright under 0019 v7 §4c (INV-N1) before any of it applies
+CLAIM = {"triples": [{"subject": "org:acme", "relation": "third_party_claim", "object": "user owes money"}],
          "episode": "A collection email."}
 FACT = {"triples": [{"subject": "user", "relation": "likes", "object": "tea"}], "episode": "A chat."}
 

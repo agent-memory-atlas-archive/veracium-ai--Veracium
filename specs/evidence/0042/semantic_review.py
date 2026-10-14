@@ -103,7 +103,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("store/revocation_sweep.py", 172): "control-flow", ("store/revocation_sweep.py", 192): "control-flow",
     ("store/schema_version.py", 1688): "argument-check", ("store/schema_version.py", 1862): "control-flow",
     ("telemetry.py", 466): "control-flow", ("telemetry.py", 487): "control-flow", ("telemetry.py", 514): "control-flow",
-    ("mcp_server.py", 560): "cli-usage", ("mcp_server.py", 566): "cli-usage", ("mcp_server.py", 570): "cli-usage", ("mcp_server.py", 582): "cli-usage",
+    ("mcp_server.py", 563): "cli-usage", ("mcp_server.py", 569): "cli-usage", ("mcp_server.py", 573): "cli-usage", ("mcp_server.py", 585): "cli-usage",
     ("source_identity.py", 59): "argument-check", ("_json.py", 43): "control-flow", ("introspect.py", 54): "argument-check",
 }
 REASON_TEXT = {
@@ -179,9 +179,9 @@ e("graph.py", 1201, "graph.strictly-redundant", "0012", "§4c", "withhold")
 e("graph.py", 184, "graph.supersession.receipt-boundary", "0014", "R10", "refuse")
 e("graph.py", 210, "graph.supersession.replay-mismatch", "0014", "§4b", "refuse")
 e("grounding.py", 243, "grounding.ungrounded", "0019", "§4", "downgrade")
-e("ingest.py", 310, "ingest.basis-via-remember", "0037", "§4b", "refuse")
-e("ingest.py", 371, "ingest.instructions-not-a-list", "0039", "§2a", "downgrade")
-e("ingest.py", 299, "ingest.source-id-required", "0006", "§4 rule 9", "refuse")
+e("ingest.py", 314, "ingest.basis-via-remember", "0037", "§4b", "refuse")
+e("ingest.py", 375, "ingest.instructions-not-a-list", "0039", "§2a", "downgrade")
+e("ingest.py", 303, "ingest.source-id-required", "0006", "§4 rule 9", "refuse")
 e("mcp_server.py", 113, "mcp.closed-set.author", "0011", "§4d", "refuse")
 e("mcp_server.py", 122, "mcp.closed-set.trust-field", "0011", "§4d", "refuse")
 e("__init__.py", 2074, "memory.correct.inactive-edge", "0011", "§4b", "refuse")

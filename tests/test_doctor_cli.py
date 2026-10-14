@@ -53,7 +53,7 @@ def _seed(db, *, confirm=False):
                  context=EvidenceContext.direct())
     mem.remember(U, "Actually, give me detailed answers", date="2026-09-02",
                  context=EvidenceContext.direct())
-    mem.remember(U, "email from quickclaim", author=EvidenceAuthor.THIRD_PARTY,
+    mem.remember(U, "email from quickclaim: you owe $2,400", author=EvidenceAuthor.THIRD_PARTY,  # the text grounds the claim's figure: 0019 v7 §4c refuses a FLAGGED triple from a non-user event
                  event_type="email", source_id="quickclaim-inbox", date="2026-09-03")
     if confirm:
         pet = next(e for e in mem.store.edges(U) if e.relation == "has_pet")
@@ -364,8 +364,8 @@ def test_third_party_records_without_a_source_id_are_named_and_the_floor_is_not(
             {"triples": [{"subject": "user", "relation": "likes", "object": "tea"}],
              "episode": "A chat with no declared context."},
         ]), config=MemoryConfig(require_source_id=False, db_path=db, wiki_recompile_after_writes=0))  # 0006 v8: opted out — measures records that exist (rule 8 / I3 / I13), not the ingest requirement
-        mem.remember(U, "mail one", author=EvidenceAuthor.THIRD_PARTY, event_type="email", date="2026-09-01")
-        mem.remember(U, "mail two", author=EvidenceAuthor.THIRD_PARTY, event_type="email", date="2026-09-02",
+        mem.remember(U, "mail one: you owe $10", author=EvidenceAuthor.THIRD_PARTY, event_type="email", date="2026-09-01")  # the text grounds the claim's figure: 0019 v7 §4c refuses a FLAGGED triple from a non-user event
+        mem.remember(U, "mail two: you owe $20", author=EvidenceAuthor.THIRD_PARTY, event_type="email", date="2026-09-02",
                      source_id="acme-inbox")
         mem.remember(U, "I like tea", date="2026-09-03")          # the floor: derived_from=third_party, author=user
         edges = {e.object: e for e in mem.store.edges(U, active_only=False, include_quarantined=True)}

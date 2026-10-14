@@ -33,7 +33,7 @@ def _seeded_mem(db):
     ]), config=MemoryConfig(require_source_id=False, db_path=db, wiki_recompile_after_writes=0))  # 0006 v8: opted out — measures records that exist (rule 8 / I3 / I13), not the ingest requirement
     mem.remember("ida", "I have a cat named Miso and I like concise answers")
     mem.remember("ida", "Actually, give me detailed answers")
-    mem.remember("ida", "email from quickclaim", author=EvidenceAuthor.THIRD_PARTY,
+    mem.remember("ida", "email from quickclaim: you owe $2,400", author=EvidenceAuthor.THIRD_PARTY,  # the text grounds the claim's figure: 0019 v7 §4c refuses a FLAGGED triple from a non-user event
                  event_type="email")
     return mem
 

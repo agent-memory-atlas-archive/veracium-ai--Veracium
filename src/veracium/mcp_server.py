@@ -211,6 +211,9 @@ _OPERATOR_ONLY = ("supersessions", "reinforcements",
                   # recorded for v4 to ratify or reverse.
                   "instructions_dropped",
                   "subject_refused",
+                  # specs/0019 v7 §2 (amendment 0045/0019-nonuser-refusal): an operator counter never reaches the
+                  # model (0031 §4d) — stripped with its refusal siblings
+                  "nonuser_ungrounded_refused",
                   # specs/0037 v16 §4a-iii: the quote-gated capture counters, stripped
                   # with their 0025 siblings by the same 0031 §4d argument
                   "procedures", "procedural_refused",
