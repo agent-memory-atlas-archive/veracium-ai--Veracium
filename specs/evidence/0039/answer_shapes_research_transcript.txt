@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 86522c6
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ fbd69be
+# RE-PINNED 2026-10-14 0029 v12 (the reinstatement reason) landed in fbd69be010eebee4bbe403c66620366e2d3101e6: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-14 0013-PA1 stage-2 (the chain postcondition's own classification) landed in 86522c6398ea411ebae9ab6893a4cc5194a9b334: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-14 0013 v33 §4f (0013-PA1, the migration postconditions) landed in 0a89696f48e4c4247e0c54e01b62567983214ad3: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-13 the 0041 notice-binding hotfix landed in 98327c23e5e3f70fac3cfeb071f52468f2855314: bodies byte-identical; the pin moves to the commit that changed src/
