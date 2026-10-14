@@ -50,6 +50,15 @@ the scenarios they govern (S06 setup + mechanism, S10 failure surface).
 dev's to declare — not *bars*, which were mine to set. Supersedes
 `820cabee48112d8e674bfbff1917a0eca22d58d6b8bfebd7a101ff2a147f6f81`.
 
+**4 — 2026-10-14.** ONE expectation changed, by an accepted spec: S02's t3 `reinstated`
+event now carries reason `source_restored`, not null. 0029 v12 §4b-i (the
+reinstatement-reason fold) closes the vocabulary, refuses a NULL on a new write and has
+0022's lift write `source_restored`. The v12 fold missed this frozen carrier, and the
+implementation's first full suite found it. A pre-v12 NULL still reads as
+`source_restored` (§4b-i point 4), but this corpus builds a fresh store, so every
+reinstatement it writes is post-v12. Re-frozen by research; supersedes
+`9974601d85cdcc7f3d459ae6d1a9c3e47206c23e79aa3c485019b9f7bd834867`.
+
 ## What is in it
 
 - **10 named scenarios** with exact expected event sequences AND
@@ -66,8 +75,8 @@ dev's to declare — not *bars*, which were mine to set. Supersedes
 
 ## Freeze
 
-`MANIFEST.json` sha256 **`9974601d85cdcc7f3d459ae6d1a9c3e47206c23e79aa3c485019b9f7bd834867`**
-(amendment 3; supersedes `c4197b598cecf04f…` and `c844523962fecdf8…`, which superseded
+`MANIFEST.json` sha256 **`dd9d67996542687f03f231e732dace772da1beb4685d8278bad8b29827eff555`**
+(amendment 4, 2026-10-14; supersedes `9974601d85cdcc7f…`, amendment 3, which superseded `c4197b598cecf04f…` and `c844523962fecdf8…`, which superseded
 `820cabee48112d8e674bfbff1917a0eca22d58d6b8bfebd7a101ff2a147f6f81` — the
 digest dev recorded in both `## Review closure` sections. That record stands:
 it is the pre-implementation one, and it is what §6a asked for.)

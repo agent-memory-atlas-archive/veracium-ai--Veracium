@@ -1149,7 +1149,17 @@ def _journal_bad_redaction_reason():
     s.close()
 
 
+def _journal_bad_reinstatement_reason():
+    """specs/0029 v12 §4b-i: a `reinstated` write whose reason is outside REINSTATEMENT_REASONS (NULL included)."""
+    s = _store(); s.add_edge(_edge("jn"))
+    with pytest.raises(ValueError):
+        with s._write_txn():
+            s._journal_edge_write(U, "jn", '{"changed": 1}', "{}", kind="reinstated", reason=None)
+    s.close()
+
+
 DECLINES.update({
+    "store.journal.reinstatement-reason": lambda mp: _journal_bad_reinstatement_reason(),            # specs/0029 v12
     "store.redact.target": lambda mp: _raises(ValueError, _store().redact, U, edge_id="no-such-edge", reason="subject_request"),
     "store.redact.both-or-neither": lambda mp: _raises(ValueError, _store().redact, U, edge_id="e", episode_id="ep", reason="subject_request"),
     "store.redact.reason-not-registered": lambda mp: _redact_bad_reason(),

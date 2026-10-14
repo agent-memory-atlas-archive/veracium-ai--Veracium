@@ -790,6 +790,11 @@ ONE shape — the absorbed edge restated (`mutated`) and invalidated
 on content rather than order; sha256
 `9974601d85cdcc7f3d459ae6d1a9c3e47206c23e79aa3c485019b9f7bd834867` is the
 shipped text and the runner pins it. All ten named + nine retained pass.
+**Amendment 4** (2026-10-14, after acceptance, with v12): S02's t3 `reinstated` event's reason, null →
+`source_restored`. That is the one expectation v12 §4b-i changes: a NULL reinstatement is refused, and 0022's lift
+writes `source_restored`. The v12 fold missed this carrier, and dev's T1 suite found it. From this date sha256
+`dd9d67996542687f03f231e732dace772da1beb4685d8278bad8b29827eff555`
+is the shipped text and the runner's pin, in place of amendment 3's.
 *Implementation note (2026-09-05):* the carrier's code moved 0031's LIVE
 attribute-partition row (an implementation consideration under its
 governing rule, not a design change): dotted/dataflow 4,604 → 4,687,

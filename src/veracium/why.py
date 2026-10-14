@@ -49,6 +49,7 @@ from __future__ import annotations
 import json
 
 from .redaction import MARKER as _REDACTION_MARKER
+from .store.base import LEGACY_REINSTATEMENT_REASON
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -145,8 +146,11 @@ def gather(store, user_id: str, edge_id: str) -> Biography:
                     state, note = {}, "state not JSON"
                 else:
                     note = None
+            # specs/0029 v12 (INV-J2): a `reinstated` event written before v12 carries NULL and reads as
+            # `source_restored` — the only reinstatement that existed; the stored row is never rewritten
+            reason = (LEGACY_REINSTATEMENT_REASON if ev.kind == "reinstated" and ev.reason is None else ev.reason)
             bio.events.append({"seq": ev.seq, "txn": ev.txn, "kind": ev.kind,
-                               "reason": ev.reason, "at": ev.recorded_at,
+                               "reason": reason, "at": ev.recorded_at,
                                "changed": (_diff(prev, state) if ev.kind == "mutated"
                                            else [("content", None, "redacted")] if ev.kind == "redacted" else []),
                                **({"note": note} if note else {})})

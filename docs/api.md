@@ -409,7 +409,9 @@ source-restriction verdict), its lineage both ways (`supersedes` and
 absorbed into it and what it was absorbed into (the 0014 contribution ledger),
 supersessions refused with it on either side, then a timeline: every
 transaction-time journal event (0029: created / mutated / invalidated /
-reinstated, with the invalidation's reason and, for a mutation, the fields
+reinstated, with the invalidation's reason, the reinstatement's (0029 v12:
+`source_restored` for a lifted source revocation; an event written before v12
+carries none and reads as `source_restored`) and, for a mutation, the fields
 that moved), every confirmation (who, when, by which call path), every
 outcome judgment (0009). `--json` returns the same as one document.
 `veracium why --user X --find TEXT` lists the edges whose subject, relation or

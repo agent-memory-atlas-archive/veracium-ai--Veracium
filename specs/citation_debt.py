@@ -223,10 +223,6 @@ CITATION_DEBT: dict = {
     },
     "0029": {
         "test_a_failed_commit_discards_the_import_counts": "unclassified_at_generation",
-        "test_every_reinstated_writer_and_reason_reader_is_censused": "owed_at_implementation: v12 V-REINSTATE-WRITERS (INV-J3), folded from amendment 0044/0029-reinstated-reason at design acceptance",
-        "test_pre_v12_null_reinstatement_reads_source_restored_and_is_not_rewritten": "owed_at_implementation: v12 V-REINSTATE-LEGACY (INV-J2), folded from amendment 0044/0029-reinstated-reason at design acceptance",
-        "test_reinstated_reason_is_closed_and_an_invalid_one_unwinds_the_write": "owed_at_implementation: v12 V-REINSTATE-REASON (INV-J1), folded from amendment 0044/0029-reinstated-reason at design acceptance",
-        "test_reinstatement_reason_leaves_reconstruction_verbatim": "owed_at_implementation: v12 V-REINSTATE-VERBATIM, folded from amendment 0044/0029-reinstated-reason at design acceptance",
         "test_the_duplicate_race_raises_at_the_insert_not_the_commit": "unclassified_at_generation"
     },
     "0030": {

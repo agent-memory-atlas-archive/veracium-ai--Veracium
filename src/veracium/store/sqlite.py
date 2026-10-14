@@ -27,7 +27,7 @@ from ..schema import (ConsolidationOp, ConsolidationOutputDraft, ConsolidationSt
                       SupersessionPlan, SupersessionRefusal, SupersessionResult,
                       is_historical_id, to_historical_id,
                       WIKI_RETAINING_REASONS, DISPOSITIONED_REASONS, as_utc_required)
-from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState,
+from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS,
                    DESTINATION_CHANGED, HEAD_MOVED, LEASE_MAX, NON_QUIESCENT,
                    PLAN_STALE, ReceiptSchemaBoundaryError, Store,
                    SupersessionIntegrityError)
@@ -72,6 +72,7 @@ _SITE_EPISODE_RETIRED_REASON = declare_site("store.episode.retired-reason-not-re
 _SITE_IMPORT_REASON = declare_site("store.import.reason-not-registered")
 _SITE_REDACTED_REASON = declare_site("store.redacted-reason.not-a-redaction")
 _SITE_JOURNAL_REDACTION_REASON = declare_site("store.journal.redaction-reason")
+_SITE_JOURNAL_REINSTATEMENT_REASON = declare_site("store.journal.reinstatement-reason")   # specs/0029 v12 §4b-i
 _SITE_IMPORT_ATTESTED = declare_site("store.import.attested-redaction")     # tranche 4b: INV-11 at the import boundary
 _SITE_READ_OUTPUT_NOT_VISIBLE = declare_site("store.read.output-not-visible", declines=False)
 _SITE_READ_INPUT_CLAIMED = declare_site("store.read.input-claimed", declines=False)
@@ -141,7 +142,7 @@ EDGE_WRITE_SITE_RULINGS = {
                   "`invalidated`, reason validated against DISPOSITIONED_REASONS"},
     "_reinstate_edge_row": {
         "ruling": "the SOLE active=1-restoring writer; journals with the site "
-                  "hint `reinstated`, reason NULL"},
+                  "hint `reinstated`, reason `source_restored` (specs/0029 v12)"},
     "_recompute_edge_row": {
         "ruling": "the fourth site (R1-4): rewrites valid_from/observed_at/"
                   "confidence; journals on the FULL-STATE delta (mutated)"},
@@ -303,9 +304,11 @@ class SqliteStore(Store):
         serialization changed → `mutated`, or the site's `active`-flip hint;
         prior present and bytes unchanged → NO event (the full-state trigger
         basis, F4). `baseline` is the migration's kind and refused here.
-        `reason` is non-NULL iff kind == invalidated and must be one of the
-        seven DISPOSITIONED_REASONS — an unregistered reason refuses the
-        WRITE (the exception unwinds the transaction). Returns the kind
+        `reason` is non-NULL iff kind is invalidated (one of the seven
+        DISPOSITIONED_REASONS), redacted (REDACTION_REASONS) or reinstated
+        (REINSTATEMENT_REASONS, specs/0029 v12 — NULL included, refused); an
+        unregistered reason refuses the WRITE (the exception unwinds the
+        transaction). Returns the kind
         journaled, or None. specs/0041 §4c: a `redacted` write is journaled
         even when the bytes did not move (a record that arrived already
         carrying the marker, §4g) — the redaction is the write."""
@@ -340,6 +343,15 @@ class SqliteStore(Store):
                     raise _SITE_JOURNAL_REDACTION_REASON.fire(ValueError(
                         f"redaction reason {reason!r} is not one of {_redaction.REDACTION_REASONS} — "
                         f"the write is refused (specs/0041 §11.2, D1)"))
+        elif kind == "reinstated":
+            # specs/0029 v12 §4b-i (INV-J1): WHY the edge came back, from the closed vocabulary; NULL on a new write is
+            # refused like any unregistered reason, and the raise unwinds the whole transaction — the row's
+            # reinstatement with it
+            with _SITE_JOURNAL_REINSTATEMENT_REASON.consult():
+                if reason not in REINSTATEMENT_REASONS:
+                    raise _SITE_JOURNAL_REINSTATEMENT_REASON.fire(ValueError(
+                        f"reinstatement reason {reason!r} is not one of {REINSTATEMENT_REASONS} — the write is "
+                        f"refused (specs/0029 v12 §4b-i)"))
         else:
             reason = None
         alloc = self._txn_alloc
@@ -857,7 +869,8 @@ class SqliteStore(Store):
         new_json = edge.model_dump_json()
         self._conn.execute("UPDATE edges SET active=1, json=? WHERE id=?",
                            (new_json, edge_id))
-        self._journal_edge_write(row[1], edge_id, new_json, row[0], kind="reinstated")
+        self._journal_edge_write(row[1], edge_id, new_json, row[0], kind="reinstated",
+                                 reason="source_restored")   # specs/0029 v12: 0022's lift restores a revoked source
         self._conn.execute("DELETE FROM wiki WHERE user_id=?", (row[1],))
 
     def _reinstate_episode_row(self, episode_id: str) -> None:

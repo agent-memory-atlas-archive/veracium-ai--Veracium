@@ -43,7 +43,9 @@ MANIFEST = HERE / "MANIFEST.json"
 # amendment 2 (2026-09-05): the nine retained v2 scenarios given expectations +
 # pass criterion (5) — c4197b598cecf04f…; amendment 3 (same day): V05 corrected to
 # ONE shape, three events, one batch, payloads pinned (the executed absorption).
-MANIFEST_SHA256 = "9974601d85cdcc7f3d459ae6d1a9c3e47206c23e79aa3c485019b9f7bd834867"
+# amendment 4 (2026-10-14): S02's t3 reinstated reason null -> "source_restored" (0029 v12 §4b-i, research's
+# re-freeze; the v12 fold had missed this frozen carrier). Supersedes 9974601d85cdcc7f….
+MANIFEST_SHA256 = "dd9d67996542687f03f231e732dace772da1beb4685d8278bad8b29827eff555"
 
 sys.path.insert(0, str(ROOT / "src"))
 from veracium import EvidenceAuthor, SqliteStore, graph                # noqa: E402
@@ -168,7 +170,7 @@ def s02():
     return {"events": events, "checks": {
         "sequence": seq == [("t1", "created", "E1", None),
                             ("t2", "invalidated", "E1", "revoked_source"),
-                            ("t3", "reinstated", "E1", None)],
+                            ("t3", "reinstated", "E1", "source_restored")],   # 0029 v12 §4b-i (amendment 4)
         "K=t2 recovers invalidated_at + reason the live row no longer carries":
             mid["invalidation_reason"] == "revoked_source" and mid["invalidated_at"] is not None
             and live["invalidation_reason"] is None and live["invalidated_at"] is None,

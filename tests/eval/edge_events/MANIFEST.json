@@ -32,6 +32,12 @@
    "supersedes_sha256": "c4197b598cecf04f548fe818f6fea6e27ca83a34ab8943a4ef74d924e2eab40c",
    "utc": "2026-09-05",
    "what": "V05 (absorb) CORRECTED \u2014 amendment 2 had it wrong, and the error was mine reading the spec, not a gap in the spec. \u00a74b's `mutated` row says 'absorption restate' and its `created` row says 'insert_incoming, absorption survivor'; those name two DIFFERENT EDGES, and I read them as two fates of one. The restate is the ABSORBED PRIOR (note extended with `absorbed_by:<survivor>`), the survivor IS the incoming and is new by construction (graph.py:426, 'The survivor IS the incoming (a NEW row)'). So there is ONE shape, not two cells: three events in one txn \u2014 absorbed mutated, absorbed invalidated/absorbed_duplicate, survivor created. Amendment 2's cell (a) named a path that does not exist and its cell (b) omitted the absorbed edge's restate. The correction REDUCES the bar: an 'exhaust the class' instinct manufactured a second cell for a path there was no evidence for, which is the same over-broad error in a bar that it would be in a claim. Ordering within the batch is still not asserted; instead the PAYLOADS are pinned (\u00a74a's post-mutation-state rule), which constrains the sequence using what the spec does determine. Also records dev's V08 import mechanism, which closes the short-circuit confound research flagged."
+  },
+  {
+   "n": 4,
+   "supersedes_sha256": "9974601d85cdcc7f3d459ae6d1a9c3e47206c23e79aa3c485019b9f7bd834867",
+   "utc": "2026-10-14",
+   "what": "S02's t3 `reinstated` event: reason null -> \"source_restored\". ONE expectation changed, and it is accepted 0029 v12's, not a reading of mine: \u00a74b-i point 2 refuses a `reinstated` write whose reason is NULL, and point 3 makes 0022's lift (S02's t3 writer, `_reinstate_edge_row`) write `source_restored`. Under v12 the old expectation is a refused write, so it could no longer pass. The v12 fold (research's, adopted by dev) missed this carrier; dev's T1 suite found it (S02: ['sequence']). Point 4 is unaffected: a NULL written BEFORE v12 still reads as `source_restored` and is never rewritten, and this corpus builds a fresh store, so every reinstatement it writes is post-v12. Swept: no other frozen artifact in the tree or in research expects a `reinstated` reason of null; the runner's s02 tuple is dev's, moved with T1."
   }
  ],
  "classification_cells_owned_by_0030": [
@@ -285,7 +291,7 @@
     {
      "edge": "E1",
      "kind": "reinstated",
-     "reason": null,
+     "reason": "source_restored",
      "txn": "t3"
     }
    ],

@@ -1075,6 +1075,9 @@ spec owns are named there and specified in §6a above. Dev owns the builder
 expectation changed); 2 (`c4197b598cecf04f…`, the nine retained v2 scenarios
 scored, criterion (5)); 3 (`9974601d85cdcc7f3d459ae6d1a9c3e47206c23e79aa3c485019b9f7bd834867`,
 V05 corrected to the one executed absorption shape) — the shipped text.
+Amendment 4 (2026-10-14, after acceptance, with 0029 v12: S02's t3 `reinstated` reason null →
+`source_restored`; `dd9d67996542687f03f231e732dace772da1beb4685d8278bad8b29827eff555`)
+is the shipped text from that date, in place of 3.
 *Implementation note (2026-09-05):* the classifier package
 (`src/veracium/asof/`) and the store's current-state derivation moved 0031's
 LIVE attribute-partition row (an implementation consideration under its

@@ -133,6 +133,14 @@ EVENT_KINDS: tuple = ("created", "mutated", "invalidated", "reinstated", "baseli
                                      # 0029 V-KIND derives the vocabulary from the mutator surface, and redact() is a mutator
 
 
+# specs/0029 v12 §4b-i (INV-J1, folded from amendment 0044/0029-reinstated-reason): a `reinstated` event carries WHY
+# the edge came back, from this closed vocabulary, validated at the emission choke point. `source_restored` is 0022's
+# revocation lift; `arity_reclassified` is RESERVED for 0044's restoration (its only writer; V-REINSTATE-WRITERS
+# refuses it from any other site). A pre-v12 NULL reads as `source_restored` and is never rewritten (INV-J2).
+REINSTATEMENT_REASONS: tuple = ("source_restored", "arity_reclassified")
+LEGACY_REINSTATEMENT_REASON = "source_restored"
+
+
 class EdgeEvent(NamedTuple):
     """One journal row (§4a), typed, in `seq` order. `state` is the edge's FULL
     canonical serialization AFTER the mutation, as VERBATIM TEXT — never parsed
