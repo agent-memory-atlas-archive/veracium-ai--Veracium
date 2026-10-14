@@ -2,15 +2,16 @@
 
 Spec-Status: accepted
 Spec-Requires: 0007, 0013, 0016
+Folds: 0044/0018-data-migration
 
 | | |
 |---|---|
 | **Author / session** | dev |
-| **Version** | **v6 (ACCEPTED)** — EXTERNAL ROUND 4: **APPROVED FOR ACCEPTANCE under the finite-acceptance rule; the frozen surface is I13–I23** (total preflight · the exact retry sequence · the result truth table · exact attestation · loud audit failures · reason-only resolution evidence · the CLI contract · the terminal-domain split · total routing · the fingerprint encoding · the closed readback carrier). v6 = v5 + the four same-commit CLOSURE OBLIGATIONS, each demonstrated in this revision: (1) the R3-2 sweep COMPLETED — the §2c cell's test clause now carries I18's two-condition expectation (the description half was fixed in v5, the test half still said "no authority"); (2) exactness made RECURSIVE — `ReadbackResult` requires `type(facts) is TerminalFacts` and invokes `TerminalFacts.problems(facts)` UNBOUND (the reviewer's dynamic-validator subclass probe is the named regression), and `PreflightResolution` exact-types every scalar before any comparison (`resolved_base=True` refuses; hostile `str` subclasses refuse) — I18/I23 extended; (3) read-level failure TOTALITY — `malformed(problems)` is the total read-failure arm (`read-failed: <class>` bounded entries; forced-read-failure regression), and the `ReadbackResult` row is IN §7a (v5 had put it in §2 while claiming §7a complete); (4) the R3-5 output sweep FINISHED — the false "store not accessed" clause removed (the preflight reads the manifest), and §4g/I19 enumerate the five package routes. The reviewer's verification: the corrected fingerprint EXECUTED and matched an independent encoder; the suite delta reconciled exactly; B3-1 closed. **Acceptance is ATOMIC with 0016 v18 (this commit flips both).** *(v5 history: external round 3 — 5+1 folded: the executable fingerprint via `identity(manifest())`, the swept §2c/I14 carriers, the constructed `ReadbackResult`, the pre-mint package route, the MCP gate-scope correction.)* |
+| **Version** | **v7 — THE DATA-MIGRATION FOLD (amendment `0044/0018-data-migration`, v4, sha16 `c09a4aed2db848a9`).** Its design was accepted with 0044 at round 4 of the 0044 package (verdict 2026-10-13: I24–I32, with I13–I23 kept), and the owner ruled “Accept now, fold next” (2026-10-14). It adds a per-user data-migration operation BESIDE the release orchestrator, which it leaves untouched. Folded as §4i, labelled by the amendment's own section numbers so its internal references resolve; pointers added at §2, §6 and §8. Its reach rows are re-derived at `af1e564`. Not folded: its review brief, open questions and version history. Prior: **v6 (ACCEPTED)** — EXTERNAL ROUND 4: **APPROVED FOR ACCEPTANCE under the finite-acceptance rule; the frozen surface is I13–I23** (total preflight · the exact retry sequence · the result truth table · exact attestation · loud audit failures · reason-only resolution evidence · the CLI contract · the terminal-domain split · total routing · the fingerprint encoding · the closed readback carrier). v6 = v5 + the four same-commit CLOSURE OBLIGATIONS, each demonstrated in this revision: (1) the R3-2 sweep COMPLETED — the §2c cell's test clause now carries I18's two-condition expectation (the description half was fixed in v5, the test half still said "no authority"); (2) exactness made RECURSIVE — `ReadbackResult` requires `type(facts) is TerminalFacts` and invokes `TerminalFacts.problems(facts)` UNBOUND (the reviewer's dynamic-validator subclass probe is the named regression), and `PreflightResolution` exact-types every scalar before any comparison (`resolved_base=True` refuses; hostile `str` subclasses refuse) — I18/I23 extended; (3) read-level failure TOTALITY — `malformed(problems)` is the total read-failure arm (`read-failed: <class>` bounded entries; forced-read-failure regression), and the `ReadbackResult` row is IN §7a (v5 had put it in §2 while claiming §7a complete); (4) the R3-5 output sweep FINISHED — the false "store not accessed" clause removed (the preflight reads the manifest), and §4g/I19 enumerate the five package routes. The reviewer's verification: the corrected fingerprint EXECUTED and matched an independent encoder; the suite delta reconciled exactly; B3-1 closed. **Acceptance is ATOMIC with 0016 v18 (this commit flips both).** *(v5 history: external round 3 — 5+1 folded: the executable fingerprint via `identity(manifest())`, the swept §2c/I14 carriers, the constructed `ReadbackResult`, the pre-mint package route, the MCP gate-scope correction.)* |
 | **Status** | *narrative only — canonical is the `Spec-Status:` line* |
 | **Internal reviewers** | research — round 1 RETURNED + folded (v2); re-review CLEARED 2026-08-13. *(v2 history: F1 readback reconciliation — refined by external R1-4; F2 sections inlined; F3 the `PreflightResolution` §2c row + reason-labeling pin.)* |
 | **External review** | **ROUND 4: APPROVED FOR ACCEPTANCE** (2026-08-13, package `0018-v5-20260813T2202Z.tar.gz` sha `107e7720…`) — findings 3(int)/7/9+1/5+1/0; the four closure obligations folded same-commit with the flip |
-| **Decision + date** | **ACCEPTED 2026-08-13** — external round 4, under the finite-acceptance rule; the frozen surface is I13–I23; ATOMIC with `0016` v18 (commit `32faaa8`). *(Row filled 2026-08-22 — the audit also found this round's VERDICT was never recorded in `specs/reviews.py`; recorded now.)* |
+| **Decision + date** | **ACCEPTED 2026-08-13** — external round 4, under the finite-acceptance rule; the frozen surface is I13–I23; ATOMIC with `0016` v18 (commit `32faaa8`). *(Row filled 2026-08-22 — the audit also found this round's VERDICT was never recorded in `specs/reviews.py`; recorded now.)* **v7, 2026-10-14:** the amendment `0044/0018-data-migration`, accepted with 0044 at round 4, folded on the owner's ruling “Accept now, fold next”. |
 | **Path** | full |
 
 ---
@@ -98,6 +99,8 @@ and the marked 0013 amendments:
 | `MigrationAuditReadError` | frozen, validated carrier {`operation_id`, `failure` ∈ {missing, malformed, mismatched}, `outcome`, `derived_resulting_state` — from the frozen outcome→states map, labeled derived} — constructed by the ORCHESTRATOR, which holds the kernel outcome (§4f, R2-5) | the CLI's exit-3 stderr; hosts |
 | `ReadbackResult` | the closed readback sum carrier (§4f, external R3-4): NamedTuple {`kind` ∈ {record, absent, malformed}, `facts: Optional[TerminalFacts]`, `problems: tuple[str, ...]`} — cross-field laws constructor-enforced, problems immutable/capped, exact-type admitted | `read_terminal` → the orchestrator's §4f routing |
 | CLI `migrate` | gains `--i-have-quiesced` + `--backup REF`; exits 0/1/2 and **3 = the loud-escape class (`MigrationAuditWriteError` / `MigrationAuditReadError` / `PackageConsistencyError`)** | operators; `tests/test_migrate_cli.py` re-dispositioned §7a |
+
+**v7:** a per-user data-migration operation is added beside the orchestrator, with its own schema step, result carrier, receipt and `doctor` check (§4i.2); the orchestrator, `MigrationResult` and I13–I23 are untouched.
 
 ## 2c. Untrusted inputs — REQUIRED, blocking
 
@@ -507,6 +510,266 @@ authority.
 > (record | absent | malformed); raises nothing; the initiating orchestrator
 > owns every raise decision, and facts are never inferred from the label.
 
+---
+
+## 4i. The per-user data-migration operation (v7, amendment `0044/0018-data-migration`)
+
+> **What this section adds:** `run_data_migration`, a per-user data-migration operation BESIDE the release orchestrator (which §4a–§4h keep unchanged, with I13–I23), for 0044's restoration; its closed result carrier, its receipt read, `doctor`'s `data-migration` check, and the v15 → v16 schema step that creates its tables. **Within this section, a reference to “§1”–“§8” or “§4a”–“§4f” means the subsection labelled with that number here** (the amendment's own numbering, kept so its references resolve); a reference to 0018's own sections says “0018”.
+
+### 4i.1 Why (the amendment's §1)
+
+0044 restores rows that a superseded arity rule retired, and names each in a receipt (the owner's (b), 2026-10-10).
+Round 1 found that "once per user" had no execution contract (R1-03): the accepted 0018 orchestrator short-circuits a
+current store (`current`, no effect), its kernel migration is ONE store transaction, its `MigrationResult` table is a
+closed domain (I15), and it takes no registry — while 0044 needs per-user transactions, resumability, a durable
+receipt, and the host's effective registry (R1-06).
+
+**Alternatives rejected.** *Extend the orchestrator* — amends frozen I15 and §4a's interception rule and couples a
+multi-transaction operation to a single-transaction kernel (rejected by 0018's owner). *Do it inside the schema step*
+— a 0013 step cannot see the host's registry. *Make it mandatory at open* — the owner chose optional (§5).
+
+### 4i.2 Field contracts (the amendment's §2)
+
+| site | change |
+|---|---|
+| 0013's schema-step chain (`_apply_forward`, `migration.py` L105) | **gains step v15 → v16**: creates `migration_run` (each row naming the `op_id` that committed it), `migration_outcome`, `reclassification_plan`, the plan header (0044 §4e, with the `op_id` that wrote it), `migration_op` (the admission record, §4b, v4), and the two inventories, which it WRITES (§4a, R2-01); stamps `arity_effective_at` (the step's commit time). One transaction, through `migrate_store` — 0013's existing contract, unchanged |
+| `run_data_migration` *(new)* | §4b |
+| `DataMigrationResult` *(new, closed)* | §4c |
+| `data_migration_receipt` *(new, read-only)* | §4d |
+| `doctor` (`doctor.py`) | **gains a check `data-migration`** (§4e) |
+| `run_release_migration`, `MigrationResult`, I13–I23 | **untouched** |
+
+### 4i.3 Untrusted inputs (the amendment's §2c)
+
+| uncontrolled input | empty | malformed | unrecognised | adversarial | **invariant** |
+|---|---|---|---|---|---|
+| `path` | refused (0018's preflight cells) | same | same | same — the shared opening path, unchanged | 0018 I13 (reused, not amended) |
+| `host_attestation` (`MigrationAttestation`, exact-typed, `release_migration.py` L586) | refused (0018 I16) | refused | refused | a coerced or duck-typed attestation is refused, as 0018 requires | I16 (reused) |
+| `op_id` (host-supplied; v4) | refused | outside §6c's caller grammar → refused AT ENTRY, before any read or write, with no result constructed (0008 C9's discipline; §4c's constructor row 8 is the same rule at the carrier) | — | a held id with different inputs → `op-id-conflict` (§4b.1b) | **I32** |
+| `registry` (the host's effective relation registry) | refused — the plan cannot be made without it | refused by 0025's validator | — | a registry that changes between the plan and a later call: the plan is written ONCE per store and reused; a second call with a different registry is refused with both digests named | **I25** |
+| data written by an older version | — | — | — | the eligibility rules (0044 §4f); never re-derived from episodes | 0044 |
+
+### 4i.4 Assertions about reach (the amendment's §2c-ii)
+
+Commands run from the repository root at `af1e564` (research, 2026-10-14). **READ** = the cited lines or signature.
+
+| # | assertion | command | result |
+|---|---|---|---|
+| 1 | the orchestrator takes no registry | `grep -n "def run_release_migration" src/veracium/store/release_migration.py` | READ: `(path, *, host_attestation)` |
+| 2 | the kernel migration takes no registry | `grep -n "def migrate_store" -A2 src/veracium/store/migration.py` | READ: `(path, *, audit_sink=…)` |
+| 3 | the store is at schema v15 | `grep -n "^SCHEMA_VERSION" src/veracium/store/schema_version.py` | READ: `SCHEMA_VERSION = 15` |
+| 4 | 0018's result table is a closed domain | `grep -n "rejects every carrier not in the table below" specs/0018-*.md` | READ: L307 in this document as folded (L304 before the fold), §4e (the sentence continues "— the table IS the domain" on the next line) |
+
+### 4i.5 Trust classes, authorization and scope (the amendment's §3 and §3b)
+
+n/a for the operation itself — it reads no trust class and writes none: each restoration is 0044's row operation,
+whose matrix (0044 §3) governs. The schema step creates empty tables and a timestamp.
+
+Host-only (a store path and an attestation); not MCP. Per user inside; no cross-user effect. The receipt read
+returns one user's outcomes.
+
+**Why 0018's quiescence attestation, for an optional operation (dev's question).** Not for correctness: per-user
+`BEGIN IMMEDIATE` is correct online — a revocation committed before a user's transaction is read under the lock
+(0044 §4f step 2), and one committed after reaches the now-active row through the revocation sweep. The reason is the
+attestation's **backup reference**: this is a bulk restoration of a known SUPERSET (correctly replaced values come
+back), and a pre-run backup is the only whole-store undo. **Kept (D3, dev as 0018's owner, 2026-10-11).** *The trade,
+stated: an online variant without the attestation would be cheaper and correct, but would lose the bulk undo for a
+host whose receipt shows the superset went worse than expected; the per-row undo is the only other way back. Because
+the operation is optional and run deliberately, asking for a backup at that moment is proportionate. *The attestation is a host ASSERTION with a backup reference, not proof that the backup is usable (round 2).* §9 asks the
+reviewer whether an online variant should ALSO exist (not blocking).*
+
+### 4i.6 Behaviour (the amendment's §4)
+
+##### 4a. The schema step v15 → v16
+
+Creates the feature's tables and records `arity_effective_at`. **In the same transaction it writes the two
+inventories (R2-01; 0044 §4f):** `arity_inventory`, every retirement that is at that moment
+`superseded` under the three default relation names, as `(edge_id, user_id, pre_invalidated_at, pre_reason)`; and
+`refusal_inventory(refusal_id, user_id)`, the `supersession_refusals` rows that exist. They are the operation-era boundary: a retirement is old-policy iff it was
+committed before this transaction, which no timestamp can show. No edge is changed. Ordinary opening of a v16 store is
+unchanged in every other respect.
+
+##### 4b. `run_data_migration(path, *, host_attestation, registry, op_id, plan_only=False) -> DataMigrationResult`
+
+1. **Preflight** through the shared opening path, with 0018's attestation contract: the same refusal cells as
+   0018 §4e's preflight rows, returned in `DataMigrationResult` (§4c). A store below v16 → `requires-schema-step`.
+1b. **Admission of the `op_id` (v4; the owner, 2026-10-13).** `migration_op(op_id, mode, inputs_digest,
+   admitted_at)` is the durable admission record. `mode` is `plan_only` or `restore`. `inputs_digest` is the canonical
+   digest of the operation's inputs: §4b.2's plan-input digest and the mode. *The attestation is not an input: it
+   asserts quiescence at the moment of a call, and a resume legitimately carries a fresh one.* Under the write lock:
+   - an `op_id` with no record → the record is written, in the transaction of the call's first durable write (the
+     plan, or the first user), so a call that is refused before writing leaves no record;
+   - a held `op_id` with an EQUAL `inputs_digest` → the same operation: it RESUMES, retrying exactly the users with no
+     run row under it;
+   - a held `op_id` with a different digest, a different mode included → **`op-id-conflict`**, refused, nothing
+     written. So plan-only and restoration never share an id, and a changed request under a reused id never runs.
+   - **A call that writes nothing writes no record** (`complete`, `already-planned`, `registry-changed`, an all-failed
+     call over an existing header, any refusal). Its `op_id` stays free, and `data_migration_status` returns
+     `unknown-op` for it. This is consistent: such a call changed nothing, so there is nothing to recover.
+
+   *It holds no user content*: an id, a mode, a digest of declarations, a time. Its per-user part is the run rows,
+   which name the `op_id` and are erased with their user under the 0008 amendment's one erasure rule. **Retention:**
+   the record lives as long as the store. It is a few bytes per operation, and keeping it is what makes a reused id
+   conflict instead of silently starting a second operation.
+2. **The plan**, one transaction: if no plan HEADER exists (0044 §4e: uninitialized), write the header and the plan's
+   relation rows from `registry` (0044 §4e's rule: a relation enters
+   the plan only if its declaration is canonically the default) with `effective_at = arity_effective_at` and
+   `registry_digest` — **a digest of the plan's INPUTS only: the canonical declarations of the three reclassified
+   relations** (D2), so an unrelated registry edit never trips it. *v4 (R3-03): for example, changing `works_as` from
+   single to multi leaves the digest equal, and the call is admitted. Hashing the whole registry is the mutant.* **The plan is fixed at its first write (A3):** a
+   later call whose digest differs returns `registry-changed` (refused, both digests named) and changes nothing. *No
+   re-plan operation: a host that later changes those three declarations keeps the plan it first ran under; the
+   refusal is rare because only those three declarations count, and permanent by design.* **The header is written
+   even when no relation qualifies** (initialized-empty, R2-02): that decision is durable, so a later call with the
+   defaults finds it and is admitted or refused by digest, never re-planned. Two concurrent first calls produce one
+   header (0044 §4e's admission).
+3. **The per-user phase:** for each user lacking a `migration_run` row, ONE transaction (`BEGIN IMMEDIATE`): evaluate
+   0044 §4f's eligibility under the lock; apply restorations; write `migration_outcome` rows and the run row; commit.
+   **A failing user does not stop the phase (D1):** its transaction rolls back, it gets no run row, the failure is
+   recorded in the result, and the phase continues with the next user. A re-call retries exactly the users with no
+   run row. *Stopping would let one user's bad data hold every later user's restoration hostage.*
+4. Returns per-user counts and the operation id. **Idempotent:** a second call with the same registry finds every
+   user complete and returns `complete` with zero new effects.
+
+**PLAN-ONLY (`plan_only=True`; the owner, 2026-10-12T23:03Z, Q9).** Steps 1 and 2 only, under the same host
+attestation: the plan header and its relation rows are written (or an existing header is admitted or refused by
+digest), and **nothing is restored**: no per-user phase, no `migration_outcome`, no run row. It is the prerequisite
+0044 §4l's import refusal names, so an importer of a pre-arity file can plan without running the restoration, which
+stays optional. A later call without `plan_only` runs the per-user phase over the plan it finds.
+
+##### 4c. `DataMigrationResult` — a TOTAL, closed carrier (R2-03)
+
+**The carrier:** `outcome`, `store_changed`, `plan_written` (this call wrote the plan header; a REQUIRED field, v4),
+`committed` (the users whose transaction committed in THIS call), `failed` (each failing user, named), and `op_id`. `store_changed` is
+DEFINED as "this call changed durable state": a written header, or ≥1 committed user. It is never inferred from the
+outcome name alone.
+
+| outcome | store changed | meaning |
+|---|---|---|
+| `requires-schema-step` | False | the store is below v16 |
+| 0018's preflight refusal cells (`preflight-refused`) | False | unchanged meanings, the attestation's included |
+| `registry-changed` | False | §4b.2: a header exists with a different input digest |
+| `op-id-conflict` | False | §4b.1b (v4): the `op_id` is held with a different inputs digest or mode; nothing written |
+| `planned` | True | this call wrote the plan header (with its relation rows, possibly none) and restored nothing: `plan_only`, or a full call that found no user to process |
+| `already-planned` | False | `plan_only`: a header with an equal digest already existed; nothing written |
+| `complete` | False | a full call: the header already existed and every user already had a run row; nothing written |
+| `migrated` | True | ≥1 user committed in this call, none failed |
+| `partial` | True | ≥1 user committed and ≥1 user's transaction failed; each failure named; a re-call retries exactly the failed users |
+| `failed` | **= `plan_written`** | 0 users committed and ≥1 failed; each named. **Not `complete`:** v2's table had no row for this, so an all-failed call had no truthful outcome. Its `store_changed` is True exactly when this same call wrote the header, which happens on a first call |
+
+**A validating constructor rejects any other carrier** (the I15 discipline). Stated as a matrix (v4, R3-03), it
+rejects:
+
+| # | rejected carrier |
+|---|---|
+| 1 | an `outcome` outside the ten rows above |
+| 2 | a missing field, `plan_written` included |
+| 3 | `store_changed ≠ (plan_written ∨ committed ≠ ∅)` |
+| 4 | `failed ≠ ∅` on any row but `partial` and `failed`; `failed = ∅` on those two |
+| 5 | `committed ≠ ∅` on any row but `migrated` and `partial`; `committed = ∅` on those two |
+| 6 | `committed ∩ failed ≠ ∅` |
+| 7 | `plan_written` true on `requires-schema-step`, `preflight-refused`, `registry-changed`, `op-id-conflict`, `already-planned` or `complete`; false on `planned` |
+| 8 | an `op_id` outside §6c's caller grammar |
+
+Every row of the outcome table, with its own consistent fields, constructs (the positive control).
+
+**The two lists say different things (v4).** A result's `committed` names the users committed by THIS invocation.
+`data_migration_status(path, op_id)` returns the operation's CUMULATIVE durable commits, over every invocation under
+that `op_id`.
+
+**After an unknown return** (a crash or a lost connection after some commit): every commit is durable on its own, so
+nothing is lost, and the host recovers what happened from durable facts alone. `data_migration_status(path, op_id)`
+returns `{plan_written_by_op, committed}`, read from the header's `op_id` and the run rows that operation wrote (all of
+its invocations), or `unknown-op` when no admission record holds the id. A user
+it did not commit reads as not run: a failure is not durable, and a re-call retries it. **The `op_id` is supplied by
+the HOST** (an idempotency key in §6c's caller grammar), so the host can name the operation it lost the answer to.
+
+*v4: dev's model enumerates **900 schedules**, with the admission record's dimension (a held `op_id`: none, equal,
+different digest or mode), and all ten outcomes are reached. The enumeration is BOUNDED: an earlier call's failures
+are INV-M25's own check (resume after failure), not the enumeration's. The paragraph below is v3's account.*
+*v3: dev's model enumerated 360 cases: v16 or not × attested × the header before (none, equal,
+different) × `plan_only` × 0–3 users × every failing subset. In every case the outcome is a row of this table,
+`store_changed` equals whether durable state changed, the named failures equal the failing users, and the status read
+recovers the commits from durable facts alone. All nine outcomes are reached. Its mutants: `store_changed` set only
+when a user committed (which misreports `planned`), and no `failed` row (an all-failed call read as `complete`).*
+
+##### 4d. `data_migration_receipt(path, plan_id, user_id)`
+
+A read of `migration_outcome` for that user: every considered row with its outcome, pre-state, successor evidence and
+undo state. **Object text is read from the live edge at call time** (a redacted edge returns the marker) (A4). An absent edge
+renders `no longer held` from the outcome row alone. That is defensive: at the pin no public path removes one edge
+while its user is retained (0044 §4g-ii). **User erasure ends the receipt (R2-07):** `forget_user` deletes the
+user's `migration_outcome`, `migration_run`, `arity_inventory` and `refusal_inventory` rows, and their
+request-registry rows, atomically, under the
+0008 amendment's single erasure rule. Replay and once-per-plan end there, and a recreated user restores nothing.
+*v2's “the outcome row itself stays” is withdrawn: it would have kept user-linked metadata past erasure.* *Available
+at any time after the user's commit — a crash after commit loses nothing, because there is no separate delivery
+state (R1-03's "receipt after commit, before delivery").*
+
+##### 4e. `doctor`'s `data-migration` check — two phases (A1)
+
+`doctor` takes no registry, and before the operation runs no plan exists, so the check cannot know eligibility. Its phase is read from the plan HEADER (0044 §4e), so an empty plan is a state of its own.
+
+| phase | predicate | finding |
+|---|---|---|
+| **uninitialized: no plan header** (v16) | members of the schema step's `arity_inventory` (§4a) under the three DEFAULT relation NAMES whose current retirement still equals the inventoried one (0044 §4f's test, v4: no time is compared) — **name-only, and stated as such** | **warn**: `may have values to restore (judged by relation name): run run_data_migration(path, host_attestation=…, registry=…) — see 0044. A host whose registry keeps a custom single-value declaration for these relations will find none eligible.` |
+| **initialized-nonempty, some users without a run row** | the plan's relations; users lacking a run row | warn, naming the count of incomplete users and the operation |
+| **initialized-nonempty, all users complete** | — | none |
+| **initialized-EMPTY** (a header, no relation rows; R2-02) | — | **info**: `data migration planned: no relation was reclassified (this host's own declarations keep them single-valued); nothing to restore` — never the pre-plan warning, which a completed empty plan used to leave in place |
+
+*The warning names the operation to run (the owner's ruling). The name-only predicate is acceptable for a WARNING —
+never for eligibility, which is the plan's (0044 R1-06).*
+
+##### 4f. Failure boundaries (R1-03's list)
+
+| boundary | outcome |
+|---|---|
+| before a user's commit | that user unchanged; `partial` or a re-call resumes |
+| after a user's commit, before the caller reads the result | the receipt is recoverable (§4d); a re-call returns `complete` for that user |
+| between users | `partial`; resume |
+| during a retry | per-user transactions are independent; the run row makes each user's effect once-only |
+| unknown result | read `data_migration_receipt` / the run rows; never re-run blind |
+
+### 4i.7 Regimes (the amendment's §5)
+
+| regime | behaviour |
+|---|---|
+| host runs the operation after upgrading | restorations committed per user; receipts available |
+| 🔴 **host never runs it (the owner's choice: optional)** | **the wrongly retired values stay hidden, and no receipt ever exists for that store**; `doctor` warns for as long as eligible rows remain. *The owner accepted this cost explicitly (2026-10-11).* |
+| new store created at v16 | no eligible rows; the check finds none |
+| multi-user store, partially migrated | resumable; per-user completion |
+
+### 4i.8 Invariants (the amendment's §6)
+
+| | invariant | check, and the mutant it must fail on |
+|---|---|---|
+| **I24** | the schema step changes no row | v15 store with data → v16: every edge byte-identical. Mutant: restore inside the step → FAILS |
+| **I25** | the plan is written once, from the registry, and a change to the THREE reclassified declarations is refused, while any other registry change is admitted (§4b.2's narrow digest) | Mutants: rewrite the plan on each call; hash the whole registry (`works_as` single → multi then returns `registry-changed`, the round-3 witness) → each FAILS |
+| **I26** | each user's restorations, outcomes and run row commit together or not at all | inject a failure mid-user. Mutant: two transactions → FAILS |
+| **I27** | the run row makes a completed user's re-call return `complete` and leaves `doctor` quiet for that user | Mutant: drop the run row → a re-call reports `migrated`/work for completed users and `doctor` keeps warning → FAILS. *Correctness after an undo is NOT this row's: "never re-applies after an undo" is 0044 §4f step 3's outcome-row check and its own invariant (A2; the model's F6)* |
+| **I28** | the receipt is recoverable after commit with no delivery state | crash after commit; read the receipt. Mutant: a receipt held only in the return value → FAILS |
+| **I29** | `DataMigrationResult` is TOTAL over the operation's domain and closed: every reachable call yields a row of §4c, its `store_changed` equals whether durable state changed, its failures name the failing users, and `data_migration_status` recovers the commits from durable facts (R2-03) | the model's enumeration over the operation's domain (INV-M15), AND the constructor's rejection matrix (§4c), with every listed row constructing as the positive control. Mutants: `store_changed` set only when a user committed (misreports `planned`); no `failed` row (an all-failed call reads `complete`); an unlisted carrier constructs (round 3's `_result('unlisted', …)`); the carrier omits `plan_written` → each FAILS |
+| **I32** | **(v4)** an `op_id` is bound to its inputs digest and mode by a durable admission record: equal inputs resume, a different digest or mode refuses with `op-id-conflict` and writes nothing, the status read returns cumulative commits for the operation, and the record holds no user content | Mutants: grammar-only idempotency (a changed request under a reused id runs); one id admitted for plan-only then for restoration; status returns only the last invocation's commits → each FAILS |
+| **I30** | `doctor` warns in both phases (§4e), names the operation, and states the name-only predicate before a plan exists | Mutants: silent → FAILS; a pre-plan warning that claims eligibility → FAILS |
+| **I31** | 0018's I13–I23 are unchanged | the existing 0018 tests pass unmodified |
+
+**The gate, stated the same way in 0044, the 0003 amendment and the 0018 amendment (R2-08):** before design acceptance, a row is either a MODEL check or a stated PRODUCT obligation. A MODEL check runs in dev's reference model (`specs/evidence/0044/`): each claimed mutant REACHES its mutated path and is killed SEMANTICALLY, by an owning invariant that returns False. An exception is a harness failure, never a kill, and a mutant may have more than one killing invariant. Which kind each row is is not restated here: `specs/evidence/0044/obligations.py` derives the map from this section, and refuses an unmapped row, a mapping to an invariant that owns no killed mutant, and a model invariant no row claims. It is also the package's review manifest. At the implementation gate, every row is in addition a named PRODUCT test, demonstrated red against its mutant. *I24 and I31 are PRODUCT only: a byte comparison of a real v15 store through the real step, and 0018's existing tests run unmodified.*
+
+### 4i.9 Failure modes, claims and limits (the amendment's §7 and §8)
+
+- **Silent:** a host that never runs it (§5) — warned, not silent to the operator; silent to users.
+- **Reversible:** each restoration is undoable per row (0044's undo verb); the schema step is additive.
+- **Partial:** per-user transactions; `partial` names the failure; resumable.
+
+**Claimed:** the restoration runs once per user per plan, survives crashes at every boundary with its receipt
+recoverable, and never re-applies after an undo. **NOT claimed:** that every store will be migrated (optional, by the
+owner's ruling); anything about the release orchestrator, which this does not change.
+
+**Release text (the owner's cost, in substance):** *“Upgrading to this version does not restore values that the old
+single-value rule retired. To restore them and get a receipt listing each one, run `run_data_migration`. Until you do,
+those values stay hidden and `doctor` warns.”*
+
+---
 
 ## 5. Regime analysis
 
@@ -539,6 +802,8 @@ rows, no readback error); **the loud escapes** (`MigrationAuditWriteError` /
 | **I17** audit failures are loud end-to-end | `test_audit_read_error_is_loud` — a missing record under a record-guaranteed outcome, and a malformed record under ANY outcome, raise `MigrationAuditReadError` whose validated carrier reaches CLI exit 3 with `derived_resulting_state` labeled derived-from-outcome on stderr; the existing `MigrationAuditWriteError` path and the newly-dispositioned `PackageConsistencyError` share the exit-3 loud-escape class, never exit 0. **Gate-extension obligation: the readback boundary, the no-record routing branch, and the mint-retry loop are NEW failure seams — they join `test_every_fault_seam_preserves_the_invariants`'s injection list** | CI |
 | **I18** the resolution evidence is reason-labeling only (internal F3; test form corrected by external R2-7 — the v3 regression demanded unconditional refusal, which would itself have made the evidence authority-relevant) | `test_resolution_is_reason_labeling_only` — forged vs genuine `resolved` compared under BOTH real-store conditions: with a VALID store + attestation, mint SUCCEEDS identically under forged evidence (an authority IS granted — forgery must not deny either); with a FAILING store, mint fails identically, and at most the `MintError` reason label differs; PLUS the recursive-exactness cells (closure obligation 2): `resolved_base=True` and hostile `str`-subclass scalars REFUSE at the `PreflightResolution` boundary before any comparison runs | CI |
 | **I19** the CLI contract | `tests/test_migrate_cli.py`, amended under this spec's authority (§7a): flags required on the migration path (missing → exit 2), invalid `--backup` → exit 2 with the grammar, exits 0/1/2/3 as §4, reporting from structured fields only — **and the exit-3 package routes enumerated as five named cases (closure obligation 4): pre-mint · bound `package-inconsistent` (recorded facts) · mismatched · missing · malformed, each with its exact stderr form** | CI |
+
+**v7: I24–I32, the data-migration operation's invariants, are §4i.8**; I13–I23 above are unchanged.
 
 ## 7. Failure modes and reversibility
 
@@ -583,6 +848,8 @@ from a host that didn't quiesce is a false statement the orchestrator cannot
 detect (0013's own boundary, unchanged); `backup_ref` is a token, not a
 verified backup. The `resolved` evidence bounds (§2c) hold only while the
 I18 pin holds — the pin is the contract, not a hope.
+
+**v7:** the data-migration operation's own claims and limits are §4i.9.
 
 ## 9. Brief for the external reviewer
 
