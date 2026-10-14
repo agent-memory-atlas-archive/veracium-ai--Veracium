@@ -178,6 +178,26 @@ def test_cell_an_undeclared_raw_key_refuses_at_the_chain_step(tmp_path):
 
 
 # ---- the honest flows ----------------------------------------------------------------------------------------------
+def test_cell_two_legacy_outcome_rows_both_convert(tmp_path):
+    """Stage-2 F1: the postcondition classifies legacy outcome rows from its OWN pre-step read. A step that misses the
+    second row (neither converts nor reports it) refuses at the chain step instead of committing an unconverted v3
+    outcome record."""
+    p = _fixture(tmp_path, second=True)
+    _must_migrate(p)
+    c = sqlite3.connect(p)
+    rows = [json.loads(b) for (b,) in c.execute("SELECT json FROM episodes")]
+    c.close()
+    outcomes = [r for r in rows if r.get("kind") == "outcome"]
+    assert len(outcomes) == 2 and all(r.get("seq") == 1 and r.get("judgment_time_known") is False for r in outcomes)
+
+
+def test_honest_a_store_above_v3_migrates(tmp_path):
+    """A migration that never reaches the v2→v3 step (base v12): a mutant of that step alone must leave it working."""
+    p = str(tmp_path / "v12.db")
+    _campaign().fresh_fixture(p, "v12#0")
+    _must_migrate(p)
+
+
 def test_honest_a_legacy_row_with_a_present_observed_at_migrates(tmp_path):
     _must_migrate(_fixture(tmp_path, observed_at="2026-01-01T00:00:00Z"))
 

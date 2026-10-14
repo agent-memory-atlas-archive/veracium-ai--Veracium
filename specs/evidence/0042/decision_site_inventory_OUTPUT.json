@@ -3310,75 +3310,81 @@
    "qualname": "_nested_models"
   },
   {
+   "kind": "RETURN_NONE",
+   "line": 151,
+   "module": "store/migration.py",
+   "qualname": "_raw_object"
+  },
+  {
    "kind": "FILTER_RETURN",
-   "line": 169,
+   "line": 193,
    "module": "store/migration.py",
    "qualname": "_rows"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 199,
+   "line": 223,
    "module": "store/migration.py",
    "qualname": "_migrate_outcome_chains"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 208,
+   "line": 232,
    "module": "store/migration.py",
    "qualname": "_migrate_outcome_chains"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 236,
+   "line": 260,
    "module": "store/migration.py",
    "qualname": "_mig_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 256,
+   "line": 280,
    "module": "store/migration.py",
    "qualname": "_apply_forward"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 320,
+   "line": 344,
    "module": "store/migration.py",
    "qualname": "_apply_forward"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 348,
+   "line": 372,
    "module": "store/migration.py",
    "qualname": "_apply_forward"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 374,
+   "line": 398,
    "module": "store/migration.py",
    "qualname": "_apply_forward"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 414,
+   "line": 438,
    "module": "store/migration.py",
    "qualname": "_same_instant"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 416,
+   "line": 440,
    "module": "store/migration.py",
    "qualname": "_same_instant"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 520,
+   "line": 544,
    "module": "store/migration.py",
    "qualname": "migrate_store"
   },
@@ -5512,7 +5518,7 @@
    "FILTER_RETURN": 46,
    "RAISE": 543,
    "RETURN_FALSE": 92,
-   "RETURN_NONE": 72
+   "RETURN_NONE": 73
   },
   "kinds": [
    "RAISE",
@@ -5809,7 +5815,7 @@
     "FILTER_RETURN": 3,
     "RAISE": 8,
     "RETURN_FALSE": 1,
-    "RETURN_NONE": 0
+    "RETURN_NONE": 1
    },
    "store/release_migration.py": {
     "BOOL_RETURN": 1,
@@ -5854,7 +5860,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 827,
+  "total": 828,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

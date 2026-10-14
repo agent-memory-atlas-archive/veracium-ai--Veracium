@@ -111,8 +111,8 @@ def _compare_converted(raw: dict, new: dict, model, path: tuple, now: datetime, 
             out.append(f"{'.'.join(path + (k,))}: the converted row carries a key no model declares")
     for k, f in fields.items():
         where = ".".join(path + (k,))
-        if k not in new and f.is_required():
-            out.append(f"{where}: a required field missing from the converted row")
+        if k not in new and (f.is_required() or f.default_factory is not None):
+            out.append(f"{where}: a field with no constant default is missing from the converted row")
             continue
         if k in nested:
             if not isinstance(new[k], dict) or (k in raw and not isinstance(raw[k], dict)):
@@ -143,8 +143,28 @@ def _compare_converted(raw: dict, new: dict, model, path: tuple, now: datetime, 
             out.append(f"{where}: {new.get(k, '<absent>')!r} != the expected {want!r}")
 
 
-def _check_outcome_chains(conn: sqlite3.Connection, base: int, before: dict, outcome_ids: set, now: datetime) -> None:
+def _raw_object(blob):
+    """A stored episode json as a dict, or None when it does not parse as a JSON object."""
+    try:
+        d = json.loads(blob)
+    except (ValueError, TypeError):
+        return None
+    return d if isinstance(d, dict) else None
+
+
+def _check_outcome_chains(conn: sqlite3.Connection, base: int, before: dict, now: datetime) -> None:
+    """The v2→v3 postcondition. Which rows are legacy OUTCOME rows is decided HERE, from the `before` snapshot's raw
+    `kind` (research's stage-2 F1): taking that set from the step would trust a value the step computed and kept, so a
+    row the step misclassified would be neither converted nor reported (M123)."""
     problems = []
+    kind_default = Episode.model_fields["kind"].default
+    outcome_ids = set()
+    for eid, blob in before.items():
+        raw = _raw_object(blob)
+        if raw is None:
+            problems.append(f"episode {eid!r}: its pre-migration json is not a JSON object")
+        elif raw.get("kind", kind_default) == "outcome":
+            outcome_ids.add(eid)
     after = dict(conn.execute("SELECT id, json FROM episodes").fetchall())
     if set(after) != set(before):
         problems.append(f"the episode id set changed ({len(before)} rows before, {len(after)} after)")
@@ -157,8 +177,12 @@ def _check_outcome_chains(conn: sqlite3.Connection, base: int, before: dict, out
                 problems.append(f"non-outcome episode {eid!r} changed")
             continue
         converted += 1
+        old, new = _raw_object(blob), _raw_object(after[eid])
+        if old is None or new is None:                    # stage-2 F2: an unparseable row is a FAILED check, never a raise
+            problems.append(f"episode {eid!r}: the converted json is not a JSON object")
+            continue
         out = []
-        _compare_converted(json.loads(blob), json.loads(after[eid]), Episode, (), now, out)
+        _compare_converted(old, new, Episode, (), now, out)
         problems += [f"episode {eid!r}: {o}" for o in out]
     if converted != len(outcome_ids):
         problems.append(f"converted {converted} outcome rows, the legacy count is {len(outcome_ids)}")
@@ -270,8 +294,8 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
         # Guarded to base<3<=head so a future v3→v4 bump never re-roots valid v3 chains.
         if base < 3 <= SCHEMA_VERSION:
             before = dict(conn.execute("SELECT id, json FROM episodes").fetchall())
-            outcome_ids = _migrate_outcome_chains(conn, now)
-            _check_outcome_chains(conn, base, before, outcome_ids, now)
+            _migrate_outcome_chains(conn, now)
+            _check_outcome_chains(conn, base, before, now)
         # specs/0003 §4c-ii / §7a: crossing INTO v4 must invalidate every wiki cache. A v3
         # store may hold a wiki compiled under pre-0003 "one current value" semantics over a
         # pair that is now a contention (§4e reorders PRE-EXISTING contentions), and the
