@@ -12,9 +12,16 @@ ONE mutant per protection the hotfix added, each REINTRODUCING the defect that p
             arriving new is redacted; a newer backup restored over an older store redacts it; a standing notice
             completes on its own origin's redacted record and, on restore, on any inserted record that shows it);
     CELLS   0041-PA1's closure cells (read from specs/closure_findings.py, never a hand list) run under pytest with a
-            JUnit record: KILLED iff >=1 cell FAILS by assertion and none ERRORS;
+            JUnit record, and EACH failing cell is classified from its failure message (failure_kind): `assertion`
+            (an AssertionError or a bare assert, the permission helper's included), `expected-refusal-missing`
+            (pytest.raises: DID NOT RAISE), or `other: <type>` (anything else — a TypeError, an unrelated ValueError,
+            a setup failure). KILLED iff >=1 cell fails with a QUALIFYING kind, NO cell fails with `other` and none
+            ERRORS; failures that include an `other` read UNCLASSIFIED (round-4 IO-II-7: the runner had called every
+            JUnit failure an assertion kill, and three detections were escaping domain refusals);
   and the file is restored byte-identically before the next.
-A row is good when IMPORT ok, HONEST passes, and it is KILLED by assertion.
+A row is good when IMPORT ok, HONEST passes, and it is KILLED; it records every failing cell's kind, so its kill can be
+recounted from the table without re-running. CONTROLS are the classifier's negatives: an UNRELATED failure injected at a
+mutated call site must read UNCLASSIFIED, never KILLED.
 
 `--check` is FAST and re-runs nothing: the definitions equal the table's, every anchor still occurs once, every recorded
 digest (each mutated module, each cell file, the honest nodes' file, this runner) equals the current bytes, every row is
@@ -26,6 +33,7 @@ tests/test_0041_mutation_campaign.py re-runs the first row each suite run, so CI
 """
 from __future__ import annotations
 
+import collections
 import hashlib
 import importlib.util
 import json
@@ -52,6 +60,19 @@ HONEST_NODES = [HOTFIX_TESTS + "::" + n for n in (
     "test_ii_a_default_arrival_from_the_notices_own_origin_completes_it",
     "test_ii_on_restore_completion_needs_an_inserted_shown_record_and_not_its_origin",
 )]
+
+QUALIFYING = ("assertion", "expected-refusal-missing")
+
+
+def failure_kind(message: str) -> str:
+    """A failing cell's kind, from its JUnit failure message (round-4 IO-II-7)."""
+    m = (message or "").lstrip()
+    if m.startswith("AssertionError") or m.startswith("assert "):
+        return "assertion"
+    if m.startswith("Failed: DID NOT RAISE"):
+        return "expected-refusal-missing"
+    return "other: " + ((m.split(":")[0].split() or ["<no message>"])[0])[:60]
+
 
 # (id, finding, file under src/veracium/, anchor, replacement, what it reintroduces)
 MUTANTS = [
@@ -108,6 +129,19 @@ MUTANTS = [
      '            f"SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=? AND NOT {_STANDING_SQL}",\n',
      '            f"SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=?",\n',
      "a standing notice's id is in redacted_targets() again: the readers hide a record no notice reached"),
+]
+
+_WRITER = '            attested = self._attested_fields(edge.user_id, "edge", edge.id, standing=False)\n'
+# (id, file under src/veracium/, anchor, replacement, what it injects, the outcome the classifier must give it)
+CONTROLS = [
+    ("CTRL-unrelated-TypeError", "store/sqlite.py", _WRITER,
+     _WRITER + '            raise TypeError("an unrelated execution failure (IO-II-7 negative control)")\n',
+     "an UNRELATED TypeError at PA1-writer-edge's call site: every edge write fails, for no reason the hotfix names",
+     "UNCLASSIFIED"),
+    ("CTRL-unrelated-ValueError", "store/sqlite.py", _WRITER,
+     _WRITER + '            raise ValueError("an unrelated ValueError, not a domain refusal (IO-II-7 negative control)")\n',
+     "an UNRELATED ValueError (no `refused:` domain form) at the same site: the permission helper must not count it",
+     "UNCLASSIFIED"),
 ]
 
 
@@ -178,18 +212,21 @@ def _pytest(root, nodes) -> dict:
         xml = pathlib.Path(d) / "j.xml"
         r = subprocess.run([sys.executable, "-B", "-m", "pytest", "-q", "-p", "no:randomly", "-p", "no:cacheprovider",
                             f"--junitxml={xml}", *nodes], cwd=root, env=_env(root), capture_output=True, text=True)
-        failed, errored, passed = [], [], 0
+        failed, errored, passed, kinds = [], [], 0, {}
         if xml.exists():
             for tc in ET.parse(xml).iter("testcase"):
                 node = f"{tc.get('file') or tc.get('classname', '').replace('.', '/') + '.py'}::{tc.get('name')}"
-                if tc.find("failure") is not None:
+                f = tc.find("failure")
+                if f is not None:
                     failed.append(node)
+                    kinds[node] = failure_kind(f.get("message") or "")
                 elif tc.find("error") is not None:
                     errored.append(node)
                 elif tc.find("skipped") is None:
                     passed += 1
         summary = (r.stdout.strip().splitlines() or [""])[-1][:160]
-    return {"exit": r.returncode, "passed": passed, "failed": sorted(failed), "errored": sorted(errored), "summary": summary}
+    return {"exit": r.returncode, "passed": passed, "failed": sorted(failed), "errored": sorted(errored),
+            "kinds": dict(sorted(kinds.items())), "summary": summary}
 
 
 def _honest(root) -> str:
@@ -216,11 +253,46 @@ def run_one(root: pathlib.Path, m, nodes) -> dict:
     finally:
         target.write_bytes(original)
     assert _sha(target) == hashlib.sha256(original).hexdigest()
-    killed = bool(c["failed"]) and not c["errored"]
-    row.update({"cells": len(nodes), "cells_failed": c["failed"], "cells_errored": c["errored"], "pytest": c["summary"],
-                "outcome": "KILLED" if killed else ("ERROR" if c["errored"] else "SURVIVED"),
-                "kill_kind": "assertion" if killed else None})
-    row["good"] = row["import"] == "ok" and row["honest"] == "pass" and killed
+    row.update(classify(c))
+    row.update({"cells": len(nodes), "pytest": c["summary"]})
+    row["good"] = row["import"] == "ok" and row["honest"] == "pass" and row["outcome"] == "KILLED"
+    return row
+
+
+def classify(c: dict) -> dict:
+    """KILLED only by a qualifying kind with no `other` and no error (round-4 IO-II-7); the kinds are recorded."""
+    kinds = c["kinds"]
+    qual = sorted({k for k in kinds.values() if k in QUALIFYING})
+    other = any(k not in QUALIFYING for k in kinds.values())
+    if c["errored"]:
+        outcome = "ERROR"
+    elif not c["failed"]:
+        outcome = "SURVIVED"
+    elif other or not qual or set(kinds) != set(c["failed"]):
+        outcome = "UNCLASSIFIED"
+    else:
+        outcome = "KILLED"
+    return {"cells_failed": c["failed"], "cells_errored": c["errored"], "cell_kinds": kinds, "outcome": outcome,
+            "kill_kind": "+".join(qual) if outcome == "KILLED" else None}
+
+
+def run_control(root: pathlib.Path, ctl, nodes) -> dict:
+    cid, file, anchor, repl, what, expected = ctl
+    target = root / SRC / file
+    original = target.read_bytes()
+    text = original.decode()
+    row = {"id": cid, "file": SRC + file, "what": what, "anchor_count": text.count(anchor), "expected": expected}
+    if row["anchor_count"] != 1:
+        return {**row, "outcome": "ANCHOR", "good": False}
+    target.write_text(text.replace(anchor, repl))
+    try:
+        row["import"] = _imports(root, file)
+        c = _pytest(root, nodes)
+    finally:
+        target.write_bytes(original)
+    assert _sha(target) == hashlib.sha256(original).hexdigest()
+    row.update(classify(c))
+    row["good"] = row["import"] == "ok" and row["outcome"] == expected and bool(row["cells_failed"])
     return row
 
 
@@ -239,6 +311,7 @@ def campaign() -> dict:
         if clean_cells["failed"] or clean_cells["errored"] or clean_cells["exit"] != 0 or clean_honest != "pass":
             raise SystemExit(f"CLEAN failed — no mutant is meaningful on a tree whose controls fail: {clean_cells} {clean_honest}")
         rows = [run_one(root, m, nodes[m[1]]) for m in MUTANTS]
+        controls = [run_control(root, k, nodes[FINDING]) for k in CONTROLS]
     head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no"],
                            capture_output=True, text=True).stdout.split("\n")
@@ -246,11 +319,16 @@ def campaign() -> dict:
         "header": {"spec": "0041", "commit": head, "tracked_changes": sorted(l[3:] for l in dirty if l.strip()),
                    "python": platform.python_version(), "platform": platform.platform(),
                    "digests": _digests(ROOT), "definitions": {m[0]: definition_sha(m) for m in MUTANTS},
+                   "control_definitions": {k[0]: definition_sha(k) for k in CONTROLS},
                    "cells": nodes, "honest_nodes": HONEST_NODES,
                    "clean": {"cells_passed": clean_cells["passed"], "honest": clean_honest}},
         "rows": rows,
-        "summary": {"rows": len(rows), "killed_by_assertion": sum(r.get("kill_kind") == "assertion" for r in rows),
-                    "survived": sum(r["outcome"] == "SURVIVED" for r in rows), "good": sum(r["good"] for r in rows)},
+        "controls": controls,
+        "summary": {"rows": len(rows), "killed": sum(r["outcome"] == "KILLED" for r in rows),
+                    "cell_kinds": dict(sorted(collections.Counter(
+                        k for r in rows for k in r.get("cell_kinds", {}).values()).items())),
+                    "survived": sum(r["outcome"] == "SURVIVED" for r in rows), "good": sum(r["good"] for r in rows),
+                    "controls": len(controls), "controls_good": sum(k["good"] for k in controls)},
     }
     return {**body, "body_sha256": hashlib.sha256(canonical(body)).hexdigest()}
 
@@ -275,6 +353,8 @@ def problems(path: pathlib.Path = TABLE) -> list[str]:
         out.append(f"the table declares spec {h.get('spec')!r}, not 0041")
     if h.get("definitions") != {m[0]: definition_sha(m) for m in MUTANTS}:
         out.append("the mutant definitions differ from the runner's — run --write")
+    if h.get("control_definitions") != {k[0]: definition_sha(k) for k in CONTROLS}:
+        out.append("the control definitions differ from the runner's — run --write")
     if h.get("cells") != cells():
         out.append("the closure cells differ from specs/closure_findings.py's — run --write")
     if h.get("honest_nodes") != HONEST_NODES:
@@ -292,12 +372,23 @@ def problems(path: pathlib.Path = TABLE) -> list[str]:
     cited = {n for ns in (h.get("cells") or {}).values() for n in ns}
     for r in rows:
         failed = r.get("cells_failed") or []
-        if not (r.get("outcome") == "KILLED" and r.get("kill_kind") == "assertion" and r.get("import") == "ok"
-                and r.get("honest") == "pass" and r.get("good") is True and not r.get("cells_errored")
-                and failed and set(failed) <= cited):
-            out.append(f"{r.get('id')}: not a good row (outcome {r.get('outcome')}, kill {r.get('kill_kind')}, "
-                       f"import {r.get('import')}, honest {r.get('honest')}, {len(failed)} failing cell(s), "
+        recount = classify({"kinds": r.get("cell_kinds") or {}, "failed": failed, "errored": r.get("cells_errored") or []})
+        if not (r.get("outcome") == "KILLED" == recount["outcome"] and r.get("kill_kind") == recount["kill_kind"]
+                and r.get("import") == "ok" and r.get("honest") == "pass" and r.get("good") is True
+                and not r.get("cells_errored") and failed and set(failed) <= cited):
+            out.append(f"{r.get('id')}: not a good row (outcome {r.get('outcome')}, recounted from its cell kinds "
+                       f"{recount['outcome']}, kill {r.get('kill_kind')}, import {r.get('import')}, honest "
+                       f"{r.get('honest')}, {len(failed)} failing cell(s), "
                        f"{'all' if set(failed) <= cited else 'NOT all'} among the cited cells)")
+    ctls = t.get("controls", [])
+    if [k.get("id") for k in ctls] != [k[0] for k in CONTROLS]:
+        out.append("the controls are not one per CONTROLS entry, in order")
+    for k in ctls:
+        recount = classify({"kinds": k.get("cell_kinds") or {}, "failed": k.get("cells_failed") or [],
+                            "errored": k.get("cells_errored") or []})
+        if not (k.get("good") is True and k.get("outcome") == k.get("expected") == recount["outcome"] != "KILLED"):
+            out.append(f"{k.get('id')}: the classifier's negative control is not good (outcome {k.get('outcome')}, "
+                       f"recounted {recount['outcome']}, expected {k.get('expected')})")
     return out
 
 

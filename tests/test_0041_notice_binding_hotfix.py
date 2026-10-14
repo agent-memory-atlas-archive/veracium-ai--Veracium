@@ -18,6 +18,7 @@ with the control that the legitimate propagation it must not break still works.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import pathlib
 
@@ -98,6 +99,22 @@ def _obj(store, edge_id):
 
 def _redaction_rows(store, target_id):
     return store._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (target_id,)).fetchone()[0]
+
+
+@contextlib.contextmanager
+def _permitted(what):
+    """An operation the hotfix must PERMIT, asserted as such: a refusal of it fails as an ASSERTION naming the
+    permission, never as an escaping domain ValueError (round-4 IO-II-7: the mutation campaign counts only assertion
+    and expected-refusal failures as kills, so a permission a mutant takes away must be asserted, not merely run).
+    Only a DOMAIN refusal (`refused: …`) is that observation; any other exception propagates as itself. A context
+    manager, not a wrapper taking the function: the call stays a direct `import_memory(...)` / `add_edge(...)` call,
+    which the call-site censuses (0005's import dispositions among them) find by its name."""
+    try:
+        yield
+    except ValueError as x:
+        if not str(x).startswith("refused:"):
+            raise
+        raise AssertionError(f"the hotfix must permit {what}; it was refused: {x}") from x
 
 
 def _own_fact(tmp_path, name="victim.db", edge_id="e-own", obj="Lisbon"):
@@ -181,8 +198,10 @@ def test_an_untrusted_notice_for_an_absent_id_leaves_no_standing_row(tmp_path):
 def test_a_later_record_of_that_id_is_not_redacted_on_arrival(tmp_path):
     victim = _mem(tmp_path, "victim.db")
     _full, notices, _recs, _o = _export_cuts(tmp_path, "att", edge_id="e-x")
-    port.import_memory(victim.store, notices)
-    r3 = port.import_memory(victim.store, _plain_export(tmp_path, "third", "e-x", "tea"))
+    with _permitted("a notice-only default import"):
+        port.import_memory(victim.store, notices)
+    with _permitted("a later record of the notice's id arriving by default import"):
+        r3 = port.import_memory(victim.store, _plain_export(tmp_path, "third", "e-x", "tea"))
     assert r3["notices_applied"] == 0 and _obj(victim.store, "e-x") == "tea" and _redaction_rows(victim.store, "e-x") == 0
     victim.close()
 
@@ -202,12 +221,14 @@ def test_i_a_legacy_standing_notice_never_refuses_the_users_own_write(tmp_path):
     victim = _mem(tmp_path, "victim.db")
     _legacy_standing(tmp_path, victim.store, "e-held-later")
     assert "e-held-later" not in victim.store.redacted_targets(U, "edge")
-    victim.store.add_edge(Edge(id="e-held-later", user_id=U, subject="user", relation="lives_in", object="Porto",
-                               provenance=_prov()))
+    with _permitted("the user's own edge write under a standing notice"):
+        victim.store.add_edge(Edge(id="e-held-later", user_id=U, subject="user", relation="lives_in", object="Porto",
+                                   provenance=_prov()))
     before = _row(victim.store, "edge", "e-held-later")
     assert json.loads(before)["object"] == "Porto"
     # the NEXT unrelated default import leaves that local record alone: it is not a record that import inserts
-    port.import_memory(victim.store, _plain_export(tmp_path, "unrelated", "e-other", "tea"))
+    with _permitted("an unrelated default import beside a local record under a standing notice"):
+        port.import_memory(victim.store, _plain_export(tmp_path, "unrelated", "e-other", "tea"))
     assert _row(victim.store, "edge", "e-held-later") == before
     victim.close()
 
@@ -216,7 +237,8 @@ def test_i_a_legacy_standing_notice_never_refuses_the_users_own_episode_write(tm
     victim = _mem(tmp_path, "victim.db")
     _full, notices, _recs, _o = _export_cuts(tmp_path, "legacy-ep", episode_id="ep-later")
     assert port.import_memory(victim.store, notices, restore=True)["notices_standing"] == 1
-    victim.store.add_episode(Episode(id="ep-later", user_id=U, date="2026-09-03", summary="mine", provenance=_prov()))
+    with _permitted("the user's own episode write under a standing notice"):
+        victim.store.add_episode(Episode(id="ep-later", user_id=U, date="2026-09-03", summary="mine", provenance=_prov()))
     assert json.loads(_row(victim.store, "episode", "ep-later"))["summary"] == "mine"
     assert "ep-later" not in victim.store.redacted_targets(U, "episode")
     victim.close()
@@ -288,7 +310,9 @@ def _poisoned_export(tmp_path):
     writes their own e-mine, and exports: the file carries the hostile notice beside the user's UNTREATED fact."""
     v = _mem(tmp_path, "poisoned.db")
     _legacy_standing(tmp_path, v.store, "e-mine")
-    v.store.add_edge(Edge(id="e-mine", user_id=U, subject="user", relation="lives_in", object="Lisbon", provenance=_prov()))
+    with _permitted("the user's own edge write under a legacy standing notice"):
+        v.store.add_edge(Edge(id="e-mine", user_id=U, subject="user", relation="lives_in", object="Lisbon",
+                              provenance=_prov()))
     f = tmp_path / "poisoned.jsonl"
     port.export_memory(v.store, U, f)
     assert [l for l in _lines(f)[1:] if l.get("record") == "redaction" and l.get("target_id") == "e-mine"]
@@ -329,7 +353,8 @@ def test_7_the_default_path_reports_a_held_target_before_it_would_refuse(tmp_pat
     is destroyed, and an ordinary import of the victim's own data is not blocked."""
     v, f = _poisoned_export(tmp_path)
     before = _row(v.store, "edge", "e-mine")
-    r = port.import_memory(v.store, f)
+    with _permitted("a default import of the victim's own export"):
+        r = port.import_memory(v.store, f)
     assert _row(v.store, "edge", "e-mine") == before and ["edge", "e-mine", "held-target"] in r["notices_not_applied"]
     v.close()
 

@@ -827,7 +827,28 @@ def _v111_checks(rules) -> bool:
     changed = _copy.deepcopy(f_own); changed[0][0].obj = "a different employer"
     changed_inv11 = "attested-redaction" in (_refused_with(_copy.deepcopy(own), *changed, mode="trusted") or "")
     return (total and needs_notice and skipped and listed and default_existing and restore_applies and recreated
-            and default_inv11 and restore_noop and changed_inv11)
+            and default_inv11 and restore_noop and changed_inv11 and _pending_repeat_is_existing())
+
+
+def _pending_repeat_is_existing() -> bool:
+    """Round-4 IO-II-1 (the reviewer's two sequences, pending_repeat_probe.py): a notice held PENDING with a reason other
+    than `held-target`, met again by a default import of the same notice alone, is `existing` — the WHOLE store equal
+    before and after, its pending row and reason included (a state-only comparison let the reason be rewritten)."""
+    ok = True
+    for case in ("restore-pending-then-default", "default-standing-arrival-then-repeat"):
+        s = M.Store(origin="D"); n = M.Notice("n", "e", M.FULL_NOTICE, origin="S")
+        if case == "restore-pending-then-default":            # restore without the target's copy: record-not-in-file
+            s.edges["e"] = M.Edge("e", "u", "works_as", "dentist", "not_attested")
+            M.import_rows(s, [], [], [], "trusted", notices=[n])
+            want = "record-not-in-file"
+        else:                                                  # notice first, then a treated arrival: standing-arrival
+            M.import_rows(s, [], [], [], "default", notices=[n])
+            M.import_rows(s, [M.Edge("e", "u", M.MARKER, M.MARKER, "not_attested")], [], [], "default")
+            want = "standing-arrival"
+        before = _copy.deepcopy(s)
+        ok = ok and (before.notices["n"].state, before.notices["n"].reason) == ("pending", want)   # the precondition
+        ok = ok and _imp(s, [], [], "default", [n]) and s == before
+    return ok
 
 
 def _own_redacted(rules):
@@ -908,6 +929,16 @@ def inv_g21_attv(rules=R):
             and survivor and nonuser and nonuser_travels and null_iff)
 
 
+# FROZEN at round 4 (2026-10-13): the reviewer ACCEPTED 0045 and 0047 jointly AT THE DESIGN LEVEL — "Accept 0045 and 0047
+# jointly at design level, with their 0008 and 0041 constructions." Frozen scope, quoted: "Freeze the active invariant rows in
+# **0045 §6** (including new **INV-G13**), **0047 §6** through **INV-R24** (R4 remains moved to the amendment), **0008 INV-Q1–Q10
+# including Q4′ and INV-I1–I7**, **0041 amendment INV-RR1–RR12 and RR14** (RR13 remains withdrawn), and **0019 INV-N1–N4**.
+# Preserve each row's MODEL/PREDICATE/PRODUCT allocation and the stated limits." This table is model II's MODEL allocation.
+# THE GOVERNING RULE FORWARD, quoted from the banked verdict (outbox/0045-0047-round4-verdict-verbatim.md, body sha16
+# 12576a39a0c51cb8), never paraphrased: "These obligations preserve the frozen design. Product findings should be repaired against
+# it rather than restarting debate over label-versus-block, unrestricted query derivation, procedures, authenticated principals,
+# cross-store replay or operational keys."
+# Removing an invariant, weakening an owner's check, or moving a frozen row's allocation is reopening design review, not an edit.
 INVARIANTS = {"MODEL-G1": inv_g1_legacy, "MODEL-G2": inv_g2_resolution, "MODEL-G3": inv_g3_restriction, "MODEL-G4": inv_g4_unit,
               "MODEL-G5": inv_g5_acts_stay, "MODEL-G6": inv_g6_survivor_axis, "MODEL-G7": inv_g7_marker_follows_flag,
               "MODEL-G8": inv_g8_write_path, "MODEL-G9": inv_g9_source_redacted, "MODEL-G10": inv_g10_import,
@@ -1525,6 +1556,12 @@ _mut_default_applies = _effect_on(lambda n, p, r, h, m: m == "default" and h is 
                                   lambda *a: M.Effect(state="applied", by_store=True))
 
 
+def _mut_pending_reason_rewritten(n, prev, rec, held_rec, mode):
+    """INV-RR11 ("a pending notice re-arriving is `existing`"), round-4 IO-II-1: the SUPERSEDED implementation — the table alone, so a repeated default pending
+    notice's held reason (`record-not-in-file`, `standing-arrival`) is rewritten to `held-target`."""
+    return M._notice_table(n, prev, rec, held_rec, mode)
+
+
 def _record_pending_and_apply(tx, n, reason):
     """INV-RR10: listed in notices_not_applied, and applied anyway."""
     _O["_record_pending"](tx, n, reason)
@@ -1718,6 +1755,7 @@ MUTANTS = {
     "a treated arrival attested automatically in a default import": ("MODEL-G19", _set("_notice_effect", _mut_standing_default_attests), ("0041am INV-RR12",)),
     "a local write refused under a standing notice (the pin)": ("MODEL-G19", _set("_write_refused", _write_refused_standing), ("0041am INV-RR12",)),
     "a notice's origin compared with its record's (v1.5's binding)": ("MODEL-G19", _set("_notice_effect", _mut_compare_origins), ("0041am INV-RR12",)),
+    "a repeated default pending notice's reason rewritten to held-target (round-4 IO-II-1)": ("MODEL-G19", _set("_notice_effect", _mut_pending_reason_rewritten), ("0041am INV-RR11",)),
     "a notice applied to the created record regardless (hotfix candidate 1)": ("MODEL-G19", _set("_notice_effect", _mut_apply_created), ("0041am INV-RR14",)),
     "the created record admitted, its notice pended (content lands)": ("MODEL-G19", _set("_notice_effect", _mut_pend_created), ("0041am INV-RR14",)),
     "the created record admitted, its notice skipped (content lands)": ("MODEL-G19", _set("_notice_effect", _mut_skip_created), ("0041am INV-RR14",)),

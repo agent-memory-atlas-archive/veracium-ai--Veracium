@@ -44,10 +44,10 @@
 | 0041 | `0041-targeted-redaction.md` | `accepted` | targeted redaction — stored content removed, the record that it existed retained |  |
 | 0042 | `0042-exercised-guarantees.md` | `accepted` | exercised guarantees — measuring whether what we specify is what runs |  |
 | 0043 | `0043-refusal-harness.md` | `accepted` | the refusal harness — measuring whether the gate declines when it should |  |
-| 0044 | `0044-relation-arity.md` | `draft` | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be |  |
-| 0045 | `0045-declarative-grounding.md` | `draft` | the declarative grounding axis — was a fact STATED, or not shown to be? |  |
+| 0044 | `0044-relation-arity.md` | `accepted` | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be |  |
+| 0045 | `0045-declarative-grounding.md` | `accepted` | the declarative grounding axis — was a fact STATED, or not shown to be? |  |
 | 0046 | `0046-correction-receipt.md` | `draft` | the correction receipt — a corrected fact names what still rests on it |  |
-| 0047 | `0047-subject-reply.md` | `draft` | the subject's right of reply — the record stands, and the reply travels with it |  |
+| 0047 | `0047-subject-reply.md` | `accepted` | the subject's right of reply — the record stands, and the reply travels with it |  |
 | 0048 | `0048-decay-never-raises-confidence.md` | `accepted` | maintenance never raises confidence — the decay bounds (0002's N4, carried) |  |
 
 ## Reservations (claimed, not drafted)

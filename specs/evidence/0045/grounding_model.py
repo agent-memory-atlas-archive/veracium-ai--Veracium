@@ -656,7 +656,18 @@ def _notice_effect(n: Notice, prev: Notice | None, rec, held_rec, mode: str) -> 
     under it is refused, and the rest is decided by the target's state and the mode. `rec` is the unit's copy of the
     target's record (None: no copy); `held_rec` the record held BEFORE this import (None: the import creates it, or it
     is absent); `prev` the notice as this store already holds it (a repeat; or a held STANDING notice meeting an
-    arrival). No rule reads the notice's origin."""
+    arrival). No rule reads the notice's origin.
+    A notice this store already holds PENDING, met again by a default import that would leave it pending, is
+    `existing`: the held row and its reason are kept (0041am v1.13 §4; round-4 IO-II-1 — the table alone rewrote
+    `record-not-in-file` / `standing-arrival` to `held-target`). Refusals and applications are the table's, unchanged."""
+    e = _notice_table(n, prev, rec, held_rec, mode)
+    if mode == "default" and prev is not None and prev.state == "pending" and e.state == "pending":
+        return Effect()                                # `existing`: the held pending row, reason included
+    return e
+
+
+def _notice_table(n: Notice, prev: Notice | None, rec, held_rec, mode: str) -> Effect:
+    """The one table of 0041am v1.10 §4, before the repeated-pending rule `_notice_effect` applies over it."""
     if prev is not None and prev.state == "applied":
         if rec is not None and not shows_redaction(rec, n.fields):
             return Effect(write_treated=True)          # `existing`: the arrival written in the attestation's shape

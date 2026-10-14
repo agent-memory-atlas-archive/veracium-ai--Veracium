@@ -57,6 +57,18 @@ def test_mutation_table_check_refuses_each_tampered_table(tmp_path):
         "a KILLED row with no failing cell, rebound": (_rebound(edited(lambda t: t["rows"][0].update(cells_failed=[]))), "not a good row"),
         "a KILLED row failing a cell it does not cite, rebound": (_rebound(edited(lambda t: t["rows"][0].update(cells_failed=["tests/x.py::not_cited"]))), "not a good row"),
         "a row dropped, rebound": (_rebound(edited(lambda t: t["rows"].pop())), "one per mutant"),
+        # round-4 IO-II-7: the kill is recounted from the recorded cell kinds, and the classifier's controls are checked
+        "a cell's kind edited to an unrelated exception, rebound": (_rebound(edited(lambda t: t["rows"][0]["cell_kinds"].update(
+            {next(iter(t["rows"][0]["cell_kinds"])): "other: TypeError"}))), "recounted from its cell kinds UNCLASSIFIED"),
+        "a row's cell kinds dropped, rebound": (_rebound(edited(lambda t: t["rows"][0].update(cell_kinds={}))), "not a good row"),
+        "a kill kind that disagrees with the cell kinds, rebound": (_rebound(edited(lambda t: t["rows"][0].update(
+            kill_kind="expected-refusal-missing"))), "not a good row"),
+        "a control read KILLED, rebound": (_rebound(edited(lambda t: t["controls"][0].update(outcome="KILLED"))), "negative control is not good"),
+        "a control's unrelated failures reclassified as assertions, rebound": (_rebound(edited(lambda t: t["controls"][0].update(
+            cell_kinds={k: "assertion" for k in t["controls"][0]["cell_kinds"]}))), "negative control is not good"),
+        "a control dropped, rebound": (_rebound(edited(lambda t: t["controls"].pop())), "one per CONTROLS entry"),
+        "a control definition changed, rebound": (_rebound(edited(lambda t: t["header"]["control_definitions"].update(
+            {good["controls"][0]["id"]: "0" * 64}))), "control definitions differ"),
         "the spec changed, rebound": (_rebound(edited(lambda t: t["header"].update(spec="0043"))), "not 0041"),
         "a definition digest changed, rebound": (_rebound(edited(lambda t: t["header"]["definitions"].update({good["rows"][0]["id"]: "0" * 64}))), "definitions differ"),
         "the finding's cell list edited, rebound": (_rebound(edited(lambda t: t["header"]["cells"].update(
@@ -79,6 +91,24 @@ def test_mutation_table_check_refuses_each_tampered_table(tmp_path):
     assert camp.problems(f) == []                                                  # control: an untouched copy passes
 
 
+def test_the_classifier_reads_each_failure_kind():
+    """IO-II-7's classifier, on the JUnit message forms it must tell apart (a bare unit check; the table's controls run
+    the injected failures for real)."""
+    k = camp.failure_kind
+    assert k("AssertionError: the hotfix must permit x; it was refused: refused: y") == "assertion"
+    assert k("assert (1 == 0)") == "assertion"
+    assert k("Failed: DID NOT RAISE <class 'ValueError'>") == "expected-refusal-missing"
+    assert k("ValueError: refused: imported edge 'e' arrives") == "other: ValueError"
+    assert k("TypeError: unsupported operand") == "other: TypeError"
+    assert k("Failed: an explicit pytest.fail") == "other: Failed"
+    assert k("") == "other: <no message>"
+    kinds = {"a": "assertion", "b": "other: TypeError"}
+    assert camp.classify({"kinds": kinds, "failed": ["a", "b"], "errored": []})["outcome"] == "UNCLASSIFIED"
+    assert camp.classify({"kinds": {"a": "assertion"}, "failed": ["a"], "errored": []})["outcome"] == "KILLED"
+    assert camp.classify({"kinds": {"a": "assertion"}, "failed": ["a", "b"], "errored": []})["outcome"] == "UNCLASSIFIED"
+    assert camp.classify({"kinds": {}, "failed": [], "errored": ["e"]})["outcome"] == "ERROR"
+
+
 def _is_checkout():
     r = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
     return r.returncode == 0 and pathlib.Path(r.stdout.strip()).resolve() == ROOT.resolve()
@@ -95,5 +125,5 @@ def test_the_first_row_reproduces_in_this_run():
         root = pathlib.Path(d)
         camp._snapshot(root)
         got = camp.run_one(root, m, camp.cells()[m[1]])
-    for k in ("outcome", "kill_kind", "import", "honest", "good", "cells_failed", "cells_errored"):
+    for k in ("outcome", "kill_kind", "import", "honest", "good", "cells_failed", "cells_errored", "cell_kinds"):
         assert got[k] == want[k], (k, got[k], want[k])

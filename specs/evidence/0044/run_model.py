@@ -887,6 +887,16 @@ def inv_redacted_requests_terminal(rules=R):
     return digest_gone and terminal and held and replays and conf_terminal
 
 
+# FROZEN at round 4 (2026-10-13): the reviewer ACCEPTED 0044 v1.5 AT THE DESIGN LEVEL — in the verdict's words, "Accept the
+# design on the frozen invariant surface below." Frozen scope, quoted: "Freeze **0044 INV-A1–A23**, **0018 amendment I24–I32**
+# with accepted I13–I23 preserved, and **0003 INV-O1–O10**. The shared 0008 fold freezes its active **INV-Q1–Q10, including Q4′,
+# and INV-I1–I7** as enumerated in v1.9. These names refer to the actual rows and their MODEL/PRODUCT ownership, not a claim that
+# all proposed product behavior exists at this pin." This table is model I's half of that ownership (obligations.py maps it).
+# THE GOVERNING RULE FORWARD, quoted from the banked verdict (outbox/0044-round4-verdict-verbatim.md, body sha16
+# f2dd2dbbd0041425), never paraphrased: "Do not reopen operational keys, the owner's accumulation choice, optional superset
+# restoration, plan-only admission, a user-tier floor or expiration of retained refusals. Ordinary implementation defects should
+# be fixed against the frozen rules."
+# Removing an invariant, weakening an owner's check, or moving a frozen row's ownership is reopening design review, not an edit.
 INVARIANTS = {"INV-M1": inv_revocation, "INV-M2": inv_once_per_plan, "INV-M3": inv_successor_evidence,
               "INV-M4": inv_undo_identity, "INV-M5": inv_custom_registry, "INV-M6": inv_doctor,
               "INV-M7": inv_portability, "INV-M8": inv_redaction, "INV-M9": inv_order_key,
