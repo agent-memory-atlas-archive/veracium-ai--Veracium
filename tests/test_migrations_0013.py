@@ -252,17 +252,26 @@ def test_mq2_concurrent_migration_runs_exactly_once():
     """The M-Q2 answer, demonstrated: SQLite's write lock serialises the
     migration; losers re-read under their own lock and find it done."""
     p = _v1_store()
-    results = []
+    results, errors = [], []
+    # Every authority is minted BEFORE any thread migrates: make_authority attests that the store IS an accepted v1
+    # source, so a thread that minted after the winner had migrated was correctly refused ("not an accepted v1 source")
+    # — a race in this test's setup, not in the migration (found 2026-10-14 when a loaded suite got 4 results of 5).
+    auths = [m13.make_authority(p) for _ in range(5)]
 
-    def worker():
-        results.append(m13.migrate_store(p, m13.make_authority(p),
-                                         busy_timeout_ms=10000))
+    def worker(auth):
+        # A thread's exception never reaches the main thread on its own: record it, so it is REPORTED by name
+        # instead of surfacing only as a missing result.
+        try:
+            results.append(m13.migrate_store(p, auth, busy_timeout_ms=10000))
+        except BaseException as x:                     # noqa: BLE001 — the test reports it, never drops it
+            errors.append(f"{type(x).__name__}: {x}")
 
-    threads = [threading.Thread(target=worker) for _ in range(5)]
+    threads = [threading.Thread(target=worker, args=(a,)) for a in auths]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
+    assert errors == [], f"a migrating thread raised: {errors}"
     assert sorted(results) == ["current"] * 4 + ["migrated"], results
     c = sqlite3.connect(p)
     assert c.execute("PRAGMA user_version").fetchone()[0] == 2
