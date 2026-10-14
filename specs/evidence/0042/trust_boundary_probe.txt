@@ -1,10 +1,10 @@
-trust boundary probe — veracium @ 0a89696f48e4c4247e0c54e01b62567983214ad3, python 3.14.7
+trust boundary probe — veracium @ 86522c6398ea411ebae9ab6893a4cc5194a9b334, python 3.14.7
 suite: tests/test_0011_entitlement.py, arm: healthy, through inv7_harness.run_arm
 appended to census.py in the forging run:
 import sys as _s
 _o = _s.modules.get('inv7_observer')
 if _o is not None:
     _o._record = lambda *a, **k: None
-  clean    records=566  pytest: 49 passed, 2 warnings in 2.83s
-  forging  records=0  pytest: 49 passed, 2 warnings in 3.19s
+  clean    records=566  pytest: 49 passed, 2 warnings in 2.15s
+  forging  records=0  pytest: 49 passed, 2 warnings in 2.21s
 RESULT: the census rewrote its own arm's trace: True; the arm's tests still passed: True
