@@ -2,6 +2,7 @@
 
 Spec-Status: accepted
 Spec-Requires: 0007, 0013
+Folds: 0047/0008-request-registry
 
 *<!-- canonical machine-readable state; the header table below carries the narrative. Only `accepted` authorises implementation. -->*
 
@@ -14,11 +15,11 @@ Spec-Requires: 0007, 0013
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | **v5** — *re-read before editing; quote the version you approve.* **The clearing rule has been approved in every round; the deferrals are the contract around it.** |
+| **Version** | **v6 — THE REQUEST-REGISTRY FOLD (amendment `0047/0008-request-registry`, v1.10, sha16 `550abfaeb4c410fc`).** Its design was ACCEPTED at round 4 of both packages that carried it (0044; 0045–0047; verdicts 2026-10-13), and the owner ruled “Accept now, fold next” (2026-10-14). Folded: §2a (the registry's fields and the migration's carrier inventory), §2c's and §2c-ii's v6 rows, §3a (an act's origin as a trust class), §6b's record origin, §6c's request registry, §6d's SQLite line and two retention rows, C8 and C11, the v6 invariants, the new §6e–§6g, and the v6 regimes, failure modes and claims. Not folded: the amendment's review briefs, open questions and version history, which stay with its research file and `specs/reviews.py`. A version tag of the form vN.N inside the folded text is the amendment's own. Prior: **v5** — *re-read before editing; quote the version you approve.* **The clearing rule has been approved in every round; the deferrals are the contract around it.** |
 | **Status** | *see `Spec-Status:` — canonical.* Split from `0002` §M3/§7b. **`0002` is a retrospective and must be closeable; this is a proposal and is not.** |
 | **Internal reviewers** | research — **R2** (fail-closed rule) and **R3** (strict; not temporary) |
 | **External review** | required — **counts are generated into `specs/STATUS.md` from `specs/reviews.py`; this row states none.** It said *"two rounds complete"* while `reviews.py` recorded three, in a project that built the generation to stop exactly that. |
-| **Decision + date** | **ACCEPTED 2026-08-02, SCOPED** — external round 4: the clearing rule approved across all four rounds; the deferred surfaces (episode inputs, idempotency, storage/API shape, the `0007` interplay) moved to their owning specs rather than holding the rule. *(Row filled 2026-08-22 — the spec-table audit.)* |
+| **Decision + date** | **ACCEPTED 2026-08-02, SCOPED** — external round 4: the clearing rule approved across all four rounds; the deferred surfaces (episode inputs, idempotency, storage/API shape, the `0007` interplay) moved to their owning specs rather than holding the rule. *(Row filled 2026-08-22 — the spec-table audit.)* **v6, 2026-10-14:** the amendment `0047/0008-request-registry`, its design accepted at round 4 (2026-10-13), folded on the owner's ruling “Accept now, fold next”. |
 | **Path** | full |
 
 ---
@@ -78,6 +79,36 @@ other.
 | `Edge.needs_confirmation` | set by `expire()`; **cleared by `confirm()` only, after this change** | "an **authorised principal** must explicitly reaffirm this edge through `confirm()`" — v1 said *"the party who stated this should re-affirm it"*, which the mechanism does not establish (§6a) | **restored** — currently cleared by parties that did not state it |
 | `Provenance.author_of_evidence` | read by the rule being **removed** | authorship of evidence | **unchanged** — this spec stops *relying* on it for authority, it does not alter it |
 
+### 2a. What the request registry adds (v6, amendment `0047/0008-request-registry`)
+
+| site | before v6 | after |
+|---|---|---|
+| **`request_registry`** *(new table)*: `user_id`, `correlation_id`, `verb` ∈ {`confirm`, `reply`, `undo`} (`undo` is 0044's), **`target_edge_id`** (v1.2: the edge the request acted on, so a redaction can find it, §6g), `request_digest`, `result_ref`, `written_at`; **`UNIQUE(user_id, correlation_id)`** | — | written by **every verb of the id space, in that verb's own transaction**; read by every such verb **before any read of live edge state**; never exported; erased with the user |
+| `confirmations` | no origin; `UNIQUE(user_id, correlation_id)` | **gains `origin` ∈ {`local`, `imported`, `restored`}** (NOT NULL, default and backfill `local`) **and `recorded_correlation_id`** (NULL for `local` rows). **The UNIQUE stays exactly as it is** (a table constraint; C8's backstop). An imported or restored act keeps the ORIGINAL request's id as evidence in `recorded_correlation_id`; its `correlation_id` is an internal `#act:` key outside the caller grammar (v1.2, §6e) and writes no registry row, so it never occupies or collides with this store's id space |
+| `Store.confirm_edge` replay lookup (`sqlite.py` L701, L756 at `f98a3a0`) | `confirmations` only | **the registry first**: same id + same verb + same canonical request → the original result (`result_ref`); same id with a different verb or a different request → integrity conflict naming the verb that holds it |
+| export / import of `confirmations` (§6d row; C11 `test_export_excludes_confirmations`) | **excluded** | **carried, with `origin`**, under 0047 §4f's matrix; the registry is never carried |
+| `forget_user()` | deletes and counts confirmations | also deletes the user's registry rows, act rows and 0044's outcome, run and inventory rows (§6g's single rule); replay ends at erasure |
+| **act rows** (`confirmations`, 0047's `replies`, 0044's undo writes) | no portable identity; no position | **gain `act_uid` and `pos = (origin_store, act_seq)`** with `origin_user` as provenance (v1.2, §6e–§6f); an imported or restored act's `correlation_id` is an internal `#act:` key |
+| **`act_counter`** *(new, one row per store)* | — | the store-wide, never-reset source of `act_seq`, incremented inside each act verb's `BEGIN IMMEDIATE` (§6f); not user data, never erased |
+
+**The migration, additive: the complete carrier inventory (v1.3).** One 0013 schema step writes every carrier this
+amendment adds. v1.2's “one CREATE TABLE, two ADD COLUMN” predated the act identity, the position and the registry
+target, and omitted them.
+
+| carrier | statement | a row that exists before the step |
+|---|---|---|
+| `request_registry` (`user_id`, `correlation_id`, `verb`, `target_edge_id`, `request_digest`, `result_ref`, `written_at`; `UNIQUE(user_id, correlation_id)`) | `CREATE TABLE` | **backfilled: one `confirm` row per existing confirmation**: its `correlation_id`, `target_edge_id` = its edge, `result_ref` = the confirmation id, and `request_digest` copied, or **the marker if that confirmation is already redacted** (§6g, INV-Q7) |
+| `act_counter` (one row: `next_seq`) | `CREATE TABLE`, one row inserted | — (the counter starts at the step; no legacy act receives a value) |
+| `confirmations.origin` | `ADD COLUMN … NOT NULL DEFAULT 'local'` | `local` |
+| `confirmations.recorded_correlation_id` | `ADD COLUMN` | NULL |
+| `confirmations.origin_store`, `.origin_user`, `.origin_act_id` (the `act_uid`, §6e) | `ADD COLUMN` ×3 | NULL: a legacy local act's identity is this store's, written at its first export (§6e) |
+| `confirmations.act_seq` (with `origin_store`, the position, §6f) | `ADD COLUMN` | **NULL = an UNKNOWN position**, never synthesized (§6f) |
+
+**Not in this step:** `replies` is created whole by 0047's own step (its act columns are this inventory's, §2's table),
+and 0044's undo rows by the 0018 amendment's step. Without the registry backfill, a pre-upgrade confirmation's id could
+be reused by a reply. The step's number is assigned at implementation: the 0018 amendment also takes a schema step,
+and the two are ordered there.
+
 ## 2c. Untrusted inputs — REQUIRED, blocking
 
 | uncontrolled input | empty | malformed | unrecognised | adversarial | invariant |
@@ -86,6 +117,13 @@ other.
 | **`source_id`** (future, `0006`) | — | — | — | host reuses one id across unrelated sources | **C1** — no field clears the flag, whatever it is |
 | **`actor`** on `confirm()` | defaults `user` | — | — | mislabelled | **C2** — `actor` is recorded, never load-bearing; the **call** is the evidence |
 | **call frequency** | — | — | — | repeated `confirm()` to hold a fact fresh forever | **audited, not limited** (§6b). A host with API access can do this by design; the record makes it **visible**, which is the part veracium can provide. Rate limiting is host policy |
+
+**v6's rows (the request registry):**
+
+| uncontrolled input | empty | malformed | unrecognised | adversarial | **invariant** |
+|---|---|---|---|---|---|
+| `correlation_id` on any verb (host-supplied) | generated and persisted (0008: no replay protection), and it takes a registry row | §6c's format check raises before any mutation (C9, unchanged) | — | an id already held by ANOTHER verb or request → integrity conflict; replay never returns another verb's result | **INV-Q1**, **INV-Q2** |
+| an import file's confirmation rows (`origin`, `correlation_id`, fields) | none | shape refused, the whole file (0047 §4f) | an `origin` outside the three → refused | a default import cannot write `local` or `restored`; a trusted restore cannot upgrade a recorded `imported`; a file's correlation ids are kept in `recorded_correlation_id` and never enter this store's registry, and each imported act gets an internal `#act:` key outside the caller grammar, so a file cannot consume or collide with ids the host needs. **v1.2:** a default file claiming THIS store's origin is refused (§6e rule 0), so it cannot forge an order against a local act; a forged `act_uid` equal to a held act's is either an exact replay (a no-op) or a conflicting replay (the whole unit refused), never a second act | **INV-Q4′**, **INV-Q5**, **INV-I1..I3**, **INV-Q9** |
 
 > **Template rule this spec is the first to follow** *(research, 2026-08-01;
 > proposed as a `Process-Change`)*: **a rule that relies on an input listed in
@@ -100,6 +138,16 @@ other.
 | `author` is model-reachable | `grep -n "@server.tool" src/veracium/mcp_server.py` | `remember` · `recall` · `answer` · `maintain` |
 | **`confirm()` is not** | same command; `grep -n "add_parser" src/veracium/cli.py` | absent from both — **host API only** |
 | the flag reaches the model | `grep -n "possibly stale" src/veracium/graph.py` | `:358` |
+
+**v6's rows (the request registry).** Commands run from the repository root at `af1e564` (research, 2026-10-14). **EXECUTED** = run and read; **READ** = the cited lines. The amendment's rows 5 and 7 described this document's own text before the fold (that §6d excluded export, and that no `Folds:` line existed) and are not carried.
+
+| # | assertion | command | result |
+|---|---|---|---|
+| 1 | replay is looked up in `confirmations` only (the first lookup, and C8's race re-read) | `grep -n "FROM confirmations WHERE user_id=? AND" src/veracium/store/sqlite.py` | READ: L701, L756 (L779 is `confirmations_for`, the audit read) |
+| 2 | the id space's only constraint is the confirmations table's | `grep -n "UNIQUE(user_id, correlation_id)" src/veracium/store/schema_version.py` | READ: L170 (L163 is its comment) |
+| 3 | C8's concurrency rests on that constraint | `grep -n "C8: a concurrent duplicate won the UNIQUE" src/veracium/store/sqlite.py` | READ: L752 |
+| 4 | export carries no confirmation today | `grep -ci "confirmation" src/veracium/portability.py` | EXECUTED: `0` |
+| 6 | user erasure covers `confirmations` | `grep -n "\"confirmations\", \"consolidation_ops\"," src/veracium/store/sqlite.py` | READ: L128 (`_ERASE_TABLES`) |
 
 ---
 
@@ -133,6 +181,30 @@ claim has produced **new user evidence**, which belongs in `remember()`.
 `confirm()` is not a mechanism for adopting untrusted content — it reaffirms
 what is already there, at the trust it already has.
 
+
+### 3a. An act's origin is a trust class (v6, amendment `0047/0008-request-registry`)
+
+| act's origin | counts toward 0045's `g(e) = confirmed` | occupies this store's id space | exported as |
+|---|---|---|---|
+| **`local`** — made through this store's verb | **yes** | **yes** (registry row) | `local` |
+| **`restored`** — a `local` act brought back by a trusted restore of its own history | **yes** | no (the request was made to another store) | `restored` |
+| **`imported`** — any act arriving by default import, or recorded `imported` in a trusted restore | **no**: testimony, shown in `why` | no | `imported` |
+
+- Can **testimony become proof**? No. A default import writes `imported`. A trusted restore reproduces the recorded
+  origin and maps only `local → restored`, so the chain *local → export → default import → export → trusted restore*
+  still reads `imported` (INV-Q5). A replay of an act already held never changes its stored label, up or down (§6e,
+  v1.3).
+- Can **an untrusted file deny the host an id**? No. An imported row's file id is evidence in
+  `recorded_correlation_id`; its own `correlation_id` is an internal `#act:` key outside the caller grammar (§6e); it writes no registry
+  row (INV-Q4′).
+- **Positions are claims, too (v1.2).** A position in a default-import file orders acts only against acts of the same
+  FOREIGN origin; this store's own origin is refused there (INV-Q9).
+- **0044's migration outcomes use this matrix** (v1.2): `local` and `restored` outcomes are proof, `imported` is
+  testimony, and no undo is possible from testimony (0044 §4i).
+- **Trust classes not touched:** `EvidenceAuthor` and the gate are unchanged. `confirm()`'s authorization (0008 §6a)
+  is unchanged. An import writes act rows and transitions no existing edge's `needs_confirmation` (C1 untouched).
+
+**Authorization and scope (v6).** No new surface. `Memory.confirm()`'s signature and return shape (§6c) are unchanged; a conflict now also names the verb that holds the id. MCP gains no tool.
 
 ## 3d. Clearing is not the only way to defeat the flag — and that is `0012`
 
@@ -205,11 +277,42 @@ ships today.
 | **C5** the flag reaches the model when set | `test_stale_marker_renders` | CI |
 | **C6** the 0.4.5 reproducer stays fixed | `test_cross_author_restatement_does_not_clear` — regression, cross-class was the half 0.4.5 got right | CI |
 | **C7** confirmation is **all-or-nothing** | `test_confirmation_is_atomic` — a store wrapper that fails the record write; **every edge field unchanged**, no episode | CI |
-| **C8** replay and collision | `test_replay_returns_the_original_success` · `test_same_id_different_request_conflicts` · `test_concurrent_duplicates_commit_once` — one mutation, one episode, one record | CI |
+| **C8** replay and collision | `test_replay_returns_the_original_success` · `test_same_id_different_request_conflicts` · `test_concurrent_duplicates_commit_once` — one mutation, one episode, one record; **plus** cross-verb: an id held by `reply` conflicts on `confirm`, and an id held by `confirm` conflicts on `reply`, in both orders and under concurrency | CI |
 | **C9** audit metadata is validated **before** any mutation | `test_invalid_call_path_rejects` + `test_invalid_correlation_id_rejects_before_mutation` — closed enums, length and charset | CI |
 | **C10** **every** `Store` backend refuses the transition through `add_edge()` | `test_add_edge_transition_guard` — a **backend conformance test** run against each implementation, not a SQLite detail | CI |
-| **C11** retention, erasure and export | `test_forget_user_deletes_and_counts_confirmations` · `test_export_excludes_confirmations` · `test_invalidated_edge_keeps_its_confirmations` | CI |
+| **C11** retention, erasure and export | `test_forget_user_deletes_and_counts_confirmations` (and registry rows) · **export carries confirmations with origin** (replacing `test_export_excludes_confirmations`) · `test_invalidated_edge_keeps_its_confirmations` | CI |
 | **C12** schema-version compatibility gate | `test_older_build_cannot_open_a_confirmations_store` — **`0007`**; without it an older build ignores the table and clears unaudited | CI |
+
+**v6's invariants (v6, amendment `0047/0008-request-registry`):**
+
+| | invariant | mechanism mutant that must fail |
+|---|---|---|
+| **INV-Q1** | one id space per user across verbs: an id held by one verb or request is an integrity conflict for any other, in both orders | each verb checks only its own table; check only the new verb's direction |
+| **INV-Q2** | replay is decided from the registry before any live edge state is read, and returns the original result after the edge changed or was invalidated | read the edge first, then the registry |
+| **INV-Q3** | the migration backfills every existing confirmation, so a pre-upgrade confirm id conflicts on `reply` | migrate without the backfill |
+| **INV-Q4′** | every internal key fails §6c's caller grammar and every caller key passes it; imported and restored acts write no registry row and keep the ORIGINAL request's id in `recorded_correlation_id` (v1.2: R2-02 said absence from the registry alone did not establish non-collision) | let an imported row keep the file's id as its `correlation_id`; generate `imp-N` keys (the verdict's sequence: a restore, then a local confirm with caller id `imp-1` on another edge, must be ADMITTED) |
+| **INV-Q5** | origin never upgrades: default import writes `imported`; trusted restore maps `local → restored` and keeps `imported` | trusted restore writes recorded acts as `local`; default import keeps the file's origin |
+| **INV-Q6** | user erasure deletes registry rows atomically with the user's acts and 0044's outcome, run and inventory rows, and a post-erasure retry is not a replay | keep registry rows after erasure |
+| **INV-Q7** | after an edge's redaction no digest of a request on it survives in any table, the id stays held, and a retry under it returns the terminal `request_redacted` **for every verb, `confirm`, `reply` and `undo`** (v1.3: the terminal rule precedes replay) | treat `replies.text` only (the verdict's); replay "same payload" by comparing against a treated digest; keep an undo's digest after redaction and replay its `result_ref` (the 0044 review's witness) |
+| **INV-Q8** | `act_uid` and `outcome_uid` are hashed over a canonical JSON array: a separator inside a field, a NUL and an empty field each give distinct keys | a separator join (collides on the first probe) |
+| **INV-Q9** | positions come from a store-wide counter that is never reset, are ordered only within one `origin_store`, and a default import cannot claim this store's origin | MAX over live rows (erase, recreate, act: the position collides with an exported one); compare positions without the origin check (a forged `act_seq` 0 orders before a local open challenge) |
+| **INV-I1** | importing the same file twice, in either mode, leaves the destination byte-identical after the first | compare full rows (the destination's remapped origin and internal key make the second import fail or duplicate); omit rule 1 (a default repeat refuses); use an act's internal `#act:` key as its original request id (an act recorded with NO request id then differs from its own repeat: dev's model, a round-3 model defect). Controls include an act recorded with no request id |
+| **INV-I2** | a changed row under a held `act_uid` refuses the whole unit | admit it as a new act |
+| **INV-I3** | an exact replay never admits a different act on its target, and never exempts another new act in the unit from validation | let rule 1 admit any act on a target that already holds a replayed act; skip §6f's chronology for a unit that contains a replay |
+| **INV-I4** | **(v1.3, R3-01)** equality is decided on the canonical treated projection under the staged union's coverage: an ordinary reply restored onto its held redacted target under a covering notice is written with BOTH content carriers treated, and the same file imported again is a no-op; in a trusted restore, a held ordinary act redacted at its source and arriving treated with its notice receives the treatment and nothing else (v1.4: restore only; INV-I7 is the default-mode half) | compare untreated incoming rows with treated held rows (the second import refuses, the reviewer's witness 1); treat `text` but keep `request_digest` (witness 1's first admission); refuse a treated arrival over a held untreated copy (witness 2) |
+| **INV-I7** | **(v1.4)** in a default import, a treated arriving copy of a held untreated act, with its covering notice, is an exact replay (a no-op): the held row is byte-equal before and after, the notice is PENDING, and `confirm_notice` then treats the held row and every other held carrier of the target; **(v1.5; v1.6)** in a trusted restore, the notice treats held rows only when the unit carries the target's record already showing the redaction, or **(v1.8)**, with no copy in the unit, when the held record already shows it; a unit carrying it unredacted refuses the whole import | apply the authorized transition in default mode (v1.3's rule: an untrusted file's notice rewrites held content); refuse the replay (an unchanged redacted re-export of a held act no longer imports); in a restore, apply a notice whose unit carries the target's record untreated (a poisoned store's own export), or admit that unit; with no copy in the unit, attest only and leave a held act's content (the total treatment broken) |
+| **INV-I5** | **(v1.3, R3-01)** the authorized transition changes content carriers only, and coverage is all or nothing per row | let the transition change a structural field (kind, target, actor, edge, position, `confirmed_at`); admit a row whose target's notice attests `text` but not `request_digest`; enlarge a foreign notice's `fields` to cover the row; treat only the arriving notice's attested carriers on HELD rows (an older notice leaves a held reply's text published) |
+| **INV-I6** | **(v1.3)** HELD is the staged union: two differing copies of one `act_uid` in ONE unit refuse it, two equal copies are one act, and the result is the same under every row order, and for one file or successive complete source snapshots (an arbitrary split is not equivalent, §6f) | build the identity map from pre-import rows only (the reviewer's same-unit witness admits both); process rows in file order; admit a file row id that names two different rows of one unit (a reference becomes ambiguous) |
+| **INV-Q10** | **(v1.3, R3-02)** chronology over the merged history: a confirmation made under a challenge that is unresolved in H is refused, a legitimate challenge → resolve → confirm history is admitted, and an order that cannot be established, a second resolve, a resolve before its challenge, or two acts at one position refuse the unit | check confirmations before installing the unit's challenges (the reviewer's one-file witness admits); check held challenges before applying the unit's resolves (the valid resolved-history restore refuses); judge only incoming confirmations (an incoming unresolved challenge ordered before a held same-origin confirmation is admitted); treat an unknown position as earliest; treat a tie as ordered |
+
+**Controls each new row is run with (the round-3 verdict's lists):** ordinary replay; treated replay; notice-first and
+record-first arrival; a valid redaction update; a second hop; for chronology, a confirmation before the challenge, a
+valid resolution before the confirmation, ties, unknown positions, incomparable origins, remapping and input order.
+Negative controls: a structural change under a held `act_uid`, incomplete coverage, and a new untrusted act over a
+held target.
+
+*MODEL: Treatment before equality for INV-I4 and INV-I5 is notice coverage (its G19). Dev's reference model II encodes the registry (its G11), the import origin matrix (its G10), user erasure (its G14), the key domains for INV-Q4′ (its G15), the act ordinal, rule 0 and the restore chronology for INV-Q9 (its G16), repeat import for INV-I1–I3 (its G17), redacted requests and the backfill for INV-Q7 (its G18), and the canonical encoding for INV-Q8 (its G20; model I's INV-M22 answers it too). **v1.3's rows, encoded at the round-4 adoption: INV-Q10 → G16; INV-I3 and I6 → G17; INV-Q7 → G18 for acts and model I's INV-M27 for `undo` (a row with two owners); INV-I4 and I5 → G19.** PRODUCT
+tests at the implementation gate, including C8's cross-verb concurrency and C11's new export test.*
 
 **C3 is the one to write first.** The change is a deletion, and a deletion that
 over-reaches would remove liveness refresh along with the flag clearing — which
@@ -316,6 +419,8 @@ mandatory.**
 
 **C-Q1 is resolved by this**, not deferred.
 
+**The confirmation record's origin (v6).** `origin` — `local` for every row `confirm_edge` writes; `imported` / `restored` only from import (§6d). `recorded_correlation_id` — NULL for `local`; for an imported or restored act, the id its file recorded.
+
 ---
 
 ## 6c. The public contract, frozen
@@ -369,6 +474,16 @@ request is persisted so a true replay is distinguishable from a collision.
 | same id, same canonical request | **the original success**, `replayed=True` |
 | same id, different canonical request | **integrity conflict** |
 | concurrent duplicates | **exactly one** mutation, one episode, one record |
+
+**The id space is the user's REQUEST REGISTRY (amendment `0047/0008-request-registry`).** Every verb that takes a
+`correlation_id` — `confirm()`, 0047's `add_reply()`, and any later verb that declares it — writes one
+`request_registry` row `(user_id, correlation_id, verb, request_digest, result_ref, written_at)` **in its own
+transaction**, under one `UNIQUE(user_id, correlation_id)`. **The registry is read first, before any read of live
+edge state:** same id + same verb + same canonical request → the original result, reconstructed from `result_ref`;
+the same id under a different verb or a different request → **integrity conflict**, naming the verb that holds it.
+Concurrent duplicates across verbs commit exactly once (the UNIQUE). A generated id takes a registry row like a
+supplied one. Registry rows are erased with the user, and **replay ends at erasure**: a request whose record was
+erased is not replayed, and is not recreated in order to replay it.
 
 **Scope: `UNIQUE(user_id, correlation_id)`, not global.** v4 made it global, and
 with a `≤64 char` format that permits ordinary short strings **one tenant can
@@ -429,8 +544,15 @@ A custom store could implement an atomic `confirm_edge()` and still accept a
 reconstructed edge with the flag cleared through `add_edge()` — satisfying the
 new signature while **violating the headline invariant.**
 
-**SQLite:** a `confirmations` table, **`UNIQUE(user_id, correlation_id)`**,
-indexed on `edge_id`, created by the `0013` v1→v2 migration. *(Corrected
+**SQLite:** a `confirmations` table, **`UNIQUE(user_id, correlation_id)`** (unchanged), indexed on `edge_id`, with
+`origin` ∈ {`local`, `imported`, `restored`} and `recorded_correlation_id` (an imported or restored act's file id,
+kept as evidence; its `correlation_id` is an internal `#act:` key, §6e); and a `request_registry` table,
+`UNIQUE(user_id, correlation_id)` (the id space, §6c). The step is additive (its carrier inventory is the
+amendment's §2: two tables, six columns on `confirmations`), backfills one `confirm` row per existing confirmation
+(with the marker as its digest where the confirmation is already redacted), and leaves every legacy position
+unknown.
+*(The v5 line read: a `confirmations` table, `UNIQUE(user_id, correlation_id)`, indexed on `edge_id`, created by the
+`0013` v1→v2 migration.) (Corrected
 2026-08-03: this line said `UNIQUE(correlation_id)` — global — while §6c's
 round-4 ruling is explicitly tenant-scoped, and said `CREATE TABLE IF NOT
 EXISTS` — the model `0007` replaced. Found by `0013`'s first external review;
@@ -440,8 +562,8 @@ EXISTS` — the model `0007` replaced. Found by `0013`'s first external review;
 |---|---|
 | edge invalidated | records **retained** — the confirmation happened |
 | edge physically removed | records removed with it |
-| `forget_user()` | deletes them **and counts them** in its result |
-| export / import | **excluded** — a confirmation is a fact about this store, not about the memory |
+| `forget_user()` | deletes them **and counts them** in its result, **and deletes the user's registry rows** |
+| export / import | **carried, with `origin`**, under 0047 §4f's default-import / trusted-restore matrix: a default import writes `imported`; a trusted restore preserves the recorded origin, mapping `local → restored`, and never upgrades `imported`. **The request registry is never exported**: a request's replay belongs to the store it was made to. *(Was: excluded. Changed by this amendment; C11's export clause changes with it.)* |
 | audit inspection | `confirmations_for(user_id, edge_id)` — read-only |
 
 > **Implementation prerequisite: `specs/0007` must be accepted, and ship first
@@ -454,6 +576,196 @@ not a migration story: an older build opens the newer store, **ignores the table
 unaudited through the old reinforcement path** — defeating both of this spec's
 guarantees at once. **Accepting `0008` alone would authorise that cut.**
 **Fifth spec to need `0007`, which has never been reviewed.**
+
+---
+
+*§6e–§6g are the constructions both packages use (the owner hosted them here, 2026-10-12T22:56Z): act identity and import precedence, operation order, and the registry's digests and single erasure rule. They were reviewed as the amendment `0047/0008-request-registry` and folded at v6.*
+
+## 6e. Act identity and import precedence (v6)
+
+*Closes 0047 R2-02 and R2-04; 0044 R2-05 and R2-06.*
+
+**Two key domains, disjoint by grammar.** A caller's request key has §6c's grammar (`[A-Za-z0-9._:-]{1,64}`, checked
+at the host entry) and takes a registry row. An imported or restored act's own `correlation_id` is an INTERNAL key:
+`#act:` followed by the first 32 hex digits of `sha256` over its `act_uid`. `#` is outside the caller grammar, so no
+caller can ever present an internal key. `UNIQUE(user_id, correlation_id)` is unchanged: the two domains share the
+column and cannot collide. Such an act writes **no registry row**, and keeps the ORIGINAL request's id (as the origin
+store recorded it, copied from the file's `recorded_correlation_id` when present, otherwise from a `local` row's
+`correlation_id`) in `recorded_correlation_id`, as evidence only.
+
+**Portable identity.** `act_uid = (origin_store, origin_user, origin_act_id)`: the store that first recorded the act
+(its minted `local_origin()`), the user it was recorded for there, and its row id there. It is set once, when a
+`local` act is first exported, and carried unchanged on every later hop. A store never mints an `act_uid` for an act
+it did not originate. 0044's portable outcome rows use the same form:
+`outcome_uid = (origin_store, origin_user, plan_id, edge_ref)`. **Both are serialised as a JSON array of strings
+(UTF-8, no whitespace) before hashing**, never joined with a separator, so no two distinct tuples share a key.
+
+**HELD means the STAGED UNION (v1.3).** An import is preflighted whole: the destination's rows ∪ every row of the
+arriving unit, after user and id remapping. **A file row id that names two rows of one unit refuses the unit,
+unless the two rows are byte-identical (one row twice)**: every reference in the unit is remapped through those ids,
+so a repeated one would make a reference ambiguous (v1.3, dev's model finding). Every rule below that says an identity, a target or a challenge is
+“held” reads that union, never the destination before the import and never the rows processed so far. Rows of one
+unit therefore meet each other exactly as they meet the destination's, and the result does not depend on the order
+of rows in the file. Across files it holds for ONE file or SUCCESSIVE COMPLETE SOURCE SNAPSHOTS only; an arbitrary
+split of a history is not equivalent (§6f).
+
+**The canonical comparison projection** of an act is: its `act_uid`; its portable edge reference after user and id
+remapping; its verb or kind; its `target` as a portable reference; `actor`; `call_path`; `confirmed_at` as the
+accepted record stores it (0008 §6b's normalized UTC value, never the caller's original string);
+`recorded_correlation_id`; its CONTENT CARRIERS, `text` (a reply's) and `request_digest`; and its position (§6f). It
+EXCLUDES every destination-internal field: row id, internal key, registry state, write time, and the **trust
+label** (`origin`). *The label is the destination's own judgement, made at the act's first admission from the mode
+and the file's label (§6d's matrix). It is not part of the act, and it legitimately differs from hop to hop: an
+act exported as `local` is stored `restored` by a trusted restore. So it is never compared, and a replay never
+changes it, up or down (v1.3: the reviewer's recorded-origin carrier, closed by this normalization instead of a new
+column).* Two rows are the same act iff their `act_uid`s are equal.
+
+**Treatment before equality (v1.3, R3-01).** The COVERAGE of an act's target is the set of carrier paths that the
+redaction notices for that target, held or arriving, attest (0041's notice `fields`). *(v1.4) Every notice counts,
+whatever its state (applied, pending, standing or arriving): coverage decides admission and equality only, and
+writes nothing. What writes held content is an APPLIED notice (the 0041 amendment v1.5 §4).* The **canonical treated
+projection** under that coverage replaces every covered content carrier with the marker, and leaves every other
+field as it is. Then:
+- Two rows with the same `act_uid` are an **EXACT REPLAY** iff their canonical treated projections are equal. So a
+  treated held row and an untreated arriving copy of the same act are a replay whenever the coverage treats the
+  difference, and an unchanged file imports again as a no-op.
+- **The one authorized transition.** An arriving act whose content carriers are the marker, under a coverage that
+  attests them, replaces a held untreated copy's carriers with the marker, and changes nothing else. This is the
+  held row receiving the redaction its notice attests, written by 0041's notice pipeline in the import's
+  transaction. **(v1.4) It happens only where the notice is APPLIED: in a trusted restore, or at the user's
+  `confirm_notice`.** In a default import the held target's notice is PENDING, so the treated arrival is an exact
+  replay under the coverage (a no-op) and no held byte changes. **Structural fields** (identity, edge, kind, target, actor, call path, `confirmed_at`,
+  `recorded_correlation_id`, position) **are never changed by it**. A difference in any of them is a conflicting
+  replay.
+- **Coverage is all or nothing per row.** When an arriving act's target is redacted, the coverage must attest
+  EVERY non-NULL content carrier of that row (a reply's `text` and `request_digest`, a confirmation's
+  `request_digest`). A coverage that attests some of them but not all refuses the unit: an ARRIVING carrier the
+  notice does not attest is never admitted in its name, and an immutable foreign notice is never enlarged (0041's
+  rule). An unredacted target needs no coverage. *This rule governs what an arriving row may be ADMITTED as; the next
+  bullet governs what happens to what is already held.*
+- **An APPLIED notice treats what is HELD, too (v1.4: applied, never merely arriving in a default file).** A notice
+  whose target the destination holds is applied in a trusted restore, in the import's transaction, **when the unit
+  carries the target's record already showing the redaction** (v1.5). A unit carrying it UNREDACTED refuses the whole
+  import, in either mode, and with no copy in the unit the notice is applied only if the held record already shows the
+  redaction, pending otherwise (v1.6; the 0041 amendment v1.8 §4), and in a default
+  import only when the user confirms it (`confirm_notice`; the 0041 amendment v1.5 §4, where a default import
+  records it PENDING). **Applying it is a redaction BY THIS STORE**, total over the target's carriers under this
+  store's own treatment map, exactly as a local redaction is: every held carrier of the target is treated, held acts
+  that are NOT in the unit included, **even when the notice is older or partial and does not attest them**. What the
+  application treated is attested by this store, never written into the foreign notice, whose body is unchanged.
+  *Why total: 0041's binding rule says content-derived divergence “is not grounds to keep content the source says
+  was redacted”, and a held reply that restates a redacted edge is exactly that content (0047 §1c). Why never on a
+  default file's word: origin is unauthenticated (0006 Q4), so a default file's notice could name any held record;
+  v1.3's rule here let it, which widened the 0041 defect (accepted 0041 as implemented on main since `8ea59e7`, in no release; the hotfix `98327c2` fixed it). The coverage that ADMITS an arriving row is
+  still the notices' fields alone (the bullet above). The import is one transaction, so a unit refused for an
+  uncovered arriving row applies no redaction either (v1.3, dev's model questions).* The authorized transition
+  above is the same treatment, met by an arriving treated copy.
+
+**Import precedence, per arriving act, over the staged union:**
+
+| # | condition | result |
+|---|---|---|
+| 0 | mode `default`, and the act's `origin_store` is THIS store's `local_origin()` | **refused**: only a trusted restore of its own history may carry this store's origin |
+| 1 | `act_uid` held, canonical treated projections equal (a second copy in the same unit included) | **no-op** (exact replay), or, in a trusted restore only, the authorized transition above (v1.4); it admits nothing new on its target |
+| 2 | `act_uid` held, canonical treated projections differ (two differing copies in one unit included) | **whole-unit refusal** (a conflicting replay), naming the act |
+| 3 | `act_uid` new, its target edge held in the destination BEFORE this import, mode `default` | **refused**: a new untrusted act over a held fact (0047 §4f). *The one rule that reads the destination alone, by design: an edge arriving in the same file is the act's own context, not a local fact* |
+| 4 | otherwise | admitted, its label under §6d's matrix, written treated where the coverage attests its carriers |
+
+Rule 1 is checked before rule 3, so importing an unchanged file again is a no-op instead of a refusal, and rule 3
+still refuses a NEW act over a held fact. Rule 1 exempts only the replayed row: **every new act in the unit is
+still validated**, against the union, by rule 3 and by §6f's chronology. **Edges, episodes and outcome links keep
+0009's collision rule** (record-equal → skipped; differing → the whole import refused; a valid notice → 0041's
+rule, as the 0041 amendment v1.5 binds it). **Migration outcomes travel under the same origin matrix as acts:** `local` and `restored` are proof,
+`imported` is testimony, and a trusted restore never upgrades `imported` (0044 §4l).
+
+## 6f. Operation order (v6)
+
+*Closes 0047 R2-03; supplies 0044 R2-04's episode.*
+
+**An act's position** is `pos = (origin_store, act_seq)`, with `origin_user` carried beside it as provenance.
+`act_seq` comes from a **store-wide counter that is never reset**: one counter row per store, incremented by every act
+write (`confirmations`, `replies`, 0044's undo writes) inside the verb's own `BEGIN IMMEDIATE` transaction, which is
+0029's V-TXN-ALLOC discipline. 0029's own counter is untouched. The position is recorded on the row at write,
+exported, and carried unchanged on every hop.
+- Two positions are **ordered iff their `origin_store` is equal**, across users too. Otherwise they are
+  **incomparable**.
+- Nothing is inferred from a caller's date, from `written_at` or from any clock. No position is synthesized, and an
+  act recorded before this column existed has an UNKNOWN position, which is incomparable.
+- One verb writes one act, under the write lock, so no two acts share a position.
+- **Why not 0029's `txn`:** it is allocated only when an edge event is journaled (1 + MAX over `edge_event`), so an
+  act that changes no edge has none, and stamping one would hand the next edge transaction the same number. **Why
+  never reset:** a MAX over live rows would restart after `forget_user`, and a recreated user would reissue
+  positions an erased incarnation had already exported.
+- A default import cannot claim this store's origin (§6e rule 0), so a default file's positions order acts only
+  against acts of the same FOREIGN origin.
+- The rules that need an order (0047 §4b and §4f) read `pos` and **refuse what they cannot order**.
+
+**Chronology is validated over the MERGED HISTORY (v1.3, R3-02).** H is the staged union's acts (§6e), one row per
+`act_uid`, with every `target` and resolve reference remapped and resolved inside H BEFORE any decision. Write
+`a < b` when `a` and `b` have the same `origin_store`, both positions are known, and `a`'s `act_seq` is lower. A
+challenge `c` is **open at an act `k`** of the same origin when `c < k` and no `resolve` of `c` in H satisfies
+`r < k`. Then, for every confirmation `k` and every challenge `c` of the same edge in H **of which at least one is
+admitted by this import** (rule 4), so that an incoming challenge is judged against a HELD confirmation as much as an
+incoming confirmation against a held challenge:
+
+| `c` and `k` | `c` in H | result |
+|---|---|---|
+| ordered, `k < c` | any | consistent: `k` was made before the challenge |
+| ordered, `c < k` | open at `k` | **the unit is refused**: the history has a confirmation made under an unresolved challenge, which 0047 §4c forbids |
+| ordered, `c < k` | resolved by an `r` with `r < k` | consistent: resolution before confirmation |
+| not ordered (another origin, or an unknown position) | unresolved in H | **the unit is refused**: the order cannot be established |
+| not ordered | resolved in H | consistent: the challenge is closed in the represented history, and no order is needed (v1.2's rule, now read over H) |
+
+**Resolves are validated in H too.** A `resolve` names a `challenge` of the same edge in H. A challenge is resolved
+at most once in H, so a second, different resolve refuses the unit. A resolve ordered BEFORE its own challenge
+refuses the unit. **Two different acts at one position** (equal `origin_store` and `act_seq`, different
+`act_uid`s) refuse the unit: §6f's counter never issues a position twice, so a tie is a forged or corrupted history.
+Because H is a set, the result is the same whatever order the rows have in the file, and whether a history arrives
+in one file or as SUCCESSIVE COMPLETE SOURCE SNAPSHOTS (each file a whole export at some moment, so each represents a
+history the source could have had). A history the source store could legitimately have produced (challenge,
+resolve, then confirm) is admitted that way, and a confirmation made under an unresolved challenge is refused.
+*An ARBITRARY split is not equivalent, by design: a file carrying the challenge and the confirmation without the
+resolve that came between them represents a confirmation under an unresolved challenge, and it is refused, although
+the whole history in one file is admitted (dev's model counterexample, 2026-10-13).*
+
+## 6g. The registry's digests and its single erasure rule (v6)
+
+*Closes 0047 R2-05 with the 0041 amendment; 0044 R2-04 and R2-07.*
+
+**The registry row gains `target_edge_id`**, the edge the request acted on, so an edge's redaction can find its
+requests. A redaction REPLACES `request_registry.request_digest` for those rows, as it does
+`confirmations.request_digest` and `replies.request_digest` (the 0041 amendment's per-candidate map, generated from
+the table). After it, a retry under that id returns the TERMINAL `request_redacted`, whatever its payload: it does
+not replay the original (the verifier is gone), and it admits no new act (the id stays held, so another verb still
+conflicts). The registry step backfills an already-redacted confirmation's registry row with the marker.
+
+**0044's undo is a verb of this registry, `undo`.** The id space is shared by `confirm`, `reply` and `undo`, in both
+directions and under concurrency.
+
+**Replay, and the terminal rule's precedence (v1.3).** A completed request replays from `result_ref` without
+reading the edge, so it replays after the edge is retired or changed. **The terminal rule comes first, for every
+verb (`confirm`, `reply`, `undo`):** once a redaction has replaced a request's digest, a retry under its id returns
+`request_redacted` and nothing else. A retained `result_ref` never authorizes a replay, because replay requires
+verifying the request against a digest that no longer exists. After user erasure the id is free again (the erasure
+rule below), and a retry is a new request.
+
+**One erasure rule, for both packages:** `forget_user` deletes, atomically with the user's records, the user's
+registry rows (every verb), act rows, and 0044's `migration_outcome`, `migration_run` (the run rows, which name the
+0018 amendment's `op_id`), `arity_inventory` and `refusal_inventory` rows; every such table joins `_ERASE_TABLES`.
+*The 0018 amendment's admission record, `migration_op`, is NOT per-user and holds no user content (an id, a mode, a
+digest of declarations, a time), so erasure has nothing of it to remove (v1.3, corrected before adoption).* Replay and 0044's once-per-plan
+end at erasure: a retry after erasure is a NEW request, and nothing erased is recreated in order to replay. The
+store-wide counter is NOT erased, so a recreated user's acts never reuse a position.
+
+### Regimes (v6, amendment `0047/0008-request-registry`)
+
+| regime | behaviour |
+|---|---|
+| a store with confirmations only (today's) | the migration backfills their ids; every existing replay still replays; a reply cannot reuse a pre-upgrade confirm id |
+| a host that never supplies ids | generated ids take registry rows; no replay protection, as 0008 states |
+| default import of a file with confirmations | written `imported`; no registry rows; `g(e)` unaffected |
+| trusted restore of own history | `local → restored`; `imported` stays `imported`; no registry rows |
+| older build opening an upgraded store | refused by 0007's version gate, as for any schema step |
 
 ---
 
@@ -482,6 +794,8 @@ until a later `confirm()` clears them — **reinforcement no longer changes the
 flag at all.** **That is the
 right direction to fail, and it is still not "no data changes".**
 
+
+**v6 (the request registry):** A verb that cannot write its registry row fails whole, and its act is not written (0008 C7's all-or-nothing property, extended). The migration is additive; its backfill is derived from existing rows and can be re-derived.
 
 ## 8. Claims and limits
 
@@ -514,6 +828,14 @@ this spec's own error one level up.
 - **Not anything about liveness.** §3d's bypass is open and owned by `0012`.
   **v2 claimed this and the mechanism was rejected**; nothing replaced it here.
 
+
+**v6 (the request registry):**
+
+**Claimed:** within one store, one user's correlation ids name at most one request across every verb that takes
+them. A replay returns that request's original result. An act's origin survives export and restore without
+upgrading.
+**NOT claimed:** replay across stores (the registry is not exported, by design). Proof that a `restored` act was
+genuinely made by the user: it rests on 0005's explicit trust assumption for the restore, as 0047 §4f states.
 
 ## Review closure
 
