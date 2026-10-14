@@ -2,6 +2,7 @@
 
 Spec-Status: accepted
 Spec-Requires: 0005, 0008, 0014, 0016, 0018
+Folds: 0045/0019-nonuser-refusal
 
 *<!-- canonical machine-readable state; the header table below carries the narrative. Only `accepted` authorises implementation. -->*
 
@@ -27,11 +28,11 @@ Spec-Requires: 0005, 0008, 0014, 0016, 0018
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | v6 (ACCEPTED) — ROUND 4: APPROVED ON A FINITE BOUNDARY with three mandatory pre-flip obligations, all folded here: (1) LONGEST-MATCH PRECEDENCE — a weekday token inside a next|last|this span is consumed by it ("next Friday" resolves only forward; the reviewer's executed 2026-08-07 case is a pinned FLAGGED vector); the full regression matrix (next/last/this × member × the coexistence cell) joins U3 and the vectors (30 total, four-seed-verified). (2) every current false-positive number replaced by UNKNOWN-until-U3b (the superseded predicate keeps its historical figures, labeled). (3) BOTH reductions propagated through every carrier — §2's gate row, §7's failure modes, the honest rollback statement (disabling the check is NOT full rollback: existing True flags stay consumed by both filters), and the restore forging matrix/U7 covering proactive AND wiki eligibility. Cleanups: the duplicated tokenizer heading; the reference's stale v4 label. THE FLIP IS ATOMIC: the 0014 rider, Rider A (0016), Rider B (0018), and the CHANGELOG correcting note land in this commit under the round-4 cross-spec sign-off; the numeral-sweep output is in the commit message. *(v5: round 3. v4: round 2. v3: round 1. v2: internal. v1: draft.)* |
+| **Version** | **v7 — THE NON-USER REFUSAL FOLD (amendment `0045/0019-nonuser-refusal`, v2.2, sha16 `c4e1443eca0c5a36`).** Its narrowed design was ACCEPTED at the 0045–0047 package's round 2 (v2.1, INV-N1–N4); round 2's bounded correction #4 is v2.2; rounds 3 and 4 retained the acceptance. The owner held the fold until 0045's acceptance (2026-10-11) and ruled “Accept now, fold next” (2026-10-14). Folded: §4c's first bullet and §2's gate-partition row (the amendment's exact replacement text); its field rows, untrusted inputs, reach rows (re-derived at `af1e564`), trust-class rows, regimes, invariants INV-N1–N4, failure modes and claims as v7 material; and, because the exception narrows flag-never-refuse, a v7 note on each statement that depends on it (§3's failing-check row, §4a, U1, §7 and §8). Not folded: the amendment's review brief and open questions. Prior: v6 (ACCEPTED) — ROUND 4: APPROVED ON A FINITE BOUNDARY with three mandatory pre-flip obligations, all folded here: (1) LONGEST-MATCH PRECEDENCE — a weekday token inside a next|last|this span is consumed by it ("next Friday" resolves only forward; the reviewer's executed 2026-08-07 case is a pinned FLAGGED vector); the full regression matrix (next/last/this × member × the coexistence cell) joins U3 and the vectors (30 total, four-seed-verified). (2) every current false-positive number replaced by UNKNOWN-until-U3b (the superseded predicate keeps its historical figures, labeled). (3) BOTH reductions propagated through every carrier — §2's gate row, §7's failure modes, the honest rollback statement (disabling the check is NOT full rollback: existing True flags stay consumed by both filters), and the restore forging matrix/U7 covering proactive AND wiki eligibility. Cleanups: the duplicated tokenizer heading; the reference's stale v4 label. THE FLIP IS ATOMIC: the 0014 rider, Rider A (0016), Rider B (0018), and the CHANGELOG correcting note land in this commit under the round-4 cross-spec sign-off; the numeral-sweep output is in the commit message. *(v5: round 3. v4: round 2. v3: round 1. v2: internal. v1: draft.)* |
 | **Status** | *see `Spec-Status:` — canonical.* |
 | **Internal reviewers** | research (they built and measured the instrument; the ask records research+dev aligned on option A) |
 | **External review** | required — `schema.py`, `ingest.py`, `gate.py`/render, `portability.py` are guarded; this adds a stored field and a rendered marker |
-| **Decision + date** | **ACCEPTED 2026-08-14 — external round 4, APPROVED ON A FINITE BOUNDARY** (findings 7/6/5/3-obligations; the frozen surface is §§2–5, U1–U9/U3b, the N-ary pre-insert absorption OR, the total same-ID transition guard, the exact two-consumer reduction set, and §7b's complete riders). **The separate cross-spec sign-off for the 0014 and 0016/0018 riders was GRANTED at round 4** (the rider-verification executable passing); the three riders + the CHANGELOG correcting note land in THIS flip commit — the atomic pattern. The three mandatory pre-flip obligations are folded in this same commit (longest-match weekday precedence + the regression matrix; unknown-until-U3b for every current false-positive number; both reductions propagated through §2c/§7/§8-limit-6/U7 with the honest rollback statement). Implementation gated on U1–U9 + U3b's pre-ship re-measurement |
+| **Decision + date** | **ACCEPTED 2026-08-14 — external round 4, APPROVED ON A FINITE BOUNDARY** (findings 7/6/5/3-obligations; the frozen surface is §§2–5, U1–U9/U3b, the N-ary pre-insert absorption OR, the total same-ID transition guard, the exact two-consumer reduction set, and §7b's complete riders). **The separate cross-spec sign-off for the 0014 and 0016/0018 riders was GRANTED at round 4** (the rider-verification executable passing); the three riders + the CHANGELOG correcting note land in THIS flip commit — the atomic pattern. The three mandatory pre-flip obligations are folded in this same commit (longest-match weekday precedence + the regression matrix; unknown-until-U3b for every current false-positive number; both reductions propagated through §2c/§7/§8-limit-6/U7 with the honest rollback statement). Implementation gated on U1–U9 + U3b's pre-ship re-measurement **v7, 2026-10-14:** the amendment `0045/0019-nonuser-refusal`, its design accepted at package II's round 2 and retained at rounds 3 and 4, folded on the owner's ruling “Accept now, fold next”. |
 | **Path** | full |
 | **Spec-Requires** | `0005` (accepted — the import boundary this flag crosses verbatim, §2c/§7b), `0008` (accepted — `needs_confirmation` untouched; its §6d store guard is the F3 precedent), **`0014` (accepted — FORMALLY AMENDED: the flag joins the RECOMPUTED absorption class; the request digest shifts → `outcome_digest_version` era bump; verbatim rider in §7b, R1-F1)**, **`0016` + `0018` (accepted — the complete verbatim renumbering amendments now IN §7b, R1-F2)** |
 
@@ -109,11 +110,25 @@ noticing — and only the noticing.
 |---|---|---|---|---|
 | `Edge.ungrounded` | **NEW — `StrictBool = False` (F7: pydantic's plain bool COERCES "yes"/0/1; the strict form raises on every non-boolean — the 0005 P13 closed-predicate posture)** — derived at ingest by the §4b check; MONOTONE thereafter (§4d: False→True only via the absorption OR; nothing ever clears True) | "the specifics in this fact's object were not all grounded in the event text it was extracted from" — a property of the EXTRACTION, not of the fact's truth | render (marker), proactive (suppression), introspect (count), export (carried), import (§2c) | the whole spec |
 | `Edge.needs_confirmation` | read only | 0008: staleness — "possibly outdated" | staleness machinery | **untouched — deliberately (§4d).** "Possibly never said" is a different fact from "possibly outdated"; overloading would need a 0008 amendment and would let staleness-clearing paths silently clear a fabrication signal |
-| `assertable` / gate partition | read only | disclosure-keyed routing | gate, proactive, render | **UNCHANGED — flag-never-refuse extends to flag-never-demote (§4c).** The rationale is STRUCTURAL, not numeric (R3-3): at any precision materially below 1, demotion silently buries real facts — which is refusal wearing a different hat; the design spends false positives on a marker plus exactly the two withholding reductions (§4c: proactive suppression; wiki exclusion) — never on refusal or demotion |
+| `assertable` / gate partition | read only | disclosure-keyed routing | gate, proactive, render | **UNCHANGED — flag-never-refuse extends to flag-never-demote (§4c).** The rationale is STRUCTURAL, not numeric (R3-3): at any precision materially below 1, demotion silently buries real facts — which is refusal wearing a different hat; the design spends false positives on a marker plus exactly the two withholding reductions (§4c: proactive suppression; wiki exclusion) — never on refusal or demotion. **v7:** …flag-never-refuse holds for USER-effective events; a flagged triple from a non-user-effective event is refused at ingest (§4c, the exception). |
 | `FORMAT_VERSION` | written: 5 → **6** | export carries every Edge field | `portability.py` | the flag exports; an older importer REFUSES a v6 file rather than silently dropping the field (the accepted 0014 R5-4 / 0010 refuse-don't-drop rule). **Collides with 0016 D2's claimed numbering — §7b** |
 | `SCHEMA_VERSION` | written: 6 → **7** (no DDL — the field lives in `edges.json`, the 0006 v4→v5 precedent) | 0007: an older build refuses a newer store | `store/schema_version.py` | an older build silently DROPPING the flag on rewrite would erase a fabrication signal; refusal is the honest failure. **Collides with 0016 D2's claimed v7 — §7b** |
 
 ---
+
+**v7, amendment `0045/0019-nonuser-refusal`: the sites the exception changes.**
+
+| site | change |
+|---|---|
+| ingest's flagged branch (`ingest.py`, the 0019 comment at L729) | for a NON-user-effective event: **refused and counted**, nothing written; for a USER-effective event: unchanged (stored with the flag) |
+| the ingest report | one key, `nonuser_ungrounded_refused`, present and zero on every path (the `subject_refused` / `procedural_refused` shape, L408–L409) |
+| MCP's operator-counter strip list (`mcp_server.py` L213–L216, beside `subject_refused` and `procedural_refused`) | **`nonuser_ungrounded_refused` is ADDED**: an operator counter must never reach the model (0031 §4d). A key left off the list leaks a refusal count — a carrier checked at IMPLEMENTATION (the list is code; adoption lands none), by a derived test: every ingest-report key is model-visible by declaration or stripped |
+| `Edge.ungrounded`, the predicate, the marker, the absorption OR rule | **unchanged** |
+
+**USER-effective, defined from the product's own resolved trust** (not a new notion): the event's effective author
+is `user` AND its resolved content source is direct (`_resolve_context` returns None — `EvidenceContext.direct()`).
+Every other combination — an author of system, assistant or third_party, or any `derived(X)`, **including the
+absent-context floor `derived(THIRD_PARTY)`** — is non-user-effective.
 
 ## 2c. Untrusted inputs — REQUIRED, blocking
 
@@ -123,6 +138,13 @@ noticing — and only the noticing.
 | the distiller output (the CHECKED object) | no specifics in the object → vacuously grounded, no flag | — | — | a fabricated value phrased without specifics ("a large amount") evades the specifics-only check | accepted by design: the specifics-only class catches the VALUE-SHAPED fabrications (the ones that damage functional facts) — the class choice was measured on the superseded form (§4b provenance note); the candidate's own operating point comes from U3b; common-noun fabrication is the offline full predicate's territory (§8 limit 2) |
 | an import file's `ungrounded` values (edges) | absent → `False` (see the adversarial cell — on restore this is a REAL eligibility grant, §8 limit 6) | **non-bool → `StrictBool` raises — coercive inputs ("false", "yes", 0, 1) REFUSE, never coerce (F7; the exhaustive cell list in U7)** | **pre-v6 envelope carrying the field → STRIPPED, never trusted (the 0006 I10 rule)** | a hand-written file sets `ungrounded=False` on fabricated content — or `True` on genuine content | **the flag grants no TRUST — no consumer raises trust, assertability, or authority on it (I5-class groups-never-grants) — but absence is NOT behaviourally inert on the restore path (the matrix below; the superseded blanket absence-grants-nothing claim is WITHDRAWN, R2-5).** **The forging matrix, honest (F6):** on the DEFAULT path, forging either value gains nothing — 0005 caps disclosure to `use_only`, so the record is proactive-ineligible regardless of the flag (immunity by COMPOSITION, stated not assumed). On the RESTORE path, a forged or absent `False` DOES obtain BOTH flag-keyed eligibilities — proactive volunteering AND wiki-compiler membership — that a truthful `True` would not have — accepted as §8 limit 6 under 0005 §8's own posture: restore is the operator's explicit whole-file trust assertion, and the flag rides inside that assertion like every other preserved field. Forging `True` remains a self-inflicted narrowing. Carried VERBATIM on both 0005 paths (§7b) — it is extraction-fidelity metadata, not a trust lever, so the cap neither reads nor writes it |
 | the session date (feeds date-context awareness, §4b) | absent → today (the `remember` contract) | — | — | a crafted date shifts the ±366-day resolved-date window | the window bounds PLAUSIBILITY of resolved dates, never grants trust; a shifted window at worst flags/unflags a date token — the flag grants nothing (row above) |
+
+**v7's rows (v7, amendment `0045/0019-nonuser-refusal`):**
+
+| uncontrolled input | empty | malformed | unrecognised | adversarial | **invariant** |
+|---|---|---|---|---|---|
+| the event's author / context (host-declared; under MCP, by the deployment's capability) | the absent-context floor → non-user | `_resolve_context` raises, nothing written (0011, unchanged) | — | a caller cannot ELEVATE: MCP's `author` and `derived_from` are restrict-only (0031), so no caller turns a non-user event into a user one to escape the refusal | **INV-N1** |
+| extractor output for a non-user event | no triple | the extractor's refusal | — | a flagged object is refused; an unflagged one is stored (0045: `not_attested`) | **INV-N1** |
 
 ### 2c-ii. Assertions about reach — REQUIRED
 
@@ -137,6 +159,16 @@ noticing — and only the noticing.
 
 ---
 
+**v7's rows (v7, amendment `0045/0019-nonuser-refusal`).** Commands run from the repository root at `af1e564` (research, 2026-10-14); every source line reads as the amendment recorded at `cfb4151`. Row 1 reads this document's own §4c heading.
+
+| # | assertion | command | result |
+|---|---|---|---|
+| 1 | 0019 §4c is flag-never-refuse | `grep -n "^### 4c. Consumers" specs/0019-ungrounded-flag.md` | READ: §4c in this document |
+| 2 | ingest stores a flagged edge today, and computes the flag here | `grep -n -e "A failing edge is STORED with the flag" -e "flagged = grounding.ungrounded(obj, event_text, date)" src/veracium/ingest.py` | READ: L729, L731 |
+| 3 | the refusal-counter shape | `grep -n -e "\"subject_refused\": 0" -e "\"procedural_refused\": 0" src/veracium/ingest.py` | READ: L408, L409 |
+| 4 | the absent-context floor | `grep -n "_ABSENT_CONTEXT_FLOOR = EvidenceAuthor.THIRD_PARTY" src/veracium/ingest.py` | READ: L146 |
+| 5 | MCP's capability baselines | `grep -n -A1 "_BASELINE_AUTHOR = " src/veracium/mcp_server.py` | READ: L96–L97 — NONE → `third_party`, DIRECT → `user` |
+
 ## 3. Trust-class matrix — REQUIRED, blocking
 
 **No trust class moves.** The flag is orthogonal to the author/derivation
@@ -145,7 +177,7 @@ axes by construction:
 | operation | trust consequence of the flag |
 |---|---|
 | ingest, check passes | none — field `False`, byte-identical behaviour to today |
-| ingest, check fails | the edge stores with `ungrounded=True`; **author, derived_from, disclosure, assertable, gate partition all UNCHANGED** |
+| ingest, check fails | the edge stores with `ungrounded=True`; **author, derived_from, disclosure, assertable, gate partition all UNCHANGED** (**v7:** for a USER-effective event; a NON-user-effective event's flagged triple is refused and counted, nothing written (§4c)) |
 | any read | no consumer keys a trust/authority/staleness decision on the flag (I2); render adds a marker; proactive suppresses volunteering (§4c) |
 | confirm / dispute / supersession / outcome | all operate exactly as today; none reads or writes the flag (§4d) |
 
@@ -158,6 +190,29 @@ fresh evidence, `graph.py:98` — it is not maintenance) computes the new
 survivor's N-ary OR pre-insert. MAINTAIN-TIME machinery (consolidation,
 expiry) neither reads nor writes the flag; consolidation outputs are
 system-authored summaries with their own §8 disposition (limit 3).
+
+**v7, amendment `0045/0019-nonuser-refusal`: who the exception reaches.**
+
+Classes from the enums at `af1e564`: `EvidenceAuthor` = user, third_party, system, assistant.
+
+| effective source | 0019 flag unset | 0019 flag set |
+|---|---|---|
+| **user, direct** | stored (0045 labels it) | **stored with the marker — 0019 unchanged** |
+| **user, `derived(X)`** (including the absent-context floor) | stored | **REFUSED, counted** |
+| **system · assistant · third_party** | stored | **REFUSED, counted** |
+
+🔴 **The consequence, stated: every caller that does not declare first-party capture.** That is the Python API's
+DEFAULT (`remember(…, author=USER, context=None)` resolves to the floor `derived(THIRD_PARTY)`, §2c-ii row 4) and
+every MCP call under capability NONE (author baseline `third_party`, §2c-ii row 5). For all of them **every flagged
+triple is refused**, where 0019 stored it with the marker. Those edges were `use_only` (the floor's disclosure), so none was
+assertable; the loss is of use-only, flag-positive facts. **Unmeasured** (0045 §5). Under capability DIRECT, a user's
+own statements are USER-effective and nothing they say is refused.
+
+- Can it make a **user-asserted fact non-assertable**? Not for a USER-effective event. For an event the host has not
+  attested as first-party, a flagged triple is refused; it was never assertable.
+- Can **non-user content gain authority**? No — it only loses flag-positive writes.
+
+**v7, authorization and scope:** No surface changes. The report key is an operator counter and **must join MCP's strip list** beside `subject_refused` and `procedural_refused` (`mcp_server.py` L213–L216 at cfb4151); a key left off that list would leak a refusal count to the model (0031 §4d's argument). Checked at the implementation gate, not at adoption: a derived test asserts that every ingest-report key is either model-visible by declaration or on the strip list, rather than a hand assert per key.
 
 ## 3b. Authorization and scope
 
@@ -193,7 +248,7 @@ system-authored summaries with their own §8 disposition (limit 3).
 > At ingest, after extraction and before storage, every extracted edge's
 > OBJECT is checked by the §4b predicate against the event text. A failing
 > edge is stored with **`ungrounded = True`** — stored, rendered, recallable,
-> **never refused, never demoted, never re-derived**. The flag is set at most
+> **never refused, never demoted, never re-derived** (**v7:** for a USER-effective event; a NON-user-effective event's flagged triple is refused and counted, nothing written (§4c)). The flag is set at most
 > once, at ingest, and is immutable for the record's lifetime (§4d).
 
 ### 4b. The predicate — PINNED (phase 1f, specifics-only, all relations)
@@ -276,10 +331,14 @@ so the shipped behaviour is the measured behaviour:
 
 ### 4c. Consumers — flag-never-refuse, flag-never-demote, always-visible
 
-- **Gate/partition: UNCHANGED.** A flagged fact keeps its disclosure-derived
-  partition. Rationale (structural, R3-3): at any precision materially below 1, a
-  flag may be a false positive; demotion would silently bury real memories,
-  which is refusal wearing a different hat.
+- **Gate/partition: UNCHANGED.** A flagged fact keeps its disclosure-derived partition. Rationale (structural,
+  R3-3): at any precision materially below 1, a flag may be a false positive; demotion would silently bury real
+  memories, which is refusal wearing a different hat. **Exception (amendment `0045/0019-nonuser-refusal`): a
+  flagged triple from a NON-user-effective event — effective author not `user`, or a resolved content source other
+  than direct, the absent-context floor included — is REFUSED and counted (`nonuser_ungrounded_refused`), nothing
+  written: no declared-direct user statement is refused (such an event can still carry a useful memory; that loss is
+  unmeasured), and A9 refuses an inference from a non-user source. USER-effective events
+  are unchanged.**
 - **Render: the marker — and the wiki EXCLUSION (F4).** Wherever a flagged
   fact renders (recall context, introspect categories), it carries a
   deterministic inline marker — **`[possible extraction error]`** — the same never-severed
@@ -385,6 +444,16 @@ Nothing ever clears `True` anywhere. Consequences:
 
 ---
 
+**v7's regimes (v7, amendment `0045/0019-nonuser-refusal`):**
+
+| regime | behaviour |
+|---|---|
+| USER-effective event | unchanged |
+| non-user event, unflagged | stored, as today |
+| non-user event, flagged | **refused, counted** |
+| MCP capability NONE | every flagged triple refused (§3) |
+| legacy store | nothing re-evaluated; stored flagged edges stay |
+
 ## 6. Invariants and executable checks — REQUIRED, blocking
 
 **Status of every check: STAGE-5 OBLIGATION — none exists yet** (the 0005
@@ -392,7 +461,7 @@ R1-7 rule: a draft spec claims no CI).
 
 | invariant | executable check | status |
 |---|---|---|
-| **U1** the check never refuses, never demotes: ingest outcomes and gate partitions are identical with the check enabled vs a counterfactual disabled run, except the flag and its marker | `test_ungrounded_never_refuses_or_demotes` | obligation — impl commit |
+| **U1** the check never refuses, never demotes (**v7:** for USER-effective events; a non-user-effective event's flagged triple is refused, INV-N1): ingest outcomes and gate partitions are identical with the check enabled vs a counterfactual disabled run, except the flag and its marker | `test_ungrounded_never_refuses_or_demotes` | obligation — impl commit |
 | **U2** no consumer grants or moves trust/authority/staleness on the flag — a sweep by FACT over every `ungrounded` reader | `test_ungrounded_grants_nothing` | obligation — impl commit |
 | **U2b** the 0014 rider holds mechanically: `ungrounded` sits in `RECOMPUTED_EDGE_FIELDS`; post-0019 receipts stamp `outcome_digest_version` 3 and the validated set is {1,2,3}; **the verifier RECOMPUTES the N-ary OR from the plan's full contributor set (R3-4 — the transform is contributor-set-bound, not pairwise)** and aborts any other flag difference; the partition-totality test passes with the new field classified | `test_ungrounded_joins_the_recomputed_class` | obligation — impl commit |
 | **U2c** the N-ary absorption OR (R2-3/R3-4): with ZERO absorbed contributors the incoming flag passes through; with ONE and with MANY, the winner is flagged iff the raw incoming or ANY contributor is — asserted over every flag-placement PERMUTATION of a three-contributor case and independent of contributor iteration order; 0012 reinforcement leaves every record's flag byte-untouched | `test_absorption_or_nary_permutations` | obligation — impl commit |
@@ -405,6 +474,18 @@ R1-7 rule: a draft spec claims no CI).
 | **U8** version honesty: FORMAT 6 refused by older importers; SCHEMA v7 refused by older builds; the migration is additive-only | `test_version_gates_and_migration` | obligation — impl commit |
 | **U9** introspect reports the count; MCP results carry no new field beyond the rendered marker | `test_observation_surfaces` | obligation — impl commit |
 
+
+**v7's invariants (v7, amendment `0045/0019-nonuser-refusal`):**
+
+| | invariant | mechanism mutant that must fail |
+|---|---|---|
+| **INV-N1** | a flagged triple from a non-user-effective event writes nothing and moves `nonuser_ungrounded_refused` by one; an unflagged one is stored | store it with the marker (0019's old rule); refuse unflagged non-user triples too |
+| **INV-N2** | a flagged triple from a USER-effective event is stored with the marker, exactly as 0019 | refuse it (v1's rule) |
+| **INV-N3** | the absent-context floor is non-user-effective | treat an undeclared context as direct |
+| **INV-N4** | the counter is present and zero on every path, including the unparseable one | omit the key when zero |
+
+*MODEL: dev's reference model II encodes the write path (its G8). PRODUCT tests at the implementation gate.*
+
 ---
 
 ## 7. Failure modes and reversibility
@@ -412,7 +493,7 @@ R1-7 rule: a draft spec claims no CI).
 - **False positives (rate UNKNOWN until the U3b re-measurement — round-4 obligation 2; the superseded predicate measured ~50–60%, historical only):** the designed
   cost ceiling — a marker on a true fact, plus the two §4c withholding
   reductions (proactive volunteering suppressed; the fact excluded from the
-  wiki-compiler input), never refusal or demotion. Rate bounds come from
+  wiki-compiler input), never refusal or demotion (**v7:** for USER-effective events; §4c). Rate bounds come from
   U3b's re-measurement (the superseded form measured ~1 in 400 objects;
   the candidate's own rate is pinned there before ship).
 - **False negatives:** specifics-free fabrications pass (§2c; §8 limit 2).
@@ -463,11 +544,13 @@ R1-7 rule: a draft spec claims no CI).
 
 ---
 
+- **v7, the non-user refusal:** A refused triple stores nothing; its evidence is the episode and the count. Additive otherwise; stored edges are never re-evaluated.
+
 ## 8. Claims and limits
 
 **Claim:** after this spec, a stored fact whose object carries specifics the
 source text never contained is visibly marked at every surface that shows it,
-at zero refusal cost and zero trust movement.
+at zero refusal cost and zero trust movement (**v7:** for USER-effective events; a flagged triple from a non-user-effective event is refused, §4c).
 
 **Limits, stated plainly:**
 
@@ -485,7 +568,7 @@ at zero refusal cost and zero trust movement.
    remedy is restatement. Honest cost of an immutable diagnostic.
 5. **The false-positive share is UNKNOWN until U3b** (the superseded form's ~half is historical only — round-4 obligation 2); whatever it measures, the design
    spends that on a marker plus the two behavioural reductions below, never
-   on refusal or demotion.
+   on refusal or demotion (**v7:** for USER-effective events; §4c).
 5a. **The two behavioural reductions (complete list):** proactive
    volunteering is suppressed (§4c), and flagged facts are excluded from
    the wiki-compiler input (F4 — a code-owned marker cannot survive an LLM
@@ -499,6 +582,8 @@ at zero refusal cost and zero trust movement.
    grounding consequences for the wiki half; the restore exposure sits
    inside the operator's whole-file trust assertion (0005 §8 limit 1's
    posture) and is accepted rather than patched with a tri-state.
+
+**v7, the non-user refusal:** **Claimed:** an inference from a non-user source that carries specifics its event did not contain is not written. **NOT claimed:** that unflagged non-user triples are free of inference (0019's predicate is specifics-only); that the loss under capability NONE is small (unmeasured).
 
 ---
 
