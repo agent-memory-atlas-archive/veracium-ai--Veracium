@@ -1457,6 +1457,12 @@ def test_no_plain_json_load_at_evidence_boundaries():
         "0024/baseline/run_postfix.py": (3, LEGACY),
         "0024/baseline/validate_baseline.py": (2, LEGACY),
         "0025/corpus_counts.py": (3, LEGACY),
+        # 0013 v33 §4f cites this instrument BY DIGEST (sha16 5b81c3ae0d9f1b9f): hardening it would falsify the
+        # spec's citation. Its five plain calls are not evidence boundaries: four read the instrument's OWN output
+        # files (compare/table, its report mode, never run by pa1_campaign.py) and one parses the perturbed
+        # statement's own parameter to alter it. The campaign's own reads are strict.
+        "0013/steptable.py": (5, "byte-identical copy of the instrument 0013 v33 §4f cites by sha16; its reads are "
+                                 "its own outputs and the statement it perturbs, never an input a verdict rests on"),
     }
     bad = []
     for f in sorted((ROOT / "specs" / "evidence").rglob("*.py")):
