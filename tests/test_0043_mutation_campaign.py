@@ -32,7 +32,8 @@ def test_the_mutation_table_is_current_and_every_row_is_good():
     assert camp.problems() == []
     t = _table()
     assert t["summary"]["rows"] == len(camp.MUTANTS) == t["summary"]["good"] and t["summary"]["survived"] == 0
-    assert {r["id"] for r in t["rows"] if r["kind"] == "fail-closed"} == camp.FAIL_CLOSED
+    assert {r["id"] for r in t["rows"] if r["kind"] == "fail-closed"} == set(camp.FAIL_CLOSED)
+    assert t["summary"]["controls"] == len(camp.CONTROLS) == t["summary"]["controls_good"]
 
 
 def _rebound(t):
@@ -62,6 +63,21 @@ def test_mutation_table_check_refuses_each_tampered_table(tmp_path):
         "a finding's cell list edited, rebound": (_rebound(edited(lambda t: t["header"]["cells"].update(
             {next(iter(good["header"]["cells"])): good["header"]["cells"][next(iter(good["header"]["cells"]))][1:]}))), "closure cells"),
         "a source digest changed, rebound":(_rebound(edited(lambda t: t["header"]["digests"].update({next(iter(good["header"]["digests"])): "0" * 64}))), "stale"),
+        # the class sweep of round-4 IO-II-7: kills are recounted from the recorded cell kinds; controls are checked
+        "a cell's kind edited to an unrelated exception, rebound": (_rebound(edited(lambda t: t["rows"][first_disc]["cell_kinds"].update(
+            {next(iter(t["rows"][first_disc]["cell_kinds"])): "other: KeyError"}))), "recounted from its cell kinds UNCLASSIFIED"),
+        "a row's cell kinds dropped, rebound": (_rebound(edited(lambda t: t["rows"][first_disc].update(cell_kinds={}))), "not a good row"),
+        "the fail-closed row's declared refusal moved to an undeclared cell, rebound": (_rebound(edited(lambda t: t["rows"][fc].update(
+            cell_kinds={**{n: k for n, k in t["rows"][fc]["cell_kinds"].items() if "Refused" not in k},
+                        "tests/x.py::test_not_declared": "other: r701_run_harness.Refused"},
+            cells_failed=sorted([n for n, k in t["rows"][fc]["cell_kinds"].items() if "Refused" not in k] + ["tests/x.py::test_not_declared"])))),
+            "not a good row"),
+        "a control read KILLED, rebound": (_rebound(edited(lambda t: t["controls"][0].update(outcome="KILLED"))), "negative control is not good"),
+        "a control's unrelated failures reclassified as assertions, rebound": (_rebound(edited(lambda t: t["controls"][0].update(
+            cell_kinds={k: "assertion" for k in t["controls"][0]["cell_kinds"]}))), "negative control is not good"),
+        "a control dropped, rebound": (_rebound(edited(lambda t: t["controls"].pop())), "one per CONTROLS entry"),
+        "the FAIL_CLOSED declaration edited, rebound": (_rebound(edited(lambda t: t["header"]["fail_closed"].update(
+            {next(iter(t["header"]["fail_closed"])): ["KeyError", []]}))), "FAIL_CLOSED declarations differ"),
     }
     f = tmp_path / "mutation-table.json"
     for name, (t, reason) in cases.items():
@@ -96,5 +112,14 @@ def test_the_first_row_reproduces_in_this_run():
         if m[5] == "reader":
             assert camp._honest(root, "reader-reference") == "pass"
         got = camp.run_one(root, m, camp.cells()[m[1]])
-    for k in ("outcome", "kill_kind", "import", "honest", "kind", "good", "cells_failed", "cells_errored"):
+    for k in ("outcome", "kill_kind", "import", "honest", "kind", "good", "cells_failed", "cells_errored", "cell_kinds"):
         assert got[k] == want[k], (k, got[k], want[k])
+
+
+def test_a_fail_closed_declaration_must_name_cited_honest_controls(monkeypatch):
+    """The admission is DECLARED and machine-checked (research's addition to the class sweep): a declared cell that is
+    not an honest control cited by the row's finding is refused, so a new cell cannot inherit the refusal silently."""
+    for bad_cell in ("tests/test_0043_r8_01_evidence_sequence.py::test_not_a_control_at_all",
+                     "tests/test_unrelated.py::test_control_but_not_cited_by_0043_R8_01"):
+        monkeypatch.setattr(camp, "FAIL_CLOSED", {"R8-01d": ("Refused", (bad_cell,))})
+        assert any("is not an honest control cited by its finding" in p for p in camp.problems()), bad_cell

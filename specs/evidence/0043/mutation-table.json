@@ -1,5 +1,37 @@
 {
- "body_sha256": "6721d27be7623712822886d96d3d64425f94aa8df44bc2fd41b08cd65d76318d",
+ "body_sha256": "575796719b8fec8c6126b45906dc81c34faffd780c876e74511c325caa631cd0",
+ "controls": [
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_rescore.py::test_R5_04_a_missing_pair_refuses_against_the_frozen_set": "other: TypeError",
+    "tests/test_0043_round6_rescore.py::test_R5_04_an_unaccounted_unit_stays_UNRESOLVED_on_rescore": "other: TypeError",
+    "tests/test_0043_round6_rescore.py::test_control_the_unchanged_committed_run_rescores_to_its_outcomes_and_rates": "other: TypeError",
+    "tests/test_0043_round6_stage2.py::test_R5_04_rescore_refuses_an_uncalibrated_current_interpreter": "other: TypeError",
+    "tests/test_0043_round6_stage2.py::test_R5_04_rescore_refuses_on_the_calibration_probe[<lambda>-['injected: an arm problem only the probe shows']]": "other: TypeError",
+    "tests/test_0043_round6_stage2.py::test_R5_04_rescore_refuses_on_the_calibration_probe[<lambda>-its heading-without-body control did not refuse]": "other: TypeError",
+    "tests/test_0043_round6_stage2.py::test_R5_04_rescore_refuses_when_the_ledger_gate_refuses_the_re_scored_rows": "other: TypeError"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0043_round6_rescore.py::test_R5_04_a_missing_pair_refuses_against_the_frozen_set",
+    "tests/test_0043_round6_rescore.py::test_R5_04_an_unaccounted_unit_stays_UNRESOLVED_on_rescore",
+    "tests/test_0043_round6_rescore.py::test_control_the_unchanged_committed_run_rescores_to_its_outcomes_and_rates",
+    "tests/test_0043_round6_stage2.py::test_R5_04_rescore_refuses_an_uncalibrated_current_interpreter",
+    "tests/test_0043_round6_stage2.py::test_R5_04_rescore_refuses_on_the_calibration_probe[<lambda>-['injected: an arm problem only the probe shows']]",
+    "tests/test_0043_round6_stage2.py::test_R5_04_rescore_refuses_on_the_calibration_probe[<lambda>-its heading-without-body control did not refuse]",
+    "tests/test_0043_round6_stage2.py::test_R5_04_rescore_refuses_when_the_ledger_gate_refuses_the_re_scored_rows"
+   ],
+   "expected": "UNCLASSIFIED",
+   "file": "specs/evidence/0043/run_harness.py",
+   "good": true,
+   "id": "CTRL-unrelated-TypeError",
+   "import": "ok",
+   "kill_kind": null,
+   "outcome": "UNCLASSIFIED",
+   "what": "an UNRELATED TypeError at R5-04a's call site: every rescore fails, for no reason a finding names"
+  }
+ ],
  "header": {
   "cells": {
    "0043-R5-01": [
@@ -119,7 +151,10 @@
     "score": "pass"
    }
   },
-  "commit": "0f9384015fed1479688c088e944e18368a664ad0",
+  "commit": "7c8c9053f59933664c98a0fa38cf514f75489b9f",
+  "control_definitions": {
+   "CTRL-unrelated-TypeError": "8b1901cdd81f311a90640417f2cb215e3f83198c87f72276bfb2d0afaa8bb25c"
+  },
   "definitions": {
    "R5-01a": "b2b4b14dc13dff98ae960b4860b78a1858f1289123f7e05450c22ec20cd41d8a",
    "R5-01b": "615793c75038393cb88b7afb89804f8f1bf8b88d5ef2b8595febc9fd800aed67",
@@ -145,9 +180,10 @@
   "digests": {
    "specs/evidence/0043/interpreter.py": "d5e014439e216e63cc76a6247a21d126599bd3f013a947536c4bad57d78386ef",
    "specs/evidence/0043/model_input_capture.py": "30bd0b5648223f185f95b74070222653fd39891c1c99c4978a8c6664c32a94c3",
-   "specs/evidence/0043/mutation_campaign.py": "abaeb3afae23353cce72f3c54d30a9ad8322d313184c12a08f355eb1e4426396",
+   "specs/evidence/0043/mutation_campaign.py": "7bc5bc88f76c0d24b4f6edd31e32b8649091d3949f1981c6113d1bc3ff843ff9",
    "specs/evidence/0043/request_manifest.py": "c5f636852a95b3843fb3c411768c4a9a0d5a32eb9e33da2e7161dc996b45210b",
    "specs/evidence/0043/run_harness.py": "b1679c3752bc901619bc3485ce9d7a817cb81a387f7f35fc452e606577dbfaee",
+   "specs/evidence/mutation_kinds.py": "46d4802f8ef82e797fa285dab7afde3581db230761c5377c826ce6cdc275c8ad",
    "tests/test_0043_r6_01_publication.py": "0433a1e2f7a4d09272548d7926d5eeba0b5e6e4cf99960780bdf4d52f7b05ff6",
    "tests/test_0043_r6_02_question.py": "37b739c408e1446f540272551e2c59f2140bd01d1603977f3dcdc9df75e1f4ec",
    "tests/test_0043_r6_03_compiler_binding.py": "c061f4b897a76bd4d1f421e6cb8148c264e93ba75a4d5bd1d190009d45bdf349",
@@ -158,22 +194,38 @@
    "tests/test_0043_round6_binding.py": "ee84d6cf6e20e4673af57f4f1a5542f89307d41793a69193a76fa13c6ccf4397",
    "tests/test_0043_round6_failclosed.py": "69f6fbeb2ec749c178f40e796736a68ec7c2defb6beb8c54220e3c119fc4def3",
    "tests/test_0043_round6_manifest.py": "2d10071d6570683786a7186a341c1049cdf8f6755471d0e6a898c9c22d3b437c",
-   "tests/test_0043_round6_rescore.py": "051fb4e26e66c1c1e76a4334c4517bb9571f1b8cfd5c3d1a09af719d41ae7589",
+   "tests/test_0043_round6_rescore.py": "05ffec93211bb1626ace97e465555398d5f8fa86e91a8d248b7a854009f76fd9",
    "tests/test_0043_round6_stage2.py": "1c89399d708b98ffa1b599ca185b07f696ffc1de647f55dccfbd3cfe29ce0397",
    "tests/test_0043_round6_withholding.py": "76f36851e0817a16720cab89c06a346f23dda09c93a6734a466e85f3a9bc11a6"
+  },
+  "fail_closed": {
+   "R8-01d": [
+    "Refused",
+    [
+     "tests/test_0043_r7_01_directed_intervention.py::test_control_the_honest_run_reports_3_of_6_and_0_of_6",
+     "tests/test_0043_r7_01_directed_intervention.py::test_control_the_unchanged_committed_run_still_publishes_12_of_24_and_1_of_24",
+     "tests/test_0043_r8_01_evidence_sequence.py::test_control_the_honest_run_and_the_whitespace_allowance_report"
+    ]
+   ]
   },
   "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
   "python": "3.14.7",
   "spec": "0043",
   "tracked_changes": [
+   "specs/evidence/0041/mutation_campaign.py",
    "specs/evidence/0043/mutation_campaign.py",
-   "specs/skip_inventory.py",
-   "tests/test_closure_mutants.py"
+   "specs/evidence/mutation_kinds.py",
+   "tests/test_0043_mutation_campaign.py",
+   "tests/test_0043_round6_rescore.py",
+   "tests/test_mutation_kinds.py"
   ]
  },
  "rows": [
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r6_01_publication.py::test_control_an_event_time_question_the_reader_leaves_to_the_labels_is_resolved_by_them": "assertion"
+   },
    "cells": 3,
    "cells_errored": [],
    "cells_failed": [
@@ -190,11 +242,14 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 2 passed in 4.44s",
+   "pytest": "1 failed, 2 passed in 3.81s",
    "what": "row references treated as the requested facts without adjudicating the question (the event-time step skipped: q006 classes on its located_at row)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_manifest.py::test_R5_01_a_planted_ambiguous_question_is_UNRESOLVED_through_the_real_attach_path": "assertion"
+   },
    "cells": 3,
    "cells_errored": [],
    "cells_failed": [
@@ -211,11 +266,14 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 2 passed in 4.44s",
+   "pytest": "1 failed, 2 passed in 3.73s",
    "what": "no ambiguity path (an ambiguous question is scored as if it were not)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_withholding.py::test_R5_02_the_verdicts_unrelated_refusal_row_is_OTHER": "assertion"
+   },
    "cells": 18,
    "cells_errored": [],
    "cells_failed": [
@@ -232,11 +290,15 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 26 passed in 1.54s",
+   "pytest": "1 failed, 26 passed in 1.32s",
    "what": "an answer-wide refusal-cue fallback (a refusal cue anywhere withholds every fact)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_failclosed.py::test_control_a_disclaimer_in_another_clause_does_not_fail_the_fact_closed": "assertion",
+    "tests/test_0043_round6_failclosed.py::test_control_an_explicit_denial_still_withholds_and_the_reference_cases_stay_calibrated": "assertion"
+   },
    "cells": 18,
    "cells_errored": [],
    "cells_failed": [
@@ -254,11 +316,15 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "2 failed, 25 passed in 1.53s",
+   "pytest": "2 failed, 25 passed in 1.34s",
    "what": "keyword hedges anywhere before a fact (the frame read over the answer's whole text up to the fact, not its clause; research's form, stage-1)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_stage2.py::test_R5_03_run_refuses_on_the_calibration_probe_alone[<lambda>-['injected: an arm problem only the probe shows']]": "assertion",
+    "tests/test_0043_round6_stage2.py::test_R5_03_run_refuses_on_the_calibration_probe_alone[<lambda>-its heading-without-body control did not refuse]": "assertion"
+   },
    "cells": 3,
    "cells_errored": [],
    "cells_failed": [
@@ -276,11 +342,14 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "2 failed, 2 passed in 6.83s",
+   "pytest": "2 failed, 2 passed in 5.69s",
    "what": "run discards the calibration probe's independent arm problems"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_arms.py::test_R5_03_a_fault_only_a_QUESTION_s_pair_shows_is_caught_per_question": "assertion"
+   },
    "cells": 3,
    "cells_errored": [],
    "cells_failed": [
@@ -297,11 +366,14 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 3 passed in 4.37s",
+   "pytest": "1 failed, 3 passed in 3.53s",
    "what": "run discards each question's captured-pair arm problems"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_rescore.py::test_R5_04_a_missing_pair_refuses_against_the_frozen_set": "assertion"
+   },
    "cells": 6,
    "cells_errored": [],
    "cells_failed": [
@@ -318,11 +390,14 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 6 passed in 7.89s",
+   "pytest": "1 failed, 6 passed in 7.19s",
    "what": "rescoring takes the denominator from the surviving rows (the frozen (question, arm) set not enforced)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_rescore.py::test_R5_04_an_unaccounted_unit_stays_UNRESOLVED_on_rescore": "assertion"
+   },
    "cells": 6,
    "cells_errored": [],
    "cells_failed": [
@@ -339,11 +414,14 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 6 passed in 6.51s",
+   "pytest": "1 failed, 6 passed in 5.75s",
    "what": "rescoring passes delivered=None (no delivered-evidence check)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_round6_binding.py::test_a_moved_baseline_is_reported_as_unbound": "assertion"
+   },
    "cells": 3,
    "cells_errored": [],
    "cells_failed": [
@@ -360,11 +438,15 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 3 passed in 2.12s",
+   "pytest": "1 failed, 3 passed in 1.44s",
    "what": "reverify trusts the baseline's declared digest without binding it to the captured bytes"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r6_01_publication.py::test_R6_01_an_unaccounted_unit_stays_UNRESOLVED_in_the_published_row[q006-True]": "assertion",
+    "tests/test_0043_r6_01_publication.py::test_R6_01_an_unaccounted_unit_stays_UNRESOLVED_in_the_published_row[q013-False]": "assertion"
+   },
    "cells": 3,
    "cells_errored": [],
    "cells_failed": [
@@ -382,11 +464,14 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "2 failed, 3 passed in 8.61s",
+   "pytest": "2 failed, 3 passed in 7.83s",
    "what": "published scoring bypasses capture integrity (the labelled path skips the capture accounting)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r6_01_publication.py::test_R6_01_an_edit_to_the_cached_support_cannot_move_the_published_rate": "assertion"
+   },
    "cells": 3,
    "cells_errored": [],
    "cells_failed": [
@@ -403,11 +488,17 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "1 failed, 4 passed in 9.22s",
+   "pytest": "1 failed, 4 passed in 11.83s",
    "what": "published scoring reads cached support: published_rates takes each row's support from the STORED ledger row, not the re-derived one (round 6's own mutant form; a first form in _score's ledger rows moved nothing published \u2014 an equivalent mutant, not a gap)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r6_02_question.py::test_R6_02_a_question_only_fault_passes_the_probe_and_refuses_at_its_own_row": "assertion",
+    "tests/test_0043_r6_02_question.py::test_R6_02_a_shared_transform_and_oracle_that_swap_every_question_refuse_before_any_rate": "assertion",
+    "tests/test_0043_r6_02_question.py::test_R6_02_rescore_refuses_a_stored_pair_whose_baseline_asks_another_question": "assertion",
+    "tests/test_0043_r6_02_question.py::test_R6_02_the_reference_is_the_authored_list_not_the_row_or_the_capture": "expected-refusal-missing"
+   },
    "cells": 9,
    "cells_errored": [],
    "cells_failed": [
@@ -424,14 +515,19 @@
    "honest": "pass",
    "id": "R6-02",
    "import": "ok",
-   "kill_kind": "assertion",
+   "kill_kind": "assertion+expected-refusal-missing",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "4 failed, 5 passed in 8.61s",
+   "pytest": "4 failed, 5 passed in 10.10s",
    "what": "the independent arm check accepts a different question"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_recorded_bytes_edited_with_the_digest_kept_are_not_bound[prompt]": "assertion",
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_recorded_bytes_edited_with_the_digest_kept_are_not_bound[system]": "assertion",
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_the_recorded_digest_edited_alone_is_not_bound": "assertion"
+   },
    "cells": 12,
    "cells_errored": [],
    "cells_failed": [
@@ -450,11 +546,19 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "3 failed, 13 passed in 22.97s",
+   "pytest": "3 failed, 13 passed in 21.12s",
    "what": "compiler reverification does not bind the recorded bytes"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_a_changed_live_configuration_is_named": "assertion",
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_a_live_token_limit_alone_changed_from_0_is_named": "assertion",
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_a_mismatch_outranks_PARTIAL": "assertion",
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_a_recorded_configuration_field_edited_is_named[max_tokens-1]": "assertion",
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_a_recorded_configuration_field_edited_is_named[model-another-model]": "assertion",
+    "tests/test_0043_r6_03_compiler_binding.py::test_R6_03_the_cli_exit_follows_the_compiler_stage[model-1]": "assertion"
+   },
    "cells": 12,
    "cells_errored": [],
    "cells_failed": [
@@ -476,11 +580,17 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "6 failed, 10 passed in 23.70s",
+   "pytest": "6 failed, 10 passed in 19.10s",
    "what": "compiler reverification does not compare the configuration"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[altered block contents-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[forbidden retention: the shipped block kept-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[partial retention: one bullet of the shipped block kept-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[the shipped block duplicated-<lambda>]": "assertion"
+   },
    "cells": 6,
    "cells_errored": [],
    "cells_failed": [
@@ -500,11 +610,20 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "4 failed, 8 passed in 7.64s",
+   "pytest": "4 failed, 8 passed in 6.37s",
    "what": "added baseline instructions disappear: every 'Answer using this rule:' block erased from BOTH arms"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_a_permutation_on_one_question_passes_the_probe_and_refuses_at_its_row": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_an_order_or_placement_change_refuses_at_the_probe_before_any_rate[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_an_order_or_placement_change_refuses_at_the_probe_before_any_rate[relocate]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_publication_with_its_labels_unchanged[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_publication_with_its_labels_unchanged[relocate]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_rescore[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_rescore[relocate]": "expected-refusal-missing"
+   },
    "cells": 22,
    "cells_errored": [],
    "cells_failed": [
@@ -524,14 +643,23 @@
    "honest": "pass",
    "id": "R8-01a",
    "import": "ok",
-   "kill_kind": "assertion",
+   "kill_kind": "expected-refusal-missing",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "7 failed, 28 passed in 28.74s",
+   "pytest": "7 failed, 28 passed in 24.69s",
    "what": "the pre-question sequence compared SORTED (the reviewer's sorted-unit comparison)"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_a_permutation_on_one_question_passes_the_probe_and_refuses_at_its_row": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_an_order_or_placement_change_refuses_at_the_probe_before_any_rate[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_an_order_or_placement_change_refuses_at_the_probe_before_any_rate[relocate]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_publication_with_its_labels_unchanged[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_publication_with_its_labels_unchanged[relocate]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_rescore[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_rescore[relocate]": "expected-refusal-missing"
+   },
    "cells": 22,
    "cells_errored": [],
    "cells_failed": [
@@ -551,14 +679,18 @@
    "honest": "pass",
    "id": "R8-01b",
    "import": "ok",
-   "kill_kind": "assertion",
+   "kill_kind": "expected-refusal-missing",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "7 failed, 28 passed in 29.65s",
+   "pytest": "7 failed, 28 passed in 24.79s",
    "what": "non-evidence lines and sorted evidence compared as SEPARATE projections"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r8_01_evidence_sequence.py::test_the_check_side_normaliser_is_independent_of_the_transform_a_fault_in_strip_markers_is_caught": "assertion",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_the_transform_never_reaches_the_check_side_normaliser_and_the_check_never_reaches_the_transforms_helper": "assertion"
+   },
    "cells": 22,
    "cells_errored": [],
    "cells_failed": [
@@ -576,11 +708,34 @@
    "kill_kind": "assertion",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "2 failed, 33 passed in 20.44s",
+   "pytest": "2 failed, 33 passed in 16.22s",
    "what": "the check's marker removal is the transform's own strip_markers (a shared oracle); the claims rewrite kept, so honest data passes (equal on all 504 committed evidence lines) and only the independence cells can catch it"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_a_block_added_to_one_question_passes_the_probe_and_refuses_at_its_row": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[a plain added line-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[altered block contents-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[forbidden retention: the shipped block kept-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[partial retention: one bullet of the shipped block kept-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[the reviewer's block, added-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_an_addition_or_retention_after_the_question_refuses_and_the_superseded_check_accepted_the_block_cases[the shipped block duplicated-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_the_stored_pair_edit_refuses_in_publication_with_its_labels_unchanged": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_the_stored_pair_edit_refuses_in_rescore": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_control_every_committed_pair_passes_the_directed_check": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_control_the_honest_committed_pair_is_the_shipped_request_under_the_declared_edits": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_control_the_honest_run_reports_3_of_6_and_0_of_6": "other: r701_run_harness.Refused",
+    "tests/test_0043_r7_01_directed_intervention.py::test_control_the_unchanged_committed_run_still_publishes_12_of_24_and_1_of_24": "other: r701_run_harness.Refused",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_a_permutation_on_one_question_passes_the_probe_and_refuses_at_its_row": "assertion",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_publication_with_its_labels_unchanged[permute]": "assertion",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_publication_with_its_labels_unchanged[relocate]": "assertion",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_rescore[permute]": "assertion",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_rescore[relocate]": "assertion",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_control_the_honest_run_and_the_whitespace_allowance_report": "other: r801_run_harness.Refused",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_the_check_side_normaliser_is_independent_of_the_transform_a_fault_in_strip_markers_is_caught": "assertion",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_the_transform_never_reaches_the_check_side_normaliser_and_the_check_never_reaches_the_transforms_helper": "assertion"
+   },
    "cells": 22,
    "cells_errored": [],
    "cells_failed": [
@@ -614,14 +769,27 @@
    "honest": "fail: 24 committed pair(s) refused",
    "id": "R8-01d",
    "import": "ok",
-   "kill_kind": "assertion",
+   "kill_kind": "assertion+declared-fail-closed",
    "kind": "fail-closed",
    "outcome": "KILLED",
-   "pytest": "21 failed, 14 passed in 7.22s",
+   "pytest": "21 failed, 14 passed in 4.86s",
    "what": "FAIL-CLOSED: evidence compared unnormalised (the declared marker removal not applied). On honest data the baseline carries no markers and the shipped side does, so its ONLY observable is that every honest pair refuses: a real kill by the honest controls, but no test of whether the comparison discriminates an undeclared change"
   },
   {
    "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_a_pre_question_change_beyond_the_declared_edits_refuses[a declared removed line retained-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_a_pre_question_change_beyond_the_declared_edits_refuses[the block moved before the question-<lambda>]": "assertion",
+    "tests/test_0043_r7_01_directed_intervention.py::test_R7_01_a_pre_question_change_beyond_the_declared_edits_refuses[the rename target duplicated-<lambda>]": "assertion",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_a_permutation_on_one_question_passes_the_probe_and_refuses_at_its_row": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_an_order_or_placement_change_refuses_at_the_probe_before_any_rate[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_an_order_or_placement_change_refuses_at_the_probe_before_any_rate[relocate]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_publication_with_its_labels_unchanged[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_publication_with_its_labels_unchanged[relocate]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_rescore[permute]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_R8_01_the_stored_edit_refuses_in_rescore[relocate]": "expected-refusal-missing",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_the_check_side_normaliser_is_independent_of_the_transform_a_fault_in_strip_markers_is_caught": "assertion"
+   },
    "cells": 22,
    "cells_errored": [],
    "cells_failed": [
@@ -645,17 +813,25 @@
    "honest": "pass",
    "id": "R8-01e",
    "import": "ok",
-   "kill_kind": "assertion",
+   "kill_kind": "assertion+expected-refusal-missing",
    "kind": "discriminating",
    "outcome": "KILLED",
-   "pytest": "11 failed, 24 passed in 31.33s",
+   "pytest": "11 failed, 24 passed in 24.71s",
    "what": "the pre-question sequence check removed"
   }
  ],
  "summary": {
+  "cell_kinds": {
+   "assertion": 54,
+   "expected-refusal-missing": 22,
+   "other: r701_run_harness.Refused": 2,
+   "other: r801_run_harness.Refused": 1
+  },
+  "controls": 1,
+  "controls_good": 1,
   "fail_closed": 1,
   "good": 20,
-  "killed_by_assertion": 20,
+  "killed": 20,
   "rows": 20,
   "survived": 0
  }

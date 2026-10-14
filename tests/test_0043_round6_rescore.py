@@ -44,18 +44,32 @@ def _ledger():
     return copy.deepcopy(LEDGER)
 
 
+def _refuses_against_the_frozen_set(res):
+    """The refusal asserted EXPLICITLY (0043 class sweep of round-4 IO-II-7): with the frozen-set check gone, rescore runs
+    on and fails later with a KeyError on the missing (question, arm) pair — the defect, observed one step late. That
+    KeyError is converted into an assertion naming the missing refusal; any OTHER exception propagates as itself, so an
+    unrelated failure is never counted as this test's kill."""
+    try:
+        rh.rescore(res)
+    except rh.Refused as x:
+        assert "frozen" in str(x), f"refused, but not against the frozen set: {x}"
+        return
+    except KeyError as x:
+        raise AssertionError(f"rescore did not refuse against the frozen (question, arm) set; it ran on and failed "
+                             f"later on the missing pair {x}") from x
+    raise AssertionError("rescore accepted a ledger missing a pair of the frozen (question, arm) set")
+
+
 def test_R5_04_a_missing_pair_refuses_against_the_frozen_set(tmp_path):
     res = _ledger()
     res["detail"] = [x for x in res["detail"] if x["question_id"] != "q013"]
-    with pytest.raises(rh.Refused, match="frozen"):
-        rh.rescore(res)
+    _refuses_against_the_frozen_set(res)
 
 
 def test_R5_04_a_single_missing_arm_refuses(tmp_path):
     res = _ledger()
     res["detail"] = [x for x in res["detail"] if not (x["question_id"] == "q013" and x["arm"] == "baseline")]
-    with pytest.raises(rh.Refused, match="frozen"):
-        rh.rescore(res)
+    _refuses_against_the_frozen_set(res)
 
 
 def test_R5_04_an_unaccounted_unit_stays_UNRESOLVED_on_rescore(tmp_path):

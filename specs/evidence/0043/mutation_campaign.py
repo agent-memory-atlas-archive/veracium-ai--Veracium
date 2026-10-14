@@ -14,7 +14,11 @@ The protocol is 0011's (mutant_registry.py): runner-observed, never claimed —
     IMPORT  every 0043 evidence module still imports (a mutant that breaks import "kills" everything, proving nothing);
     HONEST  the family's honest probe on the committed data (`--honest <family>`; below);
     CELLS   the finding's own closure cells (derived from specs/closure_findings.py, never a hand list) run under
-            pytest with a JUnit record: KILLED iff >=1 cell FAILS by assertion and none ERRORS (collection or setup);
+            pytest with a JUnit record, EACH failing cell classified from its failure message by the shared definition
+            (specs/evidence/mutation_kinds.py): KILLED iff >=1 cell fails with a qualifying kind (assertion; pytest.raises'
+            DID NOT RAISE; for a FAIL_CLOSED row only, its declared refusal on its declared honest-control cells), NO cell
+            fails otherwise, and none ERRORS (collection or setup). Anything else is UNCLASSIFIED (the class sweep of
+            round-4 IO-II-7: R5-04a had been "killed" by one escaping KeyError);
   and the file is restored byte-identically before the next.
 A row is good when IMPORT ok, HONEST passes, and it is KILLED by assertion: a kill only because the honest data now
 refuses is vacuous, and is recorded as such, never hidden.
@@ -31,6 +35,7 @@ or a cell file makes the table STALE — correctly, since the kill may no longer
 """
 from __future__ import annotations
 
+import collections
 import copy
 import hashlib
 import importlib.util
@@ -48,6 +53,17 @@ import xml.etree.ElementTree as ET
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
+
+
+def _load_kinds():
+    """The ONE definition of a kill, shared with 0041's campaign."""
+    spec = importlib.util.spec_from_file_location("veracium_mutation_kinds", HERE.parent / "mutation_kinds.py")
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    return m
+
+
+MK = _load_kinds()
+KINDS = "specs/evidence/mutation_kinds.py"          # how a kill is judged: digested with the runner
 TABLE = HERE / "mutation-table.json"
 E = "specs/evidence/0043/"
 ERASE = 'r"Answer using this rule:\\n(?:(?:- |  ).*\\n)*"'
@@ -143,7 +159,26 @@ MUTANTS = [
 # research's stage-1 (2026-10-10): a mutant whose only observable is that every honest pair refuses is a real defect
 # (the check fails closed) caught by the honest controls, not a discriminating one; its row is GOOD iff the honest
 # probe REFUSES and an honest-control cell fails by assertion. Declared per mutant, asserted by --check — never inferred.
-FAIL_CLOSED = {"R8-01d"}
+# Declared, never inferred: the refusal the honest controls raise, and the ONLY cells on which it counts. --check
+# asserts each named cell is among the row's finding's cited cells and is an honest control (`::test_control`).
+FAIL_CLOSED = {"R8-01d": ("Refused", (
+    "tests/test_0043_r7_01_directed_intervention.py::test_control_the_honest_run_reports_3_of_6_and_0_of_6",
+    "tests/test_0043_r7_01_directed_intervention.py::test_control_the_unchanged_committed_run_still_publishes_12_of_24_and_1_of_24",
+    "tests/test_0043_r8_01_evidence_sequence.py::test_control_the_honest_run_and_the_whitespace_allowance_report"))}
+
+
+def _admits(mid):
+    fc = FAIL_CLOSED.get(mid)
+    return (fc[0], frozenset(fc[1])) if fc else None
+
+
+_R504A = "    if len(have) != len(set(have)) or set(have) != want:\n"
+# (id, file under specs/evidence/0043/, anchor, replacement, what it injects, the outcome the classifier must give)
+CONTROLS = [
+    ("CTRL-unrelated-TypeError", "run_harness.py", _R504A,
+     '    raise TypeError("an unrelated execution failure (IO-II-7 negative control)")\n' + _R504A,
+     "an UNRELATED TypeError at R5-04a's call site: every rescore fails, for no reason a finding names", "UNCLASSIFIED"),
+]
 
 
 def _strict_pairs(pairs):
@@ -183,7 +218,7 @@ def _digests(root: pathlib.Path) -> dict:
     """The bytes the table's claims rest on: every mutated module, every cell file, AND this runner itself — a change
     to how a kill or an honest pass is judged must stale the table too (the first form bound only the first two)."""
     files = sorted({E + m[2] for m in MUTANTS} | {n.split("::")[0] for ns in cells().values() for n in ns}
-                   | {E + "mutation_campaign.py"})
+                   | {E + "mutation_campaign.py", KINDS})
     return {f: _sha(root / f) for f in files}
 
 
@@ -277,18 +312,21 @@ def _cells(root, nodes) -> dict:
         xml = pathlib.Path(d) / "j.xml"
         r = subprocess.run([sys.executable, "-B", "-m", "pytest", "-q", "-p", "no:randomly", "-p", "no:cacheprovider",
                             f"--junitxml={xml}", *nodes], cwd=root, env=_env(root), capture_output=True, text=True)
-        failed, errored, passed = [], [], 0
+        failed, errored, passed, kinds = [], [], 0, {}
         if xml.exists():
             for tc in ET.parse(xml).iter("testcase"):
                 node = f"{tc.get('file') or tc.get('classname', '').replace('.', '/') + '.py'}::{tc.get('name')}"
-                if tc.find("failure") is not None:
+                f = tc.find("failure")
+                if f is not None:
                     failed.append(node)
+                    kinds[node] = MK.failure_kind(f.get("message") or "")
                 elif tc.find("error") is not None:
                     errored.append(node)
                 elif tc.find("skipped") is None:
                     passed += 1
         summary = (r.stdout.strip().splitlines() or [""])[-1][:160]
-    return {"exit": r.returncode, "passed": passed, "failed": sorted(failed), "errored": sorted(errored), "summary": summary}
+    return {"exit": r.returncode, "passed": passed, "failed": sorted(failed), "errored": sorted(errored),
+            "kinds": dict(sorted(kinds.items())), "summary": summary}
 
 
 def run_one(root: pathlib.Path, m, nodes) -> dict:
@@ -309,16 +347,35 @@ def run_one(root: pathlib.Path, m, nodes) -> dict:
     finally:
         target.write_bytes(original)
     assert _sha(target) == hashlib.sha256(original).hexdigest()
-    killed = bool(c["failed"]) and not c["errored"]
-    row.update({"cells": len(nodes), "cells_failed": c["failed"], "cells_errored": c["errored"], "pytest": c["summary"],
-                "outcome": "KILLED" if killed else ("ERROR" if c["errored"] else "SURVIVED"),
-                "kill_kind": "assertion" if killed else None})
+    row.update(MK.classify(c["kinds"], c["failed"], c["errored"], admits=_admits(mid)))
+    row.update({"cells": len(nodes), "pytest": c["summary"]})
+    killed = row["outcome"] == "KILLED"
     row["kind"] = "fail-closed" if mid in FAIL_CLOSED else "discriminating"
     if row["kind"] == "fail-closed":
         row["good"] = (row["import"] == "ok" and row["honest"].startswith("fail") and killed
                        and any("::test_control" in n for n in c["failed"]))
     else:
         row["good"] = row["import"] == "ok" and row["honest"] == "pass" and killed
+    return row
+
+
+def run_control(root: pathlib.Path, ctl, nodes) -> dict:
+    cid, file, anchor, repl, what, expected = ctl
+    target = root / E / file
+    original = target.read_bytes()
+    text = original.decode()
+    row = {"id": cid, "file": E + file, "what": what, "anchor_count": text.count(anchor), "expected": expected}
+    if row["anchor_count"] != 1:
+        return {**row, "outcome": "ANCHOR", "good": False}
+    target.write_text(text.replace(anchor, repl))
+    try:
+        row["import"] = _imports(root, file)
+        c = _cells(root, nodes)
+    finally:
+        target.write_bytes(original)
+    assert _sha(target) == hashlib.sha256(original).hexdigest()
+    row.update(MK.classify(c["kinds"], c["failed"], c["errored"]))
+    row["good"] = row["import"] == "ok" and row["outcome"] == expected and bool(row["cells_failed"])
     return row
 
 
@@ -340,18 +397,26 @@ def campaign() -> dict:
         if clean_cells["failed"] or clean_cells["errored"] or any(v != "pass" for v in clean_honest.values()):
             raise SystemExit(f"CLEAN failed — no mutant is meaningful on a tree whose controls fail: {clean_cells} {clean_honest}")
         rows = [run_one(root, m, nodes[m[1]]) for m in MUTANTS]
+        r504 = next(m for m in MUTANTS if m[0] == "R5-04a")
+        controls = [run_control(root, k, nodes[r504[1]]) for k in CONTROLS]
     head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no"], capture_output=True, text=True).stdout.split("\n")
     body = {
         "header": {"spec": "0043", "commit": head, "tracked_changes": sorted(l[3:] for l in dirty if l.strip()),
                    "python": platform.python_version(), "platform": platform.platform(),
                    "digests": _digests(ROOT), "definitions": {m[0]: definition_sha(m) for m in MUTANTS},
+                   "control_definitions": {k[0]: definition_sha(k) for k in CONTROLS},
+                   "fail_closed": {k: [v[0], list(v[1])] for k, v in FAIL_CLOSED.items()},
                    "cells": nodes,
                    "clean": {"cells_passed": clean_cells["passed"], "honest": clean_honest}},
         "rows": rows,
-        "summary": {"rows": len(rows), "killed_by_assertion": sum(r.get("kill_kind") == "assertion" for r in rows),
+        "controls": controls,
+        "summary": {"rows": len(rows), "killed": sum(r["outcome"] == "KILLED" for r in rows),
+                    "cell_kinds": dict(sorted(collections.Counter(
+                        k for r in rows for k in r.get("cell_kinds", {}).values()).items())),
                     "fail_closed": sum(r.get("kind") == "fail-closed" for r in rows),
-                    "survived": sum(r["outcome"] == "SURVIVED" for r in rows), "good": sum(r["good"] for r in rows)},
+                    "survived": sum(r["outcome"] == "SURVIVED" for r in rows), "good": sum(r["good"] for r in rows),
+                    "controls": len(controls), "controls_good": sum(k["good"] for k in controls)},
     }
     return {**body, "body_sha256": hashlib.sha256(canonical(body)).hexdigest()}
 
@@ -374,6 +439,16 @@ def problems(path: pathlib.Path = TABLE) -> list[str]:
     h = t.get("header", {})
     if h.get("definitions") != {m[0]: definition_sha(m) for m in MUTANTS}:
         out.append("the mutant definitions differ from the table's (a mutant added, removed or changed) — run --write")
+    if h.get("control_definitions") != {k[0]: definition_sha(k) for k in CONTROLS}:
+        out.append("the control definitions differ from the runner's — run --write")
+    if h.get("fail_closed") != {k: [v[0], list(v[1])] for k, v in FAIL_CLOSED.items()}:
+        out.append("the FAIL_CLOSED declarations differ from the runner's — run --write")
+    finding = {m[0]: m[1] for m in MUTANTS}
+    for mid, (_suffix, fcells) in FAIL_CLOSED.items():
+        cited = set(cells().get(finding.get(mid), []))
+        for n in fcells:
+            if n not in cited or "::test_control" not in n:
+                out.append(f"{mid}: declared fail-closed cell {n} is not an honest control cited by its finding")
     for m in MUTANTS:
         n = (ROOT / E / m[2]).read_text().count(m[3])
         if n != 1:
@@ -393,11 +468,22 @@ def problems(path: pathlib.Path = TABLE) -> list[str]:
         honest_ok = str(r.get("honest", "")).startswith("fail") if fc else r.get("honest") == "pass"
         if r.get("kind") != ("fail-closed" if fc else "discriminating"):
             out.append(f"{r.get('id')}: kind {r.get('kind')!r} is not the declared one")
-        if not (r.get("outcome") == "KILLED" and r.get("kill_kind") == "assertion" and r.get("import") == "ok"
-                and honest_ok and r.get("good") is True
+        recount = MK.classify(r.get("cell_kinds") or {}, r.get("cells_failed") or [], r.get("cells_errored") or [],
+                              admits=_admits(r.get("id")))
+        if not (r.get("outcome") == "KILLED" == recount["outcome"] and r.get("kill_kind") == recount["kill_kind"]
+                and r.get("import") == "ok" and honest_ok and r.get("good") is True
                 and (not fc or any("::test_control" in n for n in r.get("cells_failed", [])))):
-            out.append(f"{r.get('id')}: not a good row (kind {r.get('kind')}, outcome {r.get('outcome')}, kill "
-                       f"{r.get('kill_kind')}, import {r.get('import')}, honest {r.get('honest')})")
+            out.append(f"{r.get('id')}: not a good row (kind {r.get('kind')}, outcome {r.get('outcome')}, recounted "
+                       f"from its cell kinds {recount['outcome']}, kill {r.get('kill_kind')}, import {r.get('import')}, "
+                       f"honest {r.get('honest')})")
+    ctls = t.get("controls", [])
+    if [k.get("id") for k in ctls] != [k[0] for k in CONTROLS]:
+        out.append("the controls are not one per CONTROLS entry, in order")
+    for k in ctls:
+        recount = MK.classify(k.get("cell_kinds") or {}, k.get("cells_failed") or [], k.get("cells_errored") or [])
+        if not (k.get("good") is True and k.get("outcome") == k.get("expected") == recount["outcome"] != "KILLED"):
+            out.append(f"{k.get('id')}: the classifier's negative control is not good (outcome {k.get('outcome')}, "
+                       f"recounted {recount['outcome']}, expected {k.get('expected')})")
     return out
 
 

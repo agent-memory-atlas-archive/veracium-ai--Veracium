@@ -52,6 +52,7 @@ ROOT = HERE.parents[2]
 TABLE = HERE / "mutation-table.json"
 SRC = "src/veracium/"
 SELF = "specs/evidence/0041/mutation_campaign.py"
+KINDS = "specs/evidence/mutation_kinds.py"          # how a kill is judged: digested with the runner
 FINDING = "0041-PA1"
 HOTFIX_TESTS = "tests/test_0041_notice_binding_hotfix.py"
 HONEST_NODES = [HOTFIX_TESTS + "::" + n for n in (
@@ -61,17 +62,16 @@ HONEST_NODES = [HOTFIX_TESTS + "::" + n for n in (
     "test_ii_on_restore_completion_needs_an_inserted_shown_record_and_not_its_origin",
 )]
 
-QUALIFYING = ("assertion", "expected-refusal-missing")
+def _load_kinds():
+    """The ONE definition of a kill, shared with 0043's campaign (specs/evidence/mutation_kinds.py)."""
+    spec = importlib.util.spec_from_file_location("veracium_mutation_kinds", HERE.parent / "mutation_kinds.py")
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    return m
 
 
-def failure_kind(message: str) -> str:
-    """A failing cell's kind, from its JUnit failure message (round-4 IO-II-7)."""
-    m = (message or "").lstrip()
-    if m.startswith("AssertionError") or m.startswith("assert "):
-        return "assertion"
-    if m.startswith("Failed: DID NOT RAISE"):
-        return "expected-refusal-missing"
-    return "other: " + ((m.split(":")[0].split() or ["<no message>"])[0])[:60]
+MK = _load_kinds()
+QUALIFYING = MK.QUALIFYING
+failure_kind = MK.failure_kind
 
 
 # (id, finding, file under src/veracium/, anchor, replacement, what it reintroduces)
@@ -179,7 +179,7 @@ def _digests(root: pathlib.Path) -> dict:
     """The bytes the table's claims rest on: every mutated module, every cell file, the honest nodes' file, and this
     runner itself (a change to how a kill or an honest pass is judged stales the table too)."""
     files = sorted({SRC + m[2] for m in MUTANTS} | {n.split("::")[0] for ns in cells().values() for n in ns}
-                   | {n.split("::")[0] for n in HONEST_NODES} | {SELF})
+                   | {n.split("::")[0] for n in HONEST_NODES} | {SELF, KINDS})
     return {f: _sha(root / f) for f in files}
 
 
@@ -260,20 +260,8 @@ def run_one(root: pathlib.Path, m, nodes) -> dict:
 
 
 def classify(c: dict) -> dict:
-    """KILLED only by a qualifying kind with no `other` and no error (round-4 IO-II-7); the kinds are recorded."""
-    kinds = c["kinds"]
-    qual = sorted({k for k in kinds.values() if k in QUALIFYING})
-    other = any(k not in QUALIFYING for k in kinds.values())
-    if c["errored"]:
-        outcome = "ERROR"
-    elif not c["failed"]:
-        outcome = "SURVIVED"
-    elif other or not qual or set(kinds) != set(c["failed"]):
-        outcome = "UNCLASSIFIED"
-    else:
-        outcome = "KILLED"
-    return {"cells_failed": c["failed"], "cells_errored": c["errored"], "cell_kinds": kinds, "outcome": outcome,
-            "kill_kind": "+".join(qual) if outcome == "KILLED" else None}
+    """KILLED only by a qualifying kind with no `other` and no error (round-4 IO-II-7); the shared definition."""
+    return MK.classify(c["kinds"], c["failed"], c["errored"])
 
 
 def run_control(root: pathlib.Path, ctl, nodes) -> dict:
