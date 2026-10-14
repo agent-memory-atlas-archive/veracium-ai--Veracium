@@ -87,6 +87,7 @@ edges-sql-not-a-json-write	src/veracium/doctor.py	str:edges	users = [r[0] for r 
 edges-sql-not-a-json-write	src/veracium/store/current_state.py	str:edges	"SELECT json FROM edges WHERE user_id=? AND id=?", (user_id, edge_id)).fetchone()
 edges-sql-not-a-json-write	src/veracium/store/edge_events.py	str:edges	"SELECT DISTINCT user_id FROM edges ORDER BY user_id")]
 edges-sql-not-a-json-write	src/veracium/store/edge_events.py	str:edges	"SELECT id, json FROM edges WHERE user_id=? ORDER BY rowid",
+edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	edges = _rows(conn, "SELECT user_id, id, json FROM edges")
 edges-sql-not-a-json-write	src/veracium/store/revocation.py	str:edges	"SELECT json FROM edges WHERE user_id=?", (user_id,))]
 edges-sql-not-a-json-write	src/veracium/store/schema_version.py	str:edges	"CREATE INDEX ix_edges_subj_rel ON edges(user_id, subject, relation, active)",
 edges-sql-not-a-json-write	src/veracium/store/schema_version.py	str:edges	"CREATE INDEX ix_edges_user_active ON edges(user_id, active)", REBUILDABLE),
