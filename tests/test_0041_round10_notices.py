@@ -217,7 +217,10 @@ def test_R9_06_a_standing_notice_admits_the_marker_kind_when_the_record_arrives_
     record_only = head + [r for r in recs if r.get("record") == "episode" and r["id"] == eid]
     dst = tt._mem(tmp_path, "dst.db")
     assert import_memory(dst.store, _write(tmp_path / "n.jsonl", notice_only), restore=True)["notices_standing"] == 1
-    import_memory(dst.store, _write(tmp_path / "r.jsonl", record_only), restore=True)
+    try:                    # IO-II-7's form (research's R6, T4 stage 2): the arrival is a PERMITTED import — a refusal of it
+        import_memory(dst.store, _write(tmp_path / "r.jsonl", record_only), restore=True)   # fails as an assertion
+    except ValueError as x:
+        raise AssertionError(f"the record's arrival under its standing notice was refused: {x}") from x
     assert "kind" in dst.store._attested_fields(U, "episode", eid)
 
 

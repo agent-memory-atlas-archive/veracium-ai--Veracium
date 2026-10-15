@@ -122,7 +122,8 @@ def test_a_pending_notice_is_no_attestation_and_refuses_no_local_write(tmp_path)
     in redacted_targets(); refuse a local write under it."""
     full, _n, _p = _source(tmp_path, "src")
     v = _holder(tmp_path, "v.db")
-    v.import_memory(full)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
     assert v.store.redacted_targets(U, "edge") == frozenset()
     with _permitted("the user's own write under a pending notice"):
         v.store.add_edge(_edge("e-x", "Lisbon, updated"))
@@ -133,9 +134,11 @@ def test_a_repeat_default_import_of_a_pending_notice_is_existing_and_keeps_its_r
     """IO-II-1: the repeat is `existing`; the row and its reason unchanged. Mutant: re-weigh it."""
     full, _n, _p = _source(tmp_path, "src")
     v = _holder(tmp_path, "v.db")
-    v.import_memory(full)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
     before = v.store._conn.execute("SELECT * FROM redactions").fetchall()
-    r = v.import_memory(full)
+    with _expected("an import the cell expects to succeed"):
+        r = v.import_memory(full)
     assert r["notices_existing"] == 1 and ["edge", "e-x", "held-target"] in r["notices_not_applied"]
     assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
 
@@ -146,10 +149,12 @@ def test_io_ii_1_a_record_not_in_file_pending_notice_keeps_its_reason_on_a_defau
     `record-not-in-file` (the round-4 model rewrote it to `held-target`). Mutant: rewrite a pending row's reason."""
     _f, notices, _p = _source(tmp_path, "src")
     v = _holder(tmp_path, "v.db")
-    v.import_memory(notices, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, restore=True)
     assert _rows(v) == [("e-x", "pending", "record-not-in-file")]
     before = v.store._conn.execute("SELECT * FROM redactions").fetchall()
-    r = v.import_memory(notices)
+    with _expected("an import the cell expects to succeed"):
+        r = v.import_memory(notices)
     assert r["notices_existing"] == 1 and ["edge", "e-x", "record-not-in-file"] in r["notices_not_applied"]
     assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
 
@@ -161,10 +166,12 @@ def test_r11_a_pending_notice_keeps_its_reason_through_a_restore_that_leaves_it_
     rewritten to `record-not-in-file`. Mutant: rewrite a pending row's reason on a restore."""
     _f, notices, _p = _source(tmp_path, "src")
     v = _holder(tmp_path, "v.db")
-    v.import_memory(notices)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices)
     assert _rows(v) == [("e-x", "pending", "held-target")]
     before = v.store._conn.execute("SELECT * FROM redactions").fetchall()
-    r = v.import_memory(notices, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        r = v.import_memory(notices, restore=True)
     assert ["edge", "e-x", "held-target"] in r["notices_not_applied"]
     assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
 
@@ -175,11 +182,14 @@ def test_io_ii_1_a_standing_arrival_pending_notice_keeps_its_reason_on_a_repeat_
     unchanged. Mutant: rewrite a pending row's reason to `held-target`."""
     full, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices)
-    v.import_memory(_write(tmp_path / "records.jsonl", [x for x in _lines(full) if x.get("record") != "redaction"]))
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(_write(tmp_path / "records.jsonl", [x for x in _lines(full) if x.get("record") != "redaction"]))
     assert _rows(v) == [("e-x", "pending", "standing-arrival")]
     before = v.store._conn.execute("SELECT * FROM redactions").fetchall()
-    r = v.import_memory(notices)
+    with _expected("an import the cell expects to succeed"):
+        r = v.import_memory(notices)
     assert r["notices_existing"] == 1 and ["edge", "e-x", "standing-arrival"] in r["notices_not_applied"]
     assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
 
@@ -201,7 +211,8 @@ def test_a_trusted_restore_over_a_held_target_follows_the_files_copy(tmp_path, c
             v.import_memory(f, restore=True)
         assert _json(v, "e-x") == before and _rows(v) == []
         return
-    r = v.import_memory(f, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        r = v.import_memory(f, restore=True)
     if outcome == "applied":
         assert json.loads(_json(v, "e-x"))["object"] == R.MARKER
         assert _rows(v) == [("e-x", "applied", None)] and "e-x" in v.store.redacted_targets(U, "edge")
@@ -216,10 +227,12 @@ def test_a_restore_with_no_copy_applies_over_a_held_record_that_already_shows_it
     still carrying content are treated). Mutant: leave it pending."""
     full, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
-    v.import_memory(full)                                   # holds the treated copy (created + applied)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)                                   # holds the treated copy (created + applied)
     v.store._conn.execute("DELETE FROM redactions")            # as if the notice had never travelled with it
     v.store._conn.commit()
-    r = v.import_memory(notices, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        r = v.import_memory(notices, restore=True)
     assert _rows(v) == [("e-x", "applied", None)], r
 
 
@@ -232,7 +245,8 @@ def test_a_created_record_must_show_its_notice_in_both_modes(tmp_path, restore):
     record and skip or pend the notice (content its source redacted lands)."""
     full, _n, poisoned = _source(tmp_path, "src")
     fresh = _mem(tmp_path, "fresh.db")
-    fresh.import_memory(full, restore=restore)
+    with _expected("an import the cell expects to succeed"):
+        fresh.import_memory(full, restore=restore)
     assert _rows(fresh) == [("e-x", "applied", None)]
     assert json.loads(_json(fresh, "e-x"))["object"] == R.MARKER
     other = _mem(tmp_path, "other.db")
@@ -248,7 +262,8 @@ def test_an_absent_target_leaves_an_inert_standing_notice(tmp_path, restore):
     write."""
     _f, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
-    r = v.import_memory(notices, restore=restore)
+    with _expected("an import the cell expects to succeed"):
+        r = v.import_memory(notices, restore=restore)
     assert r["notices_standing"] == 1 and _rows(v) == [("e-x", "standing", None)]
     assert v.store.redacted_targets(U, "edge") == frozenset()
     with _permitted("the user's own write of a standing notice's id"):
@@ -262,9 +277,11 @@ def test_a_standing_notice_on_a_created_arrival_that_shows_it(tmp_path, restore,
     automatically in a default import; leave a pending standing arrival out of notices_not_applied."""
     full, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices, restore=restore)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, restore=restore)
     records = _write(tmp_path / "records.jsonl", [x for x in _lines(full) if x.get("record") != "redaction"])
-    r = v.import_memory(records, restore=restore)
+    with _expected("an import the cell expects to succeed"):
+        r = v.import_memory(records, restore=restore)
     if outcome == "pending":
         assert _rows(v) == [("e-x", "pending", "standing-arrival")]
         assert ["edge", "e-x", "standing-arrival"] in r["notices_not_applied"]
@@ -280,7 +297,8 @@ def test_a_standing_notice_refuses_an_unredacted_arrival_in_both_modes(tmp_path,
     plain = _source(tmp_path, "src2")[2]
     plain_records = _write(tmp_path / "plain-records.jsonl", [x for x in _lines(plain) if x.get("record") != "redaction"])
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices, restore=restore)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, restore=restore)
     with pytest.raises(ValueError, match="UNREDACTED"):
         v.import_memory(plain_records, restore=restore)
     assert _json(v, "e-x") is None
@@ -293,7 +311,8 @@ def test_origin_decides_nothing(tmp_path):
     full, _n, _p = _source(tmp_path, "src")
     v = _holder(tmp_path, "v.db")
     forged = [dict(x, origin=v.store.local_origin()) if x.get("record") == "redaction" else x for x in _lines(full)]
-    v.import_memory(_write(tmp_path / "forged.jsonl", forged))
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(_write(tmp_path / "forged.jsonl", forged))
     assert _rows(v) == [("e-x", "pending", "held-target")]
     # the B-over-A case the origin check misfired on: store B redacts a record it holds FROM store A
     a = _mem(tmp_path, "a.db")
@@ -301,7 +320,8 @@ def test_origin_decides_nothing(tmp_path):
     fa = tmp_path / "a.jsonl"
     port.export_memory(a.store, U, fa)
     b = _mem(tmp_path, "b.db")
-    b.import_memory(fa)
+    with _expected("an import the cell expects to succeed"):
+        b.import_memory(fa)
     b.redact(U, edge_id="e-ab", reason="subject_request")
     fb = tmp_path / "b.jsonl"
     port.export_memory(b.store, U, fb)
@@ -324,14 +344,16 @@ def test_a_standing_notice_over_a_local_write_is_weighed_as_a_held_target(tmp_pa
     on the local record (the arrival loop before the v15.6 hotfix); count it `existing` and leave it standing."""
     full, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, restore=True)
     row = v.store._conn.execute("SELECT id FROM redactions").fetchone()
     assert row is not None, "the notice-only restore left no standing row"
     rid = row[0]
     with _permitted("the user's own write of a standing notice's id"):
         v.store.add_edge(_edge("e-x", "Paris (local)"))
     before = _json(v, "e-x")
-    v.import_memory({"notices": notices, "full": full}[cut], restore=restore)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory({"notices": notices, "full": full}[cut], restore=restore)
     assert _rows(v) == [want]
     assert v.store._conn.execute("SELECT id FROM redactions").fetchone()[0] == rid, "the row was duplicated"
     if want[1] != "applied":
@@ -344,7 +366,8 @@ def test_the_users_own_redact_of_a_record_a_standing_notice_names_redacts_it(tmp
     It reads APPLIED rows only. Mutant: the unfiltered repeat check."""
     _f, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, restore=True)
     with _permitted("the user's own write of a standing notice's id"):
         v.store.add_edge(_edge("e-x", "Paris (local)"))
     r = v.redact(U, edge_id="e-x", reason="subject_request")
@@ -361,11 +384,14 @@ def _store_holding(tmp_path, state):
         v.redact(U, edge_id="e-x", reason="subject_request")
     elif state == "pending":
         v.store.add_edge(_edge("e-x", "Lisbon"))
-        v.import_memory(full)
+        with _expected("an import the cell expects to succeed"):
+            v.import_memory(full)
     elif state == "standing-absent":
-        v.import_memory(notices, restore=True)
+        with _expected("an import the cell expects to succeed"):
+            v.import_memory(notices, restore=True)
     else:                                                       # standing, then a local write of its id
-        v.import_memory(notices, restore=True)
+        with _expected("an import the cell expects to succeed"):
+            v.import_memory(notices, restore=True)
         with _permitted("the user's own write of a standing notice's id"):
             v.store.add_edge(_edge("e-x", "Paris (local)"))
     return v
@@ -398,8 +424,9 @@ def _pending(tmp_path, name="v.db"):
     v = _holder(tmp_path, name)
     v.store.confirm_edge(U, "e-x", actor="user", call_path="host_api", correlation_id="k1", request_digest="d1",
                          confirmed_at=__import__("datetime").datetime(2026, 3, 1, tzinfo=__import__("datetime").timezone.utc))
-    v.import_memory(full)
-    (nid,) = [p["notice_id"] for p in v.pending_notices(U)]
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
+    nid = _the_one_pending(v)
     return v, nid
 
 
@@ -437,7 +464,8 @@ def test_confirm_notice_refuses_a_standing_row_as_standing(tmp_path):
     """Q3: a STANDING row is refused AS standing (under B3's case its target can be held)."""
     _f, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, restore=True)
     with _permitted("the user's own write of a standing notice's id"):
         v.store.add_edge(_edge("e-x", "Paris (local)"))
     row = v.store._conn.execute("SELECT id FROM redactions").fetchone()
@@ -460,9 +488,11 @@ def test_an_episode_notice_pending_deleted_inert_recreated_then_confirmed(tmp_pa
     full = tmp_path / "ep.jsonl"
     port.export_memory(a.store, U, full)
     v = _mem(tmp_path, "v.db")
-    v.import_memory(plain)
-    v.import_memory(full)
-    (nid,) = [p["notice_id"] for p in v.pending_notices(U)]
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(plain)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
+    nid = _the_one_pending(v)
     v.store.delete_episode("ep-x")
     with pytest.raises(ValueError, match="inert"):
         v.confirm_notice(U, nid)
@@ -478,7 +508,8 @@ def test_forget_user_erases_pending_and_standing_rows(tmp_path):
     """Q3: user erasure removes every notice row, whatever its state."""
     v, _nid = _pending(tmp_path)
     _f, notices, _p = _source(tmp_path, "src-b", eid="e-absent")
-    v.import_memory(notices)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices)
     assert {s for _t, s, _r in _rows(v)} == {"pending", "standing"}
     v.store.forget_user(U)
     assert _rows(v) == []
@@ -525,7 +556,8 @@ def test_coverage_counts_a_standing_notice_for_a_treated_arrivals_reason(tmp_pat
     notices = _write(tmp_path / "r-notices.jsonl", [lines[0], *[x for x in lines[1:] if x.get("record") == "redaction"]])
     records = _write(tmp_path / "r-records.jsonl", [x for x in lines if x.get("record") != "redaction"])
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices)
     with _permitted("a treated arrival under a held standing notice"):
         v.import_memory(records)
     assert _rows(v) == [("e-r", "pending", "standing-arrival")]
@@ -614,14 +646,17 @@ def test_t4_1_a_pending_notice_beside_its_unredacted_re_created_record_refuses_t
     and nothing the user holds changes. Mutant: weigh the pending shortcut before the created row."""
     plain, full, poisoned = _episode_source(tmp_path)
     v = _mem(tmp_path, "v.db")
-    v.import_memory(plain)
-    v.import_memory(full)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(plain)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
     assert _rows(v) == [("ep-x", "pending", "held-target")]
     v.store.delete_episode("ep-x")
     with pytest.raises(ValueError, match="UNREDACTED"):
         v.import_memory(poisoned)
     assert _summary(v, "ep-x") is None and _rows(v) == [("ep-x", "pending", "held-target")]
-    v.import_memory(full)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
     assert _summary(v, "ep-x") == R.MARKER and _rows(v) == [("ep-x", "applied", None)]
 
 
@@ -631,9 +666,11 @@ def test_r18_confirm_notice_never_treats_another_users_record_under_the_same_id(
     check."""
     plain, full, _p = _episode_source(tmp_path)
     v = _mem(tmp_path, "v.db")
-    v.import_memory(plain)
-    v.import_memory(full)
-    (nid,) = [p["notice_id"] for p in v.pending_notices(U)]
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(plain)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
+    nid = _the_one_pending(v)
     v.store.delete_episode("ep-x")
     v.store.add_episode(Episode(id="ep-x", user_id="w", date="2026-09-02", summary="w's own words", provenance=_prov()))
     with pytest.raises(ValueError, match="inert"):
@@ -653,7 +690,8 @@ def test_r9_a_standing_episode_notice_over_a_local_episode_write_round_trips_the
     _plain, full, _p = _episode_source(tmp_path)
     notices = _write(tmp_path / "ep-notices.jsonl", [_lines(full)[0], *[x for x in _lines(full)[1:] if x.get("record") == "redaction"]])
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, restore=True)
     with _permitted("the user's own episode write of a standing notice's id"):
         v.store.add_episode(Episode(id="ep-x", user_id=U, date="2026-09-03", summary="mine", provenance=_prov()))
     f = tmp_path / "own-ep.jsonl"
@@ -670,9 +708,11 @@ def test_r10_a_restore_weighs_a_held_pending_notice(tmp_path):
     row, its body unchanged (§11.6.6: "in a trusted restore the table weighs it"). Mutant: count it `existing`."""
     full, _n, _p = _source(tmp_path, "src")
     v = _holder(tmp_path, "v.db")
-    v.import_memory(full)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
     rid, body = v.store._conn.execute("SELECT id, source_body FROM redactions").fetchone()
-    v.import_memory(full, restore=True)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full, restore=True)
     assert _rows(v) == [("e-x", "applied", None)] and json.loads(_json(v, "e-x"))["object"] == R.MARKER
     assert v.store._conn.execute("SELECT id, source_body FROM redactions").fetchone() == (rid, body)
 
@@ -695,7 +735,8 @@ def test_r5_coverage_counts_a_standing_notice_for_a_treated_episodes_reason(tmp_
     notices = _write(tmp_path / "er-notices.jsonl", [lines[0], *[x for x in lines[1:] if x.get("record") == "redaction"]])
     records = _write(tmp_path / "er-records.jsonl", [x for x in lines if x.get("record") != "redaction"])
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices)
     with _permitted("a treated episode arrival under a held standing notice"):
         v.import_memory(records)
     assert _rows(v) == [("ep-r", "pending", "standing-arrival")]
@@ -721,9 +762,11 @@ def test_r27_a_standing_notices_own_copy_with_its_created_record_takes_the_creat
     weigh it by the standing-arrival rule (pending on a default import)."""
     full, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
-    v.import_memory(notices, restore=restore)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, restore=restore)
     assert _rows(v) == [("e-x", "standing", None)]
-    v.import_memory(full, restore=restore)
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full, restore=restore)
     assert _rows(v) == [("e-x", "applied", None)]
 
 
@@ -800,8 +843,9 @@ def test_io_ii_3_a_confirmation_on_one_connection_then_an_import_on_another(tmp_
     from veracium.store.sqlite import SqliteStore
     full, _n, _p = _source(tmp_path, "src2")
     v = _holder(tmp_path, "v.db")
-    v.import_memory(full)
-    (nid,) = [p["notice_id"] for p in v.pending_notices(U)]
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
+    nid = _the_one_pending(v)
     _permitted_call("confirm_notice", v.confirm_notice, U, nid)
     settled = v.store._conn.execute("SELECT * FROM redactions").fetchall(), _json(v, "e-x")
     b = Memory(llm=_quiet, config=MemoryConfig(db_path=str(tmp_path / "v.db"), wiki_recompile_after_writes=0,
@@ -813,6 +857,26 @@ def test_io_ii_3_a_confirmation_on_one_connection_then_an_import_on_another(tmp_
         assert (v.store._conn.execute("SELECT * FROM redactions").fetchall(), _json(v, "e-x")) == settled
     finally:
         b.close()
+
+
+def _the_one_pending(m):
+    """The setup's one PENDING notice, asserted: a setup that leaves none (or several) fails as an assertion naming
+    what it found, never as a tuple-unpack ValueError the classifier cannot read (R-A, RR10's mutant)."""
+    pend = m.pending_notices(U)
+    assert len(pend) == 1, f"the setup left {len(pend)} pending notice(s), not one: {pend}"
+    return pend[0]["notice_id"]
+
+
+@contextlib.contextmanager
+def _expected(what):
+    """IO-II-7's form around a DIRECT call a cell expects to succeed (setups included): a store refusal fails as an
+    assertion naming it. A context manager, not a wrapper taking the function, so the call stays a direct
+    `import_memory(...)` that the 0005 call-site census finds by its name. (R-A's campaign found RR10's mutant
+    UNCLASSIFIED through exactly these setup imports.)"""
+    try:
+        yield
+    except (ValueError, KeyError, RuntimeError) as x:
+        raise AssertionError(f"{what} was refused: {type(x).__name__}: {x}") from x
 
 
 def _permitted_call(what, fn, *a, **k):
