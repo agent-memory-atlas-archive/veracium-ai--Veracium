@@ -1232,14 +1232,18 @@ def _contradictory_notice(s):
     s.close()
 
 
-def _origin_mismatched_arrival(s):
-    # the 2026-10-13 notice-binding hotfix: the standing notice (origin "o", target "absent") meets a DEFAULT-scope
-    # arrival of that id whose own origin is this store's — not the notice's — so the import refuses whole
-    e = _edge("absent")
-    with pytest.raises(ValueError, match="standing redaction notice from origin"):
-        s.commit_outcome_import_plan(U, {"edges": [e], "episodes": [], "contributions": [], "redactions": []},
-                                     dict(_EMPTY_EXPECT, edge_ids={"absent": False}))
-    s.close()
+def _notice_row(state, reason=None, target="absent"):
+    """0041 §11.6.6 (T4): a notice row in the given state, written raw (the setup of a probe, outside its window)."""
+    s = _store()
+    if target != "absent":
+        s.add_edge(_edge(target))
+    s._conn.execute("INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
+                    "store_version_before, store_version_after, event_ref, recorded_at, source_body, source_origin, "
+                    "source_user, source_event_ref, state, pending_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    ("n-1", U, "edge", target, '["object"]', 1, "imported_notice", 1, 1, None,
+                     "2026-10-14T00:00:00+00:00", "{}", "o", U, "u:1", state, reason))
+    s._conn.commit()
+    return s
 
 
 def _unredacted_arrival_on_restore_scope(s):
@@ -1255,8 +1259,14 @@ def _unredacted_arrival_on_restore_scope(s):
 DECLINES.update({
     "store.import.attested-redaction": TwoPhase(lambda mp: _redacted_then_plan(), lambda st: _import_plan_repopulates(*st)),
     "store.import.notice-body-conflict": TwoPhase(lambda mp: _standing_notice_held(), lambda st: _contradictory_notice(*st)),
-    "store.import.standing-notice-origin-mismatch": TwoPhase(lambda mp: _standing_notice_held(),
-                                                             lambda st: _origin_mismatched_arrival(*st)),
+    # 0041 §11.6.6 (T4): the notice state's one writer, and confirm_notice's three refusals
+    "store.notice.state-domain": TwoPhase(lambda mp: _store(), lambda s: _raises(
+        ValueError, s._set_notice_state, U, {"_rid": "n-x"}, "half", None, prior=None, now="2026-10-14T00:00:00+00:00")),
+    "store.confirm-notice.unknown": TwoPhase(lambda mp: _store(), lambda s: _raises(ValueError, s.confirm_notice, U, "n-none")),
+    "store.confirm-notice.standing": TwoPhase(lambda mp: _notice_row("standing"),
+                                              lambda s: _raises(ValueError, s.confirm_notice, U, "n-1")),
+    "store.confirm-notice.target-absent": TwoPhase(lambda mp: _notice_row("pending", "held-target"),
+                                                   lambda s: _raises(ValueError, s.confirm_notice, U, "n-1")),
     "store.import.notice-record-unredacted": TwoPhase(lambda mp: _standing_notice_held(),
                                                       lambda st: _unredacted_arrival_on_restore_scope(*st)),
 })

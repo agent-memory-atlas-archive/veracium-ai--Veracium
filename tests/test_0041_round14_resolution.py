@@ -89,6 +89,13 @@ def _redaction_rows(st, tid=None):
     return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
 
 
+def _applied_rows(st, tid=None):
+    """T4 (specs/0041 §11.6.6): APPLIED redaction rows only — an attestation. A default import over a held target now
+    records the notice PENDING (and an absent one STANDING), so "nothing applied" is no APPLIED row, not no row."""
+    q = "SELECT COUNT(*) FROM redactions WHERE state='applied'"
+    return st._conn.execute(q + ("" if tid is None else " AND target_id=?"), (() if tid is None else (tid,))).fetchone()[0]
+
+
 def _summary(dst, eid):
     (j,) = dst.store._conn.execute("SELECT json FROM episodes WHERE id=?", (eid,)).fetchone()
     return json.loads(j, object_pairs_hook=_strict_pairs)["summary"]
@@ -170,8 +177,8 @@ def test_control_permuted_ids_with_BOTH_notices_treat_both_held_outputs(tmp_path
     assert got == want and _state(dst.store) == _state(twin.store)       # relabelled == unrelabelled, in both modes
     if not restore:
         # (A) attack-shaped on the default path: notices reaching HELD outputs are what the 2026-10-13 notice-binding
-        # hotfix closes — neither held output treated, nothing attested, no row, both targets reported
-        assert {x: _held_json(dst.store, "episode", x) for x in (a, b)} == held and _redaction_rows(dst.store) == 0
+        # hotfix closes — neither held output treated, nothing attested, no applied row (T4: the notice PENDING), both targets reported
+        assert {x: _held_json(dst.store, "episode", x) for x in (a, b)} == held and _applied_rows(dst.store) == 0
         assert not any(dst.store._attested_fields(U, "episode", x) for x in (a, b)) and got["notices_applied"] == 0
         assert _not_applied(got, "episode", a) and _not_applied(got, "episode", b)
         return
@@ -193,7 +200,7 @@ def test_control_a_notice_naming_a_held_target_with_no_arrival_applies_to_it(tmp
     if not restore:
         # (A) attack-shaped on the default path: A's notice naming the HELD output directly, and B's rebound onto its
         # held output, are what the 2026-10-13 notice-binding hotfix closes — neither applied, both held byte-identical
-        assert {x: _held_json(dst.store, "episode", x) for x in (a, b)} == held and _redaction_rows(dst.store) == 0
+        assert {x: _held_json(dst.store, "episode", x) for x in (a, b)} == held and _applied_rows(dst.store) == 0
         assert not any(dst.store._attested_fields(U, "episode", x) for x in (a, b)) and r["notices_applied"] == 0
         assert _not_applied(r, "episode", a) and _not_applied(r, "episode", b)
         return
@@ -201,7 +208,7 @@ def test_control_a_notice_naming_a_held_target_with_no_arrival_applies_to_it(tmp
     # the hotfix's fixed-point rule (both modes) closes exactly that — `a` not applied, reported record-not-in-file,
     # held byte-identical — while `b`, whose treated arrival is in the file, still resolves and applies
     assert _held_json(dst.store, "episode", a) == held[a] and _summary(dst, a) != R.MARKER
-    assert not dst.store._attested_fields(U, "episode", a) and _redaction_rows(dst.store, a) == 0
+    assert not dst.store._attested_fields(U, "episode", a) and _applied_rows(dst.store, a) == 0
     assert ["episode", a, "record-not-in-file"] in [list(x) for x in r["notices_not_applied"]]
     assert _summary(dst, b) == R.MARKER and "summary" in dst.store._attested_fields(U, "episode", b)
     assert r["notices_applied"] == 1 and r["unattested_markers"] == []

@@ -621,8 +621,33 @@ _CONFIRMATIONS_V16_SQL = """CREATE TABLE confirmations (
     origin_store TEXT, origin_user TEXT, origin_act_id TEXT, act_seq INTEGER,
     UNIQUE(user_id, correlation_id)
 )"""
+# specs/0041 §11.6.6 (amendment `0047/0041-replies`; the owner's ruling "Columns on redactions", 2026-10-14): a
+# redaction row's NOTICE STATE — `applied` (an attestation: this store treated the record), `pending` (a witnessed
+# notice over a record this store holds, awaiting the user's `confirm_notice`; `pending_reason` says why), `standing`
+# (a witnessed notice whose record this store does not hold). Only `applied` attests. Two ALTER columns on v15's one
+# `redactions` DDL; the closed values are validated at the one writer (`SqliteStore._set_notice_state`), not by CHECK.
+_REDACTIONS_V16_SQL = """CREATE TABLE redactions (
+    id                   TEXT NOT NULL PRIMARY KEY,
+    user_id              TEXT NOT NULL,
+    target_kind          TEXT NOT NULL,
+    target_id            TEXT NOT NULL,
+    fields               TEXT NOT NULL,
+    marker_version       INTEGER NOT NULL,
+    reason               TEXT NOT NULL,
+    store_version_before INTEGER NOT NULL,
+    store_version_after  INTEGER NOT NULL,
+    event_ref            TEXT,
+    recorded_at          TEXT NOT NULL,
+    source_body          TEXT,
+    source_origin        TEXT,
+    source_user          TEXT,
+    source_event_ref     TEXT,
+    state                TEXT NOT NULL DEFAULT 'applied',
+    pending_reason       TEXT
+)"""
+_V16_REPLACED = {"confirmations": _CONFIRMATIONS_V16_SQL, "redactions": _REDACTIONS_V16_SQL}
 SCHEMA_V16 = tuple(
-    o if o.name != "confirmations" else SchemaObject("table", "confirmations", _CONFIRMATIONS_V16_SQL, REQUIRED)
+    o if o.name not in _V16_REPLACED else SchemaObject("table", o.name, _V16_REPLACED[o.name], REQUIRED)
     for o in SCHEMA_V15
 ) + (
     SchemaObject("table", "request_registry", """CREATE TABLE request_registry (
@@ -669,6 +694,35 @@ ALTER_PATH_V16_CONFIRMATIONS_SQL = (
 )
 ALTER_PATH_V16_CONFIRMATIONS_SHA256 = \
     "a82ee8e86bb5a4730785a37998e15ed514bc497c3152e5f2243e838b4782fdc8"
+
+# The v15->v16 ALTER of `redactions` (0041 §11.6.6; T4): only a base-15 store holds the table (it entered at v15), in
+# ONE DDL; a base <= 14 gets it from the additive diff in its v16 constructor form. MEASURED on SQLite 3.45.1: with no
+# table-level constraint after the last column, ADD COLUMN appends on its own line before the closing parenthesis.
+ALTERS_V15_TO_V16_REDACTIONS = (
+    "ALTER TABLE redactions ADD COLUMN state TEXT NOT NULL DEFAULT 'applied'",
+    "ALTER TABLE redactions ADD COLUMN pending_reason TEXT",
+)
+ALTER_PATH_V16_REDACTIONS_SQL = (
+    "CREATE TABLE redactions (\n"
+    "    id                   TEXT NOT NULL PRIMARY KEY,\n"
+    "    user_id              TEXT NOT NULL,\n"
+    "    target_kind          TEXT NOT NULL,\n"
+    "    target_id            TEXT NOT NULL,\n"
+    "    fields               TEXT NOT NULL,\n"
+    "    marker_version       INTEGER NOT NULL,\n"
+    "    reason               TEXT NOT NULL,\n"
+    "    store_version_before INTEGER NOT NULL,\n"
+    "    store_version_after  INTEGER NOT NULL,\n"
+    "    event_ref            TEXT,\n"
+    "    recorded_at          TEXT NOT NULL,\n"
+    "    source_body          TEXT,\n"
+    "    source_origin        TEXT,\n"
+    "    source_user          TEXT,\n"
+    "    source_event_ref     TEXT\n"
+    ", state TEXT NOT NULL DEFAULT 'applied', pending_reason TEXT)"
+)
+ALTER_PATH_V16_REDACTIONS_SHA256 = \
+    "8494279ce8b1c6b8ccd8f91184978b063b89fbfd9bc9dc1ab6a447226bb01f17"
 
 SCHEMAS = {1: SCHEMA_V1, 2: SCHEMA_V2, 3: SCHEMA_V3, 4: SCHEMA_V4, 5: SCHEMA_V5,
            6: SCHEMA_V6, 7: SCHEMA_V7, 8: SCHEMA_V8, 9: SCHEMA_V9,

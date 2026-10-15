@@ -77,8 +77,9 @@ def test_the_carrier_enumeration_reproduces_its_committed_output_byte_for_byte()
     research commit 2dfdf3ab; the packaged copy resolves the repository from its
     own location) regenerates `carrier_enumeration_OUTPUT.txt` exactly: 19
     tables at v16 (15 at v14; 17 at v15 — §A, the column census, gained `episode_event` and
-    `redactions` at 0041 tranche 2; at v16, 0008 v7's `request_registry` and `act_counter`, and
-    `confirmations`' five act TEXT columns; the identities below are MODEL-derived and did
+    `redactions` at 0041 tranche 2; at v16, 0008 v7's `request_registry` and `act_counter`,
+    `confirmations`' five act TEXT columns, and (T4) `redactions.state` / `pending_reason`; the identities below are
+    MODEL-derived and did
     not move), 84 terminal (model, field) identities, 64 carriers + 20 non-carriers.
     v3's §2 quotes those counts; this is the node that keeps them honest."""
     r = subprocess.run([sys.executable, str(EVIDENCE / "carrier_enumeration.py")],

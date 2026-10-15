@@ -156,13 +156,21 @@ def _steps():
             # so the first campaign over the v16 step perturbed NEITHER write — found by its own per-step count.
             mig.STEP_ACT_COUNTER: lambda w: ":mint_act_counter:" in w["by"],
             mig.STEP_REGISTRY: lambda w: (w["kind"] == "DML" and ":_apply_forward:" in w["by"]
-                                          and "INSERT INTO request_registry" in w["sql"])}
+                                          and "INSERT INTO request_registry" in w["sql"]),
+            # 0041 §11.6.6 (v16; T4): every redaction row's notice state, derived by the pre-v16 rule
+            mig.STEP_NOTICE_STATE: lambda w: (w["kind"] == "DML" and ":_apply_forward:" in w["by"]
+                                              and "UPDATE redactions SET state" in w["sql"])}
 
 
-# A step that WRITES nothing has no write to perturb: its postcondition checks rows the step must leave alone. Named
-# here with its reason, never silently absent — every other STEP_* in the migration must appear in the cells.
-WRITELESS_STEPS = {"v16-act-columns": "B1: the legacy confirmations' v15 columns are byte-equal and their act columns "
-                                      "(origin 'local', NULL x5) unsynthesized — tests/test_0008_request_registry.py "
+# A step with no DML of its own has no write for THIS campaign to perturb. Named here with its reason, never silently
+# absent — every other STEP_* in the migration must appear in the cells. (Research's T3 stage 2 wording: v16-act-columns'
+# block DOES write — the ALTER's DEFAULT puts 'local' into every legacy row — but its writes are the six ALTERs, DDL,
+# byte-matched against the frozen literal (the step table's class (a) — 1,426 BYTE-MATCH kills at a2dc7b0 as RESEARCH
+# measured them, research commit f8c7d01d, not re-derived here), and
+# its postcondition is the row check.)
+WRITELESS_STEPS = {"v16-act-columns": "its writes are the confirmations ALTERs (DDL, byte-matched, class (a)); its "
+                                      "postcondition (B1) checks the legacy rows' v15 columns byte-equal and their act "
+                                      "columns ('local', NULL x5) unsynthesized — tests/test_0008_request_registry.py "
                                       "injects its mutants as TEMP triggers"}
 
 
@@ -213,8 +221,27 @@ def fresh_fixture(path: str, label: str) -> None:
     for lab, b, a, stamped in L["paths"]():
         if lab == label:
             L["build_fixture"](path, b, a, stamped=stamped, label=lab)
+            _add_a_standing_notice(path)
             return
     raise KeyError(label)
+
+
+def _add_a_standing_notice(path: str) -> None:
+    """T4 (0041 §11.6.6): the step table's generic row fills every TEXT column, so its one `redactions` row carries an
+    event and reads as applied — and v16-notice-state's UPDATE then wrote 0 rows on EVERY fixture (its first campaign:
+    96 perturbations, all n/a, found by the per-step count). One STANDING row (no event, a source identity), added here
+    rather than in the shared step-table instrument, gives the step a row to write and so a write to perturb. Row data
+    only: the manifest is unchanged."""
+    conn = sqlite3.connect(path)
+    try:
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='redactions'").fetchone():
+            conn.execute("INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
+                         "store_version_before, store_version_after, event_ref, recorded_at, source_body, source_origin, "
+                         "source_user, source_event_ref) VALUES('x-standing','x-user','edge','x-absent','[\"object\"]',1,"
+                         "'imported_notice',1,1,NULL,'2026-10-14T00:00:00+00:00','{}','x-origin','x-user','x-user:1')")
+            conn.commit()
+    finally:
+        conn.close()
 
 
 def step_ranges(writes: list) -> dict:

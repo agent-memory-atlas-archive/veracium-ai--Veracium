@@ -132,9 +132,9 @@ the new edge id.
   procedural records (another host's basis is its declaration) and
   `restore=True` round-trips a store's own, producer included.
   Exports from a store holding any redaction record (specs/0041) are stamped format 13
-  and carry one `redaction` line per record; older readers refuse them, and
-  `import_memory` applies each notice in the same transaction as its record (a
-  notice without its record stands until the record arrives).
+  and carry one `redaction` line per notice they may carry; older readers refuse them, and
+  `import_memory` weighs each notice in the same transaction as its record (see
+  "Redaction notices" under `import_memory`).
 
 ```python
 mem.record_procedure("alice", "Credentials are rotated quarterly.",
@@ -607,24 +607,47 @@ on files you exported yourself or have independently verified, record by
 record. `restore` must be a real bool and is mutually exclusive with
 `user_id` (a restore never remaps).
 
-**Redaction notices (specs/0041 §4g).** A file's redaction notices are applied in
-the same transaction as its records. On the default path a notice is applied
-**only to a record this import inserts**: a notice naming a record you already
-hold, or one you do not hold at all, is not applied, leaves no standing notice,
-and is listed in the result's `notices_not_applied` (`[kind, id, reason]`; the
-CLI prints the count). In both modes a notice applies only where the file
-**shows** the redaction — it carries the record already redacted — and a file
-that carries the record unredacted beside its notice is refused whole wherever
-that record would be admitted under the notice (a restore, or a default import
-that creates it), unless this store already holds that notice as applied. An untrusted file can therefore never redact data you hold —
-the cost is that a genuine redaction made by another store does not reach your
-existing copy of its record on this path. `restore=True` applies a notice to a
-held record when the file shows it redacted (or the held record already is), and
-keeps one for an absent record as a standing notice. A standing notice completes
-only on a record an import inserts that shows the redaction, and on the default
-path only when that record's own origin is the notice's; a different origin, or an
-unredacted arrival, refuses the import. It never refuses your own write of that
-id and is not in `redacted_targets()`.
+**Redaction notices (specs/0041 §11.6.6).** A file's redaction notices are weighed in
+the same transaction as its records, by the state of each notice's TARGET, by the
+file's copy of the record, and by the mode — never by the notice's claimed origin.
+A redaction row is `applied` (an attestation: this store redacted the record),
+`pending` (another store's testimony that it redacted a record you hold, waiting for
+you) or `standing` (a notice for a record you do not hold). Only `applied` counts as
+redacted: a pending or standing notice is not in `redacted_targets()` and refuses
+none of your writes.
+
+- **Default import.** A notice for a record you already hold is recorded
+  **pending** and every held byte is unchanged; it is listed in the result's
+  `notices_not_applied` (`[kind, id, reason]`, reason `held-target`; the CLI prints
+  them). A notice for a record you do not hold is **standing**. A record this
+  import creates beside its notice is applied only if the file **shows** the
+  redaction (carries the record already redacted); a record arriving unredacted
+  beside its notice refuses the whole import. A later import that creates a
+  standing notice's record must show the redaction, or it is refused; if it does,
+  the notice becomes pending (`standing-arrival`).
+- **`restore=True`.** A notice is applied to a held record when the file's copy —
+  or, with no copy, the held record itself — shows the redaction; with no copy and
+  a record that does not show it, the notice is pending (`record-not-in-file`); a
+  file carrying the record unredacted beside its notice is refused. A standing
+  notice's later arrival that shows the redaction is applied.
+
+An untrusted file can therefore never change data you hold. A source's genuine
+redaction of a record you already hold waits for you:
+
+```python
+for n in mem.pending_notices("alice"):      # {notice_id, target_kind, target_id, reason, origin, source_user, recorded_at}
+    ...                                      # show the claimed source (unauthenticated testimony) to the user
+mem.confirm_notice("alice", notice_id)       # -> RedactionReceipt: this store's own total redaction of the record
+```
+
+`confirm_notice` applies the notice exactly as `redact()` would redact the record
+— every carrier, held confirmations and their registry rows included — and keeps
+the notice's own body. Confirming an applied notice returns its receipt with
+`repeated=True`. An unknown id and another user's id are refused with one
+message; a standing notice and a notice whose record no longer exists are refused.
+An export carries applied notices, and standing notices only when it does not
+carry their record; a pending notice never travels, so restoring an export does
+not reproduce pending state (re-importing the source file re-pends it).
 
 ### `close()`
 

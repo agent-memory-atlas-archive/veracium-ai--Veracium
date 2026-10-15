@@ -382,7 +382,9 @@ def test_rider_a_named_field_at_the_marker_WITH_the_notice_resolves_and_treats_t
     r = P.import_memory(dflt.store, after)
     (now_d,) = [e for e in dflt.store.episodes("u") if e.lineage]
     assert now_d.id == held_d.id and sql_json(dflt.store, held_d.id) == held_bytes and "RIDER-SECRET" in now_d.summary
-    assert dflt.store._conn.execute("SELECT COUNT(*) FROM redactions").fetchone()[0] == 0 and r["notices_applied"] == 0
+    # T4 (0041 §11.6.6): the held output's notice is PENDING on the default path — a row, never an attestation
+    assert dflt.store._conn.execute("SELECT COUNT(*) FROM redactions WHERE state='applied'").fetchone()[0] == 0 \
+        and r["notices_applied"] == 0
     assert ["episode", held_d.id] in [list(x)[:2] for x in r["notices_not_applied"]]
     assert held_d.id not in r["inconsistent_notices"]                 # that key keeps "redacted anyway" (restore only)
 

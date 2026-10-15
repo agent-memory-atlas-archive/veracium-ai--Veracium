@@ -1,5 +1,5 @@
 {
- "body_sha256": "02b074bc2013566f2059ed04d438bf4a0944a1a15ff12b8791badc2f07106e54",
+ "body_sha256": "1d145fb4ca876842ab8496b12d5869abecafc9b77f026fb45d99b02eaa82c6a9",
  "controls": [
   {
    "anchor_counts": [
@@ -62,7 +62,7 @@
    "cells_passed": 12,
    "honest_passed": 3
   },
-  "commit": "e987e5cc240c4628568dc63b0179dc4624384a74",
+  "commit": "56f24a20802cd0a0ad5c2d4870a253395e10d189",
   "control_definitions": {
    "CTRL-unrelated-TypeError": "9b2e6d22705682c38221fb8a0e1cbbef9bef7c2e4d6a4e5e204bd43024aa7685"
   },
@@ -86,11 +86,11 @@
    "del-wiki": "ee133c453fc55c17cfd86a93a60d4ee0372bbc4e08e71639f7154cb2a2fedd7e"
   },
   "digests": {
-   "specs/evidence/0013/pa1_campaign.py": "c2a9fcdcd7903d848bf79221931aed074b40d8b101229106de2ed8f2dce43aed",
+   "specs/evidence/0013/pa1_campaign.py": "941f405b447aa82866e388e6cc280bdb79bbc48f596aac978174aac88442df59",
    "specs/evidence/0013/steptable.py": "5b81c3ae0d9f1b9f8e893ea820cef9b6b02952ca0e5f5b84fba56374db7e4536",
    "specs/evidence/mutation_kinds.py": "46d4802f8ef82e797fa285dab7afde3581db230761c5377c826ce6cdc275c8ad",
-   "src/veracium/store/migration.py": "03f13f853a20033d21817f78153c30fe185a52031113df7d186d3ec7965cdd6f",
-   "src/veracium/store/schema_version.py": "94f405f6d701f05b016ddd215d66c0216a63bf535c4c465a52e250262fa40096",
+   "src/veracium/store/migration.py": "bd008db98c0d7b58e7102c8bfac1f33550f4a2ca765cb8d3b6c17534fde8d46b",
+   "src/veracium/store/schema_version.py": "b05818944026e73cfb16d723c310bf5e58a09c9b2df8f8acdb3f7893b812073c",
    "tests/test_0013_pa1_campaign_cells.py": "0df0af6e7812e379fab5c64f8c72528f015a114baeee652bd83350f25ec961b5"
   },
   "finding": "0013-PA1",
@@ -104,16 +104,23 @@
   "spec": "0013",
   "sqlite": "3.45.1",
   "tracked_changes": [
+   "specs/closure_findings.py",
    "specs/evidence/0013/mutation-table.json",
    "specs/evidence/0013/pa1_campaign.py",
-   "specs/evidence/0031/connection_census.py",
    "specs/evidence/0041/carrier_enumeration_OUTPUT.txt",
+   "specs/evidence/0041/mutation_campaign.py",
    "specs/evidence/0042/decision_site_inventory_OUTPUT.json",
    "specs/evidence/0042/declaration.py",
    "specs/evidence/0042/reviewed_points.json",
    "specs/evidence/0042/semantic_review.py",
-   "specs/evidence/0048/tripwire_0048_classified.tsv",
+   "specs/generated/0002-audit-manifest.md",
+   "specs/generated/0021-combining-sites.md",
    "specs/schema_evidence.py",
+   "src/veracium/__init__.py",
+   "src/veracium/cli.py",
+   "src/veracium/combining.py",
+   "src/veracium/doctor.py",
+   "src/veracium/portability.py",
    "src/veracium/redaction.py",
    "src/veracium/store/base.py",
    "src/veracium/store/evidence/schema_versions.json",
@@ -121,12 +128,21 @@
    "src/veracium/store/migration.py",
    "src/veracium/store/schema_version.py",
    "src/veracium/store/sqlite.py",
-   "tests/test_0001_generated_content_trust.py",
-   "tests/test_0008_request_registry.py",
+   "tests/test_0005_import_boundary.py",
+   "tests/test_0014_portability.py",
    "tests/test_0041_evidence.py",
+   "tests/test_0041_notice_binding_hotfix.py",
+   "tests/test_0041_notice_state.py",
    "tests/test_0041_round10_matrix.py",
-   "tests/test_0041_schema_v15.py",
-   "tests/test_0042_sites.py"
+   "tests/test_0041_round11_outcome.py",
+   "tests/test_0041_round11_provenance.py",
+   "tests/test_0041_round12_quarantine.py",
+   "tests/test_0041_round12_surface.py",
+   "tests/test_0041_round13_outputs.py",
+   "tests/test_0041_round14_marker.py",
+   "tests/test_0041_round14_resolution.py",
+   "tests/test_0042_sites.py",
+   "tests/test_confirm_contract_0008.py"
   ]
  },
  "perturbations": [
@@ -452,9 +468,27 @@
    "step": "v16-registry-backfill"
   },
   {
-   "applied": "stamp 15",
-   "issued": 39,
+   "applied": "n/a",
    "k": 38,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v1#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 38,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v1#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 40,
+   "k": 39,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -462,13 +496,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 38,
+   "step_last_write": 39,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 39,
-   "k": 38,
+   "issued": 40,
+   "k": 39,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -476,13 +510,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 38,
+   "step_last_write": 39,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 39,
-   "k": 38,
+   "issued": 40,
+   "k": 39,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -490,7 +524,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 38,
+   "step_last_write": 39,
    "unchanged": true
   },
   {
@@ -830,9 +864,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 43,
+   "applied": "n/a",
    "k": 42,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v2#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 42,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v2#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 44,
+   "k": 43,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -840,13 +892,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 42,
+   "step_last_write": 43,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 43,
-   "k": 42,
+   "issued": 44,
+   "k": 43,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -854,13 +906,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 42,
+   "step_last_write": 43,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 43,
-   "k": 42,
+   "issued": 44,
+   "k": 43,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -868,7 +920,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 42,
+   "step_last_write": 43,
    "unchanged": true
   },
   {
@@ -1180,9 +1232,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 40,
+   "applied": "n/a",
    "k": 39,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v3#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 39,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v3#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 41,
+   "k": 40,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1190,13 +1260,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 39,
+   "step_last_write": 40,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 40,
-   "k": 39,
+   "issued": 41,
+   "k": 40,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1204,13 +1274,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 39,
+   "step_last_write": 40,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 40,
-   "k": 39,
+   "issued": 41,
+   "k": 40,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1218,7 +1288,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 39,
+   "step_last_write": 40,
    "unchanged": true
   },
   {
@@ -1516,9 +1586,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 40,
+   "applied": "n/a",
    "k": 39,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v4#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 39,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v4#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 41,
+   "k": 40,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1526,13 +1614,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 39,
+   "step_last_write": 40,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 40,
-   "k": 39,
+   "issued": 41,
+   "k": 40,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1540,13 +1628,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 39,
+   "step_last_write": 40,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 40,
-   "k": 39,
+   "issued": 41,
+   "k": 40,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1554,7 +1642,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 39,
+   "step_last_write": 40,
    "unchanged": true
   },
   {
@@ -1810,9 +1898,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 38,
+   "applied": "n/a",
    "k": 37,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v5#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 37,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v5#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 39,
+   "k": 38,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1820,13 +1926,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 37,
+   "step_last_write": 38,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 38,
-   "k": 37,
+   "issued": 39,
+   "k": 38,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1834,13 +1940,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 37,
+   "step_last_write": 38,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 38,
-   "k": 37,
+   "issued": 39,
+   "k": 38,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -1848,7 +1954,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 37,
+   "step_last_write": 38,
    "unchanged": true
   },
   {
@@ -2104,9 +2210,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 33,
+   "applied": "n/a",
    "k": 32,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v6#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 32,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v6#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2114,13 +2238,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 33,
-   "k": 32,
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2128,13 +2252,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 33,
-   "k": 32,
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2142,7 +2266,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
@@ -2398,9 +2522,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 33,
+   "applied": "n/a",
    "k": 32,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v6#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 32,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v6#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2408,13 +2550,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 33,
-   "k": 32,
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2422,13 +2564,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 33,
-   "k": 32,
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2436,7 +2578,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
@@ -2692,9 +2834,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 33,
+   "applied": "n/a",
    "k": 32,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v7#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 32,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v7#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2702,13 +2862,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 33,
-   "k": 32,
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2716,13 +2876,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 33,
-   "k": 32,
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2730,7 +2890,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
@@ -2986,9 +3146,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 33,
+   "applied": "n/a",
    "k": 32,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v7#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 32,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v7#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -2996,13 +3174,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 33,
-   "k": 32,
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3010,13 +3188,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 33,
-   "k": 32,
+   "issued": 34,
+   "k": 33,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3024,7 +3202,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 32,
+   "step_last_write": 33,
    "unchanged": true
   },
   {
@@ -3280,9 +3458,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 31,
+   "applied": "n/a",
    "k": 30,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v8#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 30,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v8#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3290,13 +3486,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 31,
-   "k": 30,
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3304,13 +3500,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 31,
-   "k": 30,
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3318,7 +3514,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
@@ -3574,9 +3770,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 31,
+   "applied": "n/a",
    "k": 30,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v8#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 30,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v8#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3584,13 +3798,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 31,
-   "k": 30,
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3598,13 +3812,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 31,
-   "k": 30,
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3612,7 +3826,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
@@ -3868,9 +4082,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 31,
+   "applied": "n/a",
    "k": 30,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v8#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 30,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v8#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3878,13 +4110,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 31,
-   "k": 30,
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3892,13 +4124,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 31,
-   "k": 30,
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -3906,7 +4138,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
@@ -4162,9 +4394,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 31,
+   "applied": "n/a",
    "k": 30,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v8#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 30,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v8#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4172,13 +4422,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 31,
-   "k": 30,
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4186,13 +4436,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 31,
-   "k": 30,
+   "issued": 32,
+   "k": 31,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4200,7 +4450,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 30,
+   "step_last_write": 31,
    "unchanged": true
   },
   {
@@ -4456,9 +4706,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 29,
+   "applied": "n/a",
    "k": 28,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v9#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 28,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v9#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4466,13 +4734,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 29,
-   "k": 28,
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4480,13 +4748,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 29,
-   "k": 28,
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4494,7 +4762,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
@@ -4750,9 +5018,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 29,
+   "applied": "n/a",
    "k": 28,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v9#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 28,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v9#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4760,13 +5046,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 29,
-   "k": 28,
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4774,13 +5060,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 29,
-   "k": 28,
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -4788,7 +5074,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
@@ -5044,9 +5330,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 29,
+   "applied": "n/a",
    "k": 28,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v9#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 28,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v9#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -5054,13 +5358,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 29,
-   "k": 28,
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -5068,13 +5372,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 29,
-   "k": 28,
+   "issued": 30,
+   "k": 29,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -5082,7 +5386,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 28,
+   "step_last_write": 29,
    "unchanged": true
   },
   {
@@ -5338,13 +5642,343 @@
    "unchanged": true
   },
   {
+   "applied": "n/a",
+   "k": 28,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v9#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 28,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v9#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 30,
+   "k": 29,
+   "killed": true,
+   "mode": "alter",
+   "outcome": "MigrationPostconditionError[stamp]",
+   "path": "v9#3",
+   "position": true,
+   "refused_at_step": true,
+   "step": "stamp",
+   "step_last_write": 29,
+   "unchanged": true
+  },
+  {
+   "applied": "skipped",
+   "issued": 30,
+   "k": 29,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[stamp]",
+   "path": "v9#3",
+   "position": true,
+   "refused_at_step": true,
+   "step": "stamp",
+   "step_last_write": 29,
+   "unchanged": true
+  },
+  {
+   "applied": "stamp 17",
+   "issued": 30,
+   "k": 29,
+   "killed": true,
+   "mode": "higher",
+   "outcome": "MigrationPostconditionError[stamp]",
+   "path": "v9#3",
+   "position": true,
+   "refused_at_step": true,
+   "step": "stamp",
+   "step_last_write": 29,
+   "unchanged": true
+  },
+  {
+   "applied": "edge_event.edge_id altered (+'~')",
+   "issued": 18,
+   "k": 15,
+   "killed": true,
+   "mode": "alter",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "deleted the row just inserted into edge_event",
+   "issued": 18,
+   "k": 15,
+   "killed": true,
+   "mode": "dropone",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "skipped",
+   "issued": 18,
+   "k": 15,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "edge_event.edge_id altered (+'~')",
+   "issued": 18,
+   "k": 16,
+   "killed": true,
+   "mode": "alter",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "deleted the row just inserted into edge_event",
+   "issued": 18,
+   "k": 16,
+   "killed": true,
+   "mode": "dropone",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "skipped",
+   "issued": 18,
+   "k": 16,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "edge_event.edge_id altered (+'~')",
+   "issued": 18,
+   "k": 17,
+   "killed": true,
+   "mode": "alter",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "deleted the row just inserted into edge_event",
+   "issued": 18,
+   "k": 17,
+   "killed": true,
+   "mode": "dropone",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "skipped",
+   "issued": 18,
+   "k": 17,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v13-baseline]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v13-baseline",
+   "step_last_write": 17,
+   "unchanged": true
+  },
+  {
+   "applied": "store_epoch.started_at altered (+'~')",
+   "issued": 19,
+   "k": 18,
+   "killed": true,
+   "mode": "alter",
+   "outcome": "MigrationPostconditionError[store-epoch]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "store-epoch",
+   "step_last_write": 18,
+   "unchanged": true
+  },
+  {
+   "applied": "deleted the row just inserted into store_epoch",
+   "issued": 19,
+   "k": 18,
+   "killed": true,
+   "mode": "dropone",
+   "outcome": "MigrationPostconditionError[store-epoch]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "store-epoch",
+   "step_last_write": 18,
+   "unchanged": true
+  },
+  {
+   "applied": "skipped",
+   "issued": 19,
+   "k": 18,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[store-epoch]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "store-epoch",
+   "step_last_write": 18,
+   "unchanged": true
+  },
+  {
+   "applied": "act_counter.next_seq altered (+1)",
+   "issued": 26,
+   "k": 25,
+   "killed": true,
+   "mode": "alter",
+   "outcome": "MigrationPostconditionError[v16-act-counter]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-act-counter",
+   "step_last_write": 25,
+   "unchanged": true
+  },
+  {
+   "applied": "deleted the row just inserted into act_counter",
+   "issued": 26,
+   "k": 25,
+   "killed": true,
+   "mode": "dropone",
+   "outcome": "MigrationPostconditionError[v16-act-counter]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-act-counter",
+   "step_last_write": 25,
+   "unchanged": true
+  },
+  {
+   "applied": "skipped",
+   "issued": 26,
+   "k": 25,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v16-act-counter]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-act-counter",
+   "step_last_write": 25,
+   "unchanged": true
+  },
+  {
+   "applied": "request_registry.user_id altered (+'~')",
+   "issued": 27,
+   "k": 26,
+   "killed": true,
+   "mode": "alter",
+   "outcome": "MigrationPostconditionError[v16-registry-backfill]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-registry-backfill",
+   "step_last_write": 26,
+   "unchanged": true
+  },
+  {
+   "applied": "deleted the row just inserted into request_registry",
+   "issued": 27,
+   "k": 26,
+   "killed": true,
+   "mode": "dropone",
+   "outcome": "MigrationPostconditionError[v16-registry-backfill]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-registry-backfill",
+   "step_last_write": 26,
+   "unchanged": true
+  },
+  {
+   "applied": "skipped",
+   "issued": 27,
+   "k": 26,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v16-registry-backfill]",
+   "path": "v10#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-registry-backfill",
+   "step_last_write": 26,
+   "unchanged": true
+  },
+  {
+   "applied": "n/a",
+   "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v10#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v10#0",
+   "step": "v16-notice-state"
+  },
+  {
    "applied": "stamp 15",
    "issued": 29,
    "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
-   "path": "v9#3",
+   "path": "v10#0",
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
@@ -5358,7 +5992,7 @@
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
-   "path": "v9#3",
+   "path": "v10#0",
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
@@ -5372,7 +6006,7 @@
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
-   "path": "v9#3",
+   "path": "v10#0",
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
@@ -5386,300 +6020,6 @@
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "deleted the row just inserted into edge_event",
-   "issued": 18,
-   "k": 15,
-   "killed": true,
-   "mode": "dropone",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "skipped",
-   "issued": 18,
-   "k": 15,
-   "killed": true,
-   "mode": "skip",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "edge_event.edge_id altered (+'~')",
-   "issued": 18,
-   "k": 16,
-   "killed": true,
-   "mode": "alter",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "deleted the row just inserted into edge_event",
-   "issued": 18,
-   "k": 16,
-   "killed": true,
-   "mode": "dropone",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "skipped",
-   "issued": 18,
-   "k": 16,
-   "killed": true,
-   "mode": "skip",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "edge_event.edge_id altered (+'~')",
-   "issued": 18,
-   "k": 17,
-   "killed": true,
-   "mode": "alter",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "deleted the row just inserted into edge_event",
-   "issued": 18,
-   "k": 17,
-   "killed": true,
-   "mode": "dropone",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "skipped",
-   "issued": 18,
-   "k": 17,
-   "killed": true,
-   "mode": "skip",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v13-baseline",
-   "step_last_write": 17,
-   "unchanged": true
-  },
-  {
-   "applied": "store_epoch.started_at altered (+'~')",
-   "issued": 19,
-   "k": 18,
-   "killed": true,
-   "mode": "alter",
-   "outcome": "MigrationPostconditionError[store-epoch]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "store-epoch",
-   "step_last_write": 18,
-   "unchanged": true
-  },
-  {
-   "applied": "deleted the row just inserted into store_epoch",
-   "issued": 19,
-   "k": 18,
-   "killed": true,
-   "mode": "dropone",
-   "outcome": "MigrationPostconditionError[store-epoch]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "store-epoch",
-   "step_last_write": 18,
-   "unchanged": true
-  },
-  {
-   "applied": "skipped",
-   "issued": 19,
-   "k": 18,
-   "killed": true,
-   "mode": "skip",
-   "outcome": "MigrationPostconditionError[store-epoch]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "store-epoch",
-   "step_last_write": 18,
-   "unchanged": true
-  },
-  {
-   "applied": "act_counter.next_seq altered (+1)",
-   "issued": 26,
-   "k": 25,
-   "killed": true,
-   "mode": "alter",
-   "outcome": "MigrationPostconditionError[v16-act-counter]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v16-act-counter",
-   "step_last_write": 25,
-   "unchanged": true
-  },
-  {
-   "applied": "deleted the row just inserted into act_counter",
-   "issued": 26,
-   "k": 25,
-   "killed": true,
-   "mode": "dropone",
-   "outcome": "MigrationPostconditionError[v16-act-counter]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v16-act-counter",
-   "step_last_write": 25,
-   "unchanged": true
-  },
-  {
-   "applied": "skipped",
-   "issued": 26,
-   "k": 25,
-   "killed": true,
-   "mode": "skip",
-   "outcome": "MigrationPostconditionError[v16-act-counter]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v16-act-counter",
-   "step_last_write": 25,
-   "unchanged": true
-  },
-  {
-   "applied": "request_registry.user_id altered (+'~')",
-   "issued": 27,
-   "k": 26,
-   "killed": true,
-   "mode": "alter",
-   "outcome": "MigrationPostconditionError[v16-registry-backfill]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v16-registry-backfill",
-   "step_last_write": 26,
-   "unchanged": true
-  },
-  {
-   "applied": "deleted the row just inserted into request_registry",
-   "issued": 27,
-   "k": 26,
-   "killed": true,
-   "mode": "dropone",
-   "outcome": "MigrationPostconditionError[v16-registry-backfill]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v16-registry-backfill",
-   "step_last_write": 26,
-   "unchanged": true
-  },
-  {
-   "applied": "skipped",
-   "issued": 27,
-   "k": 26,
-   "killed": true,
-   "mode": "skip",
-   "outcome": "MigrationPostconditionError[v16-registry-backfill]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "v16-registry-backfill",
-   "step_last_write": 26,
-   "unchanged": true
-  },
-  {
-   "applied": "stamp 15",
-   "issued": 28,
-   "k": 27,
-   "killed": true,
-   "mode": "alter",
-   "outcome": "MigrationPostconditionError[stamp]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "stamp",
-   "step_last_write": 27,
-   "unchanged": true
-  },
-  {
-   "applied": "skipped",
-   "issued": 28,
-   "k": 27,
-   "killed": true,
-   "mode": "skip",
-   "outcome": "MigrationPostconditionError[stamp]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "stamp",
-   "step_last_write": 27,
-   "unchanged": true
-  },
-  {
-   "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
-   "killed": true,
-   "mode": "higher",
-   "outcome": "MigrationPostconditionError[stamp]",
-   "path": "v10#0",
-   "position": true,
-   "refused_at_step": true,
-   "step": "stamp",
-   "step_last_write": 27,
-   "unchanged": true
-  },
-  {
-   "applied": "edge_event.edge_id altered (+'~')",
-   "issued": 18,
-   "k": 15,
-   "killed": true,
-   "mode": "alter",
-   "outcome": "MigrationPostconditionError[v13-baseline]",
    "path": "v10#1",
    "position": true,
    "refused_at_step": true,
@@ -5926,9 +6266,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v10#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v10#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -5936,13 +6294,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -5950,13 +6308,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -5964,7 +6322,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -6220,9 +6578,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v10#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v10#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6230,13 +6606,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6244,13 +6620,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6258,7 +6634,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -6514,9 +6890,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v10#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v10#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6524,13 +6918,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6538,13 +6932,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6552,7 +6946,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -6808,9 +7202,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v10#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v10#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6818,13 +7230,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6832,13 +7244,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -6846,7 +7258,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -7102,9 +7514,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v11#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v11#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7112,13 +7542,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7126,13 +7556,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7140,7 +7570,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -7396,9 +7826,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v11#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v11#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7406,13 +7854,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7420,13 +7868,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7434,7 +7882,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -7690,9 +8138,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v11#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v11#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7700,13 +8166,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7714,13 +8180,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7728,7 +8194,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -7984,9 +8450,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v11#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v11#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -7994,13 +8478,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8008,13 +8492,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8022,7 +8506,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -8278,9 +8762,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 28,
+   "applied": "n/a",
    "k": 27,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v11#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 27,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v11#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8288,13 +8790,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8302,13 +8804,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 28,
-   "k": 27,
+   "issued": 29,
+   "k": 28,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8316,7 +8818,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 27,
+   "step_last_write": 28,
    "unchanged": true
   },
   {
@@ -8572,9 +9074,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 26,
+   "applied": "n/a",
    "k": 25,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v12#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 25,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v12#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8582,13 +9102,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8596,13 +9116,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8610,7 +9130,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
@@ -8866,9 +9386,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 26,
+   "applied": "n/a",
    "k": 25,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v12#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 25,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v12#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8876,13 +9414,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8890,13 +9428,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -8904,7 +9442,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
@@ -9160,9 +9698,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 26,
+   "applied": "n/a",
    "k": 25,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v12#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 25,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v12#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9170,13 +9726,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9184,13 +9740,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9198,7 +9754,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
@@ -9454,9 +10010,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 26,
+   "applied": "n/a",
    "k": 25,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v12#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 25,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v12#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9464,13 +10038,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9478,13 +10052,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9492,7 +10066,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
@@ -9748,9 +10322,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 26,
+   "applied": "n/a",
    "k": 25,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v12#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 25,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v12#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9758,13 +10350,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9772,13 +10364,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 26,
-   "k": 25,
+   "issued": 27,
+   "k": 26,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9786,7 +10378,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 25,
+   "step_last_write": 26,
    "unchanged": true
   },
   {
@@ -9874,9 +10466,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 18,
+   "applied": "n/a",
    "k": 17,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v13#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 17,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v13#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9884,13 +10494,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9898,13 +10508,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -9912,7 +10522,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
@@ -10000,9 +10610,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 18,
+   "applied": "n/a",
    "k": 17,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v13#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 17,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v13#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10010,13 +10638,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10024,13 +10652,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10038,7 +10666,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
@@ -10126,9 +10754,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 18,
+   "applied": "n/a",
    "k": 17,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v13#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 17,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v13#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10136,13 +10782,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10150,13 +10796,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10164,7 +10810,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
@@ -10252,9 +10898,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 18,
+   "applied": "n/a",
    "k": 17,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v13#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 17,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v13#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10262,13 +10926,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10276,13 +10940,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10290,7 +10954,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
@@ -10378,9 +11042,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 18,
+   "applied": "n/a",
    "k": 17,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v13#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 17,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v13#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10388,13 +11070,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10402,13 +11084,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 18,
-   "k": 17,
+   "issued": 19,
+   "k": 18,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10416,7 +11098,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 17,
+   "step_last_write": 18,
    "unchanged": true
   },
   {
@@ -10504,9 +11186,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 16,
+   "applied": "n/a",
    "k": 15,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v14#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 15,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v14#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10514,13 +11214,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10528,13 +11228,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10542,7 +11242,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
@@ -10630,9 +11330,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 16,
+   "applied": "n/a",
    "k": 15,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v14#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 15,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v14#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10640,13 +11358,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10654,13 +11372,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10668,7 +11386,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
@@ -10756,9 +11474,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 16,
+   "applied": "n/a",
    "k": 15,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v14#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 15,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v14#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10766,13 +11502,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10780,13 +11516,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10794,7 +11530,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
@@ -10882,9 +11618,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 16,
+   "applied": "n/a",
    "k": 15,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v14#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 15,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v14#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10892,13 +11646,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10906,13 +11660,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -10920,7 +11674,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
@@ -11008,9 +11762,27 @@
    "unchanged": true
   },
   {
-   "applied": "stamp 15",
-   "issued": 16,
+   "applied": "n/a",
    "k": 15,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v14#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 15,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v14#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11018,13 +11790,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11032,13 +11804,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 16,
-   "k": 15,
+   "issued": 17,
+   "k": 16,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11046,7 +11818,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 15,
+   "step_last_write": 16,
    "unchanged": true
   },
   {
@@ -11134,9 +11906,32 @@
    "unchanged": true
   },
   {
+   "applied": "n/a",
+   "k": 13,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v15#0",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "issued": 14,
+   "k": 13,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v16-notice-state]",
+   "path": "v15#0",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-notice-state",
+   "step_last_write": 13,
+   "unchanged": true
+  },
+  {
    "applied": "stamp 15",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11144,13 +11939,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11158,13 +11953,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11172,7 +11967,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
@@ -11260,9 +12055,32 @@
    "unchanged": true
   },
   {
+   "applied": "n/a",
+   "k": 13,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v15#1",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "issued": 14,
+   "k": 13,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v16-notice-state]",
+   "path": "v15#1",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-notice-state",
+   "step_last_write": 13,
+   "unchanged": true
+  },
+  {
    "applied": "stamp 15",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11270,13 +12088,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11284,13 +12102,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11298,7 +12116,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
@@ -11386,9 +12204,32 @@
    "unchanged": true
   },
   {
+   "applied": "n/a",
+   "k": 13,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v15#2",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "issued": 14,
+   "k": 13,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v16-notice-state]",
+   "path": "v15#2",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-notice-state",
+   "step_last_write": 13,
+   "unchanged": true
+  },
+  {
    "applied": "stamp 15",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11396,13 +12237,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11410,13 +12251,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11424,7 +12265,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
@@ -11512,9 +12353,32 @@
    "unchanged": true
   },
   {
+   "applied": "n/a",
+   "k": 13,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v15#3",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "issued": 14,
+   "k": 13,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v16-notice-state]",
+   "path": "v15#3",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-notice-state",
+   "step_last_write": 13,
+   "unchanged": true
+  },
+  {
    "applied": "stamp 15",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11522,13 +12386,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11536,13 +12400,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11550,7 +12414,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
@@ -11638,9 +12502,32 @@
    "unchanged": true
   },
   {
+   "applied": "n/a",
+   "k": 13,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v15#4",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "issued": 14,
+   "k": 13,
+   "killed": true,
+   "mode": "skip",
+   "outcome": "MigrationPostconditionError[v16-notice-state]",
+   "path": "v15#4",
+   "position": true,
+   "refused_at_step": true,
+   "step": "v16-notice-state",
+   "step_last_write": 13,
+   "unchanged": true
+  },
+  {
    "applied": "stamp 15",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11648,13 +12535,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11662,13 +12549,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 12,
-   "k": 11,
+   "issued": 15,
+   "k": 14,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -11676,7 +12563,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 11,
+   "step_last_write": 14,
    "unchanged": true
   },
   {
@@ -12001,9 +12888,27 @@
    "step": "v16-registry-backfill"
   },
   {
-   "applied": "stamp 15",
-   "issued": 39,
+   "applied": "n/a",
    "k": 38,
+   "killed": null,
+   "mode": "alter",
+   "outcome": "N/A (n/a)",
+   "path": "v1#0-unstamped",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "skipped",
+   "k": 38,
+   "killed": null,
+   "mode": "skip",
+   "outcome": "N/A (equivalent: the write changed 0 rows)",
+   "path": "v1#0-unstamped",
+   "step": "v16-notice-state"
+  },
+  {
+   "applied": "stamp 15",
+   "issued": 40,
+   "k": 39,
    "killed": true,
    "mode": "alter",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -12011,13 +12916,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 38,
+   "step_last_write": 39,
    "unchanged": true
   },
   {
    "applied": "skipped",
-   "issued": 39,
-   "k": 38,
+   "issued": 40,
+   "k": 39,
    "killed": true,
    "mode": "skip",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -12025,13 +12930,13 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 38,
+   "step_last_write": 39,
    "unchanged": true
   },
   {
    "applied": "stamp 17",
-   "issued": 39,
-   "k": 38,
+   "issued": 40,
+   "k": 39,
    "killed": true,
    "mode": "higher",
    "outcome": "MigrationPostconditionError[stamp]",
@@ -12039,7 +12944,7 @@
    "position": true,
    "refused_at_step": true,
    "step": "stamp",
-   "step_last_write": 38,
+   "step_last_write": 39,
    "unchanged": true
   }
  ],
@@ -12071,7 +12976,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_legacy_row_in_isoformat_plus0000_form_migrates",
    "outcome": "KILLED",
-   "pytest": "1 failed, 11 passed in 1.86s",
+   "pytest": "1 failed, 11 passed in 1.95s",
    "what": "present keys compared as strings: a '+00:00' legacy value re-serialised as 'Z' falsely refuses"
   },
   {
@@ -12101,7 +13006,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_an_added_key_with_a_non_default_value_refuses_at_the_chain_step",
    "outcome": "KILLED",
-   "pytest": "1 failed, 11 passed in 1.91s",
+   "pytest": "1 failed, 11 passed in 1.95s",
    "what": "a key the dump added is accepted whatever its value"
   },
   {
@@ -12131,7 +13036,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_an_undeclared_raw_key_refuses_at_the_chain_step",
    "outcome": "KILLED",
-   "pytest": "1 failed, 11 passed in 1.97s",
+   "pytest": "1 failed, 11 passed in 1.96s",
    "what": "a raw key no model declares is dropped silently, outside the retired set (0016 D2)"
   },
   {
@@ -12219,7 +13124,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_missing_observed_at_is_filled_from_the_one_clock_read",
    "outcome": "KILLED",
-   "pytest": "8 failed, 4 passed in 1.46s",
+   "pytest": "8 failed, 4 passed in 1.48s",
    "what": "the clock re-read per row: the fill is not the recorded value"
   },
   {
@@ -12252,7 +13157,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_present_observed_at_is_kept",
    "outcome": "KILLED",
-   "pytest": "3 failed, 9 passed in 1.89s",
+   "pytest": "3 failed, 9 passed in 1.85s",
    "what": "a present observed_at overwritten with the migration's clock"
   },
   {
@@ -12282,7 +13187,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_stamp_refuses_at_the_stamp",
    "outcome": "KILLED",
-   "pytest": "1 failed, 11 passed in 1.94s",
+   "pytest": "1 failed, 11 passed in 1.93s",
    "what": "the stamp postcondition reads the value the step meant to write, not the database"
   },
   {
@@ -12343,7 +13248,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_stamp_refuses_at_the_stamp",
    "outcome": "KILLED",
-   "pytest": "1 failed, 11 passed in 1.91s",
+   "pytest": "1 failed, 11 passed in 1.92s",
    "what": "a failed postcondition commits the migration's writes before refusing"
   },
   {
@@ -12375,7 +13280,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_two_legacy_outcome_rows_both_convert",
    "outcome": "KILLED",
-   "pytest": "2 failed, 10 passed in 1.88s",
+   "pytest": "2 failed, 10 passed in 1.93s",
    "what": "research stage-2 F1: the step converts only the first legacy outcome row; a postcondition that took its outcome set from the step would find nothing to check"
   },
   {
@@ -12424,7 +13329,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_legacy_row_in_isoformat_plus0000_form_migrates",
    "outcome": "KILLED",
-   "pytest": "11 failed, 1 passed in 1.35s",
+   "pytest": "11 failed, 1 passed in 1.33s",
    "what": "research stage-2 F2: the step writes a row that is not JSON; the postcondition must refuse, never raise"
   },
   {
@@ -12458,7 +13363,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_outcome_chain_refuses_at_its_step",
    "outcome": "KILLED",
-   "pytest": "3 failed, 9 passed in 2.01s",
+   "pytest": "3 failed, 9 passed in 1.99s",
    "what": "the chain step's postcondition removed"
   },
   {
@@ -12488,7 +13393,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_skipped_wiki_drop_refuses_at_its_step",
    "outcome": "KILLED",
-   "pytest": "1 failed, 11 passed in 1.94s",
+   "pytest": "1 failed, 11 passed in 1.95s",
    "what": "the wiki step's postcondition removed"
   },
   {
@@ -12518,7 +13423,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_store_identity_refuses_at_its_step",
    "outcome": "KILLED",
-   "pytest": "1 failed, 11 passed in 1.92s",
+   "pytest": "1 failed, 11 passed in 1.94s",
    "what": "the identity step's postcondition removed"
   },
   {
@@ -12608,7 +13513,7 @@
    "killer_failed": true,
    "killing_cell": "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_stamp_refuses_at_the_stamp",
    "outcome": "KILLED",
-   "pytest": "1 failed, 11 passed in 2.06s",
+   "pytest": "1 failed, 11 passed in 1.93s",
    "what": "the stamp's postcondition removed"
   }
  ],
@@ -12636,6 +13541,10 @@
    "v16-act-counter": {
     "killed": 144
    },
+   "v16-notice-state": {
+    "killed": 5,
+    "n/a": 91
+   },
    "v16-registry-backfill": {
     "killed": 138,
     "n/a": 6
@@ -12647,13 +13556,13 @@
     "killed": 4
    }
   },
-  "perturbations": 853,
-  "perturbations_killed": 847,
-  "perturbations_not_applicable": 6,
+  "perturbations": 949,
+  "perturbations_killed": 852,
+  "perturbations_not_applicable": 97,
   "rows": 17,
   "seconds": {
-   "part_a": 68,
-   "total": 134
+   "part_a": 77,
+   "total": 142
   }
  }
 }

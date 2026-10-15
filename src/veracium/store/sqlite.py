@@ -59,14 +59,19 @@ _SITE_UPSERT_ATTESTED = declare_site("store.upsert.attested-redaction")
 _SITE_EPISODE_ATTESTED = declare_site("store.episode.attested-redaction")
 _SITE_CONSOLIDATION_INPUT_REDACTED = declare_site("store.consolidation.input-redacted")
 _SITE_IMPORT_NOTICE_CONFLICT = declare_site("store.import.notice-body-conflict")
-# the 2026-10-13 notice-binding hotfix: a STANDING notice completes on a default import only for a record whose own
-# origin is the notice's — a different origin refuses the import, naming the standing notice
-_SITE_IMPORT_STANDING_ORIGIN = declare_site("store.import.standing-notice-origin-mismatch")
+# specs/0041 §11.6.6 (T4): a notice's state moves only through ONE writer, which validates the closed values (no DDL
+# CHECK); and the host verb that applies a PENDING notice refuses an unknown id, a standing row, an absent target
+_SITE_NOTICE_STATE = declare_site("store.notice.state-domain")
+_SITE_CONFIRM_NOTICE_UNKNOWN = declare_site("store.confirm-notice.unknown")
+_SITE_CONFIRM_NOTICE_STANDING = declare_site("store.confirm-notice.standing")
+_SITE_CONFIRM_NOTICE_INERT = declare_site("store.confirm-notice.target-absent")
 # ... and a file pairing a notice with its record UNREDACTED refuses whole (the owner's ruling): applying the notice could
 # destroy the user's own fact (a hostile notice), skipping it would land content a source says it redacted (a stale copy)
 _SITE_IMPORT_NOTICE_UNSHOWN = declare_site("store.import.notice-record-unredacted")
-# a standing notice: a witnessed redaction row whose record this store has never held (no event written)
-_STANDING_SQL = "(event_ref IS NULL AND source_origin IS NOT NULL)"
+# specs/0041 §11.6.6 (T4): only an APPLIED row attests (a redaction this store made, or a notice it applied as its
+# own total treatment); PENDING and STANDING rows hold a foreign body and attest nothing. Until v16 the state was
+# derived (`event_ref IS NULL AND source_origin IS NOT NULL` read as standing); v16 stores it.
+_APPLIED_SQL = "(state = 'applied')"
 _SITE_UPSERT_INVALIDATION_REASON = declare_site("store.upsert.invalidation-reason-not-registered")
 _SITE_EPISODE_RETIRED_REASON = declare_site("store.episode.retired-reason-not-registered")
 _SITE_IMPORT_REASON = declare_site("store.import.reason-not-registered")
@@ -550,7 +555,7 @@ class SqliteStore(Store):
         # ATTESTED by a redaction record is REFUSED, not merged — keyed on the RECORD, never on the marker
         # bytes, so an unattested marker row stays writable (§4b's attestation rule; the test's control).
         with _SITE_UPSERT_ATTESTED.consult():
-            attested = self._attested_fields(edge.user_id, "edge", edge.id, standing=False)
+            attested = self._attested_fields(edge.user_id, "edge", edge.id, coverage=False)
             if attested:
                 raise _SITE_UPSERT_ATTESTED.fire(ValueError(
                     f"refused: edge {edge.id!r} is redacted — a redaction record attests {sorted(attested)}; "
@@ -1796,7 +1801,7 @@ class SqliteStore(Store):
             # committing in between was overwritten. The checks above read only the argument and stay outside.
             with self._lock, self._write_txn():
                 with _SITE_EPISODE_ATTESTED.consult():
-                    attested = self._attested_fields(episode.user_id, "episode", episode.id, standing=False)
+                    attested = self._attested_fields(episode.user_id, "episode", episode.id, coverage=False)
                     if attested:
                         raise _SITE_EPISODE_ATTESTED.fire(ValueError(
                             f"refused: episode {episode.id!r} is redacted — a redaction record attests "
@@ -2019,12 +2024,11 @@ class SqliteStore(Store):
             # (an invalid notice refuses the whole plan: the record-and-notice UNIT is never admitted
             # un-redacted), applied INSIDE the same transaction as the records below.
             notices = plan.get("redactions", [])
-            # the notice-binding hotfix (internal finding 2026-10-13; the owner's ruling: fail closed): a notice binds
-            # only to a record THIS commit inserts, unless the plan says `notice_scope="any"` — which only a trusted
-            # restore (specs/0005: the operator's own history) passes. Shipped 0041 bound a notice to a bare target id,
-            # so an untrusted file carrying only a notice redacted the user's own held fact, left a standing notice
-            # that refused the user's own later write of an absent id, and redacted a later arrival of it. Absent or
-            # unknown, the scope is the narrow one.
+            # the MODE (specs/0041 §11.6.6's table): `notice_scope="any"` is a trusted restore (specs/0005: the operator's
+            # own history), the only plan that may apply a notice to a record held BEFORE this import; anything else —
+            # absent or unknown included — is the default import's narrow scope, where a held target's notice is PENDING.
+            # (Shipped 0041 bound a notice to a bare target id, so an untrusted file carrying only a notice redacted the
+            # user's own held fact; the 2026-10-13 hotfix narrowed it; §11.6.6 replaced the hotfix's rule.)
             notice_any = plan.get("notice_scope") == "any"
             notice_targets: set = set()
             for n in notices:
@@ -2140,7 +2144,7 @@ class SqliteStore(Store):
                     for edge in edges:
                         # specs/0041 §11.2 / D1 at the IMPORT boundary (round 10, R9-02(c)): the reason closure binds
                         # import as it binds the writers
-                        if ("edge", edge.id) not in notice_targets and not self._attested_fields(user_id, "edge", edge.id):
+                        if ("edge", edge.id) not in notice_targets and not self._attested_fields(user_id, "edge", edge.id, coverage=True):
                             self._refuse_redacted_reason(edge.invalidation_reason, f"imported edge {edge.id!r}", "import-edge")
                         with _SITE_IMPORT_REASON.consult():
                             if edge.invalidation_reason is not None and edge.invalidation_reason not in DISPOSITIONED_REASONS:
@@ -2178,7 +2182,7 @@ class SqliteStore(Store):
                         if prior is None:
                             created.add(("edge", edge.id))
                     for ep in episodes:
-                        if ("episode", ep.id) not in notice_targets and not self._attested_fields(user_id, "episode", ep.id):
+                        if ("episode", ep.id) not in notice_targets and not self._attested_fields(user_id, "episode", ep.id, coverage=True):
                             self._refuse_redacted_reason(ep.retired_reason, f"imported episode {ep.id!r}", "import-episode")
                         with _SITE_IMPORT_REASON.consult():
                             if ep.retired_reason is not None and ep.retired_reason not in DISPOSITIONED_REASONS:
@@ -2197,7 +2201,7 @@ class SqliteStore(Store):
                                     ep.kind == _redaction.MARKER and (
                                         any(n["target_kind"] == "episode" and n["target_id"] == ep.id
                                             and "kind" in n["fields"] for n in notices)
-                                        or "kind" in self._attested_fields(user_id, "episode", ep.id))):
+                                        or "kind" in self._attested_fields(user_id, "episode", ep.id, coverage=True))):
                                 raise _SITE_IMPORT_EPISODE_KIND.fire(ValueError(
                                     f"refused: imported episode {ep.id!r} kind {ep.kind!r} is not a "
                                     f"recognised operational kind — the closure binds the import "
@@ -2235,15 +2239,18 @@ class SqliteStore(Store):
                              canonical_payload(row["payload"]), row["op_key"],
                              now, row["contributor_type"],
                              row["contributor_ref"]))
-                    # specs/0041 §4g: the notices, in the SAME transaction as the records — held → applied
-                    # (the record and its redaction state commit together or not at all); absent → a STANDING
-                    # notice row (event_ref NULL; the record is redacted on arrival); a row already held under
-                    # the same source identity → existing (repeat imports are idempotent by identity)
+                    # specs/0041 §11.6.6 (T4; it REPLACES the 2026-10-13 notice-binding hotfix's rule): every notice in the
+                    # unit is weighed by its TARGET's state at this import, the file's copy of the record, and the mode —
+                    # and by nothing about its origin (the owner's ruling: origin is recorded as the notice's source
+                    # identity and compared by no rule). APPLIED is this store's TOTAL treatment (`_redact_in_txn`);
+                    # PENDING and STANDING rows keep the foreign body immutable and attest nothing. In the SAME
+                    # transaction as the records: everything commits together or nothing does.
                     applied = standing = existing = 0
-                    unbound: list = []               # the hotfix: notices not applied, their targets reported
+                    unbound: list = []               # the notices left PENDING by this import: [kind, id, reason]
+                    unit_rids = {n["_rid"] for n in notices}
                     for n in notices:
                         held = self._conn.execute(
-                            "SELECT event_ref, source_body FROM redactions WHERE id=?", (n["_rid"],)).fetchone()
+                            "SELECT state, pending_reason FROM redactions WHERE id=?", (n["_rid"],)).fetchone()
                         # round 10 (R9-04): a repeat is idempotent only for the SAME body; a contradictory body under
                         # one identity refuses the whole import, across calls as well as within one file
                         # round 10, stage 2 (S2-1): the body is compared on the SOURCE identity, not the bound row id —
@@ -2279,82 +2286,98 @@ class SqliteStore(Store):
                         if native_same_target:
                             existing += 1                       # the store's own event, already attested on that target
                             continue
-                        tbl = "edges" if n["target_kind"] == "edge" else "episodes"
-                        row = self._conn.execute(f"SELECT user_id, json FROM {tbl} WHERE id=?", (n["target_id"],)).fetchone()
+                        kind, tid = n["target_kind"], n["target_id"]
+                        tbl = "edges" if kind == "edge" else "episodes"
+                        row = self._conn.execute(f"SELECT user_id, json FROM {tbl} WHERE id=?", (tid,)).fetchone()
                         present = row is not None and row[0] == user_id
-                        if held is not None and (held[0] is not None or not present):
-                            existing += 1                       # applied before, or still standing
+                        state = held[0] if held is not None else None
+                        if state == "applied":
+                            existing += 1                       # applied before: the R10-02 `existing`
                             continue
-                        if not notice_any and (n["target_kind"], n["target_id"]) not in created:
-                            # the hotfix: on the default path never a held record, never a standing row
-                            unbound.append((n["target_kind"], n["target_id"], "held-target" if present else "absent-target"))
+                        if state == "pending" and (not notice_any or not present):
+                            # IO-II-1: a repeat DEFAULT import of a pending notice is `existing`, its reason kept; a
+                            # pending notice whose target is gone is inert in both modes (§11.6.6)
+                            existing += 1
+                            unbound.append((kind, tid, held[1]))
                             continue
-                        with _SITE_IMPORT_NOTICE_UNSHOWN.consult():
-                            if present and n.get("_unshown") == "record-untreated":
-                                raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError(
-                                    f"refused: the file carries {n['target_kind']} {n['target_id']!r} UNREDACTED beside a "
-                                    f"redaction notice for it (origin {n['origin']!r}) — applying it could destroy a record "
-                                    f"the notice does not show redacted, and skipping it would land content its source "
-                                    f"says it redacted; nothing imported (specs/0041 §4g, the 2026-10-13 notice-binding "
-                                    f"hotfix)"))
-                        if present and n.get("_shown") is not True and not (
-                                n.get("_unshown", "record-not-in-file") == "record-not-in-file"
-                                and _redaction.shows_redaction(n["target_kind"], json.loads(row[1]), n["fields"])):
-                            # the hotfix's fixed-point rule, BOTH modes: a notice destroys nothing a file does not show
-                            # redacted — applied where the file's copy shows it, or (no copy in the file) where the HELD
-                            # record already does, so applying it only attests; otherwise reported, never applied
-                            unbound.append((n["target_kind"], n["target_id"], n.get("_unshown") or "record-not-in-file"))
+                        if state == "standing" and not present:
+                            existing += 1                       # still standing: its target is not held
                             continue
-                        if present:
-                            self._redact_in_txn(user_id, n["target_kind"], n["target_id"], "imported_notice",
-                                                row_json=row[1], row_id=n["_rid"], fields_hint=n["fields"],
-                                                source_body=n["_body"],
+                        if (kind, tid) in created:
+                            # CREATED by this import: the unit carries the record. It must SHOW the redaction, in both
+                            # modes — admitting it would land content its source says it redacted, and redacting it
+                            # would destroy a fact a poisoned export pairs with a notice (internal finding 0041-PA1)
+                            shown = (n["_shown"] if "_shown" in n
+                                     else _redaction.shows_redaction(kind, json.loads(row[1]), n["fields"]))
+                            with _SITE_IMPORT_NOTICE_UNSHOWN.consult():
+                                if not shown:
+                                    raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError(
+                                        f"refused: the file carries {kind} {tid!r} UNREDACTED beside a redaction notice "
+                                        f"for it (origin {n['origin']!r}) — admitting it would land content its source "
+                                        f"says it redacted, and applying the notice could destroy a record the file does "
+                                        f"not show redacted; nothing imported (specs/0041 §11.6.6, INV-RR14)"))
+                            self._redact_in_txn(user_id, kind, tid, "imported_notice", row_json=row[1], row_id=n["_rid"],
+                                                fields_hint=n["fields"], source_body=n["_body"],
                                                 source_identity=(n["origin"], n["source_user"], n["source_event_ref"]))
                             applied += 1
-                        else:
-                            ver = self.store_version(user_id)
-                            self._conn.execute(
-                                "INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
-                                "store_version_before, store_version_after, event_ref, recorded_at, source_body, "
-                                "source_origin, source_user, source_event_ref) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                                (n["_rid"], user_id, n["target_kind"], n["target_id"], json.dumps(n["fields"]),
-                                 n["marker_version"], "imported_notice", ver, ver, None, now, n["_body"],
-                                 n["origin"], n["source_user"], n["source_event_ref"]))
-                            standing += 1
-                    # §4g's arrival rule: a STANDING notice whose record this plan just delivered is applied now
-                    # The 2026-10-13 notice-binding hotfix: "just delivered" means INSERTED by this import (the
-                    # comment said so; the scan read every present target), and on the default path the record's
-                    # own resolved origin must be the notice's, byte for byte — else the import refuses, naming it.
+                            continue
+                        if present:
+                            # HELD before this import — a local fact, a copy of another store's record, or (research's
+                            # B3) a record written locally under a STANDING notice: weighed like any held target
+                            if not notice_any:
+                                # a DEFAULT import never changes a held byte through a notice (INV-RR10): PENDING
+                                self._set_notice_state(user_id, n, "pending", "held-target", prior=state, now=now)
+                                unbound.append((kind, tid, held[1] if state == "pending" else "held-target"))
+                                continue
+                            # a TRUSTED RESTORE (own history, 0005): the file's copy decides
+                            with _SITE_IMPORT_NOTICE_UNSHOWN.consult():
+                                if n.get("_unshown") == "record-untreated":
+                                    raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError(
+                                        f"refused: the file carries {kind} {tid!r} UNREDACTED beside a redaction notice "
+                                        f"for it (origin {n['origin']!r}) — a restore may not land content its source "
+                                        f"says it redacted, nor redact the held record on a copy that does not show it; "
+                                        f"nothing imported (specs/0041 §11.6.6, INV-RR14)"))
+                            if n.get("_shown") is True or _redaction.shows_redaction(kind, json.loads(row[1]), n["fields"]):
+                                # the file's copy shows it, or (no copy) the HELD record already does: applied, as this
+                                # store's total treatment — held acts still carrying content are treated (§11.6.6)
+                                self._redact_in_txn(user_id, kind, tid, "imported_notice", row_json=row[1],
+                                                    row_id=n["_rid"], fields_hint=n["fields"], source_body=n["_body"],
+                                                    source_identity=(n["origin"], n["source_user"], n["source_event_ref"]))
+                                applied += 1
+                                continue
+                            self._set_notice_state(user_id, n, "pending", "record-not-in-file", prior=state, now=now)
+                            unbound.append((kind, tid, held[1] if state == "pending" else "record-not-in-file"))
+                            continue
+                        # ABSENT, and not in the unit: STANDING — inert to local writes and readers (§11.6.6)
+                        self._set_notice_state(user_id, n, "standing", None, prior=state, now=now)
+                        standing += 1
+                    # §11.6.6: a STANDING notice held from an EARLIER import, whose record THIS import created (and whose
+                    # notice is not in this unit — the table above weighed those): an arrival that does not show the
+                    # redaction refuses the whole import, in both modes; one that shows it is PENDING in a default import
+                    # (reason `standing-arrival`, for the user's `confirm_notice`) and applied in a trusted restore. A
+                    # record written LOCALLY is never completed here: it was not created by an import. No origin is read.
                     arrived = 0
-                    from ..source_identity import resolve_origin
-                    for rid, kind, tid, fields, s_origin in self._conn.execute(
-                            "SELECT id, target_kind, target_id, fields, source_origin FROM redactions WHERE user_id=? "
-                            "AND event_ref IS NULL AND source_origin IS NOT NULL", (user_id,)).fetchall():   # R10-04
-                        if (kind, tid) not in created:
+                    for rid, kind, tid, fields in self._conn.execute(
+                            "SELECT id, target_kind, target_id, fields FROM redactions WHERE user_id=? AND state='standing'",
+                            (user_id,)).fetchall():
+                        if rid in unit_rids or (kind, tid) not in created:
                             continue
                         tbl = "edges" if kind == "edge" else "episodes"
                         row = self._conn.execute(f"SELECT user_id, json FROM {tbl} WHERE id=?", (tid,)).fetchone()
-                        if row is not None and row[0] == user_id:
-                            if not notice_any:
-                                stored = (json.loads(row[1]).get("provenance") or {}).get("origin")
-                                with _SITE_IMPORT_STANDING_ORIGIN.consult():
-                                    if resolve_origin(stored, self.local_origin()) != s_origin:
-                                        raise _SITE_IMPORT_STANDING_ORIGIN.fire(ValueError(
-                                            f"refused: imported {kind} {tid!r} arrives under a standing redaction "
-                                            f"notice from origin {s_origin!r}, but the record's own origin is not that "
-                                            f"origin — an untrusted file's notice reaches only its own source's records; "
-                                            f"nothing imported (specs/0041 §4g, the 2026-10-13 notice-binding hotfix)"))
-                            with _SITE_IMPORT_NOTICE_UNSHOWN.consult():
-                                if not _redaction.shows_redaction(kind, json.loads(row[1]), json.loads(fields)):
-                                    raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError(
-                                        f"refused: imported {kind} {tid!r} arrives UNREDACTED under a standing redaction "
-                                        f"notice from origin {s_origin!r} — completing it could destroy a record the "
-                                        f"file does not show redacted, and admitting it would land content the notice "
-                                        f"says was redacted; nothing imported (specs/0041 §4g, the 2026-10-13 "
-                                        f"notice-binding hotfix)"))
+                        with _SITE_IMPORT_NOTICE_UNSHOWN.consult():
+                            if not _redaction.shows_redaction(kind, json.loads(row[1]), json.loads(fields)):
+                                raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError(
+                                    f"refused: imported {kind} {tid!r} arrives UNREDACTED under a standing redaction "
+                                    f"notice — admitting it would land content the notice says was redacted; nothing "
+                                    f"imported (specs/0041 §11.6.6, INV-RR12)"))
+                        if notice_any:
                             self._redact_in_txn(user_id, kind, tid, "imported_notice", row_json=row[1], row_id=rid,
                                                 fields_hint=json.loads(fields))
                             arrived += 1
+                        else:
+                            self._set_notice_state(user_id, {"_rid": rid}, "pending", "standing-arrival",
+                                                   prior="standing", now=now)
+                            unbound.append((kind, tid, "standing-arrival"))
                     self._bump(user_id)
                 except BaseException:
                     self._conn.rollback()                # ONE atomic commit —
@@ -2362,7 +2385,7 @@ class SqliteStore(Store):
             return {"edges": len(edges), "episodes": len(episodes),
                     "contributions": len(contrib_writes),
                     "contributions_existing": contrib_existing,
-                    "notices_applied": applied + arrived, "notices_standing": standing - arrived if standing >= arrived else 0,
+                    "notices_applied": applied + arrived, "notices_standing": standing,
                     "notices_existing": existing, "notices_arrived": arrived,
                     "notices_not_applied": [list(t) for t in sorted(set(unbound))]}
 
@@ -2708,15 +2731,20 @@ class SqliteStore(Store):
 
     # -- compliance erasure -------------------------------------------------
     # -- specs/0041 §4a: targeted redaction (tranche 3) ------------------------
-    def _attested_fields(self, user_id: str, kind: str, target_id: str, *, standing: bool = True) -> set:
+    def _attested_fields(self, user_id: str, kind: str, target_id: str, *, coverage: bool = False) -> set:
         """§4b's attestation rule: the fields a redaction record names for this record — the ONLY thing that
         makes a marker mean 'redacted'. Empty when no record exists (an unattested marker confers nothing).
-        `standing=False` (the local writers, since the 2026-10-13 notice-binding hotfix) leaves out STANDING notices:
-        a witnessed notice for a record this store never held does not refuse the user's own write of that id."""
+        Two readers (T4, research's B2); every caller in src/ names which. The DEFAULT is the attestation reader, the
+        fail-closed one — a caller that omits the keyword counts LESS as redacted, so it refuses more, never less (the
+        tests and the committed 0041 evidence call it positionally, meaning "is it attested"):
+        `coverage=False` — ATTESTATION, APPLIED rows only: what this store has redacted (the local writers' INV-11
+        refusal, R10-02's treated arrival); `coverage=True` — COVERAGE, every row whatever its state (0041 §11.6.6:
+        "Coverage counts every notice for the target, whatever its state"): what an ARRIVING row may be admitted as,
+        which never writes held content."""
         out: set = set()
         for (fields,) in self._conn.execute(
                 "SELECT fields FROM redactions WHERE user_id=? AND target_kind=? AND target_id=?"
-                + ("" if standing else f" AND NOT {_STANDING_SQL}"),
+                + ("" if coverage else f" AND {_APPLIED_SQL}"),
                 (user_id, kind, target_id)):
             out.update(json.loads(fields))
         return out
@@ -2724,10 +2752,10 @@ class SqliteStore(Store):
     def redacted_targets(self, user_id: str, kind: str) -> frozenset:
         """specs/0041 §4b-iii (tranche 4a): the ids of this user's ATTESTED-redacted records of one kind — the
         set the readers exclude (recall, the wiki compile, describe_procedures). By the attestation record,
-        never by marker bytes: an unattested marker row is not in it. Nor is a STANDING notice (the 2026-10-13
-        notice-binding hotfix): its id names no record this store holds, so it excludes nothing it may hold later."""
+        never by marker bytes: an unattested marker row is not in it. Only APPLIED rows (0041 §11.6.6): a PENDING
+        notice is not a redaction of anything this store holds, and a STANDING one names no record it holds."""
         return frozenset(r[0] for r in self._conn.execute(
-            f"SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=? AND NOT {_STANDING_SQL}",
+            f"SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=? AND {_APPLIED_SQL}",
             (user_id, kind)))
 
     # specs/0041 §4g: a WITNESSED redaction (an imported notice) is attested by a row whose `reason` column is
@@ -2786,25 +2814,102 @@ class SqliteStore(Store):
         for row in self._conn.execute(
                 "SELECT id, target_kind, target_id, fields, marker_version, reason, store_version_before, "
                 "store_version_after, event_ref, recorded_at, source_body, source_origin, source_user, "
-                "source_event_ref FROM redactions WHERE user_id=? ORDER BY recorded_at, id", (user_id,)):
+                "source_event_ref, state FROM redactions WHERE user_id=? ORDER BY recorded_at, id", (user_id,)):
             rid, kind, tid, fields, mv, reason, vb, va, event_ref, recorded_at, source_body = row[:11]
             (origin, s_user, s_event), body = self._canonical_source(user_id, fields, mv, reason, vb, va, event_ref,
-                                                                     recorded_at, source_body, *row[11:])
+                                                                     recorded_at, source_body, *row[11:14])
             # the NOTICE this record exports (round 10, R9-05): a local redaction's own facts; a witnessed one's
             # IMMUTABLE foreign body, unchanged — the ONE projection the import compares against (round 12, R11-03)
             out.append({"id": rid, "target_kind": kind, "target_id": tid, "fields": json.loads(fields),
                         "marker_version": mv, "reason": reason, "store_version_before": vb,
                         "store_version_after": va, "event_ref": event_ref, "recorded_at": recorded_at,
-                        "origin": origin, "source_user": s_user, "source_event_ref": s_event, "notice_body": body})
+                        "origin": origin, "source_user": s_user, "source_event_ref": s_event, "notice_body": body,
+                        "state": row[14]})
         return out
 
     def _completed_attestation(self, user_id: str, kind: str, target_id: str) -> bool:
-        """A redaction record with its event written — this store redacted the record (or applied a notice to
-        it). A STANDING notice (event_ref NULL) attests too, but is exactly the case an arriving record must
-        be admitted for, to be redacted on arrival (§4g)."""
+        """An APPLIED redaction record — this store redacted the record (or applied a notice to it as its own
+        total treatment). PENDING and STANDING rows are not (0041 §11.6.6)."""
         return self._conn.execute(
-            "SELECT 1 FROM redactions WHERE user_id=? AND target_kind=? AND target_id=? AND event_ref IS NOT NULL LIMIT 1",
+            f"SELECT 1 FROM redactions WHERE user_id=? AND target_kind=? AND target_id=? AND {_APPLIED_SQL} LIMIT 1",
             (user_id, kind, target_id)).fetchone() is not None
+
+    def _set_notice_state(self, user_id: str, n: dict, state: str, reason, *, prior, now: str) -> None:
+        """specs/0041 §11.6.6 (T4): the ONE writer of a notice's PENDING or STANDING state (APPLIED is written only by
+        `_redact_in_txn`, as this store's total treatment). The closed values are validated HERE — the DDL holds no
+        CHECK. `prior` is the row's state before this import (None: no row). A PENDING row keeps its reason (IO-II-1:
+        only `confirm_notice` or its own re-arrival in a trusted restore moves it); a STANDING row may become PENDING
+        (research's B3: its target was written locally, or arrived) and never the reverse. A new row is inserted with
+        the notice's immutable foreign body and its source identity, as the standing insert always was."""
+        with _SITE_NOTICE_STATE.consult():
+            ok = (((state == "pending" and reason in _redaction.PENDING_REASONS)
+                   or (state == "standing" and reason is None))
+                  and prior in (None, "pending", "standing") and not (prior == "pending" and state == "standing"))
+            if not ok:
+                raise _SITE_NOTICE_STATE.fire(ValueError(
+                    f"refused: a redaction notice may not move {prior!r} -> {state!r} (reason {reason!r}) — the "
+                    f"states are {_redaction.NOTICE_STATES}, the pending reasons {_redaction.PENDING_REASONS} "
+                    f"(specs/0041 §11.6.6)"))
+        if prior == "pending" or prior == state:
+            return
+        if prior == "standing":
+            self._conn.execute("UPDATE redactions SET state=?, pending_reason=? WHERE id=? AND state='standing'",
+                               (state, reason, n["_rid"]))
+            return
+        ver = self.store_version(user_id)
+        self._conn.execute(
+            "INSERT INTO redactions(id, user_id, target_kind, target_id, fields, marker_version, reason, "
+            "store_version_before, store_version_after, event_ref, recorded_at, source_body, "
+            "source_origin, source_user, source_event_ref, state, pending_reason) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (n["_rid"], user_id, n["target_kind"], n["target_id"], json.dumps(n["fields"]), n["marker_version"],
+             _redaction.WITNESS_REASON, ver, ver, None, now, n["_body"], n["origin"], n["source_user"],
+             n["source_event_ref"], state, reason))
+
+    def pending_notices(self, user_id: str) -> list:
+        """specs/0041 §11.6.6 (T4): the user's PENDING notices, oldest first — the ids `confirm_notice` takes."""
+        return [{"notice_id": rid, "target_kind": kind, "target_id": tid, "reason": reason, "origin": origin,
+                 "source_user": s_user, "recorded_at": at}
+                for rid, kind, tid, reason, origin, s_user, at in self._conn.execute(
+                    "SELECT id, target_kind, target_id, pending_reason, source_origin, source_user, recorded_at "
+                    "FROM redactions WHERE user_id=? AND state='pending' ORDER BY recorded_at, id", (user_id,))]
+
+    def confirm_notice(self, user_id: str, notice_id: str):
+        """specs/0041 §11.6.6 (T4): the user's CONFIRMATION of a PENDING notice — applied as a redaction BY THIS STORE,
+        total over the target's carriers under this store's own treatment map (held acts included, even where the
+        notice is older or partial and does not attest them), exactly as a local redaction is. The notice's foreign
+        body is unchanged; the row becomes APPLIED and its fields are what this store treated. The only path by
+        which a default-mode notice changes held content.
+        An already APPLIED row is a repeat: its original receipt, `repeated=True` (redact()'s precedent). REFUSED,
+        writing nothing: an unknown id and another user's id (ONE refusal for both — the existence of another
+        user's notice is not disclosed by the shape of the error); a STANDING row (it is not pending); a pending
+        notice whose target no longer exists (inert, §11.6.6)."""
+        with self._lock, self._write_txn():
+            row = self._conn.execute(
+                "SELECT user_id, target_kind, target_id, fields, state FROM redactions WHERE id=?", (notice_id,)).fetchone()
+            with _SITE_CONFIRM_NOTICE_UNKNOWN.consult():
+                if row is None or row[0] != user_id:
+                    raise _SITE_CONFIRM_NOTICE_UNKNOWN.fire(ValueError(
+                        f"confirm_notice: no redaction notice {notice_id!r} for user {user_id!r} (specs/0041 §11.6.6)"))
+            _uid, kind, tid, fields, state = row
+            if state == "applied":
+                record = self._conn.execute(f"SELECT {self.RECORD_COLS} FROM redactions WHERE id=?", (notice_id,)).fetchone()
+                return self._receipt_from_record(user_id, kind, tid, record, repeated=True)
+            with _SITE_CONFIRM_NOTICE_STANDING.consult():
+                if state == "standing":
+                    raise _SITE_CONFIRM_NOTICE_STANDING.fire(ValueError(
+                        f"confirm_notice: notice {notice_id!r} is STANDING, not pending — it was recorded for a record this "
+                        f"store did not hold, and only a pending notice is confirmed (specs/0041 §11.6.6)"))
+            table = "edges" if kind == "edge" else "episodes"
+            target = self._conn.execute(f"SELECT user_id, json FROM {table} WHERE id=?", (tid,)).fetchone()
+            with _SITE_CONFIRM_NOTICE_INERT.consult():
+                if target is None or target[0] != user_id:
+                    raise _SITE_CONFIRM_NOTICE_INERT.fire(ValueError(
+                        f"confirm_notice: notice {notice_id!r} is inert — its {kind} {tid!r} no longer exists here "
+                        f"(specs/0041 §11.6.6)"))
+            record = self._redact_in_txn(user_id, kind, tid, _redaction.WITNESS_REASON, row_json=target[1],
+                                         row_id=notice_id, fields_hint=json.loads(fields))
+            return self._receipt_from_record(user_id, kind, tid, record, repeated=False)
 
     def _treated_on_arrival(self, user_id: str, kind: str, target_id: str, dump: dict):
         """Round 11 (R10-02): the shape a record ARRIVING under a COMPLETED attestation is written in — the PURE
@@ -2821,14 +2926,17 @@ class SqliteStore(Store):
             new, treated = _redaction.treat_episode(dump, reason_registry=DISPOSITIONED_REASONS,
                                                     recognised_kinds=_redaction.RECOGNISED_EPISODE_KINDS)
             model = Episode
-        uncovered = sorted(set(treated) - set(self._attested_fields(user_id, kind, target_id)))
+        uncovered = sorted(set(treated) - set(self._attested_fields(user_id, kind, target_id, coverage=False)))
         return model.model_validate(new), uncovered      # the CALLER refuses a non-empty `uncovered` (one census id,
                                                          # one function: the refusal stays at the insert it guards)
 
     def _redaction_record(self, user_id: str, kind: str, target_id: str):
+        # APPLIED only (T4): `redact()`'s repeat check. A PENDING or STANDING row is no redaction of the held record, so
+        # before v16 a user's own redact() of a record a standing notice named (after a local write of its id)
+        # returned `repeated=True` and treated NOTHING; the user's redaction now writes its own applied row
         return self._conn.execute(
             f"SELECT {self.RECORD_COLS} FROM redactions WHERE user_id=? AND target_kind=? AND target_id=? "
-            "ORDER BY recorded_at, id",
+            f"AND {_APPLIED_SQL} ORDER BY recorded_at, id",
             (user_id, kind, target_id)).fetchone()
 
     def _surviving_derived(self, user_id: str, kind: str, target_id: str) -> list:
@@ -3125,12 +3233,14 @@ class SqliteStore(Store):
         version_after = self.store_version(user_id)
         recorded_at = self._now().isoformat()
         rid = row_id or ("rd-" + uuid.uuid4().hex)
-        standing = self._conn.execute("SELECT 1 FROM redactions WHERE id=? AND event_ref IS NULL", (rid,)).fetchone()
-        if standing is not None:
-            # §4g: the record arrived after its notice — the standing row is COMPLETED, never duplicated
+        waiting = self._conn.execute("SELECT 1 FROM redactions WHERE id=? AND state IN ('pending', 'standing')",
+                                     (rid,)).fetchone()
+        if waiting is not None:
+            # §4g / §11.6.6: a PENDING or STANDING notice becomes APPLIED in place, never duplicated — its foreign body
+            # (source_body, the source identity) unchanged; its fields are THIS store's total treatment
             self._conn.execute(
                 "UPDATE redactions SET fields=?, marker_version=?, store_version_before=?, store_version_after=?, "
-                "event_ref=?, recorded_at=? WHERE id=?",
+                "event_ref=?, recorded_at=?, state='applied', pending_reason=NULL WHERE id=?",
                 (json.dumps(fields), _redaction.MARKER_VERSION, version_before, version_after, event_ref, recorded_at, rid))
         else:
             self._conn.execute(

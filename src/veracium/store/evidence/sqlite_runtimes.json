@@ -27,7 +27,7 @@
         "13": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
         "14": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
         "15": "9579d81a7f996d22b4c0f705a550aca93050ac9d29ce6cdf263951bbbbbd32ac",
-        "16": "68e30d7e60d4c3bd36985b645bd25d989c4117bab4aee49ec7b71a343d5dcc3e"
+        "16": "ceb1cfe9d1078188d21854e1964ac12e08c6c2b3968c28c3aa4948eda4257f89"
       },
       "manifestations": {
         "constructor v1": {
@@ -10093,7 +10093,7 @@
           "table:redactions": {
             "type": "table",
             "table": "redactions",
-            "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT,\n    source_origin        TEXT,\n    source_user          TEXT,\n    source_event_ref     TEXT\n)",
+            "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT,\n    source_origin        TEXT,\n    source_user          TEXT,\n    source_event_ref     TEXT,\n    state                TEXT NOT NULL DEFAULT 'applied',\n    pending_reason       TEXT\n)",
             "columns": [
               [
                 "id",
@@ -10209,6 +10209,22 @@
               ],
               [
                 "source_event_ref",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "state",
+                "TEXT",
+                1,
+                "'applied'",
+                0,
+                0
+              ],
+              [
+                "pending_reason",
                 "TEXT",
                 0,
                 null,

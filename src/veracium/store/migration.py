@@ -68,6 +68,7 @@ class MigrationPostconditionError(StoreVersionError):
 STEP_STAMP, STEP_IDENTITY, STEP_EPOCH = "stamp", "store-identity", "store-epoch"
 STEP_BASELINE, STEP_CHAINS, STEP_WIKI = "v13-baseline", "v2-v3-outcome-chains", "v3-v4-wiki-drop"
 STEP_ACT_COLUMNS, STEP_ACT_COUNTER, STEP_REGISTRY = "v16-act-columns", "v16-act-counter", "v16-registry-backfill"
+STEP_NOTICE_STATE = "v16-notice-state"
 
 # 0013 §4f / M-Q6 (RULED by accepted 0016 D2): a raw key no current model declares is REFUSED, except these — fields a
 # released schema declared and HEAD no longer does, dropped on read by every load since their deletion. Bound by
@@ -472,6 +473,27 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
                 conf_before, _rows(conn, f"SELECT {_CONF_V15_COLS}, {_CONF_ACT_COLS} FROM confirmations")))
             _refuse_unless(base, STEP_ACT_COUNTER,
                            _act_counter_problems(counter_before, _rows(conn, "SELECT id, next_seq FROM act_counter")))
+            # specs/0041 §11.6.6 (T4): every redaction row gets its NOTICE STATE, by the rule today's readers already
+            # apply — `standing` iff it has no event and a source identity (the pre-v16 `_STANDING_SQL`), `applied`
+            # otherwise (a row with no event and no source counted as attested before v16, and still does). No row is
+            # `pending`: the v15 hotfix's default path wrote none. Only a base-15 store holds the table (it entered at
+            # v15) and crosses the ALTER; below it the additive diff created it, empty, in its v16 form.
+            from .schema_version import ALTER_PATH_V16_REDACTIONS_SQL, ALTERS_V15_TO_V16_REDACTIONS
+            red_before = _rows(conn, f"SELECT {_RED_V15_COLS} FROM redactions") if base >= 15 else []
+            if base >= 15:
+                for stmt in ALTERS_V15_TO_V16_REDACTIONS:
+                    conn.execute(stmt)
+                stored = conn.execute(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='redactions'").fetchone()[0]
+                if stored != ALTER_PATH_V16_REDACTIONS_SQL:
+                    raise _SITE_MIGRATION_VERSION.fire(StoreVersionError(
+                        "", base, SCHEMA_VERSION, "unsupported-migration",
+                        diff="the v15->v16 ALTER of redactions produced DDL that does not byte-match the frozen measured "
+                             "expectation (0041 §11.6.6) — the migration or runtime is wrong; the expectation never "
+                             "moves"), "v16-alter-path")
+            conn.execute("UPDATE redactions SET state='standing' WHERE event_ref IS NULL AND source_origin IS NOT NULL")
+            _refuse_unless(base, STEP_NOTICE_STATE, _notice_state_problems(
+                red_before, _rows(conn, f"SELECT {_RED_V15_COLS}, state, pending_reason FROM redactions")))
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         stamped = conn.execute("PRAGMA user_version").fetchone()[0]
         _refuse_unless(base, STEP_STAMP, [f"user_version reads {stamped}, not {SCHEMA_VERSION}"]
@@ -483,6 +505,8 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
 _CONF_V15_COLS = "id, user_id, edge_id, confirmed_at, actor, call_path, correlation_id, request_digest"
 _CONF_ACT_COLS = "origin, recorded_correlation_id, origin_store, origin_user, origin_act_id, act_seq"
 _REGISTRY_COLS = "user_id, correlation_id, verb, target_edge_id, request_digest, result_ref, written_at"
+_RED_V15_COLS = ("id, user_id, target_kind, target_id, fields, marker_version, reason, store_version_before, "
+                 "store_version_after, event_ref, recorded_at, source_body, source_origin, source_user, source_event_ref")
 
 
 def _typed_row(row) -> tuple:
@@ -542,6 +566,25 @@ def _act_column_problems(conf_before: list, post: list) -> list:
             out.append(f"confirmation {cid!r} changed: {before[cid]!r} -> {a[:8]!r}")
         if _typed_row(a[8:]) != _typed_row(("local", None, None, None, None, None)):
             out.append(f"confirmation {cid!r} act columns are {a[8:]!r}, not ('local', NULL x5)")
+    return out
+
+
+def _notice_state_problems(before: list, post: list) -> list:
+    """T4: every redaction row byte-equal in its fifteen v15 columns, its state DERIVED by the pre-v16 rule from the
+    pre-read (event_ref NULL and a source identity -> `standing`; else `applied`), `pending_reason` NULL, and no row
+    added or lost. Base < 15's pre-read is the EMPTY case, asserted: the table must still be empty."""
+    out = []
+    b = {r[0]: r for r in before}
+    a = {r[0]: r for r in post}
+    if len(post) != len(before) or set(a) != set(b):
+        out.append(f"redactions went from {sorted(b)!r} to {sorted(a)!r}")
+    for rid in sorted(set(a) & set(b)):
+        row, pre = a[rid], b[rid]
+        if _typed_row(row[:15]) != _typed_row(pre):
+            out.append(f"redaction {rid!r} changed: {pre!r} -> {row[:15]!r}")
+        want = "standing" if pre[9] is None and pre[12] is not None else "applied"
+        if _typed_row(row[15:]) != _typed_row((want, None)):
+            out.append(f"redaction {rid!r} reads {row[15:]!r}, not ({want!r}, NULL)")
     return out
 
 

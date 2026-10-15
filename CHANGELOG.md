@@ -2,6 +2,55 @@
 
 ## Unreleased
 
+- **Changed (trust surface): imported redaction notices follow a state machine, and a default import never changes a
+  record you hold (specs/0041 v16 §11.6.6; INV-RR10–RR12, RR14).** It replaces the 2026-10-13 notice-binding hotfix
+  above, on unreleased `main`. Store schema v16 (unreleased, the same bump as the request registry) gives every
+  redaction row a stored state: `applied`, `pending` or `standing`. Only `applied` is an attestation that the record
+  is redacted.
+  - **A default (untrusted) import.**
+    - A notice for a record you already hold is recorded PENDING, and every held byte is unchanged. It is reported in
+      `notices_not_applied` with reason `held-target`.
+    - A notice for a record you do not hold is STANDING. It refuses none of your writes, and it is not in
+      `redacted_targets()`.
+    - A record this import creates beside its notice is applied only if the file shows it redacted; a record arriving
+      unredacted beside its notice refuses the whole import.
+    - A later import of a standing notice's record must show the redaction, in both modes, or the import is refused.
+      If it shows it, the notice is PENDING (`standing-arrival`) on a default import and applied on a restore.
+    - A repeat import of a pending notice keeps its reason.
+  - **A trusted restore (`restore=True`)** applies a notice to a held record only when the file's copy, or with no
+    copy the held record itself, shows the redaction. Otherwise the notice is pending (`record-not-in-file`), or the
+    restore is refused if the file's copy is unredacted.
+  - **Origin decides nothing.** The hotfix's origin check is removed. A store that redacts a record it got from
+    another store is now honoured like any other source.
+  - **New host API** (no new CLI verb; the owner's ruling):
+    - `Memory.pending_notices(user_id)` lists pending notices, with their claimed, unauthenticated source;
+    - `Memory.confirm_notice(user_id, notice_id)` applies one as this store's own total redaction, exactly as
+      `redact()` would, and returns a `RedactionReceipt`.
+
+    `doctor` lists pending notices and flags a state outside its domain. The CLI import line prints pending notices.
+  - **Export.** An export carries applied notices, and standing notices only when it does not carry their record. A
+    pending notice never travels. The cost: a restore does not reproduce pending state; re-importing the source file
+    re-pends it.
+  - **Fixed, two defects on unreleased `main`** (neither the notice import `8ea59e7` nor the hotfix `98327c2` is in
+    any release):
+    - A store holding a standing notice whose id the user then wrote locally could not restore its own export. The
+      export carried the notice beside the unredacted record, so it was refused three ways.
+    - In that state the user's own `redact()` returned `repeated=True` and redacted nothing.
+  - **Who must act:**
+    - Hosts that import files they did not export should surface `pending_notices` to the user. A source's redaction
+      of a record you already hold now waits for the user's confirmation instead of applying.
+    - Hosts implementing `veracium.store.base.Store` gain two methods. `confirm_notice` refuses by default;
+      `pending_notices` returns none.
+  - **Migration.** The v16 step derives each existing row's state by the rule the readers already applied (no event
+    and a source identity is standing; otherwise applied), checked at the step. Store v16 now accepts 11 shapes.
+  - **Evidence.**
+    - The notice-state and hotfix test files hold 63 tests.
+    - The re-anchored 0041-PA1 mutation table kills 15 of 15 mutants, with honest flows passing. Its origin mutant is
+      inverted: it now puts an origin check back, and is killed.
+    - 13 more code mutants of T4's own rules each fail their named cell. They ran as a scratch campaign and are not
+      committed evidence.
+    - The 0013 step campaign perturbs the new step on every base-15 shape: 949 perturbations, 852 killed, 97 not
+      applicable. The not-applicable cells are the empty-table bases, and an UPDATE with no parameter to alter.
 - **BREAKING for existing stores — schema 15 → 16: the request registry and act positions (specs/0008 v7 §2a,
   §6c, §6f, §6g; amendment `0047/0008-request-registry`).** The first schema step of the 0044/0045/0047 programme,
   which ships as one release. Three changes:

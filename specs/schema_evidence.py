@@ -377,20 +377,32 @@ def build_version_artifact(strict: bool = True) -> dict:
         # base-1 store gets it inline from the additive diff. So v16's reachable set is the fresh constructor (also
         # base 1), the constructor with `confirmations` ALTERed (a base 2/3, or a store born at v10..v15), and the
         # four migrated v15 shapes, each with `confirmations` ALTERed (bases 4..9 all hold the table) — six.
+        # T4 (0041 §11.6.6): `redactions` gains its notice state by ALTER on a base-15 store only (the table entered at
+        # v15, in one DDL); every lower base gets the v16 constructor form. So each non-fresh shape above comes in TWO:
+        # the redactions table in constructor form (a base <= 14) or ALTERed (a base 15) — eleven in all.
+        def _v16_redactions_variants(objs, prov):
+            import copy as _copy
+            out = [(objs, prov + "; redactions inline (a base <= 14)")]
+            alt2 = _copy.deepcopy(objs)
+            alt2["table:redactions"] = dict(alt2["table:redactions"], sql=sv.ALTER_PATH_V16_REDACTIONS_SQL)
+            out.append((alt2, prov + "; redactions ALTER, sha 8494279c… (a base 15)"))
+            return out
         if version >= 16:
             import copy
             import hashlib as _h
-            if (_h.sha256(sv.ALTER_PATH_V16_CONFIRMATIONS_SQL.encode()).hexdigest()
-                    != sv.ALTER_PATH_V16_CONFIRMATIONS_SHA256):
-                raise SystemExit("ALTER_PATH_V16_CONFIRMATIONS_SQL does not match its pinned sha256 (0008 §2a) — "
-                                 "refusing to emit evidence")
+            for const, sha, what in ((sv.ALTER_PATH_V16_CONFIRMATIONS_SQL, sv.ALTER_PATH_V16_CONFIRMATIONS_SHA256,
+                                      "0008 §2a"),
+                                     (sv.ALTER_PATH_V16_REDACTIONS_SQL, sv.ALTER_PATH_V16_REDACTIONS_SHA256,
+                                      "0041 §11.6.6")):
+                if _h.sha256(const.encode()).hexdigest() != sha:
+                    raise SystemExit(f"a v16 ALTER-path constant does not match its pinned sha256 ({what}) — "
+                                     f"refusing to emit evidence")
             alt = copy.deepcopy(identity(manifest(c)))
             alt["table:confirmations"] = dict(alt["table:confirmations"], sql=sv.ALTER_PATH_V16_CONFIRMATIONS_SQL)
-            accepted.append({
-                "provenance": f"migrated->v{version} (0008 §2a: confirmations ALTER on a constructor-shaped base, "
-                              f"sha a82ee8e8…)",
-                "digest": sv._digest_of_identity(alt, version),
-                "objects": alt})
+            for objs, prov in _v16_redactions_variants(
+                    alt, f"migrated->v{version} (0008 §2a: confirmations ALTER on a constructor-shaped base, "
+                         f"sha a82ee8e8…)"):
+                accepted.append({"provenance": prov, "digest": sv._digest_of_identity(objs, version), "objects": objs})
         if version in (10, 11, 12, 13, 14, 15, 16):   # specs/0001 I13c (candidate): v11 … v15 (0041's additive bump); v16 below
             # inherits EVERY accepted v10 manifestation BY CONSTRUCTION —
             # the same 2x2 object manipulation, digested at 11 (SCHEMA_V11
@@ -425,6 +437,12 @@ def build_version_artifact(strict: bool = True) -> dict:
                     if version >= 16:   # every migrated v15 shape holds `confirmations`, so it crosses the v16 ALTER
                         alt["table:confirmations"] = dict(
                             alt["table:confirmations"], sql=sv.ALTER_PATH_V16_CONFIRMATIONS_SQL)
+                        prov16 = (f"migrated->v{version} (0025 §4b-v: {ops_tag}; {ledger_tag}) [v15 shape + the 0008 "
+                                  f"v16 registry/counter and the confirmations ALTER, sha a82ee8e8… — specs/0008 §2a]")
+                        for objs, prov in _v16_redactions_variants(alt, prov16):
+                            accepted.append({"provenance": prov, "digest": sv._digest_of_identity(objs, version),
+                                             "objects": objs})
+                        continue
                     accepted.append({
                         "provenance": f"migrated->v{version} (0025 §4b-v: {ops_tag}; "
                                       f"{ledger_tag})"

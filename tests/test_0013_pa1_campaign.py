@@ -43,17 +43,30 @@ def test_the_pa1_table_is_current_and_every_row_good():
     assert s["rows"] == len(camp.MUTANTS) == s["good"] == s["killed"]
     assert s["controls"] == len(camp.CONTROLS) == s["controls_good"]
     assert s["perturbations"] == s["perturbations_killed"] + s["perturbations_not_applicable"]
-    # the only not-applicable cells are the v16 registry backfill on a BASE-1 store: no confirmation exists to copy,
-    # so the write changes 0 rows and every perturbation of it is n/a (the step table's own "wrote no row") or
-    # equivalent (a skip of a 0-row write). Anywhere else an n/a is a perturbation that did not land.
+    # the only not-applicable cells, each with its measured reason — anywhere else an n/a is a perturbation that did
+    # not land:
+    #  - the v16 registry backfill on a BASE-1 store: no confirmation exists to copy, so the write changes 0 rows and
+    #    every perturbation of it is n/a (the step table's "wrote no row") or equivalent (a skip of a 0-row write);
+    #  - v16-notice-state below base 15: `redactions` did not exist before the step, so its UPDATE changes 0 rows;
+    #  - v16-notice-state's `alter` on base 15: the instrument alters only an UPDATE's string param[0], and this UPDATE
+    #    has none — its alter class is carried by tests/test_0041_notice_state.py's TEMP-trigger cells.
     na = [r for r in t["perturbations"] if r.get("killed") is None]
     assert len(na) == s["perturbations_not_applicable"]
-    assert {(r["step"], r["path"].split("-")[0]) for r in na} <= {("v16-registry-backfill", "v1#0")}, na
+    base = lambda r: int(r["path"].split("#")[0][1:])                       # noqa: E731
+    for r in na:
+        ok = ((r["step"] == "v16-registry-backfill" and base(r) == 1)
+              or (r["step"] == "v16-notice-state" and base(r) < 15)
+              or (r["step"] == "v16-notice-state" and base(r) == 15 and r["mode"] == "alter"
+                  and r["outcome"] == "N/A (n/a)"))
+        assert ok, r
+    killed15 = {r["path"] for r in t["perturbations"]
+                if r["step"] == "v16-notice-state" and base(r) == 15 and r["mode"] == "skip" and r.get("killed")}
+    assert len(killed15) == 5, killed15                                     # every base-15 shape, skip refused
     import veracium.store.migration as mig
     writing = {v for k, v in vars(mig).items() if k.startswith("STEP_") and isinstance(v, str)} - set(camp.WRITELESS_STEPS)
     assert set(s["per_step"]) == writing == {"stamp", "store-identity", "store-epoch", "v13-baseline",
                                              "v2-v3-outcome-chains", "v3-v4-wiki-drop", "v16-act-counter",
-                                             "v16-registry-backfill"}
+                                             "v16-registry-backfill", "v16-notice-state"}
 
 
 def test_pa1_table_check_refuses_each_tampered_table(tmp_path):

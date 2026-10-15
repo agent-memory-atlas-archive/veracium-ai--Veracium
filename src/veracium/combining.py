@@ -196,6 +196,9 @@ COMBINING_SITES = {
     (_STORE, "confirm_edge"): SiteSpec(
         False, why="specs/0008 — clears needs_confirmation on ONE edge and "
                    "records the confirmation; no second record contributes"),
+    (_STORE, "_set_notice_state"): SiteSpec(
+        False, why="specs/0041 §11.6.6 — records or moves ONE witnessed notice's pending/standing state; it treats no "
+                   "record and no second record contributes"),
     (_STORE, "_allocate_act_seq"): SiteSpec(
         False, why="specs/0008 v7 §6f — advances the store's one act counter; a position, not content, and no "
                    "record contributes to another"),

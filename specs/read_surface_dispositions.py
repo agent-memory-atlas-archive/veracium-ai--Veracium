@@ -142,6 +142,24 @@ DISPOSITIONS: dict[str, dict] = {
                     "returns a receipt, the `forget` shape: the data subject's request must "
                     "reach every carrier the map names or none, so no principal narrows it."),
 
+    "Memory.confirm_notice": dict(
+        returns_records=False, principal="none",
+        carriers="a `RedactionReceipt`, exactly `redact`'s — carrier NAMES, the reason, the marker and store "
+                 "versions, the journal event ref, the derived ids (F6); never content and never a content digest",
+        disposition="AN OPERATOR SURFACE BY DECISION, `redact`'s class (specs/0041 §11.6.6, T4): the user's "
+                    "confirmation of a PENDING notice, applied as this store's total treatment. A WRITE that "
+                    "returns a receipt; scoped to `user_id` with ONE refusal for an unknown id and another "
+                    "user's (the existence of another user's notice is not disclosed). Host API only, never MCP."),
+
+    "Memory.pending_notices": dict(
+        returns_records=False, principal="none",
+        carriers="per pending notice: its id, the target's kind and id, the pending reason, the CLAIMED "
+                 "source origin and user, the time recorded — ids and closed values, never content",
+        disposition="AN OPERATOR SURFACE BY DECISION (specs/0041 §11.6.6, T4): the host's list of notices "
+                    "awaiting the user's `confirm_notice`, the `doctor` listing as a call. Reads one user's "
+                    "rows; the claimed source is UNAUTHENTICATED testimony (0006 Q4), so it is shown, never "
+                    "trusted. Carries no record content. Host API only, never MCP."),
+
     "Memory.edges_since": dict(
         returns_records=True, principal="none",
         carriers="`list[Edge]` — full record objects",

@@ -89,6 +89,13 @@ def _redaction_rows(st, tid=None):
     return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
 
 
+def _applied_rows(st, tid=None):
+    """T4 (specs/0041 §11.6.6): APPLIED redaction rows only — an attestation. A default import over a held target now
+    records the notice PENDING (and an absent one STANDING), so "nothing applied" is no APPLIED row, not no row."""
+    q = "SELECT COUNT(*) FROM redactions WHERE state='applied'"
+    return st._conn.execute(q + ("" if tid is None else " AND target_id=?"), (() if tid is None else (tid,))).fetchone()[0]
+
+
 def _outputs(st, uid=U):
     return [e for e in st.episodes(uid) if e.lineage]
 
@@ -112,9 +119,9 @@ def test_R12_01_indexed_output_redaction_reaches_held_output(tmp_path, restore):
     (after,) = _outputs(dst.store)
     if not restore:
         # (A) attack-shaped on the default path: the rider rebinding a notice onto a HELD output is what the
-        # 2026-10-13 notice-binding hotfix closes — the held bytes unchanged, the arrival still not installed, no row
+        # 2026-10-13 notice-binding hotfix closes — the held bytes unchanged, the arrival still not installed, no applied row (T4: the notice PENDING)
         assert after.id == held.id and _held_json(dst.store, "episode", held.id) == held_bytes
-        assert not dst.store._attested_fields(U, "episode", held.id) and _redaction_rows(dst.store) == 0
+        assert not dst.store._attested_fields(U, "episode", held.id) and _applied_rows(dst.store) == 0
         assert r["notices_applied"] == 0 and _not_applied(r, "episode", held.id)
         return
     assert after.id == held.id and SECRET not in after.summary                 # the HELD output, treated in place
@@ -162,8 +169,8 @@ def test_every_redaction_row_names_a_record_after_held_earlier_and_repeat(tmp_pa
     ids = {e.id for e in dst.store.episodes(U)}
     if not restore:
         # (A) on the default path the 2026-10-13 notice-binding hotfix applies no notice to the held output and writes
-        # no standing row, so there is no row at all — nothing dangling, nothing applied
-        assert _rows(dst.store) == [] and _redaction_rows(dst.store) == 0
+        # no standing row — and since T4 (0041 §11.6.6) the held output's notice is PENDING: a row, never applied
+        assert _applied_rows(dst.store) == 0    # T4: the held output's notice is PENDING — a row, never applied
         return
     assert _rows(dst.store) and all(t in ids for (t,) in _rows(dst.store))
 

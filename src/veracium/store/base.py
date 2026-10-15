@@ -315,6 +315,17 @@ class Store(ABC):
             "this Store does not implement redact (specs/0041 §4a) — a store without the "
             "operation refuses rather than pretending the content was removed")
 
+    def pending_notices(self, user_id: str) -> list:
+        """specs/0041 §11.6.6 (T4): the user's PENDING redaction notices. A store without notices holds none."""
+        return []
+
+    def confirm_notice(self, user_id: str, notice_id: str):
+        """specs/0041 §11.6.6 (T4): apply a PENDING redaction notice as this store's own total treatment, returning a
+        `RedactionReceipt`. A store without it REFUSES, as `redact` does: the user asked for content to be removed."""
+        raise NotImplementedError(
+            "this Store does not implement confirm_notice (specs/0041 §11.6.6) — a store without the operation "
+            "refuses rather than pretending the content was removed")
+
     def atomic(self):
         """specs/0041 round 10: one write transaction for a caller's read, decision and writes. A store without
         transactions has nothing to join — the honest default is a no-op scope, not a refusal."""

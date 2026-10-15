@@ -116,7 +116,10 @@ edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	tbl = "edges" if kind == "edge" else "episodes"
-edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	tbl = "edges" if n["target_kind"] == "edge" else "episodes"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	tbl = "edges" if kind == "edge" else "episodes"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE redactions SET state=?, pending_reason=? WHERE id=? AND state='standing'",
+sql-write-other-table	src/veracium/store/migration.py	str:sql-write	conn.execute("UPDATE redactions SET state='standing' WHERE event_ref IS NULL AND source_origin IS NOT NULL")
 edges-text	src/veracium/__init__.py	str:edges	self._record("export", {"edges": r["edges"], "episodes": r["episodes"]}, user_id)
 edges-text	src/veracium/__init__.py	str:edges	self._record("export", {"edges": r["edges"], "episodes": r["episodes"]}, user_id)
 edges-text	src/veracium/__init__.py	str:edges	self._record("forget", {"edges": r["edges"], "episodes": r["episodes"]}, user_id)

@@ -75,6 +75,13 @@ def _redaction_rows(st, tid=None):
     return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
 
 
+def _applied_rows(st, tid=None):
+    """T4 (specs/0041 §11.6.6): APPLIED redaction rows only — an attestation. A default import over a held target now
+    records the notice PENDING (and an absent one STANDING), so "nothing applied" is no APPLIED row, not no row."""
+    q = "SELECT COUNT(*) FROM redactions WHERE state='applied'"
+    return st._conn.execute(q + ("" if tid is None else " AND target_id=?"), (() if tid is None else (tid,))).fetchone()[0]
+
+
 def _edge_store(tmp_path, name="src.db"):
     m = tt._mem(tmp_path, name)
     m.store.add_edge(Edge(id="e-x", user_id=U, subject="user", relation="lives_at", object=SECRET, provenance=tt._prov()))
@@ -167,18 +174,18 @@ def test_R10_04_a_hand_built_notice_claiming_this_stores_own_identity_still_read
     forged = dict(n0, origin=dst.store.local_origin(), source_user=U, source_event_ref=f"{U}:1")
     ffile = _write(tmp_path / "f.jsonl", _head(recs) + [forged])
     # (A) a hand-built notice over the destination's HELD record: on the default path the 2026-10-13 notice-binding
-    # hotfix applies nothing at all — no row, the content kept, the target reported ...
+    # hotfix applies nothing at all — no applied row (T4: PENDING), the content kept, the target reported ...
     dflt = _edge_store(tmp_path, "dflt.db")
     held = _held_json(dflt.store, "edge", "e-x")
     r = import_memory(dflt.store, ffile)
-    assert _redaction_rows(dflt.store) == 0 and _held_json(dflt.store, "edge", "e-x") == held
+    assert _applied_rows(dflt.store) == 0 and _held_json(dflt.store, "edge", "e-x") == held
     assert r["notices_applied"] == 0 and _not_applied(r, "edge", "e-x")
     # ... a notice-only file on a trusted restore no longer applies to an UNTREATED held record either (the hotfix's
     # fixed-point rule, both modes): not applied, reported record-not-in-file, the held bytes unchanged ...
     rst = _edge_store(tmp_path, "rst.db")
     held_r = _held_json(rst.store, "edge", "e-x")
     rr = import_memory(rst.store, ffile, restore=True)
-    assert _redaction_rows(rst.store) == 0 and _held_json(rst.store, "edge", "e-x") == held_r
+    assert _applied_rows(rst.store) == 0 and _held_json(rst.store, "edge", "e-x") == held_r
     assert rr["notices_applied"] == 0 and ["edge", "e-x", "record-not-in-file"] in [list(x) for x in rr["notices_not_applied"]]
     # ... and the provenance property — a forged notice that DOES apply still reads as witnessed — is held where it can
     # apply: a trusted restore whose file SHOWS the redaction (the record beside it, in its treated shape), unchanged
@@ -217,7 +224,7 @@ def test_R10_04_a_hand_built_notice_cannot_clear_its_own_provenance(tmp_path, ex
         assert r["notices_applied"] == 0 and _not_applied(r, "edge", "e-x")
     except ValueError:
         pass
-    assert _redaction_rows(dflt.store) == 0 and _held_json(dflt.store, "edge", "e-x") == held
+    assert _applied_rows(dflt.store) == 0 and _held_json(dflt.store, "edge", "e-x") == held
     # ... and the provenance property is held under a trusted restore whose file SHOWS the redaction (the record beside
     # the notice in its treated shape — the hotfix's fixed-point rule, both modes), where such a notice can apply
     (treated,) = [x for x in recs if x.get("record") == "edge" and x.get("id") == "e-x"]

@@ -125,18 +125,54 @@ def test_same_id_different_request_conflicts():
         _confirm(s, request_digest="DIFFERENT")
 
 
+def _forge_the_precheck_miss(s):
+    """The loser of a race read the registry BEFORE the winner committed: its front lookup
+    misses ONCE, so it proceeds to write, hits UNIQUE(user_id, correlation_id), and must be
+    answered by the IntegrityError fallback (specs/0008 v7 §6c, research's N2: the SAME lookup).
+    Until 2026-10-14 this test called _confirm twice in sequence and never reached that branch
+    (research's T3 stage 2, F1: replacing the fallback's lookup with None left every test green)."""
+    real, calls = s._confirm_replay, []
+
+    def missing_once(*a, **k):
+        calls.append(a)
+        return None if len(calls) == 1 else real(*a, **k)
+    s._confirm_replay = missing_once
+    return calls
+
+
 def test_concurrent_duplicates_commit_once():
-    """C8: the UNIQUE(user_id, correlation_id) constraint means two writers with the
-    same request commit exactly one mutation/record (simulated by a direct second
-    INSERT racing past the pre-check)."""
+    """C8: two writers with the same request commit exactly one mutation, one record and one
+    registry row; the loser's whole write unwinds and it is answered as a replay of the winner."""
     s = _store()
     s.add_edge(_edge())
-    # forge the pre-check miss: insert a competing record with the same
-    # (user, correlation_id) directly, then confirm_edge must resolve to a replay.
-    _confirm(s)                                            # the "winner"
-    out = _confirm(s)                                      # the "loser": replay
-    assert out.replayed is True
+    winner = _confirm(s)
+    events, episodes = len(s.edge_events("u", edge_id="e1")), len(s.episodes("u"))
+    calls = _forge_the_precheck_miss(s)
+    out = _confirm(s)                                      # the loser, past a missed pre-check
+    assert len(calls) == 2, "the fallback did not run: the race branch was never reached"
+    assert out.replayed is True and out.id == winner.id
     assert len(s.confirmations_for("u", "e1")) == 1
+    assert s._conn.execute("SELECT COUNT(*) FROM request_registry").fetchone()[0] == 1
+    assert len(s.edge_events("u", edge_id="e1")) == events, "the loser's edge write survived its rollback"
+    # the loser's confirmation EPISODE is a new row (its own id), so it is what a missing rollback leaves behind —
+    # its edge write changes no byte after the winner's, and journals nothing either way
+    assert len(s.episodes("u")) == episodes, "the loser's confirmation episode survived its rollback"
+
+
+def test_a_concurrent_duplicate_with_a_different_request_is_a_conflict():
+    """C8, the other cell: the race's loser carries a DIFFERENT request under the same id — the
+    fallback's lookup names the integrity conflict, and nothing of the loser lands."""
+    s = _store()
+    s.add_edge(_edge())
+    _confirm(s)
+    episodes = len(s.episodes("u"))
+    calls = _forge_the_precheck_miss(s)
+    with pytest.raises(ValueError, match="DIFFERENT request"):
+        _confirm(s, request_digest="d-other")
+    assert len(calls) == 2
+    assert len(s.confirmations_for("u", "e1")) == 1
+    assert s._conn.execute("SELECT COUNT(*) FROM request_registry").fetchone()[0] == 1
+    assert len(s.episodes("u")) == episodes
 
 
 # --- C9: metadata validated BEFORE any mutation -----------------------------

@@ -7,14 +7,15 @@ of it and listed it as redacted, and (3) redact a later record of that id on arr
 reference model; reproduced on the shipped code (dev-handoff/round4-I-II/repro_notice_default.py; research's
 probe_standing_notice.py).
 
-THE RULES. On the default path a notice is applied ONLY to a record THIS import inserts; every other notice is not
-applied, writes no standing row, and is reported in `notices_not_applied` as [kind, id] (`inconsistent_notices` keeps
-its meaning: a held version that WAS redacted). A standing notice — already written by the earlier code, or by a
-restore — (i) never refuses the user's own write of its id and is not in `redacted_targets()`; (ii) completes only on
-a record an import INSERTS, and on the default path only when that record's own resolved origin equals the notice's
-origin, byte for byte (a different origin refuses the import). A trusted restore (`restore=True`, the operator's own
-history, specs/0005) applies a notice to a held record exactly as before. Each attack below is the attacker's move,
-with the control that the legitimate propagation it must not break still works.
+RE-POINTED AT T4 (specs/0041 §11.6.6, the notice state machine, which REPLACES the hotfix's rule). Every ATTACK below
+is still the attacker's move and still fails; what the store records changed. A default import never changes a held
+byte through a notice, and now records the notice PENDING (`held-target`), awaiting the user's `confirm_notice`,
+instead of writing nothing. A notice for an ABSENT id is a STANDING row, inert (it refuses no local write and is not in
+`redacted_targets()`), instead of no row. A later arrival of that id must SHOW the redaction in both modes, or the
+import is refused; a treated arrival is PENDING `standing-arrival` on a default import and applied on a restore —
+and origin decides nothing (the hotfix's origin check is removed; RR12's "compare origins" mutant is the cell below).
+A store's own export no longer carries a non-applied notice beside its record (research's B1), so the poisoned pair
+is built by hand here, as a pre-T4 export carried it. The controls are unchanged.
 """
 from __future__ import annotations
 
@@ -101,6 +102,18 @@ def _redaction_rows(store, target_id):
     return store._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (target_id,)).fetchone()[0]
 
 
+def _states(store, target_id):
+    """T4: the notice rows for a target as (state, pending_reason)."""
+    return store._conn.execute("SELECT state, pending_reason FROM redactions WHERE target_id=? ORDER BY id",
+                               (target_id,)).fetchall()
+
+
+def _applied(store, target_id):
+    """T4: the APPLIED rows (attestations) for a target — what "redacted here" means; a pending notice is not one."""
+    return store._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=? AND state='applied'",
+                               (target_id,)).fetchone()[0]
+
+
 @contextlib.contextmanager
 def _permitted(what):
     """An operation the hotfix must PERMIT, asserted as such: a refusal of it fails as an ASSERTION naming the
@@ -130,7 +143,7 @@ def test_an_untrusted_notice_never_redacts_the_users_own_held_fact(tmp_path):
     _full, notices, _recs, _o = _export_cuts(tmp_path, "att", edge_id="e-own")
     r = port.import_memory(victim.store, notices)                      # DEFAULT mode
     assert _row(victim.store, "edge", "e-own") == before               # the whole held row, byte for byte
-    assert _redaction_rows(victim.store, "e-own") == 0
+    assert _states(victim.store, "e-own") == [("pending", "held-target")]
     assert r["notices_applied"] == 0 and r["notices_standing"] == 0
     assert r["notices_not_applied"] == [["edge", "e-own", "held-target"]] and r["inconsistent_notices"] == []
     victim.close()
@@ -142,7 +155,8 @@ def test_an_untrusted_notice_never_redacts_a_held_episode(tmp_path):
     before = _row(victim.store, "episode", "ep-own")
     _full, notices, _recs, _o = _export_cuts(tmp_path, "att", episode_id="ep-own")
     r = port.import_memory(victim.store, notices)
-    assert _row(victim.store, "episode", "ep-own") == before and _redaction_rows(victim.store, "ep-own") == 0
+    assert _row(victim.store, "episode", "ep-own") == before
+    assert _states(victim.store, "ep-own") == [("pending", "held-target")]
     assert r["notices_not_applied"] == [["episode", "ep-own", "held-target"]]
     victim.close()
 
@@ -161,7 +175,7 @@ def test_the_victims_exact_record_in_the_file_does_not_unlock_the_notice(tmp_pat
         r = port.import_memory(victim.store, crafted)
     except ValueError:
         r = None                                                       # refusing the whole file is also fail-closed
-    assert _row(victim.store, "edge", "e-own") == before and _redaction_rows(victim.store, "e-own") == 0
+    assert _row(victim.store, "edge", "e-own") == before and _applied(victim.store, "e-own") == 0
     if r is not None:
         assert r["notices_applied"] == 0 and ["edge", "e-own", "held-target"] in r["notices_not_applied"]
     victim.close()
@@ -175,34 +189,40 @@ def test_a_held_different_version_under_an_untrusted_notice_is_kept_and_reported
     before = _row(victim.store, "edge", "e-own")
     full, _notices, _recs, _o = _export_cuts(tmp_path, "att", edge_id="e-own")
     r = port.import_memory(victim.store, full)
-    assert _row(victim.store, "edge", "e-own") == before and _redaction_rows(victim.store, "e-own") == 0
+    assert _row(victim.store, "edge", "e-own") == before and _applied(victim.store, "e-own") == 0
     assert r["notices_applied"] == 0 and r["notices_not_applied"] == [["edge", "e-own", "held-target"]]
     assert r["inconsistent_notices"] == []
     victim.close()
 
 
 # --------------------------------------------------------------------------- arms 2 and 3: an absent id (standing)
-def test_an_untrusted_notice_for_an_absent_id_leaves_no_standing_row(tmp_path):
+def test_an_untrusted_notice_for_an_absent_id_leaves_an_inert_standing_row(tmp_path):
+    """T4: an absent target's notice is STANDING (the hotfix wrote no row) — and inert: not in redacted_targets(), and
+    the user's own write of the id is admitted."""
     victim = _mem(tmp_path, "victim.db")
     _full, notices, _recs, _o = _export_cuts(tmp_path, "att", edge_id="e-later")
     r = port.import_memory(victim.store, notices)
-    assert r["notices_standing"] == 0 and r["notices_applied"] == 0
-    assert r["notices_not_applied"] == [["edge", "e-later", "absent-target"]]
-    assert _redaction_rows(victim.store, "e-later") == 0
+    assert r["notices_standing"] == 1 and r["notices_applied"] == 0 and r["notices_not_applied"] == []
+    assert _states(victim.store, "e-later") == [("standing", None)]
     assert "e-later" not in victim.store.redacted_targets(U, "edge")
-    victim.store.add_edge(Edge(id="e-later", user_id=U, subject="user", relation="lives_in", object="Porto", provenance=_prov()))
+    with _permitted("the user's own write of a standing notice's id"):
+        victim.store.add_edge(Edge(id="e-later", user_id=U, subject="user", relation="lives_in", object="Porto",
+                                   provenance=_prov()))
     assert _obj(victim.store, "e-later") == "Porto"
     victim.close()
 
 
-def test_a_later_record_of_that_id_is_not_redacted_on_arrival(tmp_path):
+def test_a_later_unredacted_record_of_that_id_is_refused_whole_and_nothing_is_redacted(tmp_path):
+    """T4 (§11.6.7: "a standing notice, then an arrival of its id carrying content: the import refused"): the hotfix
+    admitted the later record because it wrote no standing row; the standing notice now refuses an arrival that does
+    not show the redaction — content never lands under a notice, and nothing is redacted."""
     victim = _mem(tmp_path, "victim.db")
     _full, notices, _recs, _o = _export_cuts(tmp_path, "att", edge_id="e-x")
     with _permitted("a notice-only default import"):
         port.import_memory(victim.store, notices)
-    with _permitted("a later record of the notice's id arriving by default import"):
-        r3 = port.import_memory(victim.store, _plain_export(tmp_path, "third", "e-x", "tea"))
-    assert r3["notices_applied"] == 0 and _obj(victim.store, "e-x") == "tea" and _redaction_rows(victim.store, "e-x") == 0
+    with pytest.raises(ValueError, match="arrives UNREDACTED under a standing redaction notice"):
+        port.import_memory(victim.store, _plain_export(tmp_path, "third", "e-x", "tea"))
+    assert _row(victim.store, "edge", "e-x") is None and _states(victim.store, "e-x") == [("standing", None)]
     victim.close()
 
 
@@ -244,39 +264,56 @@ def test_i_a_legacy_standing_notice_never_refuses_the_users_own_episode_write(tm
     victim.close()
 
 
-def test_ii_a_default_arrival_from_another_origin_is_refused_whole(tmp_path):
+def test_ii_an_unredacted_default_arrival_under_a_standing_notice_is_refused_whole(tmp_path):
+    """Refused by the fixed point (the record does not show the redaction) — never by origin, which T4 removed."""
     victim = _mem(tmp_path, "victim.db")
     _legacy_standing(tmp_path, victim.store, "e-x")
-    with pytest.raises(ValueError, match="the record's own origin is not that origin"):
+    with pytest.raises(ValueError, match="arrives UNREDACTED under a standing redaction notice"):
         port.import_memory(victim.store, _plain_export(tmp_path, "third", "e-x", "tea"))
     assert _row(victim.store, "edge", "e-x") is None                  # nothing written
-    assert victim.store._conn.execute(
-        "SELECT event_ref FROM redactions WHERE target_id='e-x'").fetchone()[0] is None   # still standing
+    assert _states(victim.store, "e-x") == [("standing", None)]       # still standing
     victim.close()
 
 
-def test_ii_a_default_REDACTED_arrival_from_another_origin_is_refused_by_the_origin_check_alone(tmp_path):
-    """The origin check's own cell: store B's arrival of that id already SHOWS the redaction (B redacted its own copy),
-    so the fixed point is satisfied and only the origin decides — on the default path a notice from A reaches only A's
-    records, so the import refuses, naming the notice. (The untreated-arrival test above is refused by the fixed point
-    too, so it cannot tell whether the origin check runs.)"""
+def test_ii_a_default_REDACTED_arrival_from_another_origin_is_pending_origin_decides_nothing(tmp_path):
+    """INV-RR12's "compare origins" mutant cell (T4 removed the hotfix's origin check): store B's arrival of that id
+    already SHOWS the redaction, so the fixed point is satisfied and ONLY an origin rule could refuse it. It is
+    admitted, and the standing notice from A is PENDING `standing-arrival` on it — never applied on a default import,
+    never refused by origin (a legitimate B-over-A notice must not misfire)."""
     victim = _mem(tmp_path, "victim.db")
     _legacy_standing(tmp_path, victim.store, "e-x")
     _full, _n, b_records, _ob = _export_cuts(tmp_path, "b", edge_id="e-x", obj="B's own value")
-    with pytest.raises(ValueError, match="the record's own origin is not that origin"):
-        port.import_memory(victim.store, b_records)                    # DEFAULT
-    assert _row(victim.store, "edge", "e-x") is None
-    assert victim.store._conn.execute("SELECT event_ref FROM redactions WHERE target_id='e-x'").fetchone()[0] is None
+    with _permitted("a treated default arrival from another origin under a standing notice"):
+        r = port.import_memory(victim.store, b_records)                # DEFAULT
+    assert r["notices_applied"] == 0 and ["edge", "e-x", "standing-arrival"] in r["notices_not_applied"]
+    assert _states(victim.store, "e-x") == [("pending", "standing-arrival")]
+    assert _obj(victim.store, "e-x") == R.MARKER                      # B's own treated copy, as it arrived
     victim.close()
 
 
-def test_ii_a_default_arrival_from_the_notices_own_origin_completes_it(tmp_path):
+def test_ii_a_default_arrival_from_the_notices_own_origin_is_pending_not_applied(tmp_path):
+    """T4: on a default import even the notice's own source's treated record leaves the notice PENDING — an
+    attestation of data this store then holds, on an untrusted file's word, is the user's to confirm. The record
+    arrives treated; nothing held changes."""
     victim = _mem(tmp_path, "victim.db")
     _full, notices, records, _origin = _export_cuts(tmp_path, "src", edge_id="e-red", obj="night shifts at the Grand")
     assert port.import_memory(victim.store, notices, restore=True)["notices_standing"] == 1
     r = port.import_memory(victim.store, records)                      # DEFAULT: the source's own record arrives
-    assert r["notices_applied"] == 1 and _obj(victim.store, "e-red") == R.MARKER
-    assert "Grand" not in _row(victim.store, "edge", "e-red")
+    assert r["notices_applied"] == 0 and _states(victim.store, "e-red") == [("pending", "standing-arrival")]
+    assert _obj(victim.store, "e-red") == R.MARKER and "Grand" not in _row(victim.store, "edge", "e-red")
+    victim.close()
+
+
+def test_ii_a_treated_default_arrival_under_a_standing_notice_is_admitted(tmp_path):
+    """An HONEST flow for the mutation campaign (T4): a record that SHOWS its standing notice's redaction, arriving by a
+    default import, is admitted and stored treated — whatever the notice's state then reads (pending on the default
+    path, applied under a restore scope), so this asserts only the admission, which no protection may take away."""
+    victim = _mem(tmp_path, "victim.db")
+    _full, notices, records, _origin = _export_cuts(tmp_path, "src", edge_id="e-red", obj="night shifts at the Grand")
+    assert port.import_memory(victim.store, notices, restore=True)["notices_standing"] == 1
+    with _permitted("a treated default arrival under a standing notice"):
+        port.import_memory(victim.store, records)
+    assert _obj(victim.store, "e-red") == R.MARKER and "Grand" not in _row(victim.store, "edge", "e-red")
     victim.close()
 
 
@@ -300,22 +337,28 @@ def test_ii_an_unredacted_arrival_under_a_standing_notice_refuses_even_on_restor
     with pytest.raises(ValueError, match="arrives UNREDACTED under a standing redaction notice"):
         port.import_memory(victim.store, _plain_export(tmp_path, "third", "e-x", "tea"), restore=True)
     assert _row(victim.store, "edge", "e-x") is None
-    assert victim.store._conn.execute("SELECT event_ref FROM redactions WHERE target_id='e-x'").fetchone()[0] is None
+    assert _states(victim.store, "e-x") == [("standing", None)]
     victim.close()
 
 
 # ------------------------------------- case 7 (research's probe of candidate 1): the hostile notice rides an export
 def _poisoned_export(tmp_path):
-    """A store the earlier code poisoned (a legacy standing notice for e-mine), whose user — now admitted by (i) —
-    writes their own e-mine, and exports: the file carries the hostile notice beside the user's UNTREATED fact."""
+    """A store the earlier code poisoned (a legacy standing notice for e-mine), whose user — admitted by (i) — writes
+    their own e-mine. T4 (research's B1): its OWN export no longer carries the standing notice, whose target it carries,
+    so the poisoned pair is built here as a pre-T4 export carried it — the hostile notice beside the user's UNTREATED
+    fact — and every case below is the attacker's (or the old export's) file."""
     v = _mem(tmp_path, "poisoned.db")
     _legacy_standing(tmp_path, v.store, "e-mine")
     with _permitted("the user's own edge write under a legacy standing notice"):
         v.store.add_edge(Edge(id="e-mine", user_id=U, subject="user", relation="lives_in", object="Lisbon",
                               provenance=_prov()))
-    f = tmp_path / "poisoned.jsonl"
-    port.export_memory(v.store, U, f)
-    assert [l for l in _lines(f)[1:] if l.get("record") == "redaction" and l.get("target_id") == "e-mine"]
+    own = tmp_path / "own.jsonl"
+    port.export_memory(v.store, U, own)
+    assert not [l for l in _lines(own)[1:] if l.get("record") == "redaction"], "B1: the own export carried the notice"
+    _full, legacy_notices, _r, _o = _export_cuts(tmp_path, "legacy-e-mine-again", edge_id="e-mine")
+    notice = [l for l in _lines(legacy_notices)[1:] if l.get("record") == "redaction"]
+    head = dict(_lines(legacy_notices)[0])
+    f = _write(tmp_path / "poisoned.jsonl", [head, *_lines(own)[1:], *notice])
     return v, f
 
 
@@ -348,9 +391,9 @@ def test_7c_a_poisoned_store_restoring_its_own_export_refuses_and_keeps_the_fact
 
 
 def test_7_the_default_path_reports_a_held_target_before_it_would_refuse(tmp_path):
-    """On the default path the created-only gate decides first: a HELD target beside its own unredacted copy (the
-    victim's exact record under a hostile notice) is reported held-target and never refused — nothing lands, nothing
-    is destroyed, and an ordinary import of the victim's own data is not blocked."""
+    """On the default path a HELD target beside its own unredacted copy (the victim's exact record under a hostile
+    notice) is PENDING held-target and never refused — nothing lands, nothing is destroyed, and an ordinary import of
+    the victim's own data is not blocked."""
     v, f = _poisoned_export(tmp_path)
     before = _row(v.store, "edge", "e-mine")
     with _permitted("a default import of the victim's own export"):
@@ -401,7 +444,8 @@ def test_a_repeat_untrusted_import_stays_inert(tmp_path):
     for _ in range(2):
         r = port.import_memory(victim.store, notices)
         assert r["notices_applied"] == 0 and r["notices_standing"] == 0
-    assert _row(victim.store, "edge", "e-own") == before and _redaction_rows(victim.store, "e-own") == 0
+    assert _row(victim.store, "edge", "e-own") == before
+    assert _states(victim.store, "e-own") == [("pending", "held-target")]     # one row, its reason kept (IO-II-1)
     victim.close()
 
 
@@ -411,7 +455,7 @@ def test_the_cli_prints_the_notices_it_did_not_apply(tmp_path, capsys):
     _full, notices, _recs, _o = _export_cuts(tmp_path, "att", edge_id="e-own")
     assert main(["import", str(notices), "--db", str(tmp_path / "victim.db")]) == 0
     out = capsys.readouterr().out
-    assert "1 redaction notice(s) NOT applied" in out and "edge e-own" in out
+    assert "1 redaction notice(s) PENDING your confirmation, NOT applied" in out and "edge e-own" in out
     assert main(["import", str(notices), "--restore", "--db", str(tmp_path / "other.db")]) == 0
     assert "NOT applied" not in capsys.readouterr().out
 
@@ -427,8 +471,10 @@ def test_the_attest_only_branch_is_restore_only_on_a_default_import(tmp_path):
     assert "e-own" not in held.store.redacted_targets(U, "edge")
     _full, notices, _recs, _o = _export_cuts(tmp_path, "att", edge_id="e-own")
     r = port.import_memory(held.store, notices)                        # DEFAULT
-    assert r["notices_not_applied"] == [["edge", "e-own", "held-target"]] and _redaction_rows(held.store, "e-own") == 0
-    held.store.add_edge(Edge(id="e-own", user_id=U, subject="user", relation="lives_in", object="Porto", provenance=_prov()))
+    assert r["notices_not_applied"] == [["edge", "e-own", "held-target"]] and _applied(held.store, "e-own") == 0
+    with _permitted("the user's own write under a pending notice"):
+        held.store.add_edge(Edge(id="e-own", user_id=U, subject="user", relation="lives_in", object="Porto",
+                                 provenance=_prov()))
     assert _obj(held.store, "e-own") == "Porto"                        # still writable: nothing attested it
     held.close()
 
@@ -444,5 +490,5 @@ def test_the_primitive_defaults_to_the_narrow_scope(tmp_path):
                                                 {"edge_ids": {}, "episode_records": {}, "chain_heads": {},
                                                  "contribution_state": {}})
     assert r["notices_applied"] == 0 and r["notices_not_applied"] == [["edge", "e-own", "held-target"]]
-    assert _row(victim.store, "edge", "e-own") == before and _redaction_rows(victim.store, "e-own") == 0
+    assert _row(victim.store, "edge", "e-own") == before and _applied(victim.store, "e-own") == 0
     victim.close()

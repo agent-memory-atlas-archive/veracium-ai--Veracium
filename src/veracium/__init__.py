@@ -2181,6 +2181,24 @@ class Memory:
         self._record("redact", {"kind": r.redacted_kind, "fields": len(r.fields_cleared), "repeated": r.repeated}, user_id)
         return r
 
+    def pending_notices(self, user_id: str) -> list:
+        """specs/0041 §11.6.6 (T4): the user's PENDING redaction notices — another store's testimony that it redacted a
+        record THIS store holds, recorded by an import and never applied on the file's word. Each is
+        `{notice_id, target_kind, target_id, reason, origin, source_user, recorded_at}`, oldest first; `reason` is
+        why it waits (`held-target`, `record-not-in-file`, `standing-arrival`). The claimed source is UNAUTHENTICATED
+        testimony (0006 Q4). Read-only; `confirm_notice` applies one."""
+        return self.store.pending_notices(user_id)
+
+    def confirm_notice(self, user_id: str, notice_id: str):
+        """specs/0041 §11.6.6 (T4): the user confirms a PENDING notice (from `pending_notices`), and it is applied as a
+        redaction BY THIS STORE — total over the record's carriers, exactly as `redact` is, the notice's own body kept.
+        The only way a notice from an untrusted import changes held content. Returns a `RedactionReceipt`; an already
+        applied notice returns its original receipt with `repeated=True`. Refuses an unknown or another user's id
+        (one refusal), a STANDING notice, and a notice whose record no longer exists. Host API only, never MCP."""
+        r = self.store.confirm_notice(user_id, notice_id)
+        self._record("redact", {"kind": r.redacted_kind, "fields": len(r.fields_cleared), "repeated": r.repeated}, user_id)
+        return r
+
     # -- portability (see veracium.portability for the format) --------------
     # -- specs/0027 §4g (v14): reading the durable receipts -------------------
     def policy_receipts(self, user_id: str, *, limit: Optional[int] = None) -> list:

@@ -345,26 +345,45 @@ def _check_refs(rep: Report, conn, user: Optional[str], edges: dict, episodes: d
                 "exist", bad_contrib)
     # specs/0041 v15: redaction records name a target; episode events name an episode
     if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='redactions'").fetchone():
-        # specs/0041 §4g / §11.4 (tranche 4b): a STANDING NOTICE — an imported redaction notice whose record has
-        # not arrived (reason `imported_notice`, no event yet) — names a target that does not exist BY DESIGN and
-        # is reported as such, never as damage; any other absent target is an error
-        absent = [r for r in conn.execute(f"SELECT id, user_id, target_kind, target_id, reason, event_ref, source_origin FROM redactions {where}", args)
-                  if (r["user_id"], r["target_id"]) not in (edges if r["target_kind"] == "edge" else episodes)]
-        # round 11 (R10-04): STANDING is a fact of the RECORD, never read from the reason text: no event yet AND a
-        # source identity — the shape only the import's standing insert writes. A row with no event and NO source
-        # identity is a shape no writer produces: damage, an error
-        is_standing = lambda r: r["event_ref"] is None and r["source_origin"] is not None   # noqa: E731
-        # round 11 (R10-02): a COMPLETED attestation whose EPISODE is gone is a state the store makes legitimately —
+        # specs/0041 §11.6.6 (T4): a redaction row's NOTICE STATE is stored — `applied` (an attestation), `pending`
+        # (a witnessed notice over a held record, awaiting the user's `confirm_notice`), `standing` (a witnessed notice
+        # whose record this store does not hold). The DDL holds no CHECK, so a value outside the closed sets is damage.
+        from . import redaction as _red
+        rows = list(conn.execute("SELECT id, user_id, target_kind, target_id, reason, event_ref, source_origin, "
+                                 f"source_user, state, pending_reason FROM redactions {where}", args))
+        bad = [r["id"] for r in rows
+               if r["state"] not in _red.NOTICE_STATES
+               or (r["state"] == "pending") != (r["pending_reason"] is not None)
+               or (r["state"] == "pending" and r["pending_reason"] not in _red.PENDING_REASONS)]
+        if bad:
+            rep.add("refs", "error", f"{len(bad)} redaction record(s) whose notice state or pending reason is outside "
+                    f"{_red.NOTICE_STATES} / {_red.PENDING_REASONS}, or a pending reason on a row that is not pending "
+                    f"(specs/0041 §11.6.6)", bad)
+        held = lambda r: (r["user_id"], r["target_id"]) in (edges if r["target_kind"] == "edge" else episodes)   # noqa: E731
+        pending = [f"{r['id']} ({r['target_kind']} {r['target_id']}; {r['pending_reason']}; claimed source "
+                   f"{r['source_origin']}/{r['source_user']})" for r in rows if r["state"] == "pending" and held(r)]
+        if pending:
+            rep.add("refs", "info", f"{len(pending)} PENDING redaction notice(s) awaiting the user's confirmation "
+                    f"(`confirm_notice`): another store's unauthenticated testimony that it redacted a record held here; "
+                    f"nothing is redacted until confirmed (specs/0041 §11.6.6)", pending)
+        inert = [r["id"] for r in rows if r["state"] == "pending" and not held(r)]
+        if inert:
+            rep.add("refs", "info", f"{len(inert)} pending redaction notice(s) whose record no longer exists — inert: "
+                    f"confirming one is refused (specs/0041 §11.6.6)", inert)
+        standing = [r["id"] for r in rows if r["state"] == "standing"]
+        if standing:
+            rep.add("refs", "info", f"{len(standing)} standing redaction notice(s) naming no record this store held when "
+                    f"they arrived — they refuse no write and redact nothing; a later import that creates the record "
+                    f"refuses it unredacted, and otherwise leaves the notice pending or (a trusted restore) applies it "
+                    f"(specs/0041 §11.6.6)", standing)
+        absent = [r for r in rows if r["state"] == "applied" and not held(r)]
+        # round 11 (R10-02): an APPLIED attestation whose EPISODE is gone is a state the store makes legitimately —
         # the supported `delete_episode`, after which a re-arriving record is written in its treated shape (§4g).
         # Only episodes: no supported remover deletes a single edge, so an absent edge stays an error. The doctor
         # cannot tell "deleted" from "never existed"; planting the latter needs raw SQL, outside what it serves.
-        is_deleted_episode = lambda r: r["event_ref"] is not None and r["target_kind"] == "episode"   # noqa: E731
-        standing = [r["id"] for r in absent if is_standing(r)]
+        is_deleted_episode = lambda r: r["target_kind"] == "episode"   # noqa: E731
         deleted = [r["id"] for r in absent if is_deleted_episode(r)]
-        ids = [r["id"] for r in absent if not is_standing(r) and not is_deleted_episode(r)]
-        if standing:
-            rep.add("refs", "info", f"{len(standing)} standing redaction notice(s) awaiting their record — the record is "
-                    f"redacted on arrival (specs/0041 §4g); not damage", standing)
+        ids = [r["id"] for r in absent if not is_deleted_episode(r)]
         if deleted:
             rep.add("refs", "info", f"{len(deleted)} redaction record(s) for an episode since deleted — the record stays "
                     f"attested (its journal events stay too), and a re-arriving copy with its notice is written treated "

@@ -178,7 +178,17 @@ def export_memory(store, user_id: str, path) -> dict:
     with path.open("w") as f:
         # specs/0026 §3d / specs/0037 §4e: the conditional stamp (see
         # FORMAT_VERSION) — the highest era any record in the file needs
-        redaction_records = store.redaction_records(user_id)
+        # specs/0041 §11.6.6 (T4; research's B1): which notices an export carries. An APPLIED record exports treated,
+        # so its pair always SHOWS the redaction; a STANDING row travels only when the file does NOT carry its target
+        # (it re-arrives standing). A PENDING notice never travels: its target is held and untreated by definition, so
+        # exporting it beside its record would make the store's OWN export unrestorable (the table refuses a unit
+        # carrying a record unredacted beside its notice) — measured at a2dc7b0 for a standing notice over a local
+        # write, refused three ways. The cost, stated: a restore does not reproduce pending state; re-importing the
+        # source file re-pends it. Relaying pending testimony would need an unauthenticated state label (INV-RR14).
+        _carried = {("edge", e.id) for e in edges} | {("episode", ep.id) for ep in episodes}
+        redaction_records = [r for r in store.redaction_records(user_id)
+                             if r["state"] == "applied"
+                             or (r["state"] == "standing" and (r["target_kind"], r["target_id"]) not in _carried)]
         _version = (FORMAT_VERSION
                     if redaction_records
                     else _PRODUCER_VERSION
@@ -294,10 +304,10 @@ def held_differs_verdict(attested_complete: bool, noticed: bool) -> str:
         boundary);
       • the file's notice names it → "inconsistent": content-derived divergence is no ground to keep content the
         source says was redacted — the held version is redacted anyway (the notice applies in the commit), the
-        incoming copy is not written, and the import flags it in `inconsistent_notices` — on a RESTORE; on the
-        default path (the 2026-10-13 notice-binding hotfix) the notice names a record this import did not insert, so
-        it is NOT applied: the held version is kept, the incoming copy is still not written, and the target is
-        reported in `notices_not_applied` instead;
+        incoming copy is not written, and the import flags it in `inconsistent_notices` — on a RESTORE whose file
+        shows the redaction; on the default path (specs/0041 §11.6.6) a notice over a held record is PENDING, never
+        applied: the held version is kept, the incoming copy is still not written, and the target is reported in
+        `notices_not_applied` with reason `held-target` instead;
       • otherwise → "conflict", refused with the branch's own message and census label.
     Pure: the caller fires the refusal, so each census id stays in the one function that declares it."""
     if attested_complete and not noticed:
@@ -1341,8 +1351,9 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
 
         plan = {"edges": plan_edges, "episodes": plan_eps,
                 "contributions": contrib_rows, "redactions": notices,
-                # the notice-binding hotfix (2026-10-13): only a trusted restore lets a notice reach a held or absent
-                # record; on the default path it binds to a record this import inserts, or is reported, never applied
+                # specs/0041 §11.6.6: the MODE the binding table reads — a trusted restore ("any") applies a notice to a
+                # held record whose file copy (or held self) shows it; a default import ("created") applies one only to a
+                # record it creates showing it, and leaves every held target's notice PENDING
                 "notice_scope": "created" if capped_path else "any"}
         expected = {"edge_ids": edge_ids_expected,
                     "episode_records": ep_records_expected,
@@ -1358,9 +1369,9 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                 "notices_applied": result.get("notices_applied", 0),
                 "notices_standing": result.get("notices_standing", 0),
                 "notices_existing": result.get("notices_existing", 0),
-                # the 2026-10-13 notice-binding hotfix: `inconsistent_notices` keeps its meaning (the held version WAS
-                # redacted), so a target whose notice the default path did not apply is not in it; those are in
-                # `notices_not_applied` ([kind, id]): named no record this import inserted — never applied, never standing
+                # `inconsistent_notices` keeps its meaning (the held version WAS redacted), so a target whose notice this
+                # import left PENDING is not in it; those are in `notices_not_applied` ([kind, id, reason]: `held-target`,
+                # `record-not-in-file`, `standing-arrival` — specs/0041 §11.6.6), never applied by the file's word
                 "inconsistent_notices": sorted({i for k, i in inconsistent
                                                 if (k, i) not in {(x[0], x[1]) for x in result.get("notices_not_applied", [])}}),
                 "notices_not_applied": result.get("notices_not_applied", [])}

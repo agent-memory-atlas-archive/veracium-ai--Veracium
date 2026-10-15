@@ -206,6 +206,9 @@ DDL_ACCOUNT = {
         # (its request_digest is a TREATED side path, §6g)
         "request_registry.user_id", "request_registry.correlation_id", "request_registry.verb",
         "request_registry.target_edge_id", "request_registry.result_ref", "request_registry.written_at",
+        # specs/0041 §11.6.6 (T4): a redaction row's notice state and why a notice waits — closed sets, validated at
+        # the one writer (redaction.NOTICE_STATES, PENDING_REASONS)
+        "redactions.state", "redactions.pending_reason",
         "consolidation_ops.operation_id", "consolidation_ops.user_id", "consolidation_ops.state",
         "consolidation_ops.owner", "consolidation_ops.lease_expires_at", "consolidation_ops.claimed_ids",
         "contribution_ledger.id", "contribution_ledger.user_id", "contribution_ledger.survivor_type",

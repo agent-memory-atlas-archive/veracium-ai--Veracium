@@ -9,8 +9,9 @@ ONE mutant per protection the hotfix added, each REINTRODUCING the defect that p
   per mutant, in that copy: the anchor must occur EXACTLY ONCE; it is replaced; then
     IMPORT  the mutated module still imports (a mutant that breaks import "kills" everything, proving nothing);
     HONEST  the legitimate flows the hotfix must not break still pass under the mutant (HONEST_NODES: a redacted record
-            arriving new is redacted; a newer backup restored over an older store redacts it; a standing notice
-            completes on its own origin's redacted record and, on restore, on any inserted record that shows it);
+            arriving new is redacted; a newer backup restored over an older store redacts it; a treated default
+            arrival of a standing notice's record is ADMITTED — its notice's state is not asserted, which a scope
+            mutant legitimately moves (T4); and on restore any inserted record that shows it completes it);
     CELLS   0041-PA1's closure cells (read from specs/closure_findings.py, never a hand list) run under pytest with a
             JUnit record, and EACH failing cell is classified from its failure message (failure_kind): `assertion`
             (an AssertionError or a bare assert, the permission helper's included), `expected-refusal-missing`
@@ -58,7 +59,7 @@ HOTFIX_TESTS = "tests/test_0041_notice_binding_hotfix.py"
 HONEST_NODES = [HOTFIX_TESTS + "::" + n for n in (
     "test_a_redacted_record_arriving_new_is_still_redacted_in_the_same_transaction",
     "test_a_trusted_restore_of_a_newer_backup_still_redacts_the_held_older_record",
-    "test_ii_a_default_arrival_from_the_notices_own_origin_completes_it",
+    "test_ii_a_treated_default_arrival_under_a_standing_notice_is_admitted",
     "test_ii_on_restore_completion_needs_an_inserted_shown_record_and_not_its_origin",
 )]
 
@@ -76,10 +77,13 @@ failure_kind = MK.failure_kind
 
 # (id, finding, file under src/veracium/, anchor, replacement, what it reintroduces)
 MUTANTS = [
+    # RE-ANCHORED AT T4 (2026-10-14): 0041 §11.6.6's notice state machine replaced the hotfix's rule, so each protection
+    # below is anchored on the code that now provides it. The defect each REINTRODUCES is the same finding's; RR12's
+    # origin mutant is inverted — the hotfix ADDED an origin check, §11.6.6 removed it, so its mutant puts one back.
     ("PA1-created", FINDING, "store/sqlite.py",
-     '                        if not notice_any and (n["target_kind"], n["target_id"]) not in created:\n',
-     '                        if False:\n',
-     "the default path's created-only gate removed: an untrusted notice redacts a HELD record and writes a standing row"),
+     '                            if not notice_any:\n',
+     '                            if False:\n',
+     "the default path's held-target gate removed: an untrusted notice is weighed like a restore's over a HELD record"),
     ("PA1-scope", FINDING, "portability.py",
      '                "notice_scope": "created" if capped_path else "any"}',
      '                "notice_scope": "any"}',
@@ -97,41 +101,54 @@ MUTANTS = [
      '            n["_shown"] = rec is None or _redaction.shows_redaction(n["target_kind"], rec, n["fields"])\n',
      "a notice with no record in the file counts as shown: a notice-only restore redacts an unredacted held record"),
     ("PA1-pair-refusal", FINDING, "store/sqlite.py",
-     '                            if present and n.get("_unshown") == "record-untreated":\n',
-     '                            if False:\n',
-     "a file pairing a notice with its record UNREDACTED is not refused (the poisoned export imports)"),
-    ("PA1-arrival-refusal", FINDING, "store/sqlite.py",
-     '                                if not _redaction.shows_redaction(kind, json.loads(row[1]), json.loads(fields)):\n',
+     '                                if n.get("_unshown") == "record-untreated":\n',
      '                                if False:\n',
-     "a standing notice completes on an UNREDACTED arrival: it removes content from a record arriving in a restore"),
+     "a restore pairing a notice with its HELD record UNREDACTED is not refused: the same-store restore redacts the fact"),
+    ("PA1-pair-refusal-created", FINDING, "store/sqlite.py",
+     '                                if not shown:\n',
+     '                                if False:\n',
+     "a file pairing a notice with a record it CREATES unredacted is not refused (the poisoned export imports)"),
+    ("PA1-arrival-refusal", FINDING, "store/sqlite.py",
+     '                            if not _redaction.shows_redaction(kind, json.loads(row[1]), json.loads(fields)):\n',
+     '                            if False:\n',
+     "a standing notice admits an UNREDACTED arrival: content lands under a notice (and a restore removes it)"),
     ("PA1-arrival-created", FINDING, "store/sqlite.py",
-     '                        if (kind, tid) not in created:\n                            continue\n',
-     '',
-     "a standing notice completes on ANY present record, not only one this import inserted (the user's own later write)"),
+     '                        if rid in unit_rids or (kind, tid) not in created:\n',
+     '                        if rid in unit_rids:\n',
+     "a standing notice completes on ANY present record, not only one an import created (the user's own later write)"),
     ("PA1-origin", FINDING, "store/sqlite.py",
-     '                                    if resolve_origin(stored, self.local_origin()) != s_origin:\n',
-     '                                    if False:\n',
-     "on the default path a standing notice completes on a record from ANY origin (a third store's record redacted)"),
+     '                        if notice_any:\n'
+     '                            self._redact_in_txn(user_id, kind, tid, "imported_notice", row_json=row[1], row_id=rid,\n',
+     '                        if not notice_any and (json.loads(row[1]).get("provenance") or {}).get("origin") != '
+     'self._conn.execute("SELECT source_origin FROM redactions WHERE id=?", (rid,)).fetchone()[0]:\n'
+     '                            raise ValueError("refused: the record\'s own origin is not the notice\'s origin")\n'
+     '                        if notice_any:\n'
+     '                            self._redact_in_txn(user_id, kind, tid, "imported_notice", row_json=row[1], row_id=rid,\n',
+     "INV-RR12's 'compare origins': an origin binding put back — a legitimate B-over-A treated arrival refused"),
     ("PA1-attest-held", FINDING, "store/sqlite.py",
-     '                                and _redaction.shows_redaction(n["target_kind"], json.loads(row[1]), n["fields"])):\n',
-     '                                and True):\n',
-     "with no copy in the file, a notice applies to a HELD record that does not show the redaction (the primitive's own "
-     "check, the only one a plan arriving by another route than the import has)"),
+     '                            if n.get("_shown") is True or _redaction.shows_redaction(kind, json.loads(row[1]), n["fields"]):\n',
+     '                            if True:\n',
+     "with no copy in the file, a restore applies a notice to a HELD record that does not show the redaction"),
     ("PA1-writer-edge", FINDING, "store/sqlite.py",
-     '            attested = self._attested_fields(edge.user_id, "edge", edge.id, standing=False)\n',
-     '            attested = self._attested_fields(edge.user_id, "edge", edge.id)\n',
-     "a standing notice refuses the user's own edge write of its id again"),
+     '            attested = self._attested_fields(edge.user_id, "edge", edge.id, coverage=False)\n',
+     '            attested = self._attested_fields(edge.user_id, "edge", edge.id, coverage=True)\n',
+     "a standing or pending notice refuses the user's own edge write of its id again"),
     ("PA1-writer-episode", FINDING, "store/sqlite.py",
-     '                    attested = self._attested_fields(episode.user_id, "episode", episode.id, standing=False)\n',
-     '                    attested = self._attested_fields(episode.user_id, "episode", episode.id)\n',
-     "a standing notice refuses the user's own episode write of its id again"),
+     '                    attested = self._attested_fields(episode.user_id, "episode", episode.id, coverage=False)\n',
+     '                    attested = self._attested_fields(episode.user_id, "episode", episode.id, coverage=True)\n',
+     "a standing or pending notice refuses the user's own episode write of its id again"),
     ("PA1-readers", FINDING, "store/sqlite.py",
-     '            f"SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=? AND NOT {_STANDING_SQL}",\n',
+     '            f"SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=? AND {_APPLIED_SQL}",\n',
      '            f"SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=?",\n',
-     "a standing notice's id is in redacted_targets() again: the readers hide a record no notice reached"),
+     "a standing or pending notice's id is in redacted_targets() again: the readers hide a record no notice reached"),
+    ("PA1-export", FINDING, "portability.py",
+     '                             if r["state"] == "applied"\n',
+     '                             if True\n',
+     "an export carries a non-applied notice beside its record: the store's own export pairs a hostile notice with the "
+     "user's unredacted fact (research's B1)"),
 ]
 
-_WRITER = '            attested = self._attested_fields(edge.user_id, "edge", edge.id, standing=False)\n'
+_WRITER = '            attested = self._attested_fields(edge.user_id, "edge", edge.id, coverage=False)\n'
 # (id, file under src/veracium/, anchor, replacement, what it injects, the outcome the classifier must give it)
 CONTROLS = [
     ("CTRL-unrelated-TypeError", "store/sqlite.py", _WRITER,
@@ -359,15 +376,18 @@ def problems(path: pathlib.Path = TABLE) -> list[str]:
         out.append("the rows are not one per mutant, in order")
     cited = {n for ns in (h.get("cells") or {}).values() for n in ns}
     for r in rows:
+        # a cited cell is a test FUNCTION, and citing it runs every parametrisation; a failing parametrised node
+        # (`name[param]`, T4's cells) is that cited cell — compared by its base node id
         failed = r.get("cells_failed") or []
+        failed_cells = {c.split("[", 1)[0] for c in failed}
         recount = classify({"kinds": r.get("cell_kinds") or {}, "failed": failed, "errored": r.get("cells_errored") or []})
         if not (r.get("outcome") == "KILLED" == recount["outcome"] and r.get("kill_kind") == recount["kill_kind"]
                 and r.get("import") == "ok" and r.get("honest") == "pass" and r.get("good") is True
-                and not r.get("cells_errored") and failed and set(failed) <= cited):
+                and not r.get("cells_errored") and failed and failed_cells <= cited):
             out.append(f"{r.get('id')}: not a good row (outcome {r.get('outcome')}, recounted from its cell kinds "
                        f"{recount['outcome']}, kill {r.get('kill_kind')}, import {r.get('import')}, honest "
                        f"{r.get('honest')}, {len(failed)} failing cell(s), "
-                       f"{'all' if set(failed) <= cited else 'NOT all'} among the cited cells)")
+                       f"{'all' if failed_cells <= cited else 'NOT all'} among the cited cells)")
     ctls = t.get("controls", [])
     if [k.get("id") for k in ctls] != [k[0] for k in CONTROLS]:
         out.append("the controls are not one per CONTROLS entry, in order")

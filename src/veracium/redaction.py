@@ -69,6 +69,11 @@ REDACTION_REASONS = ("subject_request", "operator_policy", "erroneous_capture", 
 # a witnessed record is the one whose source identity columns are set (`redactions.source_origin`).
 WITNESS_REASON = "imported_notice"
 ORIGINATING_REASONS = tuple(r for r in REDACTION_REASONS if r != WITNESS_REASON)
+# specs/0041 §11.6.6 (T4): a redaction row's NOTICE STATE, and why a notice waits. Only `applied` attests; `pending` is
+# a witnessed notice over a record this store holds, awaiting the user's `confirm_notice`; `standing` names no record it
+# holds. The store validates both at its one writer (the DDL holds no CHECK) and `doctor` reports a value outside them.
+NOTICE_STATES = ("applied", "pending", "standing")
+PENDING_REASONS = ("held-target", "record-not-in-file", "standing-arrival")
 
 # §11.2 / D1, `source_revocations.reason` (round 10, R9-02(a)): the owner's FOUR values for a future REVOKE — a different
 # field from the redaction's own reason, so a different constant (`policy`, not `operator_policy`: the operator's own

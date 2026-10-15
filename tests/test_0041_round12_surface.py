@@ -70,6 +70,13 @@ def _redaction_rows(st, tid=None):
     return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
 
 
+def _applied_rows(st, tid=None):
+    """T4 (specs/0041 §11.6.6): APPLIED redaction rows only — an attestation. A default import over a held target now
+    records the notice PENDING (and an absent one STANDING), so "nothing applied" is no APPLIED row, not no row."""
+    q = "SELECT COUNT(*) FROM redactions WHERE state='applied'"
+    return st._conn.execute(q + ("" if tid is None else " AND target_id=?"), (() if tid is None else (tid,))).fetchone()[0]
+
+
 def _content_in_journal(st, eid="t"):
     return sum(SECRET in (s or "") for s in _journal(st, eid))
 
@@ -127,9 +134,9 @@ def test_a_history_only_redaction_exports_a_notice_another_store_applies(tmp_pat
     r = import_memory(dst.store, p, restore=restore)
     if not restore:
         # (A) attack-shaped on the default path: a notice reaching the destination's HELD record is what the
-        # 2026-10-13 notice-binding hotfix closes — not applied, the row and its journal byte-identical, no row
+        # 2026-10-13 notice-binding hotfix closes — not applied, the row and its journal byte-identical, no applied row (T4: the notice PENDING)
         assert _held_json(dst.store, "edge", "t") == held and _journal(dst.store, "t") == journal
-        assert not dst.store._attested_fields(U, "edge", "t") and _redaction_rows(dst.store, "t") == 0
+        assert not dst.store._attested_fields(U, "edge", "t") and _applied_rows(dst.store, "t") == 0
         assert r["notices_applied"] == 0 and _not_applied(r, "edge", "t")
         return
     assert dst.store._attested_fields(U, "edge", "t") and _content_in_journal(dst.store) == 0
@@ -164,7 +171,7 @@ def test_a_notice_WITHOUT_the_journal_path_still_treats_the_destinations_journal
     held_r, journal_r = _held_json(rst.store, "edge", "t"), _journal(rst.store, "t")
     rr = import_memory(rst.store, older, restore=True)
     assert _held_json(rst.store, "edge", "t") == held_r and _journal(rst.store, "t") == journal_r
-    assert rr["notices_applied"] == 0 and _redaction_rows(rst.store, "t") == 0
+    assert rr["notices_applied"] == 0 and _applied_rows(rst.store, "t") == 0
     assert ["edge", "t", "record-not-in-file"] in [list(x) for x in rr["notices_not_applied"]]
     # ... and the default path applies nothing to the held record: its journal keeps the content, the target reported
     dflt = tt._mem(tmp_path, "dflt.db")
@@ -173,7 +180,7 @@ def test_a_notice_WITHOUT_the_journal_path_still_treats_the_destinations_journal
     r = import_memory(dflt.store, older)
     assert _held_json(dflt.store, "edge", "t") == held and _journal(dflt.store, "t") == journal
     assert _content_in_journal(dflt.store) >= 1 and not dflt.store._attested_fields(U, "edge", "t")
-    assert r["notices_applied"] == 0 and _redaction_rows(dflt.store, "t") == 0 and _not_applied(r, "edge", "t")
+    assert r["notices_applied"] == 0 and _applied_rows(dflt.store, "t") == 0 and _not_applied(r, "edge", "t")
 
 
 def test_a_record_with_nothing_anywhere_is_still_refused_with_nothing_written(tmp_path):

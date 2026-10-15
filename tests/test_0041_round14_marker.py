@@ -87,6 +87,13 @@ def _redaction_rows(st, tid=None):
     return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
 
 
+def _applied_rows(st, tid=None):
+    """T4 (specs/0041 §11.6.6): APPLIED redaction rows only — an attestation. A default import over a held target now
+    records the notice PENDING (and an absent one STANDING), so "nothing applied" is no APPLIED row, not no row."""
+    q = "SELECT COUNT(*) FROM redactions WHERE state='applied'"
+    return st._conn.execute(q + ("" if tid is None else " AND target_id=?"), (() if tid is None else (tid,))).fetchone()[0]
+
+
 def _summary(dst, eid):
     (j,) = dst.store._conn.execute("SELECT json FROM episodes WHERE id=?", (eid,)).fetchone()
     return json.loads(j, object_pairs_hook=_strict_pairs)["summary"]
@@ -131,9 +138,9 @@ def test_control_the_exact_marker_with_the_notices_is_admitted_and_treats_both(t
     r = import_memory(dst.store, tmp_path / "after.jsonl", restore=restore)
     if not restore:
         # (A) attack-shaped on the default path: notices rebound onto HELD outputs are what the 2026-10-13
-        # notice-binding hotfix closes — both held outputs byte-identical, nothing attested, no row, both not applied
+        # notice-binding hotfix closes — both held outputs byte-identical, nothing attested, no applied row (T4: the notice PENDING), both not applied
         assert {x: _held_json(dst.store, "episode", x) for x in (a, b)} == held
-        assert R.MARKER not in (_summary(dst, a), _summary(dst, b)) and _redaction_rows(dst.store) == 0
+        assert R.MARKER not in (_summary(dst, a), _summary(dst, b)) and _applied_rows(dst.store) == 0
         assert not any(dst.store._attested_fields(U, "episode", x) for x in (a, b)) and r["notices_applied"] == 0
         assert _not_applied(r, "episode", a) and _not_applied(r, "episode", b)
         return

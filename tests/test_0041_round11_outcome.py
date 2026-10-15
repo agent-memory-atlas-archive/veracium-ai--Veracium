@@ -48,6 +48,13 @@ def _redaction_rows(st, tid=None):
     return st._conn.execute("SELECT COUNT(*) FROM redactions WHERE target_id=?", (tid,)).fetchone()[0]
 
 
+def _applied_rows(st, tid=None):
+    """T4 (specs/0041 §11.6.6): APPLIED redaction rows only — an attestation. A default import over a held target now
+    records the notice PENDING (and an absent one STANDING), so "nothing applied" is no APPLIED row, not no row."""
+    q = "SELECT COUNT(*) FROM redactions WHERE state='applied'"
+    return st._conn.execute(q + ("" if tid is None else " AND target_id=?"), (() if tid is None else (tid,))).fetchone()[0]
+
+
 def _strict(pairs):
     out = {}
     for k, v in pairs:
@@ -120,8 +127,8 @@ def test_R10_01_full_export_applies_notice_to_held_outcome(tmp_path, restore):
     r = import_memory(dst.store, p2, restore=restore)
     if not restore:
         # (A) attack-shaped on the default path: a notice reaching a HELD record is what the 2026-10-13 notice-binding
-        # hotfix closes — not applied, the held bytes unchanged, nothing attested, no row, reported as not applied
-        assert _held_json(dst.store, "episode", tid) == held and _redaction_rows(dst.store, tid) == 0
+        # hotfix closes — not applied, the held bytes unchanged, nothing attested, no applied row (T4: the notice PENDING), reported as not applied
+        assert _held_json(dst.store, "episode", tid) == held and _applied_rows(dst.store, tid) == 0
         assert not dst.store._attested_fields(U, "episode", tid) and r["notices_applied"] == 0
         assert _not_applied(r, "episode", tid)
         return
