@@ -62,7 +62,7 @@ def test_higher_authority_contention_member_ranks_first(tmp_path):  # I6a via or
 
 def test_a_live_refusal_contention_is_excluded_from_the_wiki(tmp_path):
     """§4c-ii: a contested functional group in a LIVE refusal contention is kept OUT of the
-    one-value LLM wiki — the compiler only ever sees facts that have one current value."""
+    one-value LLM wiki — the compiler is never handed a refusal pair's two competing values."""
     s = SqliteStore(str(tmp_path / "s.db"))
     s.add_edge(_edge("p", EvidenceAuthor.USER, "CFO at Acme"))
     s.add_edge(_edge("other", EvidenceAuthor.USER, "Boston", rel="located_at"))    # uncontested

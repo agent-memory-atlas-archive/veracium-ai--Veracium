@@ -130,10 +130,11 @@ def test_wide_gap_accumulates_instead_of_merging():
 
 def test_functional_relation_subset_reinforces_instead_of_churning():
     store = _store()
-    apply_supersession(store, _edge("e1", "concise bullet answers",
-                                    relation="prefers", day=1), DEFAULT_RELATIONS)
-    apply_supersession(store, _edge("e2", "concise answers",
-                                    relation="prefers", day=4), DEFAULT_RELATIONS)
+    # `located_at` stays `single` (specs/0044 moved `prefers` to `multi`, where nothing supersedes)
+    apply_supersession(store, _edge("e1", "Porto city centre",
+                                    relation="located_at", day=1), DEFAULT_RELATIONS)
+    apply_supersession(store, _edge("e2", "Porto centre",
+                                    relation="located_at", day=4), DEFAULT_RELATIONS)
     # specs/0012 Design 1: the subset restatement persists as its own edge; the NO-CHURN
     # intent this test protects is preserved — no supersession, no invalidation (0012 I6).
     edges = {e.id: e for e in store.edges("u1", active_only=False)}
@@ -141,8 +142,8 @@ def test_functional_relation_subset_reinforces_instead_of_churning():
     assert edges["e1"].invalidation_reason is None
     assert edges["e2"].supersedes is None
     # a genuinely different value still supersedes — BOTH same-value actives retire
-    apply_supersession(store, _edge("e3", "detailed answers",
-                                    relation="prefers", day=8), DEFAULT_RELATIONS)
+    apply_supersession(store, _edge("e3", "Lisbon",
+                                    relation="located_at", day=8), DEFAULT_RELATIONS)
     active = store.edges("u1")
     assert [e.id for e in active] == ["e3"]
     assert active[0].supersedes in {"e1", "e2"}
@@ -413,11 +414,15 @@ def test_valid_from_never_exceeds_observed_at_on_any_write_path():
     it. Holds at creation and after reinforcement, absorption and supersession —
     the check that catches a regression here."""
     store = _store()
-    apply_supersession(store, _edge("a", "runs", day=1, relation="prefers"), DEFAULT_RELATIONS)
-    apply_supersession(store, _edge("b", "runs", day=9, relation="prefers"), DEFAULT_RELATIONS)
-    apply_supersession(store, _edge("c", "morning runs", day=14, relation="prefers"),
+    # `located_at` stays `single`, so "d" still SUPERSEDES (under `prefers`, `multi` since specs/0044, it would only
+    # accumulate and this test would silently stop covering the supersession path it names)
+    apply_supersession(store, _edge("a", "Porto", day=1, relation="located_at"), DEFAULT_RELATIONS)
+    apply_supersession(store, _edge("b", "Porto", day=9, relation="located_at"), DEFAULT_RELATIONS)
+    apply_supersession(store, _edge("c", "central Porto", day=14, relation="located_at"),
                        DEFAULT_RELATIONS)
-    apply_supersession(store, _edge("d", "tea", day=3, relation="prefers"), DEFAULT_RELATIONS)
+    apply_supersession(store, _edge("d", "Lisbon", day=3, relation="located_at"), DEFAULT_RELATIONS)
+    assert any(e.invalidation_reason == "superseded"
+               for e in store.edges("u1", active_only=False)), "the supersession write path was not exercised"
     for e in store.edges("u1", active_only=False, include_quarantined=True):
         assert e.valid_from <= e.provenance.observed_at, \
             f"{e.id}: became true {e.valid_from} after being recorded {e.provenance.observed_at}"

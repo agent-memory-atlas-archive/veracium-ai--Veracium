@@ -1253,8 +1253,14 @@ CLOSURES = [
      "schema.py:203 marks it functional=True — the matrix contradicted the "
      "code it describes",
      "§3 matrix",
-     "grep -n 'name=\"prefers\", functional=True' src/veracium/schema.py  "
-     "# the shipped flag the corrected row now states"),
+     # specs/0044 (T5): `prefers` is now `multi`, so the flag this command grepped for is gone. The finding was a
+     # DISAGREEMENT between the §3 matrix and the code, so the command checks the agreement: 0025's annotation names
+     # 0044's flip AND the shipped declaration is `multi` — it fails if either side drifts (research's R6)
+     "PYTHONPATH=src $PY -c \"import pathlib, sys; from veracium.schema import DEFAULT_RELATIONS as D; "
+     "from veracium.registry import declared_arity; "
+     "t = pathlib.Path('specs/0025-relation-vocabulary-enforcement.md').read_text(); "
+     "sys.exit(0 if declared_arity(D['prefers']) == 'multi' and 'from 0044' in t and 'arity=\\\"multi\\\"' in t "
+     "else 1)\"  # the matrix row, its 0044 annotation and the shipped declaration agree"),
     ("0025", "external", 1, "F5",
      "§2 said one new count while §4c and X4 said three, and no caller "
      "surface (Memory/MCP/CLI/telemetry) was dispositioned",

@@ -20,19 +20,20 @@ class Fake:
 def _seeded_mem(db):
     mem = Memory(llm=Fake([
         {"triples": [
+            # the supersession is under `works_as`, a `single` relation (specs/0044 moved `prefers` to `multi`)
             {"subject": "user", "relation": "has_pet", "object": "cat Miso"},
-            {"subject": "user", "relation": "prefers", "object": "concise answers"}],
-         "episode": "User shared pet and preference."},
+            {"subject": "user", "relation": "works_as", "object": "engineer at Acme"}],
+         "episode": "User shared pet and role."},
         {"triples": [
-            {"subject": "user", "relation": "prefers", "object": "detailed answers"}],
-         "episode": "User switched preference."},
+            {"subject": "user", "relation": "works_as", "object": "manager at Acme"}],
+         "episode": "User changed role."},
         {"triples": [
             {"subject": "org:quickclaim", "relation": "third_party_claim",
              "object": "user owes $2,400"}],
          "episode": "Received a collection email."},
     ]), config=MemoryConfig(require_source_id=False, db_path=db, wiki_recompile_after_writes=0))  # 0006 v8: opted out — measures records that exist (rule 8 / I3 / I13), not the ingest requirement
-    mem.remember("ida", "I have a cat named Miso and I like concise answers")
-    mem.remember("ida", "Actually, give me detailed answers")
+    mem.remember("ida", "I have a cat named Miso and I'm an engineer at Acme")
+    mem.remember("ida", "Actually, I'm a manager at Acme now")
     mem.remember("ida", "email from quickclaim: you owe $2,400", author=EvidenceAuthor.THIRD_PARTY,  # the text grounds the claim's figure: 0019 v7 §4c refuses a FLAGGED triple from a non-user event
                  event_type="email")
     return mem
@@ -44,7 +45,7 @@ def test_introspect_summary_counts():
         out = mem.introspect("ida")
         assert out["facts"] == 2
         assert out["unverified_claims"] == 1
-        assert out["by_relation"] == {"has_pet": 1, "prefers": 1}
+        assert out["by_relation"] == {"has_pet": 1, "works_as": 1}
         assert out["by_author"] == {"third_party": 1, "user": 2}
         assert out["by_disclosure"]["quarantined"] == 1
         assert out["retired"] == {"superseded": 1}
@@ -58,11 +59,11 @@ def test_introspect_categories_render_provenance():
     with tempfile.TemporaryDirectory() as d:
         mem = _seeded_mem(f"{d}/t.db")
         out = mem.introspect("ida", mode="categories")
-        assert set(out["categories"]) == {"has_pet", "prefers", "third_party_claim"}
+        assert set(out["categories"]) == {"has_pet", "works_as", "third_party_claim"}
         claim_line = out["categories"]["third_party_claim"][0]
         assert "UNVERIFIED third-party claim" in claim_line  # flagged exactly as recall shows it
-        assert out["categories"]["prefers"] == [
-            l for l in out["categories"]["prefers"] if "detailed" in l
+        assert out["categories"]["works_as"] == [
+            l for l in out["categories"]["works_as"] if "manager" in l
         ]  # superseded value not listed among current facts
         mem.close()
 
@@ -89,9 +90,9 @@ def test_cli_recall_and_introspect_are_store_only(capsys):
         briefing = capsys.readouterr().out
         assert briefing.strip()  # proactive briefing rendered
 
-        assert cli_main(["recall", "--user", "ida", "--db", db, "detailed answers"]) == 0
+        assert cli_main(["recall", "--user", "ida", "--db", db, "manager at Acme"]) == 0
         out = capsys.readouterr().out
-        assert "detailed answers" in out
+        assert "manager at Acme" in out
         assert "$2,400" not in out.split("UNVERIFIED")[0]  # claim only in flagged section
 
         assert cli_main(["introspect", "--user", "ida", "--db", db, "--json"]) == 0

@@ -40,18 +40,19 @@ def _seed(db, *, confirm=False):
     clean on it only after the confirmation episode's two ids were made one — see
     test_the_confirmation_episode_has_one_id_and_a_consumer_can_delete_it)."""
     mem = Memory(llm=Fake([
+        # the supersession is under `works_as`, a `single` relation (specs/0044 moved `prefers` to `multi`)
         {"triples": [{"subject": "user", "relation": "has_pet", "object": "cat Miso"},
-                     {"subject": "user", "relation": "prefers", "object": "concise answers"}],
-         "episode": "User shared pet and preference."},
-        {"triples": [{"subject": "user", "relation": "prefers", "object": "detailed answers"}],
-         "episode": "User switched preference."},
+                     {"subject": "user", "relation": "works_as", "object": "engineer at Acme"}],
+         "episode": "User shared pet and role."},
+        {"triples": [{"subject": "user", "relation": "works_as", "object": "manager at Acme"}],
+         "episode": "User changed role."},
         {"triples": [{"subject": "org:quickclaim", "relation": "third_party_claim",
                       "object": "user owes $2,400"}],
          "episode": "Received a collection email."},
     ]), config=MemoryConfig(require_source_id=False, db_path=db, wiki_recompile_after_writes=0))  # 0006 v8: opted out — measures records that exist (rule 8 / I3 / I13), not the ingest requirement
-    mem.remember(U, "I have a cat named Miso and I like concise answers", date="2026-09-01",
+    mem.remember(U, "I have a cat named Miso and I'm an engineer at Acme", date="2026-09-01",
                  context=EvidenceContext.direct())
-    mem.remember(U, "Actually, give me detailed answers", date="2026-09-02",
+    mem.remember(U, "Actually, I'm a manager at Acme now", date="2026-09-02",
                  context=EvidenceContext.direct())
     mem.remember(U, "email from quickclaim: you owe $2,400", author=EvidenceAuthor.THIRD_PARTY,  # the text grounds the claim's figure: 0019 v7 §4c refuses a FLAGGED triple from a non-user event
                  event_type="email", source_id="quickclaim-inbox", date="2026-09-03")

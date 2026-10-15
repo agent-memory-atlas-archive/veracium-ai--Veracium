@@ -1,5 +1,7 @@
-A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 19 tables
+A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 27 tables
 
+   arity_era                effective_at
+   arity_inventory          edge_id, user_id, pre_invalidated_at, pre_reason
    confirmations            id, user_id, edge_id, confirmed_at, actor, call_path, correlation_id, request_digest, origin, recorded_correlation_id, origin_store, origin_user, origin_act_id
    consolidation_ops        operation_id, user_id, state, owner, lease_expires_at, claimed_ids
    contribution_ledger      id, user_id, survivor_type, survivor_id, site, identity_digest, evidence_ref_digest, payload, op_key, created_at, contributor_type, contributor_ref
@@ -8,8 +10,14 @@ A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 19 tables
    edges                    id, user_id, subject ←DUPLICATES json, relation ←DUPLICATES json, object ←DUPLICATES json, json
    episode_event            user_id, episode_id, kind, reason, state, recorded_at
    episodes                 id, user_id, date, json
+   migration_op             op_id, mode, inputs_digest, admitted_at
+   migration_outcome        plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, successor_evidence, origin, outcome_uid, undone_at, undo_request_ref
+   migration_run            plan_id, user_id, op_id, committed_at
+   plan_header              plan_id, effective_at, registry_digest, op_id
    policy_receipt           user_id, recall_id, policy_id, policy_version, recorded_at, receipt
+   reclassification_plan    plan_id, relation, from_arity, to_arity
    redactions               id, user_id, target_kind, target_id, fields, reason, event_ref, recorded_at, source_body, source_origin, source_user, source_event_ref, state, pending_reason
+   refusal_inventory        refusal_id, user_id
    request_registry         user_id, correlation_id, verb, target_edge_id, request_digest, result_ref, written_at
    source_revocations       user_id, identity_digest, action, at, reason
    store_epoch              started_at

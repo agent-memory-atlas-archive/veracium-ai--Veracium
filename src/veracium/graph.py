@@ -1,4 +1,7 @@
-"""Graph operations: functional supersession and entity-matched subgraph render.
+"""Graph operations: supersession under `single` relations and entity-matched subgraph render.
+
+A relation's arity (specs/0044) decides whether a differing value supersedes: under `single` (functional) it retires
+the prior; under `multi` it never does — both values stay current. Reinforcement and absorption are arity-blind.
 
 Pure logic over the store — no LLM, no I/O beyond the store handle — so this is
 the offline-testable heart of memory correctness (supersession-with-history is

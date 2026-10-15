@@ -30,9 +30,10 @@ in Memory-Architecture Rankings"* ([arXiv:2607.21962](https://arxiv.org/abs/2607
   dated episodes. A curated "wiki" view is compiled from them and cached — never
   the source of truth. *(The layered design won on both short and 9-week horizons;
   flat stores each failed one regime.)*
-- **Supersession, never erasure.** Functional facts (preference, employer,
+- **Supersession, never erasure.** Single-valued facts (employer, location,
   deadline) keep one current value with the prior value retained as history —
-  "what did X used to be?" stays answerable. *(The category commercial memory
+  "what did X used to be?" stays answerable. Facts that can hold several values
+  at once (preferences, measurements, health states) accumulate instead. *(The category commercial memory
   systems handle worst; Veracium's strongest.)*
 - **Representation is a security control.** Third-party claims (received email,
   external docs) are quarantined *structurally* — stored as `third_party_claim`

@@ -245,7 +245,13 @@ class Store(ABC):
         EVERY same-ID transition in BOTH directions with no exception —
         absorption inserts a NEW survivor whose flag is the N-ary OR computed
         pre-insert, so the persistence layer sees only immutable flags
-        (specs/0019 §3b/§4d, U4)."""
+        (specs/0019 §3b/§4d, U4).
+
+        LIFETIME TRANSITIONS (specs/0044 §4f-ii): a backend derives an edge's
+        lifetime transitions — reinstatement, retirement, re-retirement,
+        redaction — from the persisted old and new row on EVERY write that can
+        change an edge's lifetime, a same-ID replace included, and applies their
+        effects in that write's transaction: never from which method ran."""
         ...
 
     @store_mutator
@@ -284,6 +290,13 @@ class Store(ABC):
         newest first. Read-only; the source `specs/0011` re-evaluates. Not abstract."""
         raise NotImplementedError(
             f"{type(self).__name__} does not implement refusals")
+
+    def refusal_inventory_ids(self, user_id: str) -> frozenset:
+        """specs/0044 §4d/§4f: the ids of the user's refusals in the v16 schema step's refusal inventory — recorded
+        while their relation was `single`, so their protection is retained. Read-only. Not abstract: a caller reads a
+        backend without it as holding none (`veracium.contention.retained_refusal_ids`)."""
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement refusal_inventory_ids")
 
     def contributions(self, user_id: str, survivor_type: str,
                       survivor_id: str) -> list:

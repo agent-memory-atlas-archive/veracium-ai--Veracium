@@ -237,6 +237,35 @@ def test_cache_key_changes_with_every_identity_component():
             assert other.key_for("t", author="user", event_type="chat", date="d") != k, field
 
 
+def test_the_extraction_identity_keys_the_rendered_relation_lines(tmp_path, monkeypatch):
+    """specs/0044 R1 (the owner's ruling, option 3): the extractor's relation lines are filled into the template at
+    ingest, so the template hash cannot see them. The runner's identity carries their hash, and so its cache key moves
+    when ONE gloss changes: an old-gloss extraction is never replayed under a new-gloss run."""
+    import run_longmemeval as rl
+    from veracium.schema import DEFAULT_RELATIONS
+    seen = {}
+
+    class _Stop(Exception):
+        pass
+
+    class _Capture:
+        def __init__(self, inner, *, path, identity, enabled):
+            seen.update(identity)
+            raise _Stop
+
+    monkeypatch.setattr(rl, "CachedComplete", _Capture)
+    with pytest.raises(_Stop):
+        rl.run([], provider=object(), out_dir=tmp_path)
+    assert seen.get("extract_relations_sha") == rl.extraction_relations_sha(DEFAULT_RELATIONS), "not in the identity"
+    edited = dict(DEFAULT_RELATIONS)
+    edited["measures"] = edited["measures"].model_copy(update={"desc": edited["measures"].desc + "!"})
+    assert rl.extraction_relations_sha(edited) != seen["extract_relations_sha"], "one gloss byte must move the hash"
+    a = _cache(tmp_path, _Counting(), extract_relations_sha=seen["extract_relations_sha"])
+    b = _cache(tmp_path, _Counting(), extract_relations_sha=rl.extraction_relations_sha(edited))
+    turn = dict(author="user", event_type="chat", date="d")
+    assert a.key_for("t", **turn) != b.key_for("t", **turn), "identities differing only in the relation lines collide"
+
+
 def test_cache_survives_partial_line_and_rejects_old_schema():
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "c.jsonl"

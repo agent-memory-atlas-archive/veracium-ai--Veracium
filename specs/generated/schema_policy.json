@@ -353,6 +353,17 @@
     "index:ix_redactions_target": "rebuildable",
     "table:request_registry": "required",
     "index:ix_request_registry_target": "rebuildable",
-    "table:act_counter": "required"
+    "table:act_counter": "required",
+    "table:arity_era": "required",
+    "table:arity_inventory": "required",
+    "index:ix_arity_inventory_user": "rebuildable",
+    "table:refusal_inventory": "required",
+    "index:ix_refusal_inventory_user": "rebuildable",
+    "table:migration_outcome": "required",
+    "index:ix_migration_outcome_edge": "rebuildable",
+    "table:migration_run": "required",
+    "table:migration_op": "required",
+    "table:plan_header": "required",
+    "table:reclassification_plan": "required"
   }
 }

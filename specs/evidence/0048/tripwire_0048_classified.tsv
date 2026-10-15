@@ -177,7 +177,7 @@ field-name	src/veracium/store/revocation_sweep.py	str:confidence	f"payload[{whic
 field-name	src/veracium/store/revocation_sweep.py	str:confidence	f"{'a json_datetime string' if field != 'confidence' else 'a number'},"
 field-name	src/veracium/store/revocation_sweep.py	str:confidence	if field == "confidence":
 field-name	src/veracium/store/revocation_sweep.py	str:confidence	ok = (isinstance(v, str) if field != "confidence"
-field-name	src/veracium/store/sqlite.py	str:confidence	"confidence; journals on the FULL-STATE delta (mutated)"},
+field-name	src/veracium/store/sqlite.py	str:confidence	"confidence; journals on the FULL-STATE delta (mutated)",
 field-name	src/veracium/why.py	str:confidence	"confidence", "derived_from", "source_id", "origin", "record_kind",
 fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	"confidence": base["confidence"]}
 fold-checked	src/veracium/store/revocation_sweep.py	str:confidence	"confidence": base["confidence"]}
@@ -295,3 +295,13 @@ verb-as-text	src/veracium/selfcheck.py	str:sql-write	mem.remember(uid, "Feed upd
 verb-as-text	src/veracium/selfcheck.py	str:sql-write	r1 = mem.remember(uid, "Feed update: the user moved to Lisbon.",
 verb-as-text	src/veracium/selfcheck.py	str:sql-write	r2 = mem.remember(uid, "Feed update: the user moved to Porto.",
 verb-as-text	src/veracium/selfcheck.py	str:sql-write	r3 = mem.remember(uid, "Feed update: the user adopted a cat.",
+edges-text	src/veracium/store/migration.py	str:edges	STEP_ARITY_EDGES = "v16-arity-edges-unchanged"
+edges-text	src/veracium/store/migration.py	str:edges	([f"{block}: the edges table changed"] if post_e != edges_pin else [])
+edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	edges_pin = _rows(conn, "SELECT * FROM edges ORDER BY id")
+edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	post_e = _rows(conn, "SELECT * FROM edges ORDER BY id")
+edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	for eid, uid, blob in _rows(conn, f"SELECT id, user_id, json FROM edges WHERE relation IN ({marks}) "
+edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	_rows(conn, f"SELECT id, user_id, relation, active, json FROM edges WHERE relation IN ({marks})",
+sql-write-other-table	src/veracium/store/migration.py	str:sql-write	conn.execute("INSERT INTO arity_inventory(edge_id, user_id, pre_invalidated_at, pre_reason) "
+sql-write-other-table	src/veracium/store/migration.py	str:sql-write	conn.execute("INSERT INTO refusal_inventory(refusal_id, user_id) "
+sql-write-other-table	src/veracium/store/schema_version.py	str:sql-write	conn.execute("INSERT OR IGNORE INTO arity_era(id, effective_at) VALUES(1, ?)", (effective_at,))
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE migration_outcome SET applicable=0 "

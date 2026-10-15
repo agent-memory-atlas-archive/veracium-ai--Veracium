@@ -199,6 +199,9 @@ COMBINING_SITES = {
     (_STORE, "_set_notice_state"): SiteSpec(
         False, why="specs/0041 §11.6.6 — records or moves ONE witnessed notice's pending/standing state; it treats no "
                    "record and no second record contributes"),
+    (_STORE, "_apply_lifetime_transition"): SiteSpec(
+        False, why="specs/0044 §4f-ii — ends ONE edge's arity-inventory membership or clears `applicable` on ITS "
+                   "outcome row, from that edge's own prior and new row; no second record contributes"),
     (_STORE, "_allocate_act_seq"): SiteSpec(
         False, why="specs/0008 v7 §6f — advances the store's one act counter; a position, not content, and no "
                    "record contributes to another"),

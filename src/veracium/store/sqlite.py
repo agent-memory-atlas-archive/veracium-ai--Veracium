@@ -31,6 +31,7 @@ from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, RE
                    DESTINATION_CHANGED, HEAD_MOVED, LEASE_MAX, NON_QUIESCENT,
                    PLAN_STALE, ReceiptSchemaBoundaryError, Store,
                    SupersessionIntegrityError)
+from . import lifetime as _lifetime
 from .edge_events import (append_event, mint_recorded_at, next_seq,  # noqa: F401
                           next_txn)
 from .schema_version import (SCHEMA_V1, SCHEMA_VERSION, SCHEMAS,  # noqa: F401
@@ -139,37 +140,55 @@ _ERASE_TABLES = ("contribution_ledger",
                  "supersession_refusals", "supersession_operations",
                  "edge_embedding", "edge_event", "policy_receipt",
                  "episode_event", "redactions",          # specs/0041 v15: the episode journal and the attestation record are erasable per user
-                 "request_registry")                     # specs/0008 v7 §6g: replay ends at erasure; act_counter is NOT here (never reset)
+                 "request_registry",                     # specs/0008 v7 §6g: replay ends at erasure; act_counter is NOT here (never reset)
+                 # specs/0044 §4g-ii (the 0008 amendment's one erasure rule, §6g): everything 0044 records for the user.
+                 # arity_era, plan_header, reclassification_plan and migration_op are store-level, never per-user, and
+                 # never erased
+                 "arity_inventory", "refusal_inventory", "migration_outcome", "migration_run")
+# specs/0044 §4f-ii: every ruling carries a LIFETIME disposition — `choke-point` (its lifetime transitions are derived
+# at `_journal_edge_write` from the persisted prior and new row) or `erasure` (`forget_user`, under 0008 §6g's one
+# erasure rule). tests/test_0029_carrier.py refuses a ruling without one.
 EDGE_WRITE_SITE_RULINGS = {
     "_upsert_edge_row": {
         "ruling": "reads the persisted prior, upserts, journals through the choke "
-                  "point (created / mutated / no event on unchanged bytes)"},
+                  "point (created / mutated / no event on unchanged bytes); a same-id upsert can write EITHER "
+                  "lifetime state (specs/0044 §4f-ii: it reinstates and re-retires without the two methods below)",
+        "lifetime": "choke-point"},
     "confirm_edge": {
         "ruling": "rewrites the edge json in place; journals (mutated, or no "
-                  "event when the confirmation changed no byte)"},
+                  "event when the confirmation changed no byte)",
+        "lifetime": "choke-point"},
     "_invalidate_edge_row": {
-        "ruling": "the SOLE active=0 writer; journals with the site hint "
-                  "`invalidated`, reason validated against DISPOSITIONED_REASONS"},
+        "ruling": "the invalidate METHOD's active=0 write (not the only one: the same-id upsert writes it too, "
+                  "specs/0044 §4f-ii); journals with the site hint "
+                  "`invalidated`, reason validated against DISPOSITIONED_REASONS",
+        "lifetime": "choke-point"},
     "_reinstate_edge_row": {
-        "ruling": "the SOLE active=1-restoring writer; journals with the site "
-                  "hint `reinstated`, reason `source_restored` (specs/0029 v12)"},
+        "ruling": "the reinstate METHOD's active=1 write (not the only one: the same-id upsert writes it too, "
+                  "specs/0044 §4f-ii); journals with the site "
+                  "hint `reinstated`, reason `source_restored` (specs/0029 v12)",
+        "lifetime": "choke-point"},
     "_recompute_edge_row": {
         "ruling": "the fourth site (R1-4): rewrites valid_from/observed_at/"
-                  "confidence; journals on the FULL-STATE delta (mutated)"},
+                  "confidence; journals on the FULL-STATE delta (mutated)",
+        "lifetime": "choke-point"},
     "commit_outcome_import_plan": {
         "ruling": "imports edges through the choke point (created for new ids, "
-                  "mutated for a changed same-id row, none when byte-identical)"},
+                  "mutated for a changed same-id row, none when byte-identical)",
+        "lifetime": "choke-point"},
     "_redact_in_txn": {
         "ruling": "specs/0041 §4c: the redaction's in-transaction body (`redact()` and, for an imported notice, the "
                   "import commit call it): rewrites the target's json and duplicated columns in place (the treatment "
                   "map), TOMBSTONES `state` on every prior event for the edge (the journal's one in-place "
                   "rewrite, amending 0029 V-APPEND) and journals a `redacted` event with the redaction reason through "
-                  "the choke point"},
+                  "the choke point",
+        "lifetime": "choke-point"},
     "forget_user": {
         "ruling": "erasure: deletes the user's edges AND the user's events in "
                   "the same transaction (V-ERASE); journals nothing — the "
                   "journal is what is being erased",
-        "tables": _ERASE_TABLES},
+        "tables": _ERASE_TABLES,
+        "lifetime": "erasure"},
 }
 
 
@@ -326,6 +345,10 @@ class SqliteStore(Store):
             raise RuntimeError(
                 "edge write outside a journaled write transaction — every "
                 "edges writer runs inside _write_txn (specs/0029 §4a)")
+        # specs/0044 §4f-ii: the LIFETIME HOOK, before the unchanged-bytes return below (an unchanged row is no
+        # transition). Derived from the persisted prior and the new row — never from `kind`, which a changed same-id
+        # upsert gives as `mutated` — so every writer that passes this point is bound alike.
+        self._apply_lifetime_transition(user_id, edge_id, prior_json, new_json)
         if kind is not None and kind not in self._SITE_KINDS:
             raise ValueError(
                 f"kind {kind!r} is not a site-determinable kind — only the two "
@@ -376,6 +399,19 @@ class SqliteStore(Store):
                      txn=txn, edge_id=edge_id, kind=kind, reason=reason,
                      state=new_json, recorded_at=recorded_at)
         return kind
+
+    def _apply_lifetime_transition(self, user_id: str, edge_id: str, prior_json: Optional[str],
+                                   new_json: str) -> Optional[str]:
+        """specs/0044 §4f-ii's effects, in the writer's transaction: a reinstatement ends the row's `arity_inventory`
+        membership; a retirement, re-retirement or redaction clears `applicable` on its `migration_outcome` row. Both
+        terminal. The derivation is `lifetime.transition` (§4f-ii's table, one implementation)."""
+        t = _lifetime.transition(prior_json, new_json)
+        if t in _lifetime.ENDS_MEMBERSHIP:
+            self._conn.execute("DELETE FROM arity_inventory WHERE edge_id=?", (edge_id,))
+        elif t in _lifetime.CLEARS_APPLICABLE:
+            self._conn.execute("UPDATE migration_outcome SET applicable=0 "
+                               "WHERE user_id=? AND edge_id=? AND applicable=1", (user_id, edge_id))
+        return t
 
     # -- specs/0029 read surface --------------------------------------------
     def edge_events(self, user_id: str, *, edge_id: Optional[str] = None,
@@ -1412,6 +1448,11 @@ class SqliteStore(Store):
                         if touches_contention:
                             self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))
                         return result
+
+    def refusal_inventory_ids(self, user_id: str) -> frozenset:
+        """specs/0044 §4d: the user's refusal-inventory ids (written once, by the v16 schema step)."""
+        return frozenset(r[0] for r in self._conn.execute(
+            "SELECT refusal_id FROM refusal_inventory WHERE user_id=?", (user_id,)).fetchall())
 
     def refusals(self, user_id: str) -> list[SupersessionRefusal]:
         rows = self._conn.execute(

@@ -111,6 +111,20 @@ SIDE_TABLE_TREATMENTS = {
     "episode": (("contribution_ledger.identity_digest", CLEAR), ("contribution_ledger.evidence_ref_digest", CLEAR),
                 ("source_revocations.reason", REPLACE)),
 }
+def edge_carries_marker(dumped: dict) -> bool:
+    """specs/0044 §4f-ii (research's T5 F1): does an edge row's dump hold the marker in one of its OWN carriers — the
+    REPLACE fields and the per-entry markers of the treatment map above, the fields a redaction writes the marker into.
+    Derived from those tables, never listed again; the bytes alone are not an attestation (the module docstring), so a
+    caller that reads this as "redacted" relies on the write paths refusing to INTRODUCE the marker (INV-11's mirror)."""
+    for path in EDGE_REPLACE + EDGE_MARKERS_PER_ENTRY:
+        value = dumped
+        for part in path.split("."):
+            value = value.get(part) if isinstance(value, dict) else None
+        if carries_marker(value):
+            return True
+    return False
+
+
 def carrier_paths(kind: str) -> frozenset:
     """The carrier PATHS a redaction of `kind` can treat — DERIVED from the tables above, never listed again: the
     record's own carriers plus its side-table paths. The ONE domain of an attestation record's `fields` (round-9

@@ -25,15 +25,15 @@ class FakeComplete:
 
 def test_write_read_supersession_and_quarantine():
     scripts = [
-        # e1: user states diet + preference
+        # e1: user states diet + role (`works_as` is a `single` relation: specs/0044 moved `prefers` to `multi`)
         {"triples": [
             {"subject": "user", "relation": "has_diet", "object": "vegetarian", "volatility": "permanent"},
-            {"subject": "user", "relation": "prefers", "object": "concise answers", "volatility": "slow"}],
-         "episode": "User shared dietary preference (vegetarian) and a preference for concise answers."},
-        # e2: user changes preference -> functional supersession
+            {"subject": "user", "relation": "works_as", "object": "engineer at Acme", "volatility": "slow"}],
+         "episode": "User shared dietary preference (vegetarian) and their role (engineer at Acme)."},
+        # e2: user changes role -> functional supersession
         {"triples": [
-            {"subject": "user", "relation": "prefers", "object": "detailed answers", "volatility": "slow"}],
-         "episode": "User changed preference to detailed answers."},
+            {"subject": "user", "relation": "works_as", "object": "manager at Acme", "volatility": "slow"}],
+         "episode": "User changed role to manager at Acme."},
         # e3: received scam email -> quarantined claim, never a user fact
         {"triples": [
             {"subject": "org:quickclaim", "relation": "third_party_claim",
@@ -44,17 +44,17 @@ def test_write_read_supersession_and_quarantine():
         # wiki disabled → pure write-path + graph-recall test (no read-time LLM)
         mem = Memory(llm=FakeComplete(scripts),
                      config=MemoryConfig(db_path=f"{d}/t.db", wiki_recompile_after_writes=0))
-        mem.remember("u", "USER: I'm vegetarian; keep answers concise.", date="2026-06-01")
-        mem.remember("u", "USER: actually give me detailed answers now.", date="2026-06-03")
+        mem.remember("u", "USER: I'm vegetarian; I'm an engineer at Acme.", date="2026-06-01")
+        mem.remember("u", "USER: actually I'm a manager at Acme now.", date="2026-06-03")
         mem.remember("u", "From QuickClaim: you owe $2,400.", date="2026-06-04",
                      author=EvidenceAuthor.THIRD_PARTY, event_type="email",
                  source_id="billing-mailbox")   # required for third-party content (0006 v8)
 
-        # supersession: exactly one active `prefers`, and it's the new value
-        prefs = [e for e in mem.store.edges("u", relation="prefers")]
-        assert len(prefs) == 1 and prefs[0].object == "detailed answers"
+        # supersession: exactly one active `works_as`, and it's the new value
+        prefs = [e for e in mem.store.edges("u", relation="works_as")]
+        assert len(prefs) == 1 and prefs[0].object == "manager at Acme"
         # history is retained
-        all_prefs = mem.store.edges("u", relation="prefers", active_only=False)
+        all_prefs = mem.store.edges("u", relation="works_as", active_only=False)
         assert len(all_prefs) == 2
 
         # quarantine: the scam is a quarantined claim, not an assertable fact
@@ -65,9 +65,9 @@ def test_write_read_supersession_and_quarantine():
         # recall renders the debt under a never-assert flag
         r = mem.recall("u", "does the user owe QuickClaim $2,400?")
         assert "never assert" in r.context.lower()
-        # and surfaces the current preference
-        r2 = mem.recall("u", "how does the user want answers formatted?")
-        assert "detailed answers" in r2.context
+        # and surfaces the current role
+        r2 = mem.recall("u", "what is the user's role at Acme?")
+        assert "manager at Acme" in r2.context
         mem.close()
 
 

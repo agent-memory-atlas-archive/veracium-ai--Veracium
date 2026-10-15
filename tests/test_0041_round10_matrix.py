@@ -209,6 +209,23 @@ DDL_ACCOUNT = {
         # specs/0041 §11.6.6 (T4): a redaction row's notice state and why a notice waits — closed sets, validated at
         # the one writer (redaction.NOTICE_STATES, PENDING_REASONS)
         "redactions.state", "redactions.pending_reason",
+        # specs/0044 §4e–§4i (v16; T5): the arity era and inventories, and the restoration operation's tables — ids,
+        # instants, digests of DECLARATIONS (never of content), closed values (outcome, origin, mode, the arity
+        # words, the one pre_reason `superseded`), a successor POINTER (edge ids or `none`) and the three default
+        # relation NAMES. No column holds a fact's content: object text is read from the live edge at read time (§4g)
+        "arity_era.effective_at",
+        "arity_inventory.edge_id", "arity_inventory.user_id", "arity_inventory.pre_invalidated_at",
+        "arity_inventory.pre_reason",
+        "refusal_inventory.refusal_id", "refusal_inventory.user_id",
+        "migration_outcome.plan_id", "migration_outcome.user_id", "migration_outcome.edge_id",
+        "migration_outcome.outcome", "migration_outcome.pre_invalidated_at", "migration_outcome.pre_reason",
+        "migration_outcome.successor_evidence", "migration_outcome.origin", "migration_outcome.outcome_uid",
+        "migration_outcome.undone_at", "migration_outcome.undo_request_ref",
+        "migration_run.plan_id", "migration_run.user_id", "migration_run.op_id", "migration_run.committed_at",
+        "migration_op.op_id", "migration_op.mode", "migration_op.inputs_digest", "migration_op.admitted_at",
+        "plan_header.plan_id", "plan_header.effective_at", "plan_header.registry_digest", "plan_header.op_id",
+        "reclassification_plan.plan_id", "reclassification_plan.relation", "reclassification_plan.from_arity",
+        "reclassification_plan.to_arity",
         "consolidation_ops.operation_id", "consolidation_ops.user_id", "consolidation_ops.state",
         "consolidation_ops.owner", "consolidation_ops.lease_expires_at", "consolidation_ops.claimed_ids",
         "contribution_ledger.id", "contribution_ledger.user_id", "contribution_ledger.survivor_type",

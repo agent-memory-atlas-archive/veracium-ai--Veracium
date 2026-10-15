@@ -22,7 +22,8 @@ import json
 from typing import Optional
 
 from . import budgets as _budgets
-from .graph import _value_key, collapse_for_render, render_edges
+from .graph import collapse_for_render, render_edges
+from .contention import is_live_refusal, retained_refusal_ids
 from .llm.base import Complete
 from .schema import DEFAULT_RELATIONS, Relation
 
@@ -98,7 +99,8 @@ def _split_envelope(stored: str) -> tuple[Optional[str], str]:
 def _live_refusal_contention_edge_ids(store, user_id: str,
                                       relations: dict[str, Relation]) -> set:
     """The edge ids in a LIVE refusal contention — a refusal record exists AND both
-    referenced edges are active AND still distinct AND the relation is functional (§4c-ii).
+    referenced edges are active AND still distinct AND the relation is functional (§4c-ii), or the refusal's
+    protection is retained across 0044's reclassification (§4d) — `veracium.contention.is_live_refusal`.
     These are excluded from the one-value LLM wiki so a refusal cannot collapse the pair;
     the derived-view treatment is REFUSAL-scoped (Option B), not every contention."""
     try:
@@ -109,12 +111,11 @@ def _live_refusal_contention_edge_ids(store, user_id: str,
         return set()
     active = {e.id: e for e in store.edges(user_id, active_only=True,
                                            include_quarantined=True)}
+    retained = retained_refusal_ids(store, user_id)          # specs/0044 §4d
     excluded: set = set()
     for r in refs:
         prior, inc = active.get(r.prior_edge_id), active.get(r.incoming_edge_id)
-        rel = relations.get(r.relation)
-        if (prior is not None and inc is not None and rel and rel.functional
-                and _value_key(prior.object) != _value_key(inc.object)):
+        if is_live_refusal(r, prior, inc, relations, retained):   # the ONE predicate (veracium.contention)
             excluded.add(prior.id)
             excluded.add(inc.id)
     return excluded
@@ -132,9 +133,10 @@ def _grounded_inputs(store, user_id: str, relations: dict[str, Relation]):
     routes use_only to UNVERIFIED). The inference still shapes behavior via recall's
     unverified channel; it is not lost, only kept out of the assertable body.
 
-    specs/0003 §4c-ii: a contested functional group in a LIVE refusal contention is also
-    excluded, so the "keep one current value" prompt only ever sees facts that HAVE one —
-    a refusal never hands the LLM two competing values to collapse."""
+    specs/0003 §4c-ii: a contested group in a LIVE refusal contention is also excluded, so
+    a refusal never hands the "keep one current value" prompt two competing values to
+    collapse. That is the claim, and only that: since specs/0044 the non-refused values of a
+    `multi` relation reach the compiler by design (§4c — several can be current at once)."""
     with _SITE_GROUNDED_INPUTS.consult():
         contested = _live_refusal_contention_edge_ids(store, user_id, relations)
         # specs/0019 §4c (F4 — reviewer-executed): the compiler stores an LLM's

@@ -122,6 +122,12 @@ def ingest_item(mem, item, *, arm: str, serializer, cache=None) -> dict:
     return {"turns": n_turns, "facts": n_facts}
 
 
+def extraction_relations_sha(relations) -> str:
+    """The extractor's relation lines exactly as ingest renders them for `relations` (its effective registry)."""
+    from veracium.registry import effective_registry, render_prompt_relations
+    return _sha16(render_prompt_relations(effective_registry(relations)))
+
+
 def run(items, *, provider, arm: str = "C", arms=("veracium",), cache_enabled=True,
         context: bool = True, budget=None, note: str = "", workers: int = 1,
         out_dir: Path = OUT_DIR, cache_path: Path | None = None,
@@ -143,6 +149,11 @@ def run(items, *, provider, arm: str = "C", arms=("veracium",), cache_enabled=Tr
         # hash the ACTUAL prompt + schema content, not a hand-kept label:
         # a forgotten version bump cannot then poison replay
         "extract_prompt_sha": _sha16(EXTRACT_SYSTEM + EXTRACT_PROMPT),
+        # the template's `{relations}` slot is filled at ingest from the registry (registry.render_prompt_relations),
+        # so the rendered relation lines are prompt CONTENT the template hash cannot see: a gloss edit, an added
+        # relation or a reordering must re-key the cache, never replay extractions made under the old lines (specs/0044
+        # R1, the owner's ruling, option 3)
+        "extract_relations_sha": extraction_relations_sha(MemoryConfig().relations),
         "extract_schema_sha": _sha16(json.dumps(EXTRACT_SCHEMA, sort_keys=True)),
         "serializer_version": SERIALIZER_VERSION,
         "context_policy": CONTEXT_POLICY if context else {"version": 0, "window_turns": 0},

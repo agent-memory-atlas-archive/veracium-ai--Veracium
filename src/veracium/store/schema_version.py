@@ -669,6 +669,75 @@ SCHEMA_V16 = tuple(
     id       INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
     next_seq INTEGER NOT NULL
 )""", REQUIRED),
+) + (
+    # specs/0044 §4e–§4i / 0018 amendment §4a (T5; research's R2: EVERY table the step names lands with the step, so
+    # v16's DDL is read once and T6 never changes it under stores already at v16). The ERA: the step's commit time,
+    # one row (D5). The two INVENTORIES are the operation-era boundary (§4f, R2-01): what was retired `superseded`
+    # under the three default names, and every refusal, when the step's transaction committed — never decided from
+    # a timestamp. The other five are the 0018 amendment's operation's (T6): the outcome rows, the per-user run
+    # rows, the op admission record, the plan header and its relation rows.
+    SchemaObject("table", "arity_era", """CREATE TABLE arity_era (
+    id           INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    effective_at TEXT NOT NULL
+)""", REQUIRED),
+    SchemaObject("table", "arity_inventory", """CREATE TABLE arity_inventory (
+    edge_id            TEXT NOT NULL PRIMARY KEY,
+    user_id            TEXT NOT NULL,
+    pre_invalidated_at TEXT NOT NULL,
+    pre_reason         TEXT NOT NULL
+)""", REQUIRED),
+    SchemaObject("index", "ix_arity_inventory_user",
+                 "CREATE INDEX ix_arity_inventory_user ON arity_inventory(user_id)", REBUILDABLE),
+    SchemaObject("table", "refusal_inventory", """CREATE TABLE refusal_inventory (
+    refusal_id TEXT NOT NULL PRIMARY KEY,
+    user_id    TEXT NOT NULL
+)""", REQUIRED),
+    SchemaObject("index", "ix_refusal_inventory_user",
+                 "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)", REBUILDABLE),
+    SchemaObject("table", "migration_outcome", """CREATE TABLE migration_outcome (
+    plan_id            TEXT NOT NULL,
+    user_id            TEXT NOT NULL,
+    edge_id            TEXT NOT NULL,
+    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),
+    pre_invalidated_at TEXT NOT NULL,
+    pre_reason         TEXT NOT NULL,
+    successor_evidence TEXT NOT NULL,
+    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),
+    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),
+    outcome_uid        TEXT NOT NULL UNIQUE,
+    undone_at          TEXT,
+    undo_request_ref   TEXT,
+    UNIQUE(plan_id, edge_id)
+)""", REQUIRED),
+    SchemaObject("index", "ix_migration_outcome_edge",
+                 "CREATE INDEX ix_migration_outcome_edge ON migration_outcome(user_id, edge_id)", REBUILDABLE),
+    SchemaObject("table", "migration_run", """CREATE TABLE migration_run (
+    plan_id      TEXT NOT NULL,
+    user_id      TEXT NOT NULL,
+    op_id        TEXT NOT NULL,
+    committed_at TEXT NOT NULL,
+    PRIMARY KEY(plan_id, user_id)
+)""", REQUIRED),
+    SchemaObject("table", "migration_op", """CREATE TABLE migration_op (
+    op_id         TEXT NOT NULL PRIMARY KEY,
+    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),
+    inputs_digest TEXT NOT NULL,
+    admitted_at   TEXT NOT NULL
+)""", REQUIRED),
+    SchemaObject("table", "plan_header", """CREATE TABLE plan_header (
+    id              INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    plan_id         TEXT NOT NULL UNIQUE,
+    effective_at    TEXT NOT NULL,
+    registry_digest TEXT NOT NULL,
+    op_id           TEXT NOT NULL
+)""", REQUIRED),
+    SchemaObject("table", "reclassification_plan", """CREATE TABLE reclassification_plan (
+    plan_id    TEXT NOT NULL,
+    relation   TEXT NOT NULL,
+    from_arity TEXT NOT NULL CHECK (from_arity = 'single'),
+    to_arity   TEXT NOT NULL CHECK (to_arity = 'multi'),
+    PRIMARY KEY(plan_id, relation)
+)""", REQUIRED),
 )
 
 # The v15->v16 ALTER, in the v6/v8/v10 convention: the six ADD COLUMNs of §2a's inventory in its order, and the
@@ -751,6 +820,14 @@ def mint_act_counter(conn: sqlite3.Connection) -> None:
     conn.execute("INSERT OR IGNORE INTO act_counter(id, next_seq) VALUES(1, 1)")
 
 
+def mint_arity_era(conn: sqlite3.Connection, effective_at: str) -> None:
+    """specs/0044 §4f / 0018 amendment §4a (D5) — the arity era's ONE row, `(1, effective_at)`: the v16 step's commit
+    time (the migration's one clock read), or a new store's creation time. Idempotent on the fixed `id = 1`
+    (`INSERT OR IGNORE`), so a re-attempted migration or a create-then-open never moves it. Only creation and the v16
+    step call it."""
+    conn.execute("INSERT OR IGNORE INTO arity_era(id, effective_at) VALUES(1, ?)", (effective_at,))
+
+
 def _mint_store_identity(conn: sqlite3.Connection) -> None:
     """specs/0006 §4.2 — mint the store's durable `origin` singleton if absent.
 
@@ -786,8 +863,11 @@ def create(conn: sqlite3.Connection, version: int = SCHEMA_VERSION) -> None:
         from .edge_events import mint_store_epoch
         mint_store_epoch(conn, datetime.now(timezone.utc).isoformat(), version)
     # specs/0008 v7 §6f: a NEW v16+ store's act counter starts at its creation — the first act takes position 1.
+    # specs/0044 §4f (D5): a NEW v16+ store's arity era starts at its creation, with the creation clock read. Its
+    # inventories are EMPTY: nothing was retired or refused under the old rule, because the store never held one.
     if version >= 16:
         mint_act_counter(conn)
+        mint_arity_era(conn, datetime.now(timezone.utc).isoformat())
 
 
 def manifest(conn: sqlite3.Connection) -> dict:

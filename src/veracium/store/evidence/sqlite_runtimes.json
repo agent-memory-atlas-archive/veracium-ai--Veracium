@@ -27,7 +27,7 @@
         "13": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
         "14": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
         "15": "9579d81a7f996d22b4c0f705a550aca93050ac9d29ce6cdf263951bbbbbd32ac",
-        "16": "ceb1cfe9d1078188d21854e1964ac12e08c6c2b3968c28c3aa4948eda4257f89"
+        "16": "9f7e3a786b02a39a40c8fa496af42a60d96740dc25876c87b9c7cf21bd007e2f"
       },
       "manifestations": {
         "constructor v1": {
@@ -9319,6 +9319,11 @@
           }
         },
         "constructor v16": {
+          "index:ix_arity_inventory_user": {
+            "type": "index",
+            "table": "arity_inventory",
+            "sql": "CREATE INDEX ix_arity_inventory_user ON arity_inventory(user_id)"
+          },
           "index:ix_confirmations_edge": {
             "type": "index",
             "table": "confirmations",
@@ -9379,6 +9384,11 @@
             "table": "episodes",
             "sql": "CREATE INDEX ix_episodes_user ON episodes(user_id, date)"
           },
+          "index:ix_migration_outcome_edge": {
+            "type": "index",
+            "table": "migration_outcome",
+            "sql": "CREATE INDEX ix_migration_outcome_edge ON migration_outcome(user_id, edge_id)"
+          },
           "index:ix_policy_receipt_time": {
             "type": "index",
             "table": "policy_receipt",
@@ -9388,6 +9398,11 @@
             "type": "index",
             "table": "redactions",
             "sql": "CREATE INDEX ix_redactions_target ON redactions(user_id, target_kind, target_id)"
+          },
+          "index:ix_refusal_inventory_user": {
+            "type": "index",
+            "table": "refusal_inventory",
+            "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
           },
           "index:ix_request_registry_target": {
             "type": "index",
@@ -9420,6 +9435,68 @@
               [
                 "next_seq",
                 "INTEGER",
+                1,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
+          "table:arity_era": {
+            "type": "table",
+            "table": "arity_era",
+            "sql": "CREATE TABLE arity_era (\n    id           INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),\n    effective_at TEXT NOT NULL\n)",
+            "columns": [
+              [
+                "id",
+                "INTEGER",
+                1,
+                null,
+                1,
+                0
+              ],
+              [
+                "effective_at",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
+          "table:arity_inventory": {
+            "type": "table",
+            "table": "arity_inventory",
+            "sql": "CREATE TABLE arity_inventory (\n    edge_id            TEXT NOT NULL PRIMARY KEY,\n    user_id            TEXT NOT NULL,\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL\n)",
+            "columns": [
+              [
+                "edge_id",
+                "TEXT",
+                1,
+                null,
+                1,
+                0
+              ],
+              [
+                "user_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "pre_invalidated_at",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "pre_reason",
+                "TEXT",
                 1,
                 null,
                 0,
@@ -10035,6 +10112,234 @@
               ]
             ]
           },
+          "table:migration_op": {
+            "type": "table",
+            "table": "migration_op",
+            "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+            "columns": [
+              [
+                "op_id",
+                "TEXT",
+                1,
+                null,
+                1,
+                0
+              ],
+              [
+                "mode",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "inputs_digest",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "admitted_at",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
+          "table:migration_outcome": {
+            "type": "table",
+            "table": "migration_outcome",
+            "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+            "columns": [
+              [
+                "plan_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "user_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "edge_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "outcome",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "pre_invalidated_at",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "pre_reason",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "successor_evidence",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "applicable",
+                "INTEGER",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "origin",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "outcome_uid",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "undone_at",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "undo_request_ref",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
+          "table:migration_run": {
+            "type": "table",
+            "table": "migration_run",
+            "sql": "CREATE TABLE migration_run (\n    plan_id      TEXT NOT NULL,\n    user_id      TEXT NOT NULL,\n    op_id        TEXT NOT NULL,\n    committed_at TEXT NOT NULL,\n    PRIMARY KEY(plan_id, user_id)\n)",
+            "columns": [
+              [
+                "plan_id",
+                "TEXT",
+                1,
+                null,
+                1,
+                0
+              ],
+              [
+                "user_id",
+                "TEXT",
+                1,
+                null,
+                2,
+                0
+              ],
+              [
+                "op_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "committed_at",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
+          "table:plan_header": {
+            "type": "table",
+            "table": "plan_header",
+            "sql": "CREATE TABLE plan_header (\n    id              INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),\n    plan_id         TEXT NOT NULL UNIQUE,\n    effective_at    TEXT NOT NULL,\n    registry_digest TEXT NOT NULL,\n    op_id           TEXT NOT NULL\n)",
+            "columns": [
+              [
+                "id",
+                "INTEGER",
+                1,
+                null,
+                1,
+                0
+              ],
+              [
+                "plan_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "effective_at",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "registry_digest",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "op_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
           "table:policy_receipt": {
             "type": "table",
             "table": "policy_receipt",
@@ -10082,6 +10387,45 @@
               ],
               [
                 "receipt",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
+          "table:reclassification_plan": {
+            "type": "table",
+            "table": "reclassification_plan",
+            "sql": "CREATE TABLE reclassification_plan (\n    plan_id    TEXT NOT NULL,\n    relation   TEXT NOT NULL,\n    from_arity TEXT NOT NULL CHECK (from_arity = 'single'),\n    to_arity   TEXT NOT NULL CHECK (to_arity = 'multi'),\n    PRIMARY KEY(plan_id, relation)\n)",
+            "columns": [
+              [
+                "plan_id",
+                "TEXT",
+                1,
+                null,
+                1,
+                0
+              ],
+              [
+                "relation",
+                "TEXT",
+                1,
+                null,
+                2,
+                0
+              ],
+              [
+                "from_arity",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "to_arity",
                 "TEXT",
                 1,
                 null,
@@ -10227,6 +10571,29 @@
                 "pending_reason",
                 "TEXT",
                 0,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
+          "table:refusal_inventory": {
+            "type": "table",
+            "table": "refusal_inventory",
+            "sql": "CREATE TABLE refusal_inventory (\n    refusal_id TEXT NOT NULL PRIMARY KEY,\n    user_id    TEXT NOT NULL\n)",
+            "columns": [
+              [
+                "refusal_id",
+                "TEXT",
+                1,
+                null,
+                1,
+                0
+              ],
+              [
+                "user_id",
+                "TEXT",
+                1,
                 null,
                 0,
                 0

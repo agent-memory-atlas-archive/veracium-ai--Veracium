@@ -94,6 +94,10 @@ def test_every_edge_writing_site_carries_an_event_ruling(store):
         name = re.match(r"\n\s*def\s+(\w+)", src[fn:]).group(1)
         assert name in rulings, f"raw edges write inside {name!r} has no §4b event ruling"
         assert "kind" not in rulings[name], f"ruling for {name!r} assigns a KIND per site (F-A)"
+        # specs/0044 §4f-ii (INV-A22's product half): its lifetime transitions are bound — derived at the choke point,
+        # or it is the erasure
+        assert rulings[name].get("lifetime") in ("choke-point", "erasure"), (
+            f"ruling for {name!r} carries no lifetime disposition (specs/0044 §4f-ii)")
         if "{" in src[pos:pos + 40]:                       # an interpolated table name
             assert rulings[name].get("tables"), (
                 f"{name!r} writes through an interpolated table name and its ruling "

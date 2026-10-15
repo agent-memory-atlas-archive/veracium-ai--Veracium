@@ -157,6 +157,12 @@ what the UPDATE machinery does, which is the axis this spec moves.
 > `works_on`, which actually is non-functional. A matrix cell is a second
 > copy of the code; it is regenerated against `DEFAULT_RELATIONS`, not
 > remembered.
+>
+> *Annotation (research, 2026-10-15; the row and the note above are kept as written): from 0044's
+> implementation (its T5), `prefers` is declared `arity="multi"` (`functional=False`). A differing value no
+> longer supersedes and forms no contention group, and refusals recorded while it was `single` keep 0044
+> §4d's protection. The `prefers` row states the relation as shipped before 0044; 0044 §4b is the current
+> rule. `schema.py:203` is also stale as a line number: the declaration is in `DEFAULT_RELATIONS`.*
 
 **The cell that matters is the `has_feature` row.** Today it is unreachable by accident.
 After this spec it is unreachable, or reachable, **by decision** — and the
@@ -945,7 +951,7 @@ or executable. The round-by-round ledger below is GENERATED from
 | **F1** | external 1 | the rewrite could launder hearsay: a registry omitting `third_party_claim` routes the extractor's quarantine relation through the off-vocabulary path, and disclosure computed post-rewrite no longer trips the quarantine test | §3 (the ordering), §4b-ii, X8/X9 widened, new X10 | `grep -n 'X10' specs/0025-relation-vocabulary-enforcement.md  # disclosure from the ORIGINAL relation, before the rewrite, retained` |
 | **F2** | external 1 | the retry was a description, not a construction — call count, prompt, matching, episode and malformed-output behaviour all undefined | §4b(1) | `grep -n 'exactly ONE provider call per EVENT' specs/0025-relation-vocabulary-enforcement.md` |
 | **F3** | external 1 | X5 and X8 contradicted with no construction order (injection-first makes the empty cell unreachable), key/name coherence was unstated, and the registry could be mutated mid-event | §4b-ii, X5 restated, new X11 | `grep -n '4b-ii' specs/0025-relation-vocabulary-enforcement.md  # five ordered steps, empty tested AS SUPPLIED, deep-copy snapshot` |
-| **F4** | external 1 | the §3 matrix typed `prefers` non-functional 'by design'; shipped schema.py:203 marks it functional=True — the matrix contradicted the code it describes | §3 matrix | `grep -n 'name="prefers", functional=True' src/veracium/schema.py  # the shipped flag the corrected row now states` |
+| **F4** | external 1 | the §3 matrix typed `prefers` non-functional 'by design'; shipped schema.py:203 marks it functional=True — the matrix contradicted the code it describes | §3 matrix | `PYTHONPATH=src $PY -c "import pathlib, sys; from veracium.schema import DEFAULT_RELATIONS as D; from veracium.registry import declared_arity; t = pathlib.Path('specs/0025-relation-vocabulary-enforcement.md').read_text(); sys.exit(0 if declared_arity(D['prefers']) == 'multi' and 'from 0044' in t and 'arity=\"multi\"' in t else 1)"  # the matrix row, its 0044 annotation and the shipped declaration agree` |
 | **F5** | external 1 | §2 said one new count while §4c and X4 said three, and no caller surface (Memory/MCP/CLI/telemetry) was dispositioned | §2 result-dict row, §4c, §7a | `grep -n 'STRIPS all five' specs/0025-relation-vocabulary-enforcement.md  # the carrier table moved into the SS4c inventory at round 3 (R3-2); the MCP-strips disposition this finding demanded is this row` |
 | **F6** | external 1 | 'preserved in the note' put the recovery carrier in free prose an LLM also writes — unparseable back out and spoofable by note content | §4b(2), X3, §2 (`Edge.original_relation`), 0024 §4b(3) | `grep -n 'original_relation' specs/0025-relation-vocabulary-enforcement.md specs/0024-authorship-before-structural-quarantine.md  # one typed carrier, both specs` |
 | **R2-1** | external 2 | the round-1 shadow rule rejected the shipped DEFAULT_RELATIONS (it contains third_party_claim) — ordinary ingestion could not start; and the 'deep-copied immutable snapshot' wrapped mutable pydantic models | §4b-ii steps 3-5, X9, X11 | `$PY specs/evidence/0025/reference_enforcement.py  # vector_the_shipped_default_registry_is_accepted + vector_snapshot_resists_mutation_through_itself` |

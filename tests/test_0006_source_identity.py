@@ -214,20 +214,21 @@ def test_source_id_changes_no_decision(tmp_path):
     """I5/I4 — (origin, source_id) groups but never grants: differing source_ids do NOT
     alter supersession, disclosure, or third-party routing, and never clear staleness."""
     scripts = [
-        {"triples": [{"subject": "user", "relation": "prefers", "object": "concise", "volatility": "slow"}],
-         "episode": "prefers concise"},
-        {"triples": [{"subject": "user", "relation": "prefers", "object": "detailed", "volatility": "slow"}],
-         "episode": "prefers detailed"},
+        # `located_at` stays `single` (specs/0044 moved `prefers` to `multi`, where nothing supersedes)
+        {"triples": [{"subject": "user", "relation": "located_at", "object": "Lisbon", "volatility": "slow"}],
+         "episode": "based in Lisbon"},
+        {"triples": [{"subject": "user", "relation": "located_at", "object": "Porto", "volatility": "slow"}],
+         "episode": "based in Porto"},
         # a third-party email — disclosure/routing must be identical with or without source_id
         {"triples": [{"subject": "org:x", "relation": "third_party_claim", "object": "you owe $9"}],
          "episode": "billing claim"},
     ]
     mem = _mem(str(tmp_path), scripts)
-    mem.remember("u", "USER: concise please", date="2026-06-01", source_id="mailbox:A")
-    mem.remember("u", "USER: detailed now", date="2026-06-02", source_id="mailbox:B")
-    pref = _active(mem, "u", "prefers")
+    mem.remember("u", "USER: I'm in Lisbon", date="2026-06-01", source_id="mailbox:A")
+    mem.remember("u", "USER: I'm in Porto now", date="2026-06-02", source_id="mailbox:B")
+    pref = _active(mem, "u", "located_at")
     # functional supersession is unaffected by the differing source_id — exactly one active
-    assert len(pref) == 1 and pref[0].object == "detailed"
+    assert len(pref) == 1 and pref[0].object == "Porto"
     # third-party content stays quarantined/use-only regardless of source_id (routing ignores it)
     mem.remember("u", "From X: you owe $9", date="2026-06-03",
                  author=_EA.THIRD_PARTY, event_type="email", source_id="mailbox:C")

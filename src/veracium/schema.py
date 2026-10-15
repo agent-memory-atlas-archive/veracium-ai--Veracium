@@ -439,8 +439,11 @@ DEFAULT_EXPIRY = {
 
 
 # --------------------------------------------------------------------------- #
-# Relations — the graph's edge vocabulary. `functional` relations hold at most
-# one current value per (subject, relation): a new value supersedes the old.
+# Relations — the graph's edge vocabulary. A relation's ARITY (specs/0044) says
+# how values in one (subject, relation) slot combine: `single` holds at most one
+# current value — a new value supersedes the old; `multi` accumulates — a
+# differing value never supersedes. `functional` is the compatibility projection
+# (True ≡ single).
 # --------------------------------------------------------------------------- #
 
 class Relation(BaseModel):
@@ -454,7 +457,7 @@ class Relation(BaseModel):
     confuse this registry field (domain {declarative, procedural}) with the
     record's stamp (domain {None, "procedural"})."""
     name: str
-    functional: bool = False  # one current value per subject → supersede on change
+    functional: bool = False  # compatibility projection of `arity` (True ≡ single: supersede on change)
     desc: str = ""  # one-clause gloss rendered into the distill prompt
     relation_kind: Literal["declarative", "procedural"] = "declarative"
     # specs/0044 §4a: the relation's ARITY is the contract, and `functional` its compatibility projection
@@ -485,7 +488,7 @@ class Relation(BaseModel):
 
 
 # A small, extensible default registry. Hosts can add their own via config.
-# Starred/functional relations supersede; the rest accumulate.
+# `single` (functional) relations supersede; the rest accumulate.
 # Glosses matter: the extractor sees only these names + glosses, and confusable
 # pairs (works_as vs works_on) otherwise drift between runs — which silently
 # defeats supersession for facts filed under the wrong relation.
@@ -498,15 +501,18 @@ DEFAULT_RELATIONS: dict[str, Relation] = {
         Relation(name="has_diet", desc="dietary practice or restriction"),
         Relation(name="works_as", functional=True,
                  desc="the user's employment — employer and/or role; use for jobs"),
-        Relation(name="measures", functional=True,
-                 desc="a changing quantity with one current value — weight, "
-                      "reading progress, savings balance, score; the number "
-                      "updates, history is kept"),
-        Relation(name="prefers", functional=True,
-                 desc="a standing preference, one current value"),
+        # specs/0044 §4b: three relations RECLASSIFIED to `multi` — a differing value never supersedes (one
+        # quantity's reading no longer retires another's); their glosses lose the clauses that stated one current
+        # value (§2, research's annotation: the glosses are prompt bytes, a disclosed change)
+        Relation(name="measures", arity="multi",
+                 desc="a changing quantity — weight, "
+                      "reading progress, savings balance, score; "
+                      "history is kept"),
+        Relation(name="prefers", arity="multi",
+                 desc="a standing preference"),
         Relation(name="located_at", functional=True,
                  desc="where the user lives or is based"),
-        Relation(name="health_state", functional=True,
+        Relation(name="health_state", arity="multi",
                  desc="a current health condition or state"),
         # work knowledge
         Relation(name="works_on",

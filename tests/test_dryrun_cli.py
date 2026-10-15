@@ -32,10 +32,11 @@ U = "ida"
 
 
 def _seed(db):
-    mem = Memory(llm=Fake({"triples": [{"subject": "user", "relation": "prefers", "object": "concise answers"}],
-                           "episode": "User shared a preference."}),
+    # the supersession is under `located_at`, a `single` relation (specs/0044 moved `prefers` to `multi`)
+    mem = Memory(llm=Fake({"triples": [{"subject": "user", "relation": "located_at", "object": "Lisbon"}],
+                           "episode": "User shared a location."}),
                  config=MemoryConfig(db_path=db, wiki_recompile_after_writes=0))
-    mem.remember(U, "I like concise answers", date="2026-09-01", context=EvidenceContext.direct())
+    mem.remember(U, "I'm based in Lisbon", date="2026-09-01", context=EvidenceContext.direct())
     mem.close()
     return db
 
@@ -48,33 +49,33 @@ def test_a_supersession_is_reported_and_the_store_is_untouched():
     with tempfile.TemporaryDirectory() as d:
         db = _seed(f"{d}/t.db")
         before = _sha(db)
-        llm = Fake({"triples": [{"subject": "user", "relation": "prefers", "object": "detailed answers"}],
-                    "episode": "User switched preference."})
-        dr = dryrun.run(db, llm, U, "Actually, give me detailed answers", author=EvidenceAuthor.USER,
+        llm = Fake({"triples": [{"subject": "user", "relation": "located_at", "object": "Porto"}],
+                    "episode": "User moved."})
+        dr = dryrun.run(db, llm, U, "Actually, I'm based in Porto now", author=EvidenceAuthor.USER,
                         date="2026-09-02", context=EvidenceContext.direct())
         assert dr.usable and dr.error is None and llm.calls == 1
         assert _sha(db) == before and sorted(p.name for p in pathlib.Path(d).iterdir()) == ["t.db"]
         assert not [p for p in pathlib.Path(tempfile.gettempdir()).glob("veracium-dryrun-*")]
-        assert [e["object"] for e in dr.new_edges] == ["detailed answers"]
+        assert [e["object"] for e in dr.new_edges] == ["Porto"]
         new = dr.new_edges[0]
         assert new["provenance.disclosure"] == "mentionable" and new["provenance.author_of_evidence"] == "user"
         assert new["supersedes"], "the new fact should name the fact it supersedes"
-        assert [c["fact"] for c in dr.changed_edges] == ["user prefers concise answers"]
+        assert [c["fact"] for c in dr.changed_edges] == ["user located_at Lisbon"]
         moved = {k: (b, a) for k, b, a in dr.changed_edges[0]["changed"]}
         assert moved["invalidation_reason"] == (None, "superseded") and moved["invalidated_at"][1]
         assert dr.result["facts"] == 1 and dr.result["supersessions"] == 1 and dr.new_episodes == 1
         text = dryrun.render(dr)
-        assert "nothing written" in text and "+ user prefers detailed answers" in text and "supersedes" in text
-        assert "~ user prefers concise answers" in text and "invalidation_reason: — -> superseded" in text
+        assert "nothing written" in text and "+ user located_at Porto" in text and "supersedes" in text
+        assert "~ user located_at Lisbon" in text and "invalidation_reason: — -> superseded" in text
         json.dumps(dryrun.to_json(dr), default=str)
         # THE CONSTRUCTION'S CLAIM: the real write does exactly what the dry run said
         mem = Memory(llm=Fake(llm.answer), config=MemoryConfig(db_path=db, wiki_recompile_after_writes=0))
-        r = mem.remember(U, "Actually, give me detailed answers", date="2026-09-02", context=EvidenceContext.direct())
+        r = mem.remember(U, "Actually, I'm based in Porto now", date="2026-09-02", context=EvidenceContext.direct())
         assert {k: r[k] for k in ("facts", "quarantined", "supersessions")} == \
             {k: dr.result[k] for k in ("facts", "quarantined", "supersessions")}
         live = {e.object: e for e in mem.store.edges(U, active_only=False)}
-        assert live["detailed answers"].supersedes == live["concise answers"].id
-        assert live["concise answers"].invalidation_reason == "superseded"
+        assert live["Porto"].supersedes == live["Lisbon"].id
+        assert live["Lisbon"].invalidation_reason == "superseded"
         mem.close()
 
 
@@ -153,17 +154,17 @@ def test_the_cli_flag_round_trips_and_exit_codes_follow_usability(capsys, monkey
         db = _seed(f"{d}/t.db")
         before = _sha(db)
         import veracium.cli as cli
-        answer = {"triples": [{"subject": "user", "relation": "prefers", "object": "detailed answers"}],
-                  "episode": "User switched preference."}
+        answer = {"triples": [{"subject": "user", "relation": "located_at", "object": "Porto"}],
+                  "episode": "User moved."}
         monkeypatch.setattr(cli, "_build_llm", lambda *a, **k: Fake(answer))
-        assert cli_main(["remember", "--user", U, "Actually, detailed answers", "--dry-run", "--db", db,
+        assert cli_main(["remember", "--user", U, "Actually, Porto", "--dry-run", "--db", db,
                          "--date", "2026-09-02"]) == 0
         out = capsys.readouterr().out
-        assert out.startswith("dry run — nothing written") and "+ user prefers detailed answers" in out
+        assert out.startswith("dry run — nothing written") and "+ user located_at Porto" in out
         assert _sha(db) == before
         assert cli_main(["remember", "--user", U, "x", "--dry-run", "--json", "--db", db]) == 0
         doc = json.loads(capsys.readouterr().out)
-        assert doc["usable"] and doc["new_edges"][0]["object"] == "detailed answers"
+        assert doc["usable"] and doc["new_edges"][0]["object"] == "Porto"
         monkeypatch.setattr(cli, "_build_llm", lambda *a, **k: Fake("prose, not json"))
         assert cli_main(["remember", "--user", U, "x", "--dry-run", "--db", db]) == 1
         assert "UNPARSEABLE" in capsys.readouterr().out

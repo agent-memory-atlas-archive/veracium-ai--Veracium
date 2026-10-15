@@ -101,6 +101,7 @@ census; the slot census adds the sites that group or combine by `(subject, relat
 
 **Documentation that states the old meaning and changes with it:** the `functional` comment in `schema.py` (L457),
 `graph.py`'s module docstring, and `_policy_digest`'s docstring.
+*Annotation (research, 2026-10-15; the sentence before it is kept as written): the list missed two carriers that state the old meaning and are read by the extractor, not only by people: the `DEFAULT_RELATIONS` glosses of `measures` (“a changing quantity with one current value … the number updates”) and `prefers` (“a standing preference, one current value”). `registry.render_prompt_relations` renders every gloss into the extractor's prompt, so the implementation change removes those false clauses with the flip, as a disclosed prompt-byte change; every other gloss byte is unchanged. Found at T5's stage-1 read. The LongMemEval runner's extraction identity, which is also its extraction-cache key (`tests/longmemeval/run_longmemeval.py`, `tests/longmemeval/cache.py`), hashed the prompt template and not the rendered relation lines, so a gloss edit alone would have replayed extractions made under the old glosses under an unchanged identity. By the owner's ruling (R1, option 3), the rendered relations enter that identity no later than the flip, so the first run after it re-extracts.*
 
 ---
 

@@ -69,6 +69,8 @@ STEP_STAMP, STEP_IDENTITY, STEP_EPOCH = "stamp", "store-identity", "store-epoch"
 STEP_BASELINE, STEP_CHAINS, STEP_WIKI = "v13-baseline", "v2-v3-outcome-chains", "v3-v4-wiki-drop"
 STEP_ACT_COLUMNS, STEP_ACT_COUNTER, STEP_REGISTRY = "v16-act-columns", "v16-act-counter", "v16-registry-backfill"
 STEP_NOTICE_STATE = "v16-notice-state"
+STEP_ARITY_ERA, STEP_ARITY_INVENTORY, STEP_REFUSAL_INVENTORY = "v16-arity-era", "v16-arity-inventory", "v16-refusal-inventory"
+STEP_ARITY_EDGES = "v16-arity-edges-unchanged"
 
 # 0013 §4f / M-Q6 (RULED by accepted 0016 D2): a raw key no current model declares is REFUSED, except these — fields a
 # released schema declared and HEAD no longer does, dropped on read by every load since their deletion. Bound by
@@ -191,8 +193,8 @@ def _check_outcome_chains(conn: sqlite3.Connection, base: int, before: dict, now
     _refuse_unless(base, STEP_CHAINS, problems)
 
 
-def _rows(conn, sql) -> list:
-    return [tuple(r) for r in conn.execute(sql).fetchall()]
+def _rows(conn, sql, params=()) -> list:
+    return [tuple(r) for r in conn.execute(sql, params).fetchall()]
 
 
 def _migrate_outcome_chains(conn: sqlite3.Connection, now: Optional[datetime] = None) -> set:
@@ -494,6 +496,53 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
             conn.execute("UPDATE redactions SET state='standing' WHERE event_ref IS NULL AND source_origin IS NOT NULL")
             _refuse_unless(base, STEP_NOTICE_STATE, _notice_state_problems(
                 red_before, _rows(conn, f"SELECT {_RED_V15_COLS}, state, pending_reason FROM redactions")))
+            # specs/0044 §4f / 0018 amendment §4a (T5): the ARITY ERA and its two INVENTORIES, in this transaction, after
+            # the notice-state block (nothing here reads coverage, N1). They are the operation-era boundary: what was
+            # retired `superseded` under the three default names, and every refusal, when THIS transaction commits —
+            # never decided from a timestamp (§4f: `invalidated_at` is a valid-time endpoint, not a commit time). Each
+            # block's postcondition reads the database's own bytes, independently of what the block wrote, and the
+            # step changes no edge and no journal event (INV-I24), checked after every block.
+            from .lifetime import RECLASSIFIED_RELATIONS, SUPERSEDED, retirement
+            from .schema_version import mint_arity_era
+            edges_pin = _rows(conn, "SELECT * FROM edges ORDER BY id")
+            events_pin = _rows(conn, "SELECT rowid, * FROM edge_event ORDER BY rowid")
+
+            def _edges_unchanged(block: str) -> None:
+                post_e = _rows(conn, "SELECT * FROM edges ORDER BY id")
+                post_v = _rows(conn, "SELECT rowid, * FROM edge_event ORDER BY rowid")
+                _refuse_unless(base, STEP_ARITY_EDGES,
+                               ([f"{block}: the edges table changed"] if post_e != edges_pin else [])
+                               + ([f"{block}: the edge journal changed"] if post_v != events_pin else []))
+            # step 7: the era, the migration's ONE clock read (D5)
+            era_before = _rows(conn, "SELECT id, effective_at FROM arity_era")
+            mint_arity_era(conn, now_iso)
+            _refuse_unless(base, STEP_ARITY_ERA,
+                           _arity_era_problems(era_before, _rows(conn, "SELECT id, effective_at FROM arity_era"), now))
+            _edges_unchanged(STEP_ARITY_ERA)
+            # step 8: the arity inventory, selected by the DEFAULT NAMES; the predicate is `lifetime.retirement`
+            inv_before = _rows(conn, "SELECT edge_id FROM arity_inventory")
+            marks = ",".join("?" * len(RECLASSIFIED_RELATIONS))
+            for eid, uid, blob in _rows(conn, f"SELECT id, user_id, json FROM edges WHERE relation IN ({marks}) "
+                                              f"ORDER BY id", RECLASSIFIED_RELATIONS):
+                ret = retirement(json.loads(blob))
+                if ret is not None and ret[1] == SUPERSEDED:
+                    conn.execute("INSERT INTO arity_inventory(edge_id, user_id, pre_invalidated_at, pre_reason) "
+                                 "VALUES(?, ?, ?, ?)", (eid, uid, ret[0], ret[1]))
+            _refuse_unless(base, STEP_ARITY_INVENTORY, _arity_inventory_problems(
+                inv_before,
+                _rows(conn, f"SELECT id, user_id, relation, active, json FROM edges WHERE relation IN ({marks})",
+                      RECLASSIFIED_RELATIONS),
+                _rows(conn, "SELECT edge_id, user_id, pre_invalidated_at, pre_reason FROM arity_inventory")))
+            _edges_unchanged(STEP_ARITY_INVENTORY)
+            # step 9: the refusal inventory — EVERY refusal that exists (0044 §4f, 0018 §4a; research's R3: §4d gates
+            # retention on the three names, so the inventory is not filtered by them)
+            ref_before = _rows(conn, "SELECT refusal_id FROM refusal_inventory")
+            conn.execute("INSERT INTO refusal_inventory(refusal_id, user_id) "
+                         "SELECT refusal_id, user_id FROM supersession_refusals")
+            _refuse_unless(base, STEP_REFUSAL_INVENTORY, _refusal_inventory_problems(
+                ref_before, _rows(conn, "SELECT refusal_id, user_id FROM supersession_refusals"),
+                _rows(conn, "SELECT refusal_id, user_id FROM refusal_inventory")))
+            _edges_unchanged(STEP_REFUSAL_INVENTORY)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         stamped = conn.execute("PRAGMA user_version").fetchone()[0]
         _refuse_unless(base, STEP_STAMP, [f"user_version reads {stamped}, not {SCHEMA_VERSION}"]
@@ -594,6 +643,59 @@ def _same_instant(v, now: datetime) -> bool:
         return (datetime.fromisoformat(v) if isinstance(v, str) else v) == now
     except (ValueError, TypeError):
         return False
+
+
+def _arity_era_problems(pre: list, post: list, now: datetime) -> list:
+    """step 7: exactly the one row `(1, the migration's clock read)`; a row present before is unchanged."""
+    if pre:
+        return [] if post == pre else [f"arity_era changed: {pre!r} -> {post!r}"]
+    if len(post) != 1 or _typed_row(post[0][:1]) != _typed_row((1,)):
+        return [f"arity_era holds {post!r}, not exactly one row id=1"]
+    return [] if _same_instant(post[0][1], now) else [f"arity_era.effective_at {post[0][1]!r} is not the migration's clock read"]
+
+
+def _arity_inventory_problems(pre: list, edges: list, post: list) -> list:
+    """step 8, from the edges' own bytes (research's T5 F2): the inventory is SET-EQUAL to the rows under the three
+    default names whose json retirement is `superseded`, each row TUPLE-EQUAL to its edge's json; the table was empty
+    before; and for every edge under those names the `active` column mirrors the json (`active = 0` iff
+    `invalidated_at` is set) — a row where they disagree refuses the step rather than being mis-inventoried."""
+    from .lifetime import SUPERSEDED
+    out = []
+    if pre:
+        out.append(f"arity_inventory held {len(pre)} row(s) before the step")
+    want = {}
+    for eid, uid, rel, active, blob in edges:
+        d = json.loads(blob)
+        at = d.get("invalidated_at")
+        if (active == 0) != (at is not None):
+            out.append(f"edge {eid!r}: active={active!r} disagrees with its json invalidated_at={at!r}")
+        if d.get("relation") != rel:
+            out.append(f"edge {eid!r}: the relation column {rel!r} is not its json relation {d.get('relation')!r}")
+        if at is not None and d.get("invalidation_reason") == SUPERSEDED:
+            want[eid] = (eid, uid, at, SUPERSEDED)
+    got = {}
+    for r in post:
+        if r[0] in got:
+            out.append(f"arity_inventory holds {r[0]!r} twice")
+        got[r[0]] = tuple(r)
+    for eid in sorted(set(want) | set(got)):
+        if eid not in got:
+            out.append(f"edge {eid!r} is retired `superseded` under a reclassified name and is not inventoried")
+        elif eid not in want:
+            out.append(f"arity_inventory names {eid!r}, which is not a `superseded` retirement under the three names")
+        elif _typed_row(got[eid]) != _typed_row(want[eid]):
+            out.append(f"arity_inventory row {got[eid]!r} is not its edge's retirement {want[eid]!r}")
+    return out
+
+
+def _refusal_inventory_problems(pre: list, refusals: list, post: list) -> list:
+    """step 9: SET-EQUAL to every refusal's (refusal_id, user_id), no duplicate, the table empty before."""
+    out = [f"refusal_inventory held {len(pre)} row(s) before the step"] if pre else []
+    if len(post) != len({r[0] for r in post}):
+        out.append("refusal_inventory holds a refusal id twice")
+    if {_typed_row(r) for r in post} != {_typed_row(r) for r in refusals}:
+        out.append(f"refusal_inventory ({len(post)} row(s)) is not every refusal ({len(refusals)} row(s))")
+    return out
 
 
 def _identity_problems(pre: list, post: list) -> list:

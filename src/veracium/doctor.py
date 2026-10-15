@@ -92,6 +92,12 @@ The checks, each named in the output:
                 sweep is the same pure function the commit path runs, called
                 with no proposed action (its `complete` flag, the §4c blind-
                 spot count that over-reports by design, is not a finding here)
+  data-migration  specs/0044 / the 0018 amendment §4e, the PRE-PLAN phase (no
+                plan header): members of the v16 step's arity inventory whose
+                current retirement still equals the inventoried one warn,
+                judged by relation NAME only and stated as such — never a
+                claim of eligibility, which is the plan's. The planned phases
+                are the data-migration operation's (not yet implemented)
   runtime       this interpreter's SQLite is a qualified runtime for the
                 store (specs/0007's predicate); informational
 
@@ -545,6 +551,34 @@ def _check_revocation(rep: Report, store, users: list) -> None:
                 # nothing about whether the revocation was applied. `effects` does.
 
 
+# 0018 amendment §4e, the uninitialized phase's finding, verbatim
+PRE_PLAN_WARNING = ("may have values to restore (judged by relation name): run run_data_migration(path, "
+                    "host_attestation=…, registry=…) — see 0044. A host whose registry keeps a custom single-value "
+                    "declaration for these relations will find none eligible.")
+
+
+def _check_data_migration(rep: Report, conn, user: Optional[str], edges: dict) -> None:
+    """specs/0044 §4k / 0018 amendment §4e, the UNINITIALIZED phase only: a v16 store with no plan header warns when
+    an arity-inventory member, under a reclassified default NAME, still holds exactly its inventoried retirement
+    (0044 §4f's equality test, through `lifetime.retirement`: no time is compared)."""
+    rep.checks_run.append("data-migration")
+    from .store.lifetime import RECLASSIFIED_RELATIONS, retirement, same_retirement
+    if conn.execute("SELECT 1 FROM plan_header").fetchone() is not None:
+        return
+    q = "SELECT user_id, edge_id, pre_invalidated_at, pre_reason FROM arity_inventory"
+    rows = conn.execute(q + (" WHERE user_id=?" if user else ""), (user,) if user else ()).fetchall()
+    ids = []
+    for uid, eid, at, reason in rows:
+        held = edges.get((uid, eid))
+        if held is None:
+            continue
+        d = held[1]
+        if d.get("relation") in RECLASSIFIED_RELATIONS and same_retirement(retirement(d), (at, reason)):
+            ids.append(eid)
+    if ids:
+        rep.add("data-migration", "warn", f"{len(ids)} retired value(s) {PRE_PLAN_WARNING}", ids)
+
+
 def _check_runtime(rep: Report) -> None:
     rep.checks_run.append("runtime")
     try:
@@ -584,6 +618,7 @@ def diagnose(path: str, *, user: Optional[str] = None) -> Report:
             _check_journal(rep, conn, user, edges)
             _check_sources(rep, edges, episodes)
             _check_procedural(rep, edges)
+            _check_data_migration(rep, conn, user, edges)
             try:
                 _check_revocation(rep, store, rep.users)
             except Exception as ex:                           # noqa: BLE001

@@ -90,18 +90,19 @@ def test_reinforcement_matches_paraphrased_values():
 def test_paraphrase_match_stays_order_sensitive():
     with tempfile.TemporaryDirectory() as d:
         mem = _mem(d, [
-            {"triples": [{"subject": "user", "relation": "prefers", "object": "tea over coffee", "volatility": "durable"}],
-             "episode": "prefers tea"},
-            {"triples": [{"subject": "user", "relation": "prefers", "object": "coffee over tea", "volatility": "durable"}],
-             "episode": "prefers coffee now"},
+            # `located_at` stays `single` (specs/0044 moved `prefers` to `multi`): the same words, the other order
+            {"triples": [{"subject": "user", "relation": "located_at", "object": "Lisbon then Porto", "volatility": "durable"}],
+             "episode": "based in Lisbon then Porto"},
+            {"triples": [{"subject": "user", "relation": "located_at", "object": "Porto then Lisbon", "volatility": "durable"}],
+             "episode": "based in Porto then Lisbon now"},
         ])
-        mem.remember("u", "I prefer tea over coffee.", date="2026-01-01")
-        mem.remember("u", "Actually I prefer coffee over tea.", date="2026-01-05")
-        active = mem.store.edges("u", relation="prefers")
+        mem.remember("u", "I'm based in Lisbon then Porto.", date="2026-01-01")
+        mem.remember("u", "Actually it's Porto then Lisbon.", date="2026-01-05")
+        active = mem.store.edges("u", relation="located_at")
         assert len(active) == 1                              # functional → superseded
-        assert active[0].object == "coffee over tea"         # NOT merged with the old value
-        hist = mem.store.edges("u", relation="prefers", active_only=False)
-        assert any(not e.active and e.object == "tea over coffee" for e in hist)
+        assert active[0].object == "Porto then Lisbon"       # NOT merged with the old value
+        hist = mem.store.edges("u", relation="located_at", active_only=False)
+        assert any(not e.active and e.object == "Lisbon then Porto" for e in hist)
         mem.close()
 
 

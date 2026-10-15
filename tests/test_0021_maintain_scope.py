@@ -330,11 +330,12 @@ def test_supersession_is_scope_blind(tmp_path):
     differing value on a functional relation still retires the prior. Per-scope
     truths would diverge; visibility is 0020's job, not supersession's."""
     store = _store(tmp_path)
-    apply_supersession(store, _edge("s-a", "tea over coffee",
-                                    source_id="src-A", rel="prefers"),
+    # `located_at` stays `single` (specs/0044 moved `prefers` to `multi`, where nothing supersedes)
+    apply_supersession(store, _edge("s-a", "Lisbon then Porto",
+                                    source_id="src-A", rel="located_at"),
                        DEFAULT_RELATIONS)
-    apply_supersession(store, _edge("s-b", "coffee over tea",
-                                    source_id="src-B", rel="prefers"),
+    apply_supersession(store, _edge("s-b", "Porto then Lisbon",
+                                    source_id="src-B", rel="located_at"),
                        DEFAULT_RELATIONS)
     hist = {e.id: e for e in store.edges(U, active_only=False)}
     assert hist["s-a"].invalidation_reason == "superseded", (

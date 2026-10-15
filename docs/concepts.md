@@ -85,13 +85,15 @@ declaration, Veracium trusts your voice — quoted attacker text and all.
 
 ## Supersession — one current value, history retained
 
-For **functional** facts (preference, employer, location, deadline) a new value
+For **single-valued** (functional) facts (employer, location, deadline) a new value
 supersedes the old one: at most one is "current", but the prior value is retained
-(soft-invalidated), so both "what does the user prefer *now*?" and "what did they
-prefer *before*?" are answerable. Re-stating a fact **reinforces** it (refreshes
+(soft-invalidated), so both "where does the user live *now*?" and "where did they
+live *before*?" are answerable. Re-stating a fact **reinforces** it (refreshes
 its validity) instead of duplicating.
 
-Non-functional facts (pets, relatives, tools used) accumulate.
+Multi-valued facts (pets, relatives, tools used — and preferences, measurements and
+health states, which can hold several values at once) accumulate: a differing value
+never retires another.
 
 ## Volatility and lifecycle
 

@@ -159,7 +159,13 @@ def _steps():
                                           and "INSERT INTO request_registry" in w["sql"]),
             # 0041 §11.6.6 (v16; T4): every redaction row's notice state, derived by the pre-v16 rule
             mig.STEP_NOTICE_STATE: lambda w: (w["kind"] == "DML" and ":_apply_forward:" in w["by"]
-                                              and "UPDATE redactions SET state" in w["sql"])}
+                                              and "UPDATE redactions SET state" in w["sql"]),
+            # 0044 §4f / 0018 amendment §4a (v16; T5): the arity era's mint and the two inventories
+            mig.STEP_ARITY_ERA: lambda w: ":mint_arity_era:" in w["by"],
+            mig.STEP_ARITY_INVENTORY: lambda w: (w["kind"] == "DML" and ":_apply_forward:" in w["by"]
+                                                 and "INSERT INTO arity_inventory" in w["sql"]),
+            mig.STEP_REFUSAL_INVENTORY: lambda w: (w["kind"] == "DML" and ":_apply_forward:" in w["by"]
+                                                   and "INSERT INTO refusal_inventory" in w["sql"])}
 
 
 # A step with no DML of its own has no write for THIS campaign to perturb. Named here with its reason, never silently
@@ -171,7 +177,11 @@ def _steps():
 WRITELESS_STEPS = {"v16-act-columns": "its writes are the confirmations ALTERs (DDL, byte-matched, class (a)); its "
                                       "postcondition (B1) checks the legacy rows' v15 columns byte-equal and their act "
                                       "columns ('local', NULL x5) unsynthesized — tests/test_0008_request_registry.py "
-                                      "injects its mutants as TEMP triggers"}
+                                      "injects its mutants as TEMP triggers",
+                  "v16-arity-edges-unchanged": "a check, not a write: after each arity block it compares the edges table "
+                                               "and the edge journal with the step's own pin (INV-I24) — "
+                                               "tests/test_0044_t5_era.py injects its mutant (an edge rewritten by the "
+                                               "step) as a TEMP trigger"}
 
 
 def step_of(w):
@@ -222,6 +232,7 @@ def fresh_fixture(path: str, label: str) -> None:
         if lab == label:
             L["build_fixture"](path, b, a, stamped=stamped, label=lab)
             _add_a_standing_notice(path)
+            _add_arity_rows(path)
             return
     raise KeyError(label)
 
@@ -240,6 +251,29 @@ def _add_a_standing_notice(path: str) -> None:
                          "source_user, source_event_ref) VALUES('x-standing','x-user','edge','x-absent','[\"object\"]',1,"
                          "'imported_notice',1,1,NULL,'2026-10-14T00:00:00+00:00','{}','x-origin','x-user','x-user:1')")
             conn.commit()
+    finally:
+        conn.close()
+
+
+def _add_arity_rows(path: str) -> None:
+    """T5 (0044 §4f): the generic row's relation is no reclassified name and nothing is retired, so the arity
+    inventory would write 0 rows on every fixture (T4's lesson, above). One edge retired `superseded` under `measures`,
+    and one refusal, give both inventory blocks a row to write. A full `Edge` dump, so every earlier step reads it as
+    any legacy row; row data only, the manifest unchanged."""
+    from datetime import datetime as _dt, timezone as _tz
+    from veracium.schema import Edge, Provenance
+    conn = sqlite3.connect(path)
+    try:
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='edges'").fetchone():
+            e = Edge(id="x-arity", user_id="x-user", subject="user", relation="measures", object="weight 81",
+                     invalidated_at=_dt(2050, 1, 1, tzinfo=_tz.utc), invalidation_reason="superseded",
+                     provenance=Provenance(author_of_evidence="user", evidence_ref="x-arity"))
+            conn.execute("INSERT INTO edges(id,user_id,subject,relation,object,active,quarantined,json) "
+                         "VALUES('x-arity','x-user','user','measures','weight 81',0,0,?)", (e.model_dump_json(),))
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='supersession_refusals'").fetchone():
+            conn.execute("INSERT INTO supersession_refusals VALUES('x-refusal','x-user','x-arity','x-arity','measures',"
+                         "3,2,'0003-v1','2026-01-01T00:00:00+00:00')")
+        conn.commit()
     finally:
         conn.close()
 

@@ -122,19 +122,24 @@ def test_refusal_does_not_evict_the_prior_at_a_finite_budget(tmp_path):
     assert "unemployed" not in after.grounded                       # challenger stays out of grounded
 
 
+# five FUNCTIONAL (`single`) slots, one contention each. specs/0044 moved `prefers` and `health_state` to `multi`, where
+# no new contention forms, so the five slots are the four `single` defaults plus a second subject under one of them
+_FIVE_SLOTS = [("works_as", "user"), ("located_at", "user"), ("deadline", "user"), ("scope", "user"),
+               ("deadline", "project:apollo")]
+
+
 def test_contested_surface_is_budgeted_not_unbounded(tmp_path):
     """round-8 blocker 2: the contested surface participates in token_budget — it is not an
     unbounded prompt surface across accumulating contentions. Many contentions + a tiny
     budget → deterministic truncation, flagged in Recall.truncated, and a bounded context."""
     mem = _mem(tmp_path)
-    functional = ["works_as", "located_at", "prefers", "health_state", "deadline"]
-    for n, rel in enumerate(functional):
+    for n, (rel, subj) in enumerate(_FIVE_SLOTS):
         long_tail = " with an intentionally verbose qualifier occupying budget" * 3
         mem.store.add_edge(_edge(f"p{n}", EvidenceAuthor.USER,
                                  f"grounded value {n}{long_tail}").model_copy(
-            update={"relation": rel}))
+            update={"relation": rel, "subject": subj}))
         inc = _edge(f"i{n}", EvidenceAuthor.THIRD_PARTY, f"challenge {n}{long_tail}",
-                    disc=Disclosure.QUARANTINED).model_copy(update={"relation": rel})
+                    disc=Disclosure.QUARANTINED).model_copy(update={"relation": rel, "subject": subj})
         apply_supersession(mem.store, inc, mem.config.relations)
     full = mem.recall(U, "value")                                   # unbudgeted: all groups render
     assert full.context.count("CONTESTED") >= 1
@@ -168,13 +173,12 @@ def test_the_carrier_renders_every_distinct_grounded_value_not_a_pair(tmp_path):
 def _starving_store(mem, n_detail=6):
     """Five verbose contentions (as the unbounded test builds them) PLUS grounded detail lines
     under a non-functional relation, each carrying a distinctive answer token."""
-    functional = ["works_as", "located_at", "prefers", "health_state", "deadline"]
-    for n, rel in enumerate(functional):
+    for n, (rel, subj) in enumerate(_FIVE_SLOTS):
         long_tail = " with an intentionally verbose qualifier occupying budget" * 3
         mem.store.add_edge(_edge(f"p{n}", EvidenceAuthor.USER,
-                                 f"grounded value {n}{long_tail}").model_copy(update={"relation": rel}))
+                                 f"grounded value {n}{long_tail}").model_copy(update={"relation": rel, "subject": subj}))
         inc = _edge(f"i{n}", EvidenceAuthor.THIRD_PARTY, f"challenge {n}{long_tail}",
-                    disc=Disclosure.QUARANTINED).model_copy(update={"relation": rel})
+                    disc=Disclosure.QUARANTINED).model_copy(update={"relation": rel, "subject": subj})
         apply_supersession(mem.store, inc, mem.config.relations)
     for k in range(n_detail):
         mem.store.add_edge(_edge(f"d{k}", EvidenceAuthor.USER, f"answer-token-{k} value").model_copy(

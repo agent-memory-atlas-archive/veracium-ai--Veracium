@@ -5,7 +5,7 @@
 
 # specs/0021 §3 — combining-site manifest
 
-**30 record-mutating code paths**, enumerated by **parsing the store's SQL**
+**31 record-mutating code paths**, enumerated by **parsing the store's SQL**
 rather than by reading the spec's prose matrix. **11 of them COMBINE**:
 they write a record derived from, or mutate a record because of, MORE THAN
 ONE existing record — the definition §3 gives the registry.
@@ -41,6 +41,7 @@ outside the boundary by construction.
 |---|---|---|---|---|---|
 | `src/veracium/store/sqlite.py` | `_abandon` | `DELETE FROM episodes` · `UPDATE episodes` | no | — | 0010 rollback — releases claims and drops the provisional outputs of a combination that never committed. Removing a combination is not one |
 | `src/veracium/store/sqlite.py` | `_allocate_act_seq` | `UPDATE act_counter` | no | — | specs/0008 v7 §6f — advances the store's one act counter; a position, not content, and no record contributes to another |
+| `src/veracium/store/sqlite.py` | `_apply_lifetime_transition` | `DELETE FROM arity_inventory` · `UPDATE migration_outcome` | no | — | specs/0044 §4f-ii — ends ONE edge's arity-inventory membership or clears `applicable` on ITS outcome row, from that edge's own prior and new row; no second record contributes |
 | `src/veracium/store/sqlite.py` | `_bump` | `INSERT INTO write_counter` · `UPDATE SET` | no | — | the store_version counter — not a record at all |
 | `src/veracium/store/sqlite.py` | `_claim_inputs` | `UPDATE episodes` | **yes** | consolidation | claims ONE POOL's inputs. `lifecycle.partition_cold` selects the set, so a claim never spans two identities (§4b) and each pool holds its own claim, lease and crash-safety |
 | `src/veracium/store/sqlite.py` | `_drop_contributions_for_survivor` | `DELETE FROM contribution_ledger` | no | — | accepted 0014 A10 — a ledger row lives exactly as long as its survivor. Removes attribution, never derives it (and §4c flattening is what makes that harmless) |

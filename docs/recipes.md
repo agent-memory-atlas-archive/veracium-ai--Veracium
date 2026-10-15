@@ -10,11 +10,14 @@ mem = Memory(llm=your_complete_callable)   # see api.md → Providing an LLM
 ## Add your own relations (the registry is host-extensible)
 
 The extractor's vocabulary is `MemoryConfig.relations` — a dict of
-`Relation(name=..., functional=..., desc=...)`. `functional=True` means one
-current value per subject: a new value supersedes the old (history kept),
-which is what you want for changing quantities. The built-in `measures`
-relation covers weight/progress/balance-shaped facts; add domain relations
-the same way:
+`Relation(name=..., arity=..., desc=...)`. `arity="single"` (the older spelling,
+`functional=True`, still means the same) is one current value per subject: a new
+value supersedes the old (history kept). `arity="multi"` accumulates: a differing
+value never retires another. The built-in `measures` relation is `multi`, because
+it covers several quantities at once (weight, progress, balance) and one
+quantity's reading must not retire another's — so `weight 78 kg` and
+`savings 4200` both stay current. When one value must replace the last, declare
+a `single` relation for that one thing:
 
 ```python
 from veracium import Memory, MemoryConfig, Relation
@@ -22,7 +25,7 @@ from veracium.schema import DEFAULT_RELATIONS
 
 rels = dict(DEFAULT_RELATIONS)
 rels["assigned_ticket"] = Relation(
-    name="assigned_ticket", functional=True,
+    name="assigned_ticket", arity="single",
     desc="the ticket the user is currently working on — one at a time")
 mem = Memory(llm=your_complete_callable, config=MemoryConfig(relations=rels))
 ```

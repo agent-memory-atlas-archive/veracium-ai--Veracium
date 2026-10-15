@@ -50,6 +50,8 @@ def test_the_pa1_table_is_current_and_every_row_good():
     #  - v16-notice-state below base 15: `redactions` did not exist before the step, so its UPDATE changes 0 rows;
     #  - v16-notice-state's `alter` on base 15: the instrument alters only an UPDATE's string param[0], and this UPDATE
     #    has none — its alter class is carried by tests/test_0041_notice_state.py's TEMP-trigger cells.
+    #  - v16-refusal-inventory below base 4: `supersession_refusals` did not exist before the step (it entered at v4),
+    #    so the fixture holds no refusal and the inventory INSERT…SELECT copies 0 rows (T5, 0044 §4f).
     na = [r for r in t["perturbations"] if r.get("killed") is None]
     assert len(na) == s["perturbations_not_applicable"]
     base = lambda r: int(r["path"].split("#")[0][1:])                       # noqa: E731
@@ -57,7 +59,8 @@ def test_the_pa1_table_is_current_and_every_row_good():
         ok = ((r["step"] == "v16-registry-backfill" and base(r) == 1)
               or (r["step"] == "v16-notice-state" and base(r) < 15)
               or (r["step"] == "v16-notice-state" and base(r) == 15 and r["mode"] == "alter"
-                  and r["outcome"] == "N/A (n/a)"))
+                  and r["outcome"] == "N/A (n/a)")
+              or (r["step"] == "v16-refusal-inventory" and base(r) < 4))
         assert ok, r
     killed15 = {r["path"] for r in t["perturbations"]
                 if r["step"] == "v16-notice-state" and base(r) == 15 and r["mode"] == "skip" and r.get("killed")}
@@ -66,7 +69,8 @@ def test_the_pa1_table_is_current_and_every_row_good():
     writing = {v for k, v in vars(mig).items() if k.startswith("STEP_") and isinstance(v, str)} - set(camp.WRITELESS_STEPS)
     assert set(s["per_step"]) == writing == {"stamp", "store-identity", "store-epoch", "v13-baseline",
                                              "v2-v3-outcome-chains", "v3-v4-wiki-drop", "v16-act-counter",
-                                             "v16-registry-backfill", "v16-notice-state"}
+                                             "v16-registry-backfill", "v16-notice-state", "v16-arity-era",
+                                             "v16-arity-inventory", "v16-refusal-inventory"}
 
 
 def test_pa1_table_check_refuses_each_tampered_table(tmp_path):

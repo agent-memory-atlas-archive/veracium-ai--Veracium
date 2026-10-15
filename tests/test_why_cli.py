@@ -36,20 +36,21 @@ def _seed(db):
     """Two facts, one supersession, one third-party claim; then a confirmation,
     an outcome and a dispute on the survivors."""
     mem = Memory(llm=Fake([
+        # the supersession is under `works_as`, a `single` relation (specs/0044 moved `prefers` to `multi`)
         {"triples": [{"subject": "user", "relation": "has_pet", "object": "cat Miso"},
-                     {"subject": "user", "relation": "prefers", "object": "concise answers"}],
-         "episode": "User shared pet and preference."},
-        {"triples": [{"subject": "user", "relation": "prefers", "object": "detailed answers"}],
-         "episode": "User switched preference."},
+                     {"subject": "user", "relation": "works_as", "object": "engineer at Acme"}],
+         "episode": "User shared pet and role."},
+        {"triples": [{"subject": "user", "relation": "works_as", "object": "manager at Acme"}],
+         "episode": "User changed role."},
         {"triples": [{"subject": "org:quickclaim", "relation": "third_party_claim",
                       "object": "user owes $2,400"}],
          "episode": "Received a collection email."},
     ]), config=MemoryConfig(db_path=db, wiki_recompile_after_writes=0))
     # declared-direct (specs/0011 §4d): the user's own words, assertable — the
     # default context would file them use-only, and confirm() refuses use-only facts
-    mem.remember(U, "I have a cat named Miso and I like concise answers", date="2026-09-01",
+    mem.remember(U, "I have a cat named Miso and I'm an engineer at Acme", date="2026-09-01",
                  context=EvidenceContext.direct())
-    mem.remember(U, "Actually, give me detailed answers", date="2026-09-02",
+    mem.remember(U, "Actually, I'm a manager at Acme now", date="2026-09-02",
                  context=EvidenceContext.direct())
     mem.remember(U, "email from quickclaim: you owe $2,400", author=EvidenceAuthor.THIRD_PARTY,  # the text grounds the claim's figure: 0019 v7 §4c refuses a FLAGGED triple from a non-user event
                  event_type="email", source_id="quickclaim-inbox", date="2026-09-03")
@@ -86,8 +87,8 @@ def test_lineage_is_reported_from_both_ends_with_the_reason():
     with tempfile.TemporaryDirectory() as d:
         mem = _seed(f"{d}/t.db")
         try:
-            old = _by(mem.store, "prefers", "concise answers")[0]
-            new = _by(mem.store, "prefers", "detailed answers")[0]
+            old = _by(mem.store, "works_as", "engineer at Acme")[0]
+            new = _by(mem.store, "works_as", "manager at Acme")[0]
             assert old.invalidated_at is not None, "the fixture's supersession did not happen"
             b_old = why.gather(mem.store, U, old.id)
             b_new = why.gather(mem.store, U, new.id)
@@ -175,7 +176,7 @@ def test_find_lists_ids_with_state_and_the_cli_round_trips(capsys):
         db = f"{d}/t.db"
         mem = _seed(db); mem.close()
         # --find: ids for a terminal user, since no other verb prints them
-        assert cli_main(["why", "--user", U, "--find", "prefers", "--db", db]) == 0
+        assert cli_main(["why", "--user", U, "--find", "works_as", "--db", db]) == 0
         out = capsys.readouterr().out
         lines = [l for l in out.splitlines() if l.strip()]
         assert len(lines) == 2 and any("[active]" in l for l in lines) \
@@ -184,7 +185,7 @@ def test_find_lists_ids_with_state_and_the_cli_round_trips(capsys):
         # the id from --find is accepted by why
         assert cli_main(["why", "--user", U, edge_id, "--db", db]) == 0
         text = capsys.readouterr().out
-        assert text.startswith("user prefers detailed answers") and "timeline" in text
+        assert text.startswith("user works_as manager at Acme") and "timeline" in text
         # --json
         assert cli_main(["why", "--user", U, edge_id, "--json", "--db", db]) == 0
         doc = json.loads(capsys.readouterr().out)

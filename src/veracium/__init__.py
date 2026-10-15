@@ -46,6 +46,7 @@ from .ingest import _event_dt, ingest_event
 from .llm.base import Complete, Embed
 from .authority import edge_effective as _edge_effective
 from .graph import _value_key as _value_key
+from .contention import is_live_refusal, retained_refusal_ids
 from .schema import (CONFIRMATION_RULE_VERSION, ConfirmationActor, is_procedural,
                      ConfirmationCallPath, ContestedGroup, ContestedLinkage,
                      Disclosure, Edge,
@@ -1409,11 +1410,10 @@ class Memory:
         selected = {e.id for e in query_edges}
         groups: dict = {}
         group_priors: dict = {}
+        retained = retained_refusal_ids(self.store, user_id)          # specs/0044 §4d
         for r in refusals:
             prior, inc = active.get(r.prior_edge_id), active.get(r.incoming_edge_id)
-            rel = relations.get(r.relation)
-            if (prior is not None and inc is not None and rel and rel.functional
-                    and _value_key(prior.object) != _value_key(inc.object)):
+            if is_live_refusal(r, prior, inc, relations, retained):   # the ONE predicate (veracium.contention)
                 groups.setdefault((prior.subject, r.relation), set()).update(
                     [prior.id, inc.id])
                 group_priors.setdefault((prior.subject, r.relation), set()).add(prior.id)

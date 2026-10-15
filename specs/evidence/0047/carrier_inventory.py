@@ -53,7 +53,9 @@ CLASSIFIED = {
     ("proactive.py", "assemble._obj_counted"): ("PROACTIVE", "the counted proactive object"),
     ("proactive.py", "assemble._class_rank"): ("INTERNAL", "proactive ordering only — what it ranks still renders through assemble"),
     ("proactive.py", "assemble._due_key"): ("INTERNAL", "proactive due-date ordering only"),
-    ("compile.py", "_live_refusal_contention_edge_ids"): ("WIKI", "the compiler's input exclusion set — challenged facts join it"),
+    # 0044 T5-2 (research's F3): the content read moved from compile._live_refusal_contention_edge_ids into the ONE
+    # live-contention predicate, which the compiler's exclusion set and recall's contested groups both call
+    ("contention.py", "is_live_refusal"): ("WIKI", "the compiler's input exclusion set (and recall's contested groups) — challenged facts join it"),
     ("asof/resolve.py", "render_line"): ("ASOF", "the historical renderer (0019 U5's marker landed here 84b50c2)"),
     ("graph.py", "value_groups"): ("COLLAPSE", "groups values for render-time collapse"),
     ("graph.py", "_collapse_survivor_order"): ("COLLAPSE", "orders a collapse group's survivor"),

@@ -2,6 +2,61 @@
 
 ## Unreleased
 
+- **Changed (trust surface): `measures`, `prefers` and `health_state` accumulate instead of superseding (specs/0044
+  v1.6, §4b; INV-A1–A4, A6, A10, A14, A19, A22, I24).** A relation now declares an ARITY. Under `single` (the
+  meaning `functional=True` always had) a differing value retires the prior one; under `multi` it never does. The
+  three relations are reclassified `single` → `multi`, because one slot per SUBJECT retired unrelated facts: "savings
+  4200" retired "weight 78 kg", "window seats" retired "oat milk", "iron deficiency" retired "asthma". Both values
+  now stay current.
+  Every other default keeps its meaning (`works_as`, `located_at`, `deadline`, `scope` stay `single`).
+  Reinforcement and absorption are unchanged (`80` then `weight 80` still absorbs).
+  - **The cost, stated:** there is no "latest value" for `measures` until a later round defines keyed slots. "I weigh
+    78 kg" and "I weigh 80 kg" are both current, and a generative wiki may not print every survivor (§4c).
+  - **`Relation.arity`** (`"single"`, `"multi"`; `"keyed"` is a reserved word, refused at the registry boundary).
+    `functional` is its compatibility projection: an undeclared arity is derived from `functional` when read, so
+    every host registry valid before keeps its meaning, a mutated or copied `Relation` included. A declaration giving
+    both and disagreeing is refused.
+  - **Prompt bytes changed.** Two glosses lose the clauses that stated one current value (`measures` loses "with one
+    current value" and "the number updates"; `prefers` loses "one current value"). The extractor sees these bytes.
+    The LongMemEval runner's extraction identity, which is also its cache key, now hashes the rendered relation lines
+    (`extract_relations_sha`), so the first run after this change re-extracts instead of replaying old-gloss
+    extractions under an unchanged identity (the owner's ruling).
+  - **Refusals recorded while a relation was `single` keep their protection** (§4d): the contested rendering in
+    recall and the exclusion from the compiled wiki, decided by the v16 step's refusal inventory, never by a
+    timestamp, and with no expiry. In the ranked edge list a retained pair is ordered by relevance; its authority
+    order is on the contested surface.
+  - **Values already retired under the old rule stay retired.** Restoring them is an optional host operation (the
+    0018 amendment, a later tranche of this programme). Until it runs, `doctor` warns, judged by relation name:
+    `may have values to restore (judged by relation name): run run_data_migration(…) — see 0044. …`
+  - **Schema v16 (unreleased, the programme's one bump) gains eight tables:** the era, the two inventories and the
+    five tables of the restoration operation. The v15 → v16 step writes the era (its one clock read) and the two
+    inventories in its own transaction, each checked at the step, and changes no edge and no journal event.
+  - **Lifetime transitions are derived at the journal's one choke point** from the persisted prior and new row
+    (§4f-ii), so a same-id `add_edge` that reinstates or re-retires a row is bound exactly like the invalidate and
+    reinstate methods.
+  - **Who must act:**
+    - Hosts that rely on these three relations superseding: declare your own `single` relation for the quantity
+      that must replace its last value (a host registry's own declaration is kept).
+    - Hosts implementing `veracium.store.base.Store`: `refusal_inventory_ids` is new (default: none), and `add_edge`'s
+      contract gains the lifetime obligation.
+    - Anyone comparing benchmark runs across this change: the extraction cache re-keys.
+  - **Evidence.** tests/test_0044_t5_era.py holds 47 cells (the step, the transition table row by row, round 3's
+    upsert sequence, retention through both readers, doctor, erasure, and a census refusing any other `DELETE FROM
+    edges`). 32 code mutants of T5-2's own rules each fail their named cell as an assertion or a missing refusal, run
+    as a scratch campaign (not committed evidence). The 0013 step campaign perturbs the three new step writes on every
+    shape: 1,480 perturbations, 1,371 killed, 109 not applicable (the empty-table bases, measured). The tests that
+    used one of the three relations as THE example of a functional relation now use one that stays `single`, with
+    every assertion kept; an instrument run at the previous commit also found tests that still passed after the flip
+    but no longer reached the supersession path they name, and those moved too.
+- **Fixed (unreleased `main`), the R-A round-2 findings in T3–T4's own machinery (specs/0041 §11.6.6, 0010 X21;
+  0008 §2a/§6c):**
+  - `confirm_notice` and the import's notice treatments now refuse to treat an episode a running consolidation has
+    claimed, exactly as `redact` did: the check moved into the one treatment body every caller passes.
+  - Every notice decision in an import is taken over one snapshot made before any treatment, so the order of the
+    notices in a file no longer changes which of them apply.
+  - `Memory.confirm` consults the request registry before it looks the edge up, so a retried request whose edge is
+    gone replays, is a conflict, or is `RequestRedacted`, as the store already decided; a new request for an absent
+    edge keeps its ValueError.
 - **Changed (trust surface): imported redaction notices follow a state machine, and a default import never changes a
   record you hold (specs/0041 v16 §11.6.6; INV-RR10–RR12, RR14).** It replaces the 2026-10-13 notice-binding hotfix
   above, on unreleased `main`. Store schema v16 (unreleased, the same bump as the request registry) gives every
