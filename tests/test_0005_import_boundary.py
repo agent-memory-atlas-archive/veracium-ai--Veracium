@@ -635,6 +635,12 @@ def test_cli_import_line_carries_capped_only_on_the_default_path(tmp_path, capsy
 #              re-import, byte-level chain preservation).
 #   both     — exercises the two paths deliberately (this file's own tests).
 _CALLSITE_DISPOSITIONS = {
+    # R-A round 2 (RA-01, RA-02): the notice boundaries the external reviewer found, both modes where parametrised
+    ("test_0041_ra2_notice_boundaries.py", "test_a_restore_that_would_treat_a_claimed_episode_refuses_the_whole_unit"): "restore",
+    ("test_0041_ra2_notice_boundaries.py", "test_a_prior_standing_notice_is_judged_on_the_arriving_copy"): "both",
+    ("test_0041_ra2_notice_boundaries.py", "test_the_standing_arrival_refusal_does_not_depend_on_the_order_of_the_units_notices"): "both",
+    ("test_0041_ra2_notice_boundaries.py", "test_a_store_caller_without_the_staged_answer_is_judged_on_the_arriving_copy_too"): "both",
+    ("test_0041_ra2_notice_boundaries.py", "test_an_arrival_under_a_completed_attestation_is_judged_on_the_copy_that_arrived"): "both",
     # the 2026-10-13 notice-binding hotfix: the untrusted path is its subject; one restore control
     ("test_0041_notice_binding_hotfix.py", "test_an_untrusted_notice_never_redacts_the_users_own_held_fact"): "default",
     ("test_0041_notice_binding_hotfix.py", "test_an_untrusted_notice_never_redacts_a_held_episode"): "default",
