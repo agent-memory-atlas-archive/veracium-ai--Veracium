@@ -410,7 +410,7 @@ def test_confirm_notice_is_this_stores_total_treatment_and_keeps_the_foreign_bod
     (a held act keeps its verifier)."""
     v, nid = _pending(tmp_path)
     body = v.store._conn.execute("SELECT source_body FROM redactions WHERE id=?", (nid,)).fetchone()
-    r = v.confirm_notice(U, nid)
+    r = _permitted_call("confirm_notice of a pending notice", v.confirm_notice, U, nid)
     assert r.repeated is False
     assert json.loads(_json(v, "e-x"))["object"] == R.MARKER
     assert v.store._conn.execute("SELECT request_digest FROM confirmations").fetchone()[0] == R.MARKER
@@ -418,7 +418,7 @@ def test_confirm_notice_is_this_stores_total_treatment_and_keeps_the_foreign_bod
     assert v.store._conn.execute("SELECT state, pending_reason, source_body FROM redactions WHERE id=?",
                                  (nid,)).fetchone() == ("applied", None, body[0])
     assert v.pending_notices(U) == [] and "e-x" in v.store.redacted_targets(U, "edge")
-    again = v.confirm_notice(U, nid)
+    again = _permitted_call("a repeated confirm_notice", v.confirm_notice, U, nid)
     assert again.repeated is True
 
 
@@ -469,7 +469,7 @@ def test_an_episode_notice_pending_deleted_inert_recreated_then_confirmed(tmp_pa
     with _permitted("an import re-creating a pending notice's target"):
         v.import_memory(plain)
     assert [p["notice_id"] for p in v.pending_notices(U)] == [nid]
-    v.confirm_notice(U, nid)
+    _permitted_call("confirm_notice once its target is re-created", v.confirm_notice, U, nid)
     ep = json.loads(v.store._conn.execute("SELECT json FROM episodes WHERE id='ep-x'").fetchone()[0])
     assert ep["summary"] == R.MARKER
 
@@ -745,3 +745,79 @@ def test_every_src_call_of_the_attested_fields_reader_names_it():
     assert sum(1 for p in root.rglob("*.py") for n in _ast.walk(_ast.parse(p.read_text()))
                if isinstance(n, _ast.Call) and isinstance(n.func, _ast.Attribute) and n.func.attr == "_attested_fields") >= 7
     assert unnamed("store._attested_fields(u, 'edge', e)\n") == [1]
+
+
+# ---- IO-II-3: competing import, confirmation and redaction across connections (round 4's list, product half) ------
+
+def test_io_ii_3_a_redaction_on_one_connection_then_confirm_notice_on_another(tmp_path):
+    """IO-II-3: the user redacts the target on connection B while the notice is pending on A; A's confirm_notice then
+    adds its attestation and treats nothing new (§11.6.6: "Confirming one whose target this store has since redacted").
+    Mutants: confirm refuses a target already redacted; confirm re-treats it into a second, different state."""
+    from veracium.store.sqlite import SqliteStore
+    v, nid = _pending(tmp_path)
+    b = SqliteStore(str(tmp_path / "v.db"))
+    try:
+        rb = _permitted_call("the user's own redaction on a second connection", b.redact, U, edge_id="e-x",
+                             reason="subject_request")
+        after_b = _json(v, "e-x")
+        assert rb.repeated is False and json.loads(after_b)["object"] == R.MARKER
+        r = _permitted_call("confirm_notice after another connection redacted the target", v.confirm_notice, U, nid)
+        assert r.repeated is False and _json(v, "e-x") == after_b, "the confirmation re-treated a redacted record"
+        assert v.store._conn.execute("SELECT COUNT(*) FROM redactions WHERE state='applied'").fetchone()[0] == 2
+        assert v.pending_notices(U) == []
+    finally:
+        b.close()
+
+
+def test_io_ii_3_a_held_write_lock_refuses_confirm_notice_cleanly_then_it_proceeds(tmp_path):
+    """IO-II-3: a confirmation competing with another connection's open write transaction refuses in the store's
+    lock-refusal form (0029 §4a) and writes NOTHING — the notice still pending, the record untouched; once the holder
+    releases, the same confirmation applies. Mutant: a confirmation that writes outside its BEGIN IMMEDIATE."""
+    import contextlib as _cl
+    from veracium.store.sqlite import SqliteStore
+    v, nid = _pending(tmp_path)
+    path = str(tmp_path / "v.db")
+    before = _json(v, "e-x")
+    holder, writer = SqliteStore(path), SqliteStore(path, busy_timeout_ms=200)
+    try:
+        holder._conn.execute("BEGIN IMMEDIATE")
+        with pytest.raises(sqlite3.OperationalError, match="could not take the write lock"):
+            writer.confirm_notice(U, nid)
+        holder._conn.execute("ROLLBACK")
+        assert _json(v, "e-x") == before and [p["notice_id"] for p in v.pending_notices(U)] == [nid]
+        _permitted_call("confirm_notice once the lock is released", writer.confirm_notice, U, nid)
+        assert json.loads(_json(v, "e-x"))["object"] == R.MARKER and v.pending_notices(U) == []
+    finally:
+        with _cl.suppress(sqlite3.OperationalError):
+            holder._conn.execute("ROLLBACK")
+        holder.close()
+        writer.close()
+
+
+def test_io_ii_3_a_confirmation_on_one_connection_then_an_import_on_another(tmp_path):
+    """IO-II-3: confirm_notice on A; a default re-import of the same file on connection B finds the notice APPLIED —
+    `existing`, nothing re-treated, nothing pending again. Mutant: an import re-weighs an applied notice."""
+    from veracium.store.sqlite import SqliteStore
+    full, _n, _p = _source(tmp_path, "src2")
+    v = _holder(tmp_path, "v.db")
+    v.import_memory(full)
+    (nid,) = [p["notice_id"] for p in v.pending_notices(U)]
+    _permitted_call("confirm_notice", v.confirm_notice, U, nid)
+    settled = v.store._conn.execute("SELECT * FROM redactions").fetchall(), _json(v, "e-x")
+    b = Memory(llm=_quiet, config=MemoryConfig(db_path=str(tmp_path / "v.db"), wiki_recompile_after_writes=0,
+                                               scope_groups={}, require_source_id=False))
+    try:
+        with _permitted("a re-import on a second connection"):
+            r = b.import_memory(full)
+        assert r["notices_existing"] == 1 and r["notices_not_applied"] == []
+        assert (v.store._conn.execute("SELECT * FROM redactions").fetchall(), _json(v, "e-x")) == settled
+    finally:
+        b.close()
+
+
+def _permitted_call(what, fn, *a, **k):
+    """IO-II-7's form for a call a cell expects to succeed: a store refusal fails as an assertion naming it."""
+    try:
+        return fn(*a, **k)
+    except (ValueError, KeyError, RuntimeError) as x:
+        raise AssertionError(f"{what} was refused: {type(x).__name__}: {x}") from x

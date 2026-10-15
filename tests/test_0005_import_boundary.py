@@ -684,6 +684,7 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0041_notice_state.py", "test_io_ii_1_a_record_not_in_file_pending_notice_keeps_its_reason_on_a_default_replay"): "both",
     ("test_0041_notice_state.py", "test_io_ii_1_a_standing_arrival_pending_notice_keeps_its_reason_on_a_repeat_of_the_notice"): "default",
     ("test_0041_notice_state.py", "test_r11_a_pending_notice_keeps_its_reason_through_a_restore_that_leaves_it_pending"): "both",
+    ("test_0041_notice_state.py", "test_io_ii_3_a_confirmation_on_one_connection_then_an_import_on_another"): "default",
     ("test_0041_notice_state.py", "test_t4_1_a_pending_notice_beside_its_unredacted_re_created_record_refuses_the_unit"): "default",
     ("test_0041_notice_state.py", "test_r18_confirm_notice_never_treats_another_users_record_under_the_same_id"): "default",
     ("test_0041_notice_state.py", "test_r9_a_standing_episode_notice_over_a_local_episode_write_round_trips_the_own_export"): "restore",
