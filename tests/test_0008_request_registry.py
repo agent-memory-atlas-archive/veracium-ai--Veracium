@@ -59,6 +59,31 @@ def _confirm(store, eid="e1", **over):
     return store.confirm_edge(U, eid, **kw)
 
 
+# IO-II-7's form, applied to this file's own cells: an operation a cell EXPECTS TO SUCCEED is asserted as a
+# permission (a store refusal — ValueError, KeyError, RuntimeError, MigrationPostconditionError among them — fails as an
+# ASSERTION naming it), and an expected refusal is asserted by its class (another refusal, or none, is an assertion).
+# Anything else (a TypeError, an unrelated failure) propagates as itself, so a mutation campaign never reads it as a kill.
+_REFUSALS = (ValueError, KeyError, RuntimeError)
+
+
+def _permitted(what, fn, *a, **k):
+    try:
+        return fn(*a, **k)
+    except _REFUSALS as x:
+        raise AssertionError(f"{what} was refused: {type(x).__name__}: {x}") from x
+
+
+def _refuses(cls, fn, *a, match=None, **k):
+    try:
+        fn(*a, **k)
+    except cls as x:
+        assert match is None or match in str(x), f"refused, but not as {match!r}: {x}"
+        return
+    except _REFUSALS as x:
+        raise AssertionError(f"expected {cls.__name__}, refused instead with {type(x).__name__}: {x}") from x
+    raise AssertionError(f"DID NOT RAISE {cls.__name__}")
+
+
 def _rows(path, sql):
     c = sqlite3.connect(path)
     try:
@@ -93,7 +118,7 @@ def test_every_base_migrates_and_the_step_writes_exactly_its_inventory(tmp_path,
     monkeypatch.setattr(M, "_clock", lambda: CLOCK)
     p = str(tmp_path / f"b{base}.db")
     _legacy_store(p, base)
-    migrate_store(p)
+    _permitted("the migration", migrate_store, p)
     assert _rows(p, "PRAGMA user_version") == [(16,)]
     ddl = _rows(p, "SELECT sql FROM sqlite_master WHERE name='confirmations'")[0][0]
     ctor = next(o.ddl for o in sv.SCHEMA_V16 if o.name == "confirmations")
@@ -113,7 +138,7 @@ def test_the_two_confirmations_variants_mean_the_same_columns(tmp_path):
     for base in (1, 2):
         p = str(tmp_path / f"v{base}.db")
         _legacy_store(p, base)
-        migrate_store(p)
+        _permitted("the migration", migrate_store, p)
         info[base] = _rows(p, "PRAGMA table_info(confirmations)")
     assert info[1] == info[2]
     assert [r[1:5] for r in info[1] if r[1] == "origin"] == [("origin", "TEXT", 1, "'local'")]
@@ -167,11 +192,10 @@ def test_a_backfilled_redacted_confirmation_is_terminal_not_a_replay(tmp_path, m
     under its id is `request_redacted` — never the original. Mutant: backfill a fresh digest."""
     p = str(tmp_path / "r.db")
     _legacy_store(p, 15, confirmations=(("c-1", "e1", "k1", _redaction.MARKER),))
-    migrate_store(p)
+    _permitted("the migration", migrate_store, p)
     assert _rows(p, "SELECT request_digest FROM request_registry") == [(_redaction.MARKER,)]
     s = SqliteStore(p)
-    with pytest.raises(RequestRedacted):
-        _confirm(s, correlation_id="k1", request_digest="d1")
+    _refuses(RequestRedacted, _confirm, s, correlation_id="k1", request_digest="d1")
 
 
 def _v15_store_with_a_confirmation(path, corr="k-pre"):
@@ -196,9 +220,9 @@ def test_a_pre_upgrade_confirmation_replays_after_the_migration(tmp_path):
     row. Mutant: no backfill (the retry would be a second confirmation)."""
     p = str(tmp_path / "pre.db")
     _v15_store_with_a_confirmation(p)
-    migrate_store(p)
+    _permitted("the migration", migrate_store, p)
     mem = Memory(llm=None, config=MemoryConfig(db_path=p, wiki_recompile_after_writes=0))
-    out = mem.confirm(U, "e1", correlation_id="k-pre")
+    out = _permitted("a retry of a pre-upgrade confirmation", mem.confirm, U, "e1", correlation_id="k-pre")
     assert out["replayed"] is True and out["confirmed_at"] == "2026-01-02"
     assert len(mem.store.confirmations_for(U, "e1")) == 1
 
@@ -213,8 +237,8 @@ def test_a_fresh_store_mints_the_counter_and_acts_take_successive_positions(tmp_
     assert _rows(p, "SELECT id, next_seq FROM act_counter") == [(1, 1)]
     s.add_edge(_edge("e1"))
     s.add_edge(_edge("e2", obj="tea"))
-    _confirm(s, "e1", correlation_id="k1")
-    _confirm(s, "e2", correlation_id="k2", request_digest="d2")
+    _permitted("a confirm", _confirm, s, "e1", correlation_id="k1")
+    _permitted("a confirm", _confirm, s, "e2", correlation_id="k2", request_digest="d2")
     assert _rows(p, "SELECT correlation_id, origin, act_seq FROM confirmations ORDER BY act_seq") == [
         ("k1", "local", 1), ("k2", "local", 2)]
     assert _rows(p, "SELECT next_seq FROM act_counter") == [(3,)]
@@ -229,16 +253,16 @@ def test_a_retry_after_invalidation_replays_at_the_store_and_through_the_public_
     `Store.confirm_edge` and `Memory.confirm` both (research's N1). Mutant: read the edge first."""
     s = _store(tmp_path)
     s.add_edge(_edge())
-    first = _confirm(s)
+    first = _permitted("a confirm", _confirm, s)
     s.invalidate_edge("e1", NOW, "superseded")
-    again = _confirm(s)
+    again = _permitted("a retry after invalidation", _confirm, s)
     assert again.replayed is True and again.id == first.id
 
     mem = _mem(tmp_path)
     mem.store.add_edge(_edge())
-    out = mem.confirm(U, "e1", correlation_id="kq")
+    out = _permitted("a confirm", mem.confirm, U, "e1", correlation_id="kq")
     mem.store.invalidate_edge("e1", NOW, "superseded")
-    replay = mem.confirm(U, "e1", correlation_id="kq")
+    replay = _permitted("a retry after invalidation", mem.confirm, U, "e1", correlation_id="kq")
     assert replay["replayed"] is True and replay["confirmed_at"] == out["confirmed_at"]
 
 
@@ -248,15 +272,13 @@ def test_an_id_held_by_another_verb_or_request_is_a_conflict_naming_it(tmp_path)
     p = str(tmp_path / "v.db")
     s = SqliteStore(p)
     s.add_edge(_edge())
-    _confirm(s, correlation_id="k1", request_digest="d1")
-    with pytest.raises(ValueError, match="DIFFERENT request"):
-        _confirm(s, correlation_id="k1", request_digest="d2")
+    _permitted("a confirm", _confirm, s, correlation_id="k1", request_digest="d1")
+    _refuses(ValueError, _confirm, s, correlation_id="k1", request_digest="d2", match="DIFFERENT request")
     c = sqlite3.connect(p)
     c.execute("INSERT INTO request_registry VALUES (?,?,?,?,?,?,?)", (U, "kr", "reply", "e1", "dr", "r-1", "x"))
     c.commit()
     c.close()
-    with pytest.raises(ValueError, match="held by a 'reply' request"):
-        _confirm(s, correlation_id="kr", request_digest="dr")
+    _refuses(ValueError, _confirm, s, correlation_id="kr", request_digest="dr", match="held by a 'reply' request")
     assert len(s.confirmations_for(U, "e1")) == 1
 
 
@@ -269,17 +291,16 @@ def test_a_retry_after_redaction_is_terminal_whatever_its_payload(tmp_path, inde
     p = str(tmp_path / "x.db")
     mem = Memory(llm=None, config=MemoryConfig(db_path=p, wiki_recompile_after_writes=0))
     mem.store.add_edge(_edge())
-    mem.confirm(U, "e1", correlation_id="kx")
+    _permitted("a confirm", mem.confirm, U, "e1", correlation_id="kx")
     if index == "dropped":
         mem.store._conn.execute("DROP INDEX ix_request_registry_target")
         mem.store._conn.commit()
     mem.redact(U, edge_id="e1", reason="subject_request")
     assert _rows(p, "SELECT request_digest FROM request_registry") == [(_redaction.MARKER,)]
-    with pytest.raises(RequestRedacted):
-        if payload == "the same":
-            mem.confirm(U, "e1", correlation_id="kx")
-        else:
-            mem.confirm(U, "e1", correlation_id="kx", date="2026-05-05")
+    if payload == "the same":
+        _refuses(RequestRedacted, mem.confirm, U, "e1", correlation_id="kx")
+    else:
+        _refuses(RequestRedacted, mem.confirm, U, "e1", correlation_id="kx", date="2026-05-05")
     assert len(mem.store.confirmations_for(U, "e1")) == 1
 
 
@@ -290,11 +311,11 @@ def test_erasure_frees_the_ids_but_never_resets_the_counter(tmp_path):
     p = str(tmp_path / "e.db")
     s = SqliteStore(p)
     s.add_edge(_edge())
-    _confirm(s, correlation_id="k1")
+    _permitted("a confirm", _confirm, s, correlation_id="k1")
     s.forget_user(U)
     assert _rows(p, "SELECT COUNT(*) FROM request_registry") == [(0,)]
     s.add_edge(_edge())
-    again = _confirm(s, correlation_id="k1")
+    again = _permitted("a confirm after erasure", _confirm, s, correlation_id="k1")
     assert again.replayed is False
     assert _rows(p, "SELECT act_seq FROM confirmations") == [(2,)]
 
@@ -307,8 +328,7 @@ def test_an_absent_counter_row_refuses_and_writes_nothing(tmp_path):
     s.add_edge(_edge())
     s._conn.execute("DELETE FROM act_counter")
     s._conn.commit()
-    with pytest.raises(RuntimeError, match="act_counter"):
-        _confirm(s)
+    _refuses(RuntimeError, _confirm, s, match="act_counter")
     assert s.edges(U, active_only=False)[0].needs_confirmation is True
     assert _rows(p, "SELECT COUNT(*) FROM confirmations") == [(0,)]
     assert _rows(p, "SELECT COUNT(*) FROM request_registry") == [(0,)]
@@ -319,7 +339,7 @@ def test_a_generated_id_takes_a_registry_row(tmp_path):
     """§6c: "a generated id takes a registry row like a supplied one". Mutant: register supplied ids only."""
     mem = _mem(tmp_path)
     mem.store.add_edge(_edge())
-    out = mem.confirm(U, "e1")
+    out = _permitted("a confirm with a generated id", mem.confirm, U, "e1")
     assert out["correlation_id"].startswith("auto-")
     assert _rows(str(tmp_path / "m.db"), "SELECT correlation_id, verb FROM request_registry") == [
         (out["correlation_id"], "confirm")]

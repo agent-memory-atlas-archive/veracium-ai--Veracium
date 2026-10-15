@@ -154,6 +154,21 @@ def test_io_ii_1_a_record_not_in_file_pending_notice_keeps_its_reason_on_a_defau
     assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
 
 
+def test_r11_a_pending_notice_keeps_its_reason_through_a_restore_that_leaves_it_pending(tmp_path):
+    """Research's R11 (0041 v16.1): a pending notice keeps its STORED reason through every import that leaves it
+    pending — the RESTORE leg: pending `held-target` from a default import, then a restore of the notice with no copy
+    over a held record that does not show it (the table leaves it pending), and the reason stays `held-target`, never
+    rewritten to `record-not-in-file`. Mutant: rewrite a pending row's reason on a restore."""
+    _f, notices, _p = _source(tmp_path, "src")
+    v = _holder(tmp_path, "v.db")
+    v.import_memory(notices)
+    assert _rows(v) == [("e-x", "pending", "held-target")]
+    before = v.store._conn.execute("SELECT * FROM redactions").fetchall()
+    r = v.import_memory(notices, restore=True)
+    assert ["edge", "e-x", "held-target"] in r["notices_not_applied"]
+    assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
+
+
 def test_io_ii_1_a_standing_arrival_pending_notice_keeps_its_reason_on_a_repeat_of_the_notice(tmp_path):
     """IO-II-1, the verdict's second sequence, as stated, default-only: the notice first (standing), a treated arrival
     of its target (pending `standing-arrival`), then the original notice-only file again — `existing`, the reason
@@ -310,7 +325,9 @@ def test_a_standing_notice_over_a_local_write_is_weighed_as_a_held_target(tmp_pa
     full, notices, _p = _source(tmp_path, "src")
     v = _mem(tmp_path, "v.db")
     v.import_memory(notices, restore=True)
-    rid = v.store._conn.execute("SELECT id FROM redactions").fetchone()[0]
+    row = v.store._conn.execute("SELECT id FROM redactions").fetchone()
+    assert row is not None, "the notice-only restore left no standing row"
+    rid = row[0]
     with _permitted("the user's own write of a standing notice's id"):
         v.store.add_edge(_edge("e-x", "Paris (local)"))
     before = _json(v, "e-x")
@@ -423,7 +440,9 @@ def test_confirm_notice_refuses_a_standing_row_as_standing(tmp_path):
     v.import_memory(notices, restore=True)
     with _permitted("the user's own write of a standing notice's id"):
         v.store.add_edge(_edge("e-x", "Paris (local)"))
-    rid = v.store._conn.execute("SELECT id FROM redactions").fetchone()[0]
+    row = v.store._conn.execute("SELECT id FROM redactions").fetchone()
+    assert row is not None, "the notice-only restore left no standing row"
+    rid = row[0]
     with pytest.raises(ValueError, match="STANDING"):
         v.confirm_notice(U, rid)
     assert json.loads(_json(v, "e-x"))["object"] == "Paris (local)"
@@ -447,7 +466,8 @@ def test_an_episode_notice_pending_deleted_inert_recreated_then_confirmed(tmp_pa
     v.store.delete_episode("ep-x")
     with pytest.raises(ValueError, match="inert"):
         v.confirm_notice(U, nid)
-    v.import_memory(plain)
+    with _permitted("an import re-creating a pending notice's target"):
+        v.import_memory(plain)
     assert [p["notice_id"] for p in v.pending_notices(U)] == [nid]
     v.confirm_notice(U, nid)
     ep = json.loads(v.store._conn.execute("SELECT json FROM episodes WHERE id='ep-x'").fetchone()[0])

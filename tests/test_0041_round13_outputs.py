@@ -225,3 +225,21 @@ def test_control_the_redacted_export_without_its_notice_still_refuses(tmp_path):
     with pytest.raises(ValueError, match="DIFFERENT source-identity projection"):
         import_memory(dst.store, _write(tmp_path / "n.jsonl", recs))
     assert _snapshot(dst.store) == before
+
+
+def test_r29_a_pending_notice_over_a_held_output_does_not_explain_a_differing_arrival(tmp_path):
+    """Research's R29 (T4 re-check): the 0014 rider skips an arriving output that claims a HELD output's identity with a
+    differing projection only when the difference is a redaction this store has APPLIED (R10-02's effect, the
+    attestation reader). A PENDING notice over the held output (a default import of the redacted export) holds its
+    content untreated, so the same export with its notice stripped is still refused as a foreign claim. Mutant: the
+    rider reads coverage (every state) — the arrival is skipped."""
+    _source(tmp_path)
+    dst = tt._mem(tmp_path, "dst.db")
+    import_memory(dst.store, tmp_path / "before.jsonl")
+    import_memory(dst.store, tmp_path / "after.jsonl")
+    assert dst.store._conn.execute("SELECT state FROM redactions").fetchall() == [("pending",)]
+    recs = [r for r in _lines(tmp_path / "after.jsonl") if r.get("record") != "redaction"]
+    before = _snapshot(dst.store)
+    with pytest.raises(ValueError, match="DIFFERENT source-identity projection"):
+        import_memory(dst.store, _write(tmp_path / "n29.jsonl", recs))
+    assert _snapshot(dst.store) == before

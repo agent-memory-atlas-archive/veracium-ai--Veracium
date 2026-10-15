@@ -148,7 +148,10 @@ def test_concurrent_duplicates_commit_once():
     winner = _confirm(s)
     events, episodes = len(s.edge_events("u", edge_id="e1")), len(s.episodes("u"))
     calls = _forge_the_precheck_miss(s)
-    out = _confirm(s)                                      # the loser, past a missed pre-check
+    try:                                                   # the loser, past a missed pre-check: a PERMITTED replay
+        out = _confirm(s)                                  # (IO-II-7's form: a refusal here fails as an assertion)
+    except (ValueError, KeyError, RuntimeError) as x:
+        raise AssertionError(f"the race's loser was refused instead of replayed: {x}") from x
     assert len(calls) == 2, "the fallback did not run: the race branch was never reached"
     assert out.replayed is True and out.id == winner.id
     assert len(s.confirmations_for("u", "e1")) == 1
