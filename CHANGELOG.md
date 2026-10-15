@@ -29,13 +29,17 @@
 
     `doctor` lists pending notices and flags a state outside its domain. The CLI import line prints pending notices.
   - **Export.** An export carries applied notices, and standing notices only when it does not carry their record. A
-    pending notice never travels. The cost: a restore does not reproduce pending state; re-importing the source file
-    re-pends it.
+    pending notice never travels, and neither does a standing notice whose id you have since written locally. The cost:
+    a restore reproduces neither state; re-importing the source file re-pends or re-stands the notice.
   - **Fixed, two defects on unreleased `main`** (neither the notice import `8ea59e7` nor the hotfix `98327c2` is in
     any release):
     - A store holding a standing notice whose id the user then wrote locally could not restore its own export. The
       export carried the notice beside the unredacted record, so it was refused three ways.
     - In that state the user's own `redact()` returned `repeated=True` and redacted nothing.
+    - Found by research's review of this change before release: a pending notice whose episode had been deleted,
+      re-arriving beside its UNREDACTED record in a default import that re-created it, was admitted, so the content
+      landed. A record an import creates is now weighed first, in every state, so that unit is refused whole. If the
+      record arrives already treated, the notice is applied: the unit attests itself, and nothing you hold changes.
   - **Who must act:**
     - Hosts that import files they did not export should surface `pending_notices` to the user. A source's redaction
       of a record you already hold now waits for the user's confirmation instead of applying.

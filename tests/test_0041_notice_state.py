@@ -140,6 +140,35 @@ def test_a_repeat_default_import_of_a_pending_notice_is_existing_and_keeps_its_r
     assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
 
 
+def test_io_ii_1_a_record_not_in_file_pending_notice_keeps_its_reason_on_a_default_replay(tmp_path):
+    """IO-II-1, the verdict's first sequence, as stated: a notice pending as `record-not-in-file` after a restore
+    without its target's copy, then a default import of that notice — `existing`, and the reason stays
+    `record-not-in-file` (the round-4 model rewrote it to `held-target`). Mutant: rewrite a pending row's reason."""
+    _f, notices, _p = _source(tmp_path, "src")
+    v = _holder(tmp_path, "v.db")
+    v.import_memory(notices, restore=True)
+    assert _rows(v) == [("e-x", "pending", "record-not-in-file")]
+    before = v.store._conn.execute("SELECT * FROM redactions").fetchall()
+    r = v.import_memory(notices)
+    assert r["notices_existing"] == 1 and ["edge", "e-x", "record-not-in-file"] in r["notices_not_applied"]
+    assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
+
+
+def test_io_ii_1_a_standing_arrival_pending_notice_keeps_its_reason_on_a_repeat_of_the_notice(tmp_path):
+    """IO-II-1, the verdict's second sequence, as stated, default-only: the notice first (standing), a treated arrival
+    of its target (pending `standing-arrival`), then the original notice-only file again — `existing`, the reason
+    unchanged. Mutant: rewrite a pending row's reason to `held-target`."""
+    full, notices, _p = _source(tmp_path, "src")
+    v = _mem(tmp_path, "v.db")
+    v.import_memory(notices)
+    v.import_memory(_write(tmp_path / "records.jsonl", [x for x in _lines(full) if x.get("record") != "redaction"]))
+    assert _rows(v) == [("e-x", "pending", "standing-arrival")]
+    before = v.store._conn.execute("SELECT * FROM redactions").fetchall()
+    r = v.import_memory(notices)
+    assert r["notices_existing"] == 1 and ["edge", "e-x", "standing-arrival"] in r["notices_not_applied"]
+    assert v.store._conn.execute("SELECT * FROM redactions").fetchall() == before
+
+
 @pytest.mark.parametrize("cut,outcome", [
     ("full", "applied"),                      # the file's copy shows it
     ("poisoned", "refused"),                  # the file's copy is unredacted
@@ -533,3 +562,166 @@ def test_each_notice_state_mutant_refuses_at_its_step(tmp_path, monkeypatch, lab
         migrate_store(p)
     assert ei.value.step == M.STEP_NOTICE_STATE, (label, ei.value.step, ei.value.problems)
     assert sqlite3.connect(p).execute("PRAGMA user_version").fetchone()[0] == 15
+
+
+# ---- research's T4 stage 2 (2026-10-15): T4-1 and the seven gaps, each the property its mutant broke ---------------
+
+def _episode_source(tmp_path, name="eps", eid="ep-x"):
+    """A source holding an episode, exported plain, then redacted and exported: (plain, full, poisoned = the plain
+    record beside the notice, the pair a poisoned export carries)."""
+    a = _mem(tmp_path, f"{name}.db")
+    a.store.add_episode(Episode(id=eid, user_id=U, date="2026-09-01", summary="the SECRET", provenance=_prov()))
+    plain = tmp_path / f"{name}-plain.jsonl"
+    port.export_memory(a.store, U, plain)
+    a.redact(U, episode_id=eid, reason="subject_request")
+    full = tmp_path / f"{name}.jsonl"
+    port.export_memory(a.store, U, full)
+    a.close()
+    notice = [x for x in _lines(full)[1:] if x.get("record") == "redaction"]
+    poisoned = _write(tmp_path / f"{name}-poisoned.jsonl", [_lines(full)[0], *_lines(plain)[1:], *notice])
+    return plain, full, poisoned
+
+
+def _summary(m, eid):
+    r = m.store._conn.execute("SELECT json FROM episodes WHERE id=?", (eid,)).fetchone()
+    return None if r is None else json.loads(r[0])["summary"]
+
+
+def test_t4_1_a_pending_notice_beside_its_unredacted_re_created_record_refuses_the_unit(tmp_path):
+    """T4-1 (BLOCKING, research): pending (held-target) → the episode deleted → a DEFAULT unit carrying the plain
+    record beside the notice. §11.6.6 row 1 refuses it whole; the pending shortcut admitted it and the content landed.
+    Then the SHOWN variant (dev's call): the same unit with the record treated is APPLIED — the unit attests itself
+    and nothing the user holds changes. Mutant: weigh the pending shortcut before the created row."""
+    plain, full, poisoned = _episode_source(tmp_path)
+    v = _mem(tmp_path, "v.db")
+    v.import_memory(plain)
+    v.import_memory(full)
+    assert _rows(v) == [("ep-x", "pending", "held-target")]
+    v.store.delete_episode("ep-x")
+    with pytest.raises(ValueError, match="UNREDACTED"):
+        v.import_memory(poisoned)
+    assert _summary(v, "ep-x") is None and _rows(v) == [("ep-x", "pending", "held-target")]
+    v.import_memory(full)
+    assert _summary(v, "ep-x") == R.MARKER and _rows(v) == [("ep-x", "applied", None)]
+
+
+def test_r18_confirm_notice_never_treats_another_users_record_under_the_same_id(tmp_path):
+    """R18 (cross-user WRITE): u's pending notice, u's episode deleted, w writes an episode under the same id (ids are
+    a global key); u's confirm_notice is refused as inert and w's record is untouched. Mutant: drop the target-owner
+    check."""
+    plain, full, _p = _episode_source(tmp_path)
+    v = _mem(tmp_path, "v.db")
+    v.import_memory(plain)
+    v.import_memory(full)
+    (nid,) = [p["notice_id"] for p in v.pending_notices(U)]
+    v.store.delete_episode("ep-x")
+    v.store.add_episode(Episode(id="ep-x", user_id="w", date="2026-09-02", summary="w's own words", provenance=_prov()))
+    with pytest.raises(ValueError, match="inert"):
+        v.confirm_notice(U, nid)
+    assert _summary(v, "ep-x") == "w's own words"
+
+
+def test_r15_pending_notices_reads_one_users_rows(tmp_path):
+    """R15 (cross-user READ): another user's pending notices are never listed. Mutant: drop the user filter."""
+    v, _nid = _pending(tmp_path)
+    assert len(v.pending_notices(U)) == 1 and v.pending_notices("someone-else") == []
+
+
+def test_r9_a_standing_episode_notice_over_a_local_episode_write_round_trips_the_own_export(tmp_path):
+    """R9: B1's round trip for the EPISODE kind — the export's carried set holds episodes too, so a standing episode
+    notice whose id the user wrote locally does not travel beside it. Mutant: build the carried set from edges only."""
+    _plain, full, _p = _episode_source(tmp_path)
+    notices = _write(tmp_path / "ep-notices.jsonl", [_lines(full)[0], *[x for x in _lines(full)[1:] if x.get("record") == "redaction"]])
+    v = _mem(tmp_path, "v.db")
+    v.import_memory(notices, restore=True)
+    with _permitted("the user's own episode write of a standing notice's id"):
+        v.store.add_episode(Episode(id="ep-x", user_id=U, date="2026-09-03", summary="mine", provenance=_prov()))
+    f = tmp_path / "own-ep.jsonl"
+    port.export_memory(v.store, U, f)
+    assert "redaction" not in [x.get("record") for x in _lines(f)]
+    with _permitted("a store's own export, restored into a fresh store"):
+        _mem(tmp_path, "fresh-ep.db").import_memory(f, restore=True)
+    with _permitted("a store's own export, restored into itself"):
+        v.import_memory(f, restore=True)
+
+
+def test_r10_a_restore_weighs_a_held_pending_notice(tmp_path):
+    """R10: a held PENDING notice re-arriving in a trusted restore whose file shows the redaction is APPLIED — the same
+    row, its body unchanged (§11.6.6: "in a trusted restore the table weighs it"). Mutant: count it `existing`."""
+    full, _n, _p = _source(tmp_path, "src")
+    v = _holder(tmp_path, "v.db")
+    v.import_memory(full)
+    rid, body = v.store._conn.execute("SELECT id, source_body FROM redactions").fetchone()
+    v.import_memory(full, restore=True)
+    assert _rows(v) == [("e-x", "applied", None)] and json.loads(_json(v, "e-x"))["object"] == R.MARKER
+    assert v.store._conn.execute("SELECT id, source_body FROM redactions").fetchone() == (rid, body)
+
+
+def test_r5_coverage_counts_a_standing_notice_for_a_treated_episodes_reason(tmp_path):
+    """R5: B2's EPISODE twin — an episode whose retired reason the redaction made `redacted` arrives treated under a
+    standing notice held from an earlier file; the episode reason closure counts it (coverage), and the notice goes
+    PENDING `standing-arrival`. Mutant: the episode coverage reader reads applied only."""
+    a = _mem(tmp_path, "a.db")
+    ep = Episode(id="ep-r", user_id=U, date="2026-09-01", summary="the SECRET", provenance=_prov())
+    ep = ep.model_copy(update={"retired_at": __import__("datetime").datetime(2026, 9, 2, tzinfo=__import__("datetime").timezone.utc),
+                               "retired_reason": "the user said so"})
+    a.store._conn.execute("INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)", (ep.id, U, ep.date, ep.model_dump_json()))
+    a.store._conn.commit()
+    a.redact(U, episode_id="ep-r", reason="subject_request")
+    assert json.loads(a.store._conn.execute("SELECT json FROM episodes WHERE id='ep-r'").fetchone()[0])["retired_reason"] == "redacted"
+    full = tmp_path / "er.jsonl"
+    port.export_memory(a.store, U, full)
+    lines = _lines(full)
+    notices = _write(tmp_path / "er-notices.jsonl", [lines[0], *[x for x in lines[1:] if x.get("record") == "redaction"]])
+    records = _write(tmp_path / "er-records.jsonl", [x for x in lines if x.get("record") != "redaction"])
+    v = _mem(tmp_path, "v.db")
+    v.import_memory(notices)
+    with _permitted("a treated episode arrival under a held standing notice"):
+        v.import_memory(records)
+    assert _rows(v) == [("ep-r", "pending", "standing-arrival")]
+
+
+def test_r25_the_doctor_flags_a_state_outside_its_domain_with_no_reason(tmp_path):
+    """R25: ('half', NULL) — a state outside the closed set whose pending reason is NULL, so only the DOMAIN clause can
+    see it (the earlier cell's planted row still carried a reason). Mutant: drop the domain clause."""
+    from veracium import doctor as doc
+    v, _nid = _pending(tmp_path)
+    path = str(tmp_path / "v.db")
+    c = sqlite3.connect(path)
+    c.execute("UPDATE redactions SET state='half', pending_reason=NULL")
+    c.commit()
+    c.close()
+    assert any(f.level == "error" and "notice state" in f.message for f in doc.diagnose(path).findings)
+
+
+@pytest.mark.parametrize("restore", [False, True])
+def test_r27_a_standing_notices_own_copy_with_its_created_record_takes_the_created_row(tmp_path, restore):
+    """R27 (research's ratification of (b)): a STANDING notice held from an earlier file, then a unit carrying the
+    notice AND its record treated — the created row: APPLIED in both modes, the outcome a fresh store reaches. Mutant:
+    weigh it by the standing-arrival rule (pending on a default import)."""
+    full, notices, _p = _source(tmp_path, "src")
+    v = _mem(tmp_path, "v.db")
+    v.import_memory(notices, restore=restore)
+    assert _rows(v) == [("e-x", "standing", None)]
+    v.import_memory(full, restore=restore)
+    assert _rows(v) == [("e-x", "applied", None)]
+
+
+def test_every_src_call_of_the_attested_fields_reader_names_it():
+    """Research's ratification of (c): every call in src/ names its reader (`coverage=`) — the claim held by a gate,
+    found by the AST, never by a hand list. The census is not vacuous: a planted unnamed call is found."""
+    import ast as _ast
+    root = pathlib.Path(__file__).resolve().parents[1] / "src" / "veracium"
+
+    def unnamed(text):
+        out = []
+        for n in _ast.walk(_ast.parse(text)):
+            if (isinstance(n, _ast.Call) and isinstance(n.func, _ast.Attribute) and n.func.attr == "_attested_fields"
+                    and "coverage" not in {k.arg for k in n.keywords}):
+                out.append(n.lineno)
+        return out
+    calls = {str(p.relative_to(root)): unnamed(p.read_text()) for p in sorted(root.rglob("*.py"))}
+    assert {f: ls for f, ls in calls.items() if ls} == {}
+    assert sum(1 for p in root.rglob("*.py") for n in _ast.walk(_ast.parse(p.read_text()))
+               if isinstance(n, _ast.Call) and isinstance(n.func, _ast.Attribute) and n.func.attr == "_attested_fields") >= 7
+    assert unnamed("store._attested_fields(u, 'edge', e)\n") == [1]

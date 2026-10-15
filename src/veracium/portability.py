@@ -1151,7 +1151,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 # the rider's ONE admitted class — a redaction of THIS held output, by a notice for it: in the unit,
                 # resolved to it through this arrival or naming it directly, or already held for the held output
                 in_unit = [set(n["fields"]) for n in notice_list if _notice_counts_for(n, r, hit)]
-                held_fields = store._attested_fields(dest_uid, "episode", hit["id"])
+                held_fields = store._attested_fields(dest_uid, "episode", hit["id"], coverage=False)   # APPLIED: R10-02
                 if any(held_output_redaction(hit, r, f) for f in in_unit + ([held_fields] if held_fields else [])):
                     skip_ids.add(r["id"])
                     rebind[r["id"]] = hit["id"]

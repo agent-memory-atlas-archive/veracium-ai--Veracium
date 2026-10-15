@@ -2294,7 +2294,13 @@ class SqliteStore(Store):
                         if state == "applied":
                             existing += 1                       # applied before: the R10-02 `existing`
                             continue
-                        if state == "pending" and (not notice_any or not present):
+                        created_here = (kind, tid) in created
+                        # the CREATED row is weighed before the pending/standing shortcuts (research's T4 stage 2, T4-1):
+                        # a pending notice whose target was deleted, re-arriving beside its UNREDACTED record in a unit
+                        # that creates it, short-circuited to `existing` and the content landed (main-only). A pending
+                        # notice stays pending across an import that re-creates its target only when the notice is NOT
+                        # in that unit (the arrival loop below never weighs a pending row).
+                        if state == "pending" and not created_here and (not notice_any or not present):
                             # IO-II-1: a repeat DEFAULT import of a pending notice is `existing`, its reason kept; a
                             # pending notice whose target is gone is inert in both modes (§11.6.6)
                             existing += 1
@@ -2303,10 +2309,14 @@ class SqliteStore(Store):
                         if state == "standing" and not present:
                             existing += 1                       # still standing: its target is not held
                             continue
-                        if (kind, tid) in created:
+                        if created_here:
                             # CREATED by this import: the unit carries the record. It must SHOW the redaction, in both
                             # modes — admitting it would land content its source says it redacted, and redacting it
-                            # would destroy a fact a poisoned export pairs with a notice (internal finding 0041-PA1)
+                            # would destroy a fact a poisoned export pairs with a notice (internal finding 0041-PA1).
+                            # Whatever this store already held for the notice (none, standing, or pending with its
+                            # target since deleted), a record this unit creates showing the redaction is APPLIED: the
+                            # unit attests itself, and nothing the user holds is changed (dev's call on research's open
+                            # "shown variant", 2026-10-15; research writes it into 0041)
                             shown = (n["_shown"] if "_shown" in n
                                      else _redaction.shows_redaction(kind, json.loads(row[1]), n["fields"]))
                             with _SITE_IMPORT_NOTICE_UNSHOWN.consult():
@@ -2734,9 +2744,12 @@ class SqliteStore(Store):
     def _attested_fields(self, user_id: str, kind: str, target_id: str, *, coverage: bool = False) -> set:
         """§4b's attestation rule: the fields a redaction record names for this record — the ONLY thing that
         makes a marker mean 'redacted'. Empty when no record exists (an unattested marker confers nothing).
-        Two readers (T4, research's B2); every caller in src/ names which. The DEFAULT is the attestation reader, the
-        fail-closed one — a caller that omits the keyword counts LESS as redacted, so it refuses more, never less (the
-        tests and the committed 0041 evidence call it positionally, meaning "is it attested"):
+        Two readers (T4, research's B2); every call in src/ names which, held by
+        tests/test_0041_notice_state.py::test_every_src_call_of_the_attested_fields_reader_names_it. The DEFAULT is the
+        attestation reader (the tests and the committed 0041 evidence call it positionally, meaning "is it attested").
+        For a caller that refuses on ABSENCE — the import's reason closures, the 0014 rider, R10-02's uncovered check —
+        it is the fail-closed reader, counting less as covered; for the INV-11 writers applied-only is simply the
+        correct reader, since a pending or standing notice redacts nothing they would repopulate:
         `coverage=False` — ATTESTATION, APPLIED rows only: what this store has redacted (the local writers' INV-11
         refusal, R10-02's treated arrival); `coverage=True` — COVERAGE, every row whatever its state (0041 §11.6.6:
         "Coverage counts every notice for the target, whatever its state"): what an ARRIVING row may be admitted as,
