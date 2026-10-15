@@ -885,3 +885,130 @@ def _permitted_call(what, fn, *a, **k):
         return fn(*a, **k)
     except (ValueError, KeyError, RuntimeError) as x:
         raise AssertionError(f"{what} was refused: {type(x).__name__}: {x}") from x
+
+
+# ---- research's R-A pre-dispatch read, B4/B5: IO-II-3's remaining scenarios at T4's states, and RR4 ------------------
+
+def _held_json(m, kind, tid):
+    tbl = "edges" if kind == "edge" else "episodes"
+    r = m.store._conn.execute(f"SELECT json FROM {tbl} WHERE id=?", (tid,)).fetchone()
+    return None if r is None else json.loads(r[0])
+
+
+@pytest.mark.parametrize("kind", ["edge", "episode"])
+@pytest.mark.parametrize("how", ["confirm_notice", "restore"])
+def test_io_ii_3_every_application_reaches_the_full_record_fixed_point(tmp_path, kind, how):
+    """IO-II-3 ("the full record fixed point across every carrier is a PRODUCT check"): after a notice is APPLIED —
+    by the user's confirm_notice, or by a trusted restore whose file shows it — EVERY record carrier of the target
+    shows the redaction (redaction.shows_redaction over carrier_paths(kind)), no carrier holds the content, and for an
+    edge the held act's digests (confirmations, the registry) are the marker. Both record kinds. Mutant: treat only
+    the notice's fields."""
+    if kind == "edge":
+        full, _n, _p = _source(tmp_path, "src", obj="Berlin SECRET")
+        v = _mem(tmp_path, "v.db")
+        v.store.add_edge(_edge("e-x", "Lisbon SECRET"))
+        v.store.confirm_edge(U, "e-x", actor="user", call_path="host_api", correlation_id="k1", request_digest="d1",
+                             confirmed_at=__import__("datetime").datetime(2026, 3, 1, tzinfo=__import__("datetime").timezone.utc))
+        tid = "e-x"
+    else:
+        plain, full, _p = _episode_source(tmp_path)
+        v = _mem(tmp_path, "v.db")
+        with _expected("an import the cell expects to succeed"):
+            v.import_memory(plain)
+        tid = "ep-x"
+    if how == "confirm_notice":
+        with _expected("an import the cell expects to succeed"):
+            v.import_memory(full)
+        _permitted_call("confirm_notice", v.confirm_notice, U, _the_one_pending(v))
+    else:
+        with _expected("an import the cell expects to succeed"):
+            v.import_memory(full, restore=True)
+    rec = _held_json(v, kind, tid)
+    assert R.shows_redaction(kind, rec, sorted(R.carrier_paths(kind))), f"a carrier of {kind} {tid} kept content: {rec}"
+    assert "SECRET" not in json.dumps(rec)
+    if kind == "edge":
+        assert v.store._conn.execute("SELECT request_digest FROM confirmations").fetchone()[0] == R.MARKER
+        assert v.store._conn.execute("SELECT request_digest FROM request_registry").fetchone()[0] == R.MARKER
+
+
+def test_io_ii_3_a_refused_import_rolls_back_every_notice_state_transition(tmp_path):
+    """IO-II-3 (rollback): one unit carrying a notice that would go PENDING over a held fact, a notice that would move a
+    STANDING row to pending (its id since written locally), and a poisoned pair that refuses the whole import — the
+    refusal unwinds BOTH transitions: no pending row is written and the standing row is unchanged. Mutant: commit the
+    notice states before the unit's refusal."""
+    held, _hn, _hp = _source(tmp_path, "src-held", eid="e-held")
+    _sf, stand_notices, _sp = _source(tmp_path, "src-stand", eid="e-stand")
+    _pf, _pn, poisoned = _source(tmp_path, "src-poison", eid="e-poison")
+    v = _holder(tmp_path, "v.db", eid="e-held")
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(stand_notices, restore=True)
+    with _permitted("the user's own write of a standing notice's id"):
+        v.store.add_edge(_edge("e-stand", "Paris (local)"))
+    before = v.store._conn.execute("SELECT * FROM redactions ORDER BY id").fetchall()
+    held_before = _json(v, "e-held")
+    unit = [_lines(held)[0]] + [x for x in _lines(held)[1:] if x.get("record") == "redaction"] \
+        + [x for x in _lines(stand_notices)[1:]] + _lines(poisoned)[1:]
+    with pytest.raises(ValueError, match="UNREDACTED"):
+        v.import_memory(_write(tmp_path / "mixed.jsonl", unit))
+    assert v.store._conn.execute("SELECT * FROM redactions ORDER BY id").fetchall() == before
+    assert _json(v, "e-held") == held_before and _json(v, "e-poison") is None
+
+
+def test_io_ii_3_a_remapped_import_binds_notice_rows_to_the_destination_user(tmp_path):
+    """IO-II-3 (remapping, user scoping): a user-remapping import binds its notice rows to the DESTINATION user — a
+    notice-only file STANDS for that user, and a file carrying the record treated is APPLIED to the remapped copy —
+    and nothing reaches the source user's id space. Mutant: bind a notice row to the file's user."""
+    full, notices, _p = _source(tmp_path, "src")
+    v = _mem(tmp_path, "v.db")
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(notices, user_id="u2")
+    rows = v.store._conn.execute("SELECT user_id, state FROM redactions").fetchall()
+    assert rows == [("u2", "standing")], rows
+    assert v.pending_notices(U) == [] and v.store.redacted_targets("u2", "edge") == frozenset()
+    w = _mem(tmp_path, "w.db")
+    with _expected("an import the cell expects to succeed"):
+        w.import_memory(full, user_id="u2")
+    applied = w.store._conn.execute("SELECT user_id, target_id, state FROM redactions").fetchall()
+    assert len(applied) == 1 and applied[0][0] == "u2" and applied[0][2] == "applied", applied
+    rec = w.store._conn.execute("SELECT user_id, json FROM edges WHERE id=?", (applied[0][1],)).fetchone()
+    assert rec[0] == "u2" and json.loads(rec[1])["object"] == R.MARKER
+
+
+def test_io_ii_3_a_notice_is_scoped_to_its_target_kind(tmp_path):
+    """IO-II-3 (target-kind scoping): an edge and an episode sharing one id — a notice for the EDGE is pending on the
+    edge only, and its confirmation treats the edge only; the episode's bytes and its (absent) notice state are
+    untouched. Mutant: weigh a notice by target id alone."""
+    a = _mem(tmp_path, "a.db")
+    a.store.add_edge(_edge("same-id", "Berlin SECRET"))
+    a.redact(U, edge_id="same-id", reason="subject_request")
+    full = tmp_path / "a.jsonl"
+    port.export_memory(a.store, U, full)
+    v = _mem(tmp_path, "v.db")
+    v.store.add_edge(_edge("same-id", "Lisbon (mine)"))
+    v.store.add_episode(Episode(id="same-id", user_id=U, date="2026-09-01", summary="my own day", provenance=_prov()))
+    ep_before = _held_json(v, "episode", "same-id")
+    with _expected("an import the cell expects to succeed"):
+        v.import_memory(full)
+    assert v.store._conn.execute("SELECT target_kind, state FROM redactions").fetchall() == [("edge", "pending")]
+    _permitted_call("confirm_notice", v.confirm_notice, U, _the_one_pending(v))
+    assert _held_json(v, "edge", "same-id")["object"] == R.MARKER
+    assert _held_json(v, "episode", "same-id") == ep_before
+    assert "same-id" not in v.store.redacted_targets(U, "episode")
+    # the other direction: a store holding ONLY an episode under the id — the edge notice finds no edge, and STANDS
+    _full, notices, _p = _source(tmp_path, "src2", eid="same-id")
+    w = _mem(tmp_path, "w.db")
+    w.store.add_episode(Episode(id="same-id", user_id=U, date="2026-09-01", summary="my own day", provenance=_prov()))
+    with _expected("an import the cell expects to succeed"):
+        w.import_memory(notices)
+    assert w.store._conn.execute("SELECT target_kind, state FROM redactions").fetchall() == [("edge", "standing")]
+    assert w.pending_notices(U) == []
+
+
+def test_rr4_the_registry_digest_is_a_carrier_path_by_derivation():
+    """INV-RR4 (the registry half; the reply carriers join at T10a): `request_registry.request_digest` is in
+    carrier_paths("edge") BY DERIVATION from SIDE_TABLE_TREATMENTS — never a second hand list. Mutant: drop it from the
+    treatments (a notice's fields could not name it, and the census would not account it)."""
+    side = {p for p, _how in R.SIDE_TABLE_TREATMENTS["edge"]}
+    assert "request_registry.request_digest" in side
+    assert "request_registry.request_digest" in R.carrier_paths("edge")
+    assert side <= R.carrier_paths("edge")
