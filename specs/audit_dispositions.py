@@ -39,7 +39,7 @@ DISPOSITIONS = {
    (W, "`active`, `invalidation_reason`", "act", "clean — narrows only", "`test_dispute_removes_from_assertable_but_keeps_history`"),
  ("src/veracium/__init__.py", "Memory.dispute", "add_episode", "c77fe9f6b653"):
    (W, "episode provenance", "act", "clean", "`test_dispute_removes_from_assertable_but_keeps_history`"),
- ("src/veracium/__init__.py", "Memory.confirm", "confirm_edge", "0f81d39ca11c"):
+ ("src/veracium/__init__.py", "Memory.confirm", "confirm_edge", "b1b92807403e"):
    (W, "`needs_confirmation` (cleared), `observed_at`, `confidence`, the confirmation episode + record — ALL in one atomic store operation", "act",
     "clean — `specs/0008`: `confirm()` is the ONLY path that clears `needs_confirmation`, through the atomic `confirm_edge` (M2 first-known immutability preserved; the record is mandatory, C7)",
     "`test_confirm_clears_staleness` · `test_confirm_advances_liveness_not_first_known`"),
@@ -184,7 +184,7 @@ STATES = {
   ("src/veracium/__init__.py", "Memory.embed_backfill", "upsert_embedding", "edb8a9a9b201"): "clean",
   ("src/veracium/__init__.py", "Memory.dispute", "invalidate_edge", "e2b396f8489a"): "clean",
   ("src/veracium/__init__.py", "Memory.dispute", "add_episode", "c77fe9f6b653"): "clean",
-  ("src/veracium/__init__.py", "Memory.confirm", "confirm_edge", "0f81d39ca11c"): "clean",
+  ("src/veracium/__init__.py", "Memory.confirm", "confirm_edge", "b1b92807403e"): "clean",
   ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "c581fd572ad4"): "clean",
   ("src/veracium/__init__.py", "Memory.record_outcome", "add_edge", "e00d08c435b4"): "clean",
   ("src/veracium/__init__.py", "Memory.correct", "apply_supersession_plan", "ba370b6342c2"): "clean",

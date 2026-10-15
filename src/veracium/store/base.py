@@ -198,6 +198,13 @@ class RequestRedacted(ValueError):
                          f"record was redacted; it is neither replayed nor reusable (specs/0008 §6g)")
 
 
+class UnknownEdge(KeyError):
+    """specs/0008 §2a/§6c (INV-Q2), R-A RA-03: a confirmation of an edge this store does not hold, raised by the store
+    AFTER the request registry has decided the request is NEW — never before, so a retry under a held correlation id
+    is replayed, refused as a conflict or terminal (`RequestRedacted`) whatever its target. A KeyError, as the store's
+    unknown-edge refusal always was; `Memory.confirm` maps exactly this class to its public ValueError."""
+
+
 def store_mutator(fn):
     """Marks a Store method that writes persistent state.
 

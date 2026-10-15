@@ -27,7 +27,7 @@ from ..schema import (ConsolidationOp, ConsolidationOutputDraft, ConsolidationSt
                       SupersessionPlan, SupersessionRefusal, SupersessionResult,
                       is_historical_id, to_historical_id,
                       WIKI_RETAINING_REASONS, DISPOSITIONED_REASONS, as_utc_required)
-from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS, RequestRedacted,
+from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS, RequestRedacted, UnknownEdge,
                    DESTINATION_CHANGED, HEAD_MOVED, LEASE_MAX, NON_QUIESCENT,
                    PLAN_STALE, ReceiptSchemaBoundaryError, Store,
                    SupersessionIntegrityError)
@@ -764,7 +764,7 @@ class SqliteStore(Store):
                 (edge_id, user_id)).fetchone()
             with _SITE_CONFIRM_UNKNOWN_EDGE.consult():
                 if row is None:
-                    raise _SITE_CONFIRM_UNKNOWN_EDGE.fire(KeyError(
+                    raise _SITE_CONFIRM_UNKNOWN_EDGE.fire(UnknownEdge(
                         f"edge {edge_id!r} not found for user {user_id!r}"))
             edge = Edge.model_validate_json(row[0])
             with _SITE_CONFIRM_NOT_ASSERTABLE.consult():
@@ -2141,7 +2141,12 @@ class SqliteStore(Store):
                 # the SAME transaction — nothing is durable after a prefix).
                 try:
                     created: set = set()             # (kind, id) of every record this commit INSERTS (the hotfix)
+                    # R-A RA-02: each record's ARRIVING copy as the unit carries it (after remapping, BEFORE any treatment
+                    # — `_treated_on_arrival` below, or a notice's), held as JSON TEXT so it is immutable by construction:
+                    # the notice phase's predicates parse it afresh, and never read the row
+                    arriving: dict = {}
                     for edge in edges:
+                        arriving[("edge", edge.id)] = edge.model_dump_json()
                         # specs/0041 §11.2 / D1 at the IMPORT boundary (round 10, R9-02(c)): the reason closure binds
                         # import as it binds the writers
                         if ("edge", edge.id) not in notice_targets and not self._attested_fields(user_id, "edge", edge.id, coverage=True):
@@ -2182,6 +2187,7 @@ class SqliteStore(Store):
                         if prior is None:
                             created.add(("edge", edge.id))
                     for ep in episodes:
+                        arriving[("episode", ep.id)] = ep.model_dump_json()
                         if ("episode", ep.id) not in notice_targets and not self._attested_fields(user_id, "episode", ep.id, coverage=True):
                             self._refuse_redacted_reason(ep.retired_reason, f"imported episode {ep.id!r}", "import-episode")
                         with _SITE_IMPORT_REASON.consult():
@@ -2248,6 +2254,29 @@ class SqliteStore(Store):
                     applied = standing = existing = 0
                     unbound: list = []               # the notices left PENDING by this import: [kind, id, reason]
                     unit_rids = {n["_rid"] for n in notices}
+                    # R-A RA-02 (specs/0041 §11.6.6, INV-RR12): every `shows_redaction` decision of this phase is staged
+                    # HERE, before any notice treatment, over ONE immutable snapshot — the arriving copy for a record
+                    # this unit carries, the held row otherwise — so no notice's treatment can satisfy another's
+                    # predicate and no decision depends on the order the notices are processed in. Treatments still act
+                    # on the live row. The targets: every notice in the unit, and every STANDING notice held from an
+                    # earlier import whose record this unit creates (the arrival loop below).
+                    # The arrival loop's rows are read HERE, once, and the loop iterates this list: the notice loop below
+                    # writes only the unit's own rows, so this is the set it would re-read, and staging and weighing are
+                    # one set by construction (two queries kept in step by hand were not: a widened loop query met an
+                    # unstaged target)
+                    arrival_rows = [r_ for r_ in self._conn.execute(
+                        "SELECT id, target_kind, target_id, fields FROM redactions WHERE user_id=? AND state='standing'",
+                        (user_id,)).fetchall() if r_[0] not in unit_rids and (r_[1], r_[2]) in created]
+                    staged = {(n["target_kind"], n["target_id"]) for n in notices} | {(r_[1], r_[2]) for r_ in arrival_rows}
+                    pre: dict = {}
+                    for k, t_ in staged:
+                        if (k, t_) in arriving:
+                            pre[(k, t_)] = arriving[(k, t_)]
+                            continue
+                        r_ = self._conn.execute(f"SELECT user_id, json FROM {'edges' if k == 'edge' else 'episodes'} "
+                                                f"WHERE id=?", (t_,)).fetchone()
+                        if r_ is not None and r_[0] == user_id:
+                            pre[(k, t_)] = r_[1]
                     for n in notices:
                         held = self._conn.execute(
                             "SELECT state, pending_reason FROM redactions WHERE id=?", (n["_rid"],)).fetchone()
@@ -2318,7 +2347,7 @@ class SqliteStore(Store):
                             # unit attests itself, and nothing the user holds is changed (dev's call on research's open
                             # "shown variant", 2026-10-15; research writes it into 0041)
                             shown = (n["_shown"] if "_shown" in n
-                                     else _redaction.shows_redaction(kind, json.loads(row[1]), n["fields"]))
+                                     else _redaction.shows_redaction(kind, json.loads(pre[(kind, tid)]), n["fields"]))
                             with _SITE_IMPORT_NOTICE_UNSHOWN.consult():
                                 if not shown:
                                     raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError(
@@ -2347,7 +2376,7 @@ class SqliteStore(Store):
                                         f"for it (origin {n['origin']!r}) — a restore may not land content its source "
                                         f"says it redacted, nor redact the held record on a copy that does not show it; "
                                         f"nothing imported (specs/0041 §11.6.6, INV-RR14)"))
-                            if n.get("_shown") is True or _redaction.shows_redaction(kind, json.loads(row[1]), n["fields"]):
+                            if n.get("_shown") is True or _redaction.shows_redaction(kind, json.loads(pre[(kind, tid)]), n["fields"]):
                                 # the file's copy shows it, or (no copy) the HELD record already does: applied, as this
                                 # store's total treatment — held acts still carrying content are treated (§11.6.6)
                                 self._redact_in_txn(user_id, kind, tid, "imported_notice", row_json=row[1],
@@ -2367,15 +2396,11 @@ class SqliteStore(Store):
                     # (reason `standing-arrival`, for the user's `confirm_notice`) and applied in a trusted restore. A
                     # record written LOCALLY is never completed here: it was not created by an import. No origin is read.
                     arrived = 0
-                    for rid, kind, tid, fields in self._conn.execute(
-                            "SELECT id, target_kind, target_id, fields FROM redactions WHERE user_id=? AND state='standing'",
-                            (user_id,)).fetchall():
-                        if rid in unit_rids or (kind, tid) not in created:
-                            continue
+                    for rid, kind, tid, fields in arrival_rows:
                         tbl = "edges" if kind == "edge" else "episodes"
                         row = self._conn.execute(f"SELECT user_id, json FROM {tbl} WHERE id=?", (tid,)).fetchone()
                         with _SITE_IMPORT_NOTICE_UNSHOWN.consult():
-                            if not _redaction.shows_redaction(kind, json.loads(row[1]), json.loads(fields)):
+                            if not _redaction.shows_redaction(kind, json.loads(pre[(kind, tid)]), json.loads(fields)):
                                 raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError(
                                     f"refused: imported {kind} {tid!r} arrives UNREDACTED under a standing redaction "
                                     f"notice — admitting it would land content the notice says was redacted; nothing "
@@ -3083,12 +3108,8 @@ class SqliteStore(Store):
             prior = self._redaction_record(user_id, kind, target_id)
             if prior is not None:
                 return self._receipt_from_record(user_id, kind, target_id, prior, repeated=True)
-            if kind == "episode":
-                with _SITE_REDACT_CLAIMED.consult():
-                    if target_id in self._reserved_ids(user_id):
-                        raise _SITE_REDACT_CLAIMED.fire(ValueError(
-                            f"redact refuses episode {target_id!r}: it is claimed by an in-flight consolidation "
-                            f"(specs/0010 X21; specs/0041 tranche 3)"))
+            # specs/0010 X21: a claimed episode is refused by the treatment body itself (`_redact_in_txn`), so
+            # every caller — this one, confirm_notice and the import's notice treatments — passes ONE guard (R-A RA-01)
             record = self._redact_in_txn(user_id, kind, target_id, reason, row_json=row[1])
             return self._receipt_from_record(user_id, kind, target_id, record, repeated=False)
 
@@ -3099,7 +3120,18 @@ class SqliteStore(Store):
         the record's carriers, the side tables, the journal, the attestation row. `row_id` names the
         attestation row to write (the import's deterministic notice id; a fresh id otherwise) — and when a
         STANDING notice row already exists under that id (specs/0041 §4g, the record arrived after its
-        notice), that row is completed in place rather than duplicated. Returns the record tuple."""
+        notice), that row is completed in place rather than duplicated. Returns the record tuple.
+
+        specs/0010 X21 (R-A RA-01): an episode CLAIMED by an in-flight consolidation is refused HERE, before any
+        write, so no caller of the treatment can bypass the reservation — `redact` carried this check alone, and
+        T4's `confirm_notice` (and the import's notice treatments) reached the body without it. The refusal raises
+        inside the caller's transaction, which unwinds it whole."""
+        if kind == "episode":
+            with _SITE_REDACT_CLAIMED.consult():
+                if target_id in self._reserved_ids(user_id):
+                    raise _SITE_REDACT_CLAIMED.fire(ValueError(
+                        f"redaction refuses episode {target_id!r}: it is claimed by an in-flight consolidation "
+                        f"(specs/0010 X21; specs/0041 tranche 3)"))
         table = "edges" if kind == "edge" else "episodes"
         before_json = row_json
         before = json.loads(before_json)

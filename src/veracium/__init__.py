@@ -53,7 +53,7 @@ from .schema import (CONFIRMATION_RULE_VERSION, ConfirmationActor, is_procedural
                      OutcomeJudgmentDraft, Provenance,
                      utcnow, validate_correlation_id)
 from .scope import UNRESOLVED as _SCOPE_UNRESOLVED
-from .store.base import HEAD_MOVED, Store
+from .store.base import HEAD_MOVED, Store, UnknownEdge
 from .store.sqlite import SqliteStore
 from .llm.metered import METERING_CAPABILITY, count_valid as _count_valid
 from .usage import (ATTRIBUTED_PAIRS, ROLE_FIELDS, ArmingComplete,
@@ -67,6 +67,8 @@ _SITE_SCOPE_LOCAL_ORIGIN = declare_site("memory.scope.local-origin-missing")
 _SITE_ASOF_ON_PROACTIVE = declare_site("memory.recall.as-of-on-proactive")
 _SITE_POLICY_WITH_ASOF = declare_site("memory.recall.policy-with-as-of")
 _SITE_EDGE_UNKNOWN_TARGET = declare_site("memory.edge.unknown-target")
+# specs/0008 §6c (INV-Q2), R-A RA-03: confirm()'s unknown-edge refusal, reached only AFTER the store's registry decision
+_SITE_CONFIRM_UNKNOWN_TARGET = declare_site("memory.confirm.unknown-target")
 _SITE_DISPUTE_INACTIVE = declare_site("memory.dispute.inactive-edge")
 _SITE_FEEDBACK_ATTESTED = declare_site("memory.feedback.attested-target")
 _SITE_OUTCOME_ACTOR = declare_site("memory.record-outcome.actor-vocabulary")
@@ -1894,7 +1896,10 @@ class Memory:
         correlation_id = (validate_correlation_id(correlation_id)
                           if correlation_id is not None
                           else f"auto-{uuid4().hex}")
-        self._find_edge(user_id, edge_id)              # ValueError if absent
+        # specs/0008 §2a/§6c (INV-Q2), R-A RA-03: NO read of live target state before the store's registry decision —
+        # a retry under a held correlation id is replayed, refused as a conflict, or terminal (RequestRedacted)
+        # whatever its target, exactly as the store decides it. The target is read only for a NEW request, inside
+        # the store; its unknown-edge refusal reaches the caller as the same ValueError this method always raised.
         # The canonical request identity is the CALLER's inputs — never the derived
         # instant — so two date-less retries are the SAME request (§6c). `OMITTED`
         # is a value; `rule_version` guards against a rule change colliding digests.
@@ -1903,10 +1908,14 @@ class Memory:
             [user_id, edge_id, call_path.value, actor.value,
              CONFIRMATION_RULE_VERSION, caller_date]).encode()).hexdigest()
         when = _event_dt(date or _today_utc())
-        conf = self.store.confirm_edge(
-            user_id, edge_id, actor=actor, call_path=call_path,
-            correlation_id=correlation_id, request_digest=request_digest,
-            confirmed_at=when)
+        try:
+            conf = self.store.confirm_edge(
+                user_id, edge_id, actor=actor, call_path=call_path,
+                correlation_id=correlation_id, request_digest=request_digest,
+                confirmed_at=when)
+        except UnknownEdge as e:
+            with _SITE_CONFIRM_UNKNOWN_TARGET.consult():
+                raise _SITE_CONFIRM_UNKNOWN_TARGET.fire(ValueError(f"no edge {edge_id!r} for user {user_id!r}")) from e
         if not conf.replayed:
             self._record("feedback", {"disputed": 0, "confirmed": 1}, user_id)
         # `valid_from` is first-known and immutable, so reading it back is stable on

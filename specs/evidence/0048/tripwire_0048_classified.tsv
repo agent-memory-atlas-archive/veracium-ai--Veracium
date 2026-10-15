@@ -113,6 +113,7 @@ edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._co
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._conn.execute("SELECT json, user_id FROM edges WHERE id=?",
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._conn.execute("SELECT json, user_id FROM edges WHERE id=?", (edge_id,)).fetchone()
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	r_ = self._conn.execute(f"SELECT user_id, json FROM {'edges' if k == 'edge' else 'episodes'} "
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	table = "edges" if kind == "edge" else "episodes"
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	tbl = "edges" if kind == "edge" else "episodes"

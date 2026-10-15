@@ -352,6 +352,7 @@ DECLINES.update({
     "memory.recall.policy-with-as-of": lambda mp: _memory_raises(ValueError, lambda m: m.recall(
         U, "q", policy=veracium.PolicyLane(policy_id="p", policy_version="1", tags_matched=("t",), ranks={}), as_of=NOW)),
     "memory.edge.unknown-target": lambda mp: _memory_raises(ValueError, lambda m: m.dispute(U, "nope")),
+    "memory.confirm.unknown-target": lambda mp: _memory_raises(ValueError, lambda m: m.confirm(U, "nope")),
     "memory.dispute.inactive-edge": TwoPhase(lambda mp: _with_inactive_edge(), lambda st: _raises(ValueError, st[0].dispute, U, st[1])),
     # 0041 round 10: dispute/record_outcome/correct refuse an attested target (the setup redacts outside the window)
     "memory.feedback.attested-target": TwoPhase(lambda mp: _with_redacted_edge(), lambda st: _raises(ValueError, st[0].dispute, U, st[1])),
