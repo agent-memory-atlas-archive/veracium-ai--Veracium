@@ -343,6 +343,8 @@ DECLINES.update({
     "registry.reserved-shadowed": lambda mp: _raises(
         registry_mod.RegistryError, registry_mod.effective_registry,
         {UNCLASSIFIED_RELATION: Relation(name=UNCLASSIFIED_RELATION, functional=True, desc="shadowed")}),
+    "registry.arity-refused": lambda mp: _raises(
+        registry_mod.RegistryError, registry_mod.effective_registry, {"weighs": Relation(name="weighs", arity="keyed")}),
     "mcp.closed-set.author": lambda mp: _raises(ValueError, mcp_server._closed_set, "author", "system"),
     "mcp.closed-set.trust-field": lambda mp: _raises(ValueError, mcp_server._closed_set, "derived_from", "bogus"),
     "memory.scope.local-origin-missing": lambda mp: _local_origin_missing(mp),

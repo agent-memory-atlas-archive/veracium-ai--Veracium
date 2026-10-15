@@ -2197,28 +2197,49 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 52,
-   "module": "registry.py",
-   "qualname": "effective_registry"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 54,
-   "module": "registry.py",
-   "qualname": "effective_registry"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 59,
-   "module": "registry.py",
-   "qualname": "effective_registry"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
    "line": 69,
+   "module": "registry.py",
+   "qualname": "effective_registry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 71,
+   "module": "registry.py",
+   "qualname": "effective_registry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 78,
+   "module": "registry.py",
+   "qualname": "effective_registry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 82,
+   "module": "registry.py",
+   "qualname": "effective_registry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 85,
+   "module": "registry.py",
+   "qualname": "effective_registry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 91,
+   "module": "registry.py",
+   "qualname": "effective_registry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 101,
    "module": "registry.py",
    "qualname": "effective_registry"
   },
@@ -2352,116 +2373,123 @@
    "qualname": "AgreementRecord._lexicon_pattern"
   },
   {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 482,
+   "module": "schema.py",
+   "qualname": "Relation._arity_and_functional_agree"
+  },
+  {
    "kind": "BOOL_RETURN",
-   "line": 523,
+   "line": 548,
    "module": "schema.py",
    "qualname": "is_procedural_relation"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 615,
+   "line": 640,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 620,
+   "line": 645,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 643,
+   "line": 668,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 648,
+   "line": 673,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 679,
+   "line": 704,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 684,
+   "line": 709,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__setattr__"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 689,
+   "line": 714,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__eq__"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 773,
+   "line": 798,
    "module": "schema.py",
    "qualname": "Edge.active"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 789,
+   "line": 814,
    "module": "schema.py",
    "qualname": "Edge.quarantined"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 801,
+   "line": 826,
    "module": "schema.py",
    "qualname": "Edge.use_only"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 825,
+   "line": 850,
    "module": "schema.py",
    "qualname": "Edge.valid_now"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 843,
+   "line": 868,
    "module": "schema.py",
    "qualname": "Edge.assertable"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 906,
+   "line": 931,
    "module": "schema.py",
    "qualname": "Episode.quarantined"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 917,
+   "line": 942,
    "module": "schema.py",
    "qualname": "Episode.use_only"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 924,
+   "line": 949,
    "module": "schema.py",
    "qualname": "Episode.active"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 943,
+   "line": 968,
    "module": "schema.py",
    "qualname": "Episode.assertable"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 951,
+   "line": 976,
    "module": "schema.py",
    "qualname": "Episode.valid_now"
   },
@@ -5612,7 +5640,7 @@
   "by_kind": {
    "BOOL_RETURN": 74,
    "FILTER_RETURN": 47,
-   "RAISE": 555,
+   "RAISE": 559,
    "RETURN_FALSE": 92,
    "RETURN_NONE": 74
   },
@@ -5846,14 +5874,14 @@
    "registry.py": {
     "BOOL_RETURN": 0,
     "FILTER_RETURN": 0,
-    "RAISE": 4,
+    "RAISE": 7,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
    "schema.py": {
     "BOOL_RETURN": 15,
     "FILTER_RETURN": 0,
-    "RAISE": 21,
+    "RAISE": 22,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
@@ -5956,7 +5984,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 842,
+  "total": 846,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

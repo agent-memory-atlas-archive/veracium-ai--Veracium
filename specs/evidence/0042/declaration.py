@@ -69,6 +69,7 @@ DECLARATION = (
     ("procedural-gate.actor-present", "0037", "Gate 3", "procedural_gate.py:actor_present", "refuse"),
     ("procedural-gate.positive-form", "0037", "Gate 3", "procedural_gate.py:positive_form", "refuse"),
     ("procedures.source-id-required", "0006", "§4 rule 9", "procedures.py:build_procedure_edge", "refuse"),
+    ("registry.arity-refused", "0044", "§2c INV-A3/A10", "registry.py:effective_registry", "refuse"),
     ("registry.empty-refused", "0025", "§4b-iv X5", "registry.py:effective_registry", "refuse"),
     ("registry.reserved-shadowed", "0025", "§4b-iv", "registry.py:effective_registry", "refuse"),
     ("schema.edge.assertable", "0001", "§4", "schema.py:Edge.assertable", "withhold"),

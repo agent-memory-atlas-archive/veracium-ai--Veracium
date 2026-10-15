@@ -217,6 +217,7 @@ other-object	src/veracium/proactive.py	getattr	token_budget = getattr(config, "p
 other-object	src/veracium/registry.py	getattr	eff = {k: FrozenRel(v.name, bool(v.functional), getattr(v, "desc", ""),
 other-object	src/veracium/registry.py	getattr	getattr(v, "relation_kind", "declarative"))
 other-object	src/veracium/registry.py	getattr	or getattr(v, "desc", "") != canon.desc):
+other-object	src/veracium/registry.py	getattr	a = getattr(v, "arity", None)
 other-object	src/veracium/schema.py	__setattr__	def __setattr__(self, name, value):
 other-object	src/veracium/schema.py	__setattr__	def __setattr__(self, name, value):
 other-object	src/veracium/schema.py	__setattr__	object.__setattr__(self, "basis", basis)

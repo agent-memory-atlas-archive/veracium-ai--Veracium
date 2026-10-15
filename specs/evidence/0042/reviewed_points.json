@@ -1239,114 +1239,144 @@
   "line": 165,
   "statement": "raise _SITE_PROC_SOURCE_ID_REQUIRED.fire(SourceIdRequired("
  },
- "registry.py:effective_registry:59:RAISE": {
+ "registry.py:effective_registry:78:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0044 §2c INV-A3/A10 (refuse) through site registry.arity-refused",
+  "reviewer": "dev",
+  "site": "registry.arity-refused",
+  "class": "enforcement",
+  "key": "registry.py:effective_registry:RAISE:3",
+  "line": 78,
+  "statement": "raise _SITE_REGISTRY_ARITY.fire(RegistryError("
+ },
+ "registry.py:effective_registry:82:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0044 §2c INV-A3/A10 (refuse) through site registry.arity-refused",
+  "reviewer": "dev",
+  "site": "registry.arity-refused",
+  "class": "enforcement",
+  "key": "registry.py:effective_registry:RAISE:4",
+  "line": 82,
+  "statement": "raise _SITE_REGISTRY_ARITY.fire(RegistryError("
+ },
+ "registry.py:effective_registry:85:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0044 §2c INV-A3/A10 (refuse) through site registry.arity-refused",
+  "reviewer": "dev",
+  "site": "registry.arity-refused",
+  "class": "enforcement",
+  "key": "registry.py:effective_registry:RAISE:5",
+  "line": 85,
+  "statement": "raise _SITE_REGISTRY_ARITY.fire(RegistryError("
+ },
+ "registry.py:effective_registry:91:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0025 §4b-iv X5 (refuse) through site registry.empty-refused",
   "reviewer": "dev",
   "site": "registry.empty-refused",
   "class": "enforcement",
-  "key": "registry.py:effective_registry:RAISE:3",
-  "line": 59,
+  "key": "registry.py:effective_registry:RAISE:6",
+  "line": 91,
   "statement": "raise _SITE_REGISTRY_EMPTY.fire(RegistryError(\"empty registry refused — every relation would \""
  },
- "registry.py:effective_registry:69:RAISE": {
+ "registry.py:effective_registry:101:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0025 §4b-iv (refuse) through site registry.reserved-shadowed",
   "reviewer": "dev",
   "site": "registry.reserved-shadowed",
   "class": "enforcement",
-  "key": "registry.py:effective_registry:RAISE:4",
-  "line": 69,
+  "key": "registry.py:effective_registry:RAISE:7",
+  "line": 101,
   "statement": "raise _SITE_RESERVED_SHADOWED.fire(RegistryError("
  },
- "schema.py:Edge.assertable:843:BOOL_RETURN": {
+ "schema.py:Edge.assertable:868:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site schema.edge.assertable",
   "reviewer": "dev",
   "site": "schema.edge.assertable",
   "class": "enforcement",
   "key": "schema.py:Edge.assertable:BOOL_RETURN:1",
-  "line": 843,
+  "line": 868,
   "statement": "return ok                                     # ONE return: the same exit statement in every arm (INV-7)"
  },
- "schema.py:Edge.quarantined:789:BOOL_RETURN": {
+ "schema.py:Edge.quarantined:814:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (quarantine) through site schema.edge.quarantined",
   "reviewer": "dev",
   "site": "schema.edge.quarantined",
   "class": "enforcement",
   "key": "schema.py:Edge.quarantined:BOOL_RETURN:1",
-  "line": 789,
+  "line": 814,
   "statement": "return q                                        # ONE return: the exit statement is the same in every arm (INV-7)"
  },
- "schema.py:Edge.use_only:801:BOOL_RETURN": {
+ "schema.py:Edge.use_only:826:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site schema.edge.use-only",
   "reviewer": "dev",
   "site": "schema.edge.use-only",
   "class": "enforcement",
   "key": "schema.py:Edge.use_only:BOOL_RETURN:1",
-  "line": 801,
+  "line": 826,
   "statement": "return u                                     # ONE return: the same exit statement in every arm (INV-7)"
  },
- "schema.py:Edge.valid_now:825:BOOL_RETURN": {
+ "schema.py:Edge.valid_now:850:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0028 S2 (withhold) through site schema.edge.valid-now",
   "reviewer": "dev",
   "site": "schema.edge.valid-now",
   "class": "enforcement",
   "key": "schema.py:Edge.valid_now:BOOL_RETURN:1",
-  "line": 825,
+  "line": 850,
   "statement": "return v                                      # ONE return: the same exit statement in every arm (INV-7)"
  },
- "schema.py:Episode.active:924:BOOL_RETURN": {
+ "schema.py:Episode.active:949:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0022 §4b-ii (withhold) through site schema.episode.active",
   "reviewer": "dev",
   "site": "schema.episode.active",
   "class": "enforcement",
   "key": "schema.py:Episode.active:BOOL_RETURN:1",
-  "line": 924,
+  "line": 949,
   "statement": "return _SITE_EPISODE_ACTIVE.fire(self.retired_reason is None)"
  },
- "schema.py:Episode.assertable:943:BOOL_RETURN": {
+ "schema.py:Episode.assertable:968:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site schema.episode.assertable",
   "reviewer": "dev",
   "site": "schema.episode.assertable",
   "class": "enforcement",
   "key": "schema.py:Episode.assertable:BOOL_RETURN:1",
-  "line": 943,
+  "line": 968,
   "statement": "return _SITE_EPISODE_ASSERTABLE.fire((self.active and not self.quarantined and not self.use_only"
  },
- "schema.py:Episode.quarantined:906:BOOL_RETURN": {
+ "schema.py:Episode.quarantined:931:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (quarantine) through site schema.episode.quarantined",
   "reviewer": "dev",
   "site": "schema.episode.quarantined",
   "class": "enforcement",
   "key": "schema.py:Episode.quarantined:BOOL_RETURN:1",
-  "line": 906,
+  "line": 931,
   "statement": "return _SITE_EPISODE_QUARANTINED.fire(self.provenance.disclosure == Disclosure.QUARANTINED)"
  },
- "schema.py:Episode.use_only:917:BOOL_RETURN": {
+ "schema.py:Episode.use_only:942:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site schema.episode.use-only",
   "reviewer": "dev",
   "site": "schema.episode.use-only",
   "class": "enforcement",
   "key": "schema.py:Episode.use_only:BOOL_RETURN:1",
-  "line": 917,
+  "line": 942,
   "statement": "return _SITE_EPISODE_USE_ONLY.fire((self.provenance.disclosure == Disclosure.USE_ONLY"
  },
- "schema.py:Episode.valid_now:951:BOOL_RETURN": {
+ "schema.py:Episode.valid_now:976:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0028 S2 (withhold) through site schema.episode.valid-now",
   "reviewer": "dev",
   "site": "schema.episode.valid-now",
   "class": "enforcement",
   "key": "schema.py:Episode.valid_now:BOOL_RETURN:1",
-  "line": 951,
+  "line": 976,
   "statement": "return _SITE_EPISODE_VALID_NOW.fire(self.date[:10] <= utcnow().date().isoformat())"
  },
  "scope_linkage.py:derive_absorbed_by:535:RAISE": {
@@ -3895,22 +3925,22 @@
   "line": 269,
   "statement": "return False"
  },
- "registry.py:effective_registry:52:RAISE": {
+ "registry.py:effective_registry:69:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "registry.py:effective_registry:RAISE:1",
-  "line": 52,
+  "line": 69,
   "statement": "raise RegistryError(f\"value for {k!r} is not a Relation\")"
  },
- "registry.py:effective_registry:54:RAISE": {
+ "registry.py:effective_registry:71:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "registry.py:effective_registry:RAISE:2",
-  "line": 54,
+  "line": 71,
   "statement": "raise RegistryError(f\"key {k!r} != Relation.name {v.name!r} — \""
  },
  "schema.py:AgreementRecord._direction_closed:396:RAISE": {
@@ -4012,13 +4042,22 @@
   "line": 210,
   "statement": "raise ValueError(\"producer is set only on a procedural record \""
  },
- "schema.py:SuccessorLookup.__init__:679:RAISE": {
+ "schema.py:Relation._arity_and_functional_agree:482:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
+  "reviewer": "dev",
+  "class": "argument-check",
+  "key": "schema.py:Relation._arity_and_functional_agree:RAISE:1",
+  "line": 482,
+  "statement": "raise ValueError(f\"relation {data.get('name')!r} declares functional={data['functional']!r} and \""
+ },
+ "schema.py:SuccessorLookup.__init__:704:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "schema.py:SuccessorLookup.__init__:RAISE:1",
-  "line": 679,
+  "line": 704,
   "statement": "raise TypeError(f\"disposition must be a SuccessorDisposition, got {disposition!r}\")"
  },
  "schema.py:as_utc_required:52:RAISE": {
@@ -5632,40 +5671,40 @@
   "line": 62,
   "statement": "raise EmptyCompletion("
  },
- "schema.py:<module>:615:RAISE": {
+ "schema.py:<module>:640:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "schema.py:<module>:RAISE:1",
-  "line": 615,
+  "line": 640,
   "statement": "raise ImportError("
  },
- "schema.py:<module>:620:RAISE": {
+ "schema.py:<module>:645:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "schema.py:<module>:RAISE:2",
-  "line": 620,
+  "line": 645,
   "statement": "raise ImportError(\"AS_OF_DISPOSITION carries a value outside the three closed dispositions\")"
  },
- "schema.py:<module>:643:RAISE": {
+ "schema.py:<module>:668:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "schema.py:<module>:RAISE:3",
-  "line": 643,
+  "line": 668,
   "statement": "raise ImportError("
  },
- "schema.py:<module>:648:RAISE": {
+ "schema.py:<module>:673:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "schema.py:<module>:RAISE:4",
-  "line": 648,
+  "line": 673,
   "statement": "raise ImportError(\"NAMES_A_SUCCESSOR carries a value that is not a boolean\")"
  },
  "schema.py:EvidenceContext.__setattr__:313:RAISE": {
@@ -5677,13 +5716,13 @@
   "line": 313,
   "statement": "raise AttributeError(\"EvidenceContext is immutable\")"
  },
- "schema.py:SuccessorLookup.__setattr__:684:RAISE": {
+ "schema.py:SuccessorLookup.__setattr__:709:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "schema.py:SuccessorLookup.__setattr__:RAISE:1",
-  "line": 684,
+  "line": 709,
   "statement": "raise AttributeError(\"SuccessorLookup is immutable\")"
  },
  "scope.py:_canonical_groups_ok:229:RETURN_FALSE": {
@@ -7792,13 +7831,13 @@
   "line": 231,
   "statement": "return not ((set(would) & set(fields)) - _NOT_RECORD_CARRIERS)"
  },
- "schema.py:Edge.active:773:BOOL_RETURN": {
+ "schema.py:Edge.active:798:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by __init__.py:Memory.correct [site memory.correct.inactive-edge, memory.correct.procedural, memory.correct.refused]; __init__.py:Memory.dispute [site memory.dispute.inactive-edge]; gate.py:partition_parts [site gate.partition-parts]; graph.py:collapse_for_render [site graph.collapse-for-render]; graph.py:semantic_duplicate_of [site graph.semantic-duplicate.keep]; schema.py:Edge.assertable [site schema.edge.assertable]; schema.py:Episode.assertable [site schema.episode.assertable]; store/sqlite.py:SqliteStore._redact_in_txn [site store.redact.disposition-changed, store.redact.nothing-to-redact]; store/sqlite.py:SqliteStore._upsert_edge_row [site store.upsert.attested-redaction, store.upsert.immutable, store.upsert.invalidation-reason-not-registered, store.upsert.marker-introduced, store.upsert.relation-only-quarantine]; store/sqlite.py:SqliteStore.commit_outcome_import_plan [site store.import-plan, store.import.attested-redaction, store.import.episode-kind-not-recognised, store.import.notice-body-conflict, store.import.notice-record-unredacted, store.import.reason-not-registered]; and by __init__.py:Memory._build_contested, __init__.py:Memory._fit_to_budget, authority.py:scope_fingerprint, compile.py:_live_refusal_contention_edge_ids, graph.py:_lexical_scored, graph.py:_permute_contention_groups, graph.py:history_label, graph.py:render_edges, introspect.py:report, procedures.py:describe_outcome, selfcheck.py:_check_revocation, selfcheck.py:_check_supersession, store/revocation.py:_edge_record, why.py:find (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:Edge.active:BOOL_RETURN:1",
-  "line": 773,
+  "line": 798,
   "statement": "return self.invalidated_at is None"
  },
  "schema.py:EvidenceContext.__eq__:326:BOOL_RETURN": {
@@ -7828,22 +7867,22 @@
   "line": 244,
   "statement": "return (self.author_of_evidence == EvidenceAuthor.THIRD_PARTY"
  },
- "schema.py:SuccessorLookup.__eq__:689:BOOL_RETURN": {
+ "schema.py:SuccessorLookup.__eq__:714:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no product consumer — the language's == operator (record equality); no product decision consumes it",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:SuccessorLookup.__eq__:BOOL_RETURN:1",
-  "line": 689,
+  "line": 714,
   "statement": "return (self.disposition, self.successors) == (other.disposition, other.successors)"
  },
- "schema.py:is_procedural_relation:523:BOOL_RETURN": {
+ "schema.py:is_procedural_relation:548:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by ingest.py:ingest_event [site ingest.basis-via-remember, ingest.instructions-not-a-list, ingest.source-id-required]; portability.py:import_memory [site portability.import.agreement-invalid, portability.import.file, portability.import.origin-missing, portability.import.race-exhausted, portability.import.record, portability.import.restore-not-bool, portability.import.restore-with-user]; procedures.py:build_procedure_edge [site procedures.source-id-required]; and by portability.py:import_memory._signals (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "schema.py:is_procedural_relation:BOOL_RETURN:1",
-  "line": 523,
+  "line": 548,
   "statement": "return r is not None and getattr(r, \"relation_kind\", \"declarative\") == \"procedural\""
  },
  "scope.py:is_legacy_derivative:387:BOOL_RETURN": {

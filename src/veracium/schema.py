@@ -457,6 +457,31 @@ class Relation(BaseModel):
     functional: bool = False  # one current value per subject → supersede on change
     desc: str = ""  # one-clause gloss rendered into the distill prompt
     relation_kind: Literal["declarative", "procedural"] = "declarative"
+    # specs/0044 §4a: the relation's ARITY is the contract, and `functional` its compatibility projection
+    # (`single` ≡ True, `multi` ≡ False). `keyed` is a reserved word the model holds and the registry boundary
+    # refuses (§2c); an arity outside the three is refused here, by the type. None = NOT DECLARED: the arity is then
+    # derived when read (`registry.declared_arity`), never stored, because this model is mutable — a host that sets
+    # `functional` after construction, or copies with `model_copy(update=…)` (no validator runs), must keep a
+    # registry that was valid before 0044 valid (INV-A4; research's T5-1 finding)
+    arity: Optional[Literal["single", "multi", "keyed"]] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _arity_and_functional_agree(cls, data):
+        """specs/0044 §2/§2c (INV-A4, INV-A10): an absent `arity` stays undeclared (derived at read, so every
+        registry valid today keeps its meaning); an absent `functional` is derived from a declared `arity`; a
+        declaration giving both and disagreeing is REFUSED, never resolved in favour of either."""
+        if not isinstance(data, dict):
+            return data
+        arity, has_functional = data.get("arity"), "functional" in data
+        if arity is None:
+            return data
+        if not has_functional:
+            return {**data, "functional": arity == "single"}
+        if arity in ("single", "multi") and bool(data["functional"]) != (arity == "single"):
+            raise ValueError(f"relation {data.get('name')!r} declares functional={data['functional']!r} and "
+                             f"arity={arity!r}, which disagree (specs/0044 INV-A10)")
+        return data
 
 
 # A small, extensible default registry. Hosts can add their own via config.

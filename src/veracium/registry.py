@@ -3,12 +3,14 @@
 The host's registry dict is validated AS SUPPLIED at the `ingest_event`
 boundary, the reserved members are injected, and the result is EXTRACTED
 into an immutable per-event snapshot of frozen `(name, functional, desc)`
-records — all prompt- and classification-bearing fields (X11). This ONE
+records (with `relation_kind` and, specs/0044 §2, `arity`) — all prompt- and classification-bearing fields (X11). This ONE
 snapshot feeds prompt rendering, retry validation, membership, and
 supersession; there is no second registry read anywhere in the event.
 
 Construction order (each step's position is load-bearing — §4b-ii):
-  1. shape (every value a Relation, every key == its value's name)
+  1. shape (every value a Relation, every key == its value's name); specs/0044
+     §2c: its arity is one of the operational two — `keyed` is reserved and
+     refused, and an arity disagreeing with `functional` is refused
   2. empty AS SUPPLIED (before injection can mask it — X5)
   3. conflicting-shadow refusal (the COMPLETE canonical form, desc
      included; an empty gloss is drift too — rounds 2/3/4 each narrowed
@@ -28,6 +30,7 @@ from .census import declare_site
 # decision is returned THROUGH — consult() brackets the decision, fire() wraps the value
 _SITE_REGISTRY_EMPTY = declare_site("registry.empty-refused")
 _SITE_RESERVED_SHADOWED = declare_site("registry.reserved-shadowed")
+_SITE_REGISTRY_ARITY = declare_site("registry.arity-refused")
 
 
 class FrozenRel(NamedTuple):
@@ -40,9 +43,23 @@ class FrozenRel(NamedTuple):
     desc: str
     relation_kind: str = "declarative"
 
+    @property
+    def arity(self) -> str:
+        """specs/0044 §2: the snapshot carries arity DERIVED from its one stored bit, so the two can never
+        disagree on a record. Stage 1 admits only `single` and `multi` (the boundary refuses `keyed` and any
+        disagreement before a FrozenRel is built), so `functional` determines it."""
+        return "single" if self.functional else "multi"
+
 
 class RegistryError(ValueError):
     """A host registry the boundary refuses (X5/X9)."""
+
+
+def declared_arity(v) -> str:
+    """specs/0044 §4a: an entry's arity — its own declaration, or (absent, as on every registry written before
+    0044 and on a duck-typed entry) derived from `functional`, so `functional=True ≡ single`."""
+    a = getattr(v, "arity", None)
+    return a if a is not None else ("single" if v.functional else "multi")
 
 
 def effective_registry(host: dict) -> MappingProxyType:
@@ -53,6 +70,21 @@ def effective_registry(host: dict) -> MappingProxyType:
         if k != v.name:
             raise RegistryError(f"key {k!r} != Relation.name {v.name!r} — "
                                 f"membership and lookup would disagree")
+        # specs/0044 §2c (INV-A3, INV-A10): checked on the entry AS SUPPLIED, whatever class built it — a model
+        # instance mutated after construction, or a duck-typed entry, never reached Relation's validator
+        with _SITE_REGISTRY_ARITY.consult():
+            a = declared_arity(v)
+            if a == "keyed":
+                raise _SITE_REGISTRY_ARITY.fire(RegistryError(
+                    f"relation {k!r} declares arity 'keyed', a reserved word no registry may declare yet "
+                    f"(specs/0044 §4a, INV-A3)"))
+            if a not in ("single", "multi"):
+                raise _SITE_REGISTRY_ARITY.fire(RegistryError(
+                    f"relation {k!r} declares arity {a!r}, outside single/multi (specs/0044 §2c)"))
+            if bool(v.functional) != (a == "single"):
+                raise _SITE_REGISTRY_ARITY.fire(RegistryError(
+                    f"relation {k!r} declares functional={v.functional!r} and arity={a!r}, which disagree "
+                    f"(specs/0044 INV-A10)"))
     # 2. empty — AS SUPPLIED (X5)
     with _SITE_REGISTRY_EMPTY.consult():
         if not host:

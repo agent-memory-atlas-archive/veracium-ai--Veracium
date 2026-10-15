@@ -86,9 +86,9 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("scope_linkage.py", 115): "control-flow", ("scope_linkage.py", 126): "control-flow", ("scope_linkage.py", 510): "predicate-helper",
     ("scope_linkage.py", 511): "predicate-helper", ("scope_linkage.py", 532): "control-flow",
     ("schema.py", 64): "control-flow", ("schema.py", 237): "predicate-helper", ("schema.py", 244): "predicate-helper",
-    ("schema.py", 326): "predicate-helper", ("schema.py", 523): "predicate-helper", ("schema.py", 615): "internal-invariant",
-    ("schema.py", 620): "internal-invariant", ("schema.py", 643): "internal-invariant", ("schema.py", 648): "internal-invariant",
-    ("schema.py", 689): "predicate-helper", ("schema.py", 773): "predicate-helper", ("schema.py", 313): "internal-invariant", ("schema.py", 684): "internal-invariant",
+    ("schema.py", 326): "predicate-helper", ("schema.py", 548): "predicate-helper", ("schema.py", 640): "internal-invariant",
+    ("schema.py", 645): "internal-invariant", ("schema.py", 668): "internal-invariant", ("schema.py", 673): "internal-invariant",
+    ("schema.py", 714): "predicate-helper", ("schema.py", 798): "predicate-helper", ("schema.py", 313): "internal-invariant", ("schema.py", 709): "internal-invariant",
     ("store/sqlite.py", 207): "control-flow", ("store/sqlite.py", 284): "control-flow", ("store/sqlite.py", 339): "control-flow",
     ("store/sqlite.py", 417): "control-flow", ("store/sqlite.py", 500): "control-flow", ("store/sqlite.py", 840): "control-flow",
     ("store/sqlite.py", 859): "control-flow", ("store/sqlite.py", 904): "control-flow", ("store/sqlite.py", 971): "control-flow",
@@ -254,17 +254,20 @@ e("procedural_gate.py", 190, "procedural-gate.positive-form", "0037", "Gate 3", 
 e("procedural_gate.py", 192, "procedural-gate.positive-form", "0037", "Gate 3", "refuse")
 e("procedural_gate.py", 193, "procedural-gate.positive-form", "0037", "Gate 3", "refuse")
 e("procedures.py", 165, "procedures.source-id-required", "0006", "§4 rule 9", "refuse")
-e("registry.py", 59, "registry.empty-refused", "0025", "§4b-iv X5", "refuse")
-e("registry.py", 69, "registry.reserved-shadowed", "0025", "§4b-iv", "refuse")
-e("schema.py", 843, "schema.edge.assertable", "0001", "§4", "withhold")
-e("schema.py", 789, "schema.edge.quarantined", "0001", "§4", "quarantine")
-e("schema.py", 801, "schema.edge.use-only", "0001", "§4", "withhold")
-e("schema.py", 825, "schema.edge.valid-now", "0028", "S2", "withhold")
-e("schema.py", 924, "schema.episode.active", "0022", "§4b-ii", "withhold")
-e("schema.py", 943, "schema.episode.assertable", "0001", "§4", "withhold")
-e("schema.py", 906, "schema.episode.quarantined", "0001", "§4", "quarantine")
-e("schema.py", 917, "schema.episode.use-only", "0001", "§4", "withhold")
-e("schema.py", 951, "schema.episode.valid-now", "0028", "S2", "withhold")
+e("registry.py", 78, "registry.arity-refused", "0044", "§2c INV-A3/A10", "refuse")
+e("registry.py", 82, "registry.arity-refused", "0044", "§2c INV-A3/A10", "refuse")
+e("registry.py", 85, "registry.arity-refused", "0044", "§2c INV-A3/A10", "refuse")
+e("registry.py", 91, "registry.empty-refused", "0025", "§4b-iv X5", "refuse")
+e("registry.py", 101, "registry.reserved-shadowed", "0025", "§4b-iv", "refuse")
+e("schema.py", 868, "schema.edge.assertable", "0001", "§4", "withhold")
+e("schema.py", 814, "schema.edge.quarantined", "0001", "§4", "quarantine")
+e("schema.py", 826, "schema.edge.use-only", "0001", "§4", "withhold")
+e("schema.py", 850, "schema.edge.valid-now", "0028", "S2", "withhold")
+e("schema.py", 949, "schema.episode.active", "0022", "§4b-ii", "withhold")
+e("schema.py", 968, "schema.episode.assertable", "0001", "§4", "withhold")
+e("schema.py", 931, "schema.episode.quarantined", "0001", "§4", "quarantine")
+e("schema.py", 942, "schema.episode.use-only", "0001", "§4", "withhold")
+e("schema.py", 976, "schema.episode.valid-now", "0028", "S2", "withhold")
 e("scope_linkage.py", 535, "scope-linkage.export.ambiguous-absorber", "0020", "§4a-iii", "refuse")
 e("scope_linkage.py", 458, "scope-linkage.import.rows", "0020", "R6-2", "refuse")
 e("scope_linkage.py", 478, "scope-linkage.import.rows", "0020", "R6-2", "refuse")
