@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 3e1c6bc
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ e4fbcfa
+# RE-PINNED 2026-10-15 T5-1 (0044 Relation.arity, 3e64d3c) and R-A round 2's fixes (RA-01..RA-03) landed in e4fbcfa91de01bc4cd2e9706dac44346e07c847f: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-15 the T4-1 fix (research's T4 stage 2) landed in 3e1c6bc19b03a54df4ca37e108f16dc8eb93fe35: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-15 0041 §11.6.6 (T4, the notice state machine) landed in 86baf9cb1ec84de25667d1d756d259e9951af5d3: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-14 0008 v7 (the request registry, schema v16) landed in f20840fed3c4528eba8be50cb3634a568c5f87ac: bodies byte-identical; the pin moves to the commit that changed src/
