@@ -3377,25 +3377,25 @@
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 60,
+   "line": 59,
    "module": "store/lifetime.py",
    "qualname": "same_retirement"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 61,
+   "line": 60,
    "module": "store/lifetime.py",
    "qualname": "same_retirement"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 73,
+   "line": 72,
    "module": "store/lifetime.py",
    "qualname": "transition"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 83,
+   "line": 82,
    "module": "store/lifetime.py",
    "qualname": "transition"
   },

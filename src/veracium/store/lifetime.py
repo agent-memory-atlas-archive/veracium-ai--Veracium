@@ -19,10 +19,10 @@ A transition is NEVER inferred from which method ran or from the journal kind (a
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from typing import NamedTuple, Optional
 
 from ..redaction import edge_carries_marker
+from ..schema import as_utc_required
 
 # specs/0044 §4b: the three DEFAULT relation names reclassified single -> multi. The inventory selects by these NAMES
 # (0018 amendment §4a, "under the three default relation names"); eligibility is the plan's (§4e), never this set's.
@@ -42,15 +42,14 @@ def retirement(d: dict) -> Optional[tuple]:
 
 
 def _instant(at):
-    """A stored `invalidated_at` as an instant, so ONE instant written two ways (`+00:00` by a legacy writer, `Z` by
-    the model's serializer, which every rewrite of the row uses) is one value. An unparseable value stays as stored."""
-    if not isinstance(at, str):
-        return at
+    """A stored `invalidated_at` as an instant, so ONE instant written several ways — `+00:00` or NAIVE by a legacy
+    writer, `Z` by the model's serializer, which every rewrite of the row uses — is one value. Read through the
+    project's own normalizer (`schema.as_utc_required`, 0030/0032 V-NORM: naive is UTC; research's T5-2 stage-2 N1),
+    never a second parser; a value it refuses (malformed) stays as stored."""
     try:
-        dt = datetime.fromisoformat(at[:-1] + "+00:00" if at.endswith("Z") else at)
-    except ValueError:
+        return as_utc_required(at)
+    except (TypeError, ValueError):
         return at
-    return dt.astimezone(timezone.utc) if dt.tzinfo is not None else dt
 
 
 def same_retirement(a: Optional[tuple], b: Optional[tuple]) -> bool:

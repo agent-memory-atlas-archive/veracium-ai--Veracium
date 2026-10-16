@@ -42,9 +42,9 @@
     - Hosts implementing `veracium.store.base.Store`: `refusal_inventory_ids` is new (default: none), and `add_edge`'s
       contract gains the lifetime obligation.
     - Anyone comparing benchmark runs across this change: the extraction cache re-keys.
-  - **Evidence.** tests/test_0044_t5_era.py holds 49 cells (the step, the transition table row by row, round 3's
+  - **Evidence.** tests/test_0044_t5_era.py holds 51 cells (the step, the transition table row by row, round 3's
     upsert sequence, retention through both readers, doctor, erasure, and a census refusing any other `DELETE FROM
-    edges`, and T5-3's digest cells). 34 code mutants of T5-2's and T5-3's own rules each fail their named cell as an assertion or a missing refusal, run
+    edges`, and T5-3's digest cells). 35 code mutants of T5-2's and T5-3's own rules each fail their named cell as an assertion or a missing refusal, run
     as a scratch campaign (not committed evidence). The 0013 step campaign perturbs the three new step writes on every
     shape: 1,480 perturbations, 1,371 killed, 109 not applicable (the empty-table bases, measured). The tests that
     used one of the three relations as THE example of a functional relation now use one that stays `single`, with

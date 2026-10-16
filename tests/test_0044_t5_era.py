@@ -342,6 +342,10 @@ def _j(**kw):
      _j(invalidated_at="2050", invalidation_reason="superseded", object="w"), None),
     (_j(invalidated_at="2050-01-01T00:00:00+00:00", invalidation_reason="superseded"),
      _j(invalidated_at="2050-01-01T00:00:00Z", invalidation_reason="superseded"), None),      # one instant, two spellings
+    (_j(invalidated_at="2050-01-01T00:00:00", invalidation_reason="superseded"),
+     _j(invalidated_at="2050-01-01T00:00:00Z", invalidation_reason="superseded"), None),      # naive is UTC (V-NORM, N1)
+    (_j(invalidated_at="not a time", invalidation_reason="superseded"),
+     _j(invalidated_at="not a time", invalidation_reason="superseded", object="w"), None),    # malformed: kept as stored
     (_j(), _j(object=R.MARKER), "redaction"),
     (_j(), _j(object="w"), None),                                                     # an ordinary mutation
 ])

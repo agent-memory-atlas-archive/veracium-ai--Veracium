@@ -7985,40 +7985,40 @@
   "line": 511,
   "statement": "return False"
  },
- "store/lifetime.py:same_retirement:60:BOOL_RETURN": {
+ "store/lifetime.py:same_retirement:59:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by doctor.py:_check_data_migration, store/lifetime.py:transition",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/lifetime.py:same_retirement:BOOL_RETURN:1",
-  "line": 60,
+  "line": 59,
   "statement": "return a is b"
  },
- "store/lifetime.py:same_retirement:61:BOOL_RETURN": {
+ "store/lifetime.py:same_retirement:60:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by doctor.py:_check_data_migration, store/lifetime.py:transition",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/lifetime.py:same_retirement:BOOL_RETURN:2",
-  "line": 61,
+  "line": 60,
   "statement": "return _instant(a[0]) == _instant(b[0]) and a[1] == b[1]"
  },
- "store/lifetime.py:transition:73:RETURN_NONE": {
+ "store/lifetime.py:transition:72:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by store/sqlite.py:SqliteStore._apply_lifetime_transition",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/lifetime.py:transition:RETURN_NONE:1",
-  "line": 73,
+  "line": 72,
   "statement": "return None"
  },
- "store/lifetime.py:transition:83:RETURN_NONE": {
+ "store/lifetime.py:transition:82:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by store/sqlite.py:SqliteStore._apply_lifetime_transition",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/lifetime.py:transition:RETURN_NONE:2",
-  "line": 83,
+  "line": 82,
   "statement": "return None"
  },
  "store/revocation.py:_is_ordinal_violation:56:BOOL_RETURN": {
