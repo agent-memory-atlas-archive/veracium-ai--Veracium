@@ -26,6 +26,7 @@ from .graph import collapse_for_render, render_edges
 from .contention import is_live_refusal, retained_refusal_ids
 from .llm.base import Complete
 from .schema import DEFAULT_RELATIONS, Relation
+from .registry import declared_arity
 
 # The contention-policy version. Bump it when the derived-view semantics change in a way a
 # cached wiki must not survive (independently of the relation registry). It rides in the
@@ -72,13 +73,16 @@ Rules:
 def _policy_digest(relations: dict[str, Relation], *, wiki_input_budget: int = 8000,
                    variant_cap: int = 4, item_cap: int = 512) -> str:
     """specs/0003 §4c-ii (round-10 blocker 2): the wiki's cache identity must bind the
-    compiler-policy inputs, not just `store_version`. The functional-relation registry is
-    host-supplied and lives OUTSIDE the store, so reopening the same store under a registry
-    that classifies a relation differently changes what the compiler must exclude with NO
-    `store_version` change. This digest covers the functional-relation semantics AND the
-    contention-policy version; a mismatch forces recompilation regardless of `store_version`."""
-    functional = sorted(name for name, r in relations.items() if r.functional)
-    blob = json.dumps({"functional": functional, "policy": _CONTENTION_POLICY_VERSION,
+    compiler-policy inputs, not just `store_version`. The relation registry is host-supplied
+    and lives OUTSIDE the store, so reopening the same store under a registry that classifies
+    a relation differently changes what the compiler must exclude with NO `store_version`
+    change. specs/0044 §2 (T5-3): the digest binds every relation's ARITY — the whole
+    `(name, arity)` map, read through `registry.declared_arity`, not the subset that is
+    `single` — AND the contention-policy version; a mismatch forces recompilation regardless
+    of `store_version`. Changing what the digest binds re-keys every cached wiki: one
+    recompilation per cached user view, on its next read."""
+    arity = sorted((name, declared_arity(r)) for name, r in relations.items())
+    blob = json.dumps({"arity": arity, "policy": _CONTENTION_POLICY_VERSION,
                        # the 0012 additions (I10k): compiler selection/serialization inputs
                        "wiki_input_budget": wiki_input_budget, "variant_cap": variant_cap,
                        "item_cap": item_cap,

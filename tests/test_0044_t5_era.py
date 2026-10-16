@@ -655,3 +655,42 @@ def test_no_statement_deletes_from_edges_except_the_per_user_erasure():
                 interpolated.append((f.name, re.match(r"\n\s*def\s+(\w+)", text[fn:]).group(1)))
     assert literal == [], literal
     assert interpolated == [("sqlite.py", "forget_user")], interpolated
+
+
+# ---- T5-3: the wiki's cache identity binds arity (0044 §2) -------------------------------------------------------
+
+def _digest_before_t5_3(relations):
+    """`compile._policy_digest` as it was before T5-3 — the FUNCTIONAL NAMES, not the arity map — kept here as the
+    superseded rule, so the cell can stamp a cache exactly as a pre-T5-3 compile did."""
+    import hashlib
+    from veracium import budgets
+    blob = json.dumps({"functional": sorted(n for n, r in relations.items() if r.functional),
+                       "policy": _compile._CONTENTION_POLICY_VERSION, "wiki_input_budget": 8000, "variant_cap": 4,
+                       "item_cap": 512, "marker_grammar": budgets.MARKER_GRAMMAR_VERSION},
+                      sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+
+def test_the_policy_digest_binds_the_whole_arity_map_not_the_single_subset():
+    """T5-3: a host relation ADDED as `multi` moves the digest (the functional-name list could not see it), and so does
+    one relation moving between `single` and `multi`. Mutant: bind the functional names only."""
+    from veracium.schema import Relation
+    base = _compile._policy_digest(DEFAULT_RELATIONS)
+    added = {**DEFAULT_RELATIONS, "likes_genre": Relation(name="likes_genre", arity="multi", desc="a genre")}
+    assert _compile._policy_digest(added) != base
+    moved = {**DEFAULT_RELATIONS, "measures": DEFAULT_RELATIONS["measures"].model_copy(
+        update={"arity": "single", "functional": True})}
+    assert _compile._policy_digest(moved) != base
+
+
+def test_a_wiki_cached_under_the_previous_digest_recompiles_once(tmp_path):
+    """0044 §2: changing what the digest binds re-keys every cached wiki — one recompilation per cached user view, on
+    its next read, and none after it is re-stamped. Mutant: keep the functional-name digest."""
+    s = SqliteStore(str(tmp_path / "w.db"))
+    s.add_edge(_edge("w1", "weight 70"))
+    ver = s.store_version(U)
+    s.set_wiki(U, f"{_compile._ENVELOPE}{_digest_before_t5_3(DEFAULT_RELATIONS)}\ncached body", ver)
+    assert _compile.needs_recompile(s, U, 8, DEFAULT_RELATIONS)
+    s.set_wiki(U, f"{_compile._ENVELOPE}{_compile._policy_digest(DEFAULT_RELATIONS)}\ncached body", ver)
+    assert not _compile.needs_recompile(s, U, 8, DEFAULT_RELATIONS)
+    s.close()

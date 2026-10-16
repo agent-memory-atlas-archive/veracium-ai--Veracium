@@ -75,7 +75,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("agreement.py", 219): "predicate-helper", ("agreement.py", 267): "control-flow", ("agreement.py", 487): "control-flow",
     ("asof/adapter.py", 54): "internal-invariant", ("asof/resolve.py", 117): "internal-invariant", ("asof/resolve.py", 122): "internal-invariant",
     ("asof/resolve.py", 179): "control-flow", ("asof/resolve.py", 204): "predicate-helper",
-    ("compile.py", 185): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
+    ("compile.py", 189): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
     ("doctor.py", 438): "predicate-helper", ("dryrun.py", 68): "predicate-helper",
     ("graph.py", 59): "predicate-helper", ("graph.py", 74): "predicate-helper", ("graph.py", 233): "internal-invariant",
     ("graph.py", 893): "argument-check", ("grounding.py", 154): "control-flow",
@@ -156,7 +156,7 @@ e("asof/resolve.py", 261, "asof.resolve.future-T", "0028", "§2c-i", "refuse")
 e("asof/resolve.py", 243, "asof.resolve.held-at", "0028", "§2c-i", "withhold")
 e("authority.py", 71, "authority.permitted", "0003", "§4a", "refuse")
 e("authority.py", 84, "authority.self-assertion", "0003", "§4a", "withhold")
-e("compile.py", 171, "compile.grounded-inputs", "0004", "§4", "withhold")
+e("compile.py", 175, "compile.grounded-inputs", "0004", "§4", "withhold")
 e("diagnostics.py", 276, "diagnostics.send.not-consented", "0015", "§4", "withhold")
 e("gate.py", 54, "gate.exclude-procedural", "0037", "V-EXTRACTOR-QUOTE-GATED", "withhold")
 e("gate.py", 178, "gate.partition-parts", "0001", "§4", "withhold")

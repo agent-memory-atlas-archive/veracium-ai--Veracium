@@ -696,14 +696,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 2026-10-15, 0044 T5-1 (Relation.arity: the model's validator, the registry boundary's arity refusals, declared_arity, FrozenRel.arity): moved dotted/dataflow 7,257 -> 7,267 and getattr/dataflow 33 -> 34 (registry.py's getattr(v, "arity", None), tabled in GETATTR_ALLOWANCES), the rest unchanged.
 #: 2026-10-15, R-A round 2 (RA-01: the X21 guard moved into _redact_in_txn; RA-02: the import's notice predicates staged over one pre-treatment snapshot; RA-03: Memory.confirm's registry decision before any target read, UnknownEdge): moved dotted/dataflow 7,267 -> 7,275, the rest unchanged.
 #: 2026-10-15, 0044 T5-2 (the flip; the v16 arity tables and the step's era/inventory blocks with postconditions; the lifetime hook at the choke point; contention.is_live_refusal; doctor's pre-plan phase): moved dotted/dataflow 7,275 -> 7,334, dotted/module-plain 366 -> 369 and dotted/module-protected 52 -> 53, the rest unchanged.
+#: 2026-10-16, 0044 T5-3 (compile._policy_digest binds the arity map through registry.declared_arity, not the functional names): moved dotted/dataflow 7,334 -> 7,333, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 7334,
+    "dotted/dataflow": 7333,
     "dotted/module-machinery": 19,
     "dotted/module-plain": 369,
     "dotted/module-protected": 53,
     "getattr/dataflow": 34,
 }
-SRC_ATTRIBUTE_TOTAL = 7809
+SRC_ATTRIBUTE_TOTAL = 7808
 SRC_DATA_DUNDERS_IN_DATAFLOW = 137   # 2026-10-15, 0044 T5-2: +1 — `type(self).__name__` in the Store base's refusing `refusal_inventory_ids` default  # 2026-10-14, 0008 v7: +1 — `super().__init__` in store/base.py's RequestRedacted (an exception's message, from ids and a verb)  # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 #   2026-09-20 0042 round 7: +1 — `type(exc).__name__` in `census.Site._measurement_failed` (the failure KIND recorded as a type name, R6-1)

@@ -711,19 +711,19 @@
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 171,
+   "line": 175,
    "module": "compile.py",
    "qualname": "_grounded_inputs"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 185,
+   "line": 189,
    "module": "compile.py",
    "qualname": "needs_recompile"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 317,
+   "line": 321,
    "module": "compile.py",
    "qualname": "ensure_wiki"
   },

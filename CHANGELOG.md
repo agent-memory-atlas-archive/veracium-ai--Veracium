@@ -31,6 +31,8 @@
   - **Schema v16 (unreleased, the programme's one bump) gains eight tables:** the era, the two inventories and the
     five tables of the restoration operation. The v15 → v16 step writes the era (its one clock read) and the two
     inventories in its own transaction, each checked at the step, and changes no edge and no journal event.
+  - **The compiled wiki's cache key binds every relation's arity** (T5-3; it bound the list of functional names). The
+    change re-keys every cached wiki once: each user's wiki recompiles on its next read, and not again.
   - **Lifetime transitions are derived at the journal's one choke point** from the persisted prior and new row
     (§4f-ii), so a same-id `add_edge` that reinstates or re-retires a row is bound exactly like the invalidate and
     reinstate methods.
@@ -40,9 +42,9 @@
     - Hosts implementing `veracium.store.base.Store`: `refusal_inventory_ids` is new (default: none), and `add_edge`'s
       contract gains the lifetime obligation.
     - Anyone comparing benchmark runs across this change: the extraction cache re-keys.
-  - **Evidence.** tests/test_0044_t5_era.py holds 47 cells (the step, the transition table row by row, round 3's
+  - **Evidence.** tests/test_0044_t5_era.py holds 49 cells (the step, the transition table row by row, round 3's
     upsert sequence, retention through both readers, doctor, erasure, and a census refusing any other `DELETE FROM
-    edges`). 32 code mutants of T5-2's own rules each fail their named cell as an assertion or a missing refusal, run
+    edges`, and T5-3's digest cells). 34 code mutants of T5-2's and T5-3's own rules each fail their named cell as an assertion or a missing refusal, run
     as a scratch campaign (not committed evidence). The 0013 step campaign perturbs the three new step writes on every
     shape: 1,480 perturbations, 1,371 killed, 109 not applicable (the empty-table bases, measured). The tests that
     used one of the three relations as THE example of a functional relation now use one that stays `single`, with
