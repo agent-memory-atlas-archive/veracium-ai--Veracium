@@ -946,12 +946,14 @@ class SqliteStore(Store):
                            (ep.model_dump_json(), episode_id))
         return row[1]
 
-    def _reinstate_edge_row(self, edge_id: str) -> None:
-        """Reverse OUR OWN revoked_source retirement (0022's reinstate verb —
-        the sweep only emits it for rows it retired). The wiki drops too: the
-        derived view changed in the restoring direction as surely as in the
-        retiring one, and a stale cache serving the pre-lift world is the same
-        defect mirrored."""
+    def _reinstate_edge_row(self, edge_id: str, *, reason: str) -> None:
+        """Make a retired edge active again, journaled `reinstated` with WHY (specs/0029 v12's closed vocabulary).
+        TWO callers, each passing its own constant `reason` (REQUIRED, no default — V-REINSTATE-WRITERS censuses the
+        callers, so a forwarded or defaulted reason cannot hide a site): 0022's lift (`source_restored`, reversing
+        OUR OWN revoked_source retirement — the sweep only emits it for rows it retired) and 0044's restoration
+        (`arity_reclassified`, store/data_migration.py, a row the old single-value rule retired). The wiki drops
+        too: the derived view changed in the restoring direction as surely as in the retiring one, and a stale cache
+        serving the pre-lift world is the same defect mirrored."""
         row = self._conn.execute("SELECT json, user_id FROM edges WHERE id=?",
                                  (edge_id,)).fetchone()
         if not row:
@@ -965,7 +967,7 @@ class SqliteStore(Store):
         self._conn.execute("UPDATE edges SET active=1, json=? WHERE id=?",
                            (new_json, edge_id))
         self._journal_edge_write(row[1], edge_id, new_json, row[0], kind="reinstated",
-                                 reason="source_restored")   # specs/0029 v12: 0022's lift restores a revoked source
+                                 reason=reason)   # specs/0029 v12: the caller's constant (censused per caller)
         self._conn.execute("DELETE FROM wiki WHERE user_id=?", (row[1],))
 
     def _reinstate_episode_row(self, episode_id: str) -> None:

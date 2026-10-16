@@ -305,3 +305,11 @@ sql-write-other-table	src/veracium/store/migration.py	str:sql-write	conn.execute
 sql-write-other-table	src/veracium/store/migration.py	str:sql-write	conn.execute("INSERT INTO refusal_inventory(refusal_id, user_id) "
 sql-write-other-table	src/veracium/store/schema_version.py	str:sql-write	conn.execute("INSERT OR IGNORE INTO arity_era(id, effective_at) VALUES(1, ?)", (effective_at,))
 sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE migration_outcome SET applicable=0 "
+sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	store._conn.execute("INSERT INTO migration_op(op_id, mode, inputs_digest, admitted_at) VALUES(?,?,?,?)",
+sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	store._conn.execute("INSERT INTO plan_header(id, plan_id, effective_at, registry_digest, op_id) "
+sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	store._conn.execute("INSERT INTO reclassification_plan(plan_id, relation, from_arity, to_arity) "
+sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	conn.execute("INSERT INTO migration_run(plan_id, user_id, op_id, committed_at) VALUES(?,?,?,?)",
+edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"JOIN edges e ON e.id = i.edge_id AND e.user_id = i.user_id WHERE i.user_id=? ORDER BY i.edge_id",
+edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"SELECT id FROM edges WHERE user_id=? AND json_extract(json, '$.supersedes')=? ORDER BY id", (user, eid))]
+sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	"INSERT INTO migration_outcome(plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, "
+edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	live = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (eid, user_id)).fetchone()

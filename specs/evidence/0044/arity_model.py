@@ -432,6 +432,14 @@ def restore_row(s: Store, e: Edge, out: str, origin: str = "local") -> dict:
 
 
 # ----------------------------------------------------------------------------------------------- §4h the operation
+def inventory_users(s: Store) -> list:
+    """The per-user phase's UNIVERSE (dev's T6 build note Q2, research's stage-1 read; a post-acceptance edit of this
+    model, disclosed in R-II): the users holding >=1 `arity_inventory` row. Only they can have a restoration, so a user
+    created at v16, or recreated after erasure (0044 §4g-ii), needs no run row and `doctor` never warns for it. v4 read
+    every user with edges, which left a standing warning for every user created after the operation completed."""
+    return sorted({v[0] for v in s.inventory.values()})
+
+
 def migrate_user(s: Store, user: str, op_id: str, fail: bool = False, crash_at: str | None = None,
                  admission: dict | None = None):
     """The per-user phase, ONE transaction: work on a copy, swap it in at commit. The admission record, when not yet
@@ -440,6 +448,8 @@ def migrate_user(s: Store, user: str, op_id: str, fail: bool = False, crash_at: 
     pid = tx.header["plan_id"]
     if (pid, user) in tx.runs:
         return "skipped"
+    if user not in inventory_users(tx):
+        return "skipped"                                  # re-checked under the lock: an erased user writes no run row
     t = tx.begin()
     for e in sorted(tx.edges.values(), key=lambda x: x.id):
         if e.user != user:
@@ -551,7 +561,7 @@ def run_data_migration(s: Store, registry: dict, *, op_id: str = "op-1", plan_on
         return _result("planned" if plan_written else "already-planned", plan_written, [], [], op_id,
                        plan_written=plan_written)
     committed, failed = [], []
-    for u in sorted({e.user for e in s.edges.values()}):
+    for u in inventory_users(s):
         try:
             r = migrate_user(s, u, op_id, fail=u in fail_users, crash_at=crash_at if u == crash_user else None,
                              admission=admission)
@@ -700,8 +710,7 @@ def doctor_data_migration(s: Store) -> tuple:
         return ("warn", f"may have values to restore (judged by relation name): {n}") if n else ("none", "nothing")
     if st == "initialized-empty":
         return ("info", "planned: no relation reclassified")
-    users = {e.user for e in s.edges.values()}
-    missing = sorted(u for u in users if (s.header["plan_id"], u) not in s.runs)
+    missing = [u for u in inventory_users(s) if (s.header["plan_id"], u) not in s.runs]
     return ("warn", f"{len(missing)} users incomplete") if missing else ("none", "complete")
 
 

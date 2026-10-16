@@ -698,15 +698,16 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 2026-10-15, 0044 T5-2 (the flip; the v16 arity tables and the step's era/inventory blocks with postconditions; the lifetime hook at the choke point; contention.is_live_refusal; doctor's pre-plan phase): moved dotted/dataflow 7,275 -> 7,334, dotted/module-plain 366 -> 369 and dotted/module-protected 52 -> 53, the rest unchanged.
 #: 2026-10-16, 0044 T5-3 (compile._policy_digest binds the arity map through registry.declared_arity, not the functional names): moved dotted/dataflow 7,334 -> 7,333, the rest unchanged.
 #: 2026-10-16, 0044 T5-2 stage-2 N1 (lifetime._instant reads through schema.as_utc_required, not a second parser): moved dotted/dataflow 7,333 -> 7,328, the rest unchanged.
+#: 2026-10-16, 0044 T6-1 (0018 §4i: store/data_migration.py — run_data_migration, its carrier, status and receipt, five declared sites; revocation.would_retire_if_active; doctor's three remaining phases; the reinstate writer's reason from its caller): moved dotted/dataflow 7,328 -> 7,460 and dotted/module-plain 369 -> 381, the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 7328,
+    "dotted/dataflow": 7460,
     "dotted/module-machinery": 19,
-    "dotted/module-plain": 369,
+    "dotted/module-plain": 381,
     "dotted/module-protected": 53,
     "getattr/dataflow": 34,
 }
-SRC_ATTRIBUTE_TOTAL = 7803
-SRC_DATA_DUNDERS_IN_DATAFLOW = 137   # 2026-10-15, 0044 T5-2: +1 — `type(self).__name__` in the Store base's refusing `refusal_inventory_ids` default  # 2026-10-14, 0008 v7: +1 — `super().__init__` in store/base.py's RequestRedacted (an exception's message, from ids and a verb)  # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
+SRC_ATTRIBUTE_TOTAL = 7947
+SRC_DATA_DUNDERS_IN_DATAFLOW = 141   # 2026-10-16, 0044 T6-1: +4 — in store/data_migration.py, `super().__new__` in DataMigrationResult's validating constructor, `super().__init__` in _Refusal, `type(registry).__name__` (the refused registry's CLASS name) and `type(x).__name__` (a failing user's exception CLASS name, never its message)  # 2026-10-15, 0044 T5-2: +1 — `type(self).__name__` in the Store base's refusing `refusal_inventory_ids` default  # 2026-10-14, 0008 v7: +1 — `super().__init__` in store/base.py's RequestRedacted (an exception's message, from ids and a verb)  # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 #   2026-09-20 0042 round 7: +1 — `type(exc).__name__` in `census.Site._measurement_failed` (the failure KIND recorded as a type name, R6-1)
 #   2026-10-14 0013 v33 §4f: +2 — `super().__init__` in `MigrationPostconditionError` and `type(x).__name__` in the

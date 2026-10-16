@@ -843,3 +843,69 @@ result = run_release_migration(
 result.outcome              # "migrated" | "current" | a closed refusal
 result.resulting_version    # facts, never inferred from the label
 ```
+
+## Restoring values the old single-value rule retired (`run_data_migration`)
+
+*Upgrading to this version does not restore values that the old single-value rule retired. To restore them and get a
+receipt listing each one, run `run_data_migration`. Until you do, those values stay hidden and `doctor` warns.*
+
+`measures`, `prefers` and `health_state` now keep every value (`arity="multi"`, specs/0044). Under the old rule a new
+value of one of them retired the previous one as `superseded`. The v16 schema step records exactly those retirements
+(the store's arity inventory) and changes nothing else. Bringing them back is a separate, OPTIONAL host operation
+(specs/0018 §4i). It is a bulk restoration of a known superset: a value that really was replaced comes back too, and
+the receipt names what replaced it. So it asks for the same quiescence attestation and backup reference as a release
+migration. No CLI verb runs it.
+
+```python
+from veracium.schema import DEFAULT_RELATIONS
+from veracium.store.migration import (MigrationAttestation, data_migration_receipt,
+                                      data_migration_status, run_data_migration)
+att = MigrationAttestation(quiesced=True, backup_ref="b-2026")
+r = run_data_migration("veracium.db", host_attestation=att, registry=YOUR_REGISTRY, op_id="restore-2026-10")
+r.outcome        # a row of the closed table below
+r.committed      # the users THIS call committed;  r.failed: each failing user, named
+r.plan_id        # the store's plan, for the receipt
+data_migration_receipt("veracium.db", r.plan_id, "user-1")   # one row per considered value
+data_migration_status("veracium.db", "restore-2026-10")      # after an unknown return: cumulative commits
+```
+
+- **`registry`** is the relation registry your host passes to ingest. A relation is restored only if your
+  declaration of it is the default `multi`. A host that keeps its own `single` declaration for one of the three
+  keeps its supersessions. The plan is written once per store from the first call's registry. A later call whose
+  declarations of those three differ returns `registry-changed` and changes nothing. A change to any other relation
+  is admitted.
+- **`op_id`** is your idempotency key (≤64 characters of `[A-Za-z0-9._:-]`). The same id with the same inputs
+  RESUMES: it retries exactly the users that did not commit. The same id with different inputs, or in the other mode,
+  is `op-id-conflict`. A call that wrote nothing holds no id.
+- **One transaction per user**, continuing past a failing user. The users are those holding a recorded retirement.
+  A user created after the upgrade has nothing to restore and is never processed.
+- **A value from a source under standing revocation is withheld** (`withheld_revoked`), judged by the revocation
+  sweep's own rule. It is never considered again under this plan, even after a lift. A redacted value is never
+  considered.
+- Each restored value is journaled `reinstated` with the reason `arity_reclassified`. The receipt reads its text from
+  the live edge (a redacted one shows the marker) and records what it replaced: one id, several ids, or "unknown".
+- `plan_only=True` writes the plan and restores nothing.
+
+| outcome | store changed | meaning |
+|---|---|---|
+| `requires-schema-step` | no | the store is below v16 |
+| `preflight-refused` | no | the attestation, path, store or registry was refused; the diagnostic names 0018's cell |
+| `registry-changed` | no | a plan exists under different declarations of the three; both digests named |
+| `op-id-conflict` | no | the op_id is held with different inputs or mode |
+| `planned` | yes | this call wrote the plan and restored nothing (plan-only, or no user to process) |
+| `already-planned` | no | plan-only, and an equal plan existed |
+| `complete` | no | every user already done |
+| `migrated` | yes | ≥1 user committed, none failed |
+| `partial` | yes | ≥1 committed, ≥1 failed (named); re-call to retry them |
+| `failed` | only if it wrote the plan | no user committed, ≥1 failed |
+
+Two cases are this implementation's choice where the specification's table is silent. A v16 store with rebuildable
+index drift is refused (`preflight-refused`, "rebuildable drift: open the store once … and re-run") rather than
+repaired silently, so `store_changed` stays exact. A write lock that cannot be taken raises the store's typed lock
+refusal (`sqlite3.OperationalError`, naming the site) with nothing written; a lock failure inside one user's
+transaction is instead that user's `failed` entry. Any other defect outside a user's transaction raises: the table
+has no internal-error row.
+
+`doctor`'s `data-migration` check reports the operation's phase: a warning before any plan (judged by relation name
+only, as it says), a warning naming the users not yet done, an `info` for an empty plan, and nothing once every user
+is done.

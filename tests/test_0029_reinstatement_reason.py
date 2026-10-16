@@ -125,8 +125,13 @@ def test_reinstatement_reason_leaves_reconstruction_verbatim(tmp_path):
 # ---- V-REINSTATE-WRITERS (INV-J3): every writer of a `reinstated` event and every reader of an event's reason is
 # CENSUSED from the source, never listed by hand; the rulings below are the review, and a new site with no ruling fails.
 
-WRITER_RULINGS = {("store/sqlite.py", "SqliteStore._reinstate_edge_row"): "source_restored"}
-# 0044's restoration joins here, with "arity_reclassified", when it exists (0029 v12 §4b-i point 3: RESERVED until then)
+FORWARDER = ("store/sqlite.py", "SqliteStore._reinstate_edge_row")
+WRITER_RULINGS = {FORWARDER: "<forwarded to its censused callers>"}
+# research's T6 stage-1 read, F1: the reinstate writer FORWARDS its `reason` (required, keyword-only, no default), so
+# the census reads its CALLERS — each with a constant reason, ruled here; a non-constant or absent one is a finding.
+# 0044's restoration is `arity_reclassified`'s ONE caller (0029 v12 §4b-i point 3).
+CALLER_RULINGS = {("store/revocation.py", "_apply_statement_effect"): "source_restored",
+                  ("store/data_migration.py", "_restore_user"): "arity_reclassified"}
 APPEND_EVENT_CALLERS = {("store/sqlite.py", "SqliteStore._journal_edge_write"),     # THE choke point
                         ("store/edge_events.py", "journal_baselines")}              # the v13 baseline, reason NULL
 READER_RULINGS = {
@@ -154,8 +159,9 @@ def _qualnames(tree):
 
 
 def census(sources: dict):
-    """{rel path: source} -> (reinstated writers {(rel, qualname): reason}, append_event callers, reason readers)."""
-    writers, appenders, readers = {}, set(), set()
+    """{rel path: source} -> (reinstated writers {(rel, qualname): reason}, append_event callers, reason readers,
+    reinstate-writer callers {(rel, qualname): reason})."""
+    writers, appenders, readers, callers = {}, set(), set(), {}
     for rel, text in sources.items():
         tree = ast.parse(text)
         q = _qualnames(tree)
@@ -169,7 +175,18 @@ def census(sources: dict):
                         writers[(rel, q.get(id(n), "<module>"))] = "<non-constant kind>"
                     elif k.value == "reinstated":
                         r = kw.get("reason")
-                        writers[(rel, q.get(id(n), "<module>"))] = r.value if isinstance(r, ast.Constant) else "<non-constant reason>"
+                        site = (rel, q.get(id(n), "<module>"))
+                        if isinstance(r, ast.Constant):
+                            writers[site] = r.value
+                        elif site == FORWARDER and isinstance(r, ast.Name) and r.id == "reason":
+                            writers[site] = "<forwarded to its censused callers>"
+                        else:
+                            writers[site] = "<non-constant reason>"
+                if name == "_reinstate_edge_row":
+                    r = kw.get("reason")
+                    callers[(rel, q.get(id(n), "<module>"))] = (
+                        r.value if isinstance(r, ast.Constant) else
+                        "<no reason>" if r is None else "<non-constant reason>")
                 if name == "append_event":
                     appenders.add((rel, q.get(id(n), "<module>")))
                 if name == "edge_events" and isinstance(n.func, ast.Attribute):
@@ -179,7 +196,7 @@ def census(sources: dict):
                 # SQL that reads the column: a SELECT naming `reason`, FROM edge_event (prose that mentions both is not)
                 if "reason" in low and re.search(r"\bselect\b", low) and re.search(r"\bfrom\s+edge_event\b", low):
                     readers.add((rel, q.get(id(n), "<module>")))
-    return writers, appenders, readers
+    return writers, appenders, readers, callers
 
 
 def _tree_sources():
@@ -187,20 +204,34 @@ def _tree_sources():
 
 
 def test_every_reinstated_writer_and_reason_reader_is_censused():
-    writers, appenders, readers = census(_tree_sources())
+    writers, appenders, readers, callers = census(_tree_sources())
     assert writers == WRITER_RULINGS, writers
-    assert "arity_reclassified" not in writers.values(), "the reserved reason has a writer before 0044's restoration"
+    assert callers == CALLER_RULINGS, callers
+    assert [s for s, r in callers.items() if r == "arity_reclassified"] == [("store/data_migration.py", "_restore_user")]
     assert appenders == APPEND_EVENT_CALLERS, appenders
     assert readers == set(READER_RULINGS), readers
     # the census is not vacuous: a new reinstating site, a swapped reason, and a new reader are each found
     src = _tree_sources()
+    anchor = 'store._reinstate_edge_row(rid, reason="source_restored")'
+    assert src["store/revocation.py"].count(anchor) == 1           # the plant below edits a real literal
     planted = dict(src)
-    planted["store/sqlite.py"] = src["store/sqlite.py"].replace(
-        'reason="source_restored")',
-        'reason="arity_reclassified")', 1)
-    assert census(planted)[0] != WRITER_RULINGS
+    planted["store/revocation.py"] = src["store/revocation.py"].replace(
+        anchor, 'store._reinstate_edge_row(rid, reason="arity_reclassified")', 1)
+    assert census(planted)[3] != CALLER_RULINGS                    # a swapped caller reason
     planted = dict(src)
     planted["planted.py"] = ("def sneaky(store):\n    store._journal_edge_write('u', 'e', '{}', '{}', kind='reinstated',"
                              " reason='source_restored')\n    return store.edge_events('u')\n")
-    w, _a, r = census(planted)
+    w, _a, r, _c = census(planted)
     assert ("planted.py", "sneaky") in w and ("planted.py", "sneaky") in r
+    # F1's vacuity controls: a second caller of the reserved reason, a non-constant caller, a reasonless caller, and
+    # a forwarder outside the one ruled method are each found
+    for body, want in (("store._reinstate_edge_row('e', reason='arity_reclassified')", "arity_reclassified"),
+                       ("store._reinstate_edge_row('e', reason=why)", "<non-constant reason>"),
+                       ("store._reinstate_edge_row('e')", "<no reason>")):
+        planted = dict(src)
+        planted["planted.py"] = f"def caller(store, why):\n    {body}\n"
+        assert census(planted)[3].get(("planted.py", "caller")) == want, body
+    planted = dict(src)
+    planted["planted.py"] = ("def relay(store, reason):\n    store._journal_edge_write('u', 'e', '{}', '{}', "
+                             "kind='reinstated', reason=reason)\n")
+    assert census(planted)[0].get(("planted.py", "relay")) == "<non-constant reason>"

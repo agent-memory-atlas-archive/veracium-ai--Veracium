@@ -557,13 +557,37 @@ PRE_PLAN_WARNING = ("may have values to restore (judged by relation name): run r
                     "declaration for these relations will find none eligible.")
 
 
+# 0018 amendment §4e, the initialized-EMPTY phase's finding, verbatim
+PLAN_EMPTY_INFO = ("data migration planned: no relation was reclassified (this host's own declarations keep them "
+                   "single-valued); nothing to restore")
+
+
 def _check_data_migration(rep: Report, conn, user: Optional[str], edges: dict) -> None:
-    """specs/0044 §4k / 0018 amendment §4e, the UNINITIALIZED phase only: a v16 store with no plan header warns when
-    an arity-inventory member, under a reclassified default NAME, still holds exactly its inventoried retirement
-    (0044 §4f's equality test, through `lifetime.retirement`: no time is compared)."""
+    """specs/0044 §4k / 0018 §4i.6 §4e — the four phases, read from the plan HEADER (an empty plan is a state of its
+    own):
+      uninitialized         an arity-inventory member, under a reclassified default NAME, still holds exactly its
+                            inventoried retirement (0044 §4f's equality test, through `lifetime.retirement`: no time
+                            is compared) → warn, name-only and stated as such;
+      initialized-empty     → info, §4e's text;
+      initialized-nonempty  users of the operation's universe (those holding an `arity_inventory` row — 0018 §4i's
+                            research annotation) without a run row → warn, naming the count and the operation;
+                            none → nothing."""
     rep.checks_run.append("data-migration")
     from .store.lifetime import RECLASSIFIED_RELATIONS, retirement, same_retirement
-    if conn.execute("SELECT 1 FROM plan_header").fetchone() is not None:
+    header = conn.execute("SELECT plan_id FROM plan_header WHERE id=1").fetchone()
+    if header is not None:
+        plan_id = header[0]
+        if conn.execute("SELECT 1 FROM reclassification_plan WHERE plan_id=? LIMIT 1", (plan_id,)).fetchone() is None:
+            rep.add("data-migration", "info", PLAN_EMPTY_INFO)
+            return
+        q = ("SELECT DISTINCT i.user_id FROM arity_inventory i WHERE NOT EXISTS (SELECT 1 FROM migration_run r "
+             "WHERE r.plan_id=? AND r.user_id=i.user_id)")
+        missing = [r[0] for r in conn.execute(q + (" AND i.user_id=?" if user else "") + " ORDER BY i.user_id",
+                                              (plan_id, user) if user else (plan_id,))]
+        if missing:
+            rep.add("data-migration", "warn",
+                    f"{len(missing)} user(s) have not completed the per-user phase of plan {plan_id}: re-run "
+                    f"run_data_migration(path, host_attestation=…, registry=…) — see 0044", missing)
         return
     q = "SELECT user_id, edge_id, pre_invalidated_at, pre_reason FROM arity_inventory"
     rows = conn.execute(q + (" WHERE user_id=?" if user else ""), (user,) if user else ()).fetchall()

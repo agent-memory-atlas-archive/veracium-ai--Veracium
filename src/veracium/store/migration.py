@@ -817,6 +817,10 @@ from .release_migration import (  # noqa: E402
     MigrationAuthority, MigrationResult, MintError, PreflightResolution,
     ReadbackResult, TerminalFacts, mint_release_authority, read_terminal,
     run_release_migration)
+# specs/0018 §4i: the per-user data-migration operation BESIDE the orchestrator (0044's restoration), same surface
+from .data_migration import (  # noqa: E402
+    DataMigrationResult, DataMigrationStatus, ReceiptRow, data_migration_receipt,
+    data_migration_status, run_data_migration)
 from ..census import declare_site
 
 # specs/0042 (tranche 5): the enforcement points of this module, each a declared site the

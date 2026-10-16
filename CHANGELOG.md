@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- **Added: `run_data_migration`, the optional operation that restores the values the old single-value rule retired
+  (specs/0018 §4i; specs/0044 §4e–§4g-ii; I25–I30, I32, INV-A5, A7–A9, A11, A15, A20, A21).** *Upgrading does not
+  restore values that the old single-value rule retired. To restore them and get a receipt listing each one, run
+  `run_data_migration`. Until you do, those values stay hidden and `doctor` warns.* (docs/api.md, "Restoring values
+  the old single-value rule retired".)
+  - `run_data_migration(path, *, host_attestation, registry, op_id, plan_only=False)` writes the plan once per store
+    from your registry. A relation is restored only if your declaration of it is the default `multi`. It then runs
+    ONE transaction per user, continuing past a failing user, and is idempotent on re-call. It returns
+    `DataMigrationResult`, a closed carrier of ten outcomes whose constructor refuses any other combination.
+    `data_migration_status` recovers an operation's cumulative commits after an unknown return, and
+    `data_migration_receipt` lists each considered value with its outcome and what replaced it.
+  - A value from a source under standing revocation is withheld, by the revocation sweep's own rule. A redacted value
+    is never considered. A restored value is journaled `reinstated` with the reason `arity_reclassified`.
+  - Only the users holding a retirement the v16 step recorded are processed. A user created after the upgrade has
+    nothing to restore, gets no run row and no `doctor` warning (0018 §4i's annotation; reference model I, which
+    read every user with edges, is edited to match).
+  - `doctor`'s `data-migration` check now reports every phase: before any plan, users not yet done, an empty plan
+    (`info`), and nothing once complete.
+  - The reinstate writer now takes its journal reason from its caller (`reason=`, required). The census of
+    `reinstated` writers reads the callers, so `arity_reclassified` has exactly one.
+  - **Who should act:** hosts upgrading a store that held `measures`, `prefers` or `health_state` values from before
+    this programme: quiesce, back up, run it once, and keep the receipts. A host whose own registry declares one of
+    the three `single` keeps that relation's supersessions.
+  - **Evidence.** tests/test_0044_t6_operation.py holds 55 cells. One is a differential against the specification's reference model on real stores: the model's whole
+    domain, 900 schedules, agrees field by field (run with VERACIUM_T6_FULL_DOMAIN=1, about 4 minutes); by default a seeded sample of 60
+    schedules, six of each outcome, runs in about 22 seconds. 27 code mutants of the operation's own rules each fail a named cell as an
+    assertion or a missing refusal (a scratch campaign, not committed evidence). The 0013 step campaign's figures are unchanged:
+    the operation adds no schema step.
 - **Changed (trust surface): `measures`, `prefers` and `health_state` accumulate instead of superseding (specs/0044
   v1.6, §4b; INV-A1–A4, A6, A10, A14, A19, A22, I24).** A relation now declares an ARITY. Under `single` (the
   meaning `functional=True` always had) a differing value retires the prior one; under `multi` it never does. The
@@ -25,8 +53,8 @@
     recall and the exclusion from the compiled wiki, decided by the v16 step's refusal inventory, never by a
     timestamp, and with no expiry. In the ranked edge list a retained pair is ordered by relevance; its authority
     order is on the contested surface.
-  - **Values already retired under the old rule stay retired.** Restoring them is an optional host operation (the
-    0018 amendment, a later tranche of this programme). Until it runs, `doctor` warns, judged by relation name:
+  - **Values already retired under the old rule stay retired.** Restoring them is an optional host operation,
+    `run_data_migration` (the entry above). Until it runs, `doctor` warns, judged by relation name:
     `may have values to restore (judged by relation name): run run_data_migration(…) — see 0044. …`
   - **Schema v16 (unreleased, the programme's one bump) gains eight tables:** the era, the two inventories and the
     five tables of the restoration operation. The v15 → v16 step writes the era (its one clock read) and the two

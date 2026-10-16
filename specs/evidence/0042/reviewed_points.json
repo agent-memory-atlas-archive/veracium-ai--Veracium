@@ -1799,84 +1799,84 @@
   "line": 782,
   "statement": "raise _SITE_ACT_COUNTER.fire(RuntimeError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1808:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1810:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009/0010 X21 (refuse) through site store.add-episode",
   "reviewer": "dev",
   "site": "store.add-episode",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:4",
-  "line": 1808,
+  "line": 1810,
   "statement": "raise _SITE_ADD_EPISODE.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1820:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1822:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009/0010 X21 (refuse) through site store.add-episode",
   "reviewer": "dev",
   "site": "store.add-episode",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:5",
-  "line": 1820,
+  "line": 1822,
   "statement": "raise _SITE_ADD_EPISODE.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1828:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1830:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009/0010 X21 (refuse) through site store.add-episode",
   "reviewer": "dev",
   "site": "store.add-episode",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:6",
-  "line": 1828,
+  "line": 1830,
   "statement": "raise _SITE_ADD_EPISODE.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1835:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1837:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009/0010 X21 (refuse) through site store.add-episode",
   "reviewer": "dev",
   "site": "store.add-episode",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:7",
-  "line": 1835,
+  "line": 1837,
   "statement": "raise _SITE_ADD_EPISODE.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1854:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1856:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009/0010 X21 (refuse) through site store.add-episode",
   "reviewer": "dev",
   "site": "store.add-episode",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:9",
-  "line": 1854,
+  "line": 1856,
   "statement": "raise _SITE_ADD_EPISODE.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.confirm_notice:2979:RAISE": {
+ "store/sqlite.py:SqliteStore.confirm_notice:2981:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.6.6 (confirm_notice: a standing row is not pending) (refuse) through site store.confirm-notice.standing",
   "reviewer": "dev",
   "site": "store.confirm-notice.standing",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.confirm_notice:RAISE:2",
-  "line": 2979,
+  "line": 2981,
   "statement": "raise _SITE_CONFIRM_NOTICE_STANDING.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.confirm_notice:2986:RAISE": {
+ "store/sqlite.py:SqliteStore.confirm_notice:2988:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.6.6 (confirm_notice: a pending notice whose target is gone is inert) (refuse) through site store.confirm-notice.target-absent",
   "reviewer": "dev",
   "site": "store.confirm-notice.target-absent",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.confirm_notice:RAISE:3",
-  "line": 2986,
+  "line": 2988,
   "statement": "raise _SITE_CONFIRM_NOTICE_INERT.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.confirm_notice:2971:RAISE": {
+ "store/sqlite.py:SqliteStore.confirm_notice:2973:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.6.6 (confirm_notice: an unknown or another user's id, one refusal) (refuse) through site store.confirm-notice.unknown",
   "reviewer": "dev",
   "site": "store.confirm-notice.unknown",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.confirm_notice:RAISE:1",
-  "line": 2971,
+  "line": 2973,
   "statement": "raise _SITE_CONFIRM_NOTICE_UNKNOWN.fire(ValueError("
  },
  "store/sqlite.py:SqliteStore.confirm_edge:868:RAISE": {
@@ -1919,694 +1919,744 @@
   "line": 803,
   "statement": "raise _SITE_CONFIRM_UNKNOWN_EDGE.fire(UnknownEdge("
  },
- "store/sqlite.py:SqliteStore._write_consolidation_contributions:1656:RAISE": {
+ "store/sqlite.py:SqliteStore._write_consolidation_contributions:1658:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §2c (refuse) through site store.consolidation-contribution",
   "reviewer": "dev",
   "site": "store.consolidation-contribution",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_consolidation_contributions:RAISE:1",
-  "line": 1656,
+  "line": 1658,
   "statement": "raise _SITE_CONSOLIDATION_CONTRIBUTION.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_consolidation_contributions:1664:RAISE": {
+ "store/sqlite.py:SqliteStore._write_consolidation_contributions:1666:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §2c (refuse) through site store.consolidation-contribution",
   "reviewer": "dev",
   "site": "store.consolidation-contribution",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_consolidation_contributions:RAISE:2",
-  "line": 1664,
+  "line": 1666,
   "statement": "raise _SITE_CONSOLIDATION_CONTRIBUTION.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_consolidation_contributions:1697:RAISE": {
+ "store/sqlite.py:SqliteStore._write_consolidation_contributions:1699:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §2c (refuse) through site store.consolidation-contribution",
   "reviewer": "dev",
   "site": "store.consolidation-contribution",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_consolidation_contributions:RAISE:3",
-  "line": 1697,
+  "line": 1699,
   "statement": "raise _SITE_CONSOLIDATION_CONTRIBUTION.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore.abandon_consolidation_if_current:2776:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.abandon_consolidation_if_current:2778:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 X7 (refuse) through site store.consolidation.abandon-live-lease",
   "reviewer": "dev",
   "site": "store.consolidation.abandon-live-lease",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.abandon_consolidation_if_current:RETURN_FALSE:1",
-  "line": 2776,
+  "line": 2778,
   "statement": "return _SITE_ABANDON_LIVE_LEASE.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:2590:RETURN_NONE": {
+ "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:2592:RETURN_NONE": {
   "decision": "enforcement",
   "reason": "enforces 0010 X7/X11 (refuse) through site store.consolidation.contended",
   "reviewer": "dev",
   "site": "store.consolidation.contended",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:RETURN_NONE:1",
-  "line": 2590,
+  "line": 2592,
   "statement": "return _SITE_CONSOLIDATION_CONTENDED.fire(None, \"contended\")                  # contended (X7/X11 — no partial claim)"
  },
- "store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current:2761:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current:2763:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 X21 (refuse) through site store.consolidation.delete-not-current",
   "reviewer": "dev",
   "site": "store.consolidation.delete-not-current",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.delete_claimed_inputs_if_current:RETURN_FALSE:1",
-  "line": 2761,
+  "line": 2763,
   "statement": "return _SITE_DELETE_NOT_CURRENT.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:2574:RAISE": {
+ "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:2576:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4b-ii INV-11 (refuse) through site store.consolidation.input-redacted",
   "reviewer": "dev",
   "site": "store.consolidation.input-redacted",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:RAISE:2",
-  "line": 2574,
+  "line": 2576,
   "statement": "raise _SITE_CONSOLIDATION_INPUT_REDACTED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.renew_consolidation_lease:2621:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.renew_consolidation_lease:2623:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 X7 (refuse) through site store.consolidation.renew-refused",
   "reviewer": "dev",
   "site": "store.consolidation.renew-refused",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.renew_consolidation_lease:RETURN_FALSE:1",
-  "line": 2621,
+  "line": 2623,
   "statement": "return _SITE_RENEW_REFUSED.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2716:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2718:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (refuse) through site store.consolidation.transition",
   "reviewer": "dev",
   "site": "store.consolidation.transition",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.transition_consolidation_if_current:RETURN_FALSE:1",
-  "line": 2716,
+  "line": 2718,
   "statement": "return _SITE_TRANSITION.fire(False, \"fence\")"
  },
- "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2721:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2723:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (refuse) through site store.consolidation.transition",
   "reviewer": "dev",
   "site": "store.consolidation.transition",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.transition_consolidation_if_current:RETURN_FALSE:2",
-  "line": 2721,
+  "line": 2723,
   "statement": "return _SITE_TRANSITION.fire(False, \"generating-refused\")"
  },
- "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2726:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2728:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (refuse) through site store.consolidation.transition",
   "reviewer": "dev",
   "site": "store.consolidation.transition",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.transition_consolidation_if_current:RETURN_FALSE:3",
-  "line": 2726,
+  "line": 2728,
   "statement": "return _SITE_TRANSITION.fire(False, \"cutover-refused\")"
  },
- "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2732:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2734:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (refuse) through site store.consolidation.transition",
   "reviewer": "dev",
   "site": "store.consolidation.transition",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.transition_consolidation_if_current:RETURN_FALSE:4",
-  "line": 2732,
+  "line": 2734,
   "statement": "return _SITE_TRANSITION.fire(False, \"no-bound-output\")"
  },
- "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2741:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2743:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (refuse) through site store.consolidation.transition",
   "reviewer": "dev",
   "site": "store.consolidation.transition",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.transition_consolidation_if_current:RETURN_FALSE:5",
-  "line": 2741,
+  "line": 2743,
   "statement": "return _SITE_TRANSITION.fire(False, \"not-durable\")"
  },
- "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2748:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2750:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (refuse) through site store.consolidation.transition",
   "reviewer": "dev",
   "site": "store.consolidation.transition",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.transition_consolidation_if_current:RETURN_FALSE:6",
-  "line": 2748,
+  "line": 2750,
   "statement": "return _SITE_TRANSITION.fire(False, \"inputs-remaining\")"
  },
- "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2751:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.transition_consolidation_if_current:2753:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (refuse) through site store.consolidation.transition",
   "reviewer": "dev",
   "site": "store.consolidation.transition",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.transition_consolidation_if_current:RETURN_FALSE:7",
-  "line": 2751,
+  "line": 2753,
   "statement": "return _SITE_TRANSITION.fire(False, \"unknown-transition\")"
  },
- "store/sqlite.py:SqliteStore.write_consolidation_output_if_current:2635:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore.write_consolidation_output_if_current:2637:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0010 X23 (refuse) through site store.consolidation.write-not-current",
   "reviewer": "dev",
   "site": "store.consolidation.write-not-current",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.write_consolidation_output_if_current:RETURN_FALSE:1",
-  "line": 2635,
+  "line": 2637,
   "statement": "return _SITE_WRITE_NOT_CURRENT.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore._write_contribution:1479:RAISE": {
+ "store/sqlite.py:SqliteStore._write_contribution:1481:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §4b (refuse) through site store.contribution",
   "reviewer": "dev",
   "site": "store.contribution",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_contribution:RAISE:1",
-  "line": 1479,
+  "line": 1481,
   "statement": "raise _SITE_CONTRIBUTION.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_contribution:1483:RAISE": {
+ "store/sqlite.py:SqliteStore._write_contribution:1485:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §4b (refuse) through site store.contribution",
   "reviewer": "dev",
   "site": "store.contribution",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_contribution:RAISE:2",
-  "line": 1483,
+  "line": 1485,
   "statement": "raise _SITE_CONTRIBUTION.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_contribution:1489:RAISE": {
+ "store/sqlite.py:SqliteStore._write_contribution:1491:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §4b (refuse) through site store.contribution",
   "reviewer": "dev",
   "site": "store.contribution",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_contribution:RAISE:3",
-  "line": 1489,
+  "line": 1491,
   "statement": "raise _SITE_CONTRIBUTION.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_contribution:1494:RAISE": {
+ "store/sqlite.py:SqliteStore._write_contribution:1496:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §4b (refuse) through site store.contribution",
   "reviewer": "dev",
   "site": "store.contribution",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_contribution:RAISE:4",
-  "line": 1494,
+  "line": 1496,
   "statement": "raise _SITE_CONTRIBUTION.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1298:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1300:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site store.correction.authorisation",
   "reviewer": "dev",
   "site": "store.correction.authorisation",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:5",
-  "line": 1298,
+  "line": 1300,
   "statement": "raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1305:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1307:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site store.correction.authorisation",
   "reviewer": "dev",
   "site": "store.correction.authorisation",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:6",
-  "line": 1305,
+  "line": 1307,
   "statement": "raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1309:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1311:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site store.correction.authorisation",
   "reviewer": "dev",
   "site": "store.correction.authorisation",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:7",
-  "line": 1309,
+  "line": 1311,
   "statement": "raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1313:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1315:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site store.correction.authorisation",
   "reviewer": "dev",
   "site": "store.correction.authorisation",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:8",
-  "line": 1313,
+  "line": 1315,
   "statement": "raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1317:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1319:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site store.correction.authorisation",
   "reviewer": "dev",
   "site": "store.correction.authorisation",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:9",
-  "line": 1317,
+  "line": 1319,
   "statement": "raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1323:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1325:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site store.correction.authorisation",
   "reviewer": "dev",
   "site": "store.correction.authorisation",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:10",
-  "line": 1323,
+  "line": 1325,
   "statement": "raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1328:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1330:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site store.correction.authorisation",
   "reviewer": "dev",
   "site": "store.correction.authorisation",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:11",
-  "line": 1328,
+  "line": 1330,
   "statement": "raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1332:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1334:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0011 §4b (refuse) through site store.correction.authorisation",
   "reviewer": "dev",
   "site": "store.correction.authorisation",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:12",
-  "line": 1332,
+  "line": 1334,
   "statement": "raise _SITE_CORRECTION_AUTHORISATION.fire(CorrectionAuthorisationError("
  },
- "store/sqlite.py:SqliteStore.delete_episode:1913:RAISE": {
+ "store/data_migration.py:_admit:294:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0018 §4i I32 (refuse) through site store.data-migration.op-id-conflict",
+  "reviewer": "dev",
+  "site": "store.data-migration.op-id-conflict",
+  "class": "enforcement",
+  "key": "store/data_migration.py:_admit:RAISE:1",
+  "line": 294,
+  "statement": "raise _SITE_OP_ID_CONFLICT.fire(_Refusal("
+ },
+ "store/data_migration.py:_read_only:465:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0018 §4i §4d (refuse) through site store.data-migration.read-refused",
+  "reviewer": "dev",
+  "site": "store.data-migration.read-refused",
+  "class": "enforcement",
+  "key": "store/data_migration.py:_read_only:RAISE:2",
+  "line": 465,
+  "statement": "raise _SITE_READ_REFUSED.fire(ValueError("
+ },
+ "store/data_migration.py:_redacted:419:BOOL_RETURN": {
+  "decision": "enforcement",
+  "reason": "enforces 0044 §4f.1 INV-A7 (withhold) through site store.data-migration.redacted-not-considered",
+  "reviewer": "dev",
+  "site": "store.data-migration.redacted-not-considered",
+  "class": "enforcement",
+  "key": "store/data_migration.py:_redacted:BOOL_RETURN:1",
+  "line": 419,
+  "statement": "return _SITE_REDACTED_NOT_CONSIDERED.fire(edge_carries_marker(d) or eid in attested, \"withhold\")"
+ },
+ "store/data_migration.py:_plan_phase:314:RAISE": {
+  "decision": "enforcement",
+  "reason": "enforces 0018 §4i I25 (refuse) through site store.data-migration.registry-changed",
+  "reviewer": "dev",
+  "site": "store.data-migration.registry-changed",
+  "class": "enforcement",
+  "key": "store/data_migration.py:_plan_phase:RAISE:1",
+  "line": 314,
+  "statement": "raise _SITE_REGISTRY_CHANGED.fire(_Refusal("
+ },
+ "store/data_migration.py:_withheld:427:FILTER_RETURN": {
+  "decision": "enforcement",
+  "reason": "enforces 0044 §4f.2 INV-A11 (withhold) through site store.data-migration.withheld-revoked",
+  "reviewer": "dev",
+  "site": "store.data-migration.withheld-revoked",
+  "class": "enforcement",
+  "key": "store/data_migration.py:_withheld:FILTER_RETURN:1",
+  "line": 427,
+  "statement": "return _SITE_WITHHELD_REVOKED.fire({r[0] for r in rows if r[0] in hit}, \"withhold\", declined=bool(hit))"
+ },
+ "store/sqlite.py:SqliteStore.delete_episode:1915:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.delete-episode.outcome",
   "reviewer": "dev",
   "site": "store.delete-episode.outcome",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.delete_episode:RAISE:1",
-  "line": 1913,
+  "line": 1915,
   "statement": "raise _SITE_DELETE_EPISODE_OUTCOME.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.delete_episode:1921:RAISE": {
+ "store/sqlite.py:SqliteStore.delete_episode:1923:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0010 X21 (refuse) through site store.delete-episode.reserved",
   "reviewer": "dev",
   "site": "store.delete-episode.reserved",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.delete_episode:RAISE:2",
-  "line": 1921,
+  "line": 1923,
   "statement": "raise _SITE_DELETE_EPISODE_RESERVED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.edges:1056:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.edges:1058:FILTER_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0001 §4 (withhold) through site store.edges.read-fence",
   "reviewer": "dev",
   "site": "store.edges.read-fence",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.edges:FILTER_RETURN:1",
-  "line": 1056,
+  "line": 1058,
   "statement": "return _SITE_EDGES_READ_FENCE.fire([Edge.model_validate_json(r[0]) for r in rows], \"fence-applied\", declined=not include_quarantined)"
  },
- "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:3472:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:3474:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0027 §4f (refuse) through site store.embedding.delayed-writer",
   "reviewer": "dev",
   "site": "store.embedding.delayed-writer",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:RETURN_FALSE:1",
-  "line": 3472,
+  "line": 3474,
   "statement": "return _SITE_EMBEDDING_DELAYED_WRITER.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:3479:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:3481:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0027 §4f (refuse) through site store.embedding.stale-content",
   "reviewer": "dev",
   "site": "store.embedding.stale-content",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._upsert_embedding_in_txn:RETURN_FALSE:2",
-  "line": 3479,
+  "line": 3481,
   "statement": "return _SITE_EMBEDDING_STALE_CONTENT.fire(False, \"refuse\")"
  },
- "store/sqlite.py:SqliteStore.upsert_embedding:3450:RAISE": {
+ "store/sqlite.py:SqliteStore.upsert_embedding:3452:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4e (0007 §4c form) (refuse) through site store.embedding.txn-locked",
   "reviewer": "dev",
   "site": "store.embedding.txn-locked",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.upsert_embedding:RAISE:1",
-  "line": 3450,
+  "line": 3452,
   "statement": "raise _SITE_EMBEDDING_TXN_LOCKED.fire(sqlite3.OperationalError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1847:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1849:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4b-ii INV-11 (refuse) through site store.episode.attested-redaction",
   "reviewer": "dev",
   "site": "store.episode.attested-redaction",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:8",
-  "line": 1847,
+  "line": 1849,
   "statement": "raise _SITE_EPISODE_ATTESTED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1799:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1801:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §2d-iv/§4h(ii) write path (refuse) through site store.episode.kind-not-recognised",
   "reviewer": "dev",
   "site": "store.episode.kind-not-recognised",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:3",
-  "line": 1799,
+  "line": 1801,
   "statement": "raise _SITE_EPISODE_KIND.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1786:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1788:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4b INV-11's mirror (refuse) through site store.episode.marker-introduced",
   "reviewer": "dev",
   "site": "store.episode.marker-introduced",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:1",
-  "line": 1786,
+  "line": 1788,
   "statement": "raise _SITE_EPISODE_MARKER.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.add_episode:1794:RAISE": {
+ "store/sqlite.py:SqliteStore.add_episode:1796:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.2 D1 (write path) (refuse) through site store.episode.retired-reason-not-registered",
   "reviewer": "dev",
   "site": "store.episode.retired-reason-not-registered",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.add_episode:RAISE:2",
-  "line": 1794,
+  "line": 1796,
   "statement": "raise _SITE_EPISODE_RETIRED_REASON.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.quiescent_episode_snapshot:2794:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.quiescent_episode_snapshot:2796:FILTER_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0010 X-quiesce (refuse) through site store.export.non-quiescent",
   "reviewer": "dev",
   "site": "store.export.non-quiescent",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.quiescent_episode_snapshot:FILTER_RETURN:1",
-  "line": 2794,
+  "line": 2796,
   "statement": "return _SITE_EXPORT_NON_QUIESCENT.fire([Episode.model_validate_json(r[0]) for r in self._conn.execute("
  },
- "store/sqlite.py:SqliteStore._write_absorption_flattening:1574:RAISE": {
+ "store/sqlite.py:SqliteStore._write_absorption_flattening:1576:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (refuse) through site store.flattening",
   "reviewer": "dev",
   "site": "store.flattening",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_absorption_flattening:RAISE:1",
-  "line": 1574,
+  "line": 1576,
   "statement": "raise _SITE_FLATTENING.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_absorption_flattening:1583:RAISE": {
+ "store/sqlite.py:SqliteStore._write_absorption_flattening:1585:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (refuse) through site store.flattening",
   "reviewer": "dev",
   "site": "store.flattening",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_absorption_flattening:RAISE:2",
-  "line": 1583,
+  "line": 1585,
   "statement": "raise _SITE_FLATTENING.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_absorption_flattening:1592:RAISE": {
+ "store/sqlite.py:SqliteStore._write_absorption_flattening:1594:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (refuse) through site store.flattening",
   "reviewer": "dev",
   "site": "store.flattening",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_absorption_flattening:RAISE:3",
-  "line": 1592,
+  "line": 1594,
   "statement": "raise _SITE_FLATTENING.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_absorption_flattening:1597:RAISE": {
+ "store/sqlite.py:SqliteStore._write_absorption_flattening:1599:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (refuse) through site store.flattening",
   "reviewer": "dev",
   "site": "store.flattening",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_absorption_flattening:RAISE:4",
-  "line": 1597,
+  "line": 1599,
   "statement": "raise _SITE_FLATTENING.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore._write_absorption_flattening:1620:RAISE": {
+ "store/sqlite.py:SqliteStore._write_absorption_flattening:1622:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0021 §4a (refuse) through site store.flattening",
   "reviewer": "dev",
   "site": "store.flattening",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._write_absorption_flattening:RAISE:5",
-  "line": 1620,
+  "line": 1622,
   "statement": "raise _SITE_FLATTENING.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2029:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2031:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:1",
-  "line": 2029,
+  "line": 2031,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2034:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2036:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:2",
-  "line": 2034,
+  "line": 2036,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2038:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2040:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:3",
-  "line": 2038,
+  "line": 2040,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2044:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2046:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:4",
-  "line": 2044,
+  "line": 2046,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2051:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2053:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:5",
-  "line": 2051,
+  "line": 2053,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2058:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2060:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:6",
-  "line": 2058,
+  "line": 2060,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2079:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2081:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:7",
-  "line": 2079,
+  "line": 2081,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2084:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2086:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:8",
-  "line": 2084,
+  "line": 2086,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2088:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2090:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:9",
-  "line": 2088,
+  "line": 2090,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2096:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2098:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:10",
-  "line": 2096,
+  "line": 2098,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2100:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2102:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:11",
-  "line": 2100,
+  "line": 2102,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2104:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2106:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:12",
-  "line": 2104,
+  "line": 2106,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2110:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2112:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:13",
-  "line": 2110,
+  "line": 2112,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2160:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2162:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.import-plan",
   "reviewer": "dev",
   "site": "store.import-plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:14",
-  "line": 2160,
+  "line": 2162,
   "statement": "raise _SITE_IMPORT_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2207:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2209:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4b-ii INV-11 at the import boundary (§4g) (refuse) through site store.import.attested-redaction",
   "reviewer": "dev",
   "site": "store.import.attested-redaction",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:16",
-  "line": 2207,
+  "line": 2209,
   "statement": "raise _SITE_IMPORT_ATTESTED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2214:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2216:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4b-ii INV-11 at the import boundary (§4g) (refuse) through site store.import.attested-redaction",
   "reviewer": "dev",
   "site": "store.import.attested-redaction",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:17",
-  "line": 2214,
+  "line": 2216,
   "statement": "raise _SITE_IMPORT_ATTESTED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2258:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2260:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4b-ii INV-11 at the import boundary (§4g) (refuse) through site store.import.attested-redaction",
   "reviewer": "dev",
   "site": "store.import.attested-redaction",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:20",
-  "line": 2258,
+  "line": 2260,
   "statement": "raise _SITE_IMPORT_ATTESTED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2267:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2269:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4b-ii INV-11 at the import boundary (§4g) (refuse) through site store.import.attested-redaction",
   "reviewer": "dev",
   "site": "store.import.attested-redaction",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:21",
-  "line": 2267,
+  "line": 2269,
   "statement": "raise _SITE_IMPORT_ATTESTED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2252:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2254:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §2d-iv/§4h(ii) import boundary (refuse) through site store.import.episode-kind-not-recognised",
   "reviewer": "dev",
   "site": "store.import.episode-kind-not-recognised",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:19",
-  "line": 2252,
+  "line": 2254,
   "statement": "raise _SITE_IMPORT_EPISODE_KIND.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2352:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2354:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4g (refuse) through site store.import.notice-body-conflict",
   "reviewer": "dev",
   "site": "store.import.notice-body-conflict",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:22",
-  "line": 2352,
+  "line": 2354,
   "statement": "raise _SITE_IMPORT_NOTICE_CONFLICT.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2394:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2396:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it) (refuse) through site store.import.notice-record-unredacted",
   "reviewer": "dev",
   "site": "store.import.notice-record-unredacted",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:23",
-  "line": 2394,
+  "line": 2396,
   "statement": "raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2415:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2417:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it) (refuse) through site store.import.notice-record-unredacted",
   "reviewer": "dev",
   "site": "store.import.notice-record-unredacted",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:24",
-  "line": 2415,
+  "line": 2417,
   "statement": "raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2445:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2447:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it) (refuse) through site store.import.notice-record-unredacted",
   "reviewer": "dev",
   "site": "store.import.notice-record-unredacted",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:25",
-  "line": 2445,
+  "line": 2447,
   "statement": "raise _SITE_IMPORT_NOTICE_UNSHOWN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2197:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2199:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.2 D1 (import boundary) (refuse) through site store.import.reason-not-registered",
   "reviewer": "dev",
   "site": "store.import.reason-not-registered",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:15",
-  "line": 2197,
+  "line": 2199,
   "statement": "raise _SITE_IMPORT_REASON.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2236:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2238:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.2 D1 (import boundary) (refuse) through site store.import.reason-not-registered",
   "reviewer": "dev",
   "site": "store.import.reason-not-registered",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:18",
-  "line": 2236,
+  "line": 2238,
   "statement": "raise _SITE_IMPORT_REASON.fire(ValueError("
  },
  "store/sqlite.py:SqliteStore.edge_state_at:445:RAISE": {
@@ -2729,14 +2779,14 @@
   "line": 491,
   "statement": "raise _SITE_MIGRATION_VERSION.fire(StoreVersionError("
  },
- "store/sqlite.py:SqliteStore._set_notice_state:2928:RAISE": {
+ "store/sqlite.py:SqliteStore._set_notice_state:2930:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.6.6 (T4: the notice state's one writer) (refuse) through site store.notice.state-domain",
   "reviewer": "dev",
   "site": "store.notice.state-domain",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._set_notice_state:RAISE:1",
-  "line": 2928,
+  "line": 2930,
   "statement": "raise _SITE_NOTICE_STATE.fire(ValueError("
  },
  "store/schema_version.py:open_versioned:1932:RAISE": {
@@ -2849,94 +2899,94 @@
   "line": 1834,
   "statement": "raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
  },
- "store/sqlite.py:SqliteStore.append_outcome_if_head:1971:RAISE": {
+ "store/sqlite.py:SqliteStore.append_outcome_if_head:1973:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0009 §4c (refuse) through site store.outcome.context-ref",
   "reviewer": "dev",
   "site": "store.outcome.context-ref",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.append_outcome_if_head:RAISE:1",
-  "line": 1971,
+  "line": 1973,
   "statement": "raise _SITE_OUTCOME_CONTEXT_REF.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore._ordinary_read_visible:1900:BOOL_RETURN": {
+ "store/sqlite.py:SqliteStore._ordinary_read_visible:1902:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (withhold) through site store.read.input-claimed",
   "reviewer": "dev",
   "site": "store.read.input-claimed",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._ordinary_read_visible:BOOL_RETURN:2",
-  "line": 1900,
+  "line": 1902,
   "statement": "return _SITE_READ_INPUT_CLAIMED.fire(op_state.get(ep.operation_id) is not S.OUTPUTS_DURABLE, \"withhold\")"
  },
- "store/sqlite.py:SqliteStore._ordinary_read_visible:1897:BOOL_RETURN": {
+ "store/sqlite.py:SqliteStore._ordinary_read_visible:1899:BOOL_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0010 §4b (withhold) through site store.read.output-not-visible",
   "reviewer": "dev",
   "site": "store.read.output-not-visible",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._ordinary_read_visible:BOOL_RETURN:1",
-  "line": 1897,
+  "line": 1899,
   "statement": "return _SITE_READ_OUTPUT_NOT_VISIBLE.fire(op_state.get(ep.operation_id) not in (S.CLAIMED, S.GENERATING), \"withhold\")"
  },
- "store/sqlite.py:SqliteStore.redact:3128:RAISE": {
+ "store/sqlite.py:SqliteStore.redact:3130:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4a/INV-5 (refuse) through site store.redact.both-or-neither",
   "reviewer": "dev",
   "site": "store.redact.both-or-neither",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.redact:RAISE:1",
-  "line": 3128,
+  "line": 3130,
   "statement": "raise _SITE_REDACT_BOTH_OR_NEITHER.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore._redact_in_txn:3201:RAISE": {
+ "store/sqlite.py:SqliteStore._redact_in_txn:3203:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4h(i) (refuse) through site store.redact.disposition-changed",
   "reviewer": "dev",
   "site": "store.redact.disposition-changed",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._redact_in_txn:RAISE:2",
-  "line": 3201,
+  "line": 3203,
   "statement": "raise _SITE_REDACT_DISPOSITION.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore._redact_in_txn:3173:RAISE": {
+ "store/sqlite.py:SqliteStore._redact_in_txn:3175:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041/0010 X21 (refuse) through site store.redact.input-claimed",
   "reviewer": "dev",
   "site": "store.redact.input-claimed",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._redact_in_txn:RAISE:1",
-  "line": 3173,
+  "line": 3175,
   "statement": "raise _SITE_REDACT_CLAIMED.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore._redact_in_txn:3310:RAISE": {
+ "store/sqlite.py:SqliteStore._redact_in_txn:3312:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4b-ii (round 11: the owner's ruling, nothing to redact) (refuse) through site store.redact.nothing-to-redact",
   "reviewer": "dev",
   "site": "store.redact.nothing-to-redact",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore._redact_in_txn:RAISE:3",
-  "line": 3310,
+  "line": 3312,
   "statement": "raise _SITE_REDACT_NOTHING.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.redact:3134:RAISE": {
+ "store/sqlite.py:SqliteStore.redact:3136:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.2 (refuse) through site store.redact.reason-not-registered",
   "reviewer": "dev",
   "site": "store.redact.reason-not-registered",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.redact:RAISE:2",
-  "line": 3134,
+  "line": 3136,
   "statement": "raise _SITE_REDACT_REASON.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.redact:3147:RAISE": {
+ "store/sqlite.py:SqliteStore.redact:3149:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §4a/INV-5 (refuse) through site store.redact.target",
   "reviewer": "dev",
   "site": "store.redact.target",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.redact:RAISE:3",
-  "line": 3147,
+  "line": 3149,
   "statement": "raise _SITE_REDACT_TARGET.fire(ValueError("
  },
  "store/sqlite.py:SqliteStore._refuse_redacted_reason:570:RAISE": {
@@ -2999,14 +3049,14 @@
   "line": 139,
   "statement": "raise _SITE_REVOCATION_ORDINAL.fire(OrdinalCollision(str(e))) from e"
  },
- "store/revocation.py:revoke_source:322:RAISE": {
+ "store/revocation.py:revoke_source:345:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0041 §11.2 D1 (revoke) (refuse) through site store.revocation.revoke-reason-not-registered",
   "reviewer": "dev",
   "site": "store.revocation.revoke-reason-not-registered",
   "class": "enforcement",
   "key": "store/revocation.py:revoke_source:RAISE:1",
-  "line": 322,
+  "line": 345,
   "statement": "raise _SITE_REVOKE_REASON.fire(ValueError("
  },
  "store/revocation_sweep.py:validate_contribution_row:360:RAISE": {
@@ -3079,94 +3129,94 @@
   "line": 1573,
   "statement": "return _SITE_RUNTIME_SUPPORTED.fire(False, \"raised\")"
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1232:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1234:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §4b (refuse) through site store.supersession.integrity",
   "reviewer": "dev",
   "site": "store.supersession.integrity",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:1",
-  "line": 1232,
+  "line": 1234,
   "statement": "raise _SITE_SUPERSESSION_INTEGRITY.fire(ReceiptSchemaBoundaryError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1250:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1252:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §4b (refuse) through site store.supersession.integrity",
   "reviewer": "dev",
   "site": "store.supersession.integrity",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:2",
-  "line": 1250,
+  "line": 1252,
   "statement": "raise _SITE_SUPERSESSION_INTEGRITY.fire(SupersessionIntegrityError(str(e)), \"digest\") from e"
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1266:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1268:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §4b (refuse) through site store.supersession.integrity",
   "reviewer": "dev",
   "site": "store.supersession.integrity",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:3",
-  "line": 1266,
+  "line": 1268,
   "statement": "raise _SITE_SUPERSESSION_INTEGRITY.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1271:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1273:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014 §4b (refuse) through site store.supersession.integrity",
   "reviewer": "dev",
   "site": "store.supersession.integrity",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:4",
-  "line": 1271,
+  "line": 1273,
   "statement": "raise _SITE_SUPERSESSION_INTEGRITY.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1349:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1351:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014/0019 §4b (refuse) through site store.supersession.plan",
   "reviewer": "dev",
   "site": "store.supersession.plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:13",
-  "line": 1349,
+  "line": 1351,
   "statement": "raise _SITE_SUPERSESSION_PLAN.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1371:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1373:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014/0019 §4b (refuse) through site store.supersession.plan",
   "reviewer": "dev",
   "site": "store.supersession.plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:14",
-  "line": 1371,
+  "line": 1373,
   "statement": "raise _SITE_SUPERSESSION_PLAN.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1379:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1381:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014/0019 §4b (refuse) through site store.supersession.plan",
   "reviewer": "dev",
   "site": "store.supersession.plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:15",
-  "line": 1379,
+  "line": 1381,
   "statement": "raise _SITE_SUPERSESSION_PLAN.fire(SupersessionIntegrityError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1398:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1400:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014/0019 §4b (refuse) through site store.supersession.plan",
   "reviewer": "dev",
   "site": "store.supersession.plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:16",
-  "line": 1398,
+  "line": 1400,
   "statement": "raise _SITE_SUPERSESSION_PLAN.fire(ValueError("
  },
- "store/sqlite.py:SqliteStore.apply_supersession_plan:1403:RAISE": {
+ "store/sqlite.py:SqliteStore.apply_supersession_plan:1405:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0014/0019 §4b (refuse) through site store.supersession.plan",
   "reviewer": "dev",
   "site": "store.supersession.plan",
   "class": "enforcement",
   "key": "store/sqlite.py:SqliteStore.apply_supersession_plan:RAISE:17",
-  "line": 1403,
+  "line": 1405,
   "statement": "raise _SITE_SUPERSESSION_PLAN.fire(ValueError("
  },
  "store/sqlite.py:SqliteStore._write_txn:294:RAISE": {
@@ -4223,13 +4273,13 @@
   "line": 208,
   "statement": "raise ValueError(\"store path exceeds the 4096-byte audit limit\")"
  },
- "store/sqlite.py:SqliteStore._claim_inputs:2536:RAISE": {
+ "store/sqlite.py:SqliteStore._claim_inputs:2538:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/sqlite.py:SqliteStore._claim_inputs:RAISE:1",
-  "line": 2536,
+  "line": 2538,
   "statement": "raise ValueError(f\"cannot claim {eid!r}: not an episode of \""
  },
  "store/sqlite.py:SqliteStore._cutoff:432:RAISE": {
@@ -4241,31 +4291,31 @@
   "line": 432,
   "statement": "raise CutoffDomainError("
  },
- "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:2559:RAISE": {
+ "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:2561:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/sqlite.py:SqliteStore.create_or_takeover_consolidation:RAISE:1",
-  "line": 2559,
+  "line": 2561,
   "statement": "raise ValueError(f\"lease_duration must be in (0, {LEASE_MAX}], \""
  },
- "store/sqlite.py:SqliteStore.policy_receipts:3421:RAISE": {
+ "store/sqlite.py:SqliteStore.policy_receipts:3423:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/sqlite.py:SqliteStore.policy_receipts:RAISE:1",
-  "line": 3421,
+  "line": 3423,
   "statement": "raise ValueError(f\"policy_receipts: limit must be a positive int, got {limit!r}\")"
  },
- "store/sqlite.py:SqliteStore.write_policy_receipt:3406:RAISE": {
+ "store/sqlite.py:SqliteStore.write_policy_receipt:3408:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/sqlite.py:SqliteStore.write_policy_receipt:RAISE:1",
-  "line": 3406,
+  "line": 3408,
   "statement": "raise ValueError(f\"write_policy_receipt: row lacks {missing}\")"
  },
  "cli.py:<module>:573:RAISE": {
@@ -4961,22 +5011,22 @@
   "line": 362,
   "statement": "return None                          # unchanged serialization: no event"
  },
- "store/sqlite.py:SqliteStore._ops_for_user:2488:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore._ops_for_user:2490:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore._ops_for_user:FILTER_RETURN:1",
-  "line": 2488,
+  "line": 2490,
   "statement": "return [self._op_from_row(r) for r in self._conn.execute("
  },
- "store/sqlite.py:SqliteStore._recompute_edge_row:1007:RETURN_NONE": {
+ "store/sqlite.py:SqliteStore._recompute_edge_row:1009:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore._recompute_edge_row:RETURN_NONE:1",
-  "line": 1007,
+  "line": 1009,
   "statement": "return"
  },
  "store/sqlite.py:SqliteStore._retire_episode_row:940:RETURN_NONE": {
@@ -4997,13 +5047,13 @@
   "line": 303,
   "statement": "raise"
  },
- "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2460:RAISE": {
+ "store/sqlite.py:SqliteStore.commit_outcome_import_plan:2462:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.commit_outcome_import_plan:RAISE:26",
-  "line": 2460,
+  "line": 2462,
   "statement": "raise                                # nothing after a prefix"
  },
  "store/sqlite.py:SqliteStore.confirm_edge:876:RAISE": {
@@ -5024,31 +5074,31 @@
   "line": 888,
   "statement": "return [self._confirmation_from_row(r) for r in rows]"
  },
- "store/sqlite.py:SqliteStore.contributions:1739:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.contributions:1741:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.contributions:FILTER_RETURN:1",
-  "line": 1739,
+  "line": 1741,
   "statement": "return [self._contribution_record(r) for r in rows]"
  },
- "store/sqlite.py:SqliteStore.contributions_naming:1753:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.contributions_naming:1755:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.contributions_naming:FILTER_RETURN:1",
-  "line": 1753,
+  "line": 1755,
   "statement": "return [{\"survivor_type\": r[0], \"survivor_id\": r[1], \"site\": r[2],"
  },
- "store/sqlite.py:SqliteStore.contributors_of_source:1768:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.contributors_of_source:1770:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.contributors_of_source:FILTER_RETURN:1",
-  "line": 1768,
+  "line": 1770,
   "statement": "return [self._contribution_record(r) for r in rows]"
  },
  "store/sqlite.py:SqliteStore.edge_events:427:FILTER_RETURN": {
@@ -5069,31 +5119,31 @@
   "line": 453,
   "statement": "return None"
  },
- "store/sqlite.py:SqliteStore.list_users:2805:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.list_users:2807:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.list_users:FILTER_RETURN:1",
-  "line": 2805,
+  "line": 2807,
   "statement": "return [{\"user_id\": u, \"edges\": int(e or 0), \"episodes\": int(p or 0)}"
  },
- "store/sqlite.py:SqliteStore.pending_consolidations:2783:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.pending_consolidations:2785:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.pending_consolidations:FILTER_RETURN:1",
-  "line": 2783,
+  "line": 2785,
   "statement": "return [op for op in self._ops_for_user(user_id)"
  },
- "store/sqlite.py:SqliteStore.policy_receipts:3424:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.policy_receipts:3426:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.policy_receipts:FILTER_RETURN:1",
-  "line": 3424,
+  "line": 3426,
   "statement": "return [dict(zip(self._RECEIPT_COLUMNS, r))"
  },
  "store/sqlite.py:SqliteStore.read_window:536:RAISE": {
@@ -5105,22 +5155,22 @@
   "line": 536,
   "statement": "raise"
  },
- "store/sqlite.py:SqliteStore.refusals:1463:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.refusals:1465:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.refusals:FILTER_RETURN:1",
-  "line": 1463,
+  "line": 1465,
   "statement": "return [SupersessionRefusal("
  },
- "store/sqlite.py:SqliteStore.supersession_receipt:1178:RETURN_NONE": {
+ "store/sqlite.py:SqliteStore.supersession_receipt:1180:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/sqlite.py:SqliteStore.supersession_receipt:RETURN_NONE:1",
-  "line": 1178,
+  "line": 1180,
   "statement": "return None"
  },
  "telemetry.py:_acquire_lock:162:RETURN_NONE": {
@@ -6284,6 +6334,87 @@
   "line": 108,
   "statement": "raise NoOpenReadWindow("
  },
+ "store/data_migration.py:DataMigrationResult.__new__:143:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:DataMigrationResult.__new__:RAISE:1",
+  "line": 143,
+  "statement": "raise ValueError(\"DataMigrationResult outside specs/0018 §4c: \" + \"; \".join(problems))"
+ },
+ "store/data_migration.py:_caller_key:176:RETURN_FALSE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:_caller_key:RETURN_FALSE:1",
+  "line": 176,
+  "statement": "return False"
+ },
+ "store/data_migration.py:_inventory_users:331:FILTER_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:_inventory_users:FILTER_RETURN:1",
+  "line": 331,
+  "statement": "return [r[0] for r in conn.execute(\"SELECT DISTINCT user_id FROM arity_inventory ORDER BY user_id\")]"
+ },
+ "store/data_migration.py:_migrate_user:378:RETURN_FALSE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:_migrate_user:RETURN_FALSE:1",
+  "line": 378,
+  "statement": "return False                            # a concurrent call (or an earlier invocation) committed it"
+ },
+ "store/data_migration.py:_migrate_user:380:RETURN_FALSE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:_migrate_user:RETURN_FALSE:2",
+  "line": 380,
+  "statement": "return False                            # erased since the universe read (F3): no run row after erasure"
+ },
+ "store/data_migration.py:_read_only:460:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:_read_only:RAISE:1",
+  "line": 460,
+  "statement": "raise ValueError(f\"path {_rm._safe_repr(path)} is not a usable store path\")"
+ },
+ "store/data_migration.py:_users_ok:95:BOOL_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:_users_ok:BOOL_RETURN:1",
+  "line": 95,
+  "statement": "return type(v) is tuple and all(type(u) is str and u for u in v) and len(set(v)) == len(v)"
+ },
+ "store/data_migration.py:run_data_migration:256:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:run_data_migration:RAISE:1",
+  "line": 256,
+  "statement": "raise ValueError(f\"plan_only must be a bool, not {plan_only!r}\")"
+ },
+ "store/data_migration.py:run_data_migration:265:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/data_migration.py:run_data_migration:RAISE:2",
+  "line": 265,
+  "statement": "raise ValueError(f\"registry must be the host's relation registry (a mapping of name to Relation), not \""
+ },
  "store/migration.py:_mig_event:264:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
@@ -6842,31 +6973,31 @@
   "line": 1354,
   "statement": "raise"
  },
- "store/revocation.py:_apply_statement_effect:274:RAISE": {
+ "store/revocation.py:_apply_statement_effect:297:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/revocation.py:_apply_statement_effect:RAISE:1",
-  "line": 274,
+  "line": 297,
   "statement": "raise RevocationEffectError("
  },
- "store/revocation.py:redact_revocation_reasons:289:RAISE": {
+ "store/revocation.py:redact_revocation_reasons:312:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/revocation.py:redact_revocation_reasons:RAISE:1",
-  "line": 289,
+  "line": 312,
   "statement": "raise RuntimeError(\"redact_revocation_reasons runs only inside a redaction's open write transaction \""
  },
- "store/revocation.py:revocation_reason_marked:302:BOOL_RETURN": {
+ "store/revocation.py:revocation_reason_marked:325:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/revocation.py:revocation_reason_marked:BOOL_RETURN:1",
-  "line": 302,
+  "line": 325,
   "statement": "return conn.execute(\"SELECT 1 FROM source_revocations WHERE user_id=? AND identity_digest=? AND reason=? LIMIT 1\","
  },
  "store/revocation_sweep.py:_bounded:174:RAISE": {
@@ -7373,13 +7504,13 @@
   "line": 812,
   "statement": "return {o.key for o in SCHEMAS[version] if o.policy == REBUILDABLE}"
  },
- "store/sqlite.py:SqliteStore._completed_attestation:2912:BOOL_RETURN": {
+ "store/sqlite.py:SqliteStore._completed_attestation:2914:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore._completed_attestation:BOOL_RETURN:1",
-  "line": 2912,
+  "line": 2914,
   "statement": "return self._conn.execute("
  },
  "store/sqlite.py:SqliteStore._confirm_replay:748:RETURN_NONE": {
@@ -7418,40 +7549,40 @@
   "line": 359,
   "statement": "raise ValueError(f\"{kind!r} write with no prior row for {edge_id!r}\")"
  },
- "store/sqlite.py:SqliteStore._quoting_domain:3086:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore._quoting_domain:3088:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore._quoting_domain:RETURN_FALSE:1",
-  "line": 3086,
+  "line": 3088,
   "statement": "return False"
  },
- "store/sqlite.py:SqliteStore._quoting_domain:3090:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore._quoting_domain:3092:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore._quoting_domain:RETURN_FALSE:2",
-  "line": 3090,
+  "line": 3092,
   "statement": "return False"
  },
- "store/sqlite.py:SqliteStore._quoting_domain:3102:RETURN_FALSE": {
+ "store/sqlite.py:SqliteStore._quoting_domain:3104:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore._quoting_domain:RETURN_FALSE:3",
-  "line": 3102,
+  "line": 3104,
   "statement": "return False"
  },
- "store/sqlite.py:SqliteStore._treated_on_arrival:3009:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore._treated_on_arrival:3011:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore._treated_on_arrival:FILTER_RETURN:1",
-  "line": 3009,
+  "line": 3011,
   "statement": "return model.model_validate(new), uncovered      # the CALLER refuses a non-empty `uncovered` (one census id,"
  },
  "store/sqlite.py:SqliteStore.local_origin:252:RAISE": {
@@ -7463,76 +7594,76 @@
   "line": 252,
   "statement": "raise RuntimeError("
  },
- "store/sqlite.py:SqliteStore.pending_notices:2950:FILTER_RETURN": {
+ "store/sqlite.py:SqliteStore.pending_notices:2952:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.pending_notices:FILTER_RETURN:1",
-  "line": 2950,
+  "line": 2952,
   "statement": "return [{\"notice_id\": rid, \"target_kind\": kind, \"target_id\": tid, \"reason\": reason, \"origin\": origin,"
  },
- "store/sqlite.py:SqliteStore.set_wiki:3540:BOOL_RETURN": {
+ "store/sqlite.py:SqliteStore.set_wiki:3542:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.set_wiki:BOOL_RETURN:1",
-  "line": 3540,
+  "line": 3542,
   "statement": "return n == 1"
  },
- "store/sqlite.py:SqliteStore.upsert_embedding:3460:RAISE": {
+ "store/sqlite.py:SqliteStore.upsert_embedding:3462:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.upsert_embedding:RAISE:2",
-  "line": 3460,
+  "line": 3462,
   "statement": "raise"
  },
- "store/sqlite.py:SqliteStore.validate_receipt_state:1135:RAISE": {
+ "store/sqlite.py:SqliteStore.validate_receipt_state:1137:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.validate_receipt_state:RAISE:1",
-  "line": 1135,
+  "line": 1137,
   "statement": "raise ValueError("
  },
- "store/sqlite.py:SqliteStore.validate_receipt_state:1147:RAISE": {
+ "store/sqlite.py:SqliteStore.validate_receipt_state:1149:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.validate_receipt_state:RAISE:2",
-  "line": 1147,
+  "line": 1149,
   "statement": "raise ValueError("
  },
- "store/sqlite.py:SqliteStore.validate_receipt_state:1154:RAISE": {
+ "store/sqlite.py:SqliteStore.validate_receipt_state:1156:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.validate_receipt_state:RAISE:3",
-  "line": 1154,
+  "line": 1156,
   "statement": "raise ValueError("
  },
- "store/sqlite.py:SqliteStore.validate_receipt_state:1159:RAISE": {
+ "store/sqlite.py:SqliteStore.validate_receipt_state:1161:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.validate_receipt_state:RAISE:4",
-  "line": 1159,
+  "line": 1161,
   "statement": "raise ValueError("
  },
- "store/sqlite.py:SqliteStore.validate_receipt_state:1163:RAISE": {
+ "store/sqlite.py:SqliteStore.validate_receipt_state:1165:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/sqlite.py:SqliteStore.validate_receipt_state:RAISE:5",
-  "line": 1163,
+  "line": 1165,
   "statement": "raise ValueError("
  },
  "agreement.py:_is_possessive:219:BOOL_RETURN": {
@@ -7879,7 +8010,7 @@
  },
  "redaction.py:edge_carries_marker:125:RETURN_FALSE": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by store/lifetime.py:lifetime",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by store/data_migration.py:_redacted [site store.data-migration.redacted-not-considered]; and by store/lifetime.py:lifetime (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "redaction.py:edge_carries_marker:RETURN_FALSE:1",
@@ -7987,7 +8118,7 @@
  },
  "store/lifetime.py:same_retirement:59:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by doctor.py:_check_data_migration, store/lifetime.py:transition",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by doctor.py:_check_data_migration, store/data_migration.py:_considered, store/lifetime.py:transition",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/lifetime.py:same_retirement:BOOL_RETURN:1",
@@ -7996,7 +8127,7 @@
  },
  "store/lifetime.py:same_retirement:60:BOOL_RETURN": {
   "decision": "not",
-  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by doctor.py:_check_data_migration, store/lifetime.py:transition",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by doctor.py:_check_data_migration, store/data_migration.py:_considered, store/lifetime.py:transition",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/lifetime.py:same_retirement:BOOL_RETURN:2",
@@ -8030,22 +8161,22 @@
   "line": 56,
   "statement": "return \"UNIQUE\" in msg.upper() and all(m in msg for m in _ORDINAL_MARKERS)"
  },
- "store/sqlite.py:SqliteStore._edge_in_refusal:1023:BOOL_RETURN": {
+ "store/sqlite.py:SqliteStore._edge_in_refusal:1025:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by store/sqlite.py:SqliteStore.apply_supersession_plan [site store.correction.authorisation, store.supersession.integrity, store.supersession.plan]; and by store/sqlite.py:SqliteStore.invalidate_edge (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/sqlite.py:SqliteStore._edge_in_refusal:BOOL_RETURN:1",
-  "line": 1023,
+  "line": 1025,
   "statement": "return self._conn.execute("
  },
- "store/sqlite.py:SqliteStore._lease_live:2497:BOOL_RETURN": {
+ "store/sqlite.py:SqliteStore._lease_live:2499:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by store/sqlite.py:SqliteStore.abandon_consolidation_if_current [site store.consolidation.abandon-live-lease]; store/sqlite.py:SqliteStore.create_or_takeover_consolidation [site store.consolidation.contended, store.consolidation.input-redacted]; store/sqlite.py:SqliteStore.renew_consolidation_lease [site store.consolidation.renew-refused]; store/sqlite.py:SqliteStore.transition_consolidation_if_current [site store.consolidation.transition]; store/sqlite.py:SqliteStore.write_consolidation_output_if_current [site store.consolidation.write-not-current]",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "store/sqlite.py:SqliteStore._lease_live:BOOL_RETURN:1",
-  "line": 2497,
+  "line": 2499,
   "statement": "return self._now() < datetime.fromisoformat(op.lease_expires_at)"
  }
 }

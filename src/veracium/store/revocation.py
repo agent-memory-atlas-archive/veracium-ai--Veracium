@@ -253,6 +253,29 @@ def project_store(store, user_id: str) -> dict:
             "records": records, "ledger": ledger, "revocations": revs}
 
 
+def would_retire_if_active(store, user_id: str, edge_ids) -> frozenset:
+    """specs/0044 §4f step 2 (INV-A11): the edges among `edge_ids` that the revocation sweep's OWN predicate would
+    retire were they active — the standing set and its contribution-derived basis, evaluated over the user's records
+    with those edges flipped active together (the state the restoration's transaction commits; research's T6 read,
+    Q6: joint, and moot, because the sweep's desired state reads only the standing set and the ledger, while activity
+    enters only the delta). ONE implementation, the sweep's: this builds the same projection `revoke_source` sweeps
+    and returns the edges carrying a `retire` effect. A raw read: called INSIDE the caller's write transaction."""
+    wanted = set(edge_ids)
+    if not wanted:
+        return frozenset()
+    projection = project_store(store, user_id)
+    standing = _sw.standing_revocations(projection["revocations"], user_id)
+    if not standing:
+        return frozenset()                     # nothing standing: the sweep retires nothing
+    for rec in projection["records"]:
+        if rec["type"] == "edge" and rec["id"] in wanted:
+            rec["active"], rec["retired_reason"] = True, None
+    # the retire set is a function of the standing set alone; the target only scopes the statement's `affected`
+    statement = _sw.sweep(projection, sorted(standing)[0])
+    return frozenset(e["id"] for e in statement["effects"]
+                     if e["verb"] == "retire" and e["type"] == "edge" and e["id"] in wanted)
+
+
 def _apply_statement_effect(store, at, effect: dict) -> None:
     """The CLOSED verb vocabulary, through the store's sole writers. An
     unknown verb REFUSES (the 0004 W5 polarity: the registry can only fail,
@@ -265,7 +288,7 @@ def _apply_statement_effect(store, at, effect: dict) -> None:
     elif verb == "retire" and rtype == "episode":
         store._retire_episode_row(rid, at, effect["reason"])
     elif verb == "reinstate" and rtype == "edge":
-        store._reinstate_edge_row(rid)
+        store._reinstate_edge_row(rid, reason="source_restored")   # specs/0029 v12: 0022's lift
     elif verb == "reinstate" and rtype == "episode":
         store._reinstate_episode_row(rid)
     elif verb == "recompute" and rtype == "edge":

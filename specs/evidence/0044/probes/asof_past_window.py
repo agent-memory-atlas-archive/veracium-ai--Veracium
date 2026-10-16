@@ -10,7 +10,7 @@ def run(reinstate):
     s=SqliteStore(":memory:"); s.add_edge(e("p","oat milk")); n=e("i","window seats"); apply_supersession(s,n,DEFAULT_RELATIONS); s.add_edge(n)
     t=[x for x in s.edges("u",active_only=False) if x.id=="p"][0].invalidated_at
     if reinstate:
-        with s._write_txn(): s._reinstate_edge_row("p")
+        with s._write_txn(): s._reinstate_edge_row("p", reason="source_restored")
     for label,T in (("now",datetime.now(timezone.utc)),("in retired window",t+timedelta(microseconds=1))):
         a=resolve_as_of(s,"u",T)
         print(("reinstated" if reinstate else "control   "), label.ljust(18), sorted((f.edge.object, f.resolution.outcome, f.resolution.tag) for f in a.facts))

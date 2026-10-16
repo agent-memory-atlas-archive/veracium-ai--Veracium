@@ -420,7 +420,7 @@ def test_a_reinstatement_through_the_method_ends_membership_too(tmp_path):
     p = _migrated(tmp_path, edges=_population())
     s = SqliteStore(p)
     with s._lock, s._write_txn():
-        s._reinstate_edge_row("p-old")
+        s._reinstate_edge_row("p-old", reason="source_restored")
     assert "p-old" not in _members(p)
     s.close()
 
@@ -473,7 +473,7 @@ def test_ordinary_mutations_keep_applicable_and_a_retirement_by_the_method_clear
     s.invalidate_edge("h", datetime.now(timezone.utc), "revoked_source")
     assert _applicable(s, "h") == 0
     with s._lock, s._write_txn():
-        s._reinstate_edge_row("h")
+        s._reinstate_edge_row("h", reason="source_restored")
     assert _applicable(s, "h") == 0
     s.close()
 
@@ -607,8 +607,9 @@ def test_one_live_contention_predicate_decides_for_both_readers(tmp_path, monkey
 
 def test_doctor_warns_before_any_plan_and_names_the_operation_by_relation_name(tmp_path):
     """The 0018 amendment §4e uninitialized row, its text verbatim: members whose retirement still equals the
-    inventoried one. No warning on a fresh store, none once a plan header exists. Mutants: silent; a claim of
-    eligibility."""
+    inventoried one. No warning on a fresh store, and the pre-plan warning is gone once a plan header exists (T6:
+    a header with no relation rows is then the initialized-EMPTY phase, `info`; the other phases are
+    test_0044_t6_operation's). Mutants: silent; a claim of eligibility."""
     p = _migrated(tmp_path, edges=_population())
     found = [f for f in doctor.diagnose(p).findings if f.check == "data-migration"]
     assert [(f.level, sorted(f.ids)) for f in found] == [("warn", ["m-2050", "m-other", "p-old"])], found
@@ -621,7 +622,8 @@ def test_doctor_warns_before_any_plan_and_names_the_operation_by_relation_name(t
     c.execute("INSERT INTO plan_header VALUES(1, 'plan-t5', '2026-10-15T00:00:00+00:00', 'd', 'op-1')")
     c.commit()
     c.close()
-    assert [x for x in doctor.diagnose(p).findings if x.check == "data-migration"] == []
+    assert [(x.level, x.message) for x in doctor.diagnose(p).findings if x.check == "data-migration"] == [
+        ("info", doctor.PLAN_EMPTY_INFO)]
 
 
 # ---- §4g-ii: erasure ----------------------------------------------------------------------------------------------

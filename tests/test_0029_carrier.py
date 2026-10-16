@@ -206,7 +206,7 @@ def test_edge_state_at_reconstructs_byte_exact(store):
     store.invalidate_edge(e.id, datetime(2026, 9, 1, tzinfo=timezone.utc), "lapsed")
     s1 = _raw(store, e.id); k1 = _events(store, edge_id=e.id)[-1].txn
     with store._write_txn():                                 # the row FORGETS the reason
-        store._reinstate_edge_row(e.id)
+        store._reinstate_edge_row(e.id, reason="source_restored")
     assert store.edge_state_at(U, e.id, k0).state == s0
     assert store.edge_state_at(U, e.id, k1).state == s1
     assert json.loads(store.edge_state_at(U, e.id, k1).state)["invalidation_reason"] == "lapsed"
