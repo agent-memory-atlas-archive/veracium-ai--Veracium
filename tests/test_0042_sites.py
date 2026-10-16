@@ -1361,6 +1361,65 @@ DECLINES.update({
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
 
 
+# specs/0018 §4i / 0044 §4f (T6-1): run_data_migration's five sites. Each SETUP (a file-backed v16 store, a plan
+# written, an inventoried retirement) runs outside the window; each RUN reaches its site's condition exactly once.
+def _dm_store(*, revoked=False, marked=False):
+    import tempfile as _tf, os as _os, json as _j
+    from veracium.store import data_migration as _DM, revocation as _rv
+    from veracium.store.release_migration import MigrationAttestation as _Att
+    from veracium.store.revocation_sweep import digest_of as _digest_of
+    path = _os.path.join(_tf.mkdtemp(), "dm.db")
+    s = SqliteStore(path)
+    old = _edge("dm-p", "weight 78", rel="measures").model_copy(update={
+        "invalidated_at": NOW - timedelta(days=1), "invalidation_reason": "superseded",
+        "provenance": _edge("dm-p").provenance.model_copy(update={"source_id": "feed-1"})})
+    s.add_edge(old)                                           # an insert: no lifetime transition
+    if marked:
+        s._conn.execute("UPDATE edges SET json=? WHERE id='dm-p'",
+                        (_j.dumps({**_j.loads(old.model_dump_json()), "object": _MARKER}),))
+    d = _j.loads(s._conn.execute("SELECT json FROM edges WHERE id='dm-p'").fetchone()[0])
+    s._conn.execute("INSERT INTO arity_inventory VALUES('dm-p', ?, ?, 'superseded')", (U, d["invalidated_at"]))
+    s._conn.commit()
+    if revoked:
+        _rv.revoke_source(s, U, _digest_of(None, "feed-1", s.local_origin()), "revoke", "policy", "2026-10-16T00:00:00Z")
+    s.close()
+    att = _Att(quiesced=True, backup_ref="bk-sites")
+    run = lambda **k: _DM.run_data_migration(path, host_attestation=att, **{"registry": dict(DEFAULT_RELATIONS), **k})
+    assert run(op_id="dm-plan", plan_only=True).outcome == "planned"
+    return run
+
+
+def _dm_assert(run, outcome, **k):
+    r = run(**k)
+    assert r.outcome == outcome, (r.outcome, r.diagnostic)
+
+
+def _dm_registry_changed(run):
+    from veracium.schema import Relation as _Rel
+    reg = dict(DEFAULT_RELATIONS)
+    reg["prefers"] = _Rel(name="prefers", functional=True, desc=reg["prefers"].desc, arity="single")
+    _dm_assert(run, "registry-changed", op_id="dm-other", registry=reg)
+
+
+def _dm_read_refused():
+    import tempfile as _tf, os as _os
+    from veracium.store import data_migration as _DM
+    _raises(ValueError, _DM.data_migration_receipt, _os.path.join(_tf.mkdtemp(), "absent.db"), "plan", U)
+
+
+DECLINES.update({
+    "store.data-migration.op-id-conflict": TwoPhase(lambda mp: _dm_store(),
+                                                    lambda run: _dm_assert(run, "op-id-conflict", op_id="dm-plan")),
+    "store.data-migration.registry-changed": TwoPhase(lambda mp: _dm_store(), _dm_registry_changed),
+    "store.data-migration.withheld-revoked": TwoPhase(lambda mp: _dm_store(revoked=True),
+                                                      lambda run: _dm_assert(run, "migrated", op_id="dm-run")),
+    "store.data-migration.redacted-not-considered": TwoPhase(lambda mp: _dm_store(marked=True),
+                                                             lambda run: _dm_assert(run, "migrated", op_id="dm-run")),
+    "store.data-migration.read-refused": lambda mp: _dm_read_refused(),
+})
+SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
+
+
 # THE PARAMETRISED SET IS FROZEN HERE, AFTER THE LAST ENTRY BLOCK (2026-09-20). A parametrize decorator
 # evaluates its list when the function is DEFINED; every entry block must sit above this line, and the
 # completeness test below asserts the frozen tuples equal the dicts so a block added beneath refuses loudly.
