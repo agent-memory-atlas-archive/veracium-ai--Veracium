@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ a0c9f84
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 367f761
+# RE-PINNED 2026-10-18 0044 T9-1 (0045's write half) landed in 367f761c2d74fa1f344efaeea93ced0c69444ea4: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-18 0044 T8-1 (0003 §4c-iii, the contested group order) landed in a0c9f8422464bf3c916c71e2f51c67081bc397e3: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-18 0044 T7-1 (one store-path predicate, 2537d8e) and T7-2 (undo_restoration) landed in f89752aeaf987bcaeac111bab4755bb1e00fca2e: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-16 0044 T6-1 (run_data_migration) landed in 0fee726399299da64095a52da5652e88a4550b97: bodies byte-identical; the pin moves to the commit that changed src/
