@@ -88,6 +88,7 @@ CLASSIFIED = {
     ("store/sqlite.py", "SqliteStore._upsert_edge_row"): ("INTERNAL", "store write"),
     ("store/sqlite.py", "SqliteStore.apply_supersession_plan"): ("INTERNAL", "store write"),
     ("store/sqlite.py", "SqliteStore.confirm_edge"): ("INTERNAL", "store write (0008); its refusal message names the edge, not its content"),
+    ("ingest.py", "ingest_event"): ("INTERNAL", "the write path (0045 §2, T9): it re-validates the built edge with its grounding axis before storing it; no text leaves, and a challenge (0047) can only follow the write"),
     ("store/sqlite.py", "SqliteStore._redact_in_txn"): ("INTERNAL", "redaction — the reply's text joins its treatment map (0041 amendment)"),
     ("store/sqlite.py", "SqliteStore.commit_outcome_import_plan"): ("INTERNAL", "store write"),
     ("store/sqlite.py", "SqliteStore._logical_request_digest._dump"): ("INTERNAL", "serialises a plan for its replay digest; never rendered"),
