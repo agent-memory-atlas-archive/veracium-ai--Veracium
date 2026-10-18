@@ -399,6 +399,19 @@ def test_one_id_space_with_confirm_in_both_directions(tmp_path):
                                                     cid="held-by-undo"))
 
 
+def test_a_confirm_under_an_undos_generated_id_is_refused(tmp_path):
+    """0008am INV-Q1 for a GENERATED id (research's T7 re-check, 834ae72d: the cell above uses supplied ids only, and
+    the differential never confirms under `auto-…`): an id-less undo's generated id is in the one shared id space, so
+    a confirm under it is an integrity conflict naming `undo`, and no confirmation is admitted."""
+    p = _restored(tmp_path)
+    m = _mem(p)
+    gen = _ok(m.undo_restoration, U, P)["correlation_id"]
+    assert gen.startswith("auto-")
+    n = T6._q(p, "SELECT COUNT(*) FROM confirmations")[0][0]
+    assert "held by a 'undo' request" in str(_refuses(ValueError, m.confirm, U, N, correlation_id=gen))
+    assert T6._q(p, "SELECT COUNT(*) FROM confirmations")[0][0] == n
+
+
 def _race(p, first, second):
     """`first` runs in a thread on its own SqliteStore and is PAUSED inside its write transaction (at the registry
     lookup, which runs under BEGIN IMMEDIATE); `second` starts on another SqliteStore and must WAIT for the lock.

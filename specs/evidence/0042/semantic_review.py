@@ -66,10 +66,10 @@ DEFAULT = {
 }
 OVERRIDE = {  # (module, line) -> reason class, where the module default is not the truth for that line
     ("__init__.py", 395): "control-flow", ("__init__.py", 476): "control-flow", ("__init__.py", 604): "control-flow",
-    ("__init__.py", 928): "control-flow", ("__init__.py", 1524): "control-flow", ("__init__.py", 1665): "control-flow",
-    ("__init__.py", 1687): "control-flow", ("__init__.py", 1736): "control-flow", ("__init__.py", 1743): "control-flow",
-    ("__init__.py", 1754): "control-flow", ("__init__.py", 1761): "control-flow", ("__init__.py", 1790): "control-flow",
-    ("__init__.py", 1816): "control-flow", ("__init__.py", 2155): "internal-invariant", ("__init__.py", 2242): "control-flow",
+    ("__init__.py", 928): "control-flow", ("__init__.py", 1537): "control-flow", ("__init__.py", 1678): "control-flow",
+    ("__init__.py", 1700): "control-flow", ("__init__.py", 1749): "control-flow", ("__init__.py", 1756): "control-flow",
+    ("__init__.py", 1767): "control-flow", ("__init__.py", 1774): "control-flow", ("__init__.py", 1803): "control-flow",
+    ("__init__.py", 1829): "control-flow", ("__init__.py", 2168): "internal-invariant", ("__init__.py", 2255): "control-flow",
     ("__init__.py", 297): "internal-invariant", ("__init__.py", 304): "internal-invariant",
     ("__init__.py", 1005): "internal-invariant", ("__init__.py", 1009): "internal-invariant", ("__init__.py", 1013): "internal-invariant",
     ("__init__.py", 1020): "internal-invariant", ("__init__.py", 1022): "internal-invariant",
@@ -189,18 +189,18 @@ e("ingest.py", 375, "ingest.instructions-not-a-list", "0039", "§2a", "downgrade
 e("ingest.py", 303, "ingest.source-id-required", "0006", "§4 rule 9", "refuse")
 e("mcp_server.py", 113, "mcp.closed-set.author", "0011", "§4d", "refuse")
 e("mcp_server.py", 122, "mcp.closed-set.trust-field", "0011", "§4d", "refuse")
-e("__init__.py", 1918, "memory.confirm.unknown-target", "0008", "§6c INV-Q2", "refuse")
-e("__init__.py", 2106, "memory.correct.inactive-edge", "0011", "§4b", "refuse")
-e("__init__.py", 2126, "memory.correct.procedural", "0037", "§4a-iii", "refuse")
-e("__init__.py", 2172, "memory.correct.refused", "0011", "§4b", "refuse")
-e("__init__.py", 1855, "memory.dispute.inactive-edge", "0003", "§4b", "refuse")
-e("__init__.py", 1836, "memory.edge.unknown-target", "0041", "INV-5", "refuse")
-e("__init__.py", 1827, "memory.feedback.attested-target", "0041", "§4b-ii INV-11 (derived episodes)", "refuse")
+e("__init__.py", 1931, "memory.confirm.unknown-target", "0008", "§6c INV-Q2", "refuse")
+e("__init__.py", 2119, "memory.correct.inactive-edge", "0011", "§4b", "refuse")
+e("__init__.py", 2139, "memory.correct.procedural", "0037", "§4a-iii", "refuse")
+e("__init__.py", 2185, "memory.correct.refused", "0011", "§4b", "refuse")
+e("__init__.py", 1868, "memory.dispute.inactive-edge", "0003", "§4b", "refuse")
+e("__init__.py", 1849, "memory.edge.unknown-target", "0041", "INV-5", "refuse")
+e("__init__.py", 1840, "memory.feedback.attested-target", "0041", "§4b-ii INV-11 (derived episodes)", "refuse")
 e("__init__.py", 912, "memory.recall.as-of-on-proactive", "0028", "§2c", "refuse")
 e("__init__.py", 1030, "memory.recall.policy-with-as-of", "0027", "v13 §4c", "refuse")
-e("__init__.py", 1982, "memory.record-outcome.actor-vocabulary", "0008", "§4", "refuse")
-e("__init__.py", 1985, "memory.record-outcome.human-judgment", "0008", "§4", "refuse")
-e("__init__.py", 1988, "memory.record-outcome.system-judgment", "0008", "§4", "refuse")
+e("__init__.py", 1995, "memory.record-outcome.actor-vocabulary", "0008", "§4", "refuse")
+e("__init__.py", 1998, "memory.record-outcome.human-judgment", "0008", "§4", "refuse")
+e("__init__.py", 2001, "memory.record-outcome.system-judgment", "0008", "§4", "refuse")
 e("__init__.py", 400, "memory.scope.local-origin-missing", "0006", "I9", "refuse")
 e("portability.py", 138, "portability.export.non-quiescent", "0010", "X-quiesce", "refuse")
 e("portability.py", 876, "portability.import.agreement-invalid", "0025", "§4c", "refuse")

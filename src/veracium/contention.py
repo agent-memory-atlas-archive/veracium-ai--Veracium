@@ -17,6 +17,8 @@ there, and by authority on the contested surface (research's R4, option (i)).
 """
 from __future__ import annotations
 
+import math
+
 from .graph import _value_key
 from .store.lifetime import RECLASSIFIED_RELATIONS
 
@@ -41,3 +43,29 @@ def is_live_refusal(refusal, prior, incoming, relations: dict, retained: frozens
     if rel.functional:
         return True
     return refusal.relation in RECLASSIFIED_RELATIONS and refusal.refusal_id in retained
+
+
+def contested_group_key(subject: str, relation: str, renderable: list, visible: list) -> tuple:
+    """specs/0003 §4c-iii.6 4a — where a contested group sorts in the CONTESTED block and `Recall.contested`: by the
+    authority of the fact it preserves, then by ambiguity, then by visible size, then by slot (determinism only).
+
+    `renderable`: the effective authorities of the members the renderer can EMIT (the assertable exposed members).
+    `visible`: those of every member VISIBLE to this principal: every exposed member and every FENCED linkage entry,
+    never a policy-hidden (withheld, 0020 N-2) or UNRESOLVED member. Both are the PUBLISHED authorities, after the
+    view's shaping. The key reads no query, so the order cannot depend on one (§4c-iii INV-O4).
+
+    A group with nothing renderable sorts after every other group, by slot. Otherwise, with `t` the highest renderable
+    authority: `(−t, t − max(visible without one t) or +∞, −|visible|, slot)`. A tie on `t` between members changes no
+    component, so no edge-id tie is computed.
+
+    Residual, stated (research's T8 stage-1 F1): `Recall.contested` publishes a fenced and a policy-hidden member as
+    the same content-free `ContestedLinkage`, but only the fenced one is in `visible`. Two groups that read the same
+    on the structured API can therefore sort differently, so the order discloses which kind a linkage entry is. §4a
+    mandates this (INV-O10)."""
+    if not renderable:
+        return (1, 0, 0, 0, subject, relation)
+    top = max(renderable)
+    rest = list(visible)
+    rest.remove(top)
+    gap = (top - max(rest)) if rest else math.inf
+    return (0, -top, gap, -len(visible), subject, relation)

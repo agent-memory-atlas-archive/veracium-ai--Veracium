@@ -701,14 +701,15 @@ SRC_DATA_DUNDERS_AT_ACCEPTANCE = 96
 #: 2026-10-16, 0044 T6-1 (0018 §4i: store/data_migration.py — run_data_migration, its carrier, status and receipt, five declared sites; revocation.would_retire_if_active; doctor's three remaining phases; the reinstate writer's reason from its caller): moved dotted/dataflow 7,328 -> 7,460 and dotted/module-plain 369 -> 381, the rest unchanged.
 #: 2026-10-16, 0044 T7-1 (research's T6 stage-2 N1: one store-path predicate, release_migration._usable_store_path over _path_encoding_problem, replacing the inline `len(os.fsencode(path))` checks of run_release_migration and data_migration._preflight): moved dotted/dataflow 7,460 -> 7,461 and dotted/module-plain 381 -> 379, the rest unchanged.
 #: 2026-10-16, 0044 T7-2 (0044 §4i undo: store/data_migration.undo_restoration with nine declared sites, the shared registry lookup SqliteStore._registry_held, UndoRefused, Memory.undo_restoration, doctor's §4k refs split): moved dotted/dataflow 7,461 -> 7,513, dotted/module-plain 379 -> 380 and dotted/module-protected 53 -> 54 (`sqlite3.IntegrityError`, an ALLOWED attribute, in undo's C8 fallback), the rest unchanged.
+#: 2026-10-18, 0044 T8 (0003 §4c-iii: contention.contested_group_key, the contested group order applied in _build_contested from the published members): moved dotted/dataflow 7,513 -> 7,522 and dotted/module-plain 380 -> 381 (`math.inf`, the key's +∞), the rest unchanged.
 SRC_ATTRIBUTE_PARTITION = {
-    "dotted/dataflow": 7513,
+    "dotted/dataflow": 7522,
     "dotted/module-machinery": 19,
-    "dotted/module-plain": 380,
+    "dotted/module-plain": 381,
     "dotted/module-protected": 54,
     "getattr/dataflow": 34,
 }
-SRC_ATTRIBUTE_TOTAL = 8000
+SRC_ATTRIBUTE_TOTAL = 8010
 SRC_DATA_DUNDERS_IN_DATAFLOW = 143   # 2026-10-16, 0044 T7-2: +2 — in store/base.py, `super().__init__` in UndoRefused (a refusal's message, from a closed reason and ids) and `type(self).__name__` in the Store base's refusing `undo_restoration` default  # 2026-10-16, 0044 T6-1: +4 — in store/data_migration.py, `super().__new__` in DataMigrationResult's validating constructor, `super().__init__` in _Refusal, `type(registry).__name__` (the refused registry's CLASS name) and `type(x).__name__` (a failing user's exception CLASS name, never its message)  # 2026-10-15, 0044 T5-2: +1 — `type(self).__name__` in the Store base's refusing `refusal_inventory_ids` default  # 2026-10-14, 0008 v7: +1 — `super().__init__` in store/base.py's RequestRedacted (an exception's message, from ids and a verb)  # 2026-09-14 v14.1: +1 — `object.__setattr__` on the frozen PolicyLane (a list of tags taken as a tuple); +2 — the two `type(x).__name__` reads in the v22 type guards (procedural_gate.norm_ws, ingest_event)  # 2026-09-14, 0027 v14: +4 — `type(self).__name__` in the Store base's three refusing defaults, `type(d).__name__` in receipt_from_row  # 2026-09-19, 0042 census tranche 1: +1 — `type(decision).__name__` in census._label_of (a trace label is a CLASS NAME, never content)
 #   2026-09-19 provider refusal: +1 — `super().__init__` in `EmptyCompletion` (llm/anthropic.py); the census counts it as a data dunder in dataflow
 #   2026-09-20 0042 round 7: +1 — `type(exc).__name__` in `census.Site._measurement_failed` (the failure KIND recorded as a type name, R6-1)

@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Changed: the contested block and `Recall.contested` list their groups by preservation tier, not by the alphabet
+  (specs/0003 §4c-iii; INV-O1–O10).** A group is ranked by the effective authority of the highest-authority fact the
+  block can render for it, then by how close its contention is (a negative gap, a visible higher-authority member
+  that is fenced, first), then by how many members are visible, then by `(subject, relation)`. Before, the order was
+  `(subject, relation)` alone, so a tight budget dropped the same alphabetical tail on every recall, whatever was
+  asked, and those facts reached the model in no other section. Now the cut drops the lowest-authority, least
+  ambiguous contentions, and a third-party challenge can only compete with groups whose top fact has the same
+  authority as the fact it challenged. The query still never reaches the order. The report line's contested figures
+  are unchanged in meaning and stay exact for the new order. Which fact renders inside a group is unchanged.
+  - Stated residual: `Recall.contested` publishes a fenced member and a policy-hidden one (0020) as the same
+    content-free `ContestedLinkage`, but only the fenced one counts towards a group's ambiguity. Two groups that read
+    the same on the structured API can therefore sort differently. §4c-iii requires this (INV-O10).
+  - **Who should act:** a host that read `Recall.contested` as alphabetical by `(subject, relation)`. Nothing else
+    changes; a store is not touched. (tests/test_0003_t8_contested_order.py.)
 - **Fixed: `run_release_migration` raised `UnicodeEncodeError` instead of returning `invalid-request` for a path string
   that does not encode (specs/0018 I13: the orchestrator is total over its inputs).** Present since v0.11.0. Only a
   Python caller that builds the path string itself can reach it, for example by decoding a JSON `\ud800` escape.

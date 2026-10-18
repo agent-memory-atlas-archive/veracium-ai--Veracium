@@ -182,141 +182,141 @@
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1524,
+   "line": 1537,
    "module": "__init__.py",
    "qualname": "Memory._fit_to_budget._claim_lines"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1665,
+   "line": 1678,
    "module": "__init__.py",
    "qualname": "Memory.answer"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1687,
+   "line": 1700,
    "module": "__init__.py",
    "qualname": "Memory.maintain"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1736,
+   "line": 1749,
    "module": "__init__.py",
    "qualname": "Memory.flush_telemetry"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1743,
+   "line": 1756,
    "module": "__init__.py",
    "qualname": "Memory.telemetry_preview"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1754,
+   "line": 1767,
    "module": "__init__.py",
    "qualname": "Memory.report_error"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1761,
+   "line": 1774,
    "module": "__init__.py",
    "qualname": "Memory.diagnostics_preview"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 1790,
+   "line": 1803,
    "module": "__init__.py",
    "qualname": "Memory.introspect"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1816,
+   "line": 1829,
    "module": "__init__.py",
    "qualname": "Memory.edges_since"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1827,
+   "line": 1840,
    "module": "__init__.py",
    "qualname": "Memory._refuse_attested"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1836,
+   "line": 1849,
    "module": "__init__.py",
    "qualname": "Memory._find_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1855,
+   "line": 1868,
    "module": "__init__.py",
    "qualname": "Memory.dispute"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1918,
+   "line": 1931,
    "module": "__init__.py",
    "qualname": "Memory.confirm"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1982,
+   "line": 1995,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1985,
+   "line": 1998,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1988,
+   "line": 2001,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2106,
+   "line": 2119,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2126,
+   "line": 2139,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2155,
+   "line": 2168,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2172,
+   "line": 2185,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2242,
+   "line": 2255,
    "module": "__init__.py",
    "qualname": "Memory.policy_receipts"
   },
@@ -813,25 +813,25 @@
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 35,
-   "module": "contention.py",
-   "qualname": "is_live_refusal"
-  },
-  {
-   "kind": "RETURN_FALSE",
    "line": 37,
    "module": "contention.py",
    "qualname": "is_live_refusal"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 40,
+   "line": 39,
+   "module": "contention.py",
+   "qualname": "is_live_refusal"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 42,
    "module": "contention.py",
    "qualname": "is_live_refusal"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 43,
+   "line": 45,
    "module": "contention.py",
    "qualname": "is_live_refusal"
   },

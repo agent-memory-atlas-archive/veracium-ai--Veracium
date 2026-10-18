@@ -46,7 +46,7 @@ from .ingest import _event_dt, ingest_event
 from .llm.base import Complete, Embed
 from .authority import edge_effective as _edge_effective
 from .graph import _value_key as _value_key
-from .contention import is_live_refusal, retained_refusal_ids
+from .contention import contested_group_key, is_live_refusal, retained_refusal_ids
 from .schema import (CONFIRMATION_RULE_VERSION, ConfirmationActor, is_procedural,
                      ConfirmationCallPath, ContestedGroup, ContestedLinkage,
                      Disclosure, Edge,
@@ -1319,7 +1319,8 @@ class Memory:
         """Render the deterministic CONTESTED FUNCTIONAL FACTS block from the grounded
         exposed members (specs/0003 §4c-ii). Returns (block, tokens_spent, truncated,
         loss). Group lines are walked IN THE ORDER `_build_contested` RETURNS THEM —
-        sorted (subject, relation) — with a best-effort minimum (the first line is
+        §4c-iii's key (`contention.contested_group_key`: preservation tier, then
+        ambiguity, then visible size, then slot) — with a best-effort minimum (the first line is
         unconditional — the higher-authority prior is never dropped); the rest are
         budget-gated so the surface is bounded, and the cut takes that order's tail.
         `loss` is the `ContestedLoss` (whole groups dropped after the cut / contending
@@ -1381,7 +1382,10 @@ class Memory:
         while an UNRESOLVED member is dropped outright (V13: fail-closed means invisible,
         not "invisible with a pointer"). A group with NO exposed member is dropped
         ENTIRELY, which is what keeps N-1 true: an all-withheld store is
-        indistinguishable from an empty one on the full `Recall` value."""
+        indistinguishable from an empty one on the full `Recall` value.
+
+        specs/0003 §4c-iii: the groups are returned in `contention.contested_group_key`'s
+        order (preservation tier, then ambiguity, then visible size, then slot), not by slot."""
         try:
             refusals = self.store.refusals(user_id)
         except NotImplementedError:
@@ -1417,10 +1421,10 @@ class Memory:
                 groups.setdefault((prior.subject, r.relation), set()).update(
                     [prior.id, inc.id])
                 group_priors.setdefault((prior.subject, r.relation), set()).add(prior.id)
-        result, exposed_all = [], []
+        result, exposed_all, keys = [], [], {}
         for (subject, relation), member_ids in sorted(groups.items()):
             members = [active[mid] for mid in member_ids if mid not in dropped]
-            exposed, linkage = [], []
+            exposed, linkage, fenced = [], [], set()
             for m in members:
                 if m.id in withheld:            # §4c N-2: status, never content
                     linkage.append(ContestedLinkage(
@@ -1429,6 +1433,7 @@ class Memory:
                 elif m.assertable or m.id in selected:
                     exposed.append(m)
                 else:
+                    fenced.add(m.id)            # visible, not emitted: in §4c-iii's V
                     linkage.append(ContestedLinkage(
                         edge_id=m.id, partition="unverified",
                         authority=_edge_effective(m)))
@@ -1439,12 +1444,20 @@ class Memory:
                 continue
             exposed.sort(key=lambda e: (-_edge_effective(e), e.id))
             linkage.sort(key=lambda x: (-x.authority, x.edge_id))
+            # specs/0003 §4c-iii.6 4a, read from the PUBLISHED members (the shaped authorities): R = what the renderer
+            # emits, V = every exposed member plus the FENCED linkage, never the withheld (policy-hidden) one
+            keys[(subject, relation)] = contested_group_key(
+                subject, relation, [_edge_effective(e) for e in exposed if e.assertable],
+                [_edge_effective(e) for e in exposed] + [x.authority for x in linkage if x.edge_id in fenced])
             result.append(ContestedGroup(
                 subject=subject, relation=relation, exposed=exposed, linkage=linkage,
                 prior_edge_ids=sorted(
                     i for i in group_priors.get((subject, relation), ())
                     if i not in dropped)))
             exposed_all.extend(exposed)
+        # the group ORDER is applied here, after the loop: `exposed_all` keeps the slot order the loop builds (it feeds
+        # the detail candidates, which §4c-iii does not reorder) — do not move this sort into the loop
+        result.sort(key=lambda g: keys[(g.subject, g.relation)])
         return result, exposed_all
 
     def _fit_to_budget(self, wiki: Optional[str], edges, episodes,
