@@ -81,13 +81,14 @@ def test_the_carrier_enumeration_reproduces_its_committed_output_byte_for_byte()
     `confirmations`' five act TEXT columns, (T4) `redactions.state` / `pending_reason`, and (T5) 0044's eight tables —
     ids, times, digests and closed values, no content column; the identities below are
     MODEL-derived and did
-    not move), 84 terminal (model, field) identities, 64 carriers + 20 non-carriers.
+    not move), 84 terminal (model, field) identities, 64 carriers + 20 non-carriers; at T9 (0041 v16.2) 0045's `Edge.src`
+    and `Edge.attv` make it 86 identities behind 141 paths, 66 carriers + 20 non-carriers (`Edge.att` is a closed value).
     v3's §2 quotes those counts; this is the node that keeps them honest."""
     r = subprocess.run([sys.executable, str(EVIDENCE / "carrier_enumeration.py")],
                        cwd=EVIDENCE, env={"PATH": "/usr/bin:/bin"}, capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr[-2000:]
     assert r.stdout == (EVIDENCE / "carrier_enumeration_OUTPUT.txt").read_text()
-    assert "-> 64 CARRIERS" in r.stdout and "-> 20 NON-CARRIERS" in r.stdout
+    assert "-> 66 CARRIERS" in r.stdout and "-> 20 NON-CARRIERS" in r.stdout
 
 
 def _inv12_sets(base, content_digest, embedded_text):
@@ -136,6 +137,9 @@ def _inv12_sets(base, content_digest, embedded_text):
             cur = cur[k]
         if what == "key":
             cur[path[-1] + "-changed"] = cur.pop(path[-1])
+        elif path in _CLOSED_ALTERNATIVES:
+            cur[path[-1]] = _CLOSED_ALTERNATIVES[path]     # a grammar-closed str: mutated to ANOTHER valid value, so
+                                                           # the walk still sees it (a refusal would blind it, A-5)
         else:
             cur[path[-1]] = cur[path[-1]] + "-changed"
         name = ".".join(str(k) for k in path) + ("[key]" if what == "key" else "")
@@ -179,7 +183,14 @@ _LEAF_VALUES = {                      # every str-admitting leaf of Edge, by pat
     ("provenance", "evidence_ref"): "ev-12", ("provenance", "source_id"): "mb-a", ("provenance", "origin"): "origin-1",
     ("agreement", "markers"): ["marker-one", "marker-two"], ("agreement", "direction"): "inbound",
     ("agreement", "lexicon"): "foreign-lexicon-v9",
+    ("src",): "ep-inv12", ("attv",): "ATTEST-3@b1329a81",     # specs/0045 §2 (T9), beside `att` in the base record
 }
+
+
+# specs/0045 §2 (T9): two str leaves whose every "-changed" value the model refuses (a closed Literal; a closed
+# grammar), each mutated instead to another VALID value of its domain, so INV-12's walk exercises them rather than
+# recording a refusal that would hide a widening onto them
+_CLOSED_ALTERNATIVES = {("att",): "attested", ("attv",): "ATTEST-4@0123abcd"}
 
 
 def _complete_edge(unset=()):
@@ -191,7 +202,8 @@ def _complete_edge(unset=()):
     assert not missing, f"the fixture table lacks a value for {missing} — a str leaf the model grew"
     d = {"invalidated_at": "2026-09-10T00:00:00Z",
          "provenance": {"author_of_evidence": "user", "disclosure": "mentionable"},
-         "agreement": {}}
+         "agreement": {},
+         "att": "not_attested"}      # specs/0045: a closed value (no str leaf); `src`/`attv` exist only beside it
     for path, val in _LEAF_VALUES.items():
         if path in unset:
             continue

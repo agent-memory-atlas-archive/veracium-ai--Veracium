@@ -91,13 +91,17 @@ DISPOSITIONS = {
  # third-party influence, MENTIONABLE otherwise, and C4 adds the
  # standing-revoked → QUARANTINED branch on the same field. The verdicts are
  # unchanged: the write became MORE conservative, not differently shaped.
- ("src/veracium/ingest.py", "ingest_event", "add_episode", "79166908890e"):
+ # 2026-10-18 (T9): the main write re-keyed 79166908890e -> 070f62e813fd (its id is now captured as specs/0045's
+ # `src`); and the two descriptions were found SWAPPED against the call sites they key (836c8cca9da2 is the
+ # unparseable path's placeholder, under `except ValueError`; this key is the `if episode_text:` write) — each now
+ # describes its own call. Both verdicts were `clean` and stay so.
+ ("src/veracium/ingest.py", "ingest_event", "add_episode", "070f62e813fd"):
+   (W, "episode provenance (disclosure set at birth); its id is the edges' `src` (specs/0045 §2)", "observation",
+    "clean — the origin of trust", "`test_third_party_text_never_moves_into_the_grounded_block`"),
+ ("src/veracium/ingest.py", "ingest_event", "add_episode", "836c8cca9da2"):
    (W, "episode provenance (unparseable placeholder; disclosure set at birth)",
     "observation",
     "clean — never retains raw event text", "`test_unparseable_extraction_degrades_gracefully`"),
- ("src/veracium/ingest.py", "ingest_event", "add_episode", "836c8cca9da2"):
-   (W, "episode provenance (disclosure set at birth)", "observation",
-    "clean — the origin of trust", "`test_third_party_text_never_moves_into_the_grounded_block`"),
  # specs/0037 v16 §4a-iii (2026-09-12): the quote-gated extractor path writes a
  # PROCEDURAL record directly, as record_procedure does — never through
  # apply_supersession, never a fact, excluded from model context by its own stamp.
@@ -198,7 +202,7 @@ STATES = {
   ("src/veracium/cli.py", "_forget", "forget_user", "269b73112fab"): "clean",
   ("src/veracium/compile.py", "compile_wiki", "set_wiki", "4365735ba43d"): "clean",
   ("src/veracium/graph.py", "apply_supersession", "apply_supersession_plan", "e1ecd66351bd"): "clean",
-  ("src/veracium/ingest.py", "ingest_event", "add_episode", "79166908890e"): "clean",
+  ("src/veracium/ingest.py", "ingest_event", "add_episode", "070f62e813fd"): "clean",
   ("src/veracium/ingest.py", "ingest_event", "add_episode", "836c8cca9da2"): "clean",
   ("src/veracium/ingest.py", "ingest_event", "add_edge", "74ca6d95a054"): "clean",
   ("src/veracium/lifecycle.py", "expire", "invalidate_edge", "52f316b93ba6"): "clean",

@@ -506,11 +506,55 @@ Explicit user-feedback verbs (get `edge_id`s from `Recall.edges`):
   `veracium.store.base.RequestRedacted` (a `ValueError`) whatever the
   payload: it is terminal and never replays. `forget_user` frees the user's
   ids.
+  **A fact whose source was erased (specs/0045 §4d).** `confirm` refuses a
+  `not_attested` fact (below) whose source episode was redacted, with
+  `ValueError` ("state it anew"): the user's confirmation would otherwise
+  promote a suggestion whose evidence they removed. It reads the source's
+  redaction directly, and also through a consolidated episode whose lineage
+  holds the source (the source episode is deleted at consolidation). It does
+  not refuse an `attested` fact, a fact with no recorded source, a fact
+  already confirmed in this store, or a fact written before this release. A
+  source deleted outright (not redacted) leaves nothing to read, so confirm
+  is allowed. A pending redaction notice does not refuse; an applied one does.
 
 Neither verb is exposed over MCP (an agent-callable suppress/validate verb is a
 prompt-injection target) — wire them to real user actions in your host. Note
 `correct` and `elaborate` need no verb: they *are* `remember()` (supersession /
 accumulation).
+
+### How a fact is known: `att`, `src`, `attv` (specs/0045)
+
+Every declarative fact ingest writes from now on carries three fields, set once
+and never changed (a same-id rewrite of any of them raises `ValueError`):
+
+- **`att`** — `"attested"` when a fixed, versioned predicate (ATTEST-3) found
+  the fact stated in the user's own words in the event, in the one sentence
+  form it recognises; otherwise `"not_attested"`. `"not_attested"` means only
+  that the predicate did not find it: most true statements are phrased in ways
+  it does not recognise (it recognised 12 of 53 on its blind holdout, with 1
+  false attestation in 67). It is **not** "unverified" — the fact is stored,
+  recalled and asserted exactly as before. `"attested"` is a label, not proof,
+  and carries no other privilege. Only a declared-direct USER event
+  (`context=EvidenceContext.direct()`) can be attested; every other event is
+  `"not_attested"`.
+- **`src`** — the id of the episode the event wrote, or `None` when the
+  extractor returned no episode text.
+- **`attv`** — what produced `att`: `"ATTEST-3@b1329a81"` (the predicate's
+  version and the first 8 hex digits of its source file's sha256),
+  `"non-user-effective"` (no predicate ran), or `"default-import"`.
+
+A fact written before this release has none of them and reads as `unknown`;
+nothing re-derives it. A procedural record (`record_procedure`, the quote gate)
+carries none. A fact written by `correct()` carries none for now (`unknown`).
+`veracium.attestation.declarative_grounding(edge, confirmation_origins)` gives
+the derived value: `confirmed` once a local or restored confirmation exists,
+else the stored `att`, else `unknown`.
+
+**Where they appear.** On `Recall.edges` and `why`'s edge record, as fields of
+the edge. They are not in an export yet: an export file omits them, a default
+import writes `not_attested` / `None` / `default-import` on every declarative
+fact whatever the file says, and `--restore` leaves them unset (`unknown`)
+until the export format carries them.
 
 ### `record_outcome(user_id, edge_id, *, outcome, evidence_ref, actor="system", corrected_value=None, date=None, context_ref=None) -> dict` / `correct(user_id, edge_id, corrected_value, *, actor="user", evidence_ref=None, date=None) -> dict`
 

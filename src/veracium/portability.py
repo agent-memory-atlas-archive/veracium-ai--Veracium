@@ -44,6 +44,7 @@ from .schema import (DEFAULT_RELATIONS, Disclosure, Edge, Episode, EvidenceAutho
 from .scope_linkage import (derive_absorbed_by, plan_row_id,
                             reconstruct_absorption_rows)
 from .source_identity import resolve_origin
+from .attestation import DEFAULT_IMPORT as _DEFAULT_IMPORT, NOT_ATTESTED as _NOT_ATTESTED
 from . import redaction as _redaction
 from .store.base import DESTINATION_CHANGED, NON_QUIESCENT
 from .census import declare_site
@@ -125,6 +126,19 @@ _RESTORE_WARNING = (
     "have independently verified, record by record (specs/0005 §4d)")
 
 
+_GROUNDING_AXIS = ("att", "src", "attv")    # specs/0045 §2: the declarative grounding axis's stored fields
+
+
+def _without_axis(d: dict) -> dict:
+    return {k: v for k, v in d.items() if k not in _GROUNDING_AXIS}
+
+
+def _raw_procedural(rec: dict) -> bool:
+    """0037's floor rule on a raw file record: `record_kind == "procedural"` OR `basis` set."""
+    prov = rec.get("provenance") if isinstance(rec.get("provenance"), dict) else {}
+    return prov.get("record_kind") == "procedural" or prov.get("basis") is not None
+
+
 def export_memory(store, user_id: str, path) -> dict:
     """Write `user_id`'s complete memory (all edges incl. superseded and
     quarantined, all episodes) to `path` as JSONL. Returns counts."""
@@ -204,6 +218,8 @@ def export_memory(store, user_id: str, path) -> dict:
                 + "\n")
         for e in edges:
             rec = _materialise(json.loads(e.model_dump_json()))
+            for k in _GROUNDING_AXIS:     # specs/0045 §4f: their format era is not open yet (T11b); never in a ≤13 file
+                rec.pop(k, None)
             if e.id in absorbed_by:
                 rec["absorbed_by_id"] = absorbed_by[e.id]
             f.write(json.dumps({"record": "edge", **rec}) + "\n")
@@ -936,6 +952,17 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
             for rec in edge_recs:
                 rec.pop("ungrounded", None)
 
+        # specs/0045 §4e/§4f with the 0006 I10 rule: `att`/`src`/`attv` are newer than EVERY current format (their era
+        # opens with attestation portability), so a file's values are STRIPPED in both modes, never trusted — no
+        # file can plant `attested`. Then the default-mode write rule, "whatever the file says": every DECLARATIVE
+        # row is `not_attested`, `src` NULL, `default-import`; a procedural row carries none (§4c). A trusted
+        # restore leaves the three NULL (`unknown`, version unknown) until the format carries them.
+        for rec in edge_recs:
+            for k in _GROUNDING_AXIS:
+                rec.pop(k, None)
+            if not restore and not _raw_procedural(rec):
+                rec["att"], rec["attv"] = _NOT_ATTESTED, _DEFAULT_IMPORT
+
         # specs/0016 D2 (FORMAT 7): `Provenance.source_type` is DELETED. A ≤6
         # file legitimately carries the historical key — it is DROPPED on import
         # with the rest of the record intact (§2c row 1); ANY carried value
@@ -1241,7 +1268,9 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
         for edge in edges:
             prior = existing_edges.get(edge.id)
             if prior is not None:
-                if prior.model_dump() != edge.model_dump():
+                # specs/0045: the grounding axis is a WRITE rule here (stripped, then stamped in default mode), so
+                # record equality excludes it in BOTH modes — a store's own export re-imports idempotently
+                if _without_axis(prior.model_dump()) != _without_axis(edge.model_dump()):
                     _v = held_differs_verdict(store._completed_attestation(target_uid, "edge", edge.id), ("edge", edge.id) in notice_targets)
                     if _v == "attested-redaction":
                         raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(

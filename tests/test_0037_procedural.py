@@ -865,6 +865,7 @@ def test_basis_reaches_every_carrier():
         "diagnostics.py": "readers",
         "semantic.py": "readers",
         "agreement.py": "readers",
+        "attestation.py": "reads `procedural` only: a procedural edge has no g(e) (specs/0045 §4c)",
         "asof/adapter.py": "the raw adapter tolerates the markers as unknown keys",
         "asof/classify.py": "readers via the adapter",
         "asof/resolve.py": "readers",

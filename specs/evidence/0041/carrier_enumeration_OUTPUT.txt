@@ -65,6 +65,8 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      ContestedGroup.exposed.agreement.markers   list[str]
      ContestedGroup.exposed.agreement.direction <class 'str'>
      ContestedGroup.exposed.agreement.lexicon   <class 'str'>
+     ContestedGroup.exposed.src                 str | None
+     ContestedGroup.exposed.attv                str | None
      ContestedGroup.exposed.outcome_counts      dict[str, int]
      ContestedGroup.linkage.edge_id             <class 'str'>
      ContestedGroup.linkage.partition           <class 'str'>
@@ -102,6 +104,8 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      Edge.agreement.markers           list[str]
      Edge.agreement.direction         <class 'str'>
      Edge.agreement.lexicon           <class 'str'>
+     Edge.src                         str | None
+     Edge.attv                        str | None
      Edge.outcome_counts              dict[str, int]
      Episode.date                        <class 'str'>
      Episode.summary                     <class 'str'>
@@ -141,6 +145,8 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      SupersessionPlan.incoming_edge.agreement.markerslist[str]
      SupersessionPlan.incoming_edge.agreement.direction<class 'str'>
      SupersessionPlan.incoming_edge.agreement.lexicon<class 'str'>
+     SupersessionPlan.incoming_edge.src           str | None
+     SupersessionPlan.incoming_edge.attv          str | None
      SupersessionPlan.incoming_edge.outcome_countsdict[str, int]
      SupersessionPlan.operation_id                <class 'str'>
      SupersessionPlan.expected_state              <class 'str'>
@@ -161,13 +167,13 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      SupersessionRefusalDraft.incoming_edge_id            <class 'str'>
      SupersessionRefusalDraft.relation                    <class 'str'>
 
-   125 text-capable fields, RECURSED through nested models.
+   131 text-capable fields, RECURSED through nested models.
    Every one lives inside a json blob and is invisible to the schema.
 
 C. TRIAGE -- carriers, DERIVED from persistence and value-space bounds
-   84 TERMINAL (model, field) identities behind 135 paths.
+   86 TERMINAL (model, field) identities behind 141 paths.
 
-   -> 64 CARRIERS. Each must be named in 0041 section 2, or recorded there as an explicit exclusion.
+   -> 66 CARRIERS. Each must be named in 0041 section 2, or recorded there as an explicit exclusion.
       AgreementRecord.direction                [nested in Edge (json blob)]
       [also reachable as ContestedGroup.exposed.agreement.direction, Edge.agreement.direction, SupersessionPlan.incoming_edge.agreement.direction]
       AgreementRecord.lexicon                  [nested in Edge (json blob)]
@@ -204,6 +210,8 @@ C. TRIAGE -- carriers, DERIVED from persistence and value-space bounds
       ContributionRecord.survivor_id              [IS the row -> contribution_ledger]
       ContributionRecord.survivor_type            [IS the row -> contribution_ledger]
       ContributionRecord.user_id                  [IS the row -> contribution_ledger]
+      Edge.attv                     [json blob]
+      [also reachable as ContestedGroup.exposed.attv, SupersessionPlan.incoming_edge.attv]
       Edge.id                       [json blob]
       [also reachable as ContestedGroup.exposed.id, SupersessionPlan.incoming_edge.id]
       Edge.invalidation_reason      [json blob]
@@ -218,6 +226,8 @@ C. TRIAGE -- carriers, DERIVED from persistence and value-space bounds
       [also reachable as ContestedGroup.exposed.outcome_counts, SupersessionPlan.incoming_edge.outcome_counts]
       Edge.relation                 [json blob]
       [also reachable as ContestedGroup.exposed.relation, SupersessionPlan.incoming_edge.relation]
+      Edge.src                      [json blob]
+      [also reachable as ContestedGroup.exposed.src, SupersessionPlan.incoming_edge.src]
       Edge.subject                  [json blob]
       [also reachable as ContestedGroup.exposed.subject, SupersessionPlan.incoming_edge.subject]
       Edge.supersedes               [json blob]

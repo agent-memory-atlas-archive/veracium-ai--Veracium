@@ -88,7 +88,9 @@ SOURCE_LIFT_REASONS = ("revoked_in_error", "subject_request", "legal_obligation"
 REPLACE, CLEAR, DELETE, PRESERVE = "REPLACE", "CLEAR", "DELETE", "PRESERVE"
 
 # §2d-iii-bis, the per-candidate map, restricted to what a treatment CHANGES. Every field not named is
-# PRESERVED (identifiers, timestamps, closed sets, provenance) — the map's 44 PRESERVE rows. Nested carriers are
+# PRESERVED (identifiers, timestamps, closed sets, provenance) — the map's PRESERVE rows: 50 of 66 at 0041 v16.2,
+# counted by the round-10 matrix's own parser (48 of 64 before 0045's `Edge.src` and `Edge.attv`; this comment's
+# earlier "44" was stale). Nested carriers are
 # dotted. A REPLACE writes the marker as the whole value; a CLEAR writes the empty shape the model validates
 # (`{}` for `outcome_counts`); the reason fields are the THREE-CASE rule (§4h(i) corollary, v11): absence stays
 # absent, a registered vocabulary value is preserved, existing prose becomes `redacted`.

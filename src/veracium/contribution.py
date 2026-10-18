@@ -171,7 +171,12 @@ EXACT_EQUAL_EDGE_FIELDS = ("id", "user_id", "subject", "relation", "object",
                            # submission, never touched by the planner —
                            # exact-equal, None-omitted like
                            # original_relation
-                           "agreement")
+                           "agreement",
+                           # specs/0045 §2: the grounding axis, written once at
+                           # ingest BEFORE submission and never touched by the
+                           # planner (absorption keeps the survivor's own, §4e)
+                           # — exact-equal, None-omitted like agreement
+                           "att", "src", "attv")
 # specs/0016 D2 (the 0014 partition amendment): `source_type` is DELETED from
 # Provenance, so the partition loses it — the totality test forces the
 # constant and the model to move together. The digest collapse is the defined

@@ -366,12 +366,13 @@ def test_as_of_now_diverges_only_on_two_cells(store):
 def test_no_edge_field_added(store):
     """V-ADDITIVE: no field added to `Edge`; the classifier is a pure function
     of its carrier inputs + the registry + (T, now, view) — no clock read, no
-    store write, same inputs → same output."""
+    store write, same inputs → same output. (V-ADDITIVE is a claim about 0030's OWN change: it added no
+    field. specs/0045 §2 adds three by design — `att`, `src`, `attv` — so the pinned set names them.)"""
     assert set(Edge.model_fields) == {
         "id", "user_id", "subject", "relation", "object", "note", "volatility", "provenance",
         "valid_from", "invalidated_at", "invalidation_reason", "supersedes", "original_relation",
         "needs_confirmation", "agreement", "ungrounded", "times_used", "outcome_counts",
-        "last_outcome", "last_outcome_at"}
+        "last_outcome", "last_outcome_at", "att", "src", "attv"}
     src = (SRC / "asof" / "classify.py").read_text()
     assert "datetime.now" not in src and "utcnow" not in src and "_conn" not in src
     e = _edge(); store.add_edge(e)

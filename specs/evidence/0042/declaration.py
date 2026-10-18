@@ -113,6 +113,7 @@ DECLARATION = (
     ("store.confirm.correlation", "0008", "C9", "store/sqlite.py:SqliteStore.confirm_edge", "refuse"),
     ("store.confirm.not-assertable", "0008", "§6d", "store/sqlite.py:SqliteStore.confirm_edge", "refuse"),
     ("store.confirm.request-digest", "0008", "C9", "store/sqlite.py:SqliteStore._confirm_replay", "refuse"),
+    ("store.confirm.source-redacted", "0045", "§4d INV-G10", "store/sqlite.py:SqliteStore.confirm_edge", "refuse"),
     ("store.confirm.unknown-edge", "0008", "§6d", "store/sqlite.py:SqliteStore.confirm_edge", "refuse"),
     ("store.consolidation-contribution", "0014", "§2c", "store/sqlite.py:SqliteStore._write_consolidation_contributions", "refuse"),
     ("store.consolidation.abandon-live-lease", "0010", "X7", "store/sqlite.py:SqliteStore.abandon_consolidation_if_current", "refuse"),

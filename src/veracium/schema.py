@@ -769,6 +769,28 @@ class Edge(BaseModel):
     # None-omitted from every serialization so unaffected edges stay
     # byte-identical (V7)
     agreement: Optional[AgreementRecord] = None
+    # specs/0045 §2: the declarative grounding axis, written ONCE at insert by ingest and immutable (the same-id
+    # replace path refuses every change). `att` — ATTEST's label over the source event's raw text (NULL: written
+    # before this spec, read `unknown`); `src` — the episode id of the event `att` judged (NULL when the event left no
+    # episode); `attv` — WHAT produced `att` (`veracium.attestation`). Declarative edges only: a procedural row carries
+    # none. None-OMITTED from every serialization, so a legacy or procedural row's bytes are unchanged.
+    att: Optional[Literal["attested", "not_attested"]] = None
+    src: Optional[str] = None
+    attv: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _grounding_axis_is_well_formed(self):
+        # specs/0045 §2c / research's T9 F4, F7: `attv` is matched whole against its closed grammar; `attv` and `src`
+        # exist only beside an `att` (an `att` with `attv` NULL is the one version-less state, a trusted restore's);
+        # a procedural row carries none of the three (§4c, INV-G12)
+        from .attestation import valid_attv
+        if self.attv is not None and not valid_attv(self.attv):
+            raise ValueError(f"attv {self.attv!r} is outside its grammar (specs/0045 §2c)")
+        if self.att is None and (self.attv is not None or self.src is not None):
+            raise ValueError("attv and src are written only with att (specs/0045 §2)")
+        if self.provenance.procedural and (self.att is not None or self.src is not None or self.attv is not None):
+            raise ValueError("a procedural edge carries no att, src or attv (specs/0045 §4c, INV-G12)")
+        return self
 
     @model_serializer(mode="wrap")
     def _omit_none_original_relation(self, handler):
@@ -781,6 +803,9 @@ class Edge(BaseModel):
             d.pop("original_relation", None)
         if d.get("agreement") is None:
             d.pop("agreement", None)
+        for k in ("att", "src", "attv"):            # specs/0045 §2: the same rule
+            if d.get(k) is None:
+                d.pop(k, None)
         return d
     # specs/0019: "the specifics in this fact's object were not all grounded in
     # the event text it was extracted from" — a property of the EXTRACTION,

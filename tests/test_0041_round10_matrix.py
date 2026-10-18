@@ -5,7 +5,7 @@ from `redaction.py` alone proves only that the code agrees with itself):
 
   ENUM   specs/evidence/0041/carrier_enumeration.py's triage — the DDL of every table plus every `BaseModel` in
          `veracium.schema`, recursed. It reads neither `redaction.py` nor the spec.
-  SPEC   §2d-iii-bis, the per-candidate map — 64 rows, one ruling each.
+  SPEC   §2d-iii-bis, the per-candidate map — 66 rows (v16.2), one ruling each.
   TABLE  `redaction.py`'s treatment tables — what the code does.
 
 ENUM == SPEC as SETS of carriers (the spec rules every carrier, and only carriers); SPEC == TABLE per target KIND
@@ -156,7 +156,7 @@ def test_the_enumeration_and_the_spec_rule_exactly_the_same_carriers():
     _mod, carriers = _enumeration()
     spec = set(_spec_rows())
     assert set(carriers) == spec, (sorted(set(carriers) - spec), sorted(spec - set(carriers)))
-    assert len(spec) == 64
+    assert len(spec) == 66        # 64, + 0045's Edge.src and Edge.attv (0041 v16.2)
 
 
 def test_the_spec_and_the_code_agree_per_kind_on_every_treated_path_and_its_class():

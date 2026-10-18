@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- **Added: how a fact is known — `Edge.att`, `Edge.src`, `Edge.attv` (specs/0045 §2, §4a–§4f; INV-G1, G2, G6, G7,
+  G9–G13).** Every declarative fact ingest writes carries, set once and never changed: `att` (`attested` when the
+  versioned predicate ATTEST-3 found the fact stated in the user's own words, in the one sentence form it
+  recognises; else `not_attested`), `src` (the event's episode) and `attv` (what produced `att`:
+  `ATTEST-3@b1329a81`, `non-user-effective`, or `default-import`). Only a declared-direct USER event can be
+  `attested`. `not_attested` is a label, not a demotion: the fact is stored, recalled and asserted exactly as before.
+  On its blind holdout the predicate attested 12 of 53 true statements and 1 of 67 negatives. ATTEST-3 ships
+  byte-identical to the measured file (`veracium.attest_v3`). Older facts read `unknown` and are never re-derived;
+  procedural records and `correct()`'s successors carry none. `veracium.attestation.declarative_grounding` gives the
+  derived value. The fields appear on `Recall.edges` and in `why`; an export omits them for now, a default import
+  writes `not_attested`/`default-import` on every declarative fact whatever the file says, and `--restore` leaves
+  them unset.
+  - **Who should act:** nobody. A host that reads `Edge` fields sees three new optional ones.
+    (tests/test_0045_t9_write.py.)
+- **Changed: `confirm()` refuses a `not_attested` fact whose source episode was redacted** (specs/0045 §4d, INV-G10),
+  with `ValueError` ("state it anew"), including when the source was consolidated and the consolidated episode was
+  redacted. It does not refuse an `attested` fact, a fact with no recorded source, a fact already confirmed here, or a
+  fact written before this release; a source deleted outright leaves nothing to read and confirm is allowed.
+  - **Who should act:** a host that offers confirmation of suggested facts; the refusal is new.
 - **Changed: the contested block and `Recall.contested` list their groups by preservation tier, not by the alphabet
   (specs/0003 §4c-iii; INV-O1–O10).** A group is ranked by the effective authority of the highest-authority fact the
   block can render for it, then by how close its contention is (a negative gap, a visible higher-authority member

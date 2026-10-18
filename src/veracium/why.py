@@ -57,6 +57,7 @@ from typing import Any, Optional
 _TRACKED = ("subject", "relation", "object", "note", "volatility", "valid_from",
             "invalidated_at", "invalidation_reason", "supersedes",
             "original_relation", "needs_confirmation", "agreement", "ungrounded",
+            "att", "src", "attv",      # specs/0045 §2: immutable, so a diff that names one is a tripwire
             "times_used", "outcome_counts", "last_outcome", "last_outcome_at")
 _PROV_TRACKED = ("author_of_evidence", "evidence_ref", "observed_at", "disclosure",
                  "confidence", "derived_from", "source_id", "origin", "record_kind",

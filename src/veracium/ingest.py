@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from . import agreement, grounding, prompts
+from .attestation import attestation as _attestation
 from ._json import extract_json
 from .graph import apply_supersession
 from .llm.base import Complete
@@ -693,9 +694,13 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
     # episode — always recorded; carries author so the gate knows a third-party
     # episode records receipt, not truth.
     episode_text = str(data.get("episode", "")).strip()
+    # specs/0045 §2: `src`, the episode of the event the edges' `att` judges — NULL when the event left no episode
+    # (§4d: then the source-redacted guard has nothing to read, stated)
+    source_episode = None
     if episode_text:
+        source_episode = _uid("ep")
         store.add_episode(Episode(
-            id=_uid("ep"), user_id=user_id, date=date, summary=episode_text,
+            id=source_episode, user_id=user_id, date=date, summary=episode_text,
             provenance=Provenance(author_of_evidence=author, evidence_ref=evidence_ref,
                                   # 0023 §4a (internal S3): the episode's OWN disclosure is
                                   # set at birth — third-party influence caps it at USE_ONLY
@@ -801,6 +806,11 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
             store.add_edge(edge)
             n_procedures += 1
             continue
+        # specs/0045 §3/§4a (INV-G1, G9, G13): the declarative edge's grounding axis, ONCE, from the BUILT edge's own
+        # subject, relation and object and the RAW event text — never the extractor's output, never the episode
+        # summary (research's T9 F6). Re-validated so the axis's own rules run on the record that is written.
+        att, attv = _attestation(user_effective, edge.subject, edge.relation, edge.object, event_text)
+        edge = Edge.model_validate({**edge.model_dump(), "att": att, "attv": attv, "src": source_episode})
         c = apply_supersession(store, edge, relations)
         n_supersessions += c.superseded
         n_reinforcements += c.reinforced

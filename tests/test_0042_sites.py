@@ -859,6 +859,8 @@ DECLINES.update({
     "store.confirm.not-assertable": TwoPhase(lambda mp: _quarantined_store(), lambda s: _raises(ValueError, _confirm, s)),
     "store.confirm.request-digest": TwoPhase(lambda mp: _confirmed_once(), lambda s: _raises(ValueError, _confirm, s, request_digest="DIFFERENT")),
     "store.confirm.correlation": lambda mp: _confirm_correlation_race(),
+    # specs/0045 §4d (T9, INV-G10): a not_attested edge whose source episode is redacted
+    "store.confirm.source-redacted": TwoPhase(lambda mp: _source_redacted_store(), lambda s: _raises(ValueError, _confirm, s)),
     # specs/0008 v7 §6c/§6f/§6g (v16): the registry's terminal and verb rules, and the act counter's refusal
     "store.registry.request-redacted": TwoPhase(lambda mp: _confirmed_then_redacted(), lambda s: _raises(RequestRedacted, _confirm, s)),
     "store.registry.verb-held": TwoPhase(lambda mp: _id_held_by_a_reply(), lambda s: _raises(ValueError, _confirm, s)),
@@ -894,6 +896,15 @@ def _ordinal_collision():
 
 def _quarantined_store():
     s = _store(); s.add_edge(_edge("c1", disc=Disclosure.QUARANTINED, author=EvidenceAuthor.THIRD_PARTY)); return s
+
+
+def _source_redacted_store():
+    s = _store()
+    s.add_episode(_episode("ep-src"))
+    s.add_edge(Edge.model_validate({**_edge("c1").model_dump(), "att": "not_attested", "attv": "ATTEST-3@b1329a81",
+                                    "src": "ep-src"}))
+    s.redact(U, episode_id="ep-src", reason="subject_request")
+    return s
 
 
 def _confirmed_once():

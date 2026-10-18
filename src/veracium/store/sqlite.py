@@ -20,6 +20,7 @@ from typing import Optional
 
 from ..authority import RULE_VERSION, scope_fingerprint
 from .. import redaction as _redaction
+from ..attestation import declarative_grounding
 from ..schema import (ConsolidationOp, ConsolidationOutputDraft, ConsolidationState,
                       Confirmation, ConfirmationActor, ConfirmationCallPath,
                       Disclosure, Edge, Episode, EvidenceAuthor, OutcomeJudgmentDraft, QUARANTINE_RELATION,
@@ -99,6 +100,7 @@ _SITE_CONFIRM_UNKNOWN_EDGE = declare_site("store.confirm.unknown-edge")
 _SITE_CONFIRM_NOT_ASSERTABLE = declare_site("store.confirm.not-assertable")
 _SITE_CONFIRM_REQUEST_DIGEST = declare_site("store.confirm.request-digest")
 _SITE_CONFIRM_CORRELATION = declare_site("store.confirm.correlation")
+_SITE_CONFIRM_SOURCE_REDACTED = declare_site("store.confirm.source-redacted")   # specs/0045 §4d, INV-G10
 _SITE_REGISTRY_REDACTED = declare_site("store.registry.request-redacted")
 _SITE_REGISTRY_VERB_HELD = declare_site("store.registry.verb-held")
 _SITE_ACT_COUNTER = declare_site("store.act-counter.allocate")
@@ -674,6 +676,15 @@ class SqliteStore(Store):
                         f"{edge.provenance.producer!r}) on edge {edge.id!r} — a stored "
                         f"producer stamp is immutable in both directions "
                         f"(specs/0037 v23 §4a-iii, V-PRODUCER-IMMUTABLE)"), "producer")
+                # specs/0045 §2 (INV-G13: `attv` is never rewritten; `att` and `src` are written once at insert): the
+                # declarative grounding axis is immutable in both directions, the 0019 U4 shape. Absorption inserts a
+                # NEW survivor carrying its own values (§4e), so no discriminator is needed here.
+                for axis, held, written in (("att", prior_edge.att, edge.att), ("src", prior_edge.src, edge.src),
+                                             ("attv", prior_edge.attv, edge.attv)):
+                    if held != written:
+                        raise _SITE_UPSERT_IMMUTABLE.fire(ValueError(
+                            f"cannot change {axis} ({held!r} → {written!r}) on edge {edge.id!r} — the grounding "
+                            f"axis is written once at insert (specs/0045 §2)"), axis)
             # specs/0037 v19 (V-STAMP-INHERITED; research's red team, 2026-09-13): a
             # SUCCESSOR of a procedural record must itself be procedural. correct()
             # minted one without the stamp and the note rendered; correct() now refuses
@@ -821,6 +832,20 @@ class SqliteStore(Store):
                         f"edge {edge_id!r} is not assertable (quarantined/use_only/"
                         f"inactive) — a user affirming a claim is new evidence: ingest "
                         f"it via remember(author=USER) instead"))
+            # specs/0045 §4d (INV-G10; the owner's R1-04 ruling, "an erased source ends the upgrade path"): a
+            # `not_attested` edge whose recorded source episode is redacted cannot be confirmed — state it anew. Scoped
+            # by g(e) over this edge's confirmations, read in THIS transaction (research's T9 F2), so an edge already
+            # confirmed locally is not refused a re-confirmation; an `attested` edge, a legacy row (`att` NULL) and an
+            # edge with no `src` keep today's confirm(). Past consolidation the source episode is gone and its
+            # redaction names the OUTPUT, so the output's lineage is read too, one hop (the owner, 2026-10-18, F1(a)).
+            # A source deleted outright names no episode and no lineage: confirm is allowed, stated (F1(b)).
+            with _SITE_CONFIRM_SOURCE_REDACTED.consult():
+                if edge.src is not None and declarative_grounding(edge, [o for (o,) in self._conn.execute(
+                        "SELECT origin FROM confirmations WHERE user_id=? AND edge_id=?", (user_id, edge_id))]
+                        ) == "not_attested" and self._source_redacted(user_id, edge.src):
+                    raise _SITE_CONFIRM_SOURCE_REDACTED.fire(ValueError(
+                        f"edge {edge_id!r} cannot be confirmed: its source episode was redacted — state it anew "
+                        f"(specs/0045 §4d, store.confirm.source-redacted)"))
             edge.needs_confirmation = False
             edge.provenance = edge.provenance.model_copy(update={      # frozen Provenance (0037 v23)
                 "observed_at": max(edge.provenance.observed_at, confirmed_at),
@@ -899,6 +924,20 @@ class SqliteStore(Store):
         from .data_migration import undo_restoration as _undo
         with self._lock, self._write_txn():
             return _undo(self, user_id, edge_id, correlation_id)
+
+    def _source_redacted(self, user_id: str, episode_id: str) -> bool:
+        """specs/0045 §4d: is this episode redacted here, directly or as the input of a redacted consolidation output?
+        APPLIED notices only (`redacted_targets`: a pending notice redacts nothing this store holds). The output's
+        `lineage` carries the HISTORICAL form of each consumed input's id (X19), matched in that form, as the
+        redaction receipt matches it; one hop, since an output's inputs are never outputs' outputs (X16)."""
+        redacted = self.redacted_targets(user_id, "episode")
+        if episode_id in redacted:
+            return True
+        hist = to_historical_id(episode_id)
+        return any(hist in (json.loads(js).get("lineage") or [])
+                   for (js,) in self._conn.execute(
+                       f"SELECT json FROM episodes WHERE user_id=? AND id IN ({','.join('?' * len(redacted))})",
+                       (user_id, *sorted(redacted)))) if redacted else False
 
     def confirmations_for(self, user_id, edge_id) -> list[Confirmation]:
         _COLS = ("id, user_id, edge_id, confirmed_at, actor, call_path, "

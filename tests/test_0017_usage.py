@@ -306,7 +306,7 @@ def test_metering_is_decision_invisible(tmp_path):
         out = []
         for r in rows:
             d = json.loads(r)
-            for k in ("id", "user_id"):
+            for k in ("id", "user_id", "src"):       # `src` (specs/0045 §2) is a minted episode id
                 d.pop(k, None)
             d.get("provenance", {}).pop("evidence_ref", None)
             d.pop("valid_from", None)
