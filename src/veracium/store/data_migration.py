@@ -224,7 +224,7 @@ def _preflight(path, op_id):
     """§4b.1: the shared read-only classification, 0018's cells. Returns (canonical_path, None) to proceed, or
     (None, DataMigrationResult) for a refusal. `PackageConsistencyError` propagates bare (a defect outside a per-user
     transaction raises — research's T6 read, Q5: §4c has no internal-error row)."""
-    if type(path) is not str or not path or "\x00" in path or len(os.fsencode(path)) > 4096:
+    if not _rm._usable_store_path(path):
         return None, _result("preflight-refused", op_id=op_id,
                              diagnostic=f"path {_rm._safe_repr(path)} is not a usable store path")
     kind, payload = _rm._preflight_classify(path)
@@ -249,7 +249,9 @@ def _preflight(path, op_id):
 
 def run_data_migration(path, *, host_attestation, registry, op_id, plan_only=False) -> DataMigrationResult:
     """specs/0018 §4i.6 §4b. See the module docstring. `op_id` outside 0008 §6c's caller grammar RAISES `ValueError`
-    at entry, before any read, with no result constructed (I32). Every other refusal is a row of §4c."""
+    at entry, before any read, with no result constructed (I32); so does a `plan_only` that is not exactly a `bool`
+    (`1`, `"yes"`, `None`: a caller-type error, not a store outcome, so §4c has no row for it — research's T6 stage-2
+    N2). Every other refusal is a row of §4c, a path that does not encode included (N1)."""
     from ..schema import validate_correlation_id
     validate_correlation_id(op_id)
     if type(plan_only) is not bool:
@@ -456,7 +458,7 @@ def _read_only(path):
     since these are reads, not total carriers — then the SHARED opener (`SqliteStore`, 0031's one file-backed
     connection path). Opening a store the preflight classified `current` (accepted shape, no rebuildable drift)
     repairs nothing, so the read writes nothing; the receipt cell compares the database's bytes to show it."""
-    if type(path) is not str or not path or "\x00" in path:
+    if not _rm._usable_store_path(path):
         raise ValueError(f"path {_rm._safe_repr(path)} is not a usable store path")
     kind, payload = _rm._preflight_classify(path)
     with _SITE_READ_REFUSED.consult():

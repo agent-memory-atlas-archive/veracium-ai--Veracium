@@ -162,8 +162,30 @@ def canonical_timestamp(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f+00:00")
 
 
+def _path_encoding_problem(sp: str) -> Optional[str]:
+    """The ONE encodability rule for a store path string (T6 stage-2 N1): it must encode to the filesystem's bytes
+    and fit in 4096 of them. A lone surrogate (a JSON `\\ud800` escape decoded by a Python caller) does not encode,
+    and `len(os.fsencode(...))` RAISED `UnicodeEncodeError` at every entry that inlined the length check."""
+    try:
+        encoded = os.fsencode(sp)
+    except (UnicodeEncodeError, ValueError) as exc:
+        return f"is not filesystem-encodable: {_safe_repr(exc)}"
+    if len(encoded) > 4096:
+        return "exceeds 4096 bytes"
+    return None
+
+
+def _usable_store_path(path) -> bool:
+    """The entry check of every public operation that takes a store path (the orchestrator, `run_data_migration`
+    and its two reads): a non-empty `str`, no embedded NUL, and `_path_encoding_problem`'s rule. A predicate, never
+    a raise, so each caller keeps its own closed refusal (I13's `invalid-request`; §4c's `preflight-refused`)."""
+    return (type(path) is str and bool(path) and "\x00" not in path
+            and _path_encoding_problem(path) is None)
+
+
 def _store_path_problems(sp) -> list:
-    """Ported from the instrument (rounds 13–14 corr A/B; 21 corr A)."""
+    """Ported from the instrument (rounds 13–14 corr A/B; 21 corr A). The encodability half is
+    `_path_encoding_problem`, shared with `_usable_store_path` (one implementation)."""
     if type(sp) is not str:
         return [f"must be a string, is {type(sp).__name__}"]
     problems = []
@@ -171,13 +193,9 @@ def _store_path_problems(sp) -> list:
         problems.append("contains an embedded NUL")
     if not os.path.isabs(sp):
         problems.append("must be an absolute (canonical) path")
-    try:
-        encoded = os.fsencode(sp)
-    except (UnicodeEncodeError, ValueError) as exc:
-        problems.append(f"is not filesystem-encodable: {_safe_repr(exc)}")
-    else:
-        if len(encoded) > 4096:
-            problems.append("exceeds 4096 bytes")
+    enc = _path_encoding_problem(sp)
+    if enc is not None:
+        problems.append(enc)
     return problems
 
 
@@ -1309,8 +1327,7 @@ def run_release_migration(path, *, host_attestation) -> MigrationResult:
     ap = _attestation_problems(host_attestation)
     if ap:
         return _invalid_request("host_attestation refused: " + "; ".join(ap))
-    if type(path) is not str or not path or "\x00" in path \
-            or len(os.fsencode(path)) > 4096:
+    if not _usable_store_path(path):
         return _invalid_request(f"path {_safe_repr(path)} is not a usable "
                                 f"store path")
     try:

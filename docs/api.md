@@ -884,7 +884,9 @@ data_migration_status("veracium.db", "restore-2026-10")      # after an unknown 
   considered.
 - Each restored value is journaled `reinstated` with the reason `arity_reclassified`. The receipt reads its text from
   the live edge (a redacted one shows the marker) and records what it replaced: one id, several ids, or "unknown".
-- `plan_only=True` writes the plan and restores nothing.
+- `plan_only=True` writes the plan and restores nothing. It must be exactly `True` or `False`: any other value
+  (`1`, `"yes"`, `None`) raises `ValueError` before anything is read, as an `op_id` outside the grammar does. A
+  caller error is not one of the table's outcomes.
 
 | outcome | store changed | meaning |
 |---|---|---|

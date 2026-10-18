@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Fixed: `run_release_migration` raised `UnicodeEncodeError` instead of returning `invalid-request` for a path string
+  that does not encode (specs/0018 I13: the orchestrator is total over its inputs).** Present since v0.11.0. Only a
+  Python caller that builds the path string itself can reach it, for example by decoding a JSON `\ud800` escape.
+  `veracium migrate --db` decodes its arguments with surrogateescape and was never affected. One path check now
+  serves every entry that takes a store path: the orchestrator (`invalid-request`), `run_data_migration`
+  (`preflight-refused`), and `data_migration_status` and `data_migration_receipt` (`ValueError`). A path must be a
+  non-empty string with no NUL that encodes to at most 4096 bytes. The two reads previously had no length check.
+  **Who should act:** nobody. It ships with the next release. (tests/test_0044_t7_stage2_items.py.)
+- `run_data_migration`'s `plan_only` must be exactly `True` or `False`. Any other value raises `ValueError` before
+  anything is read, as an `op_id` outside the grammar does. This was already the behaviour and is now documented.
+
 - **Added: `run_data_migration`, the optional operation that restores the values the old single-value rule retired
   (specs/0018 §4i; specs/0044 §4e–§4g-ii; I25–I30, I32, INV-A5, A7–A9, A11, A15, A20, A21).** *Upgrading does not
   restore values that the old single-value rule retired. To restore them and get a receipt listing each one, run
