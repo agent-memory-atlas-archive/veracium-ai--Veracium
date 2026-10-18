@@ -23,8 +23,9 @@
     alike, and nothing new is admitted under it.
   - A value already undone returns `already_undone=True` and writes nothing. Refusals raise `UndoRefused` (a
     `ValueError`) with one of six closed reasons: `no-outcome`, `not-restored`, `testimony`, `not-applicable`,
-    `edge-unavailable`, `ambiguous-outcome`. Undo is not an act: no act row, no act position. Undo records are
-    store-local and never exported.
+    `edge-unavailable`, `ambiguous-outcome`. Undo is not an act: no act row, no act position. The undo's request
+    id is store-local and never exported (§4g). This release exports and imports no outcome rows, so `testimony`
+    and `ambiguous-outcome` do not arise from its own operations.
   - `doctor`'s `refs` warning for an active edge whose predecessor is still active becomes an `info` when this
     store's own live restoration outcome explains it; an imported outcome keeps the warning and says so.
   - **Who should act:** nobody, unless you ran `run_data_migration` and want to reverse one restored value.

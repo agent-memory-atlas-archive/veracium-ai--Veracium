@@ -942,10 +942,11 @@ older representation comes back as the same instant. It is host API only: no CLI
 | `testimony` | the outcome was imported: another store's restoration, which this store cannot reverse |
 | `not-applicable` | the restoration has ended: a later retirement by any writer, a redaction, or the edge's removal. A later source lift does not revive it |
 | `edge-unavailable` | the edge is no longer held, or is redacted |
-| `ambiguous-outcome` | more than one outcome row names the edge (only an import can do this); no undo chooses between them |
+| `ambiguous-outcome` | more than one outcome row names the edge (only an outcome import could write a second row, and this release has none); no undo chooses between them |
 
-Undo is not an act: it writes no act row and takes no act position. Undo records are store-local and are never
-exported.
+Undo is not an act: it writes no act row and takes no act position. The undo's request id is store-local and is
+never exported (specs/0044 §4g). This release exports and imports no outcome rows, so `testimony` and
+`ambiguous-outcome` do not arise from its own operations.
 
 `doctor`'s `refs` warning for an active edge whose predecessor is still active becomes an `info` when this store's
 own restoration outcome explains it: `restored`, not undone, still applicable, of origin `local` or `restored`. An

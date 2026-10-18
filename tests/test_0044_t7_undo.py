@@ -218,6 +218,39 @@ def test_without_an_id_undo_is_idempotent_and_its_generated_id_takes_a_registry_
     assert T6._q(p, "SELECT correlation_id FROM request_registry WHERE verb='undo'") == [(r1["correlation_id"],)]
 
 
+def _versions(p):
+    s = SqliteStore(p)
+    try:
+        return s.store_version(U), s.store_version(V)
+    finally:
+        s.close()
+
+
+def test_undo_bumps_the_users_store_version_once_and_a_no_op_does_not(tmp_path):
+    """The undo's own `_bump` is its ONLY one (`_invalidate_edge_row` runs without lock, bump or commit), and the
+    counter guards 0041 §4e's wiki write: an undo moves this user's version by exactly one; a replay and an
+    already-undone call move it by none; the control user's never moves (research's T7 stage-2 S3a)."""
+    p = _restored(tmp_path)
+    u0, v0 = _versions(p)
+    _undo(p)
+    assert _versions(p) == (u0 + 1, v0)
+    assert _undo(p)["replayed"] and _versions(p) == (u0 + 1, v0)
+    assert _undo(p, cid="c2")["already_undone"] and _versions(p) == (u0 + 1, v0)
+
+
+def test_the_undo_registry_row_is_written_at_the_store_clock(tmp_path):
+    """0008 v8: the registry row's `written_at` is the store clock at the write, the same instant as the outcome's
+    `undone_at` — never the restored pre-state's retirement time (research's T7 stage-2 S3b). Both a supplied id and
+    a generated one."""
+    p = _restored(tmp_path)
+    r = _undo(p)
+    assert T6._q(p, "SELECT written_at FROM request_registry WHERE verb='undo' AND correlation_id='c1'") == [(r["undone_at"],)]
+    assert _outcome(p)[0][0] == r["undone_at"]
+    q = _restored(tmp_path, name="g.db")
+    g = _ok(_mem(q).undo_restoration, U, P)
+    assert T6._q(q, "SELECT written_at FROM request_registry WHERE verb='undo'") == [(g["undone_at"],)]
+
+
 def test_a_fresh_id_on_an_undone_row_is_answered_and_left_free(tmp_path):
     p = _restored(tmp_path)
     _undo(p, cid="c1")
@@ -491,12 +524,34 @@ def _legal(seq):
             and ("lift" not in seq or ("revoke" in seq and seq.index("revoke") < seq.index("lift"))))
 
 
+# the three length-3 sequences that reach the terminal pairs: undo's own terminal under each supplied id, and F1's
+# (another verb under the undo's redacted id). Pinned, so the default run reaches them by construction, not by
+# the seeded sample's draw (research's T7 stage-2 S1)
+_PINNED = (("undo:c1", "redact", "undo:c1"), ("undo:c2", "redact", "undo:c2"), ("undo:c1", "redact", "confirm:c1"))
+
+
+def _all_legal():
+    return [s for n in (1, 2, 3) for s in itertools.product(_STEPS, repeat=n) if _legal(s)]
+
+
 def _domain():
-    out = [s for n in (1, 2, 3) for s in itertools.product(_STEPS, repeat=n) if _legal(s)]
+    out = _all_legal()
+    assert set(_PINNED) <= set(out)
     if os.environ.get("VERACIUM_T6_FULL_DOMAIN") == "1":
         return out
     short = [s for s in out if len(s) <= 2]
-    return short + random.Random(4407).sample([s for s in out if len(s) == 3], 40)
+    rest = [s for s in out if len(s) == 3 and s not in _PINNED]
+    return short + list(_PINNED) + random.Random(4407).sample(rest, 40)
+
+
+def _model_reached(seqs):
+    """Every (step, result tag) model I returns over `seqs` — the coverage a run of them can claim."""
+    reached = set()
+    for seq in seqs:
+        M, ms = _model_state()
+        for step in seq:
+            reached.add((step, _model_step(M, ms, step)))
+    return reached
 
 
 def _model_state():
@@ -588,10 +643,14 @@ def test_undo_agrees_with_model_i_over_short_sequences(tmp_path):
     the holding verb — and the state to (undone, applicable, edge active, the registry's (verb, id) pairs with
     every GENERATED id read as `auto`: the model draws `auto-<verb>-<txn>`, the product `auto-<hex>`). The act
     counter is not projected: neither side advances it on undo (D4; model I edited at T7). The default is every
-    sequence of ≤2 steps and a seeded 40 of length 3; VERACIUM_T6_FULL_DOMAIN=1 runs every legal sequence."""
+    sequence of ≤2 steps, the three pinned terminal sequences and a seeded 40 of length 3;
+    VERACIUM_T6_FULL_DOMAIN=1 runs every legal sequence. COVERAGE (stage-2 S1): the (step, result) pairs the run
+    reached must equal those model I reaches over the WHOLE legal domain (derived here, never listed), so a default
+    run that drops a pair fails instead of passing on a narrower claim."""
     tmpl = _restored(tmp_path, source="feed-1", name="template.db")
     blob = pathlib.Path(tmpl).read_bytes()
     src = lambda s: digest_of(None, "feed-1", s.local_origin())  # noqa: E731
+    reached = set()
     for i, seq in enumerate(_domain()):
         p = str(tmp_path / f"d{i}.db")
         pathlib.Path(p).write_bytes(blob)
@@ -600,3 +659,8 @@ def test_undo_agrees_with_model_i_over_short_sequences(tmp_path):
             want, got = _model_step(M, ms, step), _product_step(p, step, src)
             assert got == want, (seq, k, step, want, got)
             assert _product_projection(p) == _model_projection(ms), (seq, k, step)
+            reached.add((step, want))
+    whole = _model_reached(_all_legal())
+    assert reached == whole, ("coverage", sorted(whole - reached), sorted(reached - whole))
+    assert {("undo:c1", ("terminal", "undo")), ("undo:c2", ("terminal", "undo")),
+            ("confirm:c1", ("terminal", "undo"))} <= reached

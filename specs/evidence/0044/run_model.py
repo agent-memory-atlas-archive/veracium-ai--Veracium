@@ -908,7 +908,9 @@ def inv_generated_ids(rules=R):
     """INV-M29 (0008 §2c's v6 row and §6c; 0044 §4g; added at T7, research's stage-1 F2): a request without an id
     GENERATES one, which takes a registry row like a supplied one, for both verbs; an id-less undo's outcome row names
     that row in `undo_request_ref`; an already-undone call generates nothing durable (no registry row, no
-    transaction: a call that writes nothing holds no id)."""
+    transaction: a call that writes nothing holds no id); and a generated id is IN the one shared id space (0008am
+    INV-Q1): another verb under it is an integrity conflict naming its holder, and nothing is admitted (research's
+    T7 stage-2 S2)."""
     s = base(); run(s)
     n0 = len(s.registry)
     M.undo(s, "u", "p", rules)
@@ -919,7 +921,10 @@ def inv_generated_ids(rules=R):
     quiet = s.txn == t and len(s.registry) == n1
     M.confirm(s, "u", "n")
     conf_row = sum(1 for r in s.registry.values() if r["verb"] == "confirm" and r["target"] == "n") == 1
-    return n1 == n0 + 1 and undo_row and again and quiet and conf_row
+    n_conf = len(s.confirmations)
+    shared = (attempt(M.confirm, s, "u", "n", cid=ref[1]) == {"refused": "integrity conflict: correlation id held by undo"}
+              and len(s.confirmations) == n_conf)
+    return n1 == n0 + 1 and undo_row and again and quiet and conf_row and shared
 
 
 # FROZEN at round 4 (2026-10-13): the reviewer ACCEPTED 0044 v1.5 AT THE DESIGN LEVEL — in the verdict's words, "Accept the
@@ -1178,6 +1183,17 @@ def _install_no_generated_ids():
         return orig_reg(s, user, cid, verb, digest, result_ref, target)
     M._generated_id = lambda verb, t: None
     M._register = _register
+
+
+def _generated_ids_per_verb(orig):
+    """A generated id checked by its own verb only, outside the shared id space (0008am INV-Q1): another verb under it
+    is admitted as if the id were free."""
+    def _replay(s, user, cid, verb, digest):
+        rec = s.registry.get((user, cid)) if cid is not None else None
+        if rec is not None and cid.startswith("auto-") and rec["verb"] != verb:
+            return None
+        return orig(s, user, cid, verb, digest)
+    return _replay
 
 
 def _header_only_when_nonempty(orig):
@@ -1536,6 +1552,7 @@ MUTANTS = {
     "the terminal for the caller's own verb only: another verb under a redacted id conflicts (0008am v1.3; 0008 v8 §6g)": ("INV-M27", _wrap("_replay", _terminal_own_verb_only)),
     "undo takes an act position (pre-D4; 0008 v7 §6f)": ("INV-M28", _wrap("_register", _undo_takes_an_act_position)),
     "an omitted id is not generated and takes no registry row (pre-F2; 0008 §6c)": ("INV-M29", _install_no_generated_ids),
+    "a generated id is checked by its own verb only, outside the shared id space (0008am INV-Q1; stage-2 S2)": ("INV-M29", _wrap("_replay", _generated_ids_per_verb)),
     "erasure keeps the refusal inventory (R3-03)": ("INV-M18", _wrap("forget_user", lambda o: (lambda s, user: (lambda keep, keep2: (o(s, user), setattr(s, "refusal_inventory", keep), setattr(s, "refusals", keep2)))(set(s.refusal_inventory), list(s.refusals))))),
     "the writers' reasons swapped (0029 J3)": ("INV-J3", _wrap("restore_source", lambda o: (lambda s, eid: (setattr(s.edges[eid], "active", True), M.journal_reinstated(s, eid, "arity_reclassified"))))),
 }
