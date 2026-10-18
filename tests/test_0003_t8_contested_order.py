@@ -102,13 +102,16 @@ _ONE_LINE = {"contested_render_share": 0.001}
 
 # ======================================================================================== INV-O1 / O2
 def test_inv_o1_a_slot_later_group_with_a_higher_tier_renders_first(tmp_path):
-    """INV-O1. Mutant: the key replaced by the slot (today's `sorted(groups.items())`)."""
+    """INV-O1. Mutant: the key replaced by the slot (today's `sorted(groups.items())`). And what the order does NOT
+    move (research's T8 stage-2 S2): `Recall.edges` carries the contested members in the build loop's SLOT order,
+    unchanged by T8 (Q4). Mutant: `exposed_all` rebuilt in the group order."""
     mem = _mem(tmp_path)
     _group(mem, "person:aa", (SYSTEM, MENTION, None), (ASSISTANT, MENTION, None))      # tier 2
     _group(mem, "person:zz", (USER, MENTION, None), (SYSTEM, MENTION, None))           # tier 3
     r = _recall(mem)
     assert _order(r) == ["person:zz", "person:aa"]
     assert _rendered_subjects(r) == ["person:zz", "person:aa"]
+    assert [e.id for e in r.edges] == ["aa-p", "aa-c0", "zz-p", "zz-c0"]
 
 
 def test_inv_o2_equal_keys_order_by_slot_and_two_recalls_are_identical(tmp_path):
@@ -154,8 +157,9 @@ def test_inv_o3_the_report_figures_are_truthful_for_the_order_used(tmp_path):
 def test_inv_o4_the_query_does_not_reach_the_block(tmp_path):
     """INV-O4, as research's T8 F3 narrowed it. Two queries, one of which SELECTS a fenced member (a query-selected
     non-assertable member moves from linkage to `exposed` on the structured carrier): the block's bytes and the order
-    of the RENDERABLE groups are the same. Mutant: a relevance term in the key (a selected member counted as
-    renderable)."""
+    of the RENDERABLE groups are the same. Across tiers (the first store) and within ONE tier (the second, research's
+    T8 stage-2 S1 probe: there selection could move only the gap). Mutants: a relevance term in the key (a selected
+    member counted as renderable); V dropping a query-selected non-assertable member (research's RT8-1)."""
     mem = _mem(tmp_path)
     _group(mem, "person:aa", (USER, QUAR, None), (SYSTEM, MENTION, None))       # fenced user top: tier 2
     _group(mem, "person:zz", (USER, MENTION, None), (THIRD, QUAR, None))        # tier 3
@@ -164,6 +168,13 @@ def test_inv_o4_the_query_does_not_reach_the_block(tmp_path):
     assert _block(plain) == _block(selecting)
     renderable = lambda r: [g.subject for g in r.contested if any(e.assertable for e in g.exposed)]  # noqa: E731
     assert renderable(plain) == renderable(selecting) == ["person:zz", "person:aa"]
+    same = _mem(tmp_path, "same-tier.db")
+    _group(same, "person:zz", (USER, QUAR, None), (SYSTEM, MENTION, None))            # tier 2, gap -1 (a fenced 3)
+    _group(same, "person:aa", (SYSTEM, MENTION, None), (ASSISTANT, MENTION, None))    # tier 2, gap 1
+    plain, selecting = _recall(same), _recall(same, "zz prior value")
+    assert any(e.id == "zz-p" for g in selecting.contested for e in g.exposed), "the query must select the member"
+    assert renderable(plain) == renderable(selecting) == ["person:zz", "person:aa"]
+    assert _block(plain) == _block(selecting)
 
 
 # ======================================================================================== INV-O5 / O6 / O8
