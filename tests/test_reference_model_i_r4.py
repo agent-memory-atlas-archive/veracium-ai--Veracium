@@ -92,13 +92,14 @@ def test_the_result_carrier_has_plan_written_and_refuses_the_unlisted_carrier():
 
 
 def test_a_redacted_undo_request_is_terminal():
-    """0008am v1.3 §6g (R3-03): the undo's digest is replaced and its retry returns `request_redacted`, before replay."""
+    """0008am v1.3 §6g (R3-03): the undo's digest is replaced and its retry returns `request_redacted`, before replay;
+    0008 v8 §6g (T7): the terminal names the verb holding the id."""
     s = _base_i()
     M.run_data_migration(s, M.DEFAULT_REGISTRY, op_id="restore")
     M.undo(s, "u", "p", correlation_id="undo-request")
     M.redact(s, "p")
     assert s.registry[("u", "undo-request")]["digest"] == M.MARKER
-    assert M.undo(s, "u", "p", correlation_id="undo-request") == {"terminal": "request_redacted"}
+    assert M.undo(s, "u", "p", correlation_id="undo-request") == {"terminal": "request_redacted", "held_by": "undo"}
 
 
 def test_a_changed_outcome_under_a_held_uid_refuses_the_whole_unit():

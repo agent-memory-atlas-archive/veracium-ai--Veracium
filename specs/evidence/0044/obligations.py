@@ -76,7 +76,7 @@ ROWS = {
     ("0044", "INV-A4"): ["INV-M21"], ("0044", "INV-A5"): ["INV-M5"], ("0044", "INV-A6"): ["INV-M12"],
     ("0044", "INV-A7"): ["INV-M8"], ("0044", "INV-A8"): ["INV-M3"], ("0044", "INV-A9"): ["INV-M2"],
     ("0044", "INV-A10"): ["INV-M21"], ("0044", "INV-A11"): ["INV-M1"], ("0044", "INV-A12"): ["INV-M16", "INV-M4"],
-    ("0044", "INV-A13"): ["INV-M4", "INV-M10", "INV-M11", "INV-M17"], ("0044", "INV-A14"): ["INV-M12"],
+    ("0044", "INV-A13"): ["INV-M4", "INV-M10", "INV-M11", "INV-M17", "INV-M29"], ("0044", "INV-A14"): ["INV-M12"],
     ("0044", "INV-A15"): ["INV-M14"], ("0044", "INV-A16"): ["INV-M7", "INV-M20"],
     ("0044", "INV-A17"): ["INV-M6", "INV-M7", "INV-M19"], ("0044", "INV-A18"): ["INV-J1", "INV-J2", "INV-J3"],
     ("0044", "INV-A19"): ["INV-M13"],
@@ -105,13 +105,14 @@ ROWS = {
     ("0003am", "INV-O9"): ["INV-M9"], ("0003am", "INV-O10"): ["INV-M9"],
     # the 0008 amendment travels in BOTH packages (the owner's hosting ruling): model I carries undo's side of it; the
     # acts' side is model II's, named here and checked by model II's map at package II's stage
-    ("0008am", "INV-Q1"): ["INV-M17"], ("0008am", "INV-Q2"): ["INV-M17"],
+    ("0008am", "INV-Q1"): ["INV-M17", "INV-M29"], ("0008am", "INV-Q2"): ["INV-M17"],
     ("0008am", "INV-Q3"): ("MODEL-II", "the confirmations backfill"),
     ("0008am", "INV-Q4′"): ("MODEL-II", "internal act keys"),
     ("0008am", "INV-Q5"): ["INV-M19"], ("0008am", "INV-Q6"): ["INV-M18"],
     ("0008am", "INV-Q7"): {"model": ["INV-M27"], "model_ii": "digest treatment of acts"},   # undo here, acts there
     ("0008am", "INV-Q8"): ["INV-M22"],
-    ("0008am", "INV-Q9"): ("MODEL-II", "the act ordinal and the origin check"),
+    # undo's side of the counter (D4, 0008 v7 §6f: an undo takes no position) here; the acts' positions there
+    ("0008am", "INV-Q9"): {"model": ["INV-M28"], "model_ii": "the act ordinal and the origin check"},
     ("0008am", "INV-I1"): ("MODEL-II", "repeat import of acts"), ("0008am", "INV-I2"): ("MODEL-II", "changed act"),
     ("0008am", "INV-I3"): ("MODEL-II", "exact replay and the held target"),
     ("0008am", "INV-I4"): ("MODEL-II", "notice treatment before equality"),
