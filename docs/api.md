@@ -911,3 +911,42 @@ has no internal-error row.
 `doctor`'s `data-migration` check reports the operation's phase: a warning before any plan (judged by relation name
 only, as it says), a warning naming the users not yet done, an `info` for an empty plan, and nothing once every user
 is done.
+
+### Undoing one restoration (`undo_restoration`)
+
+```python
+mem.undo_restoration("user-1", "edge-id", correlation_id="undo-1")
+# {"undone": "edge-id", "undone_at": "...", "correlation_id": "undo-1", "replayed": False, "already_undone": False}
+```
+
+This retires one restored value again, as it was before the restoration. `invalidated_at` and `invalidation_reason`
+are set back from the receipt's recorded pre-state, and every other field is left as it is now, including what a
+confirmation changed since. The instant is stored normalized, as at every retirement, so a pre-state written in an
+older representation comes back as the same instant. It is host API only: no CLI verb and no MCP tool.
+
+- **Request ids.** `correlation_id` is the same per-user id space `confirm()` uses. An id held by a confirmation is
+  refused, naming `confirm`; an id held by an undo is refused by `confirm()`, naming `undo`. A retry under the same id
+  replays the recorded result (`replayed=True`, always with `already_undone=False`) without reading the edge, so it
+  answers after the edge has changed or gone. If you omit the id, one is generated (`auto-…`) and returned; there is
+  nothing to retry against.
+- **Already undone.** A call on a value already undone, without an id or with an id not yet used, returns
+  `already_undone=True` with the recorded `undone_at`. It writes nothing and does not take the id.
+- **After a redaction** of the edge, a retry under the undo's id raises `RequestRedacted`, for `undo` and for
+  `confirm()` alike. The id stays held, so nothing new is admitted under it.
+- **Refusals** raise `UndoRefused` (a `ValueError`) with a closed `reason`:
+
+| `reason` | when |
+|---|---|
+| `no-outcome` | the data migration recorded nothing for this edge (or the user was erased) |
+| `not-restored` | the value was withheld because its source is under standing revocation |
+| `testimony` | the outcome was imported: another store's restoration, which this store cannot reverse |
+| `not-applicable` | the restoration has ended: a later retirement by any writer, a redaction, or the edge's removal. A later source lift does not revive it |
+| `edge-unavailable` | the edge is no longer held, or is redacted |
+| `ambiguous-outcome` | more than one outcome row names the edge (only an import can do this); no undo chooses between them |
+
+Undo is not an act: it writes no act row and takes no act position. Undo records are store-local and are never
+exported.
+
+`doctor`'s `refs` warning for an active edge whose predecessor is still active becomes an `info` when this store's
+own restoration outcome explains it: `restored`, not undone, still applicable, of origin `local` or `restored`. An
+imported outcome is testimony, so the warning stays and says so.

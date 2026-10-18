@@ -1929,6 +1929,29 @@ class Memory:
                 "correlation_id": conf.correlation_id,
                 "replayed": conf.replayed}
 
+    def undo_restoration(self, user_id: str, edge_id: str, *,
+                         correlation_id: Optional[str] = None) -> dict:
+        """Reverse ONE value the data migration restored (specs/0044 §4i), HOST API only — never model-reachable,
+        no CLI verb. The edge is retired again with its recorded retirement, field by field (`invalidated_at`, its
+        instant normalized as at every retirement, and `invalidation_reason`); every other field is untouched.
+
+        `correlation_id` (≤64 chars of `[A-Za-z0-9._:-]`) is an idempotency key in the SAME per-user id space as
+        `confirm()`'s: an id held by another verb is refused naming it, and a retry under the id replays the
+        recorded result without reading the edge. Omitted, one is generated (`auto-<hex>`), takes a registry row
+        and is returned — there is nothing to retry against. A retry under an id whose edge was later redacted
+        raises `RequestRedacted`.
+
+        Returns `{undone, undone_at, correlation_id, replayed, already_undone}`. A replay is always
+        `replayed=True, already_undone=False` (it reconstructs a call that wrote); a call on a row already undone
+        returns `already_undone=True` with the recorded `undone_at`, writes nothing and holds no id. Refusals raise
+        `UndoRefused` with a closed `reason`: `no-outcome`, `not-restored` (withheld under revocation),
+        `testimony` (an imported outcome: this store did not restore it), `not-applicable` (the restoration
+        ended: a later retirement, redaction or erasure), `edge-unavailable`, `ambiguous-outcome`."""
+        correlation_id = (validate_correlation_id(correlation_id)
+                          if correlation_id is not None
+                          else f"auto-{uuid4().hex}")
+        return self.store.undo_restoration(user_id, edge_id, correlation_id=correlation_id)
+
     # -- outcome tracking (engine-written; never MCP) ------------------------
     _OUTCOME_ACTORS = {"user": EvidenceAuthor.USER, "system": EvidenceAuthor.SYSTEM}
 

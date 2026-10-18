@@ -417,6 +417,12 @@ accepted that cost explicitly.
      explicitly. It is a fail-closed design choice, given to the owner as a notice.*
 3. **Per-field restore:** `invalidated_at := pre_invalidated_at`, `invalidation_reason := pre_reason`; every other
    field untouched. One transaction; a concurrent duplicate commits once and replays.
+   *Annotation (research, 2026-10-16; the steps above are kept as written), as implemented in T7:*
+   - ***The terminal is a named raise.*** *Step 1's terminal `request_redacted` reaches the caller as `RequestRedacted`, a `ValueError` that names the verb holding the id. 0008 v8 §6g states the same for `confirm()`. A caller that never inspects a returned key therefore cannot read a redacted request as success. The terminal comes before the verb check, so a `confirm` or `reply` under a redacted undo id gets the same raise.*
+   - ***An omitted id is generated.*** *Every verb of the registry works this way (0008 §2c's v6 row and §6c). An undo without a `correlation_id` gets a generated id. That id takes a registry row and becomes the outcome row's `undo_request_ref` (§4g). It offers no replay, because the caller never held it.*
+   - ***A call that writes nothing holds no id.*** *A call on an already-undone row, without an id or with an id the registry does not hold, returns the recorded `already undone at T`. It writes nothing and takes no registry row, so a fresh id stays free. This is the rule 0018 §4i §4b.1b states for the operation, applied here.*
+   - ***Two outcome rows refuse.*** *Undo refuses `ambiguous-outcome` when more than one `migration_outcome` row names the user's edge. That applies §4l's "no undo lookup ever chooses between two" to two slots, that is, two plans. It refuses before the registry is read, because the request digest needs the row's `plan_id`, so even a held id does not replay in that state. The state is unreachable locally: there is one plan header, and `UNIQUE(plan_id, edge_id)` holds. A row under a foreign plan can arrive only by import, and the import's implementation revisits this rule.*
+   - *Found at T7's stage-1 read. Reference model I is edited to match: the terminal comes before the verb check for every verb, both verbs generate ids, and undo takes no act position (0008 §6f).*
 
 ### 4j. The journal — 0029 v12 (the folded amendment `0044/0029-reinstated-reason`)
 

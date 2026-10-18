@@ -10,6 +10,10 @@ store opens normally; until this runs, those values stay hidden and `doctor` war
       §4c's recovery read after an unknown return: the operation's CUMULATIVE durable commits (I32).
   data_migration_receipt(path, plan_id, user_id) -> tuple[ReceiptRow, ...]
       §4d / 0044 §4g: a view over one user's outcome rows; object text read from the LIVE edge at call time.
+  undo_restoration(store, user_id, edge_id, correlation_id) -> dict
+      0044 §4i (with research's T7 annotation): the body of `SqliteStore.undo_restoration`, run inside its write
+      transaction — the registry verb `undo`, decided before any read of the edge; eligibility from the outcome row
+      and its `applicable` episode flag; the per-field restore through the invalidate method.
 
 THE PER-USER UNIVERSE (0018 §4i's research annotation, 2026-10-16; dev's T6 build note Q2): the users holding at least
 one `arity_inventory` row, read at the call and RE-CHECKED inside each user's transaction, so a user erased between
@@ -32,6 +36,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sqlite3
 import uuid
 from collections.abc import Mapping
 from typing import NamedTuple, Optional
@@ -41,6 +46,7 @@ from . import release_migration as _rm
 from . import revocation as _revocation
 from . import schema_version as sv
 from ..census import declare_site
+from .base import UndoRefused
 from ..redaction import edge_carries_marker
 from ..registry import declared_arity, effective_registry
 
@@ -52,6 +58,16 @@ _SITE_WITHHELD_REVOKED = declare_site("store.data-migration.withheld-revoked")  
 _SITE_REDACTED_NOT_CONSIDERED = declare_site("store.data-migration.redacted-not-considered",
                                              declines=True)                         # 0044 §4f.1, INV-A7
 _SITE_READ_REFUSED = declare_site("store.data-migration.read-refused")              # 0018 §4i §4c/§4d
+# T7 (0044 §4i, undo; research's T7 stage-1 classification f8ec28ed — each refuses the undo the caller asked for)
+_SITE_UNDO_AMBIGUOUS = declare_site("store.undo.ambiguous-outcome")                 # 0044 §4i annotation (T7)
+_SITE_UNDO_REQUEST_DIGEST = declare_site("store.undo.request-digest")               # 0008 §6c C9
+_SITE_UNDO_RESULT_MISSING = declare_site("store.undo.result-missing")               # 0008 §6c v7
+_SITE_UNDO_NO_OUTCOME = declare_site("store.undo.no-outcome")                       # 0044 §4i.2, INV-A12
+_SITE_UNDO_NOT_RESTORED = declare_site("store.undo.not-restored")                   # 0044 §4i.2, INV-A12
+_SITE_UNDO_TESTIMONY = declare_site("store.undo.testimony")                         # 0044 §4i.2 R2-05, INV-A17
+_SITE_UNDO_NOT_APPLICABLE = declare_site("store.undo.not-applicable")               # 0044 §4i.2, INV-A12
+_SITE_UNDO_EDGE_UNAVAILABLE = declare_site("store.undo.edge-unavailable")           # 0044 §4i.2
+_SITE_UNDO_CORRELATION = declare_site("store.undo.correlation")                     # 0008 §6c C8/C9
 
 # specs/0044 §4b: the three relations the plan can reclassify, and the declaration that is "canonically the default"
 # (§4e): arity only (research's T6 read, Q4), so a host's gloss edit neither drops a name from the plan nor moves the
@@ -508,3 +524,114 @@ def data_migration_receipt(path, plan_id, user_id) -> tuple:
         return tuple(rows)
     finally:
         store.close()
+
+
+# ================================================================================================ 0044 §4i: undo
+PROOF_ORIGINS = ("local", "restored")       # 0044 §4k / R2-05: an `imported` outcome is testimony, never undone
+
+
+def _undo_result(edge_id, undone_at, correlation_id, *, replayed, already_undone) -> dict:
+    return {"undone": edge_id, "undone_at": undone_at, "correlation_id": correlation_id,
+            "replayed": replayed, "already_undone": already_undone}
+
+
+def undo_restoration(store, user_id: str, edge_id: str, correlation_id: str) -> dict:
+    """0044 §4i, inside the caller's write transaction (`SqliteStore.undo_restoration`). In order:
+      0. the user's outcome rows for the edge — the OUTCOME table, never the edge; two rows refuse
+         `ambiguous-outcome` BEFORE the registry, because the request digest needs the row's plan (the annotation);
+      1. the registry (`_registry_held`, the ONE body `confirm()` shares): terminal, then the verb; then this verb's
+         digest; a completed undo REPLAYS from its `result_ref` (the outcome_uid) without reading the edge;
+      2. eligibility: restored, not undone (else the recorded `already undone at T`, writing nothing), PROOF,
+         `applicable`, the edge held and not redacted;
+      3. the per-field restore through `_invalidate_edge_row` — the invalidate METHOD, so 0029's choke point
+         journals `invalidated` and the T5-2 lifetime hook clears `applicable` (§4f-ii); the outcome row's
+         `undone_at` is written only where the hook has cleared the flag (research's Q8: CHECK it, never write it);
+      4. the registry row, `undo`, in this transaction. No act row and no act position (0008 §6f, D4)."""
+    conn = store._conn
+    rows = conn.execute(
+        "SELECT plan_id, outcome, undone_at, origin, applicable, pre_invalidated_at, pre_reason, outcome_uid "
+        "FROM migration_outcome WHERE user_id=? AND edge_id=?", (user_id, edge_id)).fetchall()
+    with _SITE_UNDO_AMBIGUOUS.consult():
+        if len(rows) > 1:
+            raise _SITE_UNDO_AMBIGUOUS.fire(UndoRefused(
+                "ambiguous-outcome", user_id, edge_id,
+                f"{len(rows)} outcome rows name it (plans {sorted(r[0] for r in rows)}); no undo lookup chooses "
+                f"between two (§4l)"))
+    digest = portable_uid("undo", user_id, edge_id, rows[0][0] if rows else "")
+    held = _registry_decision(store, user_id, edge_id, correlation_id, digest)
+    if held is not None:
+        return held
+    with _SITE_UNDO_NO_OUTCOME.consult():
+        if not rows:
+            raise _SITE_UNDO_NO_OUTCOME.fire(UndoRefused(
+                "no-outcome", user_id, edge_id, "the data migration recorded no outcome for it"))
+    plan_id, outcome, undone_at, origin, applicable, pre_at, pre_reason, outcome_uid = rows[0]
+    with _SITE_UNDO_NOT_RESTORED.consult():
+        if outcome != "restored":
+            raise _SITE_UNDO_NOT_RESTORED.fire(UndoRefused(
+                "not-restored", user_id, edge_id, f"its outcome is {outcome!r}: nothing was restored to undo"))
+    if undone_at is not None:
+        # §4i.1: the recorded answer; this call wrote nothing, so it holds no id (the annotation; 0018 §4i §4b.1b)
+        return _undo_result(edge_id, undone_at, correlation_id, replayed=False, already_undone=True)
+    with _SITE_UNDO_TESTIMONY.consult():
+        if origin not in PROOF_ORIGINS:
+            raise _SITE_UNDO_TESTIMONY.fire(UndoRefused(
+                "testimony", user_id, edge_id, f"its outcome is {origin!r} testimony of another store's restoration, "
+                                               f"which this store cannot reverse (R2-05)"))
+    with _SITE_UNDO_NOT_APPLICABLE.consult():
+        if not applicable:
+            raise _SITE_UNDO_NOT_APPLICABLE.fire(UndoRefused(
+                "not-applicable", user_id, edge_id, "the restoration episode ended (a later retirement, redaction "
+                                                    "or the edge's removal; a source lift never revives it)"))
+    edge = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (edge_id, user_id)).fetchone()
+    with _SITE_UNDO_EDGE_UNAVAILABLE.consult():
+        if edge is None or edge_carries_marker(json.loads(edge[0])):
+            raise _SITE_UNDO_EDGE_UNAVAILABLE.fire(UndoRefused(
+                "edge-unavailable", user_id, edge_id, "the edge is no longer held, or is redacted"))
+    store._invalidate_edge_row(edge_id, pre_at, pre_reason)
+    now = store._now().isoformat()
+    n = conn.execute("UPDATE migration_outcome SET undone_at=?, undo_request_ref=? "
+                     "WHERE plan_id=? AND edge_id=? AND undone_at IS NULL AND applicable=0",
+                     (now, correlation_id, plan_id, edge_id)).rowcount
+    if n != 1:
+        # the retirement above passes 0029's choke point, whose lifetime hook clears `applicable` (§4f-ii); a row
+        # still applicable here means the hook did not run on this path — refuse rather than write a second rule
+        raise RuntimeError(f"undo of {edge_id!r}: the outcome row's `applicable` was not cleared by the retirement "
+                           f"(specs/0044 §4f-ii's lifetime hook) — nothing written")
+    try:
+        conn.execute("INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
+                     "result_ref, written_at) VALUES(?,?,'undo',?,?,?,?)",
+                     (user_id, correlation_id, edge_id, digest, outcome_uid, now))
+    except sqlite3.IntegrityError:
+        # C8's shape (confirm's): a duplicate won the UNIQUE(user_id, correlation_id). Under BEGIN IMMEDIATE taken
+        # before the registry read no other connection can; kept defensively, through the SAME lookup
+        conn.rollback()
+        held = _registry_decision(store, user_id, edge_id, correlation_id, digest)
+        with _SITE_UNDO_CORRELATION.consult():
+            if held is None:
+                raise _SITE_UNDO_CORRELATION.fire(ValueError(
+                    f"correlation_id {correlation_id!r} conflict (specs/0008 §6c)"))
+        return held
+    store._bump(user_id)
+    return _undo_result(edge_id, now, correlation_id, replayed=False, already_undone=False)
+
+
+def _registry_decision(store, user_id, edge_id, correlation_id, digest) -> Optional[dict]:
+    """The registry, before any read of the edge (INV-A13, INV-Q2): None when the id is free; else the replay."""
+    held = store._registry_held(user_id, correlation_id, "undo")
+    if held is None:
+        return None
+    held_digest, result_ref = held
+    with _SITE_UNDO_REQUEST_DIGEST.consult():
+        if held_digest != digest:
+            raise _SITE_UNDO_REQUEST_DIGEST.fire(ValueError(
+                f"correlation_id {correlation_id!r} was already used for a DIFFERENT undo request — integrity "
+                f"conflict (specs/0008 §6c)"))
+    row = store._conn.execute("SELECT edge_id, undone_at FROM migration_outcome WHERE outcome_uid=? AND user_id=?",
+                              (result_ref, user_id)).fetchone()
+    with _SITE_UNDO_RESULT_MISSING.consult():
+        if row is None or row[1] is None:
+            raise _SITE_UNDO_RESULT_MISSING.fire(ValueError(
+                f"correlation_id {correlation_id!r}: the registry names outcome {result_ref!r}, which is absent or "
+                f"not undone — integrity conflict (specs/0008 §6c)"))
+    return _undo_result(row[0], row[1], correlation_id, replayed=True, already_undone=False)

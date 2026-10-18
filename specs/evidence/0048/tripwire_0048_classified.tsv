@@ -313,3 +313,6 @@ edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"JOIN 
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"SELECT id FROM edges WHERE user_id=? AND json_extract(json, '$.supersedes')=? ORDER BY id", (user, eid))]
 sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	"INSERT INTO migration_outcome(plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, "
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	live = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (eid, user_id)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	edge = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (edge_id, user_id)).fetchone()
+sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	n = conn.execute("UPDATE migration_outcome SET undone_at=?, undo_request_ref=? "
+sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	conn.execute("INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "

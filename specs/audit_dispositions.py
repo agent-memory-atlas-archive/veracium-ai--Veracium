@@ -43,6 +43,10 @@ DISPOSITIONS = {
    (W, "`needs_confirmation` (cleared), `observed_at`, `confidence`, the confirmation episode + record — ALL in one atomic store operation", "act",
     "clean — `specs/0008`: `confirm()` is the ONLY path that clears `needs_confirmation`, through the atomic `confirm_edge` (M2 first-known immutability preserved; the record is mandatory, C7)",
     "`test_confirm_clears_staleness` · `test_confirm_advances_liveness_not_first_known`"),
+ ("src/veracium/__init__.py", "Memory.undo_restoration", "undo_restoration", "7a97cc565969"):
+   (W, "`active` (0), `invalidated_at`/`invalidation_reason` (set back to the outcome row's recorded pre-state), the outcome row's `undone_at`/`undo_request_ref`, an `undo` registry row — ALL in one write transaction", "act",
+    "clean — `specs/0044` §4i (T7-2): host-only; eligibility is the outcome row plus its `applicable` episode flag, PROOF origins only; the restore goes through the invalidate method, so 0029's choke point journals it and the lifetime hook ends the episode; no other field is touched",
+    "`test_undo_restores_the_retirement_per_field_and_nothing_else` · `test_revoke_then_lift_leaves_the_edge_active_and_the_episode_ended`"),
  ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "c581fd572ad4"):
    (W, "episode provenance / `author_of_evidence` (new chain link — NEVER overwritten)", "act",
     "clean — **`specs/0009` (ACCEPTED): M4 CLOSED.** `record_outcome` now APPENDS a new chain link via the CAS `append_outcome_if_head` (never mutates a prior judgment's author, H1); the Store assigns `seq`/id and DERIVES `source_type`; counters are derived from chain heads (H6).",
@@ -185,6 +189,7 @@ STATES = {
   ("src/veracium/__init__.py", "Memory.dispute", "invalidate_edge", "e2b396f8489a"): "clean",
   ("src/veracium/__init__.py", "Memory.dispute", "add_episode", "c77fe9f6b653"): "clean",
   ("src/veracium/__init__.py", "Memory.confirm", "confirm_edge", "b1b92807403e"): "clean",
+  ("src/veracium/__init__.py", "Memory.undo_restoration", "undo_restoration", "7a97cc565969"): "clean",
   ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "c581fd572ad4"): "clean",
   ("src/veracium/__init__.py", "Memory.record_outcome", "add_edge", "e00d08c435b4"): "clean",
   ("src/veracium/__init__.py", "Memory.correct", "apply_supersession_plan", "ba370b6342c2"): "clean",

@@ -227,6 +227,13 @@ DISPOSITIONS: dict[str, dict] = {
         carriers="`{confirmed, valid_from, confirmed_at, correlation_id, "
                  "replayed}`",
         disposition="WRITE path; no record set leaves."),
+    "Memory.undo_restoration": dict(
+        returns_records=False, principal="none",
+        carriers="`{undone, undone_at, correlation_id, replayed, "
+                 "already_undone}`",
+        disposition="WRITE path (host-only, never MCP; specs/0044 §4i): "
+                    "retires one restored value again; ids and a time "
+                    "leave, no record content."),
     "Memory.correct": dict(
         returns_records=False, principal="none",
         carriers="`{corrected, replacement}`",

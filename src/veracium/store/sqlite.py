@@ -733,28 +733,40 @@ class SqliteStore(Store):
             actor=ConfirmationActor(actor), call_path=ConfirmationCallPath(cpath),
             correlation_id=corr, request_digest=dig)
 
-    def _confirm_replay(self, user_id, correlation_id, request_digest) -> Optional[Confirmation]:
-        """specs/0008 v7 §6c/§6g — the REQUEST REGISTRY, read before any read of live edge state (INV-Q2), and the
-        ONE lookup both the front path and the C8 race fallback use. None: the id is free. Otherwise, in the
-        spec's precedence: a redacted row is TERMINAL for every payload (§6g); an id held by another verb, or by a
-        different canonical request, is an integrity conflict naming the verb; else the original result,
-        reconstructed from `result_ref` without reading the edge, so it replays after the edge retired."""
-        _COLS = ("id, user_id, edge_id, confirmed_at, actor, call_path, "
-                 "correlation_id, request_digest")
+    def _registry_held(self, user_id, correlation_id, verb) -> Optional[tuple]:
+        """specs/0008 v8 §6c/§6g — the REQUEST REGISTRY's two rules every verb shares, in ONE body (INV-Q1: one id
+        space per user; T7, research's stage-1 Q4), read before any read of live edge state (INV-Q2). None: the id
+        is free. A redacted row is TERMINAL for every verb and payload, BEFORE the verb check (v8), naming the verb
+        that holds it; an id held by another verb is an integrity conflict naming that verb. Otherwise the held
+        `(request_digest, result_ref)`, which the calling verb compares and resolves with its own sites."""
         held = self._conn.execute(
             "SELECT verb, request_digest, result_ref FROM request_registry WHERE user_id=? AND correlation_id=?",
             (user_id, correlation_id)).fetchone()
         if held is None:
             return None
-        verb, digest, result_ref = held
+        held_verb, digest, result_ref = held
         with _SITE_REGISTRY_REDACTED.consult():
             if digest == _redaction.MARKER:
-                raise _SITE_REGISTRY_REDACTED.fire(RequestRedacted(user_id, correlation_id, verb))
+                raise _SITE_REGISTRY_REDACTED.fire(RequestRedacted(user_id, correlation_id, held_verb))
         with _SITE_REGISTRY_VERB_HELD.consult():
-            if verb != "confirm":
+            if held_verb != verb:
                 raise _SITE_REGISTRY_VERB_HELD.fire(ValueError(
-                    f"correlation_id {correlation_id!r} is held by a {verb!r} request — integrity conflict "
+                    f"correlation_id {correlation_id!r} is held by a {held_verb!r} request — integrity conflict "
                     f"(specs/0008 §6c)"))
+        return digest, result_ref
+
+    def _confirm_replay(self, user_id, correlation_id, request_digest) -> Optional[Confirmation]:
+        """specs/0008 v7 §6c/§6g — `confirm()`'s side of the REQUEST REGISTRY, read before any read of live edge
+        state (INV-Q2), and the ONE lookup both the front path and the C8 race fallback use. None: the id is free.
+        Otherwise, in the spec's precedence: the shared rules (`_registry_held`: terminal, then the verb); a
+        different canonical request is an integrity conflict; else the original result, reconstructed from
+        `result_ref` without reading the edge, so it replays after the edge retired."""
+        _COLS = ("id, user_id, edge_id, confirmed_at, actor, call_path, "
+                 "correlation_id, request_digest")
+        held = self._registry_held(user_id, correlation_id, "confirm")
+        if held is None:
+            return None
+        digest, result_ref = held
         with _SITE_CONFIRM_REQUEST_DIGEST.consult():
             if digest != request_digest:
                 raise _SITE_CONFIRM_REQUEST_DIGEST.fire(ValueError(
@@ -878,6 +890,15 @@ class SqliteStore(Store):
                 id=cid, user_id=user_id, edge_id=edge_id, confirmed_at=confirmed_at,
                 actor=ConfirmationActor(actor), call_path=ConfirmationCallPath(call_path),
                 correlation_id=correlation_id, request_digest=request_digest)
+
+    def undo_restoration(self, user_id: str, edge_id: str, *, correlation_id: str) -> dict:
+        """specs/0044 §4i — ONE write transaction (`BEGIN IMMEDIATE`) under the instance lock: the registry decision,
+        the eligibility read, the per-field restore, the outcome row and the registry row commit together or not at
+        all, and a concurrent duplicate waits for the lock, then replays. The body is
+        `store/data_migration.undo_restoration`, beside the restoration it reverses."""
+        from .data_migration import undo_restoration as _undo
+        with self._lock, self._write_txn():
+            return _undo(self, user_id, edge_id, correlation_id)
 
     def confirmations_for(self, user_id, edge_id) -> list[Confirmation]:
         _COLS = ("id, user_id, edge_id, confirmed_at, actor, call_path, "

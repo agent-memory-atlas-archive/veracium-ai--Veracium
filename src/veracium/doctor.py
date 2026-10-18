@@ -115,6 +115,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 from .store import schema_version as sv
+from .store.data_migration import PROOF_ORIGINS
 
 MAX_IDS = 20   # ids listed per finding in the text form; the JSON form carries all
 
@@ -294,11 +295,25 @@ def _load_rows(rep: Report, conn, user: Optional[str]) -> tuple:
     return edges, episodes
 
 
+def _live_restoration_origins(conn, user: Optional[str]) -> dict:
+    """specs/0044 §4k: (user_id, edge_id) → the origins of its LIVE restoration outcomes (`restored`, not undone,
+    `applicable`). Joined on the user AND the edge in every run, scoped or not. The refs check runs only on a store
+    at this build's version, so the table is there; a store without outcome rows exempts nothing and reads as
+    before."""
+    out: dict = {}
+    for r in conn.execute("SELECT user_id, edge_id, origin FROM migration_outcome WHERE outcome='restored' "
+                          "AND undone_at IS NULL AND applicable=1" + (" AND user_id=?" if user else ""),
+                          (user,) if user else ()):
+        out.setdefault((r[0], r[1]), set()).add(r[2])
+    return out
+
+
 def _check_refs(rep: Report, conn, user: Optional[str], edges: dict, episodes: dict) -> None:
     rep.checks_run.append("refs")
     where, args = ("WHERE user_id=?", (user,)) if user else ("", ())
     # supersedes: the target exists for the same user; no cycles; predecessor retired
-    dangling, unretired = [], []
+    dangling, unretired, restored, testimony = [], [], [], []
+    origins = _live_restoration_origins(conn, user)
     for (uid, eid), (row, d) in edges.items():
         pred = d.get("supersedes")
         if not pred:
@@ -306,13 +321,25 @@ def _check_refs(rep: Report, conn, user: Optional[str], edges: dict, episodes: d
         if (uid, pred) not in edges:
             dangling.append(eid)
         elif edges[(uid, pred)][1].get("invalidated_at") is None and d.get("invalidated_at") is None:
-            unretired.append(eid)
+            # specs/0044 §4k: the PREDECESSOR's live restoration outcome decides — PROOF (this store restored it:
+            # `local`/`restored`, not undone, applicable) is `info`; `imported` testimony keeps the warning and names
+            # it; anything else is the old warning, unchanged
+            o = origins.get((uid, pred), ())
+            (restored if any(x in PROOF_ORIGINS for x in o) else
+             testimony if "imported" in o else unretired).append(eid)
     if dangling:
         rep.add("refs", "error", f"{len(dangling)} edge(s) whose `supersedes` names an edge that does "
                 "not exist for that user (dangling supersession link)", dangling)
     if unretired:
         rep.add("refs", "warn", f"{len(unretired)} active edge(s) whose predecessor is still active "
                 "(a supersession that did not retire what it superseded)", unretired)
+    if testimony:
+        rep.add("refs", "warn", f"{len(testimony)} active edge(s) whose predecessor is still active and was "
+                "restored only by IMPORTED testimony — another store's data-migration outcome, which this store "
+                "cannot verify (specs/0044 §4k)", testimony)
+    if restored:
+        rep.add("refs", "info", f"{len(restored)} active edge(s) whose predecessor is active because this store's "
+                "data migration restored it (specs/0044 §4k: its own outcome row is the proof)", restored)
     cycles = []
     for (uid, eid), (row, d) in edges.items():
         seen, cur = {eid}, d.get("supersedes")

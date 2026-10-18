@@ -613,26 +613,37 @@ def receipt(s: Store, user: str) -> list:
 
 # ----------------------------------------------------------------------------------------------- the request registry
 def _replay(s: Store, user, cid, verb, digest):
-    """The 0008 amendment §6c/§6g, read FIRST, before any live edge state. v1.3: a request whose digest a redaction
-    replaced is TERMINAL for its own verb — `request_redacted`, whatever the payload, before any replay; another verb
-    under the id still conflicts (the id stays held). Otherwise same verb + same request → the original result; any
-    other holder → integrity conflict naming it."""
+    """The 0008 amendment §6c/§6g, read FIRST, before any live edge state. 0008 v8 §6g (edited at T7, research's
+    stage-1 F1; v1.3 made the terminal its own verb's only): a request whose digest a redaction replaced is TERMINAL
+    for EVERY verb — `request_redacted`, naming the verb that holds the id, whatever the payload, before the verb
+    check and before any replay; the id stays held, so nothing is admitted under it. Otherwise same verb + same
+    request → the original result; any other holder → integrity conflict naming it."""
     if cid is None:
         return None
     rec = s.registry.get((user, cid))
     if rec is None:
         return None
-    if rec["verb"] == verb and rec["digest"] == MARKER:
-        return {"terminal": "request_redacted"}
+    if rec["digest"] == MARKER:
+        return {"terminal": "request_redacted", "held_by": rec["verb"]}
     if rec["verb"] == verb and rec["digest"] == digest:
         return {"replayed": rec["result_ref"]}
     raise Refused(f"integrity conflict: correlation id held by {rec['verb']}")
 
 
+ACT_VERBS = ("confirm", "reply")                          # 0008 v7 §6f: 0044's undo is NOT an act (the owner, D4)
+
+
+def _generated_id(verb: str, t: int) -> str:
+    """0008 §2c's v6 row and §6c (edited at T7, research's stage-1 F2): an omitted id is GENERATED and takes a
+    registry row like a supplied one. Unique per write transaction (`t` is the writing call's own `begin()`), so the
+    model stays deterministic; the product draws `auto-<hex>`."""
+    return f"auto-{verb}-{t}"
+
+
 def _register(s: Store, user, cid, verb, digest, result_ref, target):
-    if cid is not None:
-        s.registry[(user, cid)] = {"verb": verb, "digest": digest, "result_ref": result_ref, "target": target}
-    s.act_counter += 1                                    # the store-wide act ordinal: every act write, never reset
+    s.registry[(user, cid)] = {"verb": verb, "digest": digest, "result_ref": result_ref, "target": target}
+    if verb in ACT_VERBS:                                 # the store-wide act ordinal: every ACT write, never reset;
+        s.act_counter += 1                                # undo takes no position (0008 §6f; edited at T7, Q7)
     return s.act_counter
 
 
@@ -642,7 +653,8 @@ def confirm(s: Store, user: str, edge_id: str, cid=None):
     rep = _replay(s, user, cid, "confirm", digest)
     if rep is not None:
         return rep
-    s.begin()
+    t = s.begin()
+    cid = cid if cid is not None else _generated_id("confirm", t)
     s.confirmations.append((user, edge_id, cid))
     _register(s, user, cid, "confirm", digest, f"conf:{edge_id}", edge_id)
     return {"confirmed": edge_id}
@@ -680,9 +692,9 @@ def undo(s: Store, user: str, edge_id: str, rules: Rules | None = None, correlat
     _write(s, edge_id, lambda: _set_lifetime(s, edge_id, False, o["pre_invalidated_at"], o["pre_reason"]),
            kind="invalidated", reason=o["pre_reason"], t=t)
     o["undone_at"], o["applicable"] = t, False
-    _register(s, user, correlation_id, "undo", digest, f"outcome:{edge_id}", edge_id)
-    if correlation_id is not None:
-        o["undo_request_ref"] = (user, correlation_id)    # store-local: never exported, never compared (§4g)
+    cid = correlation_id if correlation_id is not None else _generated_id("undo", t)
+    _register(s, user, cid, "undo", digest, f"outcome:{edge_id}", edge_id)
+    o["undo_request_ref"] = (user, cid)                   # store-local: never exported, never compared (§4g)
     return {"undone": edge_id, "already_undone": False}
 
 

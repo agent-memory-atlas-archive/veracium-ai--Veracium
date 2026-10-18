@@ -51,7 +51,7 @@ is the number that decides what can be built.
 | **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-10-15 | 1 | 14 | 0 | 0 | 0 | — |
 | **0042** | exercised guarantees — measuring whether what we specify is what runs | `accepted` | 2026-10-02 | 0 | 23 | 0 | 0 | 0 | — |
 | **0043** | the refusal harness — measuring whether the gate declines when it should | `accepted` | 2026-10-10 | 0 | 9 | 0 | 0 | 0 | — |
-| **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `accepted` | 2026-10-15 | 0 | 4 | 2 | 0 | 0 | — |
+| **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `accepted` | 2026-10-18 | 0 | 4 | 2 | 0 | 0 | — |
 | **0045** | the declarative grounding axis — was a fact STATED, or not shown to be? | `accepted` | 2026-10-14 | 0 | 4 | 0 | 0 | 0 | — |
 | **0046** | the correction receipt — a corrected fact names what still rests on it | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
 | **0047** | the subject's right of reply — the record stands, and the reply travels with it | `accepted` | 2026-10-14 | 0 | 4 | 0 | 0 | 0 | — |

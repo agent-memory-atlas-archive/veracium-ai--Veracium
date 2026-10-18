@@ -870,21 +870,56 @@ def inv_result_constructor(rules=R):
 
 
 def inv_redacted_requests_terminal(rules=R):
-    """INV-M27 (0008am v1.3 INV-Q7, the `undo` verb's side, which model II does not represent): an edge's redaction
-    replaces the digest of every registry row on it — `undo` included — and a retry under such an id returns the
-    terminal `request_redacted`, which takes precedence over replay; the id stays held (another verb still conflicts);
-    a request on an unredacted edge still replays, and the same rule holds for `confirm`."""
+    """INV-M27 (0008am v1.3 INV-Q7, the `undo` verb's side, which model II does not represent; brought to 0008 v8 §6g
+    at T7, research's stage-1 F1): an edge's redaction replaces the digest of every registry row on it — `undo`
+    included — and a retry under such an id returns the terminal `request_redacted`, naming the verb that holds the
+    id, which takes precedence over replay AND over the verb check: a request of ANOTHER verb under it gets the same
+    terminal and is never admitted (v1.3 had it conflict); a request on an unredacted edge still replays, and the
+    same rule holds for `confirm`."""
     s = base(); run(s)
     M.undo(s, "u", "p", rules, correlation_id="undo-request")
     M.confirm(s, "u", "n", cid="conf-request")
     M.redact(s, "p")
     digest_gone = s.registry[("u", "undo-request")]["digest"] == M.MARKER
-    terminal = attempt(M.undo, s, "u", "p", rules, correlation_id="undo-request") == {"terminal": "request_redacted"}
-    held = "held by undo" in attempt(M.confirm, s, "u", "p", cid="undo-request").get("refused", "")
+    held_term = {"terminal": "request_redacted", "held_by": "undo"}
+    terminal = attempt(M.undo, s, "u", "p", rules, correlation_id="undo-request") == held_term
+    n_conf = len(s.confirmations)
+    held = (attempt(M.confirm, s, "u", "p", cid="undo-request") == held_term and len(s.confirmations) == n_conf
+            and s.registry[("u", "undo-request")]["verb"] == "undo")
     replays = attempt(M.confirm, s, "u", "n", cid="conf-request") == {"replayed": "conf:n"}
     M.redact(s, "n")
-    conf_terminal = attempt(M.confirm, s, "u", "n", cid="conf-request") == {"terminal": "request_redacted"}
+    conf_terminal = (attempt(M.confirm, s, "u", "n", cid="conf-request")
+                     == {"terminal": "request_redacted", "held_by": "confirm"})
     return digest_gone and terminal and held and replays and conf_terminal
+
+
+def inv_undo_is_not_an_act(rules=R):
+    """INV-M28 (0008 v7 §6f, the owner's ruling D4 "Undo is not an act row"; added at T7, research's stage-1 Q7): an
+    undo takes NO act position (the store-wide counter does not move) while a confirmation takes exactly one."""
+    s = base(); run(s)
+    a0 = s.act_counter
+    M.undo(s, "u", "p", rules, correlation_id="c1")
+    undo_kept = s.act_counter == a0
+    M.confirm(s, "u", "n", cid="k1")
+    return undo_kept and s.act_counter == a0 + 1
+
+
+def inv_generated_ids(rules=R):
+    """INV-M29 (0008 §2c's v6 row and §6c; 0044 §4g; added at T7, research's stage-1 F2): a request without an id
+    GENERATES one, which takes a registry row like a supplied one, for both verbs; an id-less undo's outcome row names
+    that row in `undo_request_ref`; an already-undone call generates nothing durable (no registry row, no
+    transaction: a call that writes nothing holds no id)."""
+    s = base(); run(s)
+    n0 = len(s.registry)
+    M.undo(s, "u", "p", rules)
+    ref = s.outcomes[("plan-1", "p")]["undo_request_ref"]
+    undo_row = ref in s.registry and s.registry[ref]["verb"] == "undo" and s.registry[ref]["target"] == "p"
+    t, n1 = s.txn, len(s.registry)
+    again = attempt(M.undo, s, "u", "p", rules) == {"undone": "p", "already_undone": True}
+    quiet = s.txn == t and len(s.registry) == n1
+    M.confirm(s, "u", "n")
+    conf_row = sum(1 for r in s.registry.values() if r["verb"] == "confirm" and r["target"] == "n") == 1
+    return n1 == n0 + 1 and undo_row and again and quiet and conf_row
 
 
 # FROZEN at round 4 (2026-10-13): the reviewer ACCEPTED 0044 v1.5 AT THE DESIGN LEVEL — in the verdict's words, "Accept the
@@ -906,6 +941,7 @@ INVARIANTS = {"INV-M1": inv_revocation, "INV-M2": inv_once_per_plan, "INV-M3": i
               "INV-M19": inv_testimony, "INV-M20": inv_collision, "INV-M21": inv_arity, "INV-M22": inv_canonical_uid,
               "INV-M23": inv_lifetime_transitions, "INV-M24": inv_outcome_replay, "INV-M25": inv_op_admission,
               "INV-M26": inv_result_constructor, "INV-M27": inv_redacted_requests_terminal,
+              "INV-M28": inv_undo_is_not_an_act, "INV-M29": inv_generated_ids,   # added at T7 (disclosed)
               "INV-J1": inv_j1_closed_reason, "INV-J2": inv_j2_old_nulls, "INV-J3": inv_j3_writers}
 
 
@@ -1101,6 +1137,47 @@ def _no_terminal_rule(orig):
             return {"replayed": rec["result_ref"]}
         raise M.Refused(f"integrity conflict: correlation id held by {rec['verb']}")
     return _replay
+
+
+def _terminal_own_verb_only(orig):
+    """The SUPERSEDED rule (0008am v1.3, model I before T7): the terminal only for the caller's own verb, so a
+    request of another verb under a redacted id reads as a conflict instead of `request_redacted`."""
+    def _replay(s, user, cid, verb, digest):
+        if cid is None:
+            return None
+        rec = s.registry.get((user, cid))
+        if rec is None:
+            return None
+        if rec["verb"] == verb and rec["digest"] == M.MARKER:
+            return {"terminal": "request_redacted", "held_by": rec["verb"]}
+        if rec["verb"] == verb and rec["digest"] == digest:
+            return {"replayed": rec["result_ref"]}
+        raise M.Refused(f"integrity conflict: correlation id held by {rec['verb']}")
+    return _replay
+
+
+def _undo_takes_an_act_position(orig):
+    """The SUPERSEDED rule (model I before T7, pre-D4): every registry write advanced the act counter, undo's too."""
+    def _register(s, user, cid, verb, digest, result_ref, target):
+        r = orig(s, user, cid, verb, digest, result_ref, target)
+        if verb == "undo":
+            s.act_counter += 1
+        return s.act_counter
+    return _register
+
+
+def _install_no_generated_ids():
+    """The SUPERSEDED rule (model I before T7, pre-F2): an omitted id stays omitted and takes no registry row."""
+    orig_reg = _O["_register"]
+
+    def _register(s, user, cid, verb, digest, result_ref, target):
+        if cid is None:
+            if verb in M.ACT_VERBS:
+                s.act_counter += 1
+            return s.act_counter
+        return orig_reg(s, user, cid, verb, digest, result_ref, target)
+    M._generated_id = lambda verb, t: None
+    M._register = _register
 
 
 def _header_only_when_nonempty(orig):
@@ -1455,6 +1532,10 @@ MUTANTS = {
     "hash the whole registry: an unrelated declaration trips registry-changed (I25)": ("INV-M14", _set("plan_input_digest", lambda canon: M.registry_digest(canon))),
     "keep an undo's digest after redaction and replay its result_ref (0008am INV-Q7)": ("INV-M27", _wrap("redact_request_digests", _undo_digest_kept)),
     "the terminal rule omitted: a redacted retry reads as a conflict (0008am INV-Q7)": ("INV-M27", _wrap("_replay", _no_terminal_rule)),
+    # added at T7 (disclosed): each is the rule model I itself carried before research's T7 stage-1 read
+    "the terminal for the caller's own verb only: another verb under a redacted id conflicts (0008am v1.3; 0008 v8 §6g)": ("INV-M27", _wrap("_replay", _terminal_own_verb_only)),
+    "undo takes an act position (pre-D4; 0008 v7 §6f)": ("INV-M28", _wrap("_register", _undo_takes_an_act_position)),
+    "an omitted id is not generated and takes no registry row (pre-F2; 0008 §6c)": ("INV-M29", _install_no_generated_ids),
     "erasure keeps the refusal inventory (R3-03)": ("INV-M18", _wrap("forget_user", lambda o: (lambda s, user: (lambda keep, keep2: (o(s, user), setattr(s, "refusal_inventory", keep), setattr(s, "refusals", keep2)))(set(s.refusal_inventory), list(s.refusals))))),
     "the writers' reasons swapped (0029 J3)": ("INV-J3", _wrap("restore_source", lambda o: (lambda s, eid: (setattr(s.edges[eid], "active", True), M.journal_reinstated(s, eid, "arity_reclassified"))))),
 }

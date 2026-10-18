@@ -13,6 +13,22 @@
 - `run_data_migration`'s `plan_only` must be exactly `True` or `False`. Any other value raises `ValueError` before
   anything is read, as an `op_id` outside the grammar does. This was already the behaviour and is now documented.
 
+- **Added: `undo_restoration`, which retires one restored value again (specs/0044 §4i, §4k; specs/0008 v8 §6c/§6f/§6g;
+  INV-A12, A13, A17, INV-Q1, INV-Q7).** `Memory.undo_restoration(user_id, edge_id, *, correlation_id=None)` sets
+  `invalidated_at` and `invalidation_reason` back from the receipt's recorded pre-state and leaves every other field as
+  it is now. It is host API only: no CLI verb and no MCP tool. (docs/api.md, "Undoing one restoration".)
+  - It shares `confirm()`'s per-user request registry. An id held by the other verb is refused, naming it; a retry
+    under the same id replays the recorded result without reading the edge; an omitted id is generated (`auto-…`).
+    After a redaction of the edge, a retry under the undo's id raises `RequestRedacted`, for `undo` and `confirm()`
+    alike, and nothing new is admitted under it.
+  - A value already undone returns `already_undone=True` and writes nothing. Refusals raise `UndoRefused` (a
+    `ValueError`) with one of six closed reasons: `no-outcome`, `not-restored`, `testimony`, `not-applicable`,
+    `edge-unavailable`, `ambiguous-outcome`. Undo is not an act: no act row, no act position. Undo records are
+    store-local and never exported.
+  - `doctor`'s `refs` warning for an active edge whose predecessor is still active becomes an `info` when this
+    store's own live restoration outcome explains it; an imported outcome keeps the warning and says so.
+  - **Who should act:** nobody, unless you ran `run_data_migration` and want to reverse one restored value.
+    (tests/test_0044_t7_undo.py.)
 - **Added: `run_data_migration`, the optional operation that restores the values the old single-value rule retired
   (specs/0018 §4i; specs/0044 §4e–§4g-ii; I25–I30, I32, INV-A5, A7–A9, A11, A15, A20, A21).** *Upgrading does not
   restore values that the old single-value rule retired. To restore them and get a receipt listing each one, run

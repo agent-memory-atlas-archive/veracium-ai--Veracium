@@ -1386,6 +1386,7 @@ def _dm_store(*, revoked=False, marked=False):
     att = _Att(quiesced=True, backup_ref="bk-sites")
     run = lambda **k: _DM.run_data_migration(path, host_attestation=att, **{"registry": dict(DEFAULT_RELATIONS), **k})
     assert run(op_id="dm-plan", plan_only=True).outcome == "planned"
+    run.path = path                                           # T7-2's undo sites open the same store
     return run
 
 
@@ -1416,6 +1417,77 @@ DECLINES.update({
     "store.data-migration.redacted-not-considered": TwoPhase(lambda mp: _dm_store(marked=True),
                                                              lambda run: _dm_assert(run, "migrated", op_id="dm-run")),
     "store.data-migration.read-refused": lambda mp: _dm_read_refused(),
+})
+SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
+
+
+# specs/0044 §4i (T7-2): undo_restoration's nine sites. SETUP restores `dm-p` through the real operation and plants
+# the state each site needs (outside the window); RUN makes the one undo call that reaches the site's condition.
+def _undo_store(mp, plant=None, *, revoked=False, patch_free=False):
+    from veracium.store.sqlite import SqliteStore as _SS
+    run = _dm_store(revoked=revoked)
+    _dm_assert(run, "migrated", op_id="dm-run")
+    s = _SS(run.path)
+    if plant:
+        plant(s)
+        s._conn.commit()
+    if patch_free:                                   # the C8 race: the registry reads FREE although a row is held
+        mp.setattr(_SS, "_registry_held", lambda self, *a, **k: None)
+    return s
+
+
+def _undo_refused(s, reason, edge="dm-p", cid="u-1"):
+    from veracium.store.base import UndoRefused as _UR
+    try:
+        with pytest.raises(_UR) as ei:
+            s.undo_restoration(U, edge, correlation_id=cid)
+        assert ei.value.reason == reason, ei.value.reason
+    finally:
+        s.close()
+
+
+def _undo_raises(s, edge="dm-p", cid="u-1"):
+    try:
+        _raises(ValueError, s.undo_restoration, U, edge, correlation_id=cid)
+    finally:
+        s.close()
+
+
+_SECOND_ROW = ("INSERT INTO migration_outcome(plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, "
+               "successor_evidence, applicable, origin, outcome_uid) VALUES('other-plan', ?, 'dm-p', 'restored', "
+               "'2026-01-01T00:00:00+00:00', 'superseded', 'none', 1, 'imported', 'uid-other')")
+_HELD_UNDO = ("INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, result_ref, "
+              "written_at) VALUES(?, 'u-1', 'undo', 'dm-p', 'd', 'r', '2026-10-16T00:00:00+00:00')")
+
+
+def _undone_under(cid):
+    def plant(s):
+        s.undo_restoration(U, "dm-p", correlation_id=cid)
+    return plant
+
+
+DECLINES.update({
+    "store.undo.no-outcome": TwoPhase(lambda mp: _undo_store(mp), lambda s: _undo_refused(s, "no-outcome", edge="dm-q")),
+    "store.undo.not-restored": TwoPhase(lambda mp: _undo_store(mp, revoked=True),
+                                        lambda s: _undo_refused(s, "not-restored")),
+    "store.undo.testimony": TwoPhase(lambda mp: _undo_store(mp, lambda s: s._conn.execute(
+        "UPDATE migration_outcome SET origin='imported' WHERE edge_id='dm-p'")), lambda s: _undo_refused(s, "testimony")),
+    "store.undo.not-applicable": TwoPhase(lambda mp: _undo_store(mp, lambda s: s._conn.execute(
+        "UPDATE migration_outcome SET applicable=0 WHERE edge_id='dm-p'")), lambda s: _undo_refused(s, "not-applicable")),
+    "store.undo.edge-unavailable": TwoPhase(lambda mp: _undo_store(mp, lambda s: s._conn.execute(
+        "DELETE FROM edges WHERE id='dm-p'")), lambda s: _undo_refused(s, "edge-unavailable")),
+    "store.undo.ambiguous-outcome": TwoPhase(lambda mp: _undo_store(mp, lambda s: s._conn.execute(_SECOND_ROW, (U,))),
+                                             lambda s: _undo_refused(s, "ambiguous-outcome")),
+    # a completed undo under u-1, then u-1 again for an edge with no outcome: the digest differs (a different edge)
+    "store.undo.request-digest": TwoPhase(lambda mp: _undo_store(mp, _undone_under("u-1")),
+                                          lambda s: _undo_raises(s, edge="dm-q")),
+    # a completed undo whose outcome_uid no longer matches the registry's result_ref (planted)
+    "store.undo.result-missing": TwoPhase(lambda mp: _undo_store(mp, lambda s: (_undone_under("u-1")(s), s._conn.execute(
+        "UPDATE migration_outcome SET outcome_uid='moved' WHERE edge_id='dm-p'"))), lambda s: _undo_raises(s)),
+    # C8: a held row the (patched) front lookup cannot see, so the INSERT meets the UNIQUE and the fallback, through
+    # the same patched lookup, finds nothing either → the correlation conflict
+    "store.undo.correlation": TwoPhase(lambda mp: _undo_store(mp, lambda s: s._conn.execute(_HELD_UNDO, (U,)),
+                                                              patch_free=True), lambda s: _undo_raises(s)),
 })
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
 

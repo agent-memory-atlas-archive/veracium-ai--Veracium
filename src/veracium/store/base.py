@@ -186,6 +186,22 @@ class CutoffDomainError(ValueError):
     refusal; `None` means unbounded."""
 
 
+UNDO_REFUSAL_REASONS = ("no-outcome", "not-restored", "testimony", "not-applicable", "edge-unavailable",
+                        "ambiguous-outcome")
+
+
+class UndoRefused(ValueError):
+    """specs/0044 §4i — why `undo_restoration` refused, as a CLOSED `reason` (UNDO_REFUSAL_REASONS), so a caller and
+    a test branch on the cell, never on the message. A reason outside the set refuses at construction."""
+
+    def __init__(self, reason: str, user_id: str, edge_id: str, detail: str):
+        if reason not in UNDO_REFUSAL_REASONS:
+            raise ValueError(f"UndoRefused: reason {reason!r} is outside {UNDO_REFUSAL_REASONS}")
+        self.reason, self.user_id, self.edge_id = reason, user_id, edge_id
+        super().__init__(f"undo refused ({reason}): edge {edge_id!r} of user {user_id!r} — {detail} "
+                         f"(specs/0044 §4i)")
+
+
 class RequestRedacted(ValueError):
     """specs/0008 v7 §6g — the TERMINAL outcome of a retry under a correlation id whose registry row a redaction
     has marked: the verifier is gone, so the original is not replayed, and the id stays held, so no new act is
@@ -290,6 +306,13 @@ class Store(ABC):
         newest first. Read-only; the source `specs/0011` re-evaluates. Not abstract."""
         raise NotImplementedError(
             f"{type(self).__name__} does not implement refusals")
+
+    @store_mutator
+    def undo_restoration(self, user_id: str, edge_id: str, *, correlation_id: str) -> dict:
+        """specs/0044 §4i: reverse ONE restoration of the 0018 §4i data migration, per field, under the write lock.
+        Not abstract; a backend without the operation refuses."""
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement undo_restoration")
 
     def refusal_inventory_ids(self, user_id: str) -> frozenset:
         """specs/0044 §4d/§4f: the ids of the user's refusals in the v16 schema step's refusal inventory — recorded

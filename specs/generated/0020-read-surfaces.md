@@ -5,7 +5,7 @@
 
 # specs/0020 §4f — public read-surface manifest
 
-**35 public surfaces** — every public method of `Memory` plus every public
+**36 public surfaces** — every public method of `Memory` plus every public
 `*_impl` in `mcp_server` — enumerated by **parsing the AST**, not by reading
 the spec's prose inventory. **5 of them return record objects.**
 
@@ -59,6 +59,7 @@ and 0020's claim is about the surfaces named here.
 | `Memory.report_error` | no | none | bool | Diagnostics channel, consent-gated; no record set. |
 | `Memory.self_check` | no | none | content-free pass/fail counters | Runs against a THROWAWAY store; touches neither this store nor any principal. |
 | `Memory.telemetry_preview` | no | none | the aggregate a flush would send | Content-free; no records. |
+| `Memory.undo_restoration` | no | none | `{undone, undone_at, correlation_id, replayed, already_undone}` | WRITE path (host-only, never MCP; specs/0044 §4i): retires one restored value again; ids and a time leave, no record content. |
 | `mcp_server.answer_impl` | no | `principal=` **threaded** | the answer string over MCP | Passes the host's principal through to `Memory.answer`; no new MCP field (as above). |
 | `mcp_server.describe_procedures_impl` | **yes** | `principal=` **threaded** | `DescribeResult` as JSON | Passes `principal` through to `Memory.describe_procedures` (the served tool binds the deployment's user and no principal, as `recall` does); no new MCP field. |
 | `mcp_server.maintain_impl` | no | none | the maintenance report | MAINTAIN path over MCP; policy is read-side only. |
