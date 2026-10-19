@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 0612fc0
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 891ff37
+# RE-PINNED 2026-10-19 0044 T10a-1's forget() carriers (over T10a-1, 0047's reply store and verb) landed in 891ff375f994caa935c1f35d7b53c153600927a2: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-19 0044 T10a-1 (0047's reply store and verb) landed in 0612fc0caa169bc3f354c7c4b8519e5f81048a37: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-18 0044 T9-1 (0045's write half) landed in 367f761c2d74fa1f344efaeea93ced0c69444ea4: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-18 0044 T8-1 (0003 §4c-iii, the contested group order) landed in a0c9f8422464bf3c916c71e2f51c67081bc397e3: bodies byte-identical; the pin moves to the commit that changed src/
