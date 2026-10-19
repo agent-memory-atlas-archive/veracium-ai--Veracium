@@ -317,8 +317,9 @@ RULINGS = {
         "into any table."),
     "ContributionDraft": (True,
         "CARRIER. Subset failed on `contributor_id` alone, which is INSERTed "
-        "into the column `contributor_ref` -- sqlite.py:1236 documents the "
-        "rename in its own comment. The draft's content reaches disk."),
+        "into the column `contributor_ref` -- SqliteStore._write_contribution "
+        "documents the rename in its own comment. The draft's content reaches "
+        "disk."),
     "ContestedGroup": (False,
         "NON-CARRIER as a storage SITE. `exposed`/`linkage`/`prior_edge_ids` "
         "are not columns: it is a view ASSEMBLED from rows, never written. Its "

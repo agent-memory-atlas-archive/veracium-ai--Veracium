@@ -624,6 +624,7 @@ def test_r22_erasure_removes_the_users_replies_and_registry_rows_and_never_reuse
     _ok(mem.reply, U, e, kind="challenge", text="x", correlation_id="k1")
     _ok(mem.reply, U2, o, kind="challenge", text="y", correlation_id="k1")
     top = _q(mem, "SELECT MAX(act_seq) FROM replies")[0][0]
+    assert isinstance(top, int), top
     assert _ok(mem.store.forget_user, U)["replies"] == 1
     assert _rows(mem) == [] and _registry(mem) == [] and len(_rows(mem, U2)) == 1 and len(_registry(mem, U2)) == 1
     e2 = _fact(mem)
@@ -871,3 +872,65 @@ def test_differential_against_reference_model_ii(tmp_path, seed):
         for c in ("k1", "k2", "k3"):
             held = s.registry.get((U, c))
             assert _held_verb(mem, c) == (held[0] if held else None), (op, c)
+
+
+# ============================================================================================ research's T10a stage 2
+# Ready cells (research, T10a stage 2 at ea42346), written to be appended to tests/test_0047_t10a_reply.py: they use
+# its helpers. Each kills a research mutant that survived the 35 cells, and passes at ea42346.
+def test_rs2_1_doctor_reports_each_broken_conjunct_of_a_resolve_alone(tmp_path):
+    """Q14, one conjunct at a time: a resolve naming a CHALLENGE of another edge, and a resolve naming a CONTEXT reply of
+    its own edge, are each reported. The R5 cell's `r-badres` names a context reply of another edge, which breaks both
+    conjuncts at once, so dropping either one alone survived. Mutants: drop the same-edge conjunct; drop the kind
+    conjunct."""
+    mem = _mem(tmp_path)
+    e, f = _fact(mem), _fact(mem, "works_at", "Acme")
+    cf = _ok(mem.reply, U, f, kind="challenge", text="not Acme")["reply_id"]
+    ctx = _ok(mem.reply, U, e, kind="context", text="a visit")["reply_id"]
+    ins = ("INSERT INTO replies(id, user_id, edge_id, kind, target, text, actor, correlation_id, request_digest, "
+           "origin, written_at) VALUES(?,?,?,?,?,?,'user',?,'d','local','2026-10-19T00:00:00+00:00')")
+    mem.store._conn.execute(ins, ("r-res-other-edge", U, e, "resolve", cf, None, "k-a"))
+    mem.store._conn.execute(ins, ("r-res-context", U, e, "resolve", ctx, None, "k-b"))
+    mem.store._conn.commit()
+    found = {f_.message.split(" ", 1)[1]: f_.ids for f_ in doctor.diagnose(str(tmp_path / "m.db")).findings
+             if f_.check == "refs" and f_.level == "error" and "resolve" in f_.message}
+    assert found == {"resolve reply(ies) naming no challenge of their own edge (specs/0047 §4b)":
+                     ["r-res-context", "r-res-other-edge"]}, found
+
+
+@pytest.mark.parametrize("cid", ["#act:s1|u1|r-1", "has space", "x" * 65, "", "k\x00"])
+def test_rs2_2_memory_reply_refuses_a_correlation_id_outside_the_caller_grammar(tmp_path, cid):
+    """The caller grammar (`[A-Za-z0-9._:-]{1,64}`) is what keeps a caller's id out of the internal `#act:` key space an
+    imported act uses (0047 R2-02, T11b); the store takes any string, so `Memory.reply` is the only check. Refused with
+    ValueError before anything is written. Mutant: Memory.reply skips the grammar."""
+    mem = _mem(tmp_path)
+    e = _fact(mem)
+    _refuses(ValueError, mem.reply, U, e, kind="challenge", text="wrong", correlation_id=cid)
+    assert _rows(mem) == [] and _registry(mem) == []
+
+
+def test_rs2_3_a_new_reply_bumps_the_store_version_once_and_a_replay_or_refusal_does_not(tmp_path):
+    """A reply is a write the read half must see (T10b's wiki eviction keys on the store version): a new reply moves
+    `store_version` by exactly one; its replay and a refusal move it by none. Mutant: drop the bump."""
+    mem = _mem(tmp_path)
+    e = _fact(mem)
+    v0 = mem.store.store_version(U)
+    _ok(mem.reply, U, e, kind="challenge", text="wrong", correlation_id="k1")
+    v1 = mem.store.store_version(U)
+    _ok(mem.reply, U, e, kind="challenge", text="wrong", correlation_id="k1")
+    _reason(mem.reply, U, e, kind="resolve", target="r-nowhere")
+    assert (v1 - v0, mem.store.store_version(U) - v1) == (1, 0)
+
+
+def test_rs2_4_every_local_reply_has_an_integer_position_strictly_increasing(tmp_path):
+    """0008 §6f: a local act's position is allocated from the never-reset counter. The R22 cell compares positions with
+    `>`, so a NULL position killed it by TypeError, not by assertion. Every kind gets an int, in write order. Mutant:
+    allocate no position."""
+    mem = _mem(tmp_path)
+    e = _fact(mem)
+    c = _ok(mem.reply, U, e, kind="challenge", text="wrong")["reply_id"]
+    _ok(mem.reply, U, e, kind="context", text="a visit")
+    _ok(mem.reply, U, e, kind="withdrawn-consent", text="stop")
+    _ok(mem.reply, U, e, kind="resolve", target=c)
+    seqs = [r[7] for r in _rows(mem)]
+    assert len(seqs) == 4 and all(isinstance(s, int) for s in seqs), seqs
+    assert seqs == sorted(set(seqs)), seqs
