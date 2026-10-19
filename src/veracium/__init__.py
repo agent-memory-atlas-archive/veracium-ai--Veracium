@@ -587,6 +587,15 @@ class Memory:
         the minimum of the two: nothing extracted from such an event is ever
         assertable, closing the system-event laundering bypass.
 
+        ONE SPEAKER PER EVENT. A conversation holding both the user's turns
+        and an assistant's is not one user event: pass each turn as its own
+        event — the user's under `author=USER`, the assistant's under
+        `author=ASSISTANT` — or pass only the user's turns. Ingest does not
+        separate speakers inside an event, so a whole transcript passed under
+        `author=USER` can store the assistant's own first-person statements
+        ("I live in Denver") as the user's facts and assert them; turns with
+        no speaker labels are the likeliest case.
+
         `source_id` (specs/0006) optionally records WHICH source produced this
         event — an opaque, host-chosen id (a mailbox, a connector instance). It
         is DIAGNOSTIC: it groups records for inspection/dedup/attribution but

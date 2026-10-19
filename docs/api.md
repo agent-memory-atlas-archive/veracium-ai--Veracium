@@ -33,6 +33,12 @@ claims.
 - `author` — **the trust-critical input.** `EvidenceAuthor.USER` for the user's own
   messages and sent mail; `EvidenceAuthor.THIRD_PARTY` for received mail / external
   documents (their claims are quarantined); `EvidenceAuthor.SYSTEM` for derived content.
+  **One speaker per event.** Authorship is per event, and ingest does not separate
+  speakers inside one: pass a conversation turn by turn — the user's turns under
+  `EvidenceAuthor.USER`, the assistant's under `EvidenceAuthor.ASSISTANT` — or pass
+  only the user's turns. A whole transcript passed under `author=USER` can store the
+  assistant's own first-person statements ("I live in Denver") as the user's facts
+  and assert them; turns with no speaker labels are the likeliest case.
 - `context` — **the host's positive ingress declaration** (specs/0011 §4d).
   `EvidenceContext.direct()` attests first-party capture;
   `EvidenceContext.derived(X)` declares the content derives from class X.

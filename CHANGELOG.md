@@ -1098,6 +1098,14 @@
   the superseded literal text kept in the suite as the mutant the property must fail
   on. Accepted spec 0018 amended in place (the diagnostic is derived; the rider's
   ladder sentences are historical).
+- **Documentation: one speaker per event.** `remember()`'s docstring, the MCP `remember` tool's description and
+  `docs/api.md` now say to pass a conversation turn by turn: the user's turns under `author=USER`, the assistant's
+  under `author=ASSISTANT`, or only the user's turns. Ingest does not separate speakers inside one event, so a whole
+  transcript passed under `author=USER` can store the assistant's first-person statements as the user's facts and
+  assert them. Measured 2026-10-19 on 12 hand-written two-speaker transcripts, one run each (a demonstration, not a
+  rate): passed whole, an assistant-only value was asserted as the user's in 4 of 12 (6 of 18 planted values; two of
+  the six recorded as `attested`), 3 of the 4 with no speaker labels; passed turn by turn, none of the 18. No
+  behaviour changes.
 
 ## 0.26.1 — 2026-09-18
 
