@@ -4757,13 +4757,13 @@
   "line": 1700,
   "statement": "raise"
  },
- "__init__.py:Memory.policy_receipts:2299:FILTER_RETURN": {
+ "__init__.py:Memory.policy_receipts:2300:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "__init__.py:Memory.policy_receipts:FILTER_RETURN:1",
-  "line": 2299,
+  "line": 2300,
   "statement": "return [receipt_from_row(r) for r in self.store.policy_receipts(user_id, limit=limit)]"
  },
  "__init__.py:Memory.recall:928:RAISE": {

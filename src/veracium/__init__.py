@@ -2234,7 +2234,8 @@ class Memory:
     def forget(self, user_id: str) -> dict:
         """Irreversibly erase everything stored for `user_id`: all edges
         (superseded history and quarantined claims included), all episodes,
-        the wiki cache, and counters. Returns {"edges": n, "episodes": n}.
+        the wiki cache, and counters, with the user's confirmations and replies. Returns
+        {"edges": n, "episodes": n, "confirmations": n, "replies": n}.
 
         This is the data-subject right ("right to be forgotten"), deliberately
         distinct from lifecycle: `maintain()` never deletes, `forget()` never

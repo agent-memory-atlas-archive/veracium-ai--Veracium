@@ -71,7 +71,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("__init__.py", 928): "control-flow", ("__init__.py", 1537): "control-flow", ("__init__.py", 1678): "control-flow",
     ("__init__.py", 1700): "control-flow", ("__init__.py", 1749): "control-flow", ("__init__.py", 1756): "control-flow",
     ("__init__.py", 1767): "control-flow", ("__init__.py", 1774): "control-flow", ("__init__.py", 1803): "control-flow",
-    ("__init__.py", 1829): "control-flow", ("__init__.py", 2212): "internal-invariant", ("__init__.py", 2299): "control-flow",
+    ("__init__.py", 1829): "control-flow", ("__init__.py", 2212): "internal-invariant", ("__init__.py", 2300): "control-flow",
     ("__init__.py", 297): "internal-invariant", ("__init__.py", 304): "internal-invariant",
     ("__init__.py", 1005): "internal-invariant", ("__init__.py", 1009): "internal-invariant", ("__init__.py", 1013): "internal-invariant",
     ("__init__.py", 1020): "internal-invariant", ("__init__.py", 1022): "internal-invariant",
