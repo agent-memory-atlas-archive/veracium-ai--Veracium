@@ -49,8 +49,8 @@ def _dates_in(text: str) -> list[_date]:
 def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
              token_budget: Optional[int] = None,
              est: Callable[[str], int] = lambda s: max(1, len(s) // 4),
-             visible: Optional[Callable[[list], list]] = None
-             ) -> tuple[str, list[Edge], list[Episode], bool]:
+             visible: Optional[Callable[[list], list]] = None,
+             snap=None) -> tuple[str, list[Edge], list[Episode], bool]:
     """Build the briefing. Returns (context, edges, episodes, truncated).
 
     `visible` (specs/0020 §4f) is the PRINCIPAL LENS: when a principal was
@@ -112,7 +112,13 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
     _edges, _n_procedural = exclude_procedural(_edges)
     if visible is not None:
         _edges = visible(_edges)
-    surfaced, _c_info = collapse_for_render(_edges)
+    # specs/0047 §4d: proactive is an ASSERTION surface — a challenged fact and its active same-value twin (F7) are
+    # withheld, counted before any budget selection; the call's one snapshot (the caller's, or read here)
+    if snap is None:
+        snap = store.challenge_snapshot(user_id)
+    _n_withheld = sum(1 for e in _edges if e.assertable and snap.withheld(e))
+    _edges = [e for e in _edges if not snap.withheld(e)]
+    surfaced, _c_info = collapse_for_render(_edges, snap)
     # specs/0019 §4c (RULED, internal review): a flagged fact is NEVER
     # proactively surfaced — proactive would volunteer an unprompted alarm
     # whose reliability is, structurally, the flag's own. The fact stays
@@ -350,6 +356,9 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
     parts = [header + "\n" + "\n".join(admitted[header])
              for header, _ in sections if admitted[header]]
     context = "\n\n".join(parts).strip() or "(nothing needs attention)"
+    if _n_withheld:
+        from .challenge import withheld_line
+        context += "\n" + withheld_line(_n_withheld)
     if truncated:
         from .budgets import proactive_report_line         # bounded-width (R9-2); the
         context += "\n" + proactive_report_line(           # grammar lives in budgets

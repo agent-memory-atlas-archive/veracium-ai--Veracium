@@ -223,6 +223,10 @@ def _reply_shape_problem(kind: str, text, target) -> Optional[str]:
             return "a resolve names the challenge it withdraws (target)"
         if text is not None:
             return "a resolve carries no text"
+        try:
+            target.encode("utf-8")
+        except UnicodeEncodeError:              # research's T10a S2-3: F1's check, on the target too
+            return "the target does not encode as UTF-8 (a lone surrogate)"
         return None
     if target is not None:
         return f"only a resolve names a target ({kind!r} does not)"
@@ -1085,6 +1089,9 @@ class SqliteStore(Store):
                     "INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
                     "result_ref, written_at) VALUES(?,?,'reply',?,?,?,?)",
                     (user_id, correlation_id, edge_id, request_digest, rid, written_at.isoformat()))
+                # specs/0047 §4d (INV-R18): a reply write evicts the user's compiled wiki in its own transaction, so
+                # no cached body compiled before it is served after it; the bump fences an in-flight compile
+                self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))
                 self._bump(user_id)
             except sqlite3.IntegrityError:
                 # C8's shape (confirm's and undo's): roll back and answer through the SAME registry lookup. Under the
@@ -1144,6 +1151,36 @@ class SqliteStore(Store):
                 f"SELECT edge_id FROM confirmations WHERE user_id=? AND edge_id IN ({q}) "
                 f"UNION SELECT edge_id FROM replies WHERE user_id=? AND edge_id IN ({q})",
                 (user_id, *ids, user_id, *ids)))
+
+    def challenge_snapshot(self, user_id: str):
+        """specs/0047 §4d's ONE snapshot, in one read window: every open challenge of the user (§4b's predicate) with its
+        record, ordered `(written_at, id)`; which of those records are redacted, by the attestation record (0041
+        §4b-iii, never the marker bytes: a redacted record twins nothing); every confirmation's origin (0045 §4c's
+        g(e)); and the ids of every edge carrying an act (§4e's collapse row). A read surface reads it once per call."""
+        from ..challenge import ChallengeSnapshot, ChallengedRecord, OpenChallenge
+        from ..graph import _value_key
+        with self.read_window(user_id):
+            rows = self._conn.execute(
+                "SELECT c.edge_id, c.id, c.text, c.written_at, e.json FROM replies c JOIN edges e "
+                "ON e.user_id=c.user_id AND e.id=c.edge_id WHERE c.user_id=? AND c.kind='challenge' AND NOT EXISTS ("
+                "SELECT 1 FROM replies r WHERE r.user_id=c.user_id AND r.kind='resolve' AND r.target=c.id) "
+                "ORDER BY c.edge_id, c.written_at, c.id", (user_id,)).fetchall()
+            redacted = self.redacted_targets(user_id, "edge")
+            origins: dict = {}
+            for eid, origin in self._conn.execute(
+                    "SELECT edge_id, origin FROM confirmations WHERE user_id=? ORDER BY edge_id, id", (user_id,)):
+                origins.setdefault(eid, []).append(origin)
+            acted = frozenset(e for (e,) in self._conn.execute(
+                "SELECT edge_id FROM confirmations WHERE user_id=? UNION SELECT edge_id FROM replies WHERE user_id=?",
+                (user_id, user_id)))
+        by_edge: dict = {}
+        for eid, cid, text, wat, ejson in rows:
+            by_edge.setdefault(eid, (ejson, []))[1].append(OpenChallenge(cid, text, datetime.fromisoformat(wat)))
+        challenged = {}
+        for eid, (ejson, chs) in by_edge.items():
+            e = Edge.model_validate_json(ejson)
+            challenged[eid] = ChallengedRecord(e, _value_key(e.object), tuple(chs), eid in redacted)
+        return ChallengeSnapshot(challenged, {k: tuple(v) for k, v in origins.items()}, acted)
 
     def _absorbs_an_act(self, user_id: str, plan) -> bool:
         """specs/0047 §4e (INV-R17), the store's verifier: does this plan retire as `absorbed_duplicate` a prior that

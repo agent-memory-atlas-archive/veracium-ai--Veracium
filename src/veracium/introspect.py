@@ -112,8 +112,12 @@ def report(store, user_id: str, *, mode: str = "summary",
     }
     if mode == "categories":
         cats: dict[str, list[str]] = {}
+        snap = store.challenge_snapshot(user_id)      # specs/0047 §4d: an INSPECTION display carries the unit
         for e in sorted(active, key=lambda e: (e.relation, e.valid_from)):
             line = render_edges([e])
+            unit = snap.inspect(e).unit
+            if line and unit:
+                line = f"{line} {unit}"
             if line:
                 cats.setdefault(e.relation, []).append(line)
         out["categories"] = cats

@@ -48,7 +48,7 @@ DISPOSITIONS = {
     "clean — `specs/0044` §4i (T7-2): host-only; eligibility is the outcome row plus its `applicable` episode flag, PROOF origins only; the restore goes through the invalidate method, so 0029's choke point journals it and the lifetime hook ends the episode; no other field is touched",
     "`test_undo_restores_the_retirement_per_field_and_nothing_else` · `test_revoke_then_lift_leaves_the_edge_active_and_the_episode_ended`"),
  ("src/veracium/__init__.py", "Memory.reply", "add_reply", "38702764f859"):
-   (W, "a `replies` row (the subject's act) and its `reply` registry row — ONE write transaction; no edge field, no episode, no journal event", "act",
+   (W, "a `replies` row (the subject's act) and its `reply` registry row, and the user's compiled wiki dropped (0047 INV-R18) — ONE write transaction; no edge field, no episode, no journal event", "act",
     "clean — `specs/0047` §4a–§4b (T10a): host-only; a reply never mutates its edge (INV-R1), is append-only (INV-R2) and is refused on an absent, redacted or procedural edge; the registry is read before the edge (INV-Q2)",
     "`test_r1_a_reply_of_every_kind_mutates_nothing_about_its_edge` · `test_r2_replies_are_append_only_by_construction`"),
  ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "c581fd572ad4"):

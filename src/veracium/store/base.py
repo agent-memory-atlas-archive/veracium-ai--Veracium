@@ -354,6 +354,12 @@ class Store(ABC):
         that cannot tell would let an absorption strand a person's act (fail closed)."""
         raise NotImplementedError(f"{type(self).__name__} does not implement acted_edge_ids")
 
+    def challenge_snapshot(self, user_id: str):
+        """specs/0047 §4d: the user's open challenges, confirmation origins and acted edge ids, read in ONE snapshot
+        (`veracium.challenge.ChallengeSnapshot`). Not abstract, and it REFUSES rather than answering "none": a
+        backend that cannot say whether a fact is disputed cannot assert it (fail closed, as `acted_edge_ids`)."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement challenge_snapshot")
+
     def refusal_inventory_ids(self, user_id: str) -> frozenset:
         """specs/0044 §4d/§4f: the ids of the user's refusals in the v16 schema step's refusal inventory — recorded
         while their relation was `single`, so their protection is retained. Read-only. Not abstract: a caller reads a

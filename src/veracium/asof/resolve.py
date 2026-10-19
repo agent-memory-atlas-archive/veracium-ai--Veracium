@@ -157,9 +157,11 @@ class Resolution:
 
 @dataclass(frozen=True)
 class AsOfFact:
-    """One returned record: the (scope-shaped) edge and its resolution."""
+    """One returned record: the (scope-shaped) edge and its resolution, and (specs/0047 §4d) its inspection record
+    read from the CURRENT acts, whatever T (INV-R20)."""
     edge: Edge
     resolution: Resolution
+    inspection: Optional["EdgeInspection"] = None
 
 
 @dataclass(frozen=True)
@@ -266,6 +268,8 @@ def resolve_as_of(store, user_id: str, T, *, principal=None, policy=None,
     facts = []
     # §4b-o — ONE SNAPSHOT: every read below joins this window.
     with store.read_window(user_id):
+        # specs/0047 §4d / INV-R20: the CURRENT acts, in the same snapshot as the facts; never filtered by T
+        snap = store.challenge_snapshot(user_id)
         rows = store.edges(user_id, active_only=False, include_quarantined=True)
         # §3b — scope BEFORE historical eligibility: the candidate set is the
         # principal's visible set at every T, so T is not a capability.
@@ -280,7 +284,7 @@ def resolve_as_of(store, user_id: str, T, *, principal=None, policy=None,
             if r is None or r.outcome == NOT_RETURNABLE:
                 continue
             shaped = e if view is None else view.shape(e, asserted=True)
-            facts.append(AsOfFact(shaped, r))
+            facts.append(AsOfFact(shaped, r, snap.inspect(shaped, visible=(None if view is None else visible))))
     facts.sort(key=lambda f: (as_utc(f.edge.valid_from), f.edge.id))
     return AsOfAnswer(T=T, now=now, facts=tuple(facts))
 

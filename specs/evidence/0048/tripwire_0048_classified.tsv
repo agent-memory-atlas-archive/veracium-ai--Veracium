@@ -319,7 +319,9 @@ sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	n = con
 sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	conn.execute("INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
 sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
 copy-other-fields	src/veracium/store/sqlite.py	model_copy	return self._reply_from_row(row).model_copy(update={"replayed": True})
+copy-other-fields	src/veracium/__init__.py	model_copy	contested_render = [g.model_copy(update={"exposed": [m for m in g.exposed if not snap.withheld(m)]})
 edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (edge_id, user_id)).fetchone()
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	"SELECT c.edge_id, c.id, c.text, c.written_at, e.json FROM replies c JOIN edges e "
 sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	f"INSERT INTO replies({self._REPLY_COLS}, origin, act_seq) VALUES(?,?,?,?,?,?,?,?,?,?,'local',?)",
 sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	n = self._conn.execute("UPDATE replies SET text=? WHERE user_id=? AND edge_id=? AND text IS NOT NULL",
 sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	n = self._conn.execute("UPDATE replies SET request_digest=? WHERE user_id=? AND edge_id=?",

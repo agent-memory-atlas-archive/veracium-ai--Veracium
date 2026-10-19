@@ -126,6 +126,15 @@ def _live_refusal_contention_edge_ids(store, user_id: str,
 
 
 _SITE_GROUNDED_INPUTS = declare_site("compile.grounded-inputs")   # specs/0042 (declined= is explicit)
+_SITE_FENCE_DISPUTED = declare_site("compile.fence.disputed", declines=True)   # specs/0047 INV-R18
+
+
+def _drew_a_challenged_fact(store, user_id: str, edges) -> bool:
+    """specs/0047 INV-R18, the in-flight fence's challenge branch: did this compile draw on a fact a NOW-read challenge
+    snapshot withholds (a challenge, or a twin of one, committed since the inputs were read)? True withholds the body."""
+    now = store.challenge_snapshot(user_id)
+    with _SITE_FENCE_DISPUTED.consult():
+        return _SITE_FENCE_DISPUTED.fire(sum(1 for e in edges if now.withheld(e)) > 0, "withhold-body")
 
 
 def _grounded_inputs(store, user_id: str, relations: dict[str, Relation]):
@@ -142,6 +151,10 @@ def _grounded_inputs(store, user_id: str, relations: dict[str, Relation]):
     collapse. That is the claim, and only that: since specs/0044 the non-refused values of a
     `multi` relation reach the compiler by design (§4c — several can be current at once)."""
     with _SITE_GROUNDED_INPUTS.consult():
+        # specs/0047 §4d (INV-R18): a challenged fact — and, by the owner's F7 ruling, its active same-value twin —
+        # is EXCLUDED from the compiler's input: a free-text compiler cannot be made to carry the unit. One snapshot,
+        # read before the edges
+        snap = store.challenge_snapshot(user_id)
         contested = _live_refusal_contention_edge_ids(store, user_id, relations)
         # specs/0019 §4c (F4 — reviewer-executed): the compiler stores an LLM's
         # free-text output, and a code-owned marker cannot survive a re-rendering
@@ -161,10 +174,11 @@ def _grounded_inputs(store, user_id: str, relations: dict[str, Relation]):
         redacted_edges = store.redacted_targets(user_id, "edge")
         redacted_episodes = store.redacted_targets(user_id, "episode")
         edges = [e for e in _in_scope
-                 if not e.use_only and e.id not in contested and not e.ungrounded and e.id not in redacted_edges]
+                 if not e.use_only and e.id not in contested and not e.ungrounded and e.id not in redacted_edges
+                 and not snap.withheld(e)]
         # specs/0012 I8: the compiler INPUT collapses strictly-redundant duplicates —
         # N restatements feed the wiki once; the store keeps every edge.
-        edges, _since = collapse_for_render(edges)
+        edges, _since = collapse_for_render(edges, snap)
         # 0023 §4a-iv (F1): the SHARED predicate, not an open-coded copy of the
         # condition. assertable subsumes third-party influence AND the disclosure
         # ingest now writes AND 0022's retirement axis — the wiki input is the
@@ -289,6 +303,14 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
         # drawn from an attested record, and never a loop. A plain concurrent write keeps the behaviour below.
         drew_edges = {e.id for e in edges} & store.redacted_targets(user_id, "edge")
         drew_episodes = {e.id for e in episodes} & store.redacted_targets(user_id, "episode")
+        # specs/0047 §4d (INV-R18): the fence ALSO withholds a body compiled before a challenge of a fact it drew on
+        drew_challenged = _drew_a_challenged_fact(store, user_id, edges)
+        if drew_challenged and not (drew_edges or drew_episodes):
+            if _retry:
+                return _budgets.DISPUTED_DURING_COMPILE_NOTICE
+            return compile_wiki(store, llm, user_id, relations, budget_tokens=budget_tokens,
+                                wiki_input_budget=wiki_input_budget, variant_cap=variant_cap, item_cap=item_cap,
+                                _retry=True)
         if drew_edges or drew_episodes:
             if _retry:
                 _log.info("wiki compile for %r withheld: a record it drew on was redacted during the compile "

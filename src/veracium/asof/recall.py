@@ -29,16 +29,23 @@ def recall_at(mem, user_id: str, query: str, token_budget: int, *, as_of,
     answer = resolve_as_of(mem.store, user_id, as_of, principal=principal,
                            policy=mem.scope_policy, view=view)
     by_res = {f.edge.id: f.resolution for f in answer.facts}
+    by_insp = {f.edge.id: f.inspection for f in answer.facts}
     candidates = [f.edge for f in answer.facts]
+
+    def challenged(e) -> bool:
+        # specs/0047 INV-R20: a fact challenged NOW (or, F7, a twin of one) is withheld as of any T
+        i = by_insp.get(e.id)
+        return i is not None and not i.challenge_clear
 
     def grounded(e) -> bool:
         with _SITE_RECALL_GROUNDED.consult():
             r = by_res.get(e.id)
-            return _SITE_RECALL_GROUNDED.fire(r is not None and r.outcome in GROUNDED_OUTCOMES, "withhold")
+            return _SITE_RECALL_GROUNDED.fire(r is not None and r.outcome in GROUNDED_OUTCOMES
+                                              and not challenged(e), "withhold")
 
     def claim(e) -> bool:
         with _SITE_RECALL_CLAIM.consult():
-            return _SITE_RECALL_CLAIM.fire(not grounded(e), "withhold")
+            return _SITE_RECALL_CLAIM.fire(not grounded(e) and not challenged(e), "withhold")
 
     scored, relevant_ids, by_id = _lexical_scored(
         mem.store, user_id, query, view=view, candidates=candidates)
@@ -62,6 +69,10 @@ def recall_at(mem, user_id: str, query: str, token_budget: int, *, as_of,
         assertable=grounded, claims=claim, render=render_fn_for(answer))
     grounded_text = (("## RELEVANT DETAIL\n" + detail) if detail
                      else f"(nothing held as of {answer.T.isoformat()} for this user)")
+    n_withheld = sum(1 for e in edges if challenged(e))
+    if n_withheld:
+        from ..challenge import withheld_line
+        grounded_text += "\n\n" + withheld_line(n_withheld)
     context = grounded_text
     if unverified:
         context += ("\n\n## UNVERIFIED THIRD-PARTY CLAIMS (never assert as fact)\n"
@@ -77,6 +88,7 @@ def recall_at(mem, user_id: str, query: str, token_budget: int, *, as_of,
                   tokens_estimated=mem._est_tokens(context), truncated=truncated,
                   recalled_edges={k: v for k, v in sem_meta.items() if k in final_ids},
                   semantic_status=sem_status,
+                  inspection={e.id: by_insp[e.id] for e in edges if by_insp.get(e.id) is not None},
                   as_of=AsOfAnswer(T=answer.T, now=answer.now,
                                    facts=tuple(f for f in answer.facts
                                                if f.edge.id in final_ids)))

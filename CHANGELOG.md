@@ -17,15 +17,45 @@
   records its own actor. `forget_user()` erases a user's replies and returns their count beside the confirmations;
   `veracium doctor` reports a reply naming a fact that does not exist for its user, and a `resolve` naming no
   challenge of its own fact. A new reply writes one audit line naming its kind only.
-  - **Not yet:** nothing in this entry withholds a challenged fact from recall or shows replies in `why`, and an
-    export does not carry replies; the read half and the portable half of the same feature land before this is
-    released.
+  - **Not yet:** an export does not carry replies; the portable half of the same feature lands before this is
+    released. The read half is the next entry.
   - **Schema:** the unreleased store schema v16 gains a `replies` table. 0008 §2a says `replies` is created "whole by
     0047's own step"; v16 is that step, amended in place because no release has carried it. A store a development
     checkout wrote at an earlier v16 shape is refused as unaccepted, as at the arity tables' addition.
   - **Who should act:** a host that wants to offer its users a right of reply. A custom `Store` backend must
     implement `acted_edge_ids` (and the reply verbs, to offer replies): ingest asks it before absorbing a
     restatement, and the base class refuses rather than answer "no acts". (tests/test_0047_t10a_reply.py.)
+- **Changed: a fact with an open challenge is no longer asserted anywhere, and neither is a same-value restatement of
+  it** (specs/0047 §4c–§4e; INV-R3, R6, R12, R18, R20; the owner's F7 ruling). Query recall, its contested block,
+  proactive recall, as-of recall (whenever the challenge was written relative to the date asked about) and the compiled
+  wiki's input all withhold it, whatever its grounding — `attested` included — and so does `answer()`, which reads
+  recall's text. A "same-value restatement" is a fact of the same subject and relation whose value is equal or adds or
+  drops up to two words ("cat Miso", "Miso"), from any author, including the subject's own correction: after
+  "that's wrong, it's Acme Labs", a later "Acme Labs" is withheld too until the subject resolves the challenge. A
+  restatement of a challenged fact that was later redacted is released. A rendered answer that withheld anything ends
+  with `[withheld: N fact(s) the subject disputes; see the host's why()]`, N counted before the token budget; under a
+  principal N counts only facts in its view, and a challenge outside the view still withholds an in-view restatement
+  without being named. A reply of any kind drops the compiled wiki in its own write; a wiki compile that drew on a fact
+  challenged meanwhile recompiles once, then returns `[wiki omitted: a fact it drew on was challenged during the
+  compile; the next read recompiles]`. Render-time duplicate collapse never hides a restatement that carries a
+  confirmation or reply of its own.
+  - **Not covered: episodes.** An episode that names a challenged value is not withheld (specs/0047 §8): `dispute()`,
+    `correct()`, `record_outcome()` and — the one whose text affirms the value — `confirm()`, whose episode reads
+    "(user) confirmed '…' still holds". `confirm()` refuses under an open challenge, so that episode always predates
+    the challenge, but recall can show it while the fact itself is withheld, with nothing of the challenge beside it.
+  - **Who should act:** a host that renders `Recall.edges` itself (below), and a host that lets its users restate a
+    fact they challenged: offer them `resolve`.
+- **Added: inspection records — `Recall.inspection`, `AsOfFact.inspection`, and `why`'s grounding, replies and
+  challenge** (specs/0047 §4d; 0045 §4c, INV-G8, INV-G13). Per edge: `grounding` (g(e)), `attestation_version` (read
+  from the fact's `attv`, "version unknown" for an older fact), `open_challenges` (all of them, never trimmed by a
+  budget), `latest_challenge` (by `(written_at, id)`), the unit `[challenged by the subject: N open; latest: …]`,
+  `challenge_clear`, and for a withheld restatement `withheld_by` and `waiting_on`. `why` prints them, with `att` and
+  `src`, and lists every reply; `introspect(mode="categories")` appends the unit to a challenged fact's line.
+  `Recall.edges` still contains a challenged fact: a caller must not assert an edge whose entry is not
+  `challenge_clear`, and must show the unit wherever it shows the record.
+  - **Who should act:** a host that renders facts from `Recall.edges` or `AsOfFact` rather than `Recall.context`. A
+    custom `Store` backend must implement `challenge_snapshot`: every read surface asks it once per call, and the
+    base class refuses rather than answer "no challenges". (tests/test_0047_t10b_read.py.)
 - **Changed: `confirm()` refuses a fact with an open challenge** (specs/0047 §4c, INV-R13), with `ValueError`, until
   the subject resolves it; a retry of a confirmation completed before the challenge still replays.
   - **Who should act:** a host that confirms facts; the refusal is new.

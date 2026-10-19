@@ -85,6 +85,11 @@ class Biography:
     refusals: list = field(default_factory=list)
     receipt: Optional[dict] = None
     notes: list = field(default_factory=list)   # what could not be read, and why
+    # specs/0045 §4c / INV-G13: g(e) and the version that produced it, read from `attv` (None for a procedural edge)
+    grounding: Optional[dict] = None            # {label, version}
+    # specs/0047 §4d: every reply on the edge, ordered by (written_at, id), and the challenge state with its unit
+    replies: list = field(default_factory=list)
+    challenge: Optional[dict] = None            # {open, latest, unit, clear, withheld_by, waiting_on}
 
 
 # ----------------------------------------------------------------- gathering --
@@ -157,6 +162,17 @@ def gather(store, user_id: str, edge_id: str) -> Biography:
                                **({"note": note} if note else {})})
             prev = state
 
+        # specs/0047 §4d: the inspection record, from the same snapshot as the rest of the window
+        snap = store.challenge_snapshot(user_id)
+        insp = snap.inspect(edge)
+        if insp.grounding is not None:
+            bio.grounding = {"label": insp.grounding, "version": insp.attestation_version}
+        for r in store.replies_for(user_id, edge_id):
+            bio.replies.append({"id": r.id, "kind": r.kind, "target": r.target, "text": r.text,
+                                "actor": r.actor.value, "at": r.written_at.isoformat()})
+        bio.challenge = {"open": insp.open_challenges, "latest": insp.latest_challenge, "unit": insp.unit,
+                         "clear": insp.challenge_clear, "withheld_by": list(insp.withheld_by),
+                         "waiting_on": list(insp.waiting_on)}
         for c in store.confirmations_for(user_id, edge_id):
             bio.confirmations.append({
                 "at": str(c.confirmed_at), "actor": c.actor.value,
@@ -282,6 +298,15 @@ def render(bio: Biography) -> str:
         f"  use           times_used={_fmt(e.get('times_used'))} last_outcome={_fmt(e.get('last_outcome'))} "
         f"outcome_counts={_fmt(e.get('outcome_counts'))}",
     ]
+    if bio.grounding:                       # specs/0045 §4c: the label and its version, read from attv
+        out.append(f"  grounding     {bio.grounding['label']} (attestation version {bio.grounding['version']})"
+                   f"  att={_fmt(e.get('att'))} src={_fmt(e.get('src'))}")
+    ch = bio.challenge or {}
+    if ch.get("unit"):                      # specs/0047 §4d: the mandatory unit, wherever the record is inspected
+        out.append(f"  challenge     {ch['unit']}  — not asserted while open")
+    elif ch.get("withheld_by"):             # F7: a twin, the subject's own correction included, waits on a resolve
+        out.append(f"  challenge     withheld: same value as challenged {', '.join(ch['withheld_by'])} — "
+                   f"not asserted until the subject resolves {', '.join(ch['waiting_on'])}")
     if bio.predecessor:
         p = bio.predecessor
         out.append(f"  supersedes    {p['id']}  {_fmt(p.get('fact'))}"
@@ -319,6 +344,10 @@ def render(bio: Biography) -> str:
             out.append(f"      {ev['note']}")
     for c in bio.confirmations:
         out.append(f"  {c['at']}  confirmed by {c['actor']} via {c['call_path']} (correlation {c['correlation_id']})")
+    for r in bio.replies:
+        tgt = f" resolving {r['target']}" if r.get("target") else ""
+        txt = f": {r['text']}" if r.get("text") is not None else ""
+        out.append(f"  {r['at']}  reply {r['kind']} {r['id']} by {r['actor']}{tgt}{txt}")
     for o in bio.outcomes:
         retired = f"  [retired: {o['retired_reason']}]" if o.get("retired_reason") else ""
         out.append(f"  {o['date']}  outcome {o['outcome']} by {o['actor']} (evidence {o['evidence_ref']}){retired}")

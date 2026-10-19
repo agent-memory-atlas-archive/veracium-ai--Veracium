@@ -548,8 +548,36 @@ and the answer is kept with the fact. Host API only — no MCP tool reaches it.
   replaces every reply's text and request digest with the marker.
   `forget_user` erases the user's replies (`"replies"` in its return).
   `veracium doctor` reports a reply naming a fact that does not exist for its
-  user. Withholding a challenged fact from recall, and showing replies in
-  `why`, are the next step of this feature.
+  user.
+- **While a challenge is open, the fact is not asserted anywhere.** Recall,
+  its contested block, proactive recall, as-of recall and the compiled wiki
+  all withhold it, whatever its grounding (`attested` included), and so does
+  `answer()`. The same holds for any **same-value restatement** of it: an
+  equal value, or one that adds or drops up to two words ("cat Miso" and
+  "Miso"), under the same subject and relation, from any author. That
+  includes the subject's own correction ("that's wrong, it's Acme Labs",
+  then "Acme Labs" arrives): it waits too. When the subject restates the
+  fact, offer them `resolve` on the challenge. A restatement of a challenged
+  fact that was later redacted is no longer withheld (nothing of the
+  redacted value is kept to match on).
+- **The withheld line.** A rendered answer that withheld anything says so:
+  `[withheld: N fact(s) the subject disputes; see the host's why()]`. N counts
+  this answer's candidates (the facts retrieval found for the query), before
+  the token budget, so the number does not depend on the budget. Under a
+  principal, N counts only facts in the principal's view; a challenge
+  outside the view still withholds an in-view restatement, and is never
+  named or quoted to that principal.
+- **Where the challenge is shown.** `Recall.inspection` (a dict keyed by edge
+  id, an entry for every edge in `Recall.edges`), `AsOfFact.inspection`, `why`
+  and `introspect(mode="categories")` carry, per fact: `grounding` (g(e)),
+  `attestation_version`, `open_challenges`, `latest_challenge`, the `unit`
+  `[challenged by the subject: N open; latest: …]`, `challenge_clear`, and for
+  a withheld restatement `withheld_by` and `waiting_on` (the challenged facts
+  and their open challenge ids). **Consumer duty:** `Recall.edges` still
+  contains a challenged fact. Do not assert an edge whose entry is not
+  `challenge_clear`, and show the unit wherever you show the record.
+  Duplicate restatements are collapsed for display only when the hidden one
+  carries no confirmation or reply of its own.
 - **Refusals** raise `veracium.store.base.ReplyRefused` (a `ValueError`) with a
   closed `reason`: `kind`, `actor`, `shape`, `marker` (the redaction marker in
   the text), `unknown-edge` (absent, or another user's), `redacted-edge`,
@@ -601,7 +629,10 @@ the derived value: `confirmed` once a local or restored confirmation exists,
 else the stored `att`, else `unknown`.
 
 **Where they appear.** On `Recall.edges` and `why`'s edge record, as fields of
-the edge. They are not in an export yet: an export file omits them, a default
+the edge (a principal's scoped view keeps them, `src` included), and as the
+derived `grounding` and `attestation_version` in `Recall.inspection`,
+`AsOfFact.inspection` and `why`, which prints them with `att` and `src`. They
+are not in an export yet: an export file omits them, a default
 import writes `not_attested` / `None` / `default-import` on every declarative
 fact whatever the file says, and `--restore` leaves them unset (`unknown`)
 until the export format carries them.

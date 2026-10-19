@@ -881,6 +881,13 @@ DECLINES.update({
         ReplyRefused, _reply, st[0], kind="resolve", text=None, target=st[1], correlation_id="r3")),
     "store.supersession.absorb-acted": TwoPhase(lambda mp: _absorption_plan_over_an_act(),
                                                 lambda st: _stale(st[0].apply_supersession_plan(st[1]))),
+    # specs/0047 T10b: the read half's four decision points, each declining once
+    "read.challenge.withheld": TwoPhase(lambda mp: _challenge_snapshot(), lambda st: st[0].withheld(st[1])),
+    "read.challenge.twin": TwoPhase(lambda mp: _twin_of_a_challenge(), lambda st: _challenge_mod._is_twin(st[0], st[1])),
+    "compile.fence.disputed": TwoPhase(lambda mp: _compile_challenged_midway(),
+                                       lambda st: compile_mod.compile_wiki(st[0], st[1], U, DEFAULT_RELATIONS)),
+    "graph.collapse.acted": TwoPhase(lambda mp: _redundant_pair_one_acted(),
+                                     lambda st: graph.collapse_for_render(st[0], st[1])),
     # specs/0008 v7 §6c/§6f/§6g (v16): the registry's terminal and verb rules, and the act counter's refusal
     "store.registry.request-redacted": TwoPhase(lambda mp: _confirmed_then_redacted(), lambda s: _raises(RequestRedacted, _confirm, s)),
     "store.registry.verb-held": TwoPhase(lambda mp: _id_held_by_a_reply(), lambda s: _raises(ValueError, _confirm, s)),
@@ -954,6 +961,42 @@ def _resolved_once():
     s = _replyable(); c = _reply(s)
     _reply(s, kind="resolve", text=None, target=c.id, correlation_id="r2")
     return (s, c.id)
+
+
+from veracium import challenge as _challenge_mod
+
+
+def _challenge_snapshot():
+    """0047 §4d: a challenged record and the store's one snapshot; the run asks the snapshot about that record."""
+    s = _challenged()
+    return (s.challenge_snapshot(U), s.edges(U, active_only=False, include_quarantined=True)[0])
+
+
+def _twin_of_a_challenge():
+    """F7: a same-value restatement of a challenged record, matched against the snapshot's record of it."""
+    s = _challenged()
+    return (_edge("c2", "a value"), s.challenge_snapshot(U).challenged["c1"])
+
+
+def _compile_challenged_midway():
+    """INV-R18's fence: the compiler's call writes a challenge on a fact the compile drew on, so the publish fails and
+    the fence withholds the body (it recompiles once; the second publish succeeds, so the fence is consulted once)."""
+    s = _store(); s.add_edge(_edge("w1", "green tea", rel="likes"))
+    calls = []
+
+    def llm(prompt, system=None, role=None):
+        calls.append(prompt)
+        if len(calls) == 1:
+            s.add_reply(U, "w1", kind="challenge", text="no", target=None, actor=ReplyActor.USER, correlation_id="f1")
+        return "WIKI"
+    return (s, llm)
+
+
+def _redundant_pair_one_acted():
+    """§4e (the narrower reading): two strictly-redundant restatements; the non-survivor carries an act, so collapse
+    keeps it."""
+    a, b = _edge("c-a", "chef"), _edge("c-b", "chef")
+    return ([a, b], _challenge_mod.ChallengeSnapshot(acted=frozenset({"c-b"})))
 
 
 def _absorption_plan_over_an_act():

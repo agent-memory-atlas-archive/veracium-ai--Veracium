@@ -866,6 +866,7 @@ def test_basis_reaches_every_carrier():
         "semantic.py": "readers",
         "agreement.py": "readers",
         "attestation.py": "reads `procedural` only: a procedural edge has no g(e) (specs/0045 §4c)",
+        "challenge.py": "reads `procedural` only: a procedural edge carries no reply and is never a twin (specs/0047 INV-R19)",
         "asof/adapter.py": "the raw adapter tolerates the markers as unknown keys",
         "asof/classify.py": "readers via the adapter",
         "asof/resolve.py": "readers",

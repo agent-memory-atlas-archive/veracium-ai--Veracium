@@ -40,6 +40,7 @@ from .gate import ABSTAINED as _ABSTAINED  # noqa: E402
 from .graph import subgraph_for_query, render_edges
 from .graph import _lexical_scored, fused_subgraph, fused_subgraph_with_receipt
 from .graph import _asserted_today
+from .challenge import EdgeInspection, withheld_line
 from .asof.resolve import AsOfAnswer, AsOfFact, FutureAsOfRefused
 from . import semantic as _semantic_mod
 from .ingest import _event_dt, ingest_event
@@ -136,6 +137,12 @@ class Recall:
     # on reproduces the defect it was built to expose). APPENDED WITH A
     # DEFAULT (V-COMPAT).
     policy_receipt: Optional["PolicyReceipt"] = None
+    # specs/0047 §4d / 0045 §4c — the INSPECTION carrier for every edge in `edges`: g(e) and its version (from
+    # `attv`), the open-challenge count, the latest challenge, the mandatory unit and, for a withheld twin, the
+    # challenged records withholding it. Read from the call's ONE challenge snapshot. A caller must not assert an
+    # edge whose entry is not `assertable`, and must show the unit wherever it shows the record (the consumer duty).
+    # APPENDED WITH A DEFAULT (V-COMPAT).
+    inspection: dict[str, "EdgeInspection"] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -961,17 +968,20 @@ class Memory:
         # returned structured carriers all see only visible records. Unscoped,
         # `view` is None and `assemble` runs exactly as it always has.
         view = self._scope_view(user_id, principal, filters)
+        snap = self.store.challenge_snapshot(user_id)          # specs/0047 §4d: the call's ONE snapshot
         context, edges, episodes, truncated = proactive.assemble(
             self.store, user_id, self.config,
             token_budget=token_budget, est=self._est_tokens,
-            visible=(view.lens if view is not None else None))
+            visible=(view.lens if view is not None else None), snap=snap)
         self._record("recall", {"wiki_used": False, "subgraph_edges": len(edges),
                                 "grounded_items": len(edges), "unverified_items": 0,
                                 "proactive": 1, "trimmed": 1 if truncated else 0},
                      user_id)
         return Recall(context=context, grounded=context, unverified="",
                       edges=edges, episodes=episodes,
-                      tokens_estimated=self._est_tokens(context), truncated=truncated)
+                      tokens_estimated=self._est_tokens(context), truncated=truncated,
+                      inspection={e.id: snap.inspect(e, visible=(view.visible if view is not None else None),
+                                                      cap_tokens=self.config.item_cap_tokens) for e in edges})
 
     @staticmethod
     def _est_tokens(text: str) -> int:
@@ -1055,6 +1065,8 @@ class Memory:
         # id()/dim() is configured; True forces the attempt (degrading the
         # same way, reporting status); False disables it. Every degrade path
         # is a STATUS, never an exception (V6).
+        # specs/0047 §4d: the call's ONE challenge snapshot, read before its edge reads
+        snap = self.store.challenge_snapshot(user_id)
         sem_status, sm_pairs, sem_meta = "disabled", [], {}
         receipt_raw = None
         if view is None and semantic is False and policy is None:
@@ -1063,7 +1075,7 @@ class Memory:
                 self.store, user_id, query,
                 max_edges=self.config.max_subgraph_edges,
                 coverage_share=self.config.subgraph_coverage_share,
-                relations=self.config.relations)
+                relations=self.config.relations, snap=snap)
         else:
             # Stage 0-1: one scan, scoped/shaped under the per-call view
             scored, relevant_ids, by_id = _lexical_scored(
@@ -1081,7 +1093,7 @@ class Memory:
                     self.store, user_id, query,
                     max_edges=self.config.max_subgraph_edges,
                     coverage_share=self.config.subgraph_coverage_share,
-                    relations=self.config.relations)
+                    relations=self.config.relations, snap=snap)
             else:
                 # v13 §4c: with a policy the fused construction runs on EVERY
                 # path (the legacy projection is its degenerate identity, V10),
@@ -1093,7 +1105,8 @@ class Memory:
                     coverage_share=self.config.subgraph_coverage_share,
                     relations=self.config.relations,
                     policy_rank=(policy.ranks if policy is not None else None),
-                    max_displaced=(policy.max_displaced if policy is not None else None))
+                    max_displaced=(policy.max_displaced if policy is not None else None),
+                    snap=snap)
                 sem_meta = {k: RecalledEdge(**v) for k, v in raw_meta.items()}
         # specs/0041 §4b-iii (tranche 4a): a REDACTED record is not returned — structurally present in the
         # store, content absent from every surface recall renders. By the attestation record (the store's
@@ -1171,6 +1184,15 @@ class Memory:
         # (partition-preserving, §4c-ii).
         contested_ids = {e.id for g in contested for e in g.exposed if e.assertable}
         detail_edges = [e for e in edges if e.id not in contested_ids]
+        # specs/0047 §4c–§4d (INV-R3, R6): a challenged fact, and its active same-value twin (F7), reaches NO
+        # assertion surface — withheld from the contested block and from detail at every budget, and COUNTED before
+        # any budget selection. The structured carriers keep the record, with its inspection entry.
+        withheld_ids = {e.id for e in edges if snap.withheld(e)
+                        and (e.assertable or e.quarantined or (e.active and e.use_only))}
+        detail_edges = [e for e in detail_edges if not snap.withheld(e)]
+        contested_render = [g.model_copy(update={"exposed": [m for m in g.exposed if not snap.withheld(m)]})
+                            for g in contested]
+        withheld_report = withheld_line(len(withheld_ids)) if withheld_ids else ""
 
         # the contested surface renders FIRST — HIGH priority, ahead of ordinary query
         # detail — so a refusal never demotes the prior below where it stood before it (the
@@ -1183,10 +1205,12 @@ class Memory:
         # first group line stays unconditional inside the renderer (I6a), and what the block
         # does not spend flows to detail below.
         contested_block, spent, c_trunc, c_loss = self._render_contested(
-            contested, max(1, int(token_budget * self.config.contested_render_share)),
+            contested_render, max(1, int(token_budget * self.config.contested_render_share)),
             self._est_tokens)
         if filter_report:                       # §4e M-3, charged before detail
             spent += self._est_tokens(filter_report)
+        if withheld_report:                     # 0047 §4d: charged before detail, never dropped
+            spent += self._est_tokens(withheld_report)
         # the block's loss rides into the report as ONE object (I10b, 2026-09-19): the
         # report is emitted on the block's own flag, so `truncated` and the visible
         # line can never disagree about the contested class
@@ -1207,6 +1231,8 @@ class Memory:
             grounded_parts.append(contested_block)
         if detail_grounded:
             grounded_parts.append("## RELEVANT DETAIL\n" + detail_grounded)
+        if withheld_report:
+            grounded_parts.append(withheld_report)
         grounded = "\n\n".join(grounded_parts).strip() or "(no memory yet for this user)"
 
         context = grounded
@@ -1241,7 +1267,9 @@ class Memory:
                       tokens_estimated=self._est_tokens(context), truncated=truncated,
                       contested=contested,
                       recalled_edges=sem_meta, semantic_status=sem_status,
-                      policy_receipt=policy_receipt)
+                      policy_receipt=policy_receipt,
+                      inspection={e.id: snap.inspect(e, visible=(view.visible if view is not None else None),
+                                                      cap_tokens=self.config.item_cap_tokens) for e in edges})
 
     def _contested_line(self, g: "ContestedGroup",
                         line_budget: Optional[int] = None):
@@ -1995,8 +2023,9 @@ class Memory:
         the kind forbids it, empty text, or text that is not valid UTF-8), `marker` (the redaction marker in the
         text), `unknown-edge`, `redacted-edge`, `procedural-edge`, `resolve-target`, `resolve-repeat`.
 
-        Not yet shown or enforced on read surfaces: withholding a challenged fact from recall and the other assertion
-        surfaces, and showing replies in `why`/`introspect`, land with 0047's read half."""
+        While a challenge is open, the fact — and any same-value restatement of it — is withheld from every assertion
+        surface (recall, contested groups, proactive, as-of, the wiki) and counted there; `Recall.inspection`,
+        `AsOfFact.inspection`, `why` and `introspect` carry the challenge. Only a `resolve` ends it (specs/0047 §4c–§4d)."""
         correlation_id = (validate_correlation_id(correlation_id)
                           if correlation_id is not None
                           else f"auto-{uuid4().hex}")

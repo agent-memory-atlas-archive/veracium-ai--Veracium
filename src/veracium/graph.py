@@ -38,6 +38,7 @@ _SITE_SRC_REVOKED = declare_site("graph.src-revoked", declines=True)
 _SITE_SEMDUP_KEEP = declare_site("graph.semantic-duplicate.keep", declines=False)
 _SITE_STRICTLY_REDUNDANT = declare_site("graph.strictly-redundant", declines=False)
 _SITE_COLLAPSE_FOR_RENDER = declare_site("graph.collapse-for-render")
+_SITE_COLLAPSE_ACTED = declare_site("graph.collapse.acted", declines=True)   # specs/0047 §4e
 
 
 # Filler words that never change a value's meaning. Deliberately tiny: a false
@@ -745,7 +746,8 @@ def _lexical_scored(store, user_id: str, query: str, view=None, *, candidates=No
 
 def subgraph_for_query(store, user_id: str, query: str, *, max_edges: int = 40,
                        coverage_share: float = 0.25,
-                       relations: Optional[dict[str, Relation]] = None) -> list[Edge]:
+                       relations: Optional[dict[str, Relation]] = None,
+                       snap=None) -> list[Edge]:
     """Entity-matched neighborhood: every edge off the user node, plus edges whose
     tokens appear in the query, ranked by how well they match it. This is
     veracium's primary retrieval (the research found it beat similarity search on
@@ -782,7 +784,7 @@ def subgraph_for_query(store, user_id: str, query: str, *, max_edges: int = 40,
     # specs/0012 I8: collapse strictly-redundant ACTIVE duplicates AFTER scoring
     # (a query-matching note-bearer already surfaces via the suppression predicate)
     # and BEFORE truncation, so suppressed members never consume max_edges slots.
-    surfaced, _info = collapse_for_render([e for _, e in scored])
+    surfaced, _info = collapse_for_render([e for _, e in scored], snap)
     surfaced_ids = {e.id for e in surfaced}
     scored = [(sc, e) for sc, e in scored if e.id in surfaced_ids]
     if len(scored) <= max_edges:
@@ -862,7 +864,7 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
                    relations: Optional[dict[str, Relation]] = None,
                    assertable=None, policy_rank: Optional[dict] = None,
                    receipt_out: Optional[list] = None,
-                   max_displaced: Optional[int] = None):
+                   max_displaced: Optional[int] = None, snap=None):
     """specs/0027 §4a Stages 2-5 — the one total ordered retrieval-and-budget
     construction, over prepared inputs: `scored`/`relevant_ids`/`by_id` from
     `_lexical_scored` (Stage 0-1, already scoped/shaped), `sm` the semantic
@@ -939,7 +941,7 @@ def fused_subgraph(scored, relevant_ids, by_id, sm, *, max_edges: int = 40,
 
     # Stage 3 — collapse: MEMBERSHIP from lexical, ORDER from fused (R6-1).
     lx_ids = set(lx_rank)
-    survivors, _info = collapse_for_render(lx_edges)
+    survivors, _info = collapse_for_render(lx_edges, snap)
     kept = {e.id for e in survivors}
     kept_edges = list(survivors)
     for e in base_order:                   # v12: membership walks the BASELINE order —
@@ -1242,7 +1244,15 @@ def value_groups(members: list[Edge]) -> dict:
     return groups
 
 
-def collapse_for_render(edges: list[Edge]) -> tuple[list[Edge], dict]:
+def _kept_by_acts(m: Edge, survivor: Edge, snap) -> bool:
+    """specs/0047 §4e's collapse row, the narrower reading: True keeps `m` out of the suppressed set — it carries a
+    person's act, or its survivor is withheld by the call's challenge snapshot (so `m` is a twin to withhold, count
+    and inspect in its own right)."""
+    with _SITE_COLLAPSE_ACTED.consult():
+        return _SITE_COLLAPSE_ACTED.fire(snap is not None and (m.id in snap.acted or snap.withheld(survivor)), "keep")
+
+
+def collapse_for_render(edges: list[Edge], snap=None) -> tuple[list[Edge], dict]:
     """Collapse strictly-redundant ACTIVE duplicates for a model-facing surface
     (specs/0012 I8). Inactive/quarantined-history members pass through verbatim
     (I8b — history is never collapsed). Returns `(surfaced, info)`:
@@ -1289,6 +1299,13 @@ def collapse_for_render(edges: list[Edge]) -> tuple[list[Edge], dict]:
                 hidden = flagged_hidden = 0
                 for m in group:
                     if m is survivor or m is carrier:
+                        continue
+                    # specs/0047 §4e, the narrower reading (the owner, 2026-10-19): a member carrying a person's act
+                    # (a confirmation or a reply) is never suppressed; an acted SURVIVOR still hides act-less members,
+                    # which hides no one's act (0012 I8h's one-owner-at-a-time holds). Nor is a member hidden behind a
+                    # survivor the call WITHHOLDS (a challenged record, or its twin): the member is then a twin itself,
+                    # and must be withheld, counted and inspected in its own right (F7 (c)), not dropped unseen
+                    if _kept_by_acts(m, survivor, snap):
                         continue
                     if m.needs_confirmation:
                         if _strictly_redundant(m, survivor):

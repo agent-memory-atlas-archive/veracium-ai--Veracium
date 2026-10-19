@@ -87,8 +87,11 @@ CLASSIFIED = {
     ("__init__.py", "Memory.record_outcome"): ("INTERNAL", "a write of an outcome act episode naming the value, never asserting it (0047 v1.4 ruling)"),
     ("store/sqlite.py", "SqliteStore._upsert_edge_row"): ("INTERNAL", "store write"),
     ("store/sqlite.py", "SqliteStore.apply_supersession_plan"): ("INTERNAL", "store write"),
-    ("store/sqlite.py", "SqliteStore.confirm_edge"): ("INTERNAL", "store write (0008); its refusal message names the edge, not its content"),
+    ("store/sqlite.py", "SqliteStore.confirm_edge"): ("INTERNAL", "store write (0008): its refusal message names the edge, not its content; its act episode names the confirmed value as the act's OBJECT (0047 v1.4's ruling for act episodes; §8 NOT claimed; confirm refuses under an open challenge, so the episode predates any challenge)"),
     ("ingest.py", "ingest_event"): ("INTERNAL", "the write path (0045 §2, T9): it re-validates the built edge with its grounding axis before storing it; no text leaves, and a challenge (0047) can only follow the write"),
+    # T10b: the read half's two matchers. Neither renders: they decide WHICH facts the assertion surfaces withhold
+    ("challenge.py", "_is_twin"): ("INTERNAL", "F7's same-value test (0047 T10b): compares value keys to decide withholding; never renders the object"),
+    ("store/sqlite.py", "SqliteStore.challenge_snapshot"): ("INTERNAL", "0047 §4d's one snapshot: reads each challenged record to match its twins; the record is never handed to a caller"),
     ("store/sqlite.py", "SqliteStore._redact_in_txn"): ("INTERNAL", "redaction — the reply's text joins its treatment map (0041 amendment)"),
     ("store/sqlite.py", "SqliteStore.commit_outcome_import_plan"): ("INTERNAL", "store write"),
     ("store/sqlite.py", "SqliteStore._logical_request_digest._dump"): ("INTERNAL", "serialises a plan for its replay digest; never rendered"),
