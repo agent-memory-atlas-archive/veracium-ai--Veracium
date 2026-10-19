@@ -499,3 +499,66 @@ def test_declarative_grounding_agrees_with_model_ii_over_the_whole_small_domain(
                 assert declarative_grounding(e, list(origins)) == G.grounding(s, me), (att, proc, origins)
                 n += 1
     assert n == 48
+
+
+# ======================================================================================== research's T9 stage-2 cells
+# Appended to tests/test_0045_t9_write.py (its helpers: _mem, _script, _one, _edges, _plant, _episode, _ok, _refuses, _q).
+# Each kills a research mutant that survived the T9 cells at d8f16bf (READ-T9-stage2.md): S1 RT9-3, S2 RT9-5/RT9-6,
+# S3 RT9-9/RT9-10, S4 RT9-4.
+def test_inv_g2_an_unsupported_triple_from_a_user_effective_event_is_not_attested(tmp_path):
+    """0045 §3: ATTEST-3 covers first-person USER statements in its trigger table; UNSUPPORTED is not attested (the
+    safe direction). Through real ingest, declared-direct: another subject, and a relation outside the table, are
+    stored `not_attested` with the predicate's version. Mutant: UNSUPPORTED read as attested."""
+    cases = [("sister", "works_as", "nurse", "My sister works as a nurse."),
+             ("user", "favourite_colour", "green", "My favourite colour is green.")]
+    mem = _mem(tmp_path, [_script(r, o, subject=s) for s, r, o, _t in cases])
+    for n, (_s, _r, _o, text) in enumerate(cases):
+        _ok(mem.remember, f"n{n}", text, date="2026-10-01", context=DIRECT)
+        e = _one(mem, f"n{n}")
+        assert attest_v3.attests(e.subject, e.relation, e.object, text) == "UNSUPPORTED", (e.subject, e.relation)
+        assert (e.att, e.attv) == ("not_attested", PREDICATE_VERSION), text
+
+
+def test_inv_g13_the_same_id_guard_refuses_null_to_value_and_value_to_null(tmp_path):
+    """INV-G13, both directions (367f761: "refuses a same-id change of any of the three, both directions"): a legacy
+    row (NULL) is never labelled by a same-id replace, and a labelled row's three fields are never erased by one;
+    nothing is written. Mutants: NULL -> value admitted; value -> NULL admitted."""
+    mem = _mem(tmp_path, [])
+    _episode(mem, "ep-1")
+    legacy = _plant(mem, "legacy", att=None, src=None)
+    lab = _plant(mem, "lab", att="not_attested", src="ep-1", obj="chef")
+    _refuses(mem.store.add_edge, legacy.model_copy(update={"att": "attested", "attv": PREDICATE_VERSION}),
+             match="cannot change att")
+    for field in ("att", "src", "attv"):
+        _refuses(mem.store.add_edge, lab.model_copy(update={field: None}), match=f"cannot change {field}")
+    rows = {i: json.loads(j) for i, j in _q(mem, "SELECT id, json FROM edges")}
+    assert not {"att", "src", "attv"} & set(rows["legacy"])
+    assert (rows["lab"]["att"], rows["lab"]["src"], rows["lab"]["attv"]) == ("not_attested", "ep-1", PREDICATE_VERSION)
+
+
+def test_q6_a_trusted_restore_strips_the_files_axis_and_stamps_nothing(tmp_path):
+    """Q6 in RESTORE mode (367f761: "Import strips them in both modes"; "A trusted restore leaves the three unset"):
+    a trusted restore into a store without the edge writes `att`, `src` and `attv` NULL, both for the store's own
+    export and for a file that forges `attested`. Mutants: the strip in default mode only; the stamp in restore too."""
+    src_mem = _mem(tmp_path, [_script("works_as", "dentist")], name="src.db")
+    _ok(src_mem.remember, U, "I work as a dentist.", date="2026-10-01", context=DIRECT)
+    path = tmp_path / "own.jsonl"
+    src_mem.export_memory(U, path)
+    head, *rest = path.read_text().splitlines()
+    recs = [json.loads(l) for l in rest]
+    for r in recs:
+        if r.get("record") == "edge":
+            r.update(att="attested", attv=PREDICATE_VERSION, src="ep-forged")
+    forged = tmp_path / "forged.jsonl"
+    forged.write_text(head + "\n" + "\n".join(json.dumps(r) for r in recs) + "\n")
+    for f in (path, forged):
+        dst = _mem(tmp_path, [], name=f"dst-{f.stem}.db")
+        _ok(dst.import_memory, f, restore=True)
+        es = _edges(dst)
+        assert es and all((e.att, e.src, e.attv) == (None, None, None) for e in es), (f.stem, [(e.att, e.attv) for e in es])
+
+
+def test_f4_the_attv_hex_part_is_exactly_eight():
+    """0045 §2c's grammar, `ATTEST-<n>@<8 hex>`: ten hex digits refuse. Mutant: the hex part unbounded."""
+    assert valid_attv(PREDICATE_VERSION)
+    assert not valid_attv("ATTEST-3@b1329a81ab")
