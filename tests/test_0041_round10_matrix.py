@@ -156,7 +156,7 @@ def test_the_enumeration_and_the_spec_rule_exactly_the_same_carriers():
     _mod, carriers = _enumeration()
     spec = set(_spec_rows())
     assert set(carriers) == spec, (sorted(set(carriers) - spec), sorted(spec - set(carriers)))
-    assert len(spec) == 66        # 64, + 0045's Edge.src and Edge.attv (0041 v16.2)
+    assert len(spec) == 73        # 64, + 0045's Edge.src and Edge.attv (0041 v16.2), + 0047's Reply (v16.3)
 
 
 def test_the_spec_and_the_code_agree_per_kind_on_every_treated_path_and_its_class():
@@ -209,6 +209,12 @@ DDL_ACCOUNT = {
         # specs/0041 §11.6.6 (T4): a redaction row's notice state and why a notice waits — closed sets, validated at
         # the one writer (redaction.NOTICE_STATES, PENDING_REASONS)
         "redactions.state", "redactions.pending_reason",
+        # specs/0047 §2 (v16; T10a): a reply's ids, closed kind, a resolve's challenge id, the closed actor label, the
+        # caller's id, the act columns (as on confirmations) and the store's write time (its text and request_digest
+        # are TREATED side paths, §11.6.2)
+        "replies.id", "replies.user_id", "replies.edge_id", "replies.kind", "replies.target", "replies.actor",
+        "replies.correlation_id", "replies.origin", "replies.recorded_correlation_id", "replies.origin_store",
+        "replies.origin_user", "replies.origin_act_id", "replies.written_at",
         # specs/0044 §4e–§4i (v16; T5): the arity era and inventories, and the restoration operation's tables — ids,
         # instants, digests of DECLARATIONS (never of content), closed values (outcome, origin, mode, the arity
         # words, the one pre_reason `superseded`), a successor POINTER (edge ids or `none`) and the three default
@@ -280,9 +286,9 @@ def test_the_ddl_derives_which_kinds_each_treated_side_table_reaches():
     mod, _c = _enumeration()
     ddl = _ddl(mod)
     reach = {t: _kinds_of_table(ddl[t]) for t in ("confirmations", "contribution_ledger", "supersession_refusals",
-                                                    "edge_embedding")}
+                                                    "edge_embedding", "replies")}
     assert reach == {"confirmations": {"edge"}, "contribution_ledger": {"edge", "episode"},
-                     "supersession_refusals": {"edge"}, "edge_embedding": {"edge"}}
+                     "supersession_refusals": {"edge"}, "edge_embedding": {"edge"}, "replies": {"edge"}}
 
 
 # ------------------------------------------------------------------------------------------------ the execution half
@@ -434,6 +440,27 @@ def _registry(tmp_path):
     return m, "edge", "e-1", check
 
 
+def _reply(path):
+    """specs/0041 §11.6.2 (T10a): a text reply and a resolve on the edge, written by the real verb; the redaction
+    REPLACEs every reply's text (a resolve's NULL stays NULL) and every reply's digest, and attests the field."""
+    def build(tmp_path):
+        m = _mem(tmp_path)
+        m.store.add_edge(Edge(id="e-1", user_id=U, subject="user", relation="lives_in", object="Berlin " + SECRET,
+                              provenance=_prov()))
+        c = m.reply(U, "e-1", kind="challenge", text="I never lived in Berlin " + SECRET)
+        m.reply(U, "e-1", kind="resolve", target=c["reply_id"])
+        def check(st, r):
+            rows = st._conn.execute("SELECT kind, text, request_digest FROM replies WHERE edge_id='e-1' ORDER BY "
+                                    "act_seq").fetchall()
+            if path == "replies.text":
+                assert [(k, x) for k, x, _d in rows] == [("challenge", R.MARKER), ("resolve", None)]
+            else:
+                assert [d for _k, _x, d in rows] == [R.MARKER, R.MARKER]
+            assert path in r.fields_cleared
+        return m, "edge", "e-1", check
+    return build
+
+
 def _refusal(tmp_path):
     m = _mem(tmp_path)
     m.store.add_edge(Edge(id="e-1", user_id=U, subject="user's sister", relation="lives_in", object="Berlin",
@@ -583,6 +610,8 @@ CELLS = {
     ("edge", "agreement.markers"): _markers,
     ("edge", "confirmations.request_digest"): _confirmation,
     ("edge", "request_registry.request_digest"): _registry,
+    ("edge", "replies.text"): _reply("replies.text"),
+    ("edge", "replies.request_digest"): _reply("replies.request_digest"),
     ("edge", "supersession_refusals.relation"): _refusal,
     ("edge", "contribution_ledger.identity_digest"): _absorption_ledger,
     ("edge", "contribution_ledger.evidence_ref_digest"): _absorption_ledger,

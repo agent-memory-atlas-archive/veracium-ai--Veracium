@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+- **Added: the subject's right of reply — `Memory.reply()` (specs/0047 §2–§4b, §4e; INV-R1, R2, R5, R7–R10, R13–R15,
+  R17, R19, R22, R24).** A person can answer a remembered fact about them, and the answer is kept with the fact: a
+  `challenge` ("that's wrong"), `context`, `withdrawn-consent`, or a `resolve` that withdraws one challenge of the same
+  fact. A reply never changes the fact (it does not retire, supersede, edit or delete it) and is never ingested as
+  evidence. Replies are append-only: a challenge ends only by a `resolve`, never by editing it or by `context` text.
+  Host API only — no MCP tool reaches it. `kind` and `actor` (`user`, or `host` on the user's behalf) are closed sets;
+  a reply carrying the redaction marker, or aimed at an absent, another user's, redacted or procedural fact, is refused
+  with `ReplyRefused` and a closed `reason`. Its `correlation_id` shares one id space with `confirm()` and
+  `undo_restoration()`: an id one verb holds is refused to the others, a retry of the same request replays, and after
+  the fact's redaction a retry raises `RequestRedacted`. The request's identity leaves the actor out, so a retry
+  under another actor label replays (`confirm()`'s identity includes its actor). The actor of a `resolve` may differ
+  from its challenge's: labels are unauthenticated, so the rule asks only for the same user and fact, and each row
+  records its own actor. `forget_user()` erases a user's replies and returns their count beside the confirmations;
+  `veracium doctor` reports a reply naming a fact that does not exist for its user, and a `resolve` naming no
+  challenge of its own fact. A new reply writes one audit line naming its kind only.
+  - **Not yet:** nothing in this entry withholds a challenged fact from recall or shows replies in `why`, and an
+    export does not carry replies; the read half and the portable half of the same feature land before this is
+    released.
+  - **Schema:** the unreleased store schema v16 gains a `replies` table. 0008 §2a says `replies` is created "whole by
+    0047's own step"; v16 is that step, amended in place because no release has carried it. A store a development
+    checkout wrote at an earlier v16 shape is refused as unaccepted, as at the arity tables' addition.
+  - **Who should act:** a host that wants to offer its users a right of reply. A custom `Store` backend must
+    implement `acted_edge_ids` (and the reply verbs, to offer replies): ingest asks it before absorbing a
+    restatement, and the base class refuses rather than answer "no acts". (tests/test_0047_t10a_reply.py.)
+- **Changed: `confirm()` refuses a fact with an open challenge** (specs/0047 §4c, INV-R13), with `ValueError`, until
+  the subject resolves it; a retry of a confirmation completed before the challenge still replays.
+  - **Who should act:** a host that confirms facts; the refusal is new.
+- **Changed: a fact that carries a confirmation or a reply is no longer absorbed into a more specific restatement**
+  (specs/0047 §4e, INV-R17). Before, "Miso" confirmed by the user and then restated as "cat Miso" was retired as an
+  absorbed duplicate, and its confirmation stayed on the retired record. Now both stay active, each with its own acts.
+  Under a relation declared functional the same holds: the restatement does not supersede the fact it restates. A
+  genuinely different value still supersedes it, and the acts stay on the superseded fact. A fact with no act is
+  absorbed exactly as before.
+  - **Who should act:** nobody; a store is not touched.
+- **Changed: redacting a fact also replaces every reply's text and request digest with the marker** (0041 §11.6.2,
+  INV-RR2, RR5), keeping the rows; the redaction record names `replies.text` and `replies.request_digest`. A pending
+  notice's confirmation (`confirm_notice`) treats them too.
 - **Added: how a fact is known — `Edge.att`, `Edge.src`, `Edge.attv` (specs/0045 §2, §4a–§4f; INV-G1, G2, G6, G7,
   G9–G13).** Every declarative fact ingest writes carries, set once and never changed: `att` (`attested` when the
   versioned predicate ATTEST-3 found the fact stated in the user's own words, in the one sentence form it

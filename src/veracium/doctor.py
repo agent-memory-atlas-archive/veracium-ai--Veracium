@@ -54,9 +54,9 @@ The checks, each named in the output:
                 dispositioned vocabulary
   refs          `supersedes` names an existing edge of the same user; the
                 chain has no cycle; a superseded predecessor is retired;
-                outcome episodes, confirmations, ledger survivors and typed
-                contributors, embeddings and journal events all name rows
-                that exist
+                outcome episodes, confirmations, replies, ledger survivors and
+                typed contributors, embeddings and journal events all name rows
+                that exist; a resolve reply names a challenge of its own edge
   journal       every edge has at least one journal event (specs/0029: a row
                 with no `created`/`baseline` event was written outside the
                 journal)
@@ -360,6 +360,24 @@ def _check_refs(rep: Report, conn, user: Optional[str], edges: dict, episodes: d
            if (r["user_id"], r["edge_id"]) not in edges]
     if ids:
         rep.add("refs", "error", f"{len(ids)} confirmation(s) naming an edge that does not exist", ids)
+    # replies (specs/0047 INV-R5): joined on the user AND the edge, as confirmations are, so a reply naming another
+    # user's edge id is an orphan too. A resolve must name a challenge of its own edge (§4b): the writer and the
+    # partial unique index hold that, but no CHECK can cross rows, so a row that breaks it is reported (research's
+    # T10a Q14). A store from before the table has none to check.
+    if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='replies'").fetchone():
+        ids = [r["id"] for r in conn.execute(f"SELECT id, user_id, edge_id FROM replies {where}", args)
+               if (r["user_id"], r["edge_id"]) not in edges]
+        if ids:
+            rep.add("refs", "error", f"{len(ids)} reply(ies) naming an edge that does not exist "
+                    "(specs/0047 INV-R5)", ids)
+        rwhere = where.replace("user_id", "r.user_id")
+        ids = [r["id"] for r in conn.execute(
+            f"SELECT r.id FROM replies r LEFT JOIN replies c ON c.user_id = r.user_id AND c.id = r.target "
+            f"AND c.edge_id = r.edge_id AND c.kind = 'challenge' {rwhere} {'AND' if rwhere else 'WHERE'} "
+            f"r.kind = 'resolve' AND c.id IS NULL", args)]
+        if ids:
+            rep.add("refs", "error", f"{len(ids)} resolve reply(ies) naming no challenge of their own edge "
+                    "(specs/0047 §4b)", ids)
     # contribution ledger: survivors and typed contributors
     bad_surv, bad_contrib = [], []
     for r in conn.execute(f"SELECT id, user_id, survivor_type, survivor_id, contributor_type, "

@@ -51,7 +51,7 @@ from .schema import (CONFIRMATION_RULE_VERSION, ConfirmationActor, is_procedural
                      ConfirmationCallPath, ContestedGroup, ContestedLinkage,
                      Disclosure, Edge,
                      Episode, EvidenceAuthor, EvidenceContext,
-                     OutcomeJudgmentDraft, Provenance,
+                     OutcomeJudgmentDraft, Provenance, ReplyActor,
                      utcnow, validate_correlation_id)
 from .scope import UNRESOLVED as _SCOPE_UNRESOLVED
 from .store.base import HEAD_MOVED, Store, UnknownEdge
@@ -1964,6 +1964,50 @@ class Memory:
                           if correlation_id is not None
                           else f"auto-{uuid4().hex}")
         return self.store.undo_restoration(user_id, edge_id, correlation_id=correlation_id)
+
+    def reply(self, user_id: str, edge_id: str, *, kind: str, text: Optional[str] = None,
+              target: Optional[str] = None, actor: ReplyActor = ReplyActor.USER,
+              correlation_id: Optional[str] = None) -> dict:
+        """The subject's RIGHT OF REPLY to a remembered fact (specs/0047): the record stands, and the reply travels
+        with it. HOST API only — never an MCP tool, never the extractor or the assistant (INV-R10).
+
+        `kind` is closed: `challenge` ("that's wrong"), `context`, `withdrawn-consent`, or `resolve`, which withdraws
+        ONE challenge of the same fact, named by its reply id in `target`. A `resolve` carries no `text`; every other
+        kind carries non-empty text and no target. A reply changes nothing about the fact itself (INV-R1): it does not
+        retire, supersede, edit or delete it, and it is never ingested as evidence. Replies are append-only: a
+        challenge is withdrawn by a resolve, never by an edit. While a challenge is open, `confirm()` refuses the fact
+        (INV-R13), and a prior carrying a reply or a confirmation is never absorbed into a later, more specific
+        restatement (§4e).
+
+        `actor` is `user` or `host` (the host acting on the user's behalf); it is an unauthenticated LABEL until
+        authenticated principals exist. A resolve needs the same user and the same fact as its challenge, and its
+        actor may differ from the challenge's: each row records its own (the owner's reading of §4b, 2026-10-19).
+
+        `correlation_id` (≤64 chars of `[A-Za-z0-9._:-]`) is an idempotency key in the SAME per-user id space as
+        `confirm()`'s and `undo_restoration()`'s: an id held by another verb is refused naming it; a retry of the
+        same request replays the recorded reply without reading the fact; after the fact's redaction a retry raises
+        `RequestRedacted`. The request's identity is `(user, fact, kind, target, text)` — `actor` is outside it, so a
+        retry under another actor label replays (confirm's identity includes its actor; this one does not). Omitted,
+        one is generated, takes a registry row and is returned.
+
+        Returns `{reply_id, edge_id, kind, target, written_at, correlation_id, replayed}`. Refusals raise
+        `ReplyRefused` (`veracium.store.base`) with a closed `reason`: `kind`, `actor`, `shape` (a target or text where
+        the kind forbids it, empty text, or text that is not valid UTF-8), `marker` (the redaction marker in the
+        text), `unknown-edge`, `redacted-edge`, `procedural-edge`, `resolve-target`, `resolve-repeat`.
+
+        Not yet shown or enforced on read surfaces: withholding a challenged fact from recall and the other assertion
+        surfaces, and showing replies in `why`/`introspect`, land with 0047's read half."""
+        correlation_id = (validate_correlation_id(correlation_id)
+                          if correlation_id is not None
+                          else f"auto-{uuid4().hex}")
+        r = self.store.add_reply(user_id, edge_id, kind=kind, text=text, target=target, actor=actor,
+                                 correlation_id=correlation_id)
+        if not r.replayed:
+            # one content-free audit line per new reply: the closed kind only — never text, target or the fact
+            # (research's T10a F6). Telemetry's closed event schema (0015) has no `reply` event and drops it.
+            self._record("reply", {"kind": r.kind}, user_id)
+        return {"reply_id": r.id, "edge_id": r.edge_id, "kind": r.kind, "target": r.target,
+                "written_at": r.written_at.isoformat(), "correlation_id": r.correlation_id, "replayed": r.replayed}
 
     # -- outcome tracking (engine-written; never MCP) ------------------------
     _OUTCOME_ACTORS = {"user": EvidenceAuthor.USER, "system": EvidenceAuthor.SYSTEM}

@@ -88,10 +88,10 @@ SOURCE_LIFT_REASONS = ("revoked_in_error", "subject_request", "legal_obligation"
 REPLACE, CLEAR, DELETE, PRESERVE = "REPLACE", "CLEAR", "DELETE", "PRESERVE"
 
 # §2d-iii-bis, the per-candidate map, restricted to what a treatment CHANGES. Every field not named is
-# PRESERVED (identifiers, timestamps, closed sets, provenance) — the map's PRESERVE rows: 50 of 66 at 0041 v16.2,
-# counted by the round-10 matrix's own parser (48 of 64 before 0045's `Edge.src` and `Edge.attv`; this comment's
-# earlier "44" was stale). Nested carriers are
-# dotted. A REPLACE writes the marker as the whole value; a CLEAR writes the empty shape the model validates
+# PRESERVED (identifiers, timestamps, closed sets, provenance) — the map's PRESERVE rows: 55 of 73 at 0041 v16.3,
+# counted by the round-10 matrix's own parser (50 of 66 before 0047's `Reply`; 48 of 64 before 0045's `Edge.src`
+# and `Edge.attv`; this comment's earlier "44" was stale). Nested carriers are dotted. A REPLACE writes the marker
+# as the whole value; a CLEAR writes the empty shape the model validates
 # (`{}` for `outcome_counts`); the reason fields are the THREE-CASE rule (§4h(i) corollary, v11): absence stays
 # absent, a registered vocabulary value is preserved, existing prose becomes `redacted`.
 EDGE_REPLACE = ("subject", "relation", "object", "note", "original_relation")       # rows 31-33, 35-36
@@ -105,6 +105,9 @@ EPISODE_REASON_THREE_CASE = ("retired_reason",)                                 
 # carry them beside the record's own carriers
 SIDE_TABLE_TREATMENTS = {
     "edge": (("confirmations.request_digest", REPLACE), ("request_registry.request_digest", REPLACE),   # 0008 v7 §6g
+             # specs/0041 §11.6.2 (amendment `0047/0041-replies`, T10a): the first FREE-TEXT side column, and the
+             # digest that binds it; `carrier_paths("edge")` derives both, so a notice may name them (INV-RR4)
+             ("replies.text", REPLACE), ("replies.request_digest", REPLACE),
              ("contribution_ledger.identity_digest", CLEAR),
              ("contribution_ledger.evidence_ref_digest", CLEAR), ("supersession_refusals.relation", REPLACE),
              ("edge_embedding", DELETE), ("source_revocations.reason", REPLACE)),   # §11.2: no numbered row (R9-02(d))

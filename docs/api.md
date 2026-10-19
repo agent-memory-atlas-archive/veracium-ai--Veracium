@@ -516,11 +516,61 @@ Explicit user-feedback verbs (get `edge_id`s from `Recall.edges`):
   already confirmed in this store, or a fact written before this release. A
   source deleted outright (not redacted) leaves nothing to read, so confirm
   is allowed. A pending redaction notice does not refuse; an applied one does.
+  **A fact the subject challenges (specs/0047 §4c).** `confirm` refuses a fact
+  with an open `challenge` reply (below), with `ValueError`, until the subject
+  resolves it. A retry of a confirmation completed before the challenge still
+  replays.
 
 Neither verb is exposed over MCP (an agent-callable suppress/validate verb is a
 prompt-injection target) — wire them to real user actions in your host. Note
 `correct` and `elaborate` need no verb: they *are* `remember()` (supersession /
 accumulation).
+
+### `reply(user_id, edge_id, *, kind, text=None, target=None, actor="user", correlation_id=None) -> dict` (specs/0047)
+
+The subject's right of reply: a person answers a remembered fact about them,
+and the answer is kept with the fact. Host API only — no MCP tool reaches it.
+
+- **`kind`** is one of `"challenge"` ("that's wrong"), `"context"`,
+  `"withdrawn-consent"`, or `"resolve"`. A `resolve` withdraws ONE challenge of
+  the same fact, named by its reply id in `target`, and carries no `text`;
+  every other kind carries non-empty `text` and no `target`. Only a `resolve`
+  ends a challenge: `context` text never does, whatever it says.
+- **The fact is never changed.** A reply does not retire, supersede, edit or
+  delete it, and is never ingested as evidence. Replies are append-only.
+- **`actor`** is `"user"` or `"host"` (acting on the user's behalf) — a label
+  the store enforces but cannot authenticate. A `resolve` needs the same user
+  and the same fact as its challenge; its actor may differ, and each row
+  records its own.
+- **What it changes now.** While a challenge is open, `confirm()` refuses the
+  fact. A fact carrying a reply or a confirmation is never absorbed into a
+  later, more specific restatement: both records stay. Redacting the fact
+  replaces every reply's text and request digest with the marker.
+  `forget_user` erases the user's replies (`"replies"` in its return).
+  `veracium doctor` reports a reply naming a fact that does not exist for its
+  user. Withholding a challenged fact from recall, and showing replies in
+  `why`, are the next step of this feature.
+- **Refusals** raise `veracium.store.base.ReplyRefused` (a `ValueError`) with a
+  closed `reason`: `kind`, `actor`, `shape`, `marker` (the redaction marker in
+  the text), `unknown-edge` (absent, or another user's), `redacted-edge`,
+  `procedural-edge`, `resolve-target`, `resolve-repeat`. A reply to an
+  inactive or quarantined fact is admitted.
+- **Request ids.** `correlation_id` is the same per-user id space `confirm()`
+  and `undo_restoration()` use: an id another verb holds is refused, naming
+  it. A retry of the same request returns the recorded reply with
+  `replayed=True`, without reading the fact; the same id with a different
+  request raises `ValueError`; after the fact's redaction a retry raises
+  `RequestRedacted`. The request is `(user, fact, kind, target, text)`: the
+  actor is not part of it, so a retry under another actor label replays
+  (`confirm()`'s request includes its actor). Omitted, an id is generated,
+  takes a registry row and is returned.
+
+```python
+c = mem.reply("u1", edge_id, kind="challenge", text="I never lived there")
+# {"reply_id": "r-...", "edge_id": "...", "kind": "challenge", "target": None, "written_at": "...",
+#  "correlation_id": "auto-...", "replayed": False}
+mem.reply("u1", edge_id, kind="resolve", target=c["reply_id"])
+```
 
 ### How a fact is known: `att`, `src`, `attv` (specs/0045)
 

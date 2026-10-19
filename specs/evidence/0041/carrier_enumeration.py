@@ -299,9 +299,22 @@ def is_bounded(f):
 # question, so a stale ruling cannot outlive the thing it ruled on.
 RULINGS = {
     "Confirmation": (True,
-        "CARRIER. Subset failed on `replayed` alone, and schema.py:149 comments "
-        "it `runtime only: True when returned for a replay` -- it is not a "
-        "column. The model IS the confirmations row; INSERT at sqlite.py:588."),
+        "CARRIER. Subset failed on `replayed` alone, and the model's own comment "
+        "calls it `runtime only: True when returned for a replay` -- it is not a "
+        "column. The model IS the confirmations row; INSERTed by "
+        "SqliteStore.confirm_edge."),
+    # T10a (research's Q18, agreed 2026-10-19): the two models the `replies`
+    # table (0047) brought into question, each ruled against its write path
+    "Reply": (True,
+        "CARRIER. Subset failed on `replayed` alone, the runtime flag the "
+        "Confirmation ruling names (`runtime only: True when returned for a "
+        "replay`). The model IS the replies row; INSERTed by "
+        "SqliteStore.add_reply."),
+    "CorrectionAuthorisation": (False,
+        "NON-CARRIER as a replies row. It neared `replies` on two shared NAMES, "
+        "`kind` and `origin`, which mean other things there. It is minted and "
+        "verified inside SqliteStore.apply_supersession_plan, never INSERTed "
+        "into any table."),
     "ContributionDraft": (True,
         "CARRIER. Subset failed on `contributor_id` alone, which is INSERTed "
         "into the column `contributor_ref` -- sqlite.py:1236 documents the "

@@ -495,6 +495,13 @@ def _build_supersession_plan(store, edge: Edge, relations: dict[str, Relation],
     # (§2): no host's configuration reaches it, because policy is a read-side
     # concept and this decides what the store MERGES.
     same_scope = _absorption_scope_gate(store, edge)
+    # specs/0047 §4e (R1-03, INV-R17): a prior carrying a person's ACT — a confirmation or a reply — is NOT absorbed:
+    # the incoming is written as its own record and the prior keeps its acts where they were made. `kept_for_acts`
+    # is EXACTLY the priors this loop declined because of acts (research's T10a Q12), so the functional branch below
+    # leaves them active too — not retired by their own more specific restatement — while a genuinely new value
+    # still supersedes an acted prior (§4e row 4: the acts stay on it). The store is asked only about an actual
+    # absorption candidate, so the common ingest reads nothing more.
+    kept_for_acts: set[str] = set()
     for prior in same_class:
         if inc_revoked or _src_revoked(prior):
             continue          # N4: neither side of an absorption may be a
@@ -505,6 +512,9 @@ def _build_supersession_plan(store, edge: Edge, relations: dict[str, Relation],
                               # (M2: there is no renewal verb), so refusing
                               # candidacy IS refusing renewal
         if _subsumes(same, _value_key(prior.object)) and same_scope(prior):
+            if store.acted_edge_ids(edge.user_id, [prior.id]):
+                kept_for_acts.add(prior.id)
+                continue
             incoming.valid_from = min(incoming.valid_from, prior.valid_from)
             # Provenance is FROZEN (specs/0037 v23, V-PROVENANCE-FROZEN): the
             # three RECOMPUTED fields are inherited by REPLACING the survivor's
@@ -550,7 +560,7 @@ def _build_supersession_plan(store, edge: Edge, relations: dict[str, Relation],
     rel = relations.get(edge.relation)
     if rel and rel.functional:
         for prior in scope:
-            if prior.id == edge.id or prior.id in absorbed:
+            if prior.id == edge.id or prior.id in absorbed or prior.id in kept_for_acts:
                 continue
             if _value_key(prior.object) == same:
                 continue

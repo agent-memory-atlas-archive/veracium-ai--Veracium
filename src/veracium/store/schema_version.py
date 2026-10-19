@@ -665,6 +665,41 @@ SCHEMA_V16 = tuple(
     SchemaObject("index", "ix_request_registry_target",
                  "CREATE INDEX ix_request_registry_target ON request_registry(user_id, target_edge_id)",
                  REBUILDABLE),
+    # specs/0047 §2 (T10a; the plan's one v16 step, amended in place): the subject's REPLIES, append-only, one row per
+    # act, with the 0008 amendment's act columns exactly as `confirmations` carries them (§2a: `origin`, the original
+    # request's id, `act_uid` = (origin_store, origin_user, origin_act_id) NULL for a local act and derived at export,
+    # the position's `act_seq`). The two CHECKs are §4b's closed request shape (a target iff `resolve`, text NULL iff
+    # `resolve`); `UNIQUE(user_id, correlation_id)` is C8's backstop, as on `confirmations` (research's T10a Q2).
+    SchemaObject("table", "replies", """CREATE TABLE replies (
+    id                      TEXT NOT NULL PRIMARY KEY,
+    user_id                 TEXT NOT NULL,
+    edge_id                 TEXT NOT NULL,
+    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),
+    target                  TEXT,
+    text                    TEXT,
+    actor                   TEXT NOT NULL,
+    correlation_id          TEXT NOT NULL,
+    request_digest          TEXT NOT NULL,
+    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),
+    recorded_correlation_id TEXT,
+    origin_store            TEXT,
+    origin_user             TEXT,
+    origin_act_id           TEXT,
+    act_seq                 INTEGER,
+    written_at              TEXT NOT NULL,
+    CHECK ((kind = 'resolve') = (target IS NOT NULL)),
+    CHECK ((kind = 'resolve') = (text IS NULL)),
+    UNIQUE(user_id, correlation_id)
+)""", REQUIRED),
+    # the reads by edge (the gate, render, doctor, redaction): a lookup, so REBUILDABLE on the ix_request_registry_target
+    # precedent
+    SchemaObject("index", "ix_replies_edge",
+                 "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)", REBUILDABLE),
+    # §4b: a challenge is resolved AT MOST ONCE — an invariant, so REQUIRED, not a performance index (research's T10a
+    # Q3): it holds against any writer, not only under the verb's lock
+    SchemaObject("index", "ux_replies_resolve",
+                 "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'",
+                 REQUIRED),
     SchemaObject("table", "act_counter", """CREATE TABLE act_counter (
     id       INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
     next_seq INTEGER NOT NULL

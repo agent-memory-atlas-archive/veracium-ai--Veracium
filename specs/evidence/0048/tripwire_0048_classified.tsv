@@ -152,7 +152,7 @@ edges-text	src/veracium/store/sqlite.py	str:edges	_SITE_EDGES_READ_FENCE = decla
 edges-text	src/veracium/store/sqlite.py	str:edges	edges = plan.get("edges", [])
 edges-text	src/veracium/store/sqlite.py	str:edges	return [{"user_id": u, "edges": int(e or 0), "episodes": int(p or 0)}
 edges-text	src/veracium/store/sqlite.py	str:edges	return {"edges": len(edges), "episodes": len(episodes),
-edges-text	src/veracium/store/sqlite.py	str:edges	return {"edges": n_edges, "episodes": n_eps, "confirmations": n_conf}
+edges-text	src/veracium/store/sqlite.py	str:edges	return {"edges": n_edges, "episodes": n_eps, "confirmations": n_conf, "replies": n_replies}
 edges-text	src/veracium/telemetry.py	str:edges	"forget": {"edges", "episodes"},
 episode-json-writer	src/veracium/store/migration.py	str:sql-write	conn.execute("UPDATE episodes SET json=? WHERE id=?",
 episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
@@ -317,3 +317,9 @@ edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	live =
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	edge = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (edge_id, user_id)).fetchone()
 sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	n = conn.execute("UPDATE migration_outcome SET undone_at=?, undo_request_ref=? "
 sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	conn.execute("INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
+copy-other-fields	src/veracium/store/sqlite.py	model_copy	return self._reply_from_row(row).model_copy(update={"replayed": True})
+edges-sql-not-a-json-write	src/veracium/store/sqlite.py	str:edges	row = self._conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (edge_id, user_id)).fetchone()
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	f"INSERT INTO replies({self._REPLY_COLS}, origin, act_seq) VALUES(?,?,?,?,?,?,?,?,?,?,'local',?)",
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	n = self._conn.execute("UPDATE replies SET text=? WHERE user_id=? AND edge_id=? AND text IS NOT NULL",
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	n = self._conn.execute("UPDATE replies SET request_digest=? WHERE user_id=? AND edge_id=?",

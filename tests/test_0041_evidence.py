@@ -75,20 +75,21 @@ def test_the_round1_reproduction_script_reports_every_claim_as_the_reviewer_foun
 def test_the_carrier_enumeration_reproduces_its_committed_output_byte_for_byte():
     """Research's carrier enumeration (their original sha16 50531999b8caf5f0 at
     research commit 2dfdf3ab; the packaged copy resolves the repository from its
-    own location) regenerates `carrier_enumeration_OUTPUT.txt` exactly: 27
+    own location) regenerates `carrier_enumeration_OUTPUT.txt` exactly: 28
     tables at v16 (15 at v14; 17 at v15 — §A, the column census, gained `episode_event` and
     `redactions` at 0041 tranche 2; at v16, 0008 v7's `request_registry` and `act_counter`,
-    `confirmations`' five act TEXT columns, (T4) `redactions.state` / `pending_reason`, and (T5) 0044's eight tables —
-    ids, times, digests and closed values, no content column; the identities below are
+    `confirmations`' five act TEXT columns, (T4) `redactions.state` / `pending_reason`, (T5) 0044's eight tables —
+    ids, times, digests and closed values, no content column — and (T10a) 0047's `replies`; the identities below are
     MODEL-derived and did
     not move), 84 terminal (model, field) identities, 64 carriers + 20 non-carriers; at T9 (0041 v16.2) 0045's `Edge.src`
-    and `Edge.attv` make it 86 identities behind 141 paths, 66 carriers + 20 non-carriers (`Edge.att` is a closed value).
-    v3's §2 quotes those counts; this is the node that keeps them honest."""
+    and `Edge.attv` make it 86 identities behind 141 paths, 66 carriers + 20 non-carriers (`Edge.att` is a closed value);
+    at T10a (0041 v16.3) 0047's `Reply` model, ruled a carrier, makes it 93 identities behind 148 paths, 73 carriers +
+    20 non-carriers (`kind` and `actor` are closed values). v3's §2 quotes those counts; this is the node that keeps them honest."""
     r = subprocess.run([sys.executable, str(EVIDENCE / "carrier_enumeration.py")],
                        cwd=EVIDENCE, env={"PATH": "/usr/bin:/bin"}, capture_output=True, text=True, timeout=300)
     assert r.returncode == 0, r.stderr[-2000:]
     assert r.stdout == (EVIDENCE / "carrier_enumeration_OUTPUT.txt").read_text()
-    assert "-> 66 CARRIERS" in r.stdout and "-> 20 NON-CARRIERS" in r.stdout
+    assert "-> 73 CARRIERS" in r.stdout and "-> 20 NON-CARRIERS" in r.stdout
 
 
 def _inv12_sets(base, content_digest, embedded_text):

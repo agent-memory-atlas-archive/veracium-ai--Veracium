@@ -34938,7 +34938,7 @@
       "accepted": [
         {
           "provenance": "constructor v16",
-          "digest": "9f7e3a786b02a39a40c8fa496af42a60d96740dc25876c87b9c7cf21bd007e2f",
+          "digest": "c5eec18e9865548889b634a6f4fb4d58c0bf18a6eae58a815888cc3f015c3b5b",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -35025,6 +35025,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -35039,6 +35044,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -36221,6 +36231,141 @@
                 ]
               ]
             },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
             "table:request_registry": {
               "type": "table",
               "table": "request_registry",
@@ -36601,7 +36746,7 @@
         },
         {
           "provenance": "migrated->v16 (0008 \u00a72a: confirmations ALTER on a constructor-shaped base, sha a82ee8e8\u2026); redactions inline (a base <= 14)",
-          "digest": "e7426f3ce5ccd771177be6c8668fa7176d41079443a57990f9d98209f22f009f",
+          "digest": "895e853444bad8082df82efb1ede5f13cfc6bf0ea0953f07f6fefdc1aa775939",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -36688,6 +36833,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -36702,6 +36852,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -37876,6 +38031,141 @@
                 ],
                 [
                   "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
                   "TEXT",
                   1,
                   null,
@@ -38264,7 +38554,7 @@
         },
         {
           "provenance": "migrated->v16 (0008 \u00a72a: confirmations ALTER on a constructor-shaped base, sha a82ee8e8\u2026); redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "dad054230ef7cfec3dffbedb6b3c4ec8546b353cee83edd7a31ff5d7e0eb2d0b",
+          "digest": "b8589a696943508bd1e39720024f312ac505da42ea4b8f38c5d645a1c5de69a6",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -38351,6 +38641,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -38365,6 +38660,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -39539,6 +39839,141 @@
                 ],
                 [
                   "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
                   "TEXT",
                   1,
                   null,
@@ -39927,7 +40362,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ledger inline) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions inline (a base <= 14)",
-          "digest": "7a396ff644897e69be8f6ad6f93b03aeb42c8d88343f5b63996bd2c28a299c8a",
+          "digest": "946dc0aed1f5aa76a3dc40f5948f0ca6efcf7806ad43bf3f60b83638ec4a237a",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -40014,6 +40449,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -40028,6 +40468,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -41202,6 +41647,141 @@
                 ],
                 [
                   "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
                   "TEXT",
                   1,
                   null,
@@ -41590,7 +42170,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ledger inline) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "afbaf66a7f33f2e27b80ea97c5fc32a4fee1bc899fb527b1a7b28238f8d957fa",
+          "digest": "1a8bda9b6781cfebd0886fd874c1abd97f69c6c4f2d6368f505e8bc5b8935842",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -41677,6 +42257,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -41691,6 +42276,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -42865,6 +43455,141 @@
                 ],
                 [
                   "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
                   "TEXT",
                   1,
                   null,
@@ -43253,7 +43978,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions inline (a base <= 14)",
-          "digest": "7bb632f656326f5a5aeaa169bac658ba9a03a4e08167651b4aef1e3455a21440",
+          "digest": "23c3d7d722b6642fd21b45c975acf2a0b28378ad0aecb02bcb95930478ec7446",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -43340,6 +44065,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -43354,6 +44084,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -44528,6 +45263,141 @@
                 ],
                 [
                   "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
                   "TEXT",
                   1,
                   null,
@@ -44916,7 +45786,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "196e59c93a5c6b7b886ae8550a98269f4ee6bd21c64adde0385c70a62d23c90e",
+          "digest": "055d5834226aa22b457ca6f7b7e498cad22e0eea3401d914fb9a600dae5e1a34",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -45003,6 +45873,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -45017,6 +45892,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -46191,6 +47071,141 @@
                 ],
                 [
                   "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
                   "TEXT",
                   1,
                   null,
@@ -46579,7 +47594,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ledger inline) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions inline (a base <= 14)",
-          "digest": "7e94d7015a40ce622719ea8fb65899e6bd8bfc827b605c023e44509337006b1d",
+          "digest": "0f7948edf0cc4def931b6a8644e77528026eea30f7f67f2fdd30b9569db10c99",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -46666,6 +47681,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -46680,6 +47700,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -47854,6 +48879,141 @@
                 ],
                 [
                   "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
                   "TEXT",
                   1,
                   null,
@@ -48242,7 +49402,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ledger inline) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "0ef150db1a2d9fa410cd17893c8b62339d28efc6169bf1e8d18e71565656dae1",
+          "digest": "d1c17fc5281b691bc2b9c7abad454babe58134f1db6f2b1acdf405e90d2292cd",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -48329,6 +49489,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -48343,6 +49508,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -49525,6 +50695,141 @@
                 ]
               ]
             },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
             "table:request_registry": {
               "type": "table",
               "table": "request_registry",
@@ -49905,7 +51210,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions inline (a base <= 14)",
-          "digest": "91bd7d3be2d59855808cb7291b8a2746e3818c0ff4d4d012b446bdaa56f532a7",
+          "digest": "e5f76ade0d0636c66d1ed120bb62cd251857e2c53f38108fe43da09ab0099ac3",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -49992,6 +51297,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -50006,6 +51316,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -51188,6 +52503,141 @@
                 ]
               ]
             },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
             "table:request_registry": {
               "type": "table",
               "table": "request_registry",
@@ -51568,7 +53018,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "1c1223686cb8777c485be75aebef9574bef3c3c2ccb08752f8a47f9158ade0eb",
+          "digest": "6f8fa99e90184863d71677993e73e6fa089e1bb6523b826cd0fa0245668c58a8",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -51655,6 +53105,11 @@
               "table": "refusal_inventory",
               "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
             },
+            "index:ix_replies_edge": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+            },
             "index:ix_request_registry_target": {
               "type": "index",
               "table": "request_registry",
@@ -51669,6 +53124,11 @@
               "type": "index",
               "table": "supersession_refusals",
               "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+            },
+            "index:ux_replies_resolve": {
+              "type": "index",
+              "table": "replies",
+              "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
             },
             "table:act_counter": {
               "type": "table",
@@ -52843,6 +54303,141 @@
                 ],
                 [
                   "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "table:replies": {
+              "type": "table",
+              "table": "replies",
+              "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+              "columns": [
+                [
+                  "id",
+                  "TEXT",
+                  1,
+                  null,
+                  1,
+                  0
+                ],
+                [
+                  "user_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "edge_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "kind",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "target",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "text",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "actor",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "correlation_id",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "request_digest",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin",
+                  "TEXT",
+                  1,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "recorded_correlation_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_store",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_user",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "origin_act_id",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "act_seq",
+                  "INTEGER",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "written_at",
                   "TEXT",
                   1,
                   null,

@@ -1,4 +1,4 @@
-A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 27 tables
+A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 28 tables
 
    arity_era                effective_at
    arity_inventory          edge_id, user_id, pre_invalidated_at, pre_reason
@@ -18,6 +18,7 @@ A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 27 tables
    reclassification_plan    plan_id, relation, from_arity, to_arity
    redactions               id, user_id, target_kind, target_id, fields, reason, event_ref, recorded_at, source_body, source_origin, source_user, source_event_ref, state, pending_reason
    refusal_inventory        refusal_id, user_id
+   replies                  id, user_id, edge_id, kind, target, text, actor, correlation_id, request_digest, origin, recorded_correlation_id, origin_store, origin_user, origin_act_id, written_at
    request_registry         user_id, correlation_id, verb, target_edge_id, request_digest, result_ref, written_at
    source_revocations       user_id, identity_digest, action, at, reason
    store_epoch              started_at
@@ -33,7 +34,7 @@ A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 27 tables
      name or explicitly record as a non-carrier.
 
 B. Model fields that can carry TEXT — the DDL is blind to these
-   18 models DISCOVERED in veracium.schema, never named: AgreementRecord, Confirmation, ConsolidationOp, ConsolidationOutputDraft, ContestedGroup, ContestedLinkage, ContributionDraft, ContributionRecord, CorrectionAuthorisation, Edge, Episode, OutcomeJudgmentDraft, Provenance, Relation, SupersessionPlan, SupersessionRefusal, SupersessionRefusalDraft, SupersessionResult
+   19 models DISCOVERED in veracium.schema, never named: AgreementRecord, Confirmation, ConsolidationOp, ConsolidationOutputDraft, ContestedGroup, ContestedLinkage, ContributionDraft, ContributionRecord, CorrectionAuthorisation, Edge, Episode, OutcomeJudgmentDraft, Provenance, Relation, Reply, SupersessionPlan, SupersessionRefusal, SupersessionRefusalDraft, SupersessionResult
 
      AgreementRecord.markers                     list[str]
      AgreementRecord.direction                   <class 'str'>
@@ -130,6 +131,11 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      Provenance.origin                      str | None
      Relation.name                        <class 'str'>
      Relation.desc                        <class 'str'>
+     Reply.edge_id                     <class 'str'>
+     Reply.target                      str | None
+     Reply.text                        str | None
+     Reply.correlation_id              <class 'str'>
+     Reply.request_digest              <class 'str'>
      SupersessionPlan.incoming_edge.id            <class 'str'>
      SupersessionPlan.incoming_edge.user_id       <class 'str'>
      SupersessionPlan.incoming_edge.subject       <class 'str'>
@@ -167,13 +173,13 @@ B. Model fields that can carry TEXT — the DDL is blind to these
      SupersessionRefusalDraft.incoming_edge_id            <class 'str'>
      SupersessionRefusalDraft.relation                    <class 'str'>
 
-   131 text-capable fields, RECURSED through nested models.
+   136 text-capable fields, RECURSED through nested models.
    Every one lives inside a json blob and is invisible to the schema.
 
 C. TRIAGE -- carriers, DERIVED from persistence and value-space bounds
-   86 TERMINAL (model, field) identities behind 141 paths.
+   93 TERMINAL (model, field) identities behind 148 paths.
 
-   -> 66 CARRIERS. Each must be named in 0041 section 2, or recorded there as an explicit exclusion.
+   -> 73 CARRIERS. Each must be named in 0041 section 2, or recorded there as an explicit exclusion.
       AgreementRecord.direction                [nested in Edge (json blob)]
       [also reachable as ContestedGroup.exposed.agreement.direction, Edge.agreement.direction, SupersessionPlan.incoming_edge.agreement.direction]
       AgreementRecord.lexicon                  [nested in Edge (json blob)]
@@ -254,6 +260,13 @@ C. TRIAGE -- carriers, DERIVED from persistence and value-space bounds
       [also reachable as ContestedGroup.exposed.provenance.origin, Edge.provenance.origin, Episode.provenance.origin, SupersessionPlan.incoming_edge.provenance.origin]
       Provenance.source_id                [nested in Edge (json blob)]
       [also reachable as ContestedGroup.exposed.provenance.source_id, Edge.provenance.source_id, Episode.provenance.source_id, SupersessionPlan.incoming_edge.provenance.source_id]
+      Reply.correlation_id           [RULED carrier -> replies]
+      Reply.edge_id                  [RULED carrier -> replies]
+      Reply.id                       [RULED carrier -> replies]
+      Reply.request_digest           [RULED carrier -> replies]
+      Reply.target                   [RULED carrier -> replies]
+      Reply.text                     [RULED carrier -> replies]
+      Reply.user_id                  [RULED carrier -> replies]
       SupersessionRefusal.incoming_edge_id         [IS the row -> supersession_refusals]
       SupersessionRefusal.prior_edge_id            [IS the row -> supersession_refusals]
       SupersessionRefusal.refusal_id               [IS the row -> supersession_refusals]
@@ -269,9 +282,11 @@ C. TRIAGE -- carriers, DERIVED from persistence and value-space bounds
 
 
    RULED, against the write path (see RULINGS):
-      Confirmation         CARRIER. Subset failed on `replayed` alone, and schema.py:149 comments it `runtime only: True when returned for a replay` -- it is not a column. The model IS the confirmations row; INSERT at sqlite.py:588.
+      Confirmation         CARRIER. Subset failed on `replayed` alone, and the model's own comment calls it `runtime only: True when returned for a replay` -- it is not a column. The model IS the confirmations row; INSERTed by SqliteStore.confirm_edge.
       ContestedGroup       NON-CARRIER as a storage SITE. `exposed`/`linkage`/`prior_edge_ids` are not columns: it is a view ASSEMBLED from rows, never written. Its text is Edge's, already carried above. (`partition` greps clean in store/ -- every hit is str.partition(), our word, their sense.)
       ContributionDraft    CARRIER. Subset failed on `contributor_id` alone, which is INSERTed into the column `contributor_ref` -- sqlite.py:1236 documents the rename in its own comment. The draft's content reaches disk.
+      CorrectionAuthorisation NON-CARRIER as a replies row. It neared `replies` on two shared NAMES, `kind` and `origin`, which mean other things there. It is minted and verified inside SqliteStore.apply_supersession_plan, never INSERTed into any table.
+      Reply                CARRIER. Subset failed on `replayed` alone, the runtime flag the Confirmation ruling names (`runtime only: True when returned for a replay`). The model IS the replies row; INSERTed by SqliteStore.add_reply.
 
    -> 0 UNRESOLVED -- shares a table's columns but is not a row.
       NOT defaulted into either pile: guessing non-carrier loses a real
@@ -287,11 +302,11 @@ C. TRIAGE -- carriers, DERIVED from persistence and value-space bounds
       ContestedGroup.subject                  RULED non-carrier
       ContestedLinkage.edge_id                  TRANSIENT (never stored)
       ContestedLinkage.partition                TRANSIENT (never stored)
-      CorrectionAuthorisation.kind                     TRANSIENT (never stored)
-      CorrectionAuthorisation.origin                   TRANSIENT (never stored)
-      CorrectionAuthorisation.principal                TRANSIENT (never stored)
-      CorrectionAuthorisation.prior_edge_id            TRANSIENT (never stored)
-      CorrectionAuthorisation.replacement_digest       TRANSIENT (never stored)
+      CorrectionAuthorisation.kind                     RULED non-carrier
+      CorrectionAuthorisation.origin                   RULED non-carrier
+      CorrectionAuthorisation.principal                RULED non-carrier
+      CorrectionAuthorisation.prior_edge_id            RULED non-carrier
+      CorrectionAuthorisation.replacement_digest       RULED non-carrier
       OutcomeJudgmentDraft.context_ref              TRANSIENT (never stored)
       OutcomeJudgmentDraft.event_timestamp          TRANSIENT (never stored)
       OutcomeJudgmentDraft.summary                  TRANSIENT (never stored)

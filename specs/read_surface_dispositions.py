@@ -234,6 +234,13 @@ DISPOSITIONS: dict[str, dict] = {
         disposition="WRITE path (host-only, never MCP; specs/0044 §4i): "
                     "retires one restored value again; ids and a time "
                     "leave, no record content."),
+    "Memory.reply": dict(
+        returns_records=False, principal="none",
+        carriers="`{reply_id, edge_id, kind, target, written_at, "
+                 "correlation_id, replayed}`",
+        disposition="WRITE path (host-only, never MCP; specs/0047 §4a): "
+                    "appends one reply; ids, a closed kind and a time leave, "
+                    "never the reply's text or the fact's content."),
     "Memory.correct": dict(
         returns_records=False, principal="none",
         carriers="`{corrected, replacement}`",

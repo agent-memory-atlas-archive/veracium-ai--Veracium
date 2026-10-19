@@ -268,55 +268,55 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1995,
+   "line": 2039,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1998,
+   "line": 2042,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2001,
+   "line": 2045,
    "module": "__init__.py",
    "qualname": "Memory.record_outcome"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2119,
+   "line": 2163,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2139,
+   "line": 2183,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2168,
+   "line": 2212,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2185,
+   "line": 2229,
    "module": "__init__.py",
    "qualname": "Memory.correct"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2255,
+   "line": 2299,
    "module": "__init__.py",
    "qualname": "Memory.policy_receipts"
   },
@@ -1166,7 +1166,7 @@
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 465,
+   "line": 483,
    "module": "doctor.py",
    "qualname": "_check_sources.unsourced"
   },
@@ -1291,27 +1291,9 @@
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 645,
+   "line": 655,
    "module": "graph.py",
    "qualname": "_tokens"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 832,
-   "module": "graph.py",
-   "qualname": "semantic_duplicate_of"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 838,
-   "module": "graph.py",
-   "qualname": "semantic_duplicate_of"
-  },
-  {
-   "kind": "RETURN_FALSE",
-   "line": 840,
-   "module": "graph.py",
-   "qualname": "semantic_duplicate_of"
   },
   {
    "kind": "RETURN_FALSE",
@@ -1321,44 +1303,62 @@
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 844,
+   "line": 848,
    "module": "graph.py",
    "qualname": "semantic_duplicate_of"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 846,
+   "line": 850,
+   "module": "graph.py",
+   "qualname": "semantic_duplicate_of"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 852,
+   "module": "graph.py",
+   "qualname": "semantic_duplicate_of"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 854,
+   "module": "graph.py",
+   "qualname": "semantic_duplicate_of"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 856,
    "module": "graph.py",
    "qualname": "semantic_duplicate_of"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 893,
+   "line": 903,
    "module": "graph.py",
    "qualname": "fused_subgraph"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 914,
+   "line": 924,
    "module": "graph.py",
    "qualname": "fused_subgraph._order"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1057,
+   "line": 1067,
    "module": "graph.py",
    "qualname": "_stage4_and_5"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1204,
+   "line": 1214,
    "module": "graph.py",
    "qualname": "_strictly_redundant"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1299,
+   "line": 1309,
    "module": "graph.py",
    "qualname": "collapse_for_render"
   },
@@ -2262,26 +2262,26 @@
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 127,
+   "line": 130,
    "module": "redaction.py",
    "qualname": "edge_carries_marker"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 140,
+   "line": 143,
    "module": "redaction.py",
    "qualname": "carrier_paths"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 168,
+   "line": 171,
    "module": "redaction.py",
    "qualname": "_is_absent"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 247,
+   "line": 250,
    "module": "redaction.py",
    "qualname": "shows_redaction"
   },
@@ -2364,244 +2364,244 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 210,
+   "line": 253,
    "module": "schema.py",
    "qualname": "Provenance._producer_only_on_procedural"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 237,
+   "line": 280,
    "module": "schema.py",
    "qualname": "Provenance.procedural"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 244,
+   "line": 287,
    "module": "schema.py",
    "qualname": "Provenance.third_party_influenced"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 277,
+   "line": 320,
    "module": "schema.py",
    "qualname": "EvidenceContext.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 285,
+   "line": 328,
    "module": "schema.py",
    "qualname": "EvidenceContext.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 289,
+   "line": 332,
    "module": "schema.py",
    "qualname": "EvidenceContext.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 294,
+   "line": 337,
    "module": "schema.py",
    "qualname": "EvidenceContext.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 299,
+   "line": 342,
    "module": "schema.py",
    "qualname": "EvidenceContext.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 304,
+   "line": 347,
    "module": "schema.py",
    "qualname": "EvidenceContext.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 313,
+   "line": 356,
    "module": "schema.py",
    "qualname": "EvidenceContext.__setattr__"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 326,
+   "line": 369,
    "module": "schema.py",
    "qualname": "EvidenceContext.__eq__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 385,
+   "line": 428,
    "module": "schema.py",
    "qualname": "AgreementRecord._markers_closed"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 388,
+   "line": 431,
    "module": "schema.py",
    "qualname": "AgreementRecord._markers_closed"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 396,
+   "line": 439,
    "module": "schema.py",
    "qualname": "AgreementRecord._direction_closed"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 405,
+   "line": 448,
    "module": "schema.py",
    "qualname": "AgreementRecord._lexicon_pattern"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 485,
+   "line": 528,
    "module": "schema.py",
    "qualname": "Relation._arity_and_functional_agree"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 554,
+   "line": 597,
    "module": "schema.py",
    "qualname": "is_procedural_relation"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 646,
+   "line": 689,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 651,
+   "line": 694,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 674,
+   "line": 717,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 679,
+   "line": 722,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 710,
+   "line": 753,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 715,
+   "line": 758,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__setattr__"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 720,
+   "line": 763,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__eq__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 788,
+   "line": 831,
    "module": "schema.py",
    "qualname": "Edge._grounding_axis_is_well_formed"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 790,
+   "line": 833,
    "module": "schema.py",
    "qualname": "Edge._grounding_axis_is_well_formed"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 792,
+   "line": 835,
    "module": "schema.py",
    "qualname": "Edge._grounding_axis_is_well_formed"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 829,
+   "line": 872,
    "module": "schema.py",
    "qualname": "Edge.active"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 845,
+   "line": 888,
    "module": "schema.py",
    "qualname": "Edge.quarantined"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 857,
+   "line": 900,
    "module": "schema.py",
    "qualname": "Edge.use_only"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 881,
+   "line": 924,
    "module": "schema.py",
    "qualname": "Edge.valid_now"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 899,
+   "line": 942,
    "module": "schema.py",
    "qualname": "Edge.assertable"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 962,
+   "line": 1005,
    "module": "schema.py",
    "qualname": "Episode.quarantined"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 973,
+   "line": 1016,
    "module": "schema.py",
    "qualname": "Episode.use_only"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 980,
+   "line": 1023,
    "module": "schema.py",
    "qualname": "Episode.active"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 999,
+   "line": 1042,
    "module": "schema.py",
    "qualname": "Episode.assertable"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1007,
+   "line": 1050,
    "module": "schema.py",
    "qualname": "Episode.valid_now"
   },
@@ -3243,203 +3243,238 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 301,
+   "line": 216,
+   "module": "store/base.py",
+   "qualname": "ReplyRefused.__init__"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 318,
    "module": "store/base.py",
    "qualname": "Store.apply_supersession_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 307,
+   "line": 324,
    "module": "store/base.py",
    "qualname": "Store.refusals"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 314,
+   "line": 331,
    "module": "store/base.py",
    "qualname": "Store.undo_restoration"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 321,
+   "line": 341,
+   "module": "store/base.py",
+   "qualname": "Store.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 345,
+   "module": "store/base.py",
+   "qualname": "Store.replies_for"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 349,
+   "module": "store/base.py",
+   "qualname": "Store.active_challenges"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 355,
+   "module": "store/base.py",
+   "qualname": "Store.acted_edge_ids"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 361,
    "module": "store/base.py",
    "qualname": "Store.refusal_inventory_ids"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 329,
+   "line": 369,
    "module": "store/base.py",
    "qualname": "Store.contributions"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 357,
+   "line": 397,
    "module": "store/base.py",
    "qualname": "Store.redact"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 368,
+   "line": 408,
    "module": "store/base.py",
    "qualname": "Store.confirm_notice"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 393,
+   "line": 433,
    "module": "store/base.py",
    "qualname": "Store.write_policy_receipt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 402,
+   "line": 442,
    "module": "store/base.py",
    "qualname": "Store.policy_receipts"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 407,
+   "line": 447,
    "module": "store/base.py",
    "qualname": "Store.policy_receipt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 456,
+   "line": 496,
    "module": "store/base.py",
    "qualname": "Store.contributions_naming"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 463,
+   "line": 503,
    "module": "store/base.py",
    "qualname": "Store.contributors_of_source"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 487,
+   "line": 527,
    "module": "store/base.py",
    "qualname": "Store.confirm_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 493,
+   "line": 533,
    "module": "store/base.py",
    "qualname": "Store.confirmations_for"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 521,
+   "line": 561,
    "module": "store/base.py",
    "qualname": "Store.upsert_embedding"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 536,
+   "line": 576,
    "module": "store/base.py",
    "qualname": "Store.semantic_candidates"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 542,
+   "line": 582,
    "module": "store/base.py",
    "qualname": "Store.embedding_keys"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 576,
+   "line": 616,
    "module": "store/base.py",
    "qualname": "Store.append_outcome_if_head"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 628,
+   "line": 668,
    "module": "store/base.py",
    "qualname": "Store.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 644,
+   "line": 684,
    "module": "store/base.py",
    "qualname": "Store.create_or_takeover_consolidation"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 654,
+   "line": 694,
    "module": "store/base.py",
    "qualname": "Store.renew_consolidation_lease"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 667,
+   "line": 707,
    "module": "store/base.py",
    "qualname": "Store.write_consolidation_output_if_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 679,
+   "line": 719,
    "module": "store/base.py",
    "qualname": "Store.transition_consolidation_if_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 688,
+   "line": 728,
    "module": "store/base.py",
    "qualname": "Store.delete_claimed_inputs_if_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 699,
+   "line": 739,
    "module": "store/base.py",
    "qualname": "Store.abandon_consolidation_if_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 707,
+   "line": 747,
    "module": "store/base.py",
    "qualname": "Store.pending_consolidations"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 718,
+   "line": 758,
    "module": "store/base.py",
    "qualname": "Store.quiescent_episode_snapshot"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 729,
+   "line": 769,
    "module": "store/base.py",
    "qualname": "Store.list_users"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 741,
+   "line": 781,
    "module": "store/base.py",
    "qualname": "Store.forget_user"
   },
@@ -4512,194 +4547,173 @@
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 812,
+   "line": 847,
    "module": "store/schema_version.py",
    "qualname": "rebuildable_keys"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 907,
+   "line": 942,
    "module": "store/schema_version.py",
    "qualname": "identity"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 926,
+   "line": 961,
    "module": "store/schema_version.py",
    "qualname": "drift"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1039,
+   "line": 1074,
    "module": "store/schema_version.py",
    "qualname": "active_records"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1065,
+   "line": 1100,
    "module": "store/schema_version.py",
    "qualname": "artifact_problems._current"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1210,
+   "line": 1245,
    "module": "store/schema_version.py",
    "qualname": "manifestation_problems"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1338,
+   "line": 1373,
    "module": "store/schema_version.py",
    "qualname": "_keyable_runtime"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1353,
+   "line": 1388,
    "module": "store/schema_version.py",
    "qualname": "active_records"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1379,
+   "line": 1414,
    "module": "store/schema_version.py",
    "qualname": "artifact_problems._current"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1524,
+   "line": 1559,
    "module": "store/schema_version.py",
    "qualname": "manifestation_problems"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1551,
+   "line": 1586,
    "module": "store/schema_version.py",
    "qualname": "runtime_supported"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1567,
+   "line": 1602,
    "module": "store/schema_version.py",
    "qualname": "runtime_supported"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1571,
+   "line": 1606,
    "module": "store/schema_version.py",
    "qualname": "runtime_supported"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1573,
+   "line": 1608,
    "module": "store/schema_version.py",
    "qualname": "runtime_supported"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1640,
+   "line": 1675,
    "module": "store/schema_version.py",
    "qualname": "accepted_digests"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1650,
+   "line": 1685,
    "module": "store/schema_version.py",
    "qualname": "accepted_provenance"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1739,
+   "line": 1774,
    "module": "store/schema_version.py",
    "qualname": "_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1819,
+   "line": 1854,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1826,
+   "line": 1861,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1834,
+   "line": 1869,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1838,
+   "line": 1873,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1899,
+   "line": 1934,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1904,
+   "line": 1939,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1919,
+   "line": 1954,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1932,
+   "line": 1967,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1936,
+   "line": 1971,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1960,
-   "module": "store/schema_version.py",
-   "qualname": "open_versioned"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1979,
-   "module": "store/schema_version.py",
-   "qualname": "open_versioned"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1987,
-   "module": "store/schema_version.py",
-   "qualname": "open_versioned"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 2004,
+   "line": 1995,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
@@ -4713,188 +4727,193 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2030,
+   "line": 2022,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2040,
+   "line": 2039,
+   "module": "store/schema_version.py",
+   "qualname": "open_versioned"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2049,
+   "module": "store/schema_version.py",
+   "qualname": "open_versioned"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2065,
+   "module": "store/schema_version.py",
+   "qualname": "open_versioned"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2075,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 2073,
+   "line": 2108,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2082,
+   "line": 2117,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
+   "kind": "RETURN_NONE",
+   "line": 226,
+   "module": "store/sqlite.py",
+   "qualname": "_reply_shape_problem"
+  },
+  {
+   "kind": "RETURN_NONE",
+   "line": 235,
+   "module": "store/sqlite.py",
+   "qualname": "_reply_shape_problem"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
-   "line": 210,
+   "line": 251,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.__init__"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 228,
+   "line": 269,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 254,
+   "line": 295,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.local_origin"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 296,
+   "line": 337,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._write_txn"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 305,
+   "line": 346,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._write_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 321,
+   "line": 362,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._write_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 347,
+   "line": 388,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._journal_edge_write"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 355,
+   "line": 396,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._journal_edge_write"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 361,
+   "line": 402,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._journal_edge_write"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 364,
+   "line": 405,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._journal_edge_write"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 370,
+   "line": 411,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._journal_edge_write"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 378,
+   "line": 419,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._journal_edge_write"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 387,
+   "line": 428,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._journal_edge_write"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 429,
+   "line": 470,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.edge_events"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 434,
+   "line": 475,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._cutoff"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 447,
+   "line": 488,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.edge_state_at"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 455,
+   "line": 496,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.edge_state_at"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 538,
+   "line": 579,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.read_window"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 572,
+   "line": 613,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._refuse_redacted_reason"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 589,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._upsert_edge_row"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 598,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._upsert_edge_row"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 612,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._upsert_edge_row"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 617,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._upsert_edge_row"
   },
   {
    "bare": false,
@@ -4906,42 +4925,42 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 636,
+   "line": 639,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_edge_row"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 646,
+   "line": 653,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_edge_row"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 659,
+   "line": 658,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_edge_row"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 665,
+   "line": 671,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_edge_row"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 674,
+   "line": 677,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_edge_row"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 685,
+   "line": 687,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_edge_row"
   },
@@ -4955,643 +4974,749 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 710,
+   "line": 706,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._upsert_edge_row"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 715,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._upsert_edge_row"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 726,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._upsert_edge_row"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 741,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._upsert_edge_row"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 751,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_edge_row"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 757,
+   "line": 798,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._registry_held"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 761,
+   "line": 802,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._registry_held"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 764,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._registry_held"
-  },
-  {
-   "kind": "RETURN_NONE",
-   "line": 779,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._confirm_replay"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 783,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._confirm_replay"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 790,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._confirm_replay"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 805,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._allocate_act_seq"
+   "qualname": "SqliteStore._registry_held"
+  },
+  {
+   "kind": "RETURN_NONE",
+   "line": 820,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._confirm_replay"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 826,
+   "line": 824,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.confirm_edge"
+   "qualname": "SqliteStore._confirm_replay"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 831,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.confirm_edge"
+   "qualname": "SqliteStore._confirm_replay"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 846,
    "module": "store/sqlite.py",
+   "qualname": "SqliteStore._allocate_act_seq"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 867,
+   "module": "store/sqlite.py",
    "qualname": "SqliteStore.confirm_edge"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 905,
+   "line": 872,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.confirm_edge"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 881,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.confirm_edge"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 895,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.confirm_edge"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 954,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.confirm_edge"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 913,
+   "line": 962,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.confirm_edge"
   },
   {
+   "kind": "RETURN_NONE",
+   "line": 992,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._reply_replay"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 996,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._reply_replay"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1003,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._reply_replay"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1029,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1033,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1039,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1042,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1053,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1058,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1063,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1071,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1075,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1100,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": true,
+   "kind": "RAISE",
+   "line": 1102,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "bare": true,
+   "kind": "RAISE",
+   "line": 1105,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.add_reply"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1111,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._resolved"
+  },
+  {
    "kind": "FILTER_RETURN",
-   "line": 948,
+   "line": 1117,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._open_challenge_ids"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1124,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.replies_for"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1131,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.active_challenges"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1153,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._absorbs_an_act"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 1176,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.confirmations_for"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 955,
+   "line": 1183,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._invalidate_edge_row"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1000,
+   "line": 1228,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._retire_episode_row"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1069,
+   "line": 1297,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._recompute_edge_row"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1085,
+   "line": 1313,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._edge_in_refusal"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1118,
+   "line": 1346,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.edges"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1197,
+   "line": 1425,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.validate_receipt_state"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1209,
+   "line": 1437,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.validate_receipt_state"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1216,
+   "line": 1444,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.validate_receipt_state"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1221,
+   "line": 1449,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.validate_receipt_state"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1225,
+   "line": 1453,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.validate_receipt_state"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1240,
+   "line": 1468,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.supersession_receipt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1294,
+   "line": 1522,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1312,
+   "line": 1540,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1328,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1333,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1360,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1367,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1371,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1375,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1379,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1385,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1390,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1394,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1411,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1433,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1441,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1460,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1465,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.apply_supersession_plan"
-  },
-  {
-   "kind": "FILTER_RETURN",
-   "line": 1525,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.refusals"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1541,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_contribution"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1545,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_contribution"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1551,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_contribution"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 1556,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_contribution"
+   "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1636,
+   "line": 1561,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_absorption_flattening"
+   "qualname": "SqliteStore.apply_supersession_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1594,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.apply_supersession_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1601,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.apply_supersession_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1605,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.apply_supersession_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1609,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.apply_supersession_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1613,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.apply_supersession_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1619,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.apply_supersession_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1624,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.apply_supersession_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1628,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 1645,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_absorption_flattening"
+   "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1654,
+   "line": 1667,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_absorption_flattening"
+   "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1659,
+   "line": 1675,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_absorption_flattening"
+   "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1682,
+   "line": 1694,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_absorption_flattening"
+   "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1718,
+   "line": 1699,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_consolidation_contributions"
+   "qualname": "SqliteStore.apply_supersession_plan"
   },
   {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1726,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_consolidation_contributions"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
+   "kind": "FILTER_RETURN",
    "line": 1759,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._write_consolidation_contributions"
-  },
-  {
-   "kind": "FILTER_RETURN",
-   "line": 1801,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.contributions"
-  },
-  {
-   "kind": "FILTER_RETURN",
-   "line": 1815,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.contributions_naming"
-  },
-  {
-   "kind": "FILTER_RETURN",
-   "line": 1830,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.contributors_of_source"
+   "qualname": "SqliteStore.refusals"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1848,
+   "line": 1775,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.add_episode"
+   "qualname": "SqliteStore._write_contribution"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1856,
+   "line": 1779,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.add_episode"
+   "qualname": "SqliteStore._write_contribution"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1861,
+   "line": 1785,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.add_episode"
+   "qualname": "SqliteStore._write_contribution"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1790,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._write_contribution"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 1870,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.add_episode"
+   "qualname": "SqliteStore._write_absorption_flattening"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1882,
+   "line": 1879,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.add_episode"
+   "qualname": "SqliteStore._write_absorption_flattening"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1890,
+   "line": 1888,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.add_episode"
+   "qualname": "SqliteStore._write_absorption_flattening"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1897,
+   "line": 1893,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.add_episode"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1909,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.add_episode"
+   "qualname": "SqliteStore._write_absorption_flattening"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 1916,
    "module": "store/sqlite.py",
+   "qualname": "SqliteStore._write_absorption_flattening"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1952,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._write_consolidation_contributions"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1960,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._write_consolidation_contributions"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1993,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._write_consolidation_contributions"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 2035,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.contributions"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 2049,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.contributions_naming"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 2064,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.contributors_of_source"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2082,
+   "module": "store/sqlite.py",
    "qualname": "SqliteStore.add_episode"
   },
   {
-   "kind": "BOOL_RETURN",
-   "line": 1959,
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2090,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore._ordinary_read_visible"
-  },
-  {
-   "kind": "BOOL_RETURN",
-   "line": 1962,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore._ordinary_read_visible"
+   "qualname": "SqliteStore.add_episode"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1975,
+   "line": 2095,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.delete_episode"
+   "qualname": "SqliteStore.add_episode"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1983,
+   "line": 2104,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.delete_episode"
+   "qualname": "SqliteStore.add_episode"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2033,
+   "line": 2116,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.append_outcome_if_head"
+   "qualname": "SqliteStore.add_episode"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2091,
+   "line": 2124,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
+   "qualname": "SqliteStore.add_episode"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2096,
+   "line": 2131,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
+   "qualname": "SqliteStore.add_episode"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2100,
+   "line": 2143,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 2106,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 2113,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 2120,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 2141,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 2146,
-   "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
+   "qualname": "SqliteStore.add_episode"
   },
   {
    "bare": false,
    "kind": "RAISE",
    "line": 2150,
    "module": "store/sqlite.py",
-   "qualname": "SqliteStore.commit_outcome_import_plan"
+   "qualname": "SqliteStore.add_episode"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 2193,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._ordinary_read_visible"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 2196,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore._ordinary_read_visible"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2158,
+   "line": 2209,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.delete_episode"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2217,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.delete_episode"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2267,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.append_outcome_if_head"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2325,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2162,
+   "line": 2330,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2166,
+   "line": 2334,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2172,
+   "line": 2340,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2222,
+   "line": 2347,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2259,
+   "line": 2354,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2269,
+   "line": 2375,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2276,
+   "line": 2380,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2298,
+   "line": 2384,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2314,
+   "line": 2392,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2320,
+   "line": 2396,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2329,
+   "line": 2400,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2414,
+   "line": 2406,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
@@ -5605,302 +5730,365 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2477,
+   "line": 2493,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2507,
+   "line": 2503,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2510,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2532,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2548,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2554,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2563,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2648,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2690,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2711,
+   "module": "store/sqlite.py",
+   "qualname": "SqliteStore.commit_outcome_import_plan"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2741,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 2522,
+   "line": 2756,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.commit_outcome_import_plan"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2550,
+   "line": 2784,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._ops_for_user"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 2559,
+   "line": 2793,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._lease_live"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2598,
+   "line": 2832,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._claim_inputs"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2621,
+   "line": 2855,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.create_or_takeover_consolidation"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2636,
+   "line": 2870,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.create_or_takeover_consolidation"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 2652,
+   "line": 2886,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.create_or_takeover_consolidation"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2683,
+   "line": 2917,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.renew_consolidation_lease"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2697,
+   "line": 2931,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.write_consolidation_output_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2778,
+   "line": 3012,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.transition_consolidation_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2783,
+   "line": 3017,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.transition_consolidation_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2788,
+   "line": 3022,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.transition_consolidation_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2794,
+   "line": 3028,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.transition_consolidation_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2803,
+   "line": 3037,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.transition_consolidation_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2810,
+   "line": 3044,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.transition_consolidation_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2813,
+   "line": 3047,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.transition_consolidation_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2823,
+   "line": 3057,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.delete_claimed_inputs_if_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2838,
+   "line": 3072,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.abandon_consolidation_if_current"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2845,
+   "line": 3079,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.pending_consolidations"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2856,
+   "line": 3090,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.quiescent_episode_snapshot"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 2867,
+   "line": 3101,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.list_users"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 2974,
+   "line": 3208,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._completed_attestation"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2990,
+   "line": 3224,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._set_notice_state"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 3012,
+   "line": 3246,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.pending_notices"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3033,
+   "line": 3267,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.confirm_notice"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3041,
+   "line": 3275,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.confirm_notice"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3048,
+   "line": 3282,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.confirm_notice"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 3071,
+   "line": 3305,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._treated_on_arrival"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3148,
+   "line": 3382,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._quoting_domain"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3152,
+   "line": 3386,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._quoting_domain"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3164,
+   "line": 3398,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._quoting_domain"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3190,
+   "line": 3424,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.redact"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3196,
+   "line": 3430,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.redact"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3209,
+   "line": 3443,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.redact"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3235,
+   "line": 3469,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._redact_in_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3263,
+   "line": 3497,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._redact_in_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3372,
+   "line": 3618,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._redact_in_txn"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3468,
+   "line": 3716,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.write_policy_receipt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3483,
+   "line": 3731,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 3486,
+   "line": 3734,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.policy_receipts"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 3512,
+   "line": 3760,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.upsert_embedding"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 3522,
+   "line": 3770,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.upsert_embedding"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3534,
+   "line": 3782,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_embedding_in_txn"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 3541,
+   "line": 3789,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore._upsert_embedding_in_txn"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 3602,
+   "line": 3850,
    "module": "store/sqlite.py",
    "qualname": "SqliteStore.set_wiki"
   },
@@ -5994,11 +6182,11 @@
  ],
  "summary": {
   "by_kind": {
-   "BOOL_RETURN": 83,
-   "FILTER_RETURN": 51,
-   "RAISE": 585,
+   "BOOL_RETURN": 85,
+   "FILTER_RETURN": 54,
+   "RAISE": 605,
    "RETURN_FALSE": 102,
-   "RETURN_NONE": 80
+   "RETURN_NONE": 83
   },
   "kinds": [
    "RAISE",
@@ -6300,7 +6488,7 @@
    "store/base.py": {
     "BOOL_RETURN": 0,
     "FILTER_RETURN": 0,
-    "RAISE": 30,
+    "RAISE": 35,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 0
    },
@@ -6361,11 +6549,11 @@
     "RETURN_NONE": 1
    },
    "store/sqlite.py": {
-    "BOOL_RETURN": 6,
-    "FILTER_RETURN": 14,
-    "RAISE": 128,
+    "BOOL_RETURN": 8,
+    "FILTER_RETURN": 17,
+    "RAISE": 143,
     "RETURN_FALSE": 16,
-    "RETURN_NONE": 9
+    "RETURN_NONE": 12
    },
    "telemetry.py": {
     "BOOL_RETURN": 0,
@@ -6375,7 +6563,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 901,
+  "total": 929,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

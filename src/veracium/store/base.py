@@ -15,7 +15,7 @@ from typing import NamedTuple, Optional
 
 from ..schema import (ConsolidationOp, ConsolidationOutputDraft, Confirmation,
                       ConfirmationActor, ConfirmationCallPath, Edge, Episode,
-                      OutcomeJudgmentDraft, SupersessionPlan, SupersessionRefusal,
+                      OutcomeJudgmentDraft, Reply, ReplyActor, SupersessionPlan, SupersessionRefusal,
                       SupersessionResult)
 
 # specs/0010 §4a-ii: the one library bound on a lease's duration (seconds). A
@@ -202,6 +202,23 @@ class UndoRefused(ValueError):
                          f"(specs/0044 §4i)")
 
 
+REPLY_REFUSAL_REASONS = ("kind", "actor", "shape", "marker", "unknown-edge", "redacted-edge", "procedural-edge",
+                         "resolve-target", "resolve-repeat")
+
+
+class ReplyRefused(ValueError):
+    """specs/0047 §2c/§4b — why `add_reply` refused, as a CLOSED `reason` (REPLY_REFUSAL_REASONS), so a caller and a
+    test branch on the cell, never on the message (the `UndoRefused` precedent). A reason outside the set refuses at
+    construction. The registry's conflicts keep their shared `ValueError`, and its terminal stays `RequestRedacted`."""
+
+    def __init__(self, reason: str, user_id: str, edge_id: str, detail: str):
+        if reason not in REPLY_REFUSAL_REASONS:
+            raise ValueError(f"ReplyRefused: reason {reason!r} is outside {REPLY_REFUSAL_REASONS}")
+        self.reason, self.user_id, self.edge_id = reason, user_id, edge_id
+        super().__init__(f"reply refused ({reason}): edge {edge_id!r} of user {user_id!r} — {detail} "
+                         f"(specs/0047)")
+
+
 class RequestRedacted(ValueError):
     """specs/0008 v7 §6g — the TERMINAL outcome of a retry under a correlation id whose registry row a redaction
     has marked: the verifier is gone, so the original is not replayed, and the id stays held, so no new act is
@@ -313,6 +330,29 @@ class Store(ABC):
         Not abstract; a backend without the operation refuses."""
         raise NotImplementedError(
             f"{type(self).__name__} does not implement undo_restoration")
+
+    @store_mutator
+    def add_reply(self, user_id: str, edge_id: str, *, kind: str, text: Optional[str], target: Optional[str],
+                  actor: ReplyActor, correlation_id: str) -> Reply:
+        """specs/0047 §4a–§4b: append ONE reply to an edge in one write transaction — the request's shape, then the
+        request registry (verb `reply`, before any read of live edge state), then the edge, then a `resolve`'s
+        target; the row, its act position and its registry row commit together. Refusals raise `ReplyRefused`. Not
+        abstract; a backend without replies refuses."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement add_reply")
+
+    def replies_for(self, user_id: str, edge_id: str) -> list[Reply]:
+        """Read-only: the replies recorded on one edge, ordered by `(written_at, id)`. Not abstract."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement replies_for")
+
+    def active_challenges(self, user_id: str, edge_id: str) -> list[Reply]:
+        """specs/0047 §4b: the edge's `challenge` rows that no `resolve` names. Read-only. Not abstract."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement active_challenges")
+
+    def acted_edge_ids(self, user_id: str, edge_ids) -> frozenset:
+        """specs/0047 §4e: which of these edges carry an ACT (a confirmation or a reply, any kind, any origin) — the
+        absorption planner never absorbs one. Not abstract, and it REFUSES rather than answering "none": a backend
+        that cannot tell would let an absorption strand a person's act (fail closed)."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement acted_edge_ids")
 
     def refusal_inventory_ids(self, user_id: str) -> frozenset:
         """specs/0044 §4d/§4f: the ids of the user's refusals in the v16 schema step's refusal inventory — recorded

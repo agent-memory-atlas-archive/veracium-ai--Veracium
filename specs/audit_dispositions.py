@@ -47,6 +47,10 @@ DISPOSITIONS = {
    (W, "`active` (0), `invalidated_at`/`invalidation_reason` (set back to the outcome row's recorded pre-state), the outcome row's `undone_at`/`undo_request_ref`, an `undo` registry row — ALL in one write transaction", "act",
     "clean — `specs/0044` §4i (T7-2): host-only; eligibility is the outcome row plus its `applicable` episode flag, PROOF origins only; the restore goes through the invalidate method, so 0029's choke point journals it and the lifetime hook ends the episode; no other field is touched",
     "`test_undo_restores_the_retirement_per_field_and_nothing_else` · `test_revoke_then_lift_leaves_the_edge_active_and_the_episode_ended`"),
+ ("src/veracium/__init__.py", "Memory.reply", "add_reply", "38702764f859"):
+   (W, "a `replies` row (the subject's act) and its `reply` registry row — ONE write transaction; no edge field, no episode, no journal event", "act",
+    "clean — `specs/0047` §4a–§4b (T10a): host-only; a reply never mutates its edge (INV-R1), is append-only (INV-R2) and is refused on an absent, redacted or procedural edge; the registry is read before the edge (INV-Q2)",
+    "`test_r1_a_reply_of_every_kind_mutates_nothing_about_its_edge` · `test_r2_replies_are_append_only_by_construction`"),
  ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "c581fd572ad4"):
    (W, "episode provenance / `author_of_evidence` (new chain link — NEVER overwritten)", "act",
     "clean — **`specs/0009` (ACCEPTED): M4 CLOSED.** `record_outcome` now APPENDS a new chain link via the CAS `append_outcome_if_head` (never mutates a prior judgment's author, H1); the Store assigns `seq`/id and DERIVES `source_type`; counters are derived from chain heads (H6).",
@@ -194,6 +198,7 @@ STATES = {
   ("src/veracium/__init__.py", "Memory.dispute", "add_episode", "c77fe9f6b653"): "clean",
   ("src/veracium/__init__.py", "Memory.confirm", "confirm_edge", "b1b92807403e"): "clean",
   ("src/veracium/__init__.py", "Memory.undo_restoration", "undo_restoration", "7a97cc565969"): "clean",
+  ("src/veracium/__init__.py", "Memory.reply", "add_reply", "38702764f859"): "clean",
   ("src/veracium/__init__.py", "Memory.record_outcome", "append_outcome_if_head", "c581fd572ad4"): "clean",
   ("src/veracium/__init__.py", "Memory.record_outcome", "add_edge", "e00d08c435b4"): "clean",
   ("src/veracium/__init__.py", "Memory.correct", "apply_supersession_plan", "ba370b6342c2"): "clean",

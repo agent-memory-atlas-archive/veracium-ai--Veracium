@@ -37,9 +37,10 @@ from veracium import compile as compile_mod
 from veracium.asof import adapter, classify, resolve
 from veracium.asof.carrier import Envelope
 from veracium.config import MemoryConfig
+from veracium import redaction as _redaction
 from veracium.schema import (DEFAULT_RELATIONS, Disclosure, Edge, Episode, EvidenceAuthor,
-                             Provenance, Volatility)
-from veracium.store.base import RawEdgeState, RequestRedacted
+                             Provenance, ReplyActor, Volatility)
+from veracium.store.base import PLAN_STALE, RawEdgeState, ReplyRefused, RequestRedacted
 from veracium.store.sqlite import SqliteStore
 
 U = "u"
@@ -861,6 +862,25 @@ DECLINES.update({
     "store.confirm.correlation": lambda mp: _confirm_correlation_race(),
     # specs/0045 §4d (T9, INV-G10): a not_attested edge whose source episode is redacted
     "store.confirm.source-redacted": TwoPhase(lambda mp: _source_redacted_store(), lambda s: _raises(ValueError, _confirm, s)),
+    # specs/0047 (T10a): confirm under an open challenge, and the reply verb's refusals
+    "store.confirm.active-challenge": TwoPhase(lambda mp: _challenged(), lambda s: _raises(ValueError, _confirm, s)),
+    "store.reply.kind": TwoPhase(lambda mp: _replyable(), lambda s: _raises(ReplyRefused, _reply, s, kind="bogus")),
+    "store.reply.actor": TwoPhase(lambda mp: _replyable(), lambda s: _raises(ReplyRefused, _reply, s, actor="assistant")),
+    "store.reply.shape": TwoPhase(lambda mp: _replyable(), lambda s: _raises(ReplyRefused, _reply, s, text="")),
+    "store.reply.marker": TwoPhase(lambda mp: _replyable(), lambda s: _raises(ReplyRefused, _reply, s,
+                                                                               text=_redaction.MARKER)),
+    "store.reply.unknown-edge": TwoPhase(lambda mp: _store(), lambda s: _raises(ReplyRefused, _reply, s)),
+    "store.reply.redacted-edge": TwoPhase(lambda mp: _replyable(redacted=True), lambda s: _raises(ReplyRefused, _reply, s)),
+    "store.reply.procedural-edge": TwoPhase(lambda mp: _replyable(procedural=True),
+                                            lambda s: _raises(ReplyRefused, _reply, s)),
+    "store.reply.request-digest": TwoPhase(lambda mp: _replied(), lambda s: _raises(ValueError, _reply, s, text="other")),
+    "store.reply.result-missing": TwoPhase(lambda mp: _replied(lost=True), lambda s: _raises(ValueError, _reply, s)),
+    "store.reply.resolve-target": TwoPhase(lambda mp: _replyable(), lambda s: _raises(
+        ReplyRefused, _reply, s, kind="resolve", text=None, target="r-none")),
+    "store.reply.resolve-repeat": TwoPhase(lambda mp: _resolved_once(), lambda st: _raises(
+        ReplyRefused, _reply, st[0], kind="resolve", text=None, target=st[1], correlation_id="r3")),
+    "store.supersession.absorb-acted": TwoPhase(lambda mp: _absorption_plan_over_an_act(),
+                                                lambda st: _stale(st[0].apply_supersession_plan(st[1]))),
     # specs/0008 v7 §6c/§6f/§6g (v16): the registry's terminal and verb rules, and the act counter's refusal
     "store.registry.request-redacted": TwoPhase(lambda mp: _confirmed_then_redacted(), lambda s: _raises(RequestRedacted, _confirm, s)),
     "store.registry.verb-held": TwoPhase(lambda mp: _id_held_by_a_reply(), lambda s: _raises(ValueError, _confirm, s)),
@@ -905,6 +925,52 @@ def _source_redacted_store():
                                     "src": "ep-src"}))
     s.redact(U, episode_id="ep-src", reason="subject_request")
     return s
+
+
+def _reply(s, **over):
+    kw = dict(kind="challenge", text="no", target=None, actor=ReplyActor.USER, correlation_id="r1")
+    kw.update(over); return s.add_reply(U, "c1", **kw)
+
+
+def _replyable(*, redacted=False, procedural=False):
+    s = _store(); s.add_edge(_edge("c1", procedural=procedural))
+    if redacted:
+        s.redact(U, edge_id="c1", reason="subject_request")
+    return s
+
+
+def _challenged():
+    s = _replyable(); _reply(s); return s
+
+
+def _replied(*, lost=False):
+    s = _replyable(); _reply(s)
+    if lost:
+        s._conn.execute("DELETE FROM replies"); s._conn.commit()
+    return s
+
+
+def _resolved_once():
+    s = _replyable(); c = _reply(s)
+    _reply(s, kind="resolve", text=None, target=c.id, correlation_id="r2")
+    return (s, c.id)
+
+
+def _absorption_plan_over_an_act():
+    """A plan that absorbs a prior, built BEFORE the prior took an act (a confirmation): the store's verifier finds the
+    act in the plan's own transaction and answers PlanStale (0047 §4e, research's T10a Q13)."""
+    s = _store()
+    prior = _sourced5("e-prior", "Miso", days=3); apply_supersession(s, prior, DEFAULT_RELATIONS)
+    winner = _sourced5("e-winner", "cat Miso", days=0)
+    plan, _ = _build_supersession_plan(s, winner, DEFAULT_RELATIONS, "op-abs-act")
+    assert plan.contribution_drafts, "the fixture must absorb (same source, more specific value)"
+    s.confirm_edge(U, "e-prior", actor=ConfirmationActor.USER, call_path=ConfirmationCallPath.HOST_API,
+                   correlation_id="k-abs", request_digest="d-abs", confirmed_at=NOW)
+    return (s, plan)
+
+
+def _stale(result):
+    assert result is PLAN_STALE, result
 
 
 def _confirmed_once():

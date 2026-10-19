@@ -1,8 +1,8 @@
 """Opt-in operation audit log — who called what, when, over which user.
 
 Attach via `Memory(audit=AuditLog("audit.jsonl"))`. Every Memory operation
-(remember/recall/answer/maintain/dispute/confirm/forget/export/import) appends
-one JSON line: UTC timestamp, operation, user_id, and the operation's
+(remember/recall/answer/maintain/dispute/confirm/reply/forget/export/import)
+appends one JSON line: UTC timestamp, operation, user_id, and the operation's
 content-free counters. No memory text ever appears — the log records *that*
 operations happened, not what memory says (pair with `export_memory` when an
 inspection needs content).

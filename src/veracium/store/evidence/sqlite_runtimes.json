@@ -27,7 +27,7 @@
         "13": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
         "14": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
         "15": "9579d81a7f996d22b4c0f705a550aca93050ac9d29ce6cdf263951bbbbbd32ac",
-        "16": "9f7e3a786b02a39a40c8fa496af42a60d96740dc25876c87b9c7cf21bd007e2f"
+        "16": "c5eec18e9865548889b634a6f4fb4d58c0bf18a6eae58a815888cc3f015c3b5b"
       },
       "manifestations": {
         "constructor v1": {
@@ -9404,6 +9404,11 @@
             "table": "refusal_inventory",
             "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)"
           },
+          "index:ix_replies_edge": {
+            "type": "index",
+            "table": "replies",
+            "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)"
+          },
           "index:ix_request_registry_target": {
             "type": "index",
             "table": "request_registry",
@@ -9418,6 +9423,11 @@
             "type": "index",
             "table": "supersession_refusals",
             "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)"
+          },
+          "index:ux_replies_resolve": {
+            "type": "index",
+            "table": "replies",
+            "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'"
           },
           "table:act_counter": {
             "type": "table",
@@ -10592,6 +10602,141 @@
               ],
               [
                 "user_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ]
+            ]
+          },
+          "table:replies": {
+            "type": "table",
+            "table": "replies",
+            "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+            "columns": [
+              [
+                "id",
+                "TEXT",
+                1,
+                null,
+                1,
+                0
+              ],
+              [
+                "user_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "edge_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "kind",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "target",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "text",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "actor",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "correlation_id",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "request_digest",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "origin",
+                "TEXT",
+                1,
+                null,
+                0,
+                0
+              ],
+              [
+                "recorded_correlation_id",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "origin_store",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "origin_user",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "origin_act_id",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "act_seq",
+                "INTEGER",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "written_at",
                 "TEXT",
                 1,
                 null,

@@ -196,6 +196,9 @@ COMBINING_SITES = {
     (_STORE, "confirm_edge"): SiteSpec(
         False, why="specs/0008 — clears needs_confirmation on ONE edge and "
                    "records the confirmation; no second record contributes"),
+    (_STORE, "add_reply"): SiteSpec(
+        False, why="specs/0047 §4a — appends ONE reply to ONE edge and its registry row; a resolve READS its "
+                   "challenge to check it, derives nothing from it and writes nothing to it"),
     (_STORE, "_set_notice_state"): SiteSpec(
         False, why="specs/0041 §11.6.6 — records or moves ONE witnessed notice's pending/standing state; it treats no "
                    "record and no second record contributes"),

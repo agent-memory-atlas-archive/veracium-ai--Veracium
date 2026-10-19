@@ -22,13 +22,15 @@ from ..authority import RULE_VERSION, scope_fingerprint
 from .. import redaction as _redaction
 from ..attestation import declarative_grounding
 from ..schema import (ConsolidationOp, ConsolidationOutputDraft, ConsolidationState,
-                      Confirmation, ConfirmationActor, ConfirmationCallPath,
+                      Confirmation, ConfirmationActor, ConfirmationCallPath, REPLY_KINDS, Reply, ReplyActor,
+                      reply_request_digest,
                       Disclosure, Edge, Episode, EvidenceAuthor, OutcomeJudgmentDraft, QUARANTINE_RELATION,
                       Provenance, RECOVERY_PENDING_STATES,
                       SupersessionPlan, SupersessionRefusal, SupersessionResult,
                       is_historical_id, to_historical_id,
                       WIKI_RETAINING_REASONS, DISPOSITIONED_REASONS, as_utc_required)
-from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS, RequestRedacted, UnknownEdge,
+from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS, ReplyRefused,
+                   RequestRedacted, UnknownEdge,
                    DESTINATION_CHANGED, HEAD_MOVED, LEASE_MAX, NON_QUIESCENT,
                    PLAN_STALE, ReceiptSchemaBoundaryError, Store,
                    SupersessionIntegrityError)
@@ -101,6 +103,22 @@ _SITE_CONFIRM_NOT_ASSERTABLE = declare_site("store.confirm.not-assertable")
 _SITE_CONFIRM_REQUEST_DIGEST = declare_site("store.confirm.request-digest")
 _SITE_CONFIRM_CORRELATION = declare_site("store.confirm.correlation")
 _SITE_CONFIRM_SOURCE_REDACTED = declare_site("store.confirm.source-redacted")   # specs/0045 §4d, INV-G10
+_SITE_CONFIRM_ACTIVE_CHALLENGE = declare_site("store.confirm.active-challenge")   # specs/0047 §4c, INV-R13
+# specs/0047 §2c/§4b (T10a): the reply verb's refusals — the request's SHAPE (read no state), then the edge, then a
+# resolve's target; and the registry's own-verb conflict (the shared terminal and verb rules are `_registry_held`'s)
+_SITE_REPLY_KIND = declare_site("store.reply.kind")                      # INV-R8
+_SITE_REPLY_ACTOR = declare_site("store.reply.actor")                    # §2c "who wrote it"
+_SITE_REPLY_SHAPE = declare_site("store.reply.shape")                    # §4b's closed request; research's T10a F1
+_SITE_REPLY_MARKER = declare_site("store.reply.marker")                  # INV-R7 / 0041 INV-RR1
+_SITE_REPLY_UNKNOWN_EDGE = declare_site("store.reply.unknown-edge")      # INV-R9
+_SITE_REPLY_REDACTED_EDGE = declare_site("store.reply.redacted-edge")    # §0, INV-R9
+_SITE_REPLY_PROCEDURAL_EDGE = declare_site("store.reply.procedural-edge")    # §4d's ruling, INV-R19
+_SITE_REPLY_RESOLVE_TARGET = declare_site("store.reply.resolve-target")  # INV-R14
+_SITE_REPLY_RESOLVE_REPEAT = declare_site("store.reply.resolve-repeat")  # INV-R14
+_SITE_REPLY_REQUEST_DIGEST = declare_site("store.reply.request-digest")  # INV-R15, R24
+_SITE_REPLY_RESULT_MISSING = declare_site("store.reply.result-missing")  # 0008 §6c, reply's side
+_SITE_SUPERSESSION_ABSORB_ACTED = declare_site("store.supersession.absorb-acted",
+                                               declines=True)        # specs/0047 §4e, INV-R17
 _SITE_REGISTRY_REDACTED = declare_site("store.registry.request-redacted")
 _SITE_REGISTRY_VERB_HELD = declare_site("store.registry.verb-held")
 _SITE_ACT_COUNTER = declare_site("store.act-counter.allocate")
@@ -143,6 +161,7 @@ _ERASE_TABLES = ("contribution_ledger",
                  "edge_embedding", "edge_event", "policy_receipt",
                  "episode_event", "redactions",          # specs/0041 v15: the episode journal and the attestation record are erasable per user
                  "request_registry",                     # specs/0008 v7 §6g: replay ends at erasure; act_counter is NOT here (never reset)
+                 "replies",                              # specs/0047 INV-R22: the user's replies, with their registry rows
                  # specs/0044 §4g-ii (the 0008 amendment's one erasure rule, §6g): everything 0044 records for the user.
                  # arity_era, plan_header, reclassification_plan and migration_op are store-level, never per-user, and
                  # never erased
@@ -192,6 +211,28 @@ EDGE_WRITE_SITE_RULINGS = {
         "tables": _ERASE_TABLES,
         "lifetime": "erasure"},
 }
+
+
+def _reply_shape_problem(kind: str, text, target) -> Optional[str]:
+    """specs/0047 §4b's closed request shape, read from the request alone: a `resolve` names its challenge and carries
+    no text; every other kind carries non-empty text and no target. Text must encode as strict UTF-8 (research's T10a
+    F1: a lone surrogate otherwise raises `UnicodeEncodeError` at the INSERT, a `ValueError` with no reason). None:
+    well formed."""
+    if kind == "resolve":
+        if not (isinstance(target, str) and target):
+            return "a resolve names the challenge it withdraws (target)"
+        if text is not None:
+            return "a resolve carries no text"
+        return None
+    if target is not None:
+        return f"only a resolve names a target ({kind!r} does not)"
+    if not (isinstance(text, str) and text.strip()):
+        return "a reply's text is empty"
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return "the text does not encode as UTF-8 (a lone surrogate)"
+    return None
 
 
 class SqliteStore(Store):
@@ -832,6 +873,14 @@ class SqliteStore(Store):
                         f"edge {edge_id!r} is not assertable (quarantined/use_only/"
                         f"inactive) — a user affirming a claim is new evidence: ingest "
                         f"it via remember(author=USER) instead"))
+            # specs/0047 §4c (INV-R13): no confirmation can post-date an unresolved challenge; a `resolve` is the way
+            # back. Read in THIS transaction, and only after the registry (a completed confirmation still replays
+            # after a later challenge: research's T10a F3)
+            with _SITE_CONFIRM_ACTIVE_CHALLENGE.consult():
+                if self._open_challenge_ids(user_id, edge_id):
+                    raise _SITE_CONFIRM_ACTIVE_CHALLENGE.fire(ValueError(
+                        f"edge {edge_id!r} has an active challenge by the subject — it cannot be confirmed until the "
+                        f"challenge is resolved (specs/0047 §4c, store.confirm.active-challenge)"))
             # specs/0045 §4d (INV-G10; the owner's R1-04 ruling, "an erased source ends the upgrade path"): a
             # `not_attested` edge whose recorded source episode is redacted cannot be confirmed — state it anew. Scoped
             # by g(e) over this edge's confirmations, read in THIS transaction (research's T9 F2), so an edge already
@@ -924,6 +973,185 @@ class SqliteStore(Store):
         from .data_migration import undo_restoration as _undo
         with self._lock, self._write_txn():
             return _undo(self, user_id, edge_id, correlation_id)
+
+    _REPLY_COLS = "id, user_id, edge_id, kind, target, text, actor, correlation_id, request_digest, written_at"
+
+    @staticmethod
+    def _reply_from_row(row) -> Reply:
+        (rid, uid, eid, kind, target, text, actor, corr, dig, at) = row
+        return Reply(id=rid, user_id=uid, edge_id=eid, kind=kind, target=target, text=text, actor=ReplyActor(actor),
+                     correlation_id=corr, request_digest=dig, written_at=datetime.fromisoformat(at))
+
+    def _reply_replay(self, user_id, correlation_id, request_digest) -> Optional[Reply]:
+        """specs/0008 §6c/§6g, `reply`'s side of the REQUEST REGISTRY (confirm's `_confirm_replay` shape): read before
+        any read of live edge state (INV-Q2). None: the id is free. Otherwise the shared rules (`_registry_held`:
+        terminal, then the verb), then this verb's digest, then the original reply rebuilt from `result_ref` without
+        reading the edge, so it replays after the edge was retired or changed (INV-R24)."""
+        held = self._registry_held(user_id, correlation_id, "reply")
+        if held is None:
+            return None
+        digest, result_ref = held
+        with _SITE_REPLY_REQUEST_DIGEST.consult():
+            if digest != request_digest:
+                raise _SITE_REPLY_REQUEST_DIGEST.fire(ValueError(
+                    f"correlation_id {correlation_id!r} was already used for a DIFFERENT reply request — integrity "
+                    f"conflict (specs/0008 §6c)"))
+        row = self._conn.execute(f"SELECT {self._REPLY_COLS} FROM replies WHERE id=? AND user_id=?",
+                                 (result_ref, user_id)).fetchone()
+        with _SITE_REPLY_RESULT_MISSING.consult():
+            if row is None:
+                raise _SITE_REPLY_RESULT_MISSING.fire(ValueError(
+                    f"correlation_id {correlation_id!r}: the registry names reply {result_ref!r}, which does not "
+                    f"exist — integrity conflict (specs/0008 §6c)"))
+        return self._reply_from_row(row).model_copy(update={"replayed": True})
+
+    def add_reply(self, user_id: str, edge_id: str, *, kind: str, text: Optional[str], target: Optional[str],
+                  actor: ReplyActor, correlation_id: str) -> Reply:
+        """specs/0047 §4a–§4b (T10a): append ONE reply, in one `BEGIN IMMEDIATE` under the instance lock, in the order
+        research's stage-1 read agreed:
+          (a) the request's SHAPE, which reads no state (Q5; C9's precedent): `kind` closed (INV-R8), `actor` closed,
+              a target iff `resolve` and non-empty strict-UTF-8 text iff not (§4b's closed request; F1: a lone
+              surrogate refuses here, never at the INSERT), and no marker in the text (INV-R7, 0041 INV-RR1);
+          (b) the REQUEST REGISTRY, through the one shared lookup — terminal, then the verb, then this verb's digest;
+              the same request replays (INV-Q2, INV-R24);
+          (c) the EDGE, read only now: absent for this user, redacted (its own carriers show the marker OR an applied
+              attestation names it: Q7's union, the 0044 sweep's predicate), or procedural (INV-R9, INV-R19). An
+              inactive, quarantined or use_only edge is admitted (§2c, §3; Q8);
+          (d) a resolve's TARGET: a `challenge` of the same user and edge, not yet resolved (INV-R14). The actor may
+              differ from the challenge's (Q9, the owner's 2026-10-19: labels are unauthenticated until 0050);
+          (e) the WRITE: the row (`origin` local, `act_seq` from the never-reset counter, `act_uid` columns NULL —
+              derived at export, as for `confirmations`), its registry row, and the version bump. No episode (§1c: a
+              reply must never feed ingest), no edge write and no journal event (INV-R1)."""
+        actor_v = actor.value if isinstance(actor, ReplyActor) else next(
+            (a.value for a in ReplyActor if isinstance(actor, str) and actor == a.value), None)
+        with _SITE_REPLY_KIND.consult():
+            if not (isinstance(kind, str) and kind in REPLY_KINDS):
+                raise _SITE_REPLY_KIND.fire(ReplyRefused(
+                    "kind", user_id, edge_id, f"kind {kind!r} is outside the closed set {REPLY_KINDS}"))
+        with _SITE_REPLY_ACTOR.consult():
+            if actor_v is None:
+                raise _SITE_REPLY_ACTOR.fire(ReplyRefused(
+                    "actor", user_id, edge_id, f"actor {actor!r} is outside {[a.value for a in ReplyActor]} — a "
+                    f"reply is the subject's (or the host's on their behalf), never the assistant's or the extractor's"))
+        with _SITE_REPLY_SHAPE.consult():
+            problem = _reply_shape_problem(kind, text, target)
+            if problem:
+                raise _SITE_REPLY_SHAPE.fire(ReplyRefused("shape", user_id, edge_id, problem))
+        with _SITE_REPLY_MARKER.consult():
+            if text is not None and _redaction.carries_marker(text):
+                raise _SITE_REPLY_MARKER.fire(ReplyRefused(
+                    "marker", user_id, edge_id, "the text carries the redaction marker — a reply may not introduce it "
+                    "(0041 INV-11's mirror, INV-RR1)"))
+        request_digest = reply_request_digest(user_id, edge_id, kind, target, text)
+        with self._lock, self._write_txn():
+            prior = self._reply_replay(user_id, correlation_id, request_digest)
+            if prior is not None:
+                return prior
+            row = self._conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (edge_id, user_id)).fetchone()
+            with _SITE_REPLY_UNKNOWN_EDGE.consult():
+                if row is None:
+                    raise _SITE_REPLY_UNKNOWN_EDGE.fire(ReplyRefused(
+                        "unknown-edge", user_id, edge_id, "no such edge for this user"))
+            with _SITE_REPLY_REDACTED_EDGE.consult():
+                if (_redaction.edge_carries_marker(json.loads(row[0]))
+                        or self._attested_fields(user_id, "edge", edge_id, coverage=False)):
+                    raise _SITE_REPLY_REDACTED_EDGE.fire(ReplyRefused(
+                        "redacted-edge", user_id, edge_id, "the edge is redacted — a new reply to it is refused "
+                        "(specs/0047 §0)"))
+            with _SITE_REPLY_PROCEDURAL_EDGE.consult():
+                if Edge.model_validate_json(row[0]).provenance.procedural:
+                    raise _SITE_REPLY_PROCEDURAL_EDGE.fire(ReplyRefused(
+                        "procedural-edge", user_id, edge_id, "a reply cannot attach to a procedural record (§4d's "
+                        "ruling; a procedural right of reply is deferred, §10 R6)"))
+            if kind == "resolve":
+                challenge = self._conn.execute("SELECT edge_id, kind FROM replies WHERE id=? AND user_id=?",
+                                               (target, user_id)).fetchone()
+                with _SITE_REPLY_RESOLVE_TARGET.consult():
+                    if challenge is None or challenge[0] != edge_id or challenge[1] != "challenge":
+                        raise _SITE_REPLY_RESOLVE_TARGET.fire(ReplyRefused(
+                            "resolve-target", user_id, edge_id, f"{target!r} is not a challenge of this edge"))
+                with _SITE_REPLY_RESOLVE_REPEAT.consult():
+                    if self._resolved(user_id, target):
+                        raise _SITE_REPLY_RESOLVE_REPEAT.fire(ReplyRefused(
+                            "resolve-repeat", user_id, edge_id, f"challenge {target!r} is already resolved"))
+            rid = f"r-{uuid.uuid4().hex[:12]}"
+            written_at = self._now()
+            try:
+                self._conn.execute(
+                    f"INSERT INTO replies({self._REPLY_COLS}, origin, act_seq) VALUES(?,?,?,?,?,?,?,?,?,?,'local',?)",
+                    (rid, user_id, edge_id, kind, target, text, actor_v, correlation_id, request_digest,
+                     written_at.isoformat(), self._allocate_act_seq()))
+                self._conn.execute(
+                    "INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_id, request_digest, "
+                    "result_ref, written_at) VALUES(?,?,'reply',?,?,?,?)",
+                    (user_id, correlation_id, edge_id, request_digest, rid, written_at.isoformat()))
+                self._bump(user_id)
+            except sqlite3.IntegrityError:
+                # C8's shape (confirm's and undo's): roll back and answer through the SAME registry lookup. Under the
+                # lock and BEGIN IMMEDIATE taken before (b) and (d), only a writer that skipped them reaches here; a
+                # constraint that is not the correlation id's is never reported as one (research's T10a F2): a second
+                # resolve of one challenge is `resolve-repeat`, anything else re-raises unchanged
+                self._conn.rollback()
+                prior = self._reply_replay(user_id, correlation_id, request_digest)
+                if prior is not None:
+                    return prior
+                with _SITE_REPLY_RESOLVE_REPEAT.consult():
+                    if kind == "resolve" and self._resolved(user_id, target):
+                        raise _SITE_REPLY_RESOLVE_REPEAT.fire(ReplyRefused(
+                            "resolve-repeat", user_id, edge_id, f"challenge {target!r} is already resolved"))
+                raise
+            except BaseException:
+                self._conn.rollback()
+                raise
+            return Reply(id=rid, user_id=user_id, edge_id=edge_id, kind=kind, target=target, text=text,
+                         actor=ReplyActor(actor_v), correlation_id=correlation_id, request_digest=request_digest,
+                         written_at=written_at)
+
+    def _resolved(self, user_id: str, challenge_id: str) -> bool:
+        return self._conn.execute("SELECT 1 FROM replies WHERE user_id=? AND kind='resolve' AND target=? LIMIT 1",
+                                  (user_id, challenge_id)).fetchone() is not None
+
+    def _open_challenge_ids(self, user_id: str, edge_id: str) -> list:
+        """specs/0047 §4b's predicate in ONE statement: the edge's challenges that no resolve names. Only a `resolve`
+        clears a challenge, and only the one it names (INV-R14); `context` text never does."""
+        return [r for (r,) in self._conn.execute(
+            "SELECT c.id FROM replies c WHERE c.user_id=? AND c.edge_id=? AND c.kind='challenge' AND NOT EXISTS ("
+            "SELECT 1 FROM replies r WHERE r.user_id=c.user_id AND r.kind='resolve' AND r.target=c.id)",
+            (user_id, edge_id))]
+
+    def replies_for(self, user_id: str, edge_id: str) -> list[Reply]:
+        with self._lock:
+            return [self._reply_from_row(r) for r in self._conn.execute(
+                f"SELECT {self._REPLY_COLS} FROM replies WHERE user_id=? AND edge_id=? ORDER BY written_at, id",
+                (user_id, edge_id))]
+
+    def active_challenges(self, user_id: str, edge_id: str) -> list[Reply]:
+        with self._lock:
+            open_ids = set(self._open_challenge_ids(user_id, edge_id))
+            return [self._reply_from_row(r) for r in self._conn.execute(
+                f"SELECT {self._REPLY_COLS} FROM replies WHERE user_id=? AND edge_id=? AND kind='challenge' "
+                f"ORDER BY written_at, id", (user_id, edge_id)) if r[0] in open_ids]
+
+    def acted_edge_ids(self, user_id: str, edge_ids) -> frozenset:
+        """specs/0047 §4e: the edges among `edge_ids` that carry an act — a confirmation or a reply, any kind, any
+        origin. Read by the absorption planner and, in the plan's own transaction, by the store's verifier."""
+        ids = sorted(set(edge_ids))
+        if not ids:
+            return frozenset()
+        q = ",".join("?" * len(ids))
+        with self._lock:          # reentrant: the verifier calls it inside the plan's own transaction
+            return frozenset(e for (e,) in self._conn.execute(
+                f"SELECT edge_id FROM confirmations WHERE user_id=? AND edge_id IN ({q}) "
+                f"UNION SELECT edge_id FROM replies WHERE user_id=? AND edge_id IN ({q})",
+                (user_id, *ids, user_id, *ids)))
+
+    def _absorbs_an_act(self, user_id: str, plan) -> bool:
+        """specs/0047 §4e (INV-R17), the store's verifier: does this plan retire as `absorbed_duplicate` a prior that
+        carries an act? Read in the plan's own transaction; True makes the plan STALE (research's T10a Q13)."""
+        absorbed = sorted({eid for eid, _at, r in plan.prior_invalidations if r == "absorbed_duplicate"})
+        with _SITE_SUPERSESSION_ABSORB_ACTED.consult():
+            return _SITE_SUPERSESSION_ABSORB_ACTED.fire(bool(absorbed) and bool(self.acted_edge_ids(user_id, absorbed)),
+                                                        "plan-stale")
 
     def _source_redacted(self, user_id: str, episode_id: str) -> bool:
         """specs/0045 §4d: is this episode redacted here, directly or as the input of a redacted consolidation output?
@@ -1342,6 +1570,12 @@ class SqliteStore(Store):
                         scope = self.edges(user_id, subject=inc.subject, relation=inc.relation,
                                            active_only=True, include_quarantined=True)
                         if scope_fingerprint(scope) != plan.expected_state:
+                            return PLAN_STALE
+                        # specs/0047 §4e (INV-R17): a contributor carrying an act is never absorbed. The fingerprint
+                        # above does not see acts, so this read, in THIS transaction, is what closes the plan→commit
+                        # race: an act written after planning makes the plan stale, and the re-plan declines to absorb
+                        # (research's T10a Q13). A plan built to absorb an acted prior never commits.
+                        if self._absorbs_an_act(user_id, plan):
                             return PLAN_STALE
                         # 4. apply all-or-nothing (one transaction). ANY failure mid-apply rolls the
                         #    WHOLE plan back — no incoming edge, no prior mutations, no refusal rows,
@@ -3287,6 +3521,18 @@ class SqliteStore(Store):
                                    (_redaction.MARKER, user_id, target_id)).rowcount
             if n:
                 fields.append("request_registry.request_digest")
+            # specs/0041 §11.6.2 (amendment `0047/0041-replies`, INV-RR2/RR5): every reply's TEXT and every reply's
+            # request DIGEST on the edge are REPLACED; the rows, kinds, targets, actors and positions are kept
+            # (append-only). A resolve's NULL text stays NULL. A row already at the marker is this carrier at its
+            # treated value, so it is attested too (the UPDATE counts matched rows, as for confirmations)
+            n = self._conn.execute("UPDATE replies SET text=? WHERE user_id=? AND edge_id=? AND text IS NOT NULL",
+                                   (_redaction.MARKER, user_id, target_id)).rowcount
+            if n:
+                fields.append("replies.text")
+            n = self._conn.execute("UPDATE replies SET request_digest=? WHERE user_id=? AND edge_id=?",
+                                   (_redaction.MARKER, user_id, target_id)).rowcount
+            if n:
+                fields.append("replies.request_digest")
             # rows 21/23, joined by user, KIND and id in both absorption directions (round-9 R9-03): edges and
             # episodes are independent id namespaces in this table, so a raw-id match cleared an unrelated
             # episode's digests when an edge shared its id
@@ -3436,6 +3682,8 @@ class SqliteStore(Store):
             n_conf = self._conn.execute(
                 "SELECT COUNT(*) FROM confirmations WHERE user_id=?",
                 (user_id,)).fetchone()[0]
+            # specs/0047 INV-R22: the replies go with them, and are counted beside them (research's T10a Q15)
+            n_replies = self._conn.execute("SELECT COUNT(*) FROM replies WHERE user_id=?", (user_id,)).fetchone()[0]
             # specs/0010 X17: consolidation operation state is per-user erasable data —
             # forget_user removes it atomically with the rest of the user's memory.
             # specs/0003 §4f: the refusal inventory and the operation receipts are
@@ -3451,7 +3699,7 @@ class SqliteStore(Store):
                 if table == "edge_event":
                     continue                      # deleted above, by name
                 self._conn.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
-        return {"edges": n_edges, "episodes": n_eps, "confirmations": n_conf}
+        return {"edges": n_edges, "episodes": n_eps, "confirmations": n_conf, "replies": n_replies}
 
     # -- the durable policy receipt (specs/0027 §4g, v14) -------------------
     _RECEIPT_COLUMNS = ("recall_id", "policy_id", "policy_version", "recorded_at", "receipt")

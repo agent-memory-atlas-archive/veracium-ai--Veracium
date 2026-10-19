@@ -152,6 +152,49 @@ class Confirmation(BaseModel):
     #                               not a persisted column (§6c)
 
 
+class ReplyActor(str, Enum):
+    """Who wrote a reply (specs/0047 §2c, §3): the SUBJECT, or the user acting through the host on their behalf. A
+    closed set of its own, never `ConfirmationActor` reused, so one verb's labels cannot widen the other's (research's
+    T10a Q4). `assistant`, `system`, `third_party` and `extractor` are outside it and refused. The label is
+    UNAUTHENTICATED until 0050: the store enforces the label, not who wrote it."""
+    USER = "user"
+    HOST = "host"
+
+
+REPLY_KINDS = ("challenge", "context", "withdrawn-consent", "resolve")
+
+
+class Reply(BaseModel):
+    """One row of the subject's replies (specs/0047 §2, §4a): bound to an edge, append-only, a closed `kind`. A
+    `resolve` names the `challenge` it withdraws in `target` and carries no `text`; every other kind carries text and
+    no target. `written_at` is the store's clock at the write, never an order (§4b: the position `act_seq` is)."""
+    id: str
+    user_id: str
+    edge_id: str
+    kind: Literal["challenge", "context", "withdrawn-consent", "resolve"]
+    target: Optional[str] = None
+    text: Optional[str] = None
+    actor: ReplyActor
+    correlation_id: str
+    request_digest: str
+    written_at: datetime
+    replayed: bool = False        # runtime only: True when returned for a replay, not a persisted column (0008 §6c)
+
+
+def reply_request_digest(user_id: str, edge_id: str, kind: str, target: Optional[str], text: Optional[str]) -> str:
+    """specs/0047 §4b's CLOSED canonical reply request, `(verb = reply, user_id, edge_id, kind, target, text)`, and its
+    digest (0008 §6e's encoding, INV-Q8): sha256 of the UTF-8 bytes of the JSON array
+    `["reply", user_id, edge_id, kind, target, text]`, `separators=(",", ":")`, `ensure_ascii=False`, an absent field as
+    JSON `null` — never a separator join (confirm's `\x1f` join is the one INV-Q8's probe kills) and never `str()` of
+    each part (`portable_uid`'s, under which None and "None" collide). The actor is OUTSIDE the identity, as §4b
+    closes it: a retry under another actor label replays. The bytes are pinned by a golden vector
+    (tests/test_0047_t10a_reply.py), since the identity carries no rule version (research's T10a F4)."""
+    import hashlib
+    import json
+    return hashlib.sha256(json.dumps(["reply", user_id, edge_id, kind, target, text], ensure_ascii=False,
+                                       separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
 class Provenance(BaseModel):
     author_of_evidence: EvidenceAuthor
     evidence_ref: str = Field(description="Stable id of the event/message/doc this derives from")
