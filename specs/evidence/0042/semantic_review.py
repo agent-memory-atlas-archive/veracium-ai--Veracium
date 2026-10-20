@@ -57,6 +57,8 @@ DEFAULT = {
     "contention.py": "predicate-helper",     # 0044 §4d (T5): is_live_refusal — consumed by recall's contested groups and the compiler's grounded-inputs site
     "attest_v3.py": "predicate-helper",      # 0045 §4a (T9): ATTEST-3, vendored byte-identical — its returns are the predicate's own verdict, consumed by attestation.attestation
     "attestation.py": "predicate-helper",    # 0045 §2/§4c (T9): the (att, attv) derivation, the attv grammar and g(e) — consumed by ingest's write, the Edge validator and confirm's guard
+    "attest_turns.py": "predicate-helper",   # 0051 §4/§4a: ATTEST-5, frozen — the turn grammar and the conjunction; its returns are the predicate's own verdict, consumed by attestation.attestation and speaker_backstop
+    "speaker_backstop.py": "predicate-helper",   # 0051 §4b: the speaker-turn backstop's test — consumed by ingest's write (the triple's disclosure)
     "store/lifetime.py": "predicate-helper",  # 0044 §4f-ii (T5): the lifetime transition — consumed by the choke point's effects and the v16 step
     "store/data_migration.py": "internal-invariant",  # 0018 §4i (T6): run_data_migration's refusals are rows of its closed result carrier, release_migration's precedent
     "schema.py": "argument-check", "scope.py": "argument-check", "scope_linkage.py": "internal-invariant",
@@ -82,7 +84,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("doctor.py", 483): "predicate-helper", ("dryrun.py", 68): "predicate-helper",
     ("graph.py", 60): "predicate-helper", ("graph.py", 75): "predicate-helper", ("graph.py", 234): "internal-invariant",
     ("graph.py", 905): "argument-check", ("grounding.py", 154): "control-flow",
-    ("ingest.py", 181): "control-flow", ("ingest.py", 133): "argument-check",
+    ("ingest.py", 183): "control-flow", ("ingest.py", 135): "argument-check",
     ("lifecycle.py", 208): "control-flow", ("lifecycle.py", 354): "control-flow",
     ("portability.py", 611): "control-flow",
     ("procedural_gate.py", 49): "argument-check", ("procedures.py", 104): "control-flow", ("procedures.py", 369): "control-flow",
@@ -108,7 +110,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("store/revocation_sweep.py", 172): "control-flow", ("store/revocation_sweep.py", 192): "control-flow",
     ("store/schema_version.py", 1934): "argument-check", ("store/schema_version.py", 2108): "control-flow",
     ("telemetry.py", 466): "control-flow", ("telemetry.py", 487): "control-flow", ("telemetry.py", 514): "control-flow",
-    ("mcp_server.py", 566): "cli-usage", ("mcp_server.py", 572): "cli-usage", ("mcp_server.py", 576): "cli-usage", ("mcp_server.py", 588): "cli-usage",
+    ("mcp_server.py", 569): "cli-usage", ("mcp_server.py", 575): "cli-usage", ("mcp_server.py", 579): "cli-usage", ("mcp_server.py", 591): "cli-usage",
     ("source_identity.py", 59): "argument-check", ("_json.py", 43): "control-flow", ("introspect.py", 54): "argument-check",
 }
 REASON_TEXT = {
@@ -128,6 +130,7 @@ CONSUMED_OUTSIDE = {
     "schema.py:EvidenceContext.__eq__": "the language's == operator (record equality); no product decision consumes it",
     "schema.py:SuccessorLookup.__eq__": "the language's == operator (record equality); no product decision consumes it",
     "scope.py:same_identity": "exported in scope's __all__ for the 0020 vector harness and tests; no product function calls it",
+    "attest_turns.py:only_in_non_user_turns": "ATTEST-4's backstop matcher, carried in ATTEST-5's FROZEN bytes and unused by design (0051 §4b: the product backstop is speaker_backstop.py); read only by research's H3/H4 scoring and the 0051 tests",
 }
 
 # specs/0041 tranche 1 (2026-09-19): INV-11's mirror, the relation-only quarantine, the kind closure
@@ -188,9 +191,9 @@ e("graph.py", 1216, "graph.strictly-redundant", "0012", "§4c", "withhold")
 e("graph.py", 188, "graph.supersession.receipt-boundary", "0014", "R10", "refuse")
 e("graph.py", 214, "graph.supersession.replay-mismatch", "0014", "§4b", "refuse")
 e("grounding.py", 243, "grounding.ungrounded", "0019", "§4", "downgrade")
-e("ingest.py", 315, "ingest.basis-via-remember", "0037", "§4b", "refuse")
-e("ingest.py", 376, "ingest.instructions-not-a-list", "0039", "§2a", "downgrade")
-e("ingest.py", 304, "ingest.source-id-required", "0006", "§4 rule 9", "refuse")
+e("ingest.py", 317, "ingest.basis-via-remember", "0037", "§4b", "refuse")
+e("ingest.py", 378, "ingest.instructions-not-a-list", "0039", "§2a", "downgrade")
+e("ingest.py", 306, "ingest.source-id-required", "0006", "§4 rule 9", "refuse")
 e("mcp_server.py", 113, "mcp.closed-set.author", "0011", "§4d", "refuse")
 e("mcp_server.py", 122, "mcp.closed-set.trust-field", "0011", "§4d", "refuse")
 e("__init__.py", 1968, "memory.confirm.unknown-target", "0008", "§6c INV-Q2", "refuse")

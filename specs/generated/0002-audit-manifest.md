@@ -31,9 +31,9 @@
 | `src/veracium/cli.py:328` | `_forget()` | `forget_user` | `269b73112fab` | `clean` | write-time | **all** | act | clean — same verb through the CLI | `test_forget_cli_requires_confirmation` |
 | `src/veracium/compile.py:296` | `compile_wiki()` | `set_wiki` | `4365735ba43d` | `clean` | maintain-time | none directly — **caches a trust decision** (carries the compiler-policy digest envelope, `0003` §4c-ii; the trust-reducing-invalidation drop shipped with the 0004 W-series, 0.13.0) | none | ✅ the cached wiki no longer outlives a revoked trust decision: a trust-reducing invalidation drops it (WIKI_RETAINING_REASONS names the benign keepers) — [M8-wiki] resolved | `test_dispute_drops_the_wiki` + `test_third_party_supersession_drops_the_wiki` + `test_decay_does_not_drop_the_wiki` (the W1–W4 family) |
 | `src/veracium/graph.py:223` | `apply_supersession()` | `apply_supersession_plan` | `e1ecd66351bd` | `clean` | write-time | the WHOLE supersession outcome — `active` (guarded retire / absorb), reinforcement persist-only (accepted `0012` Design 1: the incoming persists untouched, the prior is not written), `valid_from=min` on the incoming edge, the incoming insert, and the content-free refusal inventory; `needs_confirmation` never cleared here | observation | ✅ **`0003` (accepted 2026-08-08, implemented) — the authority guard.** A differing value retires the prior ONLY when incoming effective authority >= the prior's; otherwise the retirement is REFUSED (both edges kept, a durable content-free refusal recorded). One atomic CAS-linearized plan on a complete `expected_state`; `valid_from=min` operates on the unpersisted incoming edge (construction, not mutation of a stored row). Closes the unfiltered functional-supersession loop (0003 I1–I5). `correct()` is a separate `supersedes=` writer, out of 0003 scope (0011 E5). | `test_supersession_authority_matrix` · `test_refused_supersession_keeps_both` · `test_user_authored_ingest_can_supersede_third_party` · `test_a_refused_supersession_is_counted_and_logged` |
-| `src/veracium/ingest.py:392` | `ingest_event()` | `add_episode` | `836c8cca9da2` | `clean` | write-time | episode provenance (unparseable placeholder; disclosure set at birth) | observation | clean — never retains raw event text | `test_unparseable_extraction_degrades_gracefully` |
-| `src/veracium/ingest.py:702` | `ingest_event()` | `add_episode` | `070f62e813fd` | `clean` | write-time | episode provenance (disclosure set at birth); its id is the edges' `src` (specs/0045 §2) | observation | clean — the origin of trust | `test_third_party_text_never_moves_into_the_grounded_block` |
-| `src/veracium/ingest.py:806` | `ingest_event()` | `add_edge` | `74ca6d95a054` | `clean` | write-time | a procedural record: `record_kind="procedural"`, `basis="stated"` DERIVED from a quote verified against the event text; the event's provenance otherwise | act | clean — written only when the model's quote is a verbatim span of a user-authored event (V-EXTRACTOR-QUOTE-GATED); never rendered | `test_a_quoted_user_routine_is_recorded_as_a_procedure_and_never_rendered` · `test_a_procedural_emission_without_a_verifying_user_quote_is_refused_and_counted` |
+| `src/veracium/ingest.py:394` | `ingest_event()` | `add_episode` | `836c8cca9da2` | `clean` | write-time | episode provenance (unparseable placeholder; disclosure set at birth) | observation | clean — never retains raw event text | `test_unparseable_extraction_degrades_gracefully` |
+| `src/veracium/ingest.py:706` | `ingest_event()` | `add_episode` | `070f62e813fd` | `clean` | write-time | episode provenance (disclosure set at birth); its id is the edges' `src` (specs/0045 §2) | observation | clean — the origin of trust | `test_third_party_text_never_moves_into_the_grounded_block` |
+| `src/veracium/ingest.py:817` | `ingest_event()` | `add_edge` | `74ca6d95a054` | `clean` | write-time | a procedural record: `record_kind="procedural"`, `basis="stated"` DERIVED from a quote verified against the event text; the event's provenance otherwise | act | clean — written only when the model's quote is a verbatim span of a user-authored event (V-EXTRACTOR-QUOTE-GATED); never rendered | `test_a_quoted_user_routine_is_recorded_as_a_procedure_and_never_rendered` · `test_a_procedural_emission_without_a_verifying_user_quote_is_refused_and_counted` |
 | `src/veracium/lifecycle.py:67` | `expire()` | `invalidate_edge` | `52f316b93ba6` | `clean` | maintain-time | `active`, reason `lapsed` | none | clean — narrows | `test_expiry_lapse_confirm_and_reinforcement` |
 | `src/veracium/lifecycle.py:75` | `expire()` | `invalidate_edge` | `b832f3d50c54` | `clean` | maintain-time | `active`, reason `decayed` | none | clean — narrows | `test_expiry_lapse_confirm_and_reinforcement` |
 | `src/veracium/lifecycle.py:78` | `expire()` | `add_edge` | `c544c8e1440e` | `open` | maintain-time | **`confidence *= decay_factor`** | none | 🔴 **OPEN — external review item 8.** `MemoryConfig` is an unvalidated dataclass; `decay_factor=2.0`, `NaN`, `-1.0` are all accepted, so this site can RAISE confidence and **N4 is false as written**. §7d | 🔴 **`specs/0002` N4b–N4d** — `test_config_bounds_are_validated`; **none passes today** [N4-decay] |
@@ -153,21 +153,21 @@ e1ecd66351bd
   context: for(_ in range(_MAX_PLAN_ATTEMPTS))
 
 836c8cca9da2
-  file:    src/veracium/ingest.py:392
+  file:    src/veracium/ingest.py:394
   scope:   ingest_event()
   mutator: add_episode
   call:    store.add_episode(Episode(id=_uid('ep'), user_id=user_id, date=date, summary=summary, provenance=Provenance(author_of_evidence=author, evidence_ref=evidence_ref, disclosure=Disclosure.QUARANTINED if revoked_at_birth else _disclosure_for(author, '', derived_from), derived_from=derived_from, source_id=source_id, observed_at=when)))
   context: except[0](ValueError)
 
 070f62e813fd
-  file:    src/veracium/ingest.py:702
+  file:    src/veracium/ingest.py:706
   scope:   ingest_event()
   mutator: add_episode
   call:    store.add_episode(Episode(id=source_episode, user_id=user_id, date=date, summary=episode_text, provenance=Provenance(author_of_evidence=author, evidence_ref=evidence_ref, disclosure=Disclosure.QUARANTINED if revoked_at_birth else _disclosure_for(author, '', derived_from), derived_from=derived_from, source_id=source_id, observed_at=when)))
   context: if(episode_text)
 
 74ca6d95a054
-  file:    src/veracium/ingest.py:806
+  file:    src/veracium/ingest.py:817
   scope:   ingest_event()
   mutator: add_edge
   call:    store.add_edge(edge)

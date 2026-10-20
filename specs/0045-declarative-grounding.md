@@ -499,6 +499,24 @@ it was not verbatim, and the gate replaces it.*
 
 ---
 
+## Annotation — specs/0051 (2026-10-20; the frozen rows above are kept as written)
+
+*specs/0051 (speaker turns inside a user event), ACCEPTED on the owner's word 2026-10-20, narrows three rows of this
+frozen surface by ruling, not by a version of this spec; each is quoted, then its reading under 0051. Disclosed to the
+R-II package's reviewer as a design change by ruling.*
+
+- §2, `att(e)`: “The predicate reads the source event's RAW text” → the predicate is **ATTEST-5**: ATTEST-3 over the
+  raw text AND, when the event labels a turn for a non-user speaker, ATTEST-3 over the event's user text (0051 §4a).
+  ATTEST-3's bytes are unchanged (`attest_v3.py`, b1329a81); the turn grammar is a separate frozen file
+  (`attest_turns.py`, 0bb7779f).
+- §3: “Can it make a **user-asserted fact non-assertable**? **No**” → **only 0051 §4b's restriction**: in a
+  USER-effective event that labels a non-user turn, a declarative fact whose every non-`user` side occurs only in such
+  turns is written `use_only`.
+- §4a, the version carrier: “for a statement the predicate judged, `ATTEST-3@b1329a81`” → `ATTEST-5@0bb7779f` from
+  0051 on; rows written with `ATTEST-3@b1329a81` keep it (INV-G7; versions coexist, INV-G13). 0045 §4a's Versioning row
+  (“a later version ships only after it is measured on a FRESH holdout”) is met by 0051 §6's holdout H4, scored once
+  by research before the version shipped.
+
 ## Version history — superseded, not the current contract
 
 *Consolidated at the round-4 fold (the round-4 verdict asked that superseded intermediate rules be kept as history, apart from the current contract). Each entry below records what changed at that version, newest first, moved verbatim from the Version cell. **A rule that appears only here, or that an entry here calls withdrawn or superseded, is NOT part of the current contract**, which is the body of this document above.*

@@ -49,6 +49,7 @@
 | 0046 | `0046-correction-receipt.md` | `draft` | the correction receipt — a corrected fact names what still rests on it |  |
 | 0047 | `0047-subject-reply.md` | `accepted` | the subject's right of reply — the record stands, and the reply travels with it |  |
 | 0048 | `0048-decay-never-raises-confidence.md` | `accepted` | maintenance never raises confidence — the decay bounds (0002's N4, carried) |  |
+| 0051 | `0051-speaker-turns-in-a-user-event.md` | `accepted` | speaker turns inside a user event — the assistant's first person is not the user's |  |
 
 ## Reservations (claimed, not drafted)
 
@@ -68,7 +69,7 @@
 
 none
 
-**Next number from this tree alone:** `0049`. *A new spec takes its number from `allocation.py --next`, which also steps past every draft in the peer seat's tree and refuses to answer without it — run it before the first numbered file is created, in either tree.*
+**Next number from this tree alone:** `0052`. *A new spec takes its number from `allocation.py --next`, which also steps past every draft in the peer seat's tree and refuses to answer without it — run it before the first numbered file is created, in either tree.*
 
 ## Registry state
 

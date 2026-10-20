@@ -509,34 +509,34 @@
   "line": 243,
   "statement": "return _SITE_UNGROUNDED.fire(False)"
  },
- "ingest.py:ingest_event:315:RAISE": {
+ "ingest.py:ingest_event:317:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0037 §4b (refuse) through site ingest.basis-via-remember",
   "reviewer": "dev",
   "site": "ingest.basis-via-remember",
   "class": "enforcement",
   "key": "ingest.py:ingest_event:RAISE:3",
-  "line": 315,
+  "line": 317,
   "statement": "raise _SITE_BASIS_VIA_REMEMBER.fire(ValueError("
  },
- "ingest.py:ingest_event:376:RAISE": {
+ "ingest.py:ingest_event:378:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0039 §2a (downgrade) through site ingest.instructions-not-a-list",
   "reviewer": "dev",
   "site": "ingest.instructions-not-a-list",
   "class": "enforcement",
   "key": "ingest.py:ingest_event:RAISE:4",
-  "line": 376,
+  "line": 378,
   "statement": "raise _SITE_INSTRUCTIONS_TYPE.fire(ValueError(\"instructions: expected a list\"))"
  },
- "ingest.py:ingest_event:304:RAISE": {
+ "ingest.py:ingest_event:306:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0006 §4 rule 9 (refuse) through site ingest.source-id-required",
   "reviewer": "dev",
   "site": "ingest.source-id-required",
   "class": "enforcement",
   "key": "ingest.py:ingest_event:RAISE:2",
-  "line": 304,
+  "line": 306,
   "statement": "raise _SITE_SOURCE_ID_REQUIRED.fire(SourceIdRequired("
  },
  "mcp_server.py:_closed_set:113:RAISE": {
@@ -3988,58 +3988,58 @@
   "line": 905,
   "statement": "raise ValueError(f\"policy_rank[{eid!r}] must be an int >= 1, got {rank!r}\")"
  },
- "ingest.py:_event_dt:127:RAISE": {
+ "ingest.py:_event_dt:129:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "ingest.py:_event_dt:RAISE:1",
-  "line": 127,
+  "line": 129,
   "statement": "raise ValueError("
  },
- "ingest.py:_event_dt:133:RAISE": {
+ "ingest.py:_event_dt:135:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "ingest.py:_event_dt:RAISE:2",
-  "line": 133,
+  "line": 135,
   "statement": "raise ValueError("
  },
- "ingest.py:_resolve_context:171:RAISE": {
+ "ingest.py:_resolve_context:173:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "ingest.py:_resolve_context:RAISE:1",
-  "line": 171,
+  "line": 173,
   "statement": "raise TypeError("
  },
- "ingest.py:_resolve_context:177:RAISE": {
+ "ingest.py:_resolve_context:179:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "ingest.py:_resolve_context:RAISE:2",
-  "line": 177,
+  "line": 179,
   "statement": "raise ValueError("
  },
- "ingest.py:_resolve_context:184:RAISE": {
+ "ingest.py:_resolve_context:186:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "ingest.py:_resolve_context:RAISE:3",
-  "line": 184,
+  "line": 186,
   "statement": "raise TypeError("
  },
- "ingest.py:ingest_event:281:RAISE": {
+ "ingest.py:ingest_event:283:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "ingest.py:ingest_event:RAISE:1",
-  "line": 281,
+  "line": 283,
   "statement": "raise TypeError(f\"event_text must be a str, got {type(event_text).__name__}\")   # v22: never coerced (specs/0037 Gate 1)"
  },
  "introspect.py:report:54:RAISE": {
@@ -4690,40 +4690,40 @@
   "line": 83,
   "statement": "raise SystemExit(\"internal: this veracium verb should never invoke the LLM \""
  },
- "mcp_server.py:main:566:RAISE": {
+ "mcp_server.py:main:569:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:1",
-  "line": 566,
+  "line": 569,
   "statement": "raise SystemExit(f\"veracium-mcp: unknown argument {args[0]!r} (see --help). \""
  },
- "mcp_server.py:main:572:RAISE": {
+ "mcp_server.py:main:575:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:2",
-  "line": 572,
+  "line": 575,
   "statement": "raise SystemExit(\"The MCP server needs the SDK: pip install veracium[mcp]\") from e"
  },
- "mcp_server.py:main:576:RAISE": {
+ "mcp_server.py:main:579:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:3",
-  "line": 576,
+  "line": 579,
   "statement": "raise SystemExit(f\"veracium-mcp: failed to start: {e}\\n\""
  },
- "mcp_server.py:main:588:RAISE": {
+ "mcp_server.py:main:591:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: command-line usage and exit handling",
   "reviewer": "dev",
   "class": "cli-usage",
   "key": "mcp_server.py:main:RAISE:4",
-  "line": 588,
+  "line": 591,
   "statement": "raise SystemExit("
  },
  "__init__.py:Memory._build_scope_policy:402:RETURN_NONE": {
@@ -5059,13 +5059,13 @@
   "line": 154,
   "statement": "return {d for d in out"
  },
- "ingest.py:_resolve_context:181:RETURN_NONE": {
+ "ingest.py:_resolve_context:183:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "ingest.py:_resolve_context:RETURN_NONE:1",
-  "line": 181,
+  "line": 183,
   "statement": "return None"
  },
  "lifecycle.py:_safe_date:354:RETURN_NONE": {
@@ -8290,6 +8290,51 @@
   "line": 206,
   "statement": "return lookup.disposition is SuccessorDisposition.HEAD"
  },
+ "attest_turns.py:_occurs:146:BOOL_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by attest_turns.py:only_in_non_user_turns, speaker_backstop.py:speaker_restricts",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "attest_turns.py:_occurs:BOOL_RETURN:1",
+  "line": 146,
+  "statement": "return n > 0 and any(toks[i:i + n] == value for i in range(len(toks) - n + 1))"
+ },
+ "attest_turns.py:only_in_non_user_turns:156:RETURN_FALSE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no product consumer — ATTEST-4's backstop matcher, carried in ATTEST-5's FROZEN bytes and unused by design (0051 §4b: the product backstop is speaker_backstop.py); read only by research's H3/H4 scoring and the 0051 tests",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "attest_turns.py:only_in_non_user_turns:RETURN_FALSE:1",
+  "line": 156,
+  "statement": "return False"
+ },
+ "attest_turns.py:only_in_non_user_turns:160:RETURN_FALSE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no product consumer — ATTEST-4's backstop matcher, carried in ATTEST-5's FROZEN bytes and unused by design (0051 §4b: the product backstop is speaker_backstop.py); read only by research's H3/H4 scoring and the 0051 tests",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "attest_turns.py:only_in_non_user_turns:RETURN_FALSE:2",
+  "line": 160,
+  "statement": "return False"
+ },
+ "attest_turns.py:turns:107:FILTER_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by attest_turns.py:only_in_non_user_turns, attest_turns.py:user_text, speaker_backstop.py:speaker_restricts",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "attest_turns.py:turns:FILTER_RETURN:1",
+  "line": 107,
+  "statement": "return [(sp, b) for sp, b in out if b or sp != \"user\" or len(out) == 1]"
+ },
+ "attest_turns.py:user_text:114:RETURN_NONE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by attest_turns.py:attests",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "attest_turns.py:user_text:RETURN_NONE:1",
+  "line": 114,
+  "statement": "return None"
+ },
  "attest_v3.py:_complement_complete:192:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by attest_v3.py:attests",
@@ -8335,22 +8380,22 @@
   "line": 171,
   "statement": "return [p for p in (x.strip() for x in parts) if p]"
  },
- "attestation.py:declarative_grounding:50:RETURN_NONE": {
+ "attestation.py:declarative_grounding:54:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by store/sqlite.py:SqliteStore.confirm_edge [site store.confirm.active-challenge, store.confirm.correlation, store.confirm.not-assertable, store.confirm.source-redacted, store.confirm.unknown-edge]; and by challenge.py:ChallengeSnapshot.inspect (no site)",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "attestation.py:declarative_grounding:RETURN_NONE:1",
-  "line": 50,
+  "line": 54,
   "statement": "return None"
  },
- "attestation.py:valid_attv:31:BOOL_RETURN": {
+ "attestation.py:valid_attv:33:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by schema.py:Edge._grounding_axis_is_well_formed",
   "reviewer": "dev",
   "class": "predicate-helper",
   "key": "attestation.py:valid_attv:BOOL_RETURN:1",
-  "line": 31,
+  "line": 33,
   "statement": "return isinstance(value, str) and _ATTV.fullmatch(value) is not None"
  },
  "compile.py:needs_recompile:203:BOOL_RETURN": {
@@ -8729,6 +8774,42 @@
   "class": "predicate-helper",
   "key": "scope_linkage.py:_is_canonical:RETURN_FALSE:1",
   "line": 511,
+  "statement": "return False"
+ },
+ "speaker_backstop.py:_occurs:41:BOOL_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by attest_turns.py:only_in_non_user_turns, speaker_backstop.py:speaker_restricts",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "speaker_backstop.py:_occurs:BOOL_RETURN:1",
+  "line": 41,
+  "statement": "return n > 0 and any(toks[i:i + n] == value for i in range(len(toks) - n + 1))"
+ },
+ "speaker_backstop.py:_tokens:32:FILTER_RETURN": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; no consuming site — consumed (by name) by agreement.py:scan, attest_turns.py:_occurs, attest_turns.py:_side_tokens, graph.py:_lexical_scored, procedures.py:describe_procedures, procedures.py:describe_procedures._rel, speaker_backstop.py:_side, speaker_backstop.py:speaker_restricts",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "speaker_backstop.py:_tokens:FILTER_RETURN:1",
+  "line": 32,
+  "statement": "return [_stem(t) for t in _TOKEN.findall(attest_v3._norm_object(s.lower().replace(\"_\", \" \").replace(\"-\", \" \")))]"
+ },
+ "speaker_backstop.py:speaker_restricts:47:RETURN_FALSE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by ingest.py:ingest_event [site ingest.basis-via-remember, ingest.instructions-not-a-list, ingest.source-id-required]",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "speaker_backstop.py:speaker_restricts:RETURN_FALSE:1",
+  "line": 47,
+  "statement": "return False"
+ },
+ "speaker_backstop.py:speaker_restricts:51:RETURN_FALSE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a Boolean/None helper whose consumer takes the decision; consumed (by name) by ingest.py:ingest_event [site ingest.basis-via-remember, ingest.instructions-not-a-list, ingest.source-id-required]",
+  "reviewer": "dev",
+  "class": "predicate-helper",
+  "key": "speaker_backstop.py:speaker_restricts:RETURN_FALSE:2",
+  "line": 51,
   "statement": "return False"
  },
  "store/lifetime.py:same_retirement:59:BOOL_RETURN": {

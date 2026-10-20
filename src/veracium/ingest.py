@@ -16,7 +16,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from . import agreement, grounding, prompts
-from .attestation import attestation as _attestation
+from . import attest_v3 as _attest_v3
+from .attestation import ATTESTED as _ATTESTED, attestation as _attestation
+from . import speaker_backstop as _speaker_backstop
 from ._json import extract_json
 from .graph import apply_supersession
 from .llm.base import Complete
@@ -413,6 +415,7 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
                 "subject_refused": 0,          # specs/0025 (amended 2026-09-08): present, zero
                 "nonuser_ungrounded_refused": 0,   # specs/0019 v7 (INV-N4): present, zero on the unparseable path
                 "procedures": 0, "procedural_refused": 0,   # specs/0037 v16: present, zero
+                "speaker_restricted": 0,       # specs/0051 INV-S7: present, zero on the unparseable path
                 "quarantined_at_birth": (1 if revoked_at_birth else 0),
                 "birth_revocation_digest": (_birth_digest if revoked_at_birth
                                             else None),
@@ -442,6 +445,7 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
     n_subject_refused = 0
     n_nonuser_refused = 0                       # specs/0019 v7 §4c (INV-N1)
     n_procedures = n_procedural_refused = 0     # specs/0037 v16 §4a-iii
+    n_speaker_restricted = 0                    # specs/0051 INV-S7: triples §4a or §4b restricted
     # specs/0039 §2c, the PRIMARY site (matrix rows 3–7, 10): once the answer is a
     # dict (a bare array having been wrapped above), a missing `triples` key or a
     # non-list value is RECORDED — and only recorded: the normalization below then
@@ -775,6 +779,13 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
                 and disclosure == Disclosure.MENTIONABLE):
             disclosure = Disclosure.USE_ONLY
             n_agreement_floored += 1
+        # specs/0051 §4b — the speaker-turn backstop, BEFORE the record is derived (it is built from the FINAL
+        # disclosure): a USER-effective declarative triple whose every non-`user` side the event shows only in a
+        # turn it labels for a non-user speaker gets the class ASSISTANT authorship would have given it
+        speaker_restricted = (user_effective and not row.get("procedural") and disclosure == Disclosure.MENTIONABLE
+                              and _speaker_backstop.speaker_restricts(row["subject"], obj, event_text))
+        if speaker_restricted:
+            disclosure = Disclosure.USE_ONLY
         agr = agreement.derive_record(note_str, obj, disclosure,
                                       relation=relation)
         if agr is not None:
@@ -811,6 +822,11 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
         # summary (research's T9 F6). Re-validated so the axis's own rules run on the record that is written.
         att, attv = _attestation(user_effective, edge.subject, edge.relation, edge.object, event_text)
         edge = Edge.model_validate({**edge.model_dump(), "att": att, "attv": attv, "src": source_episode})
+        # specs/0051 INV-S7: a triple counts ONCE, whether §4b restricted its disclosure or §4a its label (ATTEST-3 over
+        # the raw text attested what ATTEST-5 did not) — the host's signal to split the transcript by speaker
+        if speaker_restricted or (user_effective and att != _ATTESTED and _attest_v3.attests(
+                edge.subject, edge.relation, edge.object, event_text) == "ATTESTED"):
+            n_speaker_restricted += 1
         c = apply_supersession(store, edge, relations)
         n_supersessions += c.superseded
         n_reinforcements += c.reinforced
@@ -836,6 +852,8 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
             "subject_refused": n_subject_refused,
             # specs/0019 v7 §4c (INV-N1/N4): flagged triples refused from a non-user-effective event
             "nonuser_ungrounded_refused": n_nonuser_refused,
+            # specs/0051 INV-S7: triples a speaker turn restricted (§4a's label or §4b's disclosure), counted once each
+            "speaker_restricted": n_speaker_restricted,
             # specs/0023 Q4 (RESOLVED 2026-08-22, per the recorded leaning):
             # the quarantine-at-birth AUDIT facts — the content-free identity
             # digest answers "which source is still writing" from the audit

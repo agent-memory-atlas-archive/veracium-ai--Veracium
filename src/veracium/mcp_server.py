@@ -217,6 +217,9 @@ _OPERATOR_ONLY = ("supersessions", "reinforcements",
                   # specs/0037 v16 §4a-iii: the quote-gated capture counters, stripped
                   # with their 0025 siblings by the same 0031 §4d argument
                   "procedures", "procedural_refused",
+                  # specs/0051 INV-S7: the speaker-turn restriction count, an operator counter (the HOST's signal to
+                  # split a transcript by speaker), stripped by the same argument
+                  "speaker_restricted",
                   "quarantined_at_birth", "birth_revocation_digest",
                   "agreement_floored", "agreement_recorded",
                   "provenance_raises_discarded")

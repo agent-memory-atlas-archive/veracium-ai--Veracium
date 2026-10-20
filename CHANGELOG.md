@@ -76,7 +76,7 @@
   G9–G13).** Every declarative fact ingest writes carries, set once and never changed: `att` (`attested` when the
   versioned predicate ATTEST-3 found the fact stated in the user's own words, in the one sentence form it
   recognises; else `not_attested`), `src` (the event's episode) and `attv` (what produced `att`:
-  `ATTEST-3@b1329a81`, `non-user-effective`, or `default-import`). Only a declared-direct USER event can be
+  `ATTEST-5@0bb7779f` — specs/0051, next entries — `non-user-effective`, or `default-import`). Only a declared-direct USER event can be
   `attested`. `not_attested` is a label, not a demotion: the fact is stored, recalled and asserted exactly as before.
   On its blind holdout the predicate attested 12 of 53 true statements and 1 of 67 negatives. ATTEST-3 ships
   byte-identical to the measured file (`veracium.attest_v3`). Older facts read `unknown` and are never re-derived;
@@ -1109,6 +1109,30 @@
   rate): passed whole, an assistant-only value was asserted as the user's in 4 of 12 (6 of 18 planted values; two of
   the six recorded as `attested`), 3 of the 4 with no speaker labels; passed turn by turn, none of the 18. No
   behaviour changes.
+- **Changed: in a pasted conversation, the assistant's own words are no longer the user's facts** (specs/0051,
+  accepted on the owner's word 2026-10-20; INV-S1–S8). When a user event's text labels turns by speaker ("User:",
+  "Human:", "AI:", "Assistant (GPT-4o):", "ChatGPT said:", `### Assistant`, …), ingest now:
+  - attests a fact only if the predicate finds it in the user's own turns too: the predicate is **ATTEST-5**
+    (`attv` `ATTEST-5@0bb7779f`), ATTEST-3 over the whole text AND over the user's turns. ATTEST-3 ships unchanged
+    inside it; the new grammar is a separate frozen file (`veracium.attest_turns`).
+  - stores `use_only` (not asserted) a fact whose value appears only in a turn labelled for an assistant, and counts
+    such facts in `remember()`'s new `speaker_restricted` (present on every path; stripped from the MCP tool result
+    like the other operator counters). A non-zero count means the host passed a mixed transcript as one user event.
+  - tells the extractor that a statement in an assistant's labelled turn is never a fact about the user.
+  A heading or key line inside an assistant's reply ("Pros:", "Note:", "Ingredients:") stays in the reply; an unlisted
+  name ends the assistant's turn only when it behaves as a speaker. Measured on two blind holdouts of pasted
+  transcripts written for this change, one run each, so a measurement, not a rate: on the holdout ATTEST-5 had not
+  seen, false attestations fell from 7 of 72 (ATTEST-3) to 3 of 72; true facts attested fell from 12 to 9 of 58
+  (those three rested on the assistant repeating the user's words, and remain asserted); no user fact was stored
+  `use_only` on either holdout.
+  - **Not covered:** unlabelled transcripts (the commonest leak in dev's 12-transcript measurement: 3 of 4) — pass one
+    speaker per event; an episode's wording, which can still say "User …" for an assistant's line; sample dialogue
+    inside an assistant's reply; role-play personas, API role brackets, terminal agents, Gemini's bare-name lines;
+    and another person's words in a group chat, which stay the user's text. A single exchange where the user is named
+    once, after the assistant, restricts the user's line (the safe direction).
+  - **Who should act:** hosts that store whole transcripts: split them by speaker (the assistant's turns under
+    `author=ASSISTANT`), and read `speaker_restricted`. The extraction prompt changed, so a cached extraction keyed on
+    it re-extracts. (tests/test_0051_speaker_turns.py.)
 
 ## 0.26.1 — 2026-09-18
 

@@ -87,7 +87,12 @@ claims.
   quote; never rendered into context either way) · `subject_refused`
   (specs/0025 as amended 2026-09-08 — facts whose returned subject carries
   `|`, the prompt's alternation taken literally by a provider; dropped and
-  never written, since a subject cannot be re-filed) ·
+  never written, since a subject cannot be re-filed) · `speaker_restricted`
+  (specs/0051 — facts a speaker-labelled transcript restricted: stored
+  `use_only` because their value appears only in a turn labelled for an
+  assistant, or not attested because only such a turn stated them; counted
+  once each. A non-zero count means the host passed a mixed transcript as
+  one user event: split it by speaker) ·
   `redispositioned` (specs/0024 — triples whose `third_party_claim`
   label contradicted its own claimant slot and were re-dispositioned to
   `unclassified` at `use_only`) · and the trust-state audit facts
@@ -441,7 +446,7 @@ with its evidence author, disclosure tier, `quarantined` / `ungrounded` /
 `needs_confirmation` flags, agreement record and the fact it supersedes; every
 existing fact that would move (retired with its reason, or its liveness
 advanced); the ingest's counters verbatim (`facts`, `quarantined`,
-`supersessions`, `reinforcements`, `subject_refused`, `quarantined_at_birth`,
+`supersessions`, `reinforcements`, `subject_refused`, `speaker_restricted`, `quarantined_at_birth`,
 `agreement_floored`, … and `extraction_unusable`); the episode that would be
 filed; and every degrade record (specs/0039) the run emitted. Because the
 shipped ingest ran, the report cannot disagree with what the real write does
@@ -618,20 +623,34 @@ mem.reply("u1", edge_id, kind="resolve", target=c["reply_id"])
 Every declarative fact ingest writes from now on carries three fields, set once
 and never changed (a same-id rewrite of any of them raises `ValueError`):
 
-- **`att`** — `"attested"` when a fixed, versioned predicate (ATTEST-3) found
-  the fact stated in the user's own words in the event, in the one sentence
-  form it recognises; otherwise `"not_attested"`. `"not_attested"` means only
+- **`att`** — `"attested"` when a fixed, versioned predicate found the fact
+  stated in the user's own words in the event, in the one sentence form it
+  recognises; otherwise `"not_attested"`. The predicate is ATTEST-5
+  (specs/0051): ATTEST-3 over the event text and, when the event labels a turn
+  for an assistant ("Assistant:", "AI:", "ChatGPT said:", …), ATTEST-3 again
+  over the user's turns alone — both must find it, so a sentence only the
+  assistant said is never attested. `"not_attested"` means only
   that the predicate did not find it: most true statements are phrased in ways
-  it does not recognise (it recognised 12 of 53 on its blind holdout, with 1
-  false attestation in 67). It is **not** "unverified" — the fact is stored,
+  it does not recognise (ATTEST-3 recognised 12 of 53 on its blind holdout,
+  with 1 false attestation in 67; on 0051's blind holdout of pasted
+  two-speaker transcripts ATTEST-5 attested 9 of 58, with 3 false
+  attestations in 72 where ATTEST-3 had 7). It is **not** "unverified" — the fact is stored,
   recalled and asserted exactly as before. `"attested"` is a label, not proof,
   and carries no other privilege. Only a declared-direct USER event
   (`context=EvidenceContext.direct()`) can be attested; every other event is
-  `"not_attested"`.
+  `"not_attested"`. Separately (specs/0051), in such an event a fact whose
+  value appears only in a turn labelled for an assistant is stored `use_only`
+  (not asserted) and counted in `remember()`'s `speaker_restricted`. Not
+  covered: unlabelled transcripts, an episode's wording, sample dialogue inside
+  an assistant's reply, and formats the label grammar does not recognise
+  (role-play personas, API role brackets). The other direction: in a single
+  exchange where the user is named once, after the assistant ("Claude: …" then
+  "Sam: …"), the user's line is restricted too.
 - **`src`** — the id of the episode the event wrote, or `None` when the
   extractor returned no episode text.
-- **`attv`** — what produced `att`: `"ATTEST-3@b1329a81"` (the predicate's
-  version and the first 8 hex digits of its source file's sha256),
+- **`attv`** — what produced `att`: `"ATTEST-5@0bb7779f"` (the predicate's
+  version and the first 8 hex digits of its source file's sha256;
+  `"ATTEST-3@b1329a81"` on facts a development build wrote before 0051),
   `"non-user-effective"` (no predicate ran), or `"default-import"`.
 
 A fact written before this release has none of them and reads as `unknown`;

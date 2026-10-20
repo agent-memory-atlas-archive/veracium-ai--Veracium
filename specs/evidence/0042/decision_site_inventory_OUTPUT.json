@@ -597,6 +597,36 @@
   },
   {
    "kind": "FILTER_RETURN",
+   "line": 107,
+   "module": "attest_turns.py",
+   "qualname": "turns"
+  },
+  {
+   "kind": "RETURN_NONE",
+   "line": 114,
+   "module": "attest_turns.py",
+   "qualname": "user_text"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 146,
+   "module": "attest_turns.py",
+   "qualname": "_occurs"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 156,
+   "module": "attest_turns.py",
+   "qualname": "only_in_non_user_turns"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 160,
+   "module": "attest_turns.py",
+   "qualname": "only_in_non_user_turns"
+  },
+  {
+   "kind": "FILTER_RETURN",
    "line": 171,
    "module": "attest_v3.py",
    "qualname": "sentences"
@@ -627,13 +657,13 @@
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 31,
+   "line": 33,
    "module": "attestation.py",
    "qualname": "valid_attv"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 50,
+   "line": 54,
    "module": "attestation.py",
    "qualname": "declarative_grounding"
   },
@@ -1413,69 +1443,69 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 127,
+   "line": 129,
    "module": "ingest.py",
    "qualname": "_event_dt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 133,
+   "line": 135,
    "module": "ingest.py",
    "qualname": "_event_dt"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 171,
+   "line": 173,
    "module": "ingest.py",
    "qualname": "_resolve_context"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 177,
+   "line": 179,
    "module": "ingest.py",
    "qualname": "_resolve_context"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 181,
+   "line": 183,
    "module": "ingest.py",
    "qualname": "_resolve_context"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 184,
+   "line": 186,
    "module": "ingest.py",
    "qualname": "_resolve_context"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 281,
+   "line": 283,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 304,
+   "line": 306,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 315,
+   "line": 317,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 376,
+   "line": 378,
    "module": "ingest.py",
    "qualname": "ingest_event"
   },
@@ -1575,28 +1605,28 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 566,
+   "line": 569,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 572,
+   "line": 575,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 576,
+   "line": 579,
    "module": "mcp_server.py",
    "qualname": "main"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 588,
+   "line": 591,
    "module": "mcp_server.py",
    "qualname": "main"
   },
@@ -3268,6 +3298,30 @@
    "line": 59,
    "module": "source_identity.py",
    "qualname": "source_identity_digest"
+  },
+  {
+   "kind": "FILTER_RETURN",
+   "line": 32,
+   "module": "speaker_backstop.py",
+   "qualname": "_tokens"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 41,
+   "module": "speaker_backstop.py",
+   "qualname": "_occurs"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 47,
+   "module": "speaker_backstop.py",
+   "qualname": "speaker_restricts"
+  },
+  {
+   "kind": "RETURN_FALSE",
+   "line": 51,
+   "module": "speaker_backstop.py",
+   "qualname": "speaker_restricts"
   },
   {
    "bare": false,
@@ -6225,11 +6279,11 @@
  ],
  "summary": {
   "by_kind": {
-   "BOOL_RETURN": 90,
-   "FILTER_RETURN": 54,
+   "BOOL_RETURN": 92,
+   "FILTER_RETURN": 56,
    "RAISE": 606,
-   "RETURN_FALSE": 103,
-   "RETURN_NONE": 83
+   "RETURN_FALSE": 107,
+   "RETURN_NONE": 84
   },
   "kinds": [
    "RAISE",
@@ -6238,8 +6292,8 @@
    "BOOL_RETURN",
    "FILTER_RETURN"
   ],
-  "modules_scanned": 63,
-  "modules_with_sites": 53,
+  "modules_scanned": 65,
+  "modules_with_sites": 55,
   "per_module": {
    "__init__.py": {
     "BOOL_RETURN": 0,
@@ -6289,6 +6343,13 @@
     "RAISE": 6,
     "RETURN_FALSE": 0,
     "RETURN_NONE": 3
+   },
+   "attest_turns.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 1,
+    "RAISE": 0,
+    "RETURN_FALSE": 2,
+    "RETURN_NONE": 1
    },
    "attest_v3.py": {
     "BOOL_RETURN": 1,
@@ -6535,6 +6596,13 @@
     "RETURN_FALSE": 0,
     "RETURN_NONE": 1
    },
+   "speaker_backstop.py": {
+    "BOOL_RETURN": 1,
+    "FILTER_RETURN": 1,
+    "RAISE": 0,
+    "RETURN_FALSE": 2,
+    "RETURN_NONE": 0
+   },
    "store/base.py": {
     "BOOL_RETURN": 0,
     "FILTER_RETURN": 0,
@@ -6613,7 +6681,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 936,
+  "total": 945,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

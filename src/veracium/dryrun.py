@@ -30,7 +30,7 @@ one was derived, and the edge it supersedes. Per changed edge: what moved
 (retired with its reason, or liveness advanced). Then the ingest's counters
 verbatim (`facts`, `quarantined`, `supersessions`, `reinforcements`,
 `invalid`, `retried`, `recovered`, `residual`, `redispositioned`,
-`instructions_dropped`, `subject_refused`, `quarantined_at_birth`,
+`instructions_dropped`, `subject_refused`, `speaker_restricted`, `quarantined_at_birth`,
 `agreement_floored`, `agreement_recorded`, `unparseable`,
 `extraction_unusable`), the episode that would be filed (count only; the
 summary text is the ingest's own output and is shown because the operator
@@ -189,7 +189,8 @@ def render(dr: DryRun) -> str:
         for k, b, a in c["changed"]:
             out.append(f"      {k}: {_fmt(b)} -> {_fmt(a)}")
     counters = ("facts", "quarantined", "supersessions", "reinforcements", "invalid", "retried", "recovered",
-                "residual", "redispositioned", "instructions_dropped", "subject_refused", "quarantined_at_birth",
+                "residual", "redispositioned", "instructions_dropped", "subject_refused", "speaker_restricted",
+                "quarantined_at_birth",
                 "agreement_floored", "agreement_recorded")
     out.append("  counters   " + " ".join(f"{k}={r.get(k, 0)}" for k in counters))
     if r.get("birth_revocation_digest"):
