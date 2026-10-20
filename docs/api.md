@@ -760,6 +760,15 @@ records them `restored`. The returned dict gains `"outcomes"`,
 `"outcomes_existing"` and the arity decision below. See [Exporting and importing
 restorations](#exporting-and-importing-restorations-format-14).
 
+**Confirmations, replies and grounding (FORMAT 14, specs/0008 §6d–§6f, 0047 §4f, 0045 §4f).** The file carries
+every confirmation and reply with its origin (`confirmation` / `reply` lines), and each edge's grounding (`att`,
+`src`, `attv`) on its own line. The request registry never travels: a retry belongs to the store it was made to. A
+default import records the acts as `imported` testimony (shown in `why`, never counted toward `confirmed`) and stamps
+every fact `not_attested`; `--restore` of your own export keeps them as recorded, mapping `local` to `restored`. The
+returned dict gains `"confirmations"`, `"replies"` (written), `"acts_existing"` (exact replays),
+`"acts_refused_with_edge"` and `"axis_kept_default_import"`. See [Exporting and importing confirmations and
+replies](#exporting-and-importing-confirmations-and-replies-format-14).
+
 **Trust boundary (specs/0005).** A **default** import caps every record's
 trust: `author_of_evidence` and `derived_from` are set to `third_party` and
 `disclosure` is floored to `use_only` (`quarantined` is never weakened) — so
@@ -1113,6 +1122,59 @@ plan id, so they are listed under that id instead. The stated limits: a default 
 trusts the file to say whether its store decided, so a file can choose conversion or `unknown-linkage` by including or
 omitting that line (bounded by what an untrusted file can already do: carry the rows active), and a store that relays
 another's file without a plan of its own re-exports it as undecided.
+
+### Exporting and importing confirmations and replies (format 14)
+
+An export writes each confirmation and reply with what it takes to recognise it in another store: its identity (the
+store that first recorded it, the user, and its id there), its **position** in that store's order of acts, its origin
+(`local`, `restored` or `imported`), and the id of the original request. It never writes the row id, the internal key,
+or the request registry. Import reads them over the whole file and what this store already holds, and decides per act:
+
+| the act | default import | `--restore` (your own export) |
+|---|---|---|
+| claims THIS store as its origin | **refused** (only a restore of your own history may carry it) | admitted |
+| already held, identical (after any redaction both copies are under) | nothing written (`"acts_existing"`) | same |
+| already held, different in any other field | **the whole file is refused** | same |
+| new, on a fact this store already held before the import | **refused**: a file cannot act as you over your own fact | admitted if its history is consistent (below) |
+| new, on a fact arriving in the same file | written `imported` | written as recorded (`local` becomes `restored`) |
+| its fact is in neither the file nor this store | **the whole file is refused** | same |
+
+An imported act never takes a request id from your id space: it is stored under an internal `#act:` key, keeps the
+original request's id as evidence, and writes no registry row, so a later `confirm()` with that id is a new request. It
+takes no position from this store's counter.
+
+**Order.** A confirmation made while a challenge to the same fact was open is refused, and so is any history whose
+order cannot be established: positions are ordered only within one origin, and an act recorded before this release has
+no position. A challenge **resolved** in the merged history (what this store holds plus the file) needs no order. Two
+different acts at one position, a challenge resolved twice, or a resolve before its own challenge refuse the whole file.
+In a **trusted restore**, an act recorded before this release (no position) counts as earlier than every positioned act
+of the same origin, between acts recorded `local` or `restored`. So a backup holding an old confirmation and a later
+open challenge restores; a default import of the same file is refused whole, and nothing is written.
+
+**Redacted facts.** An act arriving on a redacted fact needs a notice that covers every content field it carries (a
+reply's text and request digest, a confirmation's request digest); a notice that covers some but not all, or a notice
+from before replies existed, refuses the file. A covered act is written with those fields redacted, and the same file
+imported again is a no-op. A default import never changes an act you hold: a notice for it waits for your
+`confirm_notice`.
+
+**Times.** Times are stored as UTC (`Z`, `+00:00` and other offsets of one instant are one time), and a time without a
+timezone refuses the file. A reply's write time (the display order of challenges) is never later than the import itself:
+a future-dated time is stored as the import's time. Several future-dated replies therefore share that time, and their
+display order falls to their ids. A write time never decides an operation.
+
+**Copying into another user (`user_id=`).** Each copied act is placed in an ordering of its own for that import, so a
+user can be copied any number of times, into one user or several, and each copy keeps its own internal order. In a copy,
+the original store shows only as a hash.
+
+**Grounding.** A default import ignores the file's `att`, `src` and `attv` and stamps every fact `not_attested`, `src`
+null, `attv` `default-import`, but a value outside its grammar (an unknown label, a malformed version, `attv` or `src`
+without `att`, any of the three on a procedure) still refuses the file. A restore keeps them as recorded, any predicate
+version included. A `src` naming an episode that no longer exists is kept. A restore over a fact you hold with a
+different grounding is refused, except where this store stamped it `default-import`: that stamp is kept, and the fact
+is listed in `"axis_kept_default_import"`.
+
+**A record refused on its own.** A default import refuses procedure records one by one and admits the rest. An act on
+such a record is refused with it and counted in `"acts_refused_with_edge"`.
 
 ### Undoing one restoration (`undo_restoration`)
 

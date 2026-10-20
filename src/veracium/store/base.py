@@ -376,6 +376,17 @@ class Store(ABC):
         users), as {uid: row dict}. Not abstract; it REFUSES rather than answering "none held"."""
         raise NotImplementedError(f"{type(self).__name__} does not implement migration_outcomes_by_uid")
 
+    def act_rows(self, user_id: str) -> list:
+        """specs/0008 §6d / 0047 §4f (T11b): the user's act rows (confirmations and replies), every column, as dicts.
+        Not abstract; it REFUSES rather than answering "none" (an export that silently dropped acts would lose a
+        person's confirmations and challenges)."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement act_rows")
+
+    def act_state(self, user_id: str, uids, positions, edge_ids) -> dict:
+        """specs/0008 §6e–§6f (T11b): the held act rows an import decides by — by identity and by position
+        store-wide, and the user's rows per touched edge. Not abstract; it REFUSES rather than answering "none held"."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement act_state")
+
     def refusal_inventory_ids(self, user_id: str) -> frozenset:
         """specs/0044 §4d/§4f: the ids of the user's refusals in the v16 schema step's refusal inventory — recorded
         while their relation was `single`, so their protection is retained. Read-only. Not abstract: a caller reads a

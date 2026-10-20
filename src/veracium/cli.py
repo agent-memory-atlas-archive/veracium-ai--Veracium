@@ -152,7 +152,11 @@ def _portability(args) -> int:
     try:
         if args.cmd == "export":
             r = export_memory(store, args.user, args.path)
-            print(f"exported {r['edges']} edges + {r['episodes']} episodes -> {r['path']}")
+            # specs/0008 §6d (T11b, build note D17): the acts, named only when the file carries any (the line is
+            # otherwise unchanged)
+            acts = (f" + {r['confirmations']} confirmations + {r['replies']} replies"
+                    if r.get("confirmations") or r.get("replies") else "")
+            print(f"exported {r['edges']} edges + {r['episodes']} episodes{acts} -> {r['path']}")
         else:
             r = import_memory(store, args.path, user_id=args.user,
                               restore=args.restore)
@@ -160,7 +164,9 @@ def _portability(args) -> int:
             # (the one surface built for the operator); the restore-path line
             # says nothing about capping (capped is 0 by construction there).
             tail = "" if args.restore else f"; {r['capped']} capped to third-party trust"
-            print(f"imported {r['edges']} edges + {r['episodes']} episodes into "
+            acts = (f" + {r['confirmations']} confirmations + {r['replies']} replies"
+                    if r.get("confirmations") or r.get("replies") else "")
+            print(f"imported {r['edges']} edges + {r['episodes']} episodes{acts} into "
                   f"'{r['user_id']}' ({r['skipped']} already present, skipped{tail})")
             # specs/0041 §11.6.6 (T4): a notice left PENDING is the only signal that a source's redaction did not reach a
             # record held here, so it is printed, never only returned. No CLI verb confirms one (the owner's ruling, D9):

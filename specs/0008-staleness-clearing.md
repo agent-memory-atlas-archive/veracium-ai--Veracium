@@ -924,3 +924,57 @@ the prerequisite is not.
 |---|---|---|---|---|
 | ~~**C-Q1**~~ | **RESOLVED in §6b, not deferred.** Every `confirm()` writes a content-free audit record; repeated confirmation is allowed without limit, because veracium cannot distinguish a legitimate re-affirmation from an automated one and **a guessed limit would substitute our judgement for the host's while still not detecting misuse.** The record makes misuse visible, which is the part we can provide. | resolved | dev | — |
 | ~~C-Q2~~ | **RULED 2026-08-01 (Quentin): no release-note correction.** The 0.4.5 note is accurate as written — cross-author clearing *was* closed. The residual same-class case is this spec's subject and ships as its own fix. **Not blocking.** | resolved | Quentin | — |
+
+## Annotation — act portability as T11b implements it (2026-10-20; every row above is kept as written)
+
+*Append-only. The accepted text above this section is byte-for-byte the text before this annotation was appended,
+sha256 `473cfdce4079d45b9122c8b01c464c272f080c92722c6463ed48597d00464b28`. This annotation records two DESIGN CHANGES BY
+RULING (the owner, Quentin, 2026-10-20, ledger `1899b67`), not a version of this spec, and R-II's brief names them as
+such; and the readings T11b's implementation took where the frozen text left a choice. Implemented in T11b (dev's build
+note sha16 d54b768f with addendum 1 sha16 7a820236; research's stage-1 read `READ-T11b-stage1.md`, research
+`48750ecc`). Each narrowed sentence is quoted, then its reading.*
+
+**R-D6, the act remap namespace (the owner's ruling).**
+- §6e: "It is set once, when a `local` act is first exported, and carried unchanged on every later hop. A store never
+  mints an `act_uid` for an act it did not originate" (L597–L599), §6f: "The position is recorded on the row at write,
+  exported, and carried unchanged on every hop" (L694–L695), and §6e rule 0, "mode `default`, and the act's
+  `origin_store` is THIS store's `local_origin()`" (L674) → unchanged on every hop EXCEPT a cross-user remap
+  (`import_memory(..., user_id=)`), which moves each act into that import's REMAP NAMESPACE: `origin_store` becomes
+  `"remap:"` + the first 32 hex digits of the canonical hash of (origin store, destination user, the import's operation
+  id), `origin_user` the destination user, `origin_act_id` and `act_seq` kept; a resolve's target maps the same way.
+  Rule 0 reads the act AS ADMITTED. Why: outcomes re-mint only user and edge (0044's annotation, L788–L790) because
+  nothing orders them; an act also has a POSITION, and a second remapped copy at the source's positions would be two
+  acts at one position, which §6f refuses. With the namespace a copy's acts duplicate exactly when its edges do, and the
+  copy keeps its own internal order. **Limit, stated:** in a copy, the source store is readable only as the hash.
+
+**R-M1, legacy order in a trusted restore (the owner's ruling).**
+- §6f: "No position is synthesized, and an act recorded before this column existed has an UNKNOWN position, which is
+  incomparable" (L700–L701) → in a TRUSTED RESTORE only, between two acts of one origin both recorded `local` or
+  `restored`, an unknown position precedes every known one. Basis: §2a's "no legacy act receives a value" (L101) — the
+  counter starts at the v16 step, so every unknown-position act of an origin predates every known one. Testimony
+  (`imported`) stays incomparable (a relayed file could have nulled its position), two unknown positions stay
+  incomparable, and a default import is unchanged. So a store's own backup holding a legacy confirmation and a LATER
+  open challenge restores; its default import is refused WHOLE, at §6f's width (L724: "the unit is refused"), nothing
+  written. It departs from IO-II-4's "not by inventing an order" in exactly this case.
+
+**Readings T11b took (inside the frozen rules).**
+- §6e's projection "EXCLUDES … write time" (L622) and 0047 §4b's "`written_at` is a local clock that does not travel as
+  an order" (0047 L191–L192) with 0047 §4d's display order "challenges by `(written_at, id)`" (0047 L225) → a reply's
+  `written_at` TRAVELS, is re-rendered as canonical UTC, is never compared and is never an OPERATION order; it is the
+  DISPLAY order, and an arriving value later than the import's one clock read is stored as that read (research's M3),
+  so no file can date a challenge ahead of a later local one. `confirmed_at` is in the projection and is canonicalised
+  the same way before comparison and storage; an arriving time without a timezone refuses.
+- §6e's "A file row id that names two rows of one unit refuses the unit" (L610–L611) → the wire carries no row id
+  (destination-internal), so an act's file identity is its `act_uid` and the rule is rule 2 on one uid.
+- 0047 §4b's "A `resolve` names ONE `challenge` row of the SAME edge, written by the same subject label" (0047 L177) →
+  the actor may differ, as T10a's `add_reply` already reads it (the owner's ruling, 2026-10-19, ledger 11:56 UTC:
+  labels are unauthenticated until 0050); import follows the writer.
+- 0045 §4f's "trusted restore checks it refers to an episode in destination ∪ file" (0045 L292) → reduced to a SHAPE
+  check (research's M4): a store's own backup holds a `src` whose episode was consumed by consolidation (alive only in a
+  survivor's lineage) or deleted, and the owner's T9 F1(b) ruling reads a deleted source as naming nothing. A dangling
+  `src` is admitted.
+- 0045 §4e's "trusted restore: as recorded" with §6e's exclusion of the trust label → a restore over a held edge
+  compares the grounding axis (a difference refuses, INV-G13), except where the held `attv` is `default-import`, this
+  store's own judgement at a default import, which is kept and listed (research's M2).
+- An act on a record a default import refuses PER RECORD (0037 §4e) is refused with it and counted, not treated as an
+  orphan (0047 INV-R11), which would refuse the whole file.

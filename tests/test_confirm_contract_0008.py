@@ -258,17 +258,24 @@ def test_invalidated_edge_keeps_its_confirmations():
     assert len(s.confirmations_for("u", "e1")) == 1
 
 
-def test_export_excludes_confirmations():
-    """§6d: a confirmation is a fact about THIS store, not about the memory —
-    export carries only edges and episodes."""
+def test_export_carries_confirmations_with_origin():
+    """C11 as the 0008 amendment changes it (v6 §6d: "carried, with `origin`"; replacing
+    `test_export_excludes_confirmations`, T11b): the export carries every confirmation as a `confirmation` line WITH
+    its origin, its derived portable identity and its original request id — and never the request registry, whose
+    replay belongs to the store it was made to."""
+    import json
     with tempfile.TemporaryDirectory() as d:
         s = _store()
         s.add_edge(_edge())
-        _confirm(s)
+        c = _confirm(s)
         out = f"{d}/x.jsonl"
         export_memory(s, "u", out)
-        raw = open(out).read()
-        assert "confirmations" not in raw and "request_digest" not in raw
+        recs = [json.loads(x) for x in open(out).read().splitlines()]
+        lines = [r for r in recs if r.get("record") == "confirmation"]
+        assert len(lines) == 1 and lines[0]["origin"] == "local"
+        assert lines[0]["act_uid"] == [s.local_origin(), "u", c.id]
+        assert lines[0]["recorded_correlation_id"] == c.correlation_id
+        assert "request_registry" not in open(out).read()
 
 
 # --- C12: the version-compat gate -------------------------------------------

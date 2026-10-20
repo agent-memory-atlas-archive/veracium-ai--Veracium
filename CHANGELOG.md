@@ -1153,6 +1153,30 @@
   - **Who should act:** an importer of files from a store that was upgraded but never ran `run_data_migration`. A custom
     `Store` backend: `arity_plan_state`, `migration_outcomes` and `migration_outcomes_by_uid` refuse by default, so an
     import that needs them refuses; an export from such a backend carries no outcome. (tests/test_0044_t11a_portability.py.)
+- **Added: confirmations, replies and grounding travel in exports and imports** (specs/0008 §6d–§6f, 0047 §4f, 0041
+  §11.6.6, 0045 §4e/§4f, with the owner's two rulings of 2026-10-20 recorded as an annotation on 0008; INV-R11, R16,
+  R21, R23, Q4′, Q5, Q9, Q10, I1–I7, RR3, RR6, RR8, RR9, G9, G13). Export format 14 now carries every confirmation and
+  reply with its origin, its portable identity (derived for a local act) and its position in its store's order, and
+  each fact's `att`, `src` and `attv`; the request registry never travels. Every fact `remember` writes carries `att`,
+  so an export from such a store is now format 14, which an older build refuses. Import decides each act over the whole
+  file and what this store holds: an identical copy is a no-op, a different one refuses the whole file; a default import
+  records acts as `imported` testimony (never counted toward `confirmed`) and refuses a new act on a fact you already
+  held, or one claiming this store as its origin; `--restore` of your own export keeps them, `local` becoming
+  `restored`. A confirmation made under an open challenge, or whose order against an open challenge cannot be
+  established, refuses the whole file; a challenge resolved in the merged history needs no order. In a trusted
+  restore, a confirmation recorded before this release counts as earlier than every later act of its store (the
+  owner's ruling), so such a backup restores; its default import is refused whole. An act on a redacted fact needs a
+  notice covering every content field it carries, and is written redacted. Times are stored as UTC; a time without a
+  timezone refuses; a reply dated after the import is stored at the import's time. Copying a user (`user_id=`) gives
+  each copy its own order (the owner's ruling), so it can be repeated. A default import still stamps every fact
+  `not_attested` / `default-import`, but now refuses a malformed `attv` it used to overwrite; a restore keeps the
+  recorded grounding (any predicate version), and refuses a different grounding over a fact you hold unless this store
+  stamped it `default-import`. `why` shows an act's origin and its original request id. The result gains
+  `confirmations`, `replies`, `acts_existing`, `acts_refused_with_edge` and `axis_kept_default_import`; the export's
+  result gains `confirmations` and `replies`.
+  - **Who should act:** anyone who imports into an older build: a new export is format 14. Anyone who relied on a
+    restore writing grounding as unknown: it now keeps the file's. A custom `Store` backend: `act_rows` and `act_state`
+    refuse by default, so an export or an import that carries acts refuses. (tests/test_0047_t11b_portability.py.)
 
 ## 0.26.1 — 2026-09-18
 

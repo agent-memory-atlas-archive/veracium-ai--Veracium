@@ -1,5 +1,5 @@
 {
- "body_sha256": "005461feb5bd3668b3e2d72499790e5b46a484e8a567987f95fea8182053e605",
+ "body_sha256": "b50e28a9f6d3adaa2e201444cf8564938a84027569746ad87e168aeea2cd1a5c",
  "controls": [
   {
    "anchor_count": 1,
@@ -183,7 +183,7 @@
    "cells_passed": 31,
    "honest": "pass"
   },
-  "commit": "af93f740b617c201d5f272c3c969d78bf8402a45",
+  "commit": "b3200a1aee90cf40ffc1105825ddf14b0323793b",
   "control_definitions": {
    "CTRL-unrelated-TypeError": "afaf43a769642e14b88f26e737883cd94e0984e44be54835c4ad3a85e94b5a9a",
    "CTRL-unrelated-ValueError": "012146f56a3af0ec1928f1e115f872c9576831041d838a4a92b9136589e6de49"
@@ -208,9 +208,9 @@
   "digests": {
    "specs/evidence/0041/mutation_campaign.py": "755d787347baa10ba5b8db1b7e731f8785e6d7e379849840146881303f3d6970",
    "specs/evidence/mutation_kinds.py": "46d4802f8ef82e797fa285dab7afde3581db230761c5377c826ce6cdc275c8ad",
-   "src/veracium/portability.py": "f8fbae660ad72944f66a696e53d9da35d326e4936f555d3215e53c61b1bb9ecf",
+   "src/veracium/portability.py": "af26ca37326c7e499ab84265ee76df94c7459770d312ecd19e047ff11e9d8d80",
    "src/veracium/redaction.py": "8f957108132f71cd8470f973cd9184aaf26bdb710547ace00f64befc3060de32",
-   "src/veracium/store/sqlite.py": "6d7a48ec16fd00a0051c71cfd1c01beaf7e58d1e8ac9d1748c2d9c5e64db25b9",
+   "src/veracium/store/sqlite.py": "3943c55cdb2c72f6f2eb81709d90cfd8bcead24e9b4e913b34c043a80bc43cd9",
    "tests/test_0041_notice_binding_hotfix.py": "f08fe772966648a8cb6bbfc773c164ca1d4119cf1756e24bd3b83b732b8ee489",
    "tests/test_0041_notice_state.py": "294b0050d8123b5909287ad330b08627b15e519ade35bbf465fe55db3375bdc2"
   },
@@ -226,14 +226,32 @@
   "tracked_changes": [
    "CHANGELOG.md",
    "docs/api.md",
-   "specs/0044-relation-arity.md",
+   "specs/0008-staleness-clearing.md",
+   "specs/0045-declarative-grounding.md",
+   "specs/0047-subject-reply.md",
+   "specs/STATUS.md",
+   "specs/citation_debt.py",
    "specs/evidence/0031/connection_census.py",
+   "specs/evidence/0041/mutation-table.json",
    "specs/evidence/0042/decision_site_inventory_OUTPUT.json",
+   "specs/evidence/0042/declaration.py",
    "specs/evidence/0042/reviewed_points.json",
    "specs/evidence/0042/semantic_review.py",
+   "specs/evidence/0047/carrier_inventory.py",
+   "specs/evidence/0048/tripwire_0048_classified.tsv",
    "specs/generated/0002-audit-manifest.md",
+   "specs/generated/0021-combining-sites.md",
+   "src/veracium/cli.py",
    "src/veracium/portability.py",
-   "tests/test_0044_t11a_portability.py"
+   "src/veracium/store/base.py",
+   "src/veracium/store/sqlite.py",
+   "src/veracium/why.py",
+   "tests/test_0006_source_identity.py",
+   "tests/test_0026_relay_lexicon.py",
+   "tests/test_0042_sites.py",
+   "tests/test_0045_t9_write.py",
+   "tests/test_0047_t11b_portability.py",
+   "tests/test_confirm_contract_0008.py"
   ]
  },
  "rows": [
@@ -280,7 +298,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "13 failed, 18 passed in 7.27s",
+   "pytest": "13 failed, 18 passed in 6.96s",
    "what": "the default path's held-target gate removed: an untrusted notice is weighed like a restore's over a HELD record"
   },
   {
@@ -326,7 +344,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "13 failed, 18 passed in 7.37s",
+   "pytest": "13 failed, 18 passed in 7.04s",
    "what": "the import passes the restore scope on the default path: the shipped bare-id binding, through the caller"
   },
   {
@@ -348,7 +366,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "1 failed, 30 passed in 7.07s",
+   "pytest": "1 failed, 30 passed in 6.71s",
    "what": "the primitive's default scope widened: a plan with no scope binds a notice to a bare id (fail-open)"
   },
   {
@@ -384,7 +402,7 @@
    "import": "ok",
    "kill_kind": "assertion+expected-refusal-missing",
    "outcome": "KILLED",
-   "pytest": "8 failed, 23 passed in 6.93s",
+   "pytest": "8 failed, 23 passed in 6.67s",
    "what": "every record 'shows' every redaction: a notice beside an unredacted record applies (case 7 destroys the fact)"
   },
   {
@@ -408,7 +426,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "2 failed, 29 passed in 6.90s",
+   "pytest": "2 failed, 29 passed in 6.49s",
    "what": "a notice with no record in the file counts as shown: a notice-only restore redacts an unredacted held record"
   },
   {
@@ -430,7 +448,7 @@
    "import": "ok",
    "kill_kind": "expected-refusal-missing",
    "outcome": "KILLED",
-   "pytest": "1 failed, 30 passed in 6.67s",
+   "pytest": "1 failed, 30 passed in 6.66s",
    "what": "a restore pairing a notice with its HELD record UNREDACTED is not refused: the same-store restore redacts the fact"
   },
   {
@@ -454,7 +472,7 @@
    "import": "ok",
    "kill_kind": "expected-refusal-missing",
    "outcome": "KILLED",
-   "pytest": "2 failed, 29 passed in 6.74s",
+   "pytest": "2 failed, 29 passed in 6.53s",
    "what": "a file pairing a notice with a record it CREATES unredacted is not refused (the poisoned export imports)"
   },
   {
@@ -480,7 +498,7 @@
    "import": "ok",
    "kill_kind": "expected-refusal-missing",
    "outcome": "KILLED",
-   "pytest": "3 failed, 28 passed in 6.84s",
+   "pytest": "3 failed, 28 passed in 6.66s",
    "what": "a standing notice admits an UNREDACTED arrival: content lands under a notice (and a restore removes it)"
   },
   {
@@ -506,7 +524,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "3 failed, 28 passed in 7.33s",
+   "pytest": "3 failed, 28 passed in 7.30s",
    "what": "a standing notice completes on ANY present record, not only one an import created (the user's own later write)"
   },
   {
@@ -528,7 +546,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "1 failed, 30 passed in 6.96s",
+   "pytest": "1 failed, 30 passed in 6.87s",
    "what": "INV-RR12's 'compare origins': an origin binding put back \u2014 a legitimate B-over-A treated arrival refused"
   },
   {
@@ -552,7 +570,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "2 failed, 29 passed in 6.85s",
+   "pytest": "2 failed, 29 passed in 6.76s",
    "what": "with no copy in the file, a restore applies a notice to a HELD record that does not show the redaction"
   },
   {
@@ -594,7 +612,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "11 failed, 20 passed in 8.06s",
+   "pytest": "11 failed, 20 passed in 7.93s",
    "what": "a standing or pending notice refuses the user's own edge write of its id again"
   },
   {
@@ -616,7 +634,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "1 failed, 30 passed in 6.99s",
+   "pytest": "1 failed, 30 passed in 6.62s",
    "what": "a standing or pending notice refuses the user's own episode write of its id again"
   },
   {
@@ -648,7 +666,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "6 failed, 25 passed in 7.04s",
+   "pytest": "6 failed, 25 passed in 6.71s",
    "what": "a standing or pending notice's id is in redacted_targets() again: the readers hide a record no notice reached"
   },
   {
@@ -680,7 +698,7 @@
    "import": "ok",
    "kill_kind": "assertion",
    "outcome": "KILLED",
-   "pytest": "6 failed, 25 passed in 6.49s",
+   "pytest": "6 failed, 25 passed in 6.06s",
    "what": "an export carries a non-applied notice beside its record: the store's own export pairs a hostile notice with the user's unredacted fact (research's B1)"
   }
  ],

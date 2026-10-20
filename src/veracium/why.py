@@ -167,9 +167,13 @@ def gather(store, user_id: str, edge_id: str) -> Biography:
         insp = snap.inspect(edge)
         if insp.grounding is not None:
             bio.grounding = {"label": insp.grounding, "version": insp.attestation_version}
+        # specs/0008 §3a (T11b, build note D17): an act's ORIGIN is shown, and an imported or restored act's ORIGINAL
+        # request id in place of its internal `#act:` key — testimony is shown in `why`, labelled as testimony
+        act_rows = {r["id"]: r for r in store.act_rows(user_id) if r["edge_id"] == edge_id}
         for r in store.replies_for(user_id, edge_id):
             bio.replies.append({"id": r.id, "kind": r.kind, "target": r.target, "text": r.text,
-                                "actor": r.actor.value, "at": r.written_at.isoformat()})
+                                "actor": r.actor.value, "at": r.written_at.isoformat(),
+                                "origin": act_rows[r.id]["origin"]})
         bio.challenge = {"open": insp.open_challenges, "latest": insp.latest_challenge, "unit": insp.unit,
                          "clear": insp.challenge_clear, "withheld_by": list(insp.withheld_by),
                          "waiting_on": list(insp.waiting_on)}
@@ -177,7 +181,9 @@ def gather(store, user_id: str, edge_id: str) -> Biography:
             bio.confirmations.append({
                 "at": str(c.confirmed_at), "actor": c.actor.value,
                 "call_path": c.call_path.value,
-                "correlation_id": c.correlation_id})
+                "correlation_id": (c.correlation_id if act_rows[c.id]["origin"] == "local"
+                                   else act_rows[c.id]["recorded_correlation_id"]),
+                "origin": act_rows[c.id]["origin"]})
 
         # lineage, both directions, reasons from the invalidated side
         pred_id = bio.edge.get("supersedes")
@@ -343,11 +349,13 @@ def render(bio: Biography) -> str:
         if ev.get("note"):
             out.append(f"      {ev['note']}")
     for c in bio.confirmations:
-        out.append(f"  {c['at']}  confirmed by {c['actor']} via {c['call_path']} (correlation {c['correlation_id']})")
+        tag = "" if c.get("origin", "local") == "local" else f" [{c['origin']}]"
+        out.append(f"  {c['at']}  confirmed by {c['actor']} via {c['call_path']} (correlation {c['correlation_id']}){tag}")
     for r in bio.replies:
         tgt = f" resolving {r['target']}" if r.get("target") else ""
         txt = f": {r['text']}" if r.get("text") is not None else ""
-        out.append(f"  {r['at']}  reply {r['kind']} {r['id']} by {r['actor']}{tgt}{txt}")
+        tag = "" if r.get("origin", "local") == "local" else f" [{r['origin']}]"
+        out.append(f"  {r['at']}  reply {r['kind']} {r['id']} by {r['actor']}{tgt}{txt}{tag}")
     for o in bio.outcomes:
         retired = f"  [retired: {o['retired_reason']}]" if o.get("retired_reason") else ""
         out.append(f"  {o['date']}  outcome {o['outcome']} by {o['actor']} (evidence {o['evidence_ref']}){retired}")

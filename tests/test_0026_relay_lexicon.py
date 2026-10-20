@@ -1828,9 +1828,11 @@ def test_agreement_import_recomputes(tmp_path):
     head = _json.loads(lines[0])
     # specs/0037 §4e raised FORMAT_VERSION to 11 (the procedural era, stamped
     # conditionally); an agreement-bearing, procedural-free export stamps
-    # the agreement era's own version, exactly as §3d specified it
-    assert head["version"] == portability._PRE_PROCEDURAL_VERSION == 10, (
+    # at least the agreement era's own version, exactly as §3d specified it —
+    # and, since T11b, the grounding era: every edge ingest writes carries `att`
+    assert head["version"] >= portability._PRE_PROCEDURAL_VERSION == 10, (
         "an agreement-bearing export stamps the bumped format (§3d)")
+    assert head["version"] == portability._ACT_VERSION == 14
 
     def edited(mutate, name):
         """A copy of the export with `mutate(edge_rec_dicts)` applied."""

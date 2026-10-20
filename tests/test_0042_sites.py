@@ -490,6 +490,16 @@ def _arity_candidate_refused():
             restore=False, registry=None, import_op="op-x", inputs_digest="d", notice_targets=set())
 
 
+def _act_orphan_refused():
+    """0008 §6e / 0047 INV-R11 (T11b): an act whose edge is in neither the unit nor the destination — refused whole."""
+    act = {"table": "confirmations", "act_uid": ("other", U, "c-1"), "act_seq": 1, "edge_id": "e-nowhere",
+           "kind": "confirm", "target_uid": None, "text": None, "actor": "user", "call_path": "host_api",
+           "confirmed_at": "2026-10-01T00:00:00+00:00", "written_at": None, "recorded_correlation_id": "k",
+           "request_digest": "a" * 64, "origin": "local"}
+    _raises(ValueError, portability._act_preflight, _store(), "p", U, [act], [], {}, restore=False, notices=[],
+            now=NOW)
+
+
 def _race_exhausted(mp):
     mp.setattr(portability, "_IMPORT_RETRIES", 0)
     _import_raises(_export_lines([_edge_rec("e1")]))
@@ -553,6 +563,12 @@ DECLINES.update({
     "portability.import.arity-unit": lambda mp: _raises(ValueError, portability._validate_outcome_unit, "p",
                                                         [dict(_OUTCOME)], []),
     "portability.import.arity-preflight": lambda mp: _arity_candidate_refused(),
+    # 0008 §6e–§6f / 0045 §2c (T11b): the act and axis refusal sites
+    "portability.import.act-records": lambda mp: _raises(ValueError, portability._act_records, "p",
+                                                         [("confirmation", {})], portability._ACT_VERSION),
+    "portability.import.act-preflight": lambda mp: _act_orphan_refused(),
+    "portability.import.axis": lambda mp: _raises(ValueError, portability._axis_records, "p",
+                                                  [{"id": "e1", "att": "proven"}], portability._ACT_VERSION, False),
 })
 
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})

@@ -20,7 +20,7 @@ is the number that decides what can be built.
 | **0005** | import has no trust boundary | `accepted` | 2026-08-14 | 1 | 5 | 1 | 0 | 2 | 2/2 |
 | **0006** | source identity — `(origin, source_id)` | `accepted` | 2026-09-14 | 1 | 5 | 1 | 0 | 0 | — |
 | **0007** | on-disk store schema versioning | `accepted` | 2026-09-08 | 0 | 14 | 1 | 0 | 0 | — |
-| **0008** | what may clear `needs_confirmation` | `accepted` | 2026-10-15 | 0 | 4 | 0 | 0 | 1 | 1/1 |
+| **0008** | what may clear `needs_confirmation` | `accepted` | 2026-10-20 | 0 | 4 | 0 | 0 | 1 | 1/1 |
 | **0009** | outcome authorship is append-only history | `accepted` | 2026-08-16 | 0 | 5 | 0 | 0 | 1 | 1/1 |
 | **0010** | crash-safe consolidation | `accepted` | 2026-08-07 | 0 | 7 | 0 | 0 | 2 | 2/2 |
 | **0011** | subject-scoped entitlement | `accepted` | 2026-09-08 | 2 | 19 | 0 | 0 | 1 | 1/1 |
@@ -54,7 +54,7 @@ is the number that decides what can be built.
 | **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `accepted` | 2026-10-20 | 0 | 4 | 2 | 0 | 0 | — |
 | **0045** | the declarative grounding axis — was a fact STATED, or not shown to be? | `accepted` | 2026-10-20 | 0 | 4 | 0 | 0 | 0 | — |
 | **0046** | the correction receipt — a corrected fact names what still rests on it | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
-| **0047** | the subject's right of reply — the record stands, and the reply travels with it | `accepted` | 2026-10-14 | 0 | 4 | 0 | 0 | 0 | — |
+| **0047** | the subject's right of reply — the record stands, and the reply travels with it | `accepted` | 2026-10-20 | 0 | 4 | 0 | 0 | 0 | — |
 | **0048** | maintenance never raises confidence — the decay bounds (0002's N4, carried) | `accepted` | 2026-10-12 | 0 | 2 | 2 | 0 | 0 | — |
 | **0051** | speaker turns inside a user event — the assistant's first person is not the user's | `accepted` | 2026-10-20 | 0 | 0 | 0 | 0 | 0 | — |
 

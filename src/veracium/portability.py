@@ -65,6 +65,9 @@ _SITE_IMPORT_PREFLIGHT = declare_site("portability.import.preflight")
 _SITE_IMPORT_ARITY_RECORDS = declare_site("portability.import.arity-records")
 _SITE_IMPORT_ARITY_UNIT = declare_site("portability.import.arity-unit")
 _SITE_IMPORT_ARITY_PREFLIGHT = declare_site("portability.import.arity-preflight")
+_SITE_IMPORT_ACT_RECORDS = declare_site("portability.import.act-records")
+_SITE_IMPORT_ACT_PREFLIGHT = declare_site("portability.import.act-preflight")
+_SITE_IMPORT_AXIS = declare_site("portability.import.axis")
 
 # specs/0014 §4c/§7a (R5-4): the exported Episode.consolidation_output_index
 # field bumps the format 4→5 per accepted 0010's refuse-don't-drop rule — an
@@ -76,6 +79,8 @@ FORMAT_VERSION = 14  # specs/0044 §4l (T11a, 2026-10-20): the ARITY era — a f
 # header: absence reads "uninitialized", so a feature-free export stays byte-identical — 0026 V7). Stamped
 # CONDITIONALLY, like every era below; T11b extends the same era in place (no release falls between them).
 _ARITY_VERSION = 14     # the arity era's own number: its gates key on it, never on the reader's head (T11b extends it)
+_ACT_VERSION = 14       # specs/0008 §6d / 0047 §4f / 0045 §4f (T11b): the same era, extended in place — `confirmation`
+# and `reply` lines (an act's origin, derived identity and position) and the edge's grounding axis `att`/`src`/`attv`
 _REDACTION_VERSION = 13  # specs/0041 D2/§4g (tranche 4b, 2026-09-20): the REDACTION era — a file may carry
 # `{"record": "redaction", ...}` lines, one per redaction record of the user (the attestation record with
 # its SOURCE identity: origin, source user, source event ref; the carriers treated; the vocabulary reason;
@@ -285,6 +290,190 @@ def _without_axis(d: dict) -> dict:
     return {k: v for k, v in d.items() if k not in _GROUNDING_AXIS}
 
 
+# specs/0008 §6e–§6f / 0047 §4f (T11b): the act lines' closed shapes. No row id travels (destination-internal, §6e):
+# an act's file identity IS its `act_uid`, a resolve names its challenge by `target_uid`, and the position's store is
+# the uid's store (one `origin_store` column carries both, §2a), so the wire does not repeat it (build note D1)
+_ACT_KEYS = {
+    "confirmation": frozenset(("act_uid", "act_seq", "edge_id", "confirmed_at", "actor", "call_path",
+                               "recorded_correlation_id", "request_digest", "origin")),
+    "reply": frozenset(("act_uid", "act_seq", "edge_id", "kind", "target_uid", "text", "actor",
+                        "recorded_correlation_id", "request_digest", "origin", "written_at")),
+}
+_ACT_TABLE = {"confirmation": "confirmations", "reply": "replies"}
+_PROOF = ("local", "restored")          # 0008 §3a: the origins that are proof; `imported` is testimony
+
+
+def _utf8(v) -> bool:
+    try:
+        v.encode("utf-8")
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+def _act_records(path, act_recs, src_version) -> list:
+    """specs/0008 §6e / 0047 §4f (T11b, build note D13): the act lines validated WHOLE before any record is admitted.
+    Refuse-don't-drop below the era (an act line in an envelope declaring an older format); a closed shape per kind —
+    an `act_uid` of three non-empty strict-UTF-8 strings (absent refuses: a store never mints an `act_uid` for an act it
+    did not originate), a positive position or null (unknown), the closed origin, actor, call-path and kind sets, a
+    target iff `resolve` and text iff not (add_reply's shape rule), no marker INSIDE a text (the treated shape is the
+    marker whole), a digest of 64 hex or the marker, an original request id in the caller's grammar or null; and every
+    time a timezone-aware instant re-rendered as canonical UTC `isoformat()` (D3–D5: 'Z' and offsets agree, a naive
+    time refuses). Returns normalised dicts."""
+    from .schema import ConfirmationActor, ConfirmationCallPath, ReplyActor, REPLY_KINDS, _CORRELATION_ID_RE
+    from .store.sqlite import _reply_shape_problem
+    with _SITE_IMPORT_ACT_RECORDS.consult():
+        if act_recs and src_version < _ACT_VERSION:
+            raise _SITE_IMPORT_ACT_RECORDS.fire(ValueError(
+                f"{path}: the file declares format {src_version} but carries confirmation or reply lines (format "
+                f"{_ACT_VERSION}) — refused (specs/0008 §6d, 0047 §4f)"), "record-below-era")
+        out = []
+        for marker, r in act_recs:
+            uid = r.get("act_uid")
+            seq = r.get("act_seq")
+            tuid = r.get("target_uid")
+            orig = r.get("recorded_correlation_id")
+            dig = r.get("request_digest")
+            def _uid_ok(u):
+                return isinstance(u, list) and len(u) == 3 and all(isinstance(x, str) and x and _utf8(x) for x in u)
+            ok = (set(r) == _ACT_KEYS[marker] and _uid_ok(uid)
+                  and (seq is None or (isinstance(seq, int) and not isinstance(seq, bool) and seq >= 1))
+                  and isinstance(r["edge_id"], str) and r["edge_id"] and _utf8(r["edge_id"])
+                  and r["origin"] in ("local", "imported", "restored")
+                  and (orig is None or (isinstance(orig, str) and _CORRELATION_ID_RE.fullmatch(orig) is not None))
+                  and isinstance(dig, str) and (dig == _redaction.MARKER or (len(dig) == 64 and all(
+                      c in "0123456789abcdef" for c in dig))))
+            if ok and marker == "confirmation":
+                ok = (r["actor"] in {a.value for a in ConfirmationActor}
+                      and r["call_path"] in {c.value for c in ConfirmationCallPath})
+            elif ok:
+                text = r["text"]
+                ok = (r["kind"] in REPLY_KINDS and r["actor"] in {a.value for a in ReplyActor}
+                      and (tuid is None or _uid_ok(tuid))
+                      and _reply_shape_problem(r["kind"], text, None if tuid is None else "target") is None
+                      and (text is None or text == _redaction.MARKER or not _redaction.carries_marker(text)))
+            if not ok:
+                raise _SITE_IMPORT_ACT_RECORDS.fire(ValueError(
+                    f"{path}: {marker} {uid!r} is outside its closed shape — refused, nothing imported (specs/0008 "
+                    f"§6e, 0047 §4b/§4f)"), "act-shape")
+            times = ("confirmed_at",) if marker == "confirmation" else ("written_at",)
+            a = {"table": _ACT_TABLE[marker], "act_uid": tuple(uid), "act_seq": seq, "edge_id": r["edge_id"],
+                 "kind": "confirm" if marker == "confirmation" else r["kind"],
+                 "target_uid": None if tuid is None else tuple(tuid), "text": r.get("text"), "actor": r["actor"],
+                 "call_path": r.get("call_path"), "confirmed_at": None, "written_at": None,
+                 "recorded_correlation_id": orig, "request_digest": dig, "origin": r["origin"]}
+            for k in times:
+                a[k] = _canon_instant(r[k])
+                if a[k] is None:
+                    raise _SITE_IMPORT_ACT_RECORDS.fire(ValueError(
+                        f"{path}: {marker} {uid!r} carries a {k} that is not a timezone-aware ISO-8601 instant — refused, "
+                        f"nothing imported (specs/0008 §6e: normalised dates)"), "act-time")
+            out.append(a)
+        return out
+
+
+def _remap_namespace(uid: tuple, target_uid: str, import_op: str) -> tuple:
+    """The owner's R-D6 ruling (2026-10-20; build note D6): under a cross-user remap an act moves into a REMAP
+    NAMESPACE — its store becomes a hash of (origin store, destination user, this import's operation id), its user the
+    destination's, its act id and position kept. Outcomes re-mint only user and edge because nothing orders them; an act
+    also has a POSITION, and a second remapped copy at the source's positions would tie (§6f), so the namespace is per
+    import: acts duplicate exactly when their edges do, and a copy keeps its own order."""
+    from .store.data_migration import portable_uid
+    return ("remap:" + portable_uid("remapped", uid[0], target_uid, import_op)[:32], target_uid, uid[2])
+
+
+def _remap_acts(acts, remap, remapping, target_uid, import_op) -> list:
+    out = []
+    for a in acts:
+        a = dict(a, edge_id=remap(a["edge_id"]))
+        if remapping:
+            a["act_uid"] = _remap_namespace(a["act_uid"], target_uid, import_op)
+            if a["target_uid"] is not None:
+                a["target_uid"] = _remap_namespace(a["target_uid"], target_uid, import_op)
+        out.append(a)
+    return out
+
+
+def _axis_records(path, edge_recs, src_version, restore) -> list:
+    """specs/0045 §2c/§4e/§4f (T11b, build note D10, research's M4): the grounding axis at the import boundary. Below
+    era 14 it is newer than the declared format and STRIPPED (0006 I10). From era 14 the file's values are CHECKED in
+    BOTH modes before anything is written or stamped — an `att` outside its two values, an `attv` outside its grammar
+    (every version the grammar admits: versions coexist, INV-G13), an `attv` or `src` without `att`, the axis on a
+    procedural record, or a `src` that is not a non-empty string → the unit refused. Then the mode's write rule: a
+    DEFAULT import writes `not_attested`, NULL, `default-import` whatever the file says (INV-G9); a TRUSTED RESTORE keeps
+    the recorded values (INV-G13), a `src` naming no held or carried episode admitted (the owner's F1(b): a deleted or
+    consumed source names nothing)."""
+    from .attestation import valid_attv
+    with _SITE_IMPORT_AXIS.consult():
+        for rec in edge_recs:
+            if src_version < _ACT_VERSION:
+                for k in _GROUNDING_AXIS:
+                    rec.pop(k, None)
+            else:
+                att, src, attv = (rec.get(k) for k in _GROUNDING_AXIS)
+                problem = ("att" if att not in (None, "attested", "not_attested")
+                           else "attv" if attv is not None and not valid_attv(attv)
+                           else "without-att" if att is None and (attv is not None or src is not None)
+                           else "procedural" if _raw_procedural(rec) and (att, src, attv) != (None, None, None)
+                           else "src" if src is not None and not (isinstance(src, str) and src and _utf8(src))
+                           else None)
+                if problem is not None:
+                    raise _SITE_IMPORT_AXIS.fire(ValueError(
+                        f"{path}: edge {rec.get('id')!r} carries a grounding axis outside its rules ({problem}: att="
+                        f"{att!r}, attv={attv!r}, src={src!r}) — refused, nothing imported (specs/0045 §2c)"),
+                        f"axis-{problem}")
+            if not restore:
+                for k in _GROUNDING_AXIS:
+                    rec.pop(k, None)
+                if not _raw_procedural(rec):
+                    rec["att"], rec["attv"] = _NOT_ATTESTED, _DEFAULT_IMPORT
+        return edge_recs
+
+
+def _held_act_uid(row: dict, local: str) -> tuple:
+    """specs/0008 §6e v7: a held act's portable identity — DERIVED for a local act (its origin columns are NULL: this
+    store's origin, its own user and id), stored for an imported or restored one."""
+    if row["origin_store"] is None:
+        return (local, row["user_id"], row["id"])
+    return (row["origin_store"], row["origin_user"], row["origin_act_id"])
+
+
+def _held_original_id(row: dict):
+    """§6e: the ORIGINAL request's id — a local act's own `correlation_id`, else its recorded one; an internal key never."""
+    if row["origin"] == "local":
+        return None if row["correlation_id"].startswith("#act:") else row["correlation_id"]
+    return row["recorded_correlation_id"]
+
+
+def _act_projection(a: dict, cov) -> tuple:
+    """specs/0008 §6e's canonical TREATED projection: identity, edge (after remapping), kind, target (portable), actor,
+    call path, `confirmed_at` (canonical UTC), the content carriers (`text`, `request_digest`) — each replaced by the
+    marker where the coverage attests it — the original request id, and the position. Never the row id, the internal
+    key, the registry, `written_at` or the trust label (D3)."""
+    prefix = "confirmations." if a["table"] == "confirmations" else "replies."
+    text = a["text"]
+    if text is not None and "replies.text" in cov:
+        text = _redaction.MARKER
+    dig = _redaction.MARKER if prefix + "request_digest" in cov else a["request_digest"]
+    return (a["act_uid"], a["edge_id"], a["kind"], a["target_uid"], a["actor"], a["call_path"], a["confirmed_at"],
+            text, dig, a["recorded_correlation_id"], a["act_seq"])
+
+
+def _act_ordered(a: dict, b: dict, restore: bool):
+    """specs/0008 §6f: True when `a` precedes `b` (same `origin_store`, both positions known, lower `act_seq`), False
+    when `b` precedes `a`, None when incomparable — except the owner's R-M1 ruling (2026-10-20): in a TRUSTED RESTORE,
+    between two PROOF acts (recorded `local`/`restored`) of one origin, an UNKNOWN position precedes every known one
+    (§2a: "no legacy act receives a value" — the counter starts at the v16 step). Testimony stays incomparable."""
+    if a["act_uid"][0] != b["act_uid"][0]:
+        return None
+    sa, sb = a["act_seq"], b["act_seq"]
+    if sa is not None and sb is not None:
+        return sa < sb
+    if restore and (sa is None) != (sb is None) and a["label"] in _PROOF and b["label"] in _PROOF:
+        return sa is None
+    return None
+
+
 def _raw_procedural(rec: dict) -> bool:
     """0037's floor rule on a raw file record: `record_kind == "procedural"` OR `basis` set."""
     prov = rec.get("provenance") if isinstance(rec.get("provenance"), dict) else {}
@@ -364,8 +553,10 @@ def export_memory(store, user_id: str, path) -> dict:
             plan_state = store.arity_plan_state()["state"]
         except NotImplementedError:
             arity_outcomes, plan_state = [], "uninitialized"
+        # specs/0008 §6d / 0047 §4f (T11b): the user's acts, with their origin; never the request registry
+        acts = store.act_rows(user_id)
         _version = (_ARITY_VERSION
-                    if arity_outcomes or plan_state != "uninitialized"
+                    if arity_outcomes or plan_state != "uninitialized" or acts or any(e.att is not None for e in edges)
                     else _REDACTION_VERSION
                     if redaction_records
                     else _PRODUCER_VERSION
@@ -380,9 +571,9 @@ def export_memory(store, user_id: str, path) -> dict:
                             "exported_at": datetime.now(timezone.utc).isoformat()})
                 + "\n")
         for e in edges:
+            # specs/0045 §4f (T11b): the grounding axis travels on the edge line, `attv` WITH `att` (INV-G13); a None
+            # field is omitted (Edge's serialisation), so a legacy row's bytes are unchanged and stamp no era
             rec = _materialise(json.loads(e.model_dump_json()))
-            for k in _GROUNDING_AXIS:     # specs/0045 §4f: their format era is not open yet (T11b); never in a ≤13 file
-                rec.pop(k, None)
             if e.id in absorbed_by:
                 rec["absorbed_by_id"] = absorbed_by[e.id]
             f.write(json.dumps({"record": "edge", **rec}) + "\n")
@@ -416,8 +607,25 @@ def export_memory(store, user_id: str, path) -> dict:
                                 "pre_reason": r["pre_reason"], "successor_evidence": json.loads(r["successor_evidence"]),
                                 "stage": _outcome_stage(r), "origin": r["origin"],
                                 "undone_at": None if r["undone_at"] is None else _held_instant(r["undone_at"])}) + "\n")
+        # specs/0008 §6e–§6f (T11b, build note D1–D2): each act with its origin, its portable identity (DERIVED for a
+        # local act, §6e v7: this store's origin, its own user and id — export stays read-only), its position (NULL:
+        # unknown, never synthesized), and the ORIGINAL request's id (never an internal `#act:` key); no row id, no
+        # internal key, no registry row. A resolve names its challenge by identity
+        uid_of = {r["id"]: list(_held_act_uid(r, local)) for r in acts}
+        for r in acts:
+            line = {"record": "confirmation" if r["table"] == "confirmations" else "reply",
+                    "act_uid": uid_of[r["id"]], "act_seq": r["act_seq"], "edge_id": r["edge_id"]}
+            if r["table"] == "confirmations":
+                line.update(confirmed_at=_held_instant(r["confirmed_at"]), actor=r["actor"], call_path=r["call_path"])
+            else:
+                line.update(kind=r["kind"], target_uid=None if r["target"] is None else uid_of.get(r["target"]),
+                            text=r["text"], actor=r["actor"], written_at=_held_instant(r["written_at"]))
+            line.update(recorded_correlation_id=_held_original_id(r), request_digest=r["request_digest"],
+                        origin=r["origin"])
+            f.write(json.dumps(line) + "\n")
     return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records),
-            "outcomes": len(arity_outcomes), "path": str(path)}
+            "outcomes": len(arity_outcomes), "confirmations": sum(r["table"] == "confirmations" for r in acts),
+            "replies": sum(r["table"] == "replies" for r in acts), "path": str(path)}
 
 
 # specs/0014 §2c (R11-3/R12-3/R13-2): the source-identity projection over TWO
@@ -624,6 +832,7 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         notice_recs: list = []
         outcome_recs: list = []
         plan_recs: list = []
+        act_raw: list = []
         for ln in lines[1:]:
             rec = json.loads(ln)
             marker = rec.pop("record", None)
@@ -637,6 +846,9 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 continue
             if marker == "arity_plan":
                 plan_recs.append(rec)      # specs/0044 §4l (format 14): the exporting store's plan state
+                continue
+            if marker in _ACT_KEYS:
+                act_raw.append((marker, rec))   # specs/0008 §6d / 0047 §4f (format 14, T11b): a confirmation or reply
                 continue
             if marker not in ("edge", "episode"):
                 raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: unknown record kind {marker!r}"), "unknown-kind")
@@ -658,6 +870,8 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 f"{_REDACTION_VERSION}) — refused (specs/0041 §4g)"), "notice-below-era")
         # specs/0044 §4l (T11a): the arity era's records, validated whole here, before any record is admitted
         arity_outcomes, src_arity_state = _arity_records(path, outcome_recs, plan_recs, src_version)
+        # specs/0008 §6e (T11b): the act lines, validated whole here, before any record is admitted
+        acts = _act_records(path, act_raw, src_version)
         notices: dict = {}
         for n in notice_recs:
             need = ("origin", "source_user", "source_event_ref", "target_kind", "target_id", "fields", "marker_version", "reason")
@@ -942,6 +1156,12 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 continue
             kept.append(rec)
         edge_recs = kept
+        # specs/0037 §4e with 0047 §4f (T11b): an act whose record the file carries but this import REFUSED PER RECORD
+        # (procedural, a duplicate id, an inheritance violation) goes with its record — refused with it and counted,
+        # never an orphan that would refuse the whole file (the record's own refusal is already reported)
+        _admitted_ids = {r.get("id") for r in edge_recs}
+        acts_refused_with_edge = sum(1 for a in acts if a["edge_id"] in raw_copies and a["edge_id"] not in _admitted_ids)
+        acts = [a for a in acts if not (a["edge_id"] in raw_copies and a["edge_id"] not in _admitted_ids)]
 
         # (1b) specs/0020 §4a-iii — the LINKAGE SNAPSHOT, taken over the file's
         # OWN id universe BEFORE the cross-user remap mutates ids (winner
@@ -1027,6 +1247,9 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         # ride the SAME atomic commit as the records (the amended 0009 §4c
         # primitive), keyed by the importer's own old→new table under a remap.
         import_op = f"op-{uuid4().hex[:12]}"
+        # specs/0008 §6e (T11b; the owner's R-D6): the acts' edge references follow the map, and under a cross-user remap
+        # each act moves into this import's remap namespace
+        acts = _remap_acts(acts, _remap, remapping, target_uid, import_op)
         reconstructed = reconstruct_absorption_rows(
             linkage_recs, store.local_origin(),
             id_remap=(id_map if remapping else None), import_op=import_op)
@@ -1142,16 +1365,10 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
             for rec in edge_recs:
                 rec.pop("ungrounded", None)
 
-        # specs/0045 §4e/§4f with the 0006 I10 rule: `att`/`src`/`attv` are newer than EVERY current format (their era
-        # opens with attestation portability), so a file's values are STRIPPED in both modes, never trusted — no
-        # file can plant `attested`. Then the default-mode write rule, "whatever the file says": every DECLARATIVE
-        # row is `not_attested`, `src` NULL, `default-import`; a procedural row carries none (§4c). A trusted
-        # restore leaves the three NULL (`unknown`, version unknown) until the format carries them.
-        for rec in edge_recs:
-            for k in _GROUNDING_AXIS:
-                rec.pop(k, None)
-            if not restore and not _raw_procedural(rec):
-                rec["att"], rec["attv"] = _NOT_ATTESTED, _DEFAULT_IMPORT
+        # specs/0045 §2c/§4e/§4f (T11b): the grounding axis — stripped below era 14 (0006 I10), checked from it in BOTH
+        # modes, then the default import's write rule (`not_attested`, NULL, `default-import`, whatever the file says)
+        # or the trusted restore's (as recorded)
+        edge_recs = _axis_records(path, edge_recs, src_version, restore)
 
         # specs/0016 D2 (FORMAT 7): `Provenance.source_type` is DELETED. A ≤6
         # file legitimately carries the historical key — it is DROPPED on import
@@ -1401,12 +1618,16 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
 
         # (5) combined-destination validation + atomic commit, retried on a lost race so
         # NOTHING is ever partially imported (§4c). The destination is re-read each pass.
+        # specs/0008 §6e (T11b, research's M3): the import's ONE clock read — no arriving act is dated after it. The
+        # store's clock where it has one (injectable, as the writers' is), so the clamp and the local writes agree
+        now = store._now() if hasattr(store, "_now") else datetime.now(timezone.utc)
         for _attempt in range(_IMPORT_RETRIES):
             outcome = _preflight_and_commit(store, path, target_uid, edges, eps,
                                             incoming_chains, contrib_rows,
                                             capped_path=not restore, notices=notice_list,
                                             outcomes=arity_outcomes, src_arity_state=src_arity_state,
-                                            registry=reg, import_op=import_op, inputs_digest=inputs_digest)
+                                            registry=reg, import_op=import_op, inputs_digest=inputs_digest,
+                                            acts=acts, now=now)
             if outcome is not DESTINATION_CHANGED:
                 if redaction_arrivals:                 # the rider's arrivals: the held output treated, flagged (§4g)
                     _na = {(x[0], x[1]) for x in outcome.get("notices_not_applied", [])}
@@ -1421,6 +1642,8 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                         # the admitted set committed atomically as one transaction
                         "procedural_refused": len(procedural_refusals),
                         "procedural_refusals": procedural_refusals,
+                        # T11b: acts refused with the record they name (that record's own refusal is listed above)
+                        "acts_refused_with_edge": acts_refused_with_edge,
                         "user_id": target_uid}
         _SITE_IMPORT_RACE_EXHAUSTED.consult()
         raise _SITE_IMPORT_RACE_EXHAUSTED.fire(ValueError(f"{path}: import kept losing a race against concurrent writes "
@@ -1535,9 +1758,192 @@ def _arity_preflight(store, path, target_uid, outcomes, src_state, edges, existi
     return rows, existing, conversion, report, expected
 
 
+def _act_preflight(store, path, target_uid, acts, edges, existing_edges, *, restore, notices, now) -> tuple:
+    """specs/0008 §6e–§6f / 0047 §4f / 0041 §11.6.6 (T11b) over the STAGED UNION (destination ∪ unit, after remapping),
+    before any write — (rows to insert, exact replays, the expected act state the commit re-checks).
+    - Per arriving act: an edge in neither the unit nor the destination refuses the whole file (INV-R11); rule 0, a
+      DEFAULT file carrying this store's origin, refuses (read on the act as admitted, the owner's R-D6); coverage is
+      all or nothing per row and a marker carrier needs a notice attesting it (INV-RR3/RR6/RR9); two copies of one
+      `act_uid` in the unit with differing TREATED projections refuse (rule 2, INV-I6).
+    - Rule 1 before rule 3: a held `act_uid` (store-wide; another user's refuses) with an equal treated projection is an
+      exact replay and writes nothing (INV-I1, I4, I7); a differing one refuses (rule 2, INV-I2). Rule 3: a NEW act over
+      an edge the destination held before this import, in a default import, refuses (INV-R16). Rule 4: admitted, its
+      label by the origin matrix (INV-Q5/R21), an internal `#act:` key over its admitted uid, no registry row, no
+      position from this store's counter (INV-Q4′), written treated where the coverage attests its carriers, and an
+      arriving `written_at` later than this import's clock read clamped to it (research's M3).
+    - A resolve names a challenge of its edge in H, by identity; then §6f over H: ties, a second resolve, a resolve
+      before its challenge, and every challenge/confirmation pair of an edge of which one is new (INV-Q10, R23)."""
+    if not acts:
+        return [], 0, None
+    from .store.data_migration import portable_uid
+    local = store.local_origin()
+    unit_edges = {e.id: e for e in edges}
+    now_txt = now.astimezone(timezone.utc).isoformat()
+    afields: dict = {}
+    for n in notices:
+        if n["target_kind"] == "edge":
+            afields.setdefault(n["target_id"], set()).update(n["fields"])
+    covs: dict = {}
+
+    def cov(eid):
+        if eid not in covs:
+            covs[eid] = frozenset(store._attested_fields(target_uid, "edge", eid, coverage=True) | afields.get(eid, set()))
+        return covs[eid]
+
+    def carriers(a):
+        if a["table"] == "confirmations":
+            return {"confirmations.request_digest": a["request_digest"]}
+        return {p: v for p, v in (("replies.text", a["text"]), ("replies.request_digest", a["request_digest"]))
+                if v is not None}
+
+    with _SITE_IMPORT_ACT_PREFLIGHT.consult():
+        uniq: dict = {}
+        for a in acts:
+            e = unit_edges.get(a["edge_id"]) or existing_edges.get(a["edge_id"])
+            if e is None:
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: {a['table'][:-1]} {a['act_uid']!r} names edge {a['edge_id']!r}, which neither the file nor "
+                    f"this store holds — the whole file is refused, nothing imported (specs/0047 §4f, INV-R11)"),
+                    "act-orphan")
+            if not restore and a["act_uid"][0] == local:
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: act {a['act_uid']!r} claims THIS store's origin — only a trusted restore of its own history "
+                    f"may carry it (specs/0008 §6e rule 0, INV-Q9). {_RESTORE_WARNING}"), "act-own-origin")
+            c = cov(a["edge_id"])
+            car = carriers(a)
+            if any(v == _redaction.MARKER and p not in c for p, v in car.items()):
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: act {a['act_uid']!r} carries the marker with no notice attesting it — a fabricated tombstone, "
+                    f"refused (specs/0041 §11.6.6, INV-RR3)"), "act-marker-unattested")
+            redacted = bool(c) or bool(_redaction.marker_fields(json.loads(e.model_dump_json())))
+            if redacted and not set(car) <= c:
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: act {a['act_uid']!r} arrives onto a redacted edge whose notices attest "
+                    f"{sorted(c & set(car))}, not all of {sorted(car)} — coverage is all or nothing per row, refused "
+                    f"(specs/0008 §6e, INV-RR6, INV-RR9)"), "act-coverage")
+            p = _act_projection(a, c)
+            if a["act_uid"] in uniq and uniq[a["act_uid"]][1] != p:
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: act {a['act_uid']!r} appears twice in the file with different contents — refused whole "
+                    f"(specs/0008 §6e rule 2, INV-I6)"), "act-replay-conflict")
+            uniq.setdefault(a["act_uid"], (a, p))
+        targets = {a["target_uid"] for a, _p in uniq.values() if a["target_uid"] is not None}
+        positions = {(u[0], a["act_seq"]) for u, (a, _p) in uniq.items() if a["act_seq"] is not None}
+        touched = {a["edge_id"] for a, _p in uniq.values()}
+        args = (sorted(set(uniq) | targets), sorted(positions), sorted(touched))
+        state = store.act_state(target_uid, *args)
+        id_uid = {r["id"]: _held_act_uid(r, local) for rows in (*state["by_edge"].values(), *state["uids"].values())
+                  for r in rows}
+
+        def held(r):
+            conf = r["table"] == "confirmations"
+            return {"table": r["table"], "act_uid": _held_act_uid(r, local), "act_seq": r["act_seq"],
+                    "edge_id": r["edge_id"], "kind": "confirm" if conf else r["kind"],
+                    "target_uid": None if conf or r["target"] is None else id_uid.get(r["target"], ("?", "?", r["target"])),
+                    "text": None if conf else r["text"], "actor": r["actor"], "call_path": r.get("call_path"),
+                    "confirmed_at": _held_instant(r["confirmed_at"]) if conf else None,
+                    "recorded_correlation_id": _held_original_id(r), "request_digest": r["request_digest"],
+                    "label": r["origin"], "id": r["id"], "user_id": r["user_id"]}
+
+        rows, new, existing = [], [], 0
+        for uid, (a, p) in uniq.items():
+            hs = state["uids"][uid]
+            if hs:
+                h = held(hs[0])
+                if len(hs) > 1 or h["user_id"] != target_uid or _act_projection(h, cov(a["edge_id"])) != p:
+                    raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                        f"{path}: act {uid!r} is held here with a different projection (or for another user) — a "
+                        f"conflicting replay refuses the whole file (specs/0008 §6e rule 2, INV-I2)"), "act-replay-conflict")
+                existing += 1                          # rule 1: an exact replay writes nothing and grants nothing
+                continue
+            if not restore and a["edge_id"] in existing_edges:
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: act {uid!r} is new and acts on edge {a['edge_id']!r}, which this store already holds — an "
+                    f"untrusted file cannot act as the subject over a local fact (specs/0008 §6e rule 3, 0047 §4f, "
+                    f"INV-R16)"), "act-held-target")
+            c = cov(a["edge_id"])
+            conf = a["table"] == "confirmations"
+            label = "imported" if not restore else ("restored" if a["origin"] == "local" else a["origin"])
+            written = a["written_at"]
+            if written is not None and datetime.fromisoformat(written) > now:
+                written = now_txt                      # M3: no file dates an act after this import
+            row = {"table": a["table"], "id": ("c-" if conf else "r-") + uuid4().hex[:12], "user_id": target_uid,
+                   "edge_id": a["edge_id"], "confirmed_at": a["confirmed_at"], "actor": a["actor"],
+                   "call_path": a["call_path"], "kind": a["kind"], "target": None,
+                   "text": _redaction.MARKER if a["text"] is not None and "replies.text" in c else a["text"],
+                   "correlation_id": "#act:" + portable_uid(*uid)[:32],
+                   "request_digest": (_redaction.MARKER if ("confirmations." if conf else "replies.") + "request_digest" in c
+                                      else a["request_digest"]),
+                   "origin": label, "recorded_correlation_id": a["recorded_correlation_id"], "origin_store": uid[0],
+                   "origin_user": uid[1], "origin_act_id": uid[2], "act_seq": a["act_seq"], "written_at": written}
+            rows.append(row)
+            new.append(dict(a, label=label, id=row["id"], user_id=target_uid))
+        held_by_uid = {_held_act_uid(r, local): r for rs in state["uids"].values() for r in rs}
+        new_by_uid = {a["act_uid"]: (a, row) for a, row in zip(new, rows)}
+        for a, row in new_by_uid.values():
+            if a["kind"] != "resolve":
+                continue
+            t = a["target_uid"]
+            ch = new_by_uid[t][0] if t in new_by_uid else (held(held_by_uid[t]) if t in held_by_uid else None)
+            if ch is None or ch["kind"] != "challenge" or ch["edge_id"] != a["edge_id"] or ch["user_id"] != target_uid:
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: resolve {a['act_uid']!r} names no challenge of its edge in the merged history — refused "
+                    f"whole (specs/0008 §6f, 0047 INV-R14)"), "act-resolve-target")
+            row["target"] = ch["id"]
+        # §6f over H: the user's held acts on every touched edge, and every act this import admits
+        fresh = set(new_by_uid)
+        H = [held(r) for rs in state["by_edge"].values() for r in rs] + new
+        for a in new:
+            if a["act_seq"] is None:
+                continue
+            pos = (a["act_uid"][0], a["act_seq"])
+            others = [_held_act_uid(r, local) for r in state["positions"].get(pos, [])]
+            others += [b["act_uid"] for b in new if (b["act_uid"][0], b["act_seq"]) == pos]
+            if any(o != a["act_uid"] for o in others):
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: two different acts at one position {pos!r} — the counter never issues a position twice, so "
+                    f"the history is forged or corrupted; refused whole (specs/0008 §6f, INV-Q10)"), "act-tie")
+        by_uid = {a["act_uid"]: a for a in H}
+        resolves: dict = {}
+        for a in H:
+            if a["kind"] == "resolve":
+                resolves.setdefault(a["target_uid"], []).append(a)
+        for cu, rs in resolves.items():
+            if not (cu in fresh or any(r["act_uid"] in fresh for r in rs)):
+                continue
+            if len(rs) > 1:
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: challenge {cu!r} is resolved more than once in the merged history — refused whole "
+                    f"(specs/0008 §6f, INV-Q10)"), "act-second-resolve")
+            if cu in by_uid and _act_ordered(rs[0], by_uid[cu], restore) is True:
+                raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                    f"{path}: resolve {rs[0]['act_uid']!r} is ordered before its own challenge — refused whole (specs/0008 "
+                    f"§6f, INV-Q10)"), "act-resolve-before-challenge")
+        challenges = [a for a in H if a["kind"] == "challenge"]
+        for k in (a for a in H if a["kind"] == "confirm"):
+            for c in challenges:
+                if c["edge_id"] != k["edge_id"] or not (k["act_uid"] in fresh or c["act_uid"] in fresh):
+                    continue
+                o = _act_ordered(k, c, restore)
+                if o is True:
+                    continue                           # the confirmation was made before the challenge
+                rs = resolves.get(c["act_uid"], [])
+                if o is False and not any(_act_ordered(r, k, restore) is True for r in rs):
+                    raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                        f"{path}: confirmation {k['act_uid']!r} was made under challenge {c['act_uid']!r}, unresolved in "
+                        f"the merged history — refused whole (specs/0008 §6f, 0047 §4c, INV-R23)"), "act-under-challenge")
+                if o is None and not rs:
+                    raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
+                        f"{path}: confirmation {k['act_uid']!r} cannot be ordered against challenge {c['act_uid']!r}, which "
+                        f"is unresolved in the merged history (another origin, or an unknown position) — refused whole, "
+                        f"never guessed (specs/0008 §6f, INV-R23)"), "act-order-unknown")
+    return rows, existing, {"args": args, "state": state}
+
+
 def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                           contrib_rows, *, capped_path: bool = True, notices=None, outcomes=(),
-                          src_arity_state="uninitialized", registry=None, import_op=None, inputs_digest=None):
+                          src_arity_state="uninitialized", registry=None, import_op=None, inputs_digest=None,
+                          acts=(), now=None):
     """One preflight-then-commit pass: validate the COMBINED destination graph
     against the live store, build the plan + the full destination-state assumptions,
     and commit atomically. Returns the store's result (counts dict or
@@ -1564,14 +1970,26 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
         edge_ids_expected: dict = {}     # id -> expected-present
         ep_records_expected: dict = {}   # id -> current-persisted-json (None if absent)
         chain_heads_expected: dict = {}  # (edge_id, evidence_ref) -> head id or None
+        axis_kept: list = []             # research's M2: a held default-import axis kept over a restore's recorded one
 
         # edges: record-equal existing → idempotent skip; differing → the held-differs rule; new → insert
         for edge in edges:
             prior = existing_edges.get(edge.id)
             if prior is not None:
-                # specs/0045: the grounding axis is a WRITE rule here (stripped, then stamped in default mode), so
-                # record equality excludes it in BOTH modes — a store's own export re-imports idempotently
-                if _without_axis(prior.model_dump()) != _without_axis(edge.model_dump()):
+                # specs/0045 (T11b, build note D11 with research's M2): in a DEFAULT import the axis is a WRITE rule (the
+                # file's is discarded and the row stamped), so equality excludes it; a TRUSTED RESTORE carries the
+                # recorded axis, so it compares it (a held edge never has its axis rewritten, INV-G13) — except where the
+                # held axis is `default-import`, this store's own judgement at a default import (as an act's trust label
+                # is, §6e): kept, and listed
+                if capped_path:
+                    differs = _without_axis(prior.model_dump()) != _without_axis(edge.model_dump())
+                elif prior.attv == _DEFAULT_IMPORT and _without_axis(prior.model_dump()) == _without_axis(edge.model_dump()):
+                    differs = False
+                    if prior.model_dump() != edge.model_dump():
+                        axis_kept.append(edge.id)
+                else:
+                    differs = prior.model_dump() != edge.model_dump()
+                if differs:
                     _v = held_differs_verdict(store._completed_attestation(target_uid, "edge", edge.id), ("edge", edge.id) in notice_targets)
                     if _v == "attested-redaction":
                         raise _SITE_IMPORT_PREFLIGHT.fire(ValueError(
@@ -1683,7 +2101,12 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
         outcome_rows, outcomes_existing, conversion, arity_report, arity_expected = _arity_preflight(
             store, path, target_uid, list(outcomes), src_arity_state, edges, existing_edges, restore=not capped_path,
             registry=registry, import_op=import_op, inputs_digest=inputs_digest, notice_targets=notice_targets)
+        # specs/0008 §6e–§6f (T11b): the acts, over the same staged union
+        act_rows, acts_existing, acts_expected = _act_preflight(
+            store, path, target_uid, list(acts), edges, existing_edges, restore=not capped_path, notices=notices,
+            now=now if now is not None else datetime.now(timezone.utc))
         plan = {"edges": plan_edges, "episodes": plan_eps,
+                "acts": act_rows,
                 "outcomes": outcome_rows, "arity_conversion": conversion,
                 "contributions": contrib_rows, "redactions": notices,
                 # specs/0041 §11.6.6: the MODE the binding table reads — a trusted restore ("any") applies a notice to a
@@ -1696,6 +2119,8 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                     "contribution_state": contribution_state}
         if arity_expected is not None:
             expected["arity"] = arity_expected
+        if acts_expected is not None:
+            expected["acts"] = acts_expected
         result = store.commit_outcome_import_plan(target_uid, plan, expected)
         if result is DESTINATION_CHANGED:
             return DESTINATION_CHANGED
@@ -1706,6 +2131,9 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                 "arity_conversion": arity_report["arity_conversion"],
                 "arity_restored": result.get("arity_restored", []), "arity_withheld": result.get("arity_withheld", []),
                 "arity_unknown_linkage": arity_report["arity_unknown_linkage"],
+                # specs/0008 §6e (T11b): acts written per table, and exact replays; held default-import axes kept (M2)
+                "confirmations": result.get("confirmations", 0), "replies": result.get("replies", 0),
+                "acts_existing": acts_existing, "axis_kept_default_import": sorted(axis_kept),
                 "contributions": result.get("contributions", 0),
                 "contributions_existing": result.get("contributions_existing", 0),
                 "notices_applied": result.get("notices_applied", 0),

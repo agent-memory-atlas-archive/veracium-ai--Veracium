@@ -115,7 +115,8 @@ CITATION_DEBT: dict = {
         "test_add_edge_transition_guard": "unclassified_at_generation",
         "test_no_direct_writer_outside_confirm_edge": "unclassified_at_generation",
         "test_no_maintenance_op_clears_staleness": "unclassified_at_generation",
-        "test_older_build_cannot_open_a_confirmations_store": "unclassified_at_generation"
+        "test_older_build_cannot_open_a_confirmations_store": "unclassified_at_generation",
+        "test_export_excludes_confirmations": "renamed: 0008 v6's C11 row and §2a name it as the test the new export test REPLACES (\"replacing `test_export_excludes_confirmations`\"); T11b replaced it, and the live node is tests/test_confirm_contract_0008.py::test_export_carries_confirmations_with_origin"
     },
     "0009": {
         "test_source_type_derived_user_stated_system_inferred": "unclassified_at_generation"

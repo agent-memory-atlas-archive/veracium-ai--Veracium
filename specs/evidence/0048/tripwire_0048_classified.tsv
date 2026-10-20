@@ -131,10 +131,10 @@ edges-text	src/veracium/cli.py	str:edges	"references and supersession chains, un
 edges-text	src/veracium/cli.py	str:edges	help="instead of an id: list edges whose subject, relation or object contains TEXT")
 edges-text	src/veracium/cli.py	str:edges	print(f"erased {r['edges']} edges + {r['episodes']} episodes for '{args.user}'")
 edges-text	src/veracium/cli.py	str:edges	print(f"erased {r['edges']} edges + {r['episodes']} episodes for '{args.user}'")
-edges-text	src/veracium/cli.py	str:edges	print(f"exported {r['edges']} edges + {r['episodes']} episodes -> {r['path']}")
-edges-text	src/veracium/cli.py	str:edges	print(f"exported {r['edges']} edges + {r['episodes']} episodes -> {r['path']}")
-edges-text	src/veracium/cli.py	str:edges	print(f"imported {r['edges']} edges + {r['episodes']} episodes into "
-edges-text	src/veracium/cli.py	str:edges	print(f"imported {r['edges']} edges + {r['episodes']} episodes into "
+edges-text	src/veracium/cli.py	str:edges	print(f"exported {r['edges']} edges + {r['episodes']} episodes{acts} -> {r['path']}")
+edges-text	src/veracium/cli.py	str:edges	print(f"exported {r['edges']} edges + {r['episodes']} episodes{acts} -> {r['path']}")
+edges-text	src/veracium/cli.py	str:edges	print(f"imported {r['edges']} edges + {r['episodes']} episodes{acts} into "
+edges-text	src/veracium/cli.py	str:edges	print(f"imported {r['edges']} edges + {r['episodes']} episodes{acts} into "
 edges-text	src/veracium/doctor.py	str:edges	f"edges {rep.counts.get('edges', 0)} ({rep.counts.get('active_edges', 0)} active) "
 edges-text	src/veracium/doctor.py	str:edges	f"edges {rep.counts.get('edges', 0)} ({rep.counts.get('active_edges', 0)} active) "
 edges-text	src/veracium/doctor.py	str:edges	rep.counts = {"edges": len(edges), "episodes": len(episodes),
@@ -314,6 +314,7 @@ edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"JOIN 
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"SELECT id FROM edges WHERE user_id=? AND json_extract(json, '$.supersedes')=? ORDER BY id", (user, eid))]
 sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	"INSERT INTO migration_outcome(plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, "
 sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	f"INSERT INTO migration_outcome({', '.join(self._OUTCOME_COLUMNS)}) "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute(f"INSERT INTO {a['table']}({', '.join(cols)}) VALUES({','.join('?' * len(cols))})",
 sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("INSERT INTO migration_op(op_id, mode, inputs_digest, admitted_at) "
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	live = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (eid, user_id)).fetchone()
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	edge = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (edge_id, user_id)).fetchone()

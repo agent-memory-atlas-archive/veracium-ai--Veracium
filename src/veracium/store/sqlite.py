@@ -1170,6 +1170,51 @@ class SqliteStore(Store):
             return {r[9]: dict(zip(self._OUTCOME_COLUMNS, r)) for r in self._conn.execute(
                 f"SELECT {cols} FROM migration_outcome WHERE outcome_uid IN ({','.join('?' * len(ids))})", ids)}
 
+    # specs/0008 §2a / 0047 §2 (T11b): every column of an act row, per table — what export carries and what an import's
+    # staged union and its commit re-check compare
+    _ACT_COLUMNS = {
+        "confirmations": ("id", "user_id", "edge_id", "confirmed_at", "actor", "call_path", "correlation_id",
+                          "request_digest", "origin", "recorded_correlation_id", "origin_store", "origin_user",
+                          "origin_act_id", "act_seq"),
+        "replies": ("id", "user_id", "edge_id", "kind", "target", "text", "actor", "correlation_id", "request_digest",
+                    "origin", "recorded_correlation_id", "origin_store", "origin_user", "origin_act_id", "act_seq",
+                    "written_at"),
+    }
+
+    def _act_rows_where(self, where: str, params: tuple) -> list:
+        out = []
+        for table, cols in self._ACT_COLUMNS.items():
+            out += [{"table": table, **dict(zip(cols, r))} for r in self._conn.execute(
+                f"SELECT {', '.join(cols)} FROM {table} WHERE {where} ORDER BY id", params)]
+        return out
+
+    def act_rows(self, user_id: str) -> list:
+        """specs/0008 §6d / 0047 §4f (T11b): every act row of the user, both tables, every column (export)."""
+        with self._lock:
+            return self._act_rows_where("user_id=?", (user_id,))
+
+    def act_state(self, user_id: str, uids, positions, edge_ids) -> dict:
+        """specs/0008 §6e–§6f (T11b, build note D9): what an import decides acts by, read in one window — the held rows
+        of every `act_uid` and every known position (STORE-WIDE: identity and the counter span users), and the user's
+        rows on every touched edge. A LOCAL act's identity and position are DERIVED (its origin columns are NULL: this
+        store's `local_origin()`, its own user and id, §6e v7), so they are matched in that form too. The import's
+        preflight reads it, and its commit reads it again under the lock: any difference is a lost race."""
+        local = self.local_origin()
+        with self._lock:
+            by_uid = {}
+            for u in sorted(set(uids)):
+                where, params = "(origin_store=? AND origin_user=? AND origin_act_id=?)", tuple(u)
+                if u[0] == local:
+                    where, params = where + " OR (origin_store IS NULL AND user_id=? AND id=?)", params + (u[1], u[2])
+                by_uid[u] = self._act_rows_where(where, params)
+            by_pos = {}
+            for p in sorted(set(positions)):
+                where, params = "act_seq=? AND (origin_store=?", (p[1], p[0])
+                where += " OR origin_store IS NULL)" if p[0] == local else ")"
+                by_pos[p] = self._act_rows_where(where, params)
+            on_edges = {e: self._act_rows_where("user_id=? AND edge_id=?", (user_id, e)) for e in sorted(set(edge_ids))}
+        return {"uids": by_uid, "positions": by_pos, "by_edge": on_edges}
+
     def acted_edge_ids(self, user_id: str, edge_ids) -> frozenset:
         """specs/0047 §4e: the edges among `edge_ids` that carry an act — a confirmation or a reply, any kind, any
         origin. Read by the absorption planner and, in the plan's own transaction, by the store's verifier."""
@@ -2561,6 +2606,14 @@ class SqliteStore(Store):
                             "SELECT outcome_uid FROM migration_outcome WHERE user_id=? AND edge_id=?", (user_id, edge_id)))
                         if cur != list(expect):
                             return DESTINATION_CHANGED
+                # (1d) specs/0008 §6e–§6f (T11b, build note D9): the act rows the preflight decided by — every arriving
+                # identity's and known position's held rows store-wide, and the user's rows on every touched edge —
+                # read again under the lock: a local reply or confirm, or a concurrent import, between preflight and
+                # commit is a lost race (the preflight re-reads and decides again), never a stale chronology
+                acts_expected = expected_destination_state.get("acts")
+                if acts_expected is not None:
+                    if self.act_state(user_id, *acts_expected["args"]) != acts_expected["state"]:
+                        return DESTINATION_CHANGED
                 # (2) Install ALL records as one logical commit (edges before episodes so
                 # an outcome link's edge_id always resolves; contribution rows ride
                 # the SAME transaction — nothing is durable after a prefix).
@@ -2686,6 +2739,23 @@ class SqliteStore(Store):
                         self._conn.execute("INSERT INTO migration_op(op_id, mode, inputs_digest, admitted_at) "
                                            "VALUES(?, 'import-convert', ?, ?)", (conv["op_id"], conv["inputs_digest"], now))
                         converted = convert_rows(self, user_id, conv["plan_id"], conv["rows"], conv["op_id"])
+                    # specs/0008 §6e rule 4 / 0047 §4f (T11b, build note D14–D15): the unit's admitted acts, after the
+                    # records they name and BEFORE the notice phase, so a trusted restore's applied notice treats them with
+                    # every held act (the total treatment) and a default import's pending notice touches none. An imported
+                    # act writes NO registry row and takes NO position from this store's counter (Q4′, §6f); this
+                    # primitive refuses a plan act labelled `local` or keyed in the caller's grammar (a plan reaches it by
+                    # other routes than the preflight)
+                    act_counts = {"confirmations": 0, "replies": 0}
+                    for a in plan.get("acts", []):
+                        if a["origin"] not in ("imported", "restored") or not a["correlation_id"].startswith("#act:"):
+                            raise _SITE_IMPORT_PLAN.fire(ValueError(
+                                f"imported act {a['id']!r} is labelled {a['origin']!r} or keyed {a['correlation_id']!r} — an "
+                                f"import writes only `imported`/`restored` acts under an internal `#act:` key (specs/0008 "
+                                f"§6e, INV-Q4′, INV-Q5)"), "act-label")
+                        cols = self._ACT_COLUMNS[a["table"]]
+                        self._conn.execute(f"INSERT INTO {a['table']}({', '.join(cols)}) VALUES({','.join('?' * len(cols))})",
+                                           tuple(a[c] for c in cols))
+                        act_counts[a["table"]] += 1
                     # specs/0041 §11.6.6 (T4; it REPLACES the 2026-10-13 notice-binding hotfix's rule): every notice in the
                     # unit is weighed by its TARGET's state at this import, the file's copy of the record, and the mode —
                     # and by nothing about its origin (the owner's ruling: origin is recorded as the notice's source
@@ -2860,6 +2930,7 @@ class SqliteStore(Store):
                     raise                                # nothing after a prefix
             return {"edges": len(edges), "episodes": len(episodes),
                     "outcomes": len(outcome_rows), "arity_restored": list(converted[0]),
+                    "confirmations": act_counts["confirmations"], "replies": act_counts["replies"],
                     "arity_withheld": list(converted[1]),
                     "contributions": len(contrib_writes),
                     "contributions_existing": contrib_existing,

@@ -416,13 +416,13 @@ def test_f8_correct_writes_a_label_less_successor(tmp_path):
 
 
 # ======================================================================================== Q6, F3: the import window
-def test_q6_export_omits_the_axis_and_default_import_stamps_it(tmp_path):
-    """Q6 with the 0006 I10 rule (research agreed): the axis has no format era yet, so an export carries none of the
-    three; a DEFAULT import strips any the file holds and stamps every declarative row `not_attested`, `src` NULL,
-    `default-import` (0045 §4e: whatever the file says); a forged `attested` in the file is never written. A
-    procedural record never reaches the stamp in default mode (0037 refuses it, asserted), so F3(a)'s exemption is
-    defence in depth and its mutant is EQUIVALENT at T9 (stated in t9_mutant_defs.py). Mutants: export carrying the
-    axis; the file's `att` honoured."""
+def test_q6_export_carries_the_axis_and_default_import_stamps_it(tmp_path):
+    """Q6, as T11b opens the axis's era (format 14, 0045 §4f; this cell's T9 form pinned the strip): an export carries
+    each declarative edge's `att`/`src`/`attv` as held and a procedural record's none; a DEFAULT import discards the
+    file's values and stamps every declarative row `not_attested`, `src` NULL, `default-import` (0045 §4e: whatever the
+    file says); a forged `attested` in the file is never written. A procedural record never reaches the stamp in
+    default mode (0037 refuses it, asserted), so F3(a)'s exemption is defence in depth and its mutant is EQUIVALENT at
+    T9 (stated in t9_mutant_defs.py). Mutants: export dropping the axis; the file's `att` honoured."""
     src_mem = _mem(tmp_path, [_script("works_as", "dentist")], name="src.db")
     _ok(src_mem.remember, U, "I work as a dentist.", date="2026-10-01", context=DIRECT)
     _ok(src_mem.record_procedure, U, "I review invoices every Friday", author=EvidenceAuthor.USER,
@@ -430,7 +430,12 @@ def test_q6_export_omits_the_axis_and_default_import_stamps_it(tmp_path):
     path = tmp_path / "out.jsonl"
     src_mem.export_memory(U, path)
     lines = [json.loads(l) for l in path.read_text().splitlines()[1:]]
-    assert all(k not in r for r in lines if r.get("record") == "edge" for k in ("att", "src", "attv"))
+    held = {e.id: e for e in src_mem.store.edges(U, active_only=False, include_quarantined=True)}
+    for r in (r for r in lines if r.get("record") == "edge"):
+        if held[r["id"]].provenance.procedural:
+            assert all(k not in r for k in ("att", "src", "attv"))
+        else:
+            assert (r["att"], r["src"], r["attv"]) == (held[r["id"]].att, held[r["id"]].src, held[r["id"]].attv)
     for r in lines:
         if r.get("record") == "edge" and not (r.get("provenance") or {}).get("record_kind"):
             r.update(att="attested", attv="ATTEST-3@b1329a81", src="ep-forged")     # a forged label in the file
@@ -539,10 +544,12 @@ def test_inv_g13_the_same_id_guard_refuses_null_to_value_and_value_to_null(tmp_p
     assert (rows["lab"]["att"], rows["lab"]["src"], rows["lab"]["attv"]) == ("not_attested", "ep-1", PREDICATE_VERSION)
 
 
-def test_q6_a_trusted_restore_strips_the_files_axis_and_stamps_nothing(tmp_path):
-    """Q6 in RESTORE mode (367f761: "Import strips them in both modes"; "A trusted restore leaves the three unset"):
-    a trusted restore into a store without the edge writes `att`, `src` and `attv` NULL, both for the store's own
-    export and for a file that forges `attested`. Mutants: the strip in default mode only; the stamp in restore too."""
+def test_q6_a_trusted_restore_keeps_the_files_axis_as_recorded_and_stamps_nothing(tmp_path):
+    """Q6 in RESTORE mode, as T11b opens the axis's era (0045 §4e "trusted restore: as recorded"; this cell's T9 form,
+    367f761, pinned the strip): a trusted restore into a store without the edge writes the file's `att`, `src` and
+    `attv` exactly — the store's own export, and a file that says `attested`, which a restore trusts as the operator's
+    own history (0005), its `src` naming no episode admitted (research's T11b M4). Nothing is stamped. Mutants: the
+    strip in restore; the default stamp in restore too."""
     src_mem = _mem(tmp_path, [_script("works_as", "dentist")], name="src.db")
     _ok(src_mem.remember, U, "I work as a dentist.", date="2026-10-01", context=DIRECT)
     path = tmp_path / "own.jsonl"
@@ -558,7 +565,9 @@ def test_q6_a_trusted_restore_strips_the_files_axis_and_stamps_nothing(tmp_path)
         dst = _mem(tmp_path, [], name=f"dst-{f.stem}.db")
         _ok(dst.import_memory, f, restore=True)
         es = _edges(dst)
-        assert es and all((e.att, e.src, e.attv) == (None, None, None) for e in es), (f.stem, [(e.att, e.attv) for e in es])
+        want = {e.id: (e.att, e.src, e.attv) for e in _edges(src_mem)} if f is path else None
+        assert es and all((e.att, e.src, e.attv) == (want[e.id] if want else ("attested", "ep-forged", PREDICATE_VERSION))
+                          for e in es), (f.stem, [(e.att, e.attv) for e in es])
 
 
 def test_f4_the_attv_hex_part_is_exactly_eight():

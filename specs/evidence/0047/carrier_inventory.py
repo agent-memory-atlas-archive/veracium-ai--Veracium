@@ -70,6 +70,7 @@ CLASSIFIED = {
     ("portability.py", "export_memory"): ("EXPORT", "§8: full confirmation and reply rows"),
     ("portability.py", "import_memory"): ("EXPORT", "§8: default import vs trusted restore"),
     ("portability.py", "_preflight_and_commit"): ("EXPORT", "§8: destination ∪ incoming preflight, one transaction"),
+    ("portability.py", "_act_preflight"): ("EXPORT", "§8 / 0008 §6e–§6f: each arriving act over the staged union, chronology over H"),
     ("portability.py", "_outcome_structure"): ("EXPORT", "outcome-chain structure on the boundary"),
     ("portability.py", "source_identity_projection"): ("EXPORT", "source identity on the boundary"),
     ("graph.py", "_build_supersession_plan"): ("INTERNAL", "planning (0012/0044); no text leaves"),

@@ -277,8 +277,10 @@ def test_export_materialises_and_import_roundtrips_source_id_and_origin(tmp_path
     # while the reader knows 11
     # 0041 tranche 4b: 12->13 (the redaction era), conditionally stamped the same way
     # 0044 T11a: 13->14 (the arity era), conditionally stamped the same way
+    # 0045/0047 T11b: era 14 extended — an edge carrying the grounding axis stamps it, and every edge ingest writes
+    # carries `att` (0045 §2), so this ingest-written store exports 14; a store of planted legacy edges stays below
     assert FORMAT_VERSION == 14
-    assert _lines(exp)[0]["version"] == 9
+    assert _lines(exp)[0]["version"] == 14
     dst = SqliteStore(str(tmp_path / "dst.db"))
     import_memory(dst, exp)
     e = [x for x in dst.edges("u", active_only=True) if x.relation == "works_as"][0]
