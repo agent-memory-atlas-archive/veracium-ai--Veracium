@@ -740,3 +740,71 @@ to R2-09 on the amended artifacts, with the two shared constructions this packag
 - [ ] §8 states what this does not establish
 - [ ] I have said where I think the author's conclusion is wrong, not only where the text is wrong
 - [ ] I re-read the current version before reviewing, and I am quoting the version I approve
+
+## Annotation — the owner's D3 ruling, as T11a implements it (2026-10-20; every row above is kept as written)
+
+*Append-only. The accepted text above this section is byte-for-byte the text before this annotation was appended,
+sha256 `4e5b2ba61971a5588429dbc4ac1e396367f28b74618eb969ab68655db01dcc90`; the round-4 verdict accepted that design.
+This annotation records a DESIGN CHANGE BY RULING, not a version of this spec, and R-I's brief names it as one. The
+ruling: Quentin, 2026-10-19 (ledger `f154848`; research's stage-1 recommendation (B), its 2026-10-14 read, restated
+2026-10-19), "plan state + narrow". Implemented in T11a (dev's build note sha16 b38eb499 with addendum 1; research's
+stage-1 read `READ-T11a-stage1.md` sha16 8fbdf283). Each narrowed row is quoted, then its reading under the ruling.*
+
+**Why the rows changed.** Every format era is stamped conditionally, so an export from an arity-aware build that holds
+no era-14 record still stamps ≤13. Read literally, "a file from a format BEFORE the arity version" then (a) refused
+almost every export imported into an uninitialized store, including a fresh v16 one, and (b) gave one retired row two
+treatments decided by an unrelated record: converted at the destination when the user had no post-T9 edge, kept as
+`unknown-linkage` when they had one (dev's derivation: ingest is the only `att` writer).
+
+**The rule now (R-D3).**
+- *Export:* a store holding a plan header writes ONE `{"record": "arity_plan", "state": "initialized-empty" |
+  "initialized"}`; a store without one writes none. Absence reads `uninitialized`, as a pre-arity build's file does, so
+  a feature-free export stays byte-identical (0026 V7).
+- *A candidate:* an edge record of the IMPORT UNIT not already held, retired `superseded` under a relation the default
+  registry reclassifies (`measures`, `prefers`, `health_state`) AND the receiving registry declares `multi`, not a
+  notice target, with no outcome for its edge in the staged union under any plan.
+- *The source decided* iff the file carries the plan-state record.
+- *Import:* an undecided source's candidates are REFUSED into a store whose plan is uninitialized
+  (`requires-data-migration-plan`, naming the plan-only mode), converted under an initialized plan's relations (§4f's
+  steps, in the import's transaction, one `import-convert` operation), and reported `nothing-to-convert` by an
+  initialized-empty plan. A decided source's candidates under the destination's plan relations — the default names
+  when it has none — are kept retired and reported `unknown-linkage`. A file with no candidate imports as before, at
+  any stamp.
+
+**The rows, quoted, then read under the ruling.**
+- §2 (portability): "import-time conversion for pre-arity files" → import-time conversion of an UNDECIDED source's
+  candidate rows.
+- §2c (an import file): "a pre-arity file's retired rows are converted (refused while the plan is uninitialized)" → an
+  undecided source's CANDIDATE rows are converted (refused while the plan is uninitialized); a file with no candidate is
+  admitted.
+- §4l, the table's row "a file from a format BEFORE the arity version" → "a file whose source had NOT DECIDED (no
+  plan-state record), carrying a candidate row". Its two outcomes stand: refused into an uninitialized store, naming the
+  plan-only mode; otherwise import-time conversion.
+- §4l, the row "a file at or after the arity version, with a `superseded` row under a plan relation and no outcome row"
+  → "a file whose source DECIDED, carrying a candidate row": kept retired, reported `unknown-linkage`, never reinstated
+  by guess.
+- §4l, "Conversion touches only incoming rows: it never rescans local rows and never reverses a local undo" → TRUE as
+  written, because a candidate is a unit record not already held and has no outcome under any plan (research's T1).
+- §4g: "`outcome_uid` … set when the row is written and carried unchanged on every hop" → unchanged on every hop EXCEPT
+  a cross-user remap, which re-mints it from the file's uid with the destination user and edge, so outcomes duplicate
+  exactly when their edges do (research's Q3; T11b decides the same for `act_uid`).
+- §4l: "Destination slot: `(plan_id, destination edge_id)`. One outcome per slot." → stricter in the product: ONE
+  outcome per destination EDGE, any plan; an arriving uid on an edge holding another refuses the import (build note
+  D6c; research's Q2). §4i's annotation, "the import's implementation revisits this rule", is DISCHARGED by it:
+  undo's `ambiguous-outcome` is unreachable from an import.
+- §5: "import of a pre-arity export after the restoration | converted on import" → converted on import when the export's
+  source had not decided.
+- §6 INV-A16: "import converts only incoming pre-arity rows" → only incoming CANDIDATE rows of an undecided source.
+- §6 INV-A21: "a pre-arity import into an uninitialized store is refused, naming the plan-only mode" → an undecided
+  source's import CARRYING A CANDIDATE is refused; its mutant ("convert silently with no plan") keeps its meaning.
+- §9 and §10 (R2-02, Q9): "refuse a pre-arity import before planning" → refuse an undecided source's import carrying a
+  candidate before planning.
+
+**Also implemented, inside the frozen rules (for R-I's reader):** era 14 opens (`FORMAT_VERSION` 14; the redaction gate
+pinned to its own era, 13); outcome rows travel with their stage and trust label, never `undo_request_ref` or `op_id`;
+the projection compares canonical UTC text, and a naive time refuses; `migration_outcome.op_id` names the operation
+that wrote a row (NULL only for imported testimony) and `migration_op.mode` gains `import-convert` — both in-place edits
+of the unreleased v16; a converting import's `inputs_digest` is the sha256 of the file's bytes. **Limits stated:** in
+default mode the FILE chooses conversion or `unknown-linkage` by carrying or omitting its plan-state record, and an
+omission can force the refusal (one plan-only run); an undecided relay re-exporting a decided source's rows makes them
+convertible at the next hop. Both are bounded by what an untrusted file could already do: ship the rows active.

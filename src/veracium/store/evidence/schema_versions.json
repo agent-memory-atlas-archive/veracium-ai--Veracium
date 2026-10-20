@@ -34938,7 +34938,7 @@
       "accepted": [
         {
           "provenance": "constructor v16",
-          "digest": "c5eec18e9865548889b634a6f4fb4d58c0bf18a6eae58a815888cc3f015c3b5b",
+          "digest": "d2669f67de09e1d7edd8ff56f685a00f98a2ee3148f444272c6d666c996aebf3",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -35746,7 +35746,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -35785,7 +35785,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -35877,6 +35877,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -36746,7 +36754,7 @@
         },
         {
           "provenance": "migrated->v16 (0008 \u00a72a: confirmations ALTER on a constructor-shaped base, sha a82ee8e8\u2026); redactions inline (a base <= 14)",
-          "digest": "895e853444bad8082df82efb1ede5f13cfc6bf0ea0953f07f6fefdc1aa775939",
+          "digest": "bbaa3a27b8379d8e19fdf29ecfa2823c08e87f2fcf1e5cf349235cd1f4b8ffcc",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -37554,7 +37562,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -37593,7 +37601,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -37685,6 +37693,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -38554,7 +38570,7 @@
         },
         {
           "provenance": "migrated->v16 (0008 \u00a72a: confirmations ALTER on a constructor-shaped base, sha a82ee8e8\u2026); redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "b8589a696943508bd1e39720024f312ac505da42ea4b8f38c5d645a1c5de69a6",
+          "digest": "4c268285a246627d08ed5f5b37811a5a1555555fb32eb2ea70606db038899dfd",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -39362,7 +39378,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -39401,7 +39417,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -39493,6 +39509,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -40362,7 +40386,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ledger inline) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions inline (a base <= 14)",
-          "digest": "946dc0aed1f5aa76a3dc40f5948f0ca6efcf7806ad43bf3f60b83638ec4a237a",
+          "digest": "59d2e24d86bcccce3390579f17e440681616d7d42f8f854c3b6cd7e466897a9d",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -41170,7 +41194,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -41209,7 +41233,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -41301,6 +41325,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -42170,7 +42202,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ledger inline) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "1a8bda9b6781cfebd0886fd874c1abd97f69c6c4f2d6368f505e8bc5b8935842",
+          "digest": "7ce44e40679e28399b785ca797bbdebf3d1d73e912537e3c351e4ad26665f6be",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -42978,7 +43010,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -43017,7 +43049,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -43109,6 +43141,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -43978,7 +44018,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions inline (a base <= 14)",
-          "digest": "23c3d7d722b6642fd21b45c975acf2a0b28378ad0aecb02bcb95930478ec7446",
+          "digest": "af650b0a1f820199d81c8103109679d5b5a2895816b9a04fecd06c94ee28ed9c",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -44786,7 +44826,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -44825,7 +44865,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -44917,6 +44957,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -45786,7 +45834,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the constructor base, sha 336b762f\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "055d5834226aa22b457ca6f7b7e498cad22e0eea3401d914fb9a600dae5e1a34",
+          "digest": "b113206cb5f199af3cb43b610431dcd454c8a7f3b54f6b0b2c39f938639b74e1",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -46594,7 +46642,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -46633,7 +46681,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -46725,6 +46773,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -47594,7 +47650,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ledger inline) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions inline (a base <= 14)",
-          "digest": "0f7948edf0cc4def931b6a8644e77528026eea30f7f67f2fdd30b9569db10c99",
+          "digest": "6100b9656fdd2b8e739e57d3a918ba1d950bd03e662dfdcd837eb88384738451",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -48402,7 +48458,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -48441,7 +48497,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -48533,6 +48589,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -49402,7 +49466,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ledger inline) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "d1c17fc5281b691bc2b9c7abad454babe58134f1db6f2b1acdf405e90d2292cd",
+          "digest": "1c108da1cbd954a5223907ba2f2afb35f93138a8865d75eefe78347727268762",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -50210,7 +50274,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -50249,7 +50313,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -50341,6 +50405,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -51210,7 +51282,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions inline (a base <= 14)",
-          "digest": "e5f76ade0d0636c66d1ed120bb62cd251857e2c53f38108fe43da09ab0099ac3",
+          "digest": "c37f8b0683bcf8864e2249f7f190543c38fd34e9673d588860e5b374c4a09544",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -52018,7 +52090,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -52057,7 +52129,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -52149,6 +52221,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,
@@ -53018,7 +53098,7 @@
         },
         {
           "provenance": "migrated->v16 (0025 \u00a74b-v: v10 ALTER on the v6 ALTER-path base, sha a788a867\u2026; ALTER-path ledger \u2014 0019 rider C2, sha 027b5ca3\u2026) [v15 shape + the 0008 v16 registry/counter and the confirmations ALTER, sha a82ee8e8\u2026 \u2014 specs/0008 \u00a72a]; redactions ALTER, sha 8494279c\u2026 (a base 15)",
-          "digest": "6f8fa99e90184863d71677993e73e6fa089e1bb6523b826cd0fa0245668c58a8",
+          "digest": "a7fcd8a0de633402b2f172f72337be4e17b0bfad5d64f993d0380861fad218d5",
           "objects": {
             "index:ix_arity_inventory_user": {
               "type": "index",
@@ -53826,7 +53906,7 @@
             "table:migration_op": {
               "type": "table",
               "table": "migration_op",
-              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+              "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
               "columns": [
                 [
                   "op_id",
@@ -53865,7 +53945,7 @@
             "table:migration_outcome": {
               "type": "table",
               "table": "migration_outcome",
-              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+              "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
               "columns": [
                 [
                   "plan_id",
@@ -53957,6 +54037,14 @@
                 ],
                 [
                   "undo_request_ref",
+                  "TEXT",
+                  0,
+                  null,
+                  0,
+                  0
+                ],
+                [
+                  "op_id",
                   "TEXT",
                   0,
                   null,

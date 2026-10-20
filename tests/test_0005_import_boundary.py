@@ -635,6 +635,8 @@ def test_cli_import_line_carries_capped_only_on_the_default_path(tmp_path, capsy
 #              re-import, byte-level chain preservation).
 #   both     — exercises the two paths deliberately (this file's own tests).
 _CALLSITE_DISPOSITIONS = {
+    # 0044 T11a (outcome portability): the module's one helper forwards `restore=` from each cell — both modes
+    ("test_0044_t11a_portability.py", "_import"): "both",
     # R-A round 2 (RA-01, RA-02): the notice boundaries the external reviewer found, both modes where parametrised
     ("test_0041_ra2_notice_boundaries.py", "test_a_restore_that_would_treat_a_claimed_episode_refuses_the_whole_unit"): "restore",
     ("test_0041_ra2_notice_boundaries.py", "test_a_prior_standing_notice_is_judged_on_the_arriving_copy"): "both",

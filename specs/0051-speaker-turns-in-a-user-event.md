@@ -11,7 +11,7 @@ Spec-Status: accepted
 | **Status** | *see `Spec-Status:` at the top — canonical.* |
 | **Internal reviewers** | research (stage 1 read v0.1; H3 built and scored by research) · dev (author) |
 | **External review** | **owed** — a full spec (it touches `ingest.py`, a guarded file, and amends 0045 §3's input rule and its assertability answer, a frozen surface). Acceptance path RULED by Quentin 2026-10-19: his word after research's read, the R-II package carrying the code; research's condition, that the shipped version is measured on a fresh holdout before R-II seals, is met by §6's H4 row (ATTEST-5) |
-| **Decision + date** | **ACCEPTED 2026-10-20 on the owner's word** ("Accept 0051"; the second path of PROCESS §4a, on the acceptance path the owner ruled 2026-10-19: research's reads first, the R-II package carrying the code to the external reviewer). The accepted text is v0.3.1 (sha16 66adb4ebb87247c2 as read by research); the adoption's declared deltas are this line, the status line and the Review closure section |
+| **Decision + date** | **ACCEPTED 2026-10-20 on the owner's word** ("Accept 0051"; the second path of PROCESS §4a, on the acceptance path the owner ruled 2026-10-19: research's reads first, the R-II package carrying the code to the external reviewer). The accepted text is v0.3.1 (sha16 66adb4ebb87247c2 as read by research); the adoption's declared deltas are this line, the status line, the Review closure section, the reviewer checklist copied from TEMPLATE.md, and the rewrite of off-tree script names to plain text (research's landing read L2, 2026-10-20) |
 | **Path** | full |
 
 ---
@@ -260,13 +260,13 @@ To be written for R-II, which carries the code (Quentin's ruling).
 ## Review closure
 
 Internal reads by research (stage 1 `READ-0051-stage1.md` e8ebe9ef; the v0.2 re-read `READ-0051-v0.2.md` 74a20b94;
-the v0.3 read `READ-0051-v0.3.md` 1cab911e, with its addendum: no objection), and the owner's acceptance word
+the v0.3 read `READ-0051-v0.3.md` 1cab911e at research 3bb09e35, and with its addendum 0ec1391f at df3ed744: no objection), and the owner's acceptance word
 (ledger `af376b9`). External review: the R-II package carries the code. T = tests/test_0051_speaker_turns.py.
 
 | # | finding | closed by |
 |---|---|---|
 | B1 | v0.1's "a turn runs to the next listed label" put a user's own `Name:` notes inside non-user turns | §4's one-pass rule; `T::test_inv_s3_a_users_notes_have_no_non_user_turn` (research's five B1 rows) |
-| B2 | 0045 §4a: a new version ships only after a FRESH holdout | §6's H4 table (research b3242a94: H4 committed `375089fb`, labels `7c79f29c`, score_h4.py (local evidence, not in this tree) pre-registered `9d1130c8`) |
+| B2 | 0045 §4a: a new version ships only after a FRESH holdout | §6's H4 table (research b3242a94: H4 committed `375089fb`, labels `7c79f29c`, score_h4.py (research repo, 9d1130c8) pre-registered `9d1130c8`) |
 | B3 | ATTEST-4's every-label rule: a heading inside an assistant reply ended its turn (24.5% of LongMemEval assistant turns) | ATTEST-5's hand-off rule; `T::test_inv_s6_a_heading_inside_a_reply_stays_in_the_reply`; `T::test_inv_s1_s6_an_assistant_first_person_never_attests_and_is_restricted[B3 note heading]` and `[B3 key line]`; §5's re-measured 0.02% |
 | F1 | the `said:`, heading, quote, parenthetical and letter formats were not recognised | `T::test_inv_s1_s6_an_assistant_first_person_never_attests_and_is_restricted` (said-form, heading, quote, parenthetical, letters, emphasis) |
 | F2 | substring matching; a one-sided prefix drop; neither side `user` uncovered | `T::test_inv_s2_the_backstop_reads_each_side_through_its_normalisations` (Go, person:Anna, anna_smith, Anna/Acme both ways) |

@@ -11,7 +11,7 @@ A. EVERY TEXT/BLOB COLUMN IN SCHEMA_V16 — 28 tables
    episode_event            user_id, episode_id, kind, reason, state, recorded_at
    episodes                 id, user_id, date, json
    migration_op             op_id, mode, inputs_digest, admitted_at
-   migration_outcome        plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, successor_evidence, origin, outcome_uid, undone_at, undo_request_ref
+   migration_outcome        plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, successor_evidence, origin, outcome_uid, undone_at, undo_request_ref, op_id
    migration_run            plan_id, user_id, op_id, committed_at
    plan_header              plan_id, effective_at, registry_digest, op_id
    policy_receipt           user_id, recall_id, policy_id, policy_version, recorded_at, receipt

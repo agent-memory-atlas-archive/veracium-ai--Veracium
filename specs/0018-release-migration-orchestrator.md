@@ -638,6 +638,8 @@ digest), and **nothing is restored**: no per-user phase, no `migration_outcome`,
 0044 §4l's import refusal names, so an importer of a pre-arity file can plan without running the restoration, which
 stays optional. A later call without `plan_only` runs the per-user phase over the plan it finds.
 
+*Annotation (dev, 2026-10-20, T11a; the sentence above is kept as written): under the owner's D3 ruling (0044's annotation), "an importer of a pre-arity file" reads "an importer of a file whose store had not decided its restoration, carrying a candidate row" — the only file 0044 §4l refuses into an uninitialized store.*
+
 ##### 4c. `DataMigrationResult` — a TOTAL, closed carrier (R2-03)
 
 **The carrier:** `outcome`, `store_changed`, `plan_written` (this call wrote the plan header; a REQUIRED field, v4),

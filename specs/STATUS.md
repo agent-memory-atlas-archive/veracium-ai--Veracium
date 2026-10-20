@@ -30,7 +30,7 @@ is the number that decides what can be built.
 | **0015** | supersession / reinforcement telemetry counters | `accepted` | 2026-08-11 | 1 | 11 | 0 | 0 | 0 | — |
 | **0016** | SourceType deletion + the evidence_basis contract freeze | `accepted` | 2026-09-27 | 1 | 15 | 0 | 0 | 0 | — |
 | **0017** | token-usage telemetry over the Metered wrapper | `accepted` | 2026-08-14 | 1 | 10 | 0 | 0 | 0 | — |
-| **0018** | the release-migration orchestrator | `accepted` | 2026-10-16 | 1 | 4 | 0 | 0 | 0 | — |
+| **0018** | the release-migration orchestrator | `accepted` | 2026-10-20 | 1 | 4 | 0 | 0 | 0 | — |
 | **0019** | the `ungrounded` flag — evidence-grounding at ingest | `accepted` | 2026-10-14 | 1 | 4 | 0 | 0 | 0 | — |
 | **0020** | scoped recall — the principal boundary (S1) | `accepted` | 2026-08-16 | 2 | 14 | 2 | 0 | 0 | — |
 | **0021** | scope under derivation and consolidation (S2) | `accepted` | 2026-08-20 | 1 | 14 | 3 | 0 | 0 | — |
@@ -51,7 +51,7 @@ is the number that decides what can be built.
 | **0041** | targeted redaction — stored content removed, the record that it existed retained | `accepted` | 2026-10-19 | 1 | 14 | 0 | 0 | 0 | — |
 | **0042** | exercised guarantees — measuring whether what we specify is what runs | `accepted` | 2026-10-02 | 0 | 23 | 0 | 0 | 0 | — |
 | **0043** | the refusal harness — measuring whether the gate declines when it should | `accepted` | 2026-10-10 | 0 | 9 | 0 | 0 | 0 | — |
-| **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `accepted` | 2026-10-18 | 0 | 4 | 2 | 0 | 0 | — |
+| **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `accepted` | 2026-10-20 | 0 | 4 | 2 | 0 | 0 | — |
 | **0045** | the declarative grounding axis — was a fact STATED, or not shown to be? | `accepted` | 2026-10-20 | 0 | 4 | 0 | 0 | 0 | — |
 | **0046** | the correction receipt — a corrected fact names what still rests on it | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
 | **0047** | the subject's right of reply — the record stands, and the reply travels with it | `accepted` | 2026-10-14 | 0 | 4 | 0 | 0 | 0 | — |

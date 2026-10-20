@@ -1124,7 +1124,8 @@
   transcripts written for this change, one run each, so a measurement, not a rate: on the holdout ATTEST-5 had not
   seen, false attestations fell from 7 of 72 (ATTEST-3) to 3 of 72; true facts attested fell from 12 to 9 of 58
   (those three rested on the assistant repeating the user's words, and remain asserted); no user fact was stored
-  `use_only` on either holdout.
+  `use_only` on either holdout once the backstop's matcher was fixed on the two user facts H4's first run had lost, so
+  for the backstop H4 is a regression set, not a blind measurement.
   - **Not covered:** unlabelled transcripts (the commonest leak in dev's 12-transcript measurement: 3 of 4) — pass one
     speaker per event; an episode's wording, which can still say "User …" for an assistant's line; sample dialogue
     inside an assistant's reply; role-play personas, API role brackets, terminal agents, Gemini's bare-name lines;
@@ -1133,6 +1134,23 @@
   - **Who should act:** hosts that store whole transcripts: split them by speaker (the assistant's turns under
     `author=ASSISTANT`), and read `speaker_restricted`. The extraction prompt changed, so a cached extraction keyed on
     it re-extracts. (tests/test_0051_speaker_turns.py.)
+- **Added: restoration outcomes travel in exports and imports** (specs/0044 §4l, with the owner's D3 ruling of
+  2026-10-19 recorded as an annotation on the spec; INV-A16, A17, A21's import clause, A23). Export format 14 carries a
+  store's restoration outcomes for the edges in the file and, when the store has a plan, its plan state; a store with
+  neither exports exactly as before. Import validates the outcomes whole before any write (each outcome's edge in the
+  file, one outcome per edge, times timezone-aware), replays an outcome already held only if it is identical (a
+  changed one refuses the whole import, even beside unrelated new records), records a default import's outcomes as
+  `imported` testimony (no undo) and a `--restore` of the store's own export as `restored`. A retired value from a
+  store that had not decided its restoration is refused into a store with no plan (run `run_data_migration(...,
+  plan_only=True)` first), restored in the import under an existing plan, and reported `unknown-linkage` when the
+  source had decided; a file with nothing to convert imports as before. The result gains `outcomes`,
+  `outcomes_existing`, `arity_conversion`, `arity_restored`, `arity_withheld` and `arity_unknown_linkage`.
+  - **Schema:** the unreleased v16 gains `migration_outcome.op_id` (the operation that wrote a row; NULL for imported
+    testimony) and `migration_op` mode `import-convert`, amended in place; a store a development checkout wrote at an
+    earlier v16 shape is refused as unaccepted.
+  - **Who should act:** an importer of files from a store that was upgraded but never ran `run_data_migration`. A custom
+    `Store` backend: `arity_plan_state`, `migration_outcomes` and `migration_outcomes_by_uid` refuse by default, so an
+    import that needs them refuses; an export from such a backend carries no outcome. (tests/test_0044_t11a_portability.py.)
 
 ## 0.26.1 — 2026-09-18
 

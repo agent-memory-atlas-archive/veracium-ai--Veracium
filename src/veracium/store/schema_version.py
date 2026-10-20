@@ -742,6 +742,7 @@ SCHEMA_V16 = tuple(
     outcome_uid        TEXT NOT NULL UNIQUE,
     undone_at          TEXT,
     undo_request_ref   TEXT,
+    op_id              TEXT,
     UNIQUE(plan_id, edge_id)
 )""", REQUIRED),
     SchemaObject("index", "ix_migration_outcome_edge",
@@ -755,7 +756,7 @@ SCHEMA_V16 = tuple(
 )""", REQUIRED),
     SchemaObject("table", "migration_op", """CREATE TABLE migration_op (
     op_id         TEXT NOT NULL PRIMARY KEY,
-    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),
+    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),
     inputs_digest TEXT NOT NULL,
     admitted_at   TEXT NOT NULL
 )""", REQUIRED),

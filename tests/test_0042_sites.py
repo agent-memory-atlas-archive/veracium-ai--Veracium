@@ -477,6 +477,19 @@ def _preflight_conflict():
     s.close()
 
 
+_OUTCOME = {"outcome_uid": "u-1", "plan_id": "pl-1", "edge_id": "e1", "outcome": "restored",
+            "pre_invalidated_at": "2025-06-01T00:00:00+00:00", "pre_reason": "superseded",
+            "successor_evidence": ["none", []], "stage": "live", "origin": "local", "undone_at": None}
+
+
+def _arity_candidate_refused():
+    """0044 §4l (T11a): an undecided source's candidate into a store with no plan — the staged-union refusal."""
+    e = _edge("p1", "weight 78", rel="measures").model_copy(update={
+        "invalidated_at": NOW - timedelta(days=2), "invalidation_reason": "superseded"})
+    _raises(ValueError, portability._arity_preflight, _store(), "p", U, [], "uninitialized", [e], {},
+            restore=False, registry=None, import_op="op-x", inputs_digest="d", notice_targets=set())
+
+
 def _race_exhausted(mp):
     mp.setattr(portability, "_IMPORT_RETRIES", 0)
     _import_raises(_export_lines([_edge_rec("e1")]))
@@ -534,6 +547,12 @@ DECLINES.update({
     "portability.import.record": lambda mp: _import_raises(_export_lines([_episode_rec("ep1", claimed_by="op-x")])),
     "portability.import.race-exhausted": lambda mp: _race_exhausted(mp),
     "portability.import.preflight": lambda mp: _preflight_conflict(),
+    # 0044 T11a: the arity era's three refusal sites
+    "portability.import.arity-records": lambda mp: _raises(ValueError, portability._arity_records, "p", [],
+                                                           [{"state": "unknown"}], portability._ARITY_VERSION),
+    "portability.import.arity-unit": lambda mp: _raises(ValueError, portability._validate_outcome_unit, "p",
+                                                        [dict(_OUTCOME)], []),
+    "portability.import.arity-preflight": lambda mp: _arity_candidate_refused(),
 })
 
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})

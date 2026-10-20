@@ -258,8 +258,8 @@ def test_the_product_agrees_with_model_i_over_its_whole_domain(tmp_path, monkeyp
     fails = set()
     real = DM._restore_user
 
-    def injected(store, user, plan_id, relations):
-        real(store, user, plan_id, relations)
+    def injected(store, user, plan_id, relations, op_id):
+        real(store, user, plan_id, relations, op_id)
         if user in fails:
             raise RuntimeError("injected after the user's writes")
     monkeypatch.setattr(DM, "_restore_user", injected)
@@ -493,8 +493,8 @@ def test_a_users_transaction_is_atomic(tmp_path, monkeypatch):
     _assert_permitted(_run(p, plan_only=True), "planned")
     real = DM._restore_user
 
-    def boom(store, user, plan_id, relations):
-        real(store, user, plan_id, relations)
+    def boom(store, user, plan_id, relations, op_id):
+        real(store, user, plan_id, relations, op_id)
         if user == V:
             raise RuntimeError("after the writes")
     monkeypatch.setattr(DM, "_restore_user", boom)

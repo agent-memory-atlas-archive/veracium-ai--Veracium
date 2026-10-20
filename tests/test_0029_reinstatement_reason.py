@@ -129,9 +129,10 @@ FORWARDER = ("store/sqlite.py", "SqliteStore._reinstate_edge_row")
 WRITER_RULINGS = {FORWARDER: "<forwarded to its censused callers>"}
 # research's T6 stage-1 read, F1: the reinstate writer FORWARDS its `reason` (required, keyword-only, no default), so
 # the census reads its CALLERS — each with a constant reason, ruled here; a non-constant or absent one is a finding.
-# 0044's restoration is `arity_reclassified`'s ONE caller (0029 v12 §4b-i point 3).
+# 0044's restoration is `arity_reclassified`'s ONE caller (0029 v12 §4b-i point 3): `convert_rows`, §4f's steps 2–4,
+# which both `run_data_migration` and a converting import (0044 §4l, T11a) run.
 CALLER_RULINGS = {("store/revocation.py", "_apply_statement_effect"): "source_restored",
-                  ("store/data_migration.py", "_restore_user"): "arity_reclassified"}
+                  ("store/data_migration.py", "convert_rows"): "arity_reclassified"}
 APPEND_EVENT_CALLERS = {("store/sqlite.py", "SqliteStore._journal_edge_write"),     # THE choke point
                         ("store/edge_events.py", "journal_baselines")}              # the v13 baseline, reason NULL
 READER_RULINGS = {
@@ -207,7 +208,7 @@ def test_every_reinstated_writer_and_reason_reader_is_censused():
     writers, appenders, readers, callers = census(_tree_sources())
     assert writers == WRITER_RULINGS, writers
     assert callers == CALLER_RULINGS, callers
-    assert [s for s, r in callers.items() if r == "arity_reclassified"] == [("store/data_migration.py", "_restore_user")]
+    assert [s for s, r in callers.items() if r == "arity_reclassified"] == [("store/data_migration.py", "convert_rows")]
     assert appenders == APPEND_EVENT_CALLERS, appenders
     assert readers == set(READER_RULINGS), readers
     # the census is not vacuous: a new reinstating site, a swapped reason, and a new reader are each found

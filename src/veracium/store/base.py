@@ -360,6 +360,22 @@ class Store(ABC):
         backend that cannot say whether a fact is disputed cannot assert it (fail closed, as `acted_edge_ids`)."""
         raise NotImplementedError(f"{type(self).__name__} does not implement challenge_snapshot")
 
+    def arity_plan_state(self) -> dict:
+        """specs/0044 §4e / §4l (T11a): the store's arity plan, read for export's plan-state record and import's
+        D3 rule — {"state": "uninitialized" | "initialized-empty" | "initialized", "plan_id", "relations"}. Not abstract,
+        and it REFUSES rather than answering "uninitialized": an import cannot decide a conversion it cannot see."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement arity_plan_state")
+
+    def migration_outcomes(self, user_id: str) -> list:
+        """specs/0044 §4g / §4l (T11a): the user's `migration_outcome` rows, every plan, as dicts. Not abstract; it
+        REFUSES rather than answering "none" (an export that silently dropped outcomes would lose undo's proof)."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement migration_outcomes")
+
+    def migration_outcomes_by_uid(self, uids) -> dict:
+        """specs/0044 §4l (T11a): the held `migration_outcome` rows for `uids`, STORE-WIDE (the uid is unique across
+        users), as {uid: row dict}. Not abstract; it REFUSES rather than answering "none held"."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement migration_outcomes_by_uid")
+
     def refusal_inventory_ids(self, user_id: str) -> frozenset:
         """specs/0044 §4d/§4f: the ids of the user's refusals in the v16 schema step's refusal inventory — recorded
         while their relation was `single`, so their protection is retained. Read-only. Not abstract: a caller reads a

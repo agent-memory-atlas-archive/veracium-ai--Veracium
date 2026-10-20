@@ -227,6 +227,7 @@ DDL_ACCOUNT = {
         "migration_outcome.outcome", "migration_outcome.pre_invalidated_at", "migration_outcome.pre_reason",
         "migration_outcome.successor_evidence", "migration_outcome.origin", "migration_outcome.outcome_uid",
         "migration_outcome.undone_at", "migration_outcome.undo_request_ref",
+        "migration_outcome.op_id",              # 0044 T11a: the writing operation's id (an `op-…`/caller id), no content
         "migration_run.plan_id", "migration_run.user_id", "migration_run.op_id", "migration_run.committed_at",
         "migration_op.op_id", "migration_op.mode", "migration_op.inputs_digest", "migration_op.admitted_at",
         "plan_header.plan_id", "plan_header.effective_at", "plan_header.registry_digest", "plan_header.op_id",

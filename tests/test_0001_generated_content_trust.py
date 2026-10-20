@@ -283,7 +283,8 @@ def test_downgrade_export_fails_cleanly(tmp_path, monkeypatch):
     # (the procedural era, conditionally stamped the same way)
     # 0041 tranche 4b (2026-09-20) moved the reader to 13 (the redaction era, conditionally stamped the
     # same way); this store still exports the pre-agreement 9
-    assert port.FORMAT_VERSION == 13
+    # 0044 T11a (2026-10-20) moved it to 14 (the arity era, conditionally stamped the same way)
+    assert port.FORMAT_VERSION == 14
     assert port._PRE_AGREEMENT_VERSION == 9
     s = SqliteStore(str(tmp_path / "a.db"))
     e = _assistant_edge("model claim")

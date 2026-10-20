@@ -27,7 +27,7 @@
         "13": "73950715229cc2cac12e91898627a5c9a823ad8fceab2d7dba8e4c94e6920caa",
         "14": "51f71b8355a996dcc578df3253e7fd653b34ed03420c9f284575c65660411d4e",
         "15": "9579d81a7f996d22b4c0f705a550aca93050ac9d29ce6cdf263951bbbbbd32ac",
-        "16": "c5eec18e9865548889b634a6f4fb4d58c0bf18a6eae58a815888cc3f015c3b5b"
+        "16": "d2669f67de09e1d7edd8ff56f685a00f98a2ee3148f444272c6d666c996aebf3"
       },
       "manifestations": {
         "constructor v1": {
@@ -10125,7 +10125,7 @@
           "table:migration_op": {
             "type": "table",
             "table": "migration_op",
-            "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+            "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
             "columns": [
               [
                 "op_id",
@@ -10164,7 +10164,7 @@
           "table:migration_outcome": {
             "type": "table",
             "table": "migration_outcome",
-            "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+            "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
             "columns": [
               [
                 "plan_id",
@@ -10256,6 +10256,14 @@
               ],
               [
                 "undo_request_ref",
+                "TEXT",
+                0,
+                null,
+                0,
+                0
+              ],
+              [
+                "op_id",
                 "TEXT",
                 0,
                 null,

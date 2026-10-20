@@ -397,7 +397,7 @@ def _migrate_user(store, user, plan_id, admission, relations) -> bool:
         if not conn.execute("SELECT 1 FROM arity_inventory WHERE user_id=? LIMIT 1", (user,)).fetchone():
             return False                            # erased since the universe read (F3): no run row after erasure
         _admit(store, admission, write=True)
-        _restore_user(store, user, plan_id, relations)
+        _restore_user(store, user, plan_id, relations, admission[0])
         conn.execute("INSERT INTO migration_run(plan_id, user_id, op_id, committed_at) VALUES(?,?,?,?)",
                      (plan_id, user, admission[0], store._now().isoformat()))
     return True
@@ -445,14 +445,21 @@ def _withheld(store, user, rows) -> set:
         return _SITE_WITHHELD_REVOKED.fire({r[0] for r in rows if r[0] in hit}, "withhold", declined=bool(hit))
 
 
-def _restore_user(store, user, plan_id, relations) -> None:
-    """Steps 2–4 of 0044 §4f for one user, inside its transaction: `withheld_revoked` where the sweep's own predicate
-    would retire the row were it active (evaluated jointly, the committed state), else `restored` through 0022's
-    reinstate writer with the reason `arity_reclassified`; one outcome row each (§4g)."""
+def _restore_user(store, user, plan_id, relations, op_id) -> None:
+    """Steps 2–4 of 0044 §4f for one user, inside its transaction, over its considered rows (`convert_rows`)."""
+    convert_rows(store, user, plan_id, _considered(store, user, plan_id, relations), op_id)
+
+
+def convert_rows(store, user, plan_id, rows, op_id) -> tuple:
+    """Steps 2–4 of 0044 §4f over `rows` [(edge_id, pre_invalidated_at, pre_reason)], inside the caller's write
+    transaction: `withheld_revoked` where the sweep's own predicate would retire the row were it active (evaluated
+    jointly, the committed state), else `restored` through 0022's reinstate writer with the reason
+    `arity_reclassified`; one outcome row each (§4g), origin `local`, carrying `op_id` — the restore operation's, or a
+    converting import's (0044 §4l, T11a). Returns (restored ids, withheld ids)."""
     conn = store._conn
-    rows = _considered(store, user, plan_id, relations)
     withheld = _withheld(store, user, rows)
     origin_store = store.local_origin()
+    done = ([], [])
     for eid, pre_at, pre_reason in rows:
         outcome = "withheld_revoked" if eid in withheld else "restored"
         succ = [r[0] for r in conn.execute(
@@ -461,11 +468,13 @@ def _restore_user(store, user, plan_id, relations) -> None:
             store._reinstate_edge_row(eid, reason="arity_reclassified")
         conn.execute(
             "INSERT INTO migration_outcome(plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, "
-            "successor_evidence, applicable, origin, outcome_uid, undone_at, undo_request_ref) "
-            "VALUES(?,?,?,?,?,?,?,?,'local',?,NULL,NULL)",
+            "successor_evidence, applicable, origin, outcome_uid, undone_at, undo_request_ref, op_id) "
+            "VALUES(?,?,?,?,?,?,?,?,'local',?,NULL,NULL,?)",
             (plan_id, user, eid, outcome, pre_at, pre_reason,
              json.dumps(["pointer", succ] if succ else ["none", []], separators=(",", ":")),
-             int(outcome == "restored"), portable_uid(origin_store, user, plan_id, eid)))
+             int(outcome == "restored"), portable_uid(origin_store, user, plan_id, eid), op_id))
+        done[0 if outcome == "restored" else 1].append(eid)
+    return tuple(tuple(x) for x in done)
 
 
 # ------------------------------------------------------------------------------------------------- the read helpers

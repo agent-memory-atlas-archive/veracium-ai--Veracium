@@ -61,12 +61,22 @@ _SITE_IMPORT_ORIGIN_MISSING = declare_site("portability.import.origin-missing")
 _SITE_IMPORT_RECORD = declare_site("portability.import.record")
 _SITE_IMPORT_RACE_EXHAUSTED = declare_site("portability.import.race-exhausted")
 _SITE_IMPORT_PREFLIGHT = declare_site("portability.import.preflight")
+# specs/0044 §4l (T11a): the arity era's refusals — the records' shape, the unit's admission, the staged-union decision
+_SITE_IMPORT_ARITY_RECORDS = declare_site("portability.import.arity-records")
+_SITE_IMPORT_ARITY_UNIT = declare_site("portability.import.arity-unit")
+_SITE_IMPORT_ARITY_PREFLIGHT = declare_site("portability.import.arity-preflight")
 
 # specs/0014 §4c/§7a (R5-4): the exported Episode.consolidation_output_index
 # field bumps the format 4→5 per accepted 0010's refuse-don't-drop rule — an
 # older importer REFUSES a v5 export rather than silently dropping the field.
 # specs/0019: v6 added the `ungrounded` flag (same refuse-don't-drop rule).
-FORMAT_VERSION = 13  # specs/0041 D2/§4g (tranche 4b, 2026-09-20): the REDACTION era — a file may carry
+FORMAT_VERSION = 14  # specs/0044 §4l (T11a, 2026-10-20): the ARITY era — a file may carry `{"record":
+# "arity_outcome", ...}` lines (the user's migration outcomes for edges the file carries) and at most one
+# `{"record": "arity_plan", "state": ...}` line (the EXPORTING store's plan state, written only when it holds a plan
+# header: absence reads "uninitialized", so a feature-free export stays byte-identical — 0026 V7). Stamped
+# CONDITIONALLY, like every era below; T11b extends the same era in place (no release falls between them).
+_ARITY_VERSION = 14     # the arity era's own number: its gates key on it, never on the reader's head (T11b extends it)
+_REDACTION_VERSION = 13  # specs/0041 D2/§4g (tranche 4b, 2026-09-20): the REDACTION era — a file may carry
 # `{"record": "redaction", ...}` lines, one per redaction record of the user (the attestation record with
 # its SOURCE identity: origin, source user, source event ref; the carriers treated; the vocabulary reason;
 # the marker version; never a content digest). Stamped CONDITIONALLY at write like every era below: an
@@ -127,6 +137,133 @@ _RESTORE_WARNING = (
 
 
 _GROUNDING_AXIS = ("att", "src", "attv")    # specs/0045 §2: the declarative grounding axis's stored fields
+
+# specs/0044 §4l (T11a): the arity-era records' closed shapes
+_ARITY_PLAN_STATES = ("initialized-empty", "initialized")      # "uninitialized" is the ABSENCE of the record
+_OUTCOME_KEYS = frozenset(("outcome_uid", "plan_id", "edge_id", "outcome", "pre_invalidated_at", "pre_reason",
+                           "successor_evidence", "stage", "origin", "undone_at"))
+_OUTCOME_STAGES = ("live", "ended", "undone")
+
+
+def _outcome_stage(row: dict) -> str:
+    """0044 §4l's lifecycle STAGE of a held row: `undone`, else `live` (applicable), else `ended`."""
+    return "undone" if row["undone_at"] is not None else ("live" if row["applicable"] else "ended")
+
+
+def _canon_instant(value):
+    """0044 §4l / build note D15 (research T2): an outcome's time as ONE canonical text, UTC `isoformat()`, so 'Z' and
+    '+00:00' compare equal; None for a NAIVE or malformed value, which the caller refuses — never compared, never
+    assumed UTC."""
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00")) if isinstance(value, str) else None
+    except ValueError:
+        dt = None
+    return None if dt is None or dt.tzinfo is None else dt.astimezone(timezone.utc).isoformat()
+
+
+def _outcome_projection(o: dict) -> tuple:
+    """0044 §4l's canonical comparison projection (v1.5, R3-02): uid, plan, edge (after remapping), outcome, the
+    pre-state, the successor evidence (remapped) and the STAGE — never the row id, the write time, the trust label,
+    `undo_request_ref` or `undone_at`'s value."""
+    return (o["outcome_uid"], o["plan_id"], o["edge_id"], o["outcome"], o["pre_invalidated_at"], o["pre_reason"],
+            json.dumps(o["successor_evidence"], separators=(",", ":")), o["stage"])
+
+
+def _arity_records(path, outcome_recs, plan_recs, src_version) -> tuple:
+    """0044 §4l (T11a): the arity era's records validated WHOLE before any record is admitted — (outcomes, the source's
+    plan state). Refuse-don't-drop both ways: an arity record in an envelope declaring an older format, a second or
+    unknown plan-state record, or an outcome outside its closed shape refuses the import (build note D14)."""
+    with _SITE_IMPORT_ARITY_RECORDS.consult():
+        if (outcome_recs or plan_recs) and src_version < _ARITY_VERSION:
+            raise _SITE_IMPORT_ARITY_RECORDS.fire(ValueError(
+                f"{path}: the file declares format {src_version} but carries arity records (format {_ARITY_VERSION}) "
+                f"— refused (specs/0044 §4l)"), "record-below-era")
+        if len(plan_recs) > 1 or any(set(r) != {"state"} or r.get("state") not in _ARITY_PLAN_STATES
+                                     for r in plan_recs):
+            raise _SITE_IMPORT_ARITY_RECORDS.fire(ValueError(
+                f"{path}: the file's arity plan-state record is repeated or outside {list(_ARITY_PLAN_STATES)} — "
+                f"refused (specs/0044 §4l)"), "plan-state")
+        state = plan_recs[0]["state"] if plan_recs else "uninitialized"
+        out = []
+        for r in outcome_recs:
+            succ = r.get("successor_evidence")
+            ok = (set(r) == _OUTCOME_KEYS
+                  and all(isinstance(r[k], str) and r[k] for k in ("outcome_uid", "plan_id", "edge_id", "pre_reason"))
+                  and r["outcome"] in ("restored", "withheld_revoked") and r["stage"] in _OUTCOME_STAGES
+                  and r["origin"] in ("local", "restored", "imported")
+                  and isinstance(succ, list) and len(succ) == 2 and isinstance(succ[1], list)
+                  and all(isinstance(x, str) and x for x in succ[1])
+                  and ((succ[0] == "pointer" and succ[1]) or (succ[0] == "none" and not succ[1]))
+                  and (r["stage"] == "undone") == (r["undone_at"] is not None))
+            if not ok:
+                raise _SITE_IMPORT_ARITY_RECORDS.fire(ValueError(
+                    f"{path}: arity outcome {r.get('outcome_uid')!r} is outside its closed shape — refused, nothing "
+                    f"imported (specs/0044 §4g, §4l)"), "outcome-shape")
+            o = dict(r)
+            o["pre_invalidated_at"] = _canon_instant(r["pre_invalidated_at"])
+            o["undone_at"] = None if r["undone_at"] is None else _canon_instant(r["undone_at"])
+            if o["pre_invalidated_at"] is None or (r["undone_at"] is not None and o["undone_at"] is None):
+                raise _SITE_IMPORT_ARITY_RECORDS.fire(ValueError(
+                    f"{path}: arity outcome {r['outcome_uid']!r} carries a time that is not a timezone-aware ISO-8601 "
+                    f"instant — refused, nothing imported (specs/0044 §4l)"), "outcome-time")
+            out.append(o)
+        return out, state
+
+
+def _remap_outcomes(outcomes, remap, remapping, target_uid) -> list:
+    """0044 §4l "the edge reference after user and id remapping"; build note D11 (research's Q3): under a cross-user
+    remap an outcome's uid is RE-MINTED with its edge — derived from the file's uid (which carries the origin store and
+    plan) and the destination user and edge — so outcomes duplicate exactly when their edges do."""
+    from .store.data_migration import portable_uid
+    out = []
+    for o in outcomes:
+        o = dict(o)
+        o["edge_id"] = remap(o["edge_id"])
+        o["successor_evidence"] = [o["successor_evidence"][0], [remap(x) for x in o["successor_evidence"][1]]]
+        if remapping:
+            o["outcome_uid"] = portable_uid("remapped", o["outcome_uid"], target_uid, o["edge_id"])
+        out.append(o)
+    return out
+
+
+def _validate_outcome_unit(path, outcomes, edge_recs) -> list:
+    """0044 §4l's whole-unit validation, before any write, over the FILE: every outcome's edge is in the unit; a uid
+    repeated in the unit is the same projection (else refused); one outcome per destination edge in the unit (build
+    note D6c); the edge's state agrees with the outcome — a live `restored` ⇒ active, `undone` ⇒ retired with the
+    recorded pre-state (an instant comparison). Returns the deduplicated outcomes."""
+    from .store import lifetime as _lifetime
+    by_edge = {r.get("id"): r for r in edge_recs}
+    with _SITE_IMPORT_ARITY_UNIT.consult():
+        uniq: dict = {}
+        for o in outcomes:
+            held = uniq.get(o["outcome_uid"])
+            if held is not None and _outcome_projection(held) != _outcome_projection(o):
+                raise _SITE_IMPORT_ARITY_UNIT.fire(ValueError(
+                    f"{path}: arity outcome {o['outcome_uid']!r} appears twice with different contents — refused "
+                    f"(specs/0044 §4l)"), "outcome-uid-conflict")
+            uniq[o["outcome_uid"]] = o
+        seen: dict = {}
+        for o in uniq.values():
+            e = by_edge.get(o["edge_id"])
+            if e is None:
+                raise _SITE_IMPORT_ARITY_UNIT.fire(ValueError(
+                    f"{path}: arity outcome {o['outcome_uid']!r} names edge {o['edge_id']!r}, which the file does not "
+                    f"carry — refused (specs/0044 §4l: every outcome's edge is in the unit)"), "outcome-edge-not-in-unit")
+            if o["edge_id"] in seen:
+                raise _SITE_IMPORT_ARITY_UNIT.fire(ValueError(
+                    f"{path}: edge {o['edge_id']!r} has two arity outcomes in the file ({seen[o['edge_id']]!r}, "
+                    f"{o['outcome_uid']!r}) — refused (specs/0044 §4l, one outcome per edge)"), "outcome-slot")
+            seen[o["edge_id"]] = o["outcome_uid"]
+            retired = _lifetime.retirement(e)
+            if o["outcome"] == "restored" and o["stage"] == "live" and retired is not None:
+                raise _SITE_IMPORT_ARITY_UNIT.fire(ValueError(
+                    f"{path}: arity outcome {o['outcome_uid']!r} is a live restoration of edge {o['edge_id']!r}, which "
+                    f"the file carries retired — refused (specs/0044 §4l)"), "outcome-edge-state")
+            if o["stage"] == "undone" and not _lifetime.same_retirement(retired, (o["pre_invalidated_at"], o["pre_reason"])):
+                raise _SITE_IMPORT_ARITY_UNIT.fire(ValueError(
+                    f"{path}: arity outcome {o['outcome_uid']!r} is undone, but edge {o['edge_id']!r} is not retired "
+                    f"with the recorded pre-state — refused (specs/0044 §4l)"), "outcome-edge-state")
+        return list(uniq.values())
 
 
 def _without_axis(d: dict) -> dict:
@@ -203,7 +340,18 @@ def export_memory(store, user_id: str, path) -> dict:
         redaction_records = [r for r in store.redaction_records(user_id)
                              if r["state"] == "applied"
                              or (r["state"] == "standing" and (r["target_kind"], r["target_id"]) not in _carried)]
-        _version = (FORMAT_VERSION
+        # specs/0044 §4l (T11a): the user's outcomes for edges this file carries, and the store's plan state — the
+        # record written ONLY when a plan header exists (its absence reads "uninitialized": research's D2, so a
+        # feature-free export stays byte-identical, 0026 V7). A backend with no arity tables holds neither.
+        _edge_ids = {e.id for e in edges}
+        try:
+            arity_outcomes = [r for r in store.migration_outcomes(user_id) if r["edge_id"] in _edge_ids]
+            plan_state = store.arity_plan_state()["state"]
+        except NotImplementedError:
+            arity_outcomes, plan_state = [], "uninitialized"
+        _version = (_ARITY_VERSION
+                    if arity_outcomes or plan_state != "uninitialized"
+                    else _REDACTION_VERSION
                     if redaction_records
                     else _PRODUCER_VERSION
                     if any(e.provenance.producer is not None for e in edges)
@@ -242,7 +390,19 @@ def export_memory(store, user_id: str, path) -> dict:
             f.write(json.dumps({"record": "redaction", "origin": r["origin"], "source_user": r["source_user"],
                                 "source_event_ref": r["source_event_ref"], "target_kind": r["target_kind"],
                                 "target_id": r["target_id"], **r["notice_body"]}) + "\n")
-    return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records), "path": str(path)}
+        # specs/0044 §4l: the outcome's projection fields, its STAGE, and its trust label (the destination maps it by
+        # the origin matrix); never `undo_request_ref` (store-local, §4g) and never `op_id` (this store's operation)
+        if plan_state != "uninitialized":
+            f.write(json.dumps({"record": "arity_plan", "state": plan_state}) + "\n")
+        for r in arity_outcomes:
+            f.write(json.dumps({"record": "arity_outcome", "outcome_uid": r["outcome_uid"], "plan_id": r["plan_id"],
+                                "edge_id": r["edge_id"], "outcome": r["outcome"],
+                                "pre_invalidated_at": _held_instant(r["pre_invalidated_at"]),
+                                "pre_reason": r["pre_reason"], "successor_evidence": json.loads(r["successor_evidence"]),
+                                "stage": _outcome_stage(r), "origin": r["origin"],
+                                "undone_at": None if r["undone_at"] is None else _held_instant(r["undone_at"])}) + "\n")
+    return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records),
+            "outcomes": len(arity_outcomes), "path": str(path)}
 
 
 # specs/0014 §2c (R11-3/R12-3/R13-2): the source-identity projection over TWO
@@ -427,8 +587,10 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 "restore and user_id are mutually exclusive — a restore is this "
                 "store's own history and never remaps (specs/0005 P5)"))
         path = Path(path)
-        with path.open() as f:
-            lines = [ln for ln in (l.strip() for l in f) if ln]
+        _raw = path.read_bytes()
+        # specs/0044 §4l (T11a; research's Q1): the converting import's `inputs_digest` names the FILE's bytes as read
+        inputs_digest = __import__("hashlib").sha256(_raw).hexdigest()
+        lines = [ln for ln in (l.strip() for l in _raw.decode("utf-8").splitlines()) if ln]
         _SITE_IMPORT_FILE.consult()                 # one consult for the file's sequence of checks
         if not lines:
             raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: empty file"), "empty")
@@ -445,6 +607,8 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         edge_recs: list = []
         ep_recs: list = []
         notice_recs: list = []
+        outcome_recs: list = []
+        plan_recs: list = []
         for ln in lines[1:]:
             rec = json.loads(ln)
             marker = rec.pop("record", None)
@@ -452,6 +616,12 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                 marker = rec.pop("kind")   # format v1: the record marker was named "kind"
             if marker == "redaction":
                 notice_recs.append(rec)    # specs/0041 §4g (format 13): a redaction NOTICE
+                continue
+            if marker == "arity_outcome":
+                outcome_recs.append(rec)   # specs/0044 §4l (format 14): a migration outcome
+                continue
+            if marker == "arity_plan":
+                plan_recs.append(rec)      # specs/0044 §4l (format 14): the exporting store's plan state
                 continue
             if marker not in ("edge", "episode"):
                 raise _SITE_IMPORT_FILE.fire(ValueError(f"{path}: unknown record kind {marker!r}"), "unknown-kind")
@@ -465,12 +635,14 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         from .redaction import (MARKER_VERSION as _MARKER_VERSION, ORIGINATING_REASONS as _REASONS,
                                 marker_fields as _marker_fields, attestation_paths as _attestation_paths)
         from .store.sqlite import SqliteStore as _S
-        if notice_recs and src_version < FORMAT_VERSION:
+        if notice_recs and src_version < _REDACTION_VERSION:
             # refuse-don't-drop, in the other direction: a notice in an envelope declaring a version below the
             # redaction era is a record kind the declared version cannot carry — never silently admitted
             raise _SITE_IMPORT_FILE.fire(ValueError(
                 f"{path}: the file declares format {src_version} but carries redaction notices (format "
-                f"{FORMAT_VERSION}) — refused (specs/0041 §4g)"), "notice-below-era")
+                f"{_REDACTION_VERSION}) — refused (specs/0041 §4g)"), "notice-below-era")
+        # specs/0044 §4l (T11a): the arity era's records, validated whole here, before any record is admitted
+        arity_outcomes, src_arity_state = _arity_records(path, outcome_recs, plan_recs, src_version)
         notices: dict = {}
         for n in notice_recs:
             need = ("origin", "source_user", "source_event_ref", "target_kind", "target_id", "fields", "marker_version", "reason")
@@ -815,6 +987,9 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         for n in notice_list:
             n["target_id"] = _remap(n["target_id"])
         notice_targets = {(n["target_kind"], n["target_id"]) for n in notice_list}
+        # specs/0044 §4l: the outcomes' edge and successor references follow the same map; the unit is validated whole
+        arity_outcomes = _validate_outcome_unit(
+            path, _remap_outcomes(arity_outcomes, _remap, remapping, target_uid), edge_recs)
         # the 2026-10-13 notice-binding hotfix (the owner's ruling, BOTH modes): the file must SHOW the redaction it
         # claims — a notice may apply only to a record this file carries, already in the notice's treated shape. Flagged
         # here, against the file's own copy, before the 0014 rider rebinds a notice to a held output; the commit applies
@@ -1214,7 +1389,9 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
         for _attempt in range(_IMPORT_RETRIES):
             outcome = _preflight_and_commit(store, path, target_uid, edges, eps,
                                             incoming_chains, contrib_rows,
-                                            capped_path=not restore, notices=notice_list)
+                                            capped_path=not restore, notices=notice_list,
+                                            outcomes=arity_outcomes, src_arity_state=src_arity_state,
+                                            registry=reg, import_op=import_op, inputs_digest=inputs_digest)
             if outcome is not DESTINATION_CHANGED:
                 if redaction_arrivals:                 # the rider's arrivals: the held output treated, flagged (§4g)
                     _na = {(x[0], x[1]) for x in outcome.get("notices_not_applied", [])}
@@ -1235,8 +1412,112 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
                          f"after {_IMPORT_RETRIES} attempts — refused (specs/0009 §4c)"))
 
 
+def _held_instant(v) -> str:
+    """A held outcome's `pre_invalidated_at` (the inventory's bytes, possibly naive or 'Z') as the canonical text the
+    projection compares (build note D15): naive reads UTC, as lifetime's instant test reads it."""
+    from .schema import as_utc_required
+    try:
+        return as_utc_required(v).isoformat()
+    except (TypeError, ValueError):
+        return v
+
+
+def _arity_preflight(store, path, target_uid, outcomes, src_state, edges, existing_edges, *, restore, registry,
+                     import_op, inputs_digest, notice_targets) -> tuple:
+    """0044 §4l over the STAGED UNION (destination ∪ unit, after remapping), before any write — (rows to insert, exact
+    replays, the conversion plan, the report, the expected arity state the commit re-checks).
+    - Replay is decided by COMPARISON: a held uid with an equal projection is a no-op; a held ended/undone row and an
+      arrival that differs only by being live is older evidence of the same episode, a no-op; any other difference, or
+      a held uid of another user, refuses the whole import. An arrival whose edge is a notice target in this unit is
+      compared after that treatment (its live stage reads ended).
+    - One outcome per destination EDGE (build note D6c, stricter than the (plan, edge) slot): an arriving uid on an edge
+      that holds another refuses.
+    - Trust (§4l's table, the 0008 amendment's origin matrix): a default import writes every outcome `imported`
+      (testimony); a trusted restore maps local -> restored and never upgrades `imported`.
+    - THE OWNER'S D3 RULING (2026-10-19, plan state + narrow): a CANDIDATE is a unit edge not already held, retired
+      `superseded` under a relation the default registry reclassifies AND the receiving registry declares multi (T4),
+      not a notice target, with no outcome in the staged union under any plan (T1, D6b). The source DECIDED iff the
+      file carries a plan-state record. An undecided source's candidates are REFUSED into an uninitialized destination
+      (`requires-data-migration-plan`, naming the plan-only mode), converted under an initialized one's plan relations
+      (§4f's steps, in the import's transaction), and reported `nothing-to-convert` by an initialized-empty one. A
+      decided source's candidates under the destination's plan relations — the default names when it has none (D13) —
+      are reported `unknown-linkage`, kept retired, never reinstated by guess."""
+    from .registry import declared_arity
+    from .store import lifetime as _lifetime
+    reg = registry if registry is not None else DEFAULT_RELATIONS
+    names = set(_lifetime.RECLASSIFIED_RELATIONS) & {n for n, v in reg.items() if declared_arity(v) == "multi"}
+    out_edges = {o["edge_id"] for o in outcomes}
+    candidates = [e for e in edges if e.id not in existing_edges and not e.active
+                  and e.invalidation_reason == _lifetime.SUPERSEDED and e.relation in names
+                  and ("edge", e.id) not in notice_targets and e.id not in out_edges]
+    report = {"arity_conversion": None, "arity_unknown_linkage": []}
+    if not outcomes and not candidates:
+        return [], 0, None, report, None
+    held_by_edge: dict = {}
+    for r in store.migration_outcomes(target_uid):
+        held_by_edge.setdefault(r["edge_id"], []).append(r)
+    candidates = [e for e in candidates if e.id not in held_by_edge]
+    held_by_uid = store.migration_outcomes_by_uid([o["outcome_uid"] for o in outcomes])
+    dest = store.arity_plan_state()
+    rows, existing, conversion = [], 0, None
+    with _SITE_IMPORT_ARITY_PREFLIGHT.consult():
+        for o in outcomes:
+            if o["stage"] == "live" and ("edge", o["edge_id"]) in notice_targets:
+                o = {**o, "stage": "ended"}
+            held = held_by_uid.get(o["outcome_uid"])
+            if held is not None:
+                hp = {**held, "pre_invalidated_at": _held_instant(held["pre_invalidated_at"]),
+                      "successor_evidence": json.loads(held["successor_evidence"]), "stage": _outcome_stage(held)}
+                same = held["user_id"] == target_uid and (
+                    _outcome_projection(hp) == _outcome_projection(o)
+                    or (hp["stage"] in ("ended", "undone") and o["stage"] == "live"
+                        and _outcome_projection(hp)[:-1] == _outcome_projection(o)[:-1]))
+                if not same:
+                    raise _SITE_IMPORT_ARITY_PREFLIGHT.fire(ValueError(
+                        f"{path}: arity outcome {o['outcome_uid']!r} is held here with a different projection (or for "
+                        f"another user) — an outcome's replay is decided by comparison; refused whole (specs/0044 §4l, "
+                        f"INV-A23)"), "outcome-replay-conflict")
+                existing += 1
+                continue
+            if any(r["outcome_uid"] != o["outcome_uid"] for r in held_by_edge.get(o["edge_id"], [])):
+                raise _SITE_IMPORT_ARITY_PREFLIGHT.fire(ValueError(
+                    f"{path}: edge {o['edge_id']!r} already holds an arity outcome under another uid — one outcome per "
+                    f"edge, refused whole (specs/0044 §4l; build note D6c)"), "outcome-slot-held")
+            origin = "imported" if not restore else ("restored" if o["origin"] in ("local", "restored") else "imported")
+            rows.append({"plan_id": o["plan_id"], "user_id": target_uid, "edge_id": o["edge_id"], "outcome": o["outcome"],
+                         "pre_invalidated_at": o["pre_invalidated_at"], "pre_reason": o["pre_reason"],
+                         "successor_evidence": json.dumps(o["successor_evidence"], separators=(",", ":")),
+                         "applicable": int(o["stage"] == "live"), "origin": origin, "outcome_uid": o["outcome_uid"],
+                         "undone_at": o["undone_at"], "undo_request_ref": None,
+                         "op_id": None if origin == "imported" else import_op})
+        if candidates and src_state == "uninitialized":
+            if dest["state"] == "uninitialized":
+                raise _SITE_IMPORT_ARITY_PREFLIGHT.fire(ValueError(
+                    f"{path}: the file carries {len(candidates)} retired row(s) under a reclassified relation from a "
+                    f"store that had not decided its arity restoration, and this store has no plan — run "
+                    f"run_data_migration(path, ..., plan_only=True) first (it writes the plan and restores nothing), "
+                    f"then import again (specs/0044 §4l, Q9; the owner's D3 ruling)"), "requires-data-migration-plan")
+            conv_rows = [(e.id, e.invalidated_at.isoformat(), _lifetime.SUPERSEDED) for e in candidates
+                         if e.relation in dest["relations"]]
+            if conv_rows:
+                conversion = {"plan_id": dest["plan_id"], "rows": conv_rows, "op_id": import_op,
+                              "inputs_digest": inputs_digest}
+                report["arity_conversion"] = "converted"
+            else:
+                report["arity_conversion"] = "nothing-to-convert"
+        elif candidates:
+            rels = dest["relations"] if dest["state"] != "uninitialized" else names
+            report["arity_unknown_linkage"] = sorted(e.id for e in candidates if e.relation in rels)
+    touched = out_edges | {e.id for e in candidates}
+    expected = {"plan_id": dest["plan_id"],
+                "outcome_uids": {o["outcome_uid"]: held_by_uid.get(o["outcome_uid"]) for o in outcomes},
+                "edge_outcomes": {eid: sorted(r["outcome_uid"] for r in held_by_edge.get(eid, [])) for eid in touched}}
+    return rows, existing, conversion, report, expected
+
+
 def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
-                          contrib_rows, *, capped_path: bool = True, notices=None):
+                          contrib_rows, *, capped_path: bool = True, notices=None, outcomes=(),
+                          src_arity_state="uninitialized", registry=None, import_op=None, inputs_digest=None):
     """One preflight-then-commit pass: validate the COMBINED destination graph
     against the live store, build the plan + the full destination-state assumptions,
     and commit atomically. Returns the store's result (counts dict or
@@ -1378,7 +1659,12 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                     f"(specs/0009 §4c as amended by 0020/0021)"), "scope-rows-conflict")
             contribution_state[sid] = sorted(current)
 
+        # specs/0044 §4l (T11a): the outcome rows and the D3 decision over the staged union
+        outcome_rows, outcomes_existing, conversion, arity_report, arity_expected = _arity_preflight(
+            store, path, target_uid, list(outcomes), src_arity_state, edges, existing_edges, restore=not capped_path,
+            registry=registry, import_op=import_op, inputs_digest=inputs_digest, notice_targets=notice_targets)
         plan = {"edges": plan_edges, "episodes": plan_eps,
+                "outcomes": outcome_rows, "arity_conversion": conversion,
                 "contributions": contrib_rows, "redactions": notices,
                 # specs/0041 §11.6.6: the MODE the binding table reads — a trusted restore ("any") applies a notice to a
                 # held record whose file copy (or held self) shows it; a default import ("created") applies one only to a
@@ -1388,11 +1674,18 @@ def _preflight_and_commit(store, path, target_uid, edges, eps, incoming_chains,
                     "episode_records": ep_records_expected,
                     "chain_heads": chain_heads_expected,
                     "contribution_state": contribution_state}
+        if arity_expected is not None:
+            expected["arity"] = arity_expected
         result = store.commit_outcome_import_plan(target_uid, plan, expected)
         if result is DESTINATION_CHANGED:
             return DESTINATION_CHANGED
         return {"edges": result["edges"],
                 "episodes": result["episodes"], "skipped": skipped,
+                # specs/0044 §4l (T11a): outcomes written and exact replays; the D3 decision and its rows
+                "outcomes": result.get("outcomes", 0), "outcomes_existing": outcomes_existing,
+                "arity_conversion": arity_report["arity_conversion"],
+                "arity_restored": result.get("arity_restored", []), "arity_withheld": result.get("arity_withheld", []),
+                "arity_unknown_linkage": arity_report["arity_unknown_linkage"],
                 "contributions": result.get("contributions", 0),
                 "contributions_existing": result.get("contributions_existing", 0),
                 "notices_applied": result.get("notices_applied", 0),

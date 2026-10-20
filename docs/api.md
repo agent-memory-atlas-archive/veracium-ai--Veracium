@@ -748,6 +748,18 @@ contribution rows atomically with the records. The returned dict gains
 whose file asserts a *different* absorption history than the destination
 already recorded refuses rather than silently merging.
 
+**Restoration outcomes (FORMAT 14, specs/0044 §4l).** A store that ran
+`run_data_migration` exports its restoration outcomes for the edges in the file
+(`arity_outcome` lines) and, when it has a plan, one `arity_plan` line naming
+its state; a store with neither exports as before. Import validates them whole
+before any write: every outcome's edge must be in the file, one outcome per
+edge, and an outcome already held is replayed only if it matches exactly (a
+changed one refuses the whole import). A default import records them as
+`imported` testimony (no undo, `doctor` warns); `--restore` of your own export
+records them `restored`. The returned dict gains `"outcomes"`,
+`"outcomes_existing"` and the arity decision below. See [Exporting and importing
+restorations](#exporting-and-importing-restorations-format-14).
+
 **Trust boundary (specs/0005).** A **default** import caps every record's
 trust: `author_of_evidence` and `derived_from` are set to `third_party` and
 `disclosure` is floored to `use_only` (`quarantined` is never weakened) — so
@@ -1068,6 +1080,27 @@ has no internal-error row.
 `doctor`'s `data-migration` check reports the operation's phase: a warning before any plan (judged by relation name
 only, as it says), a warning naming the users not yet done, an `info` for an empty plan, and nothing once every user
 is done.
+
+### Exporting and importing restorations (format 14)
+
+A value the old single-value rule retired may arrive in an import file from a store that never decided about its
+restoration. The file says whether its store decided: it carries an `arity_plan` line when the exporting store has a
+plan (a file without one, including any file from before this release, is read as "had not decided"). For each retired
+`superseded` row under `measures`, `prefers` or `health_state` (when your registry treats the relation as multi-valued)
+that this store does not already hold and that carries no restoration outcome:
+
+| the file's store | this store | result |
+|---|---|---|
+| had not decided | no plan | **refused**: run `run_data_migration(path, ..., plan_only=True)` first (it writes the plan and restores nothing), then import again |
+| had not decided | a plan with these relations | **converted** in the import: restored (or withheld, by the same revocation rule) with a `local` outcome; the result's `"arity_conversion"` is `"converted"`, with `"arity_restored"` / `"arity_withheld"` |
+| had not decided | an empty plan | nothing converts; `"arity_conversion"` is `"nothing-to-convert"` |
+| decided | any | kept retired and listed in `"arity_unknown_linkage"` — never restored by guess |
+
+A file with no such row imports as before, whatever its format. A converting import is recorded as one
+`import-convert` operation whose inputs digest is the sha256 of the file's bytes. The stated limits: a default import
+trusts the file to say whether its store decided, so a file can choose conversion or `unknown-linkage` by including or
+omitting that line (bounded by what an untrusted file can already do: carry the rows active), and a store that relays
+another's file without a plan of its own re-exports it as undecided.
 
 ### Undoing one restoration (`undo_restoration`)
 

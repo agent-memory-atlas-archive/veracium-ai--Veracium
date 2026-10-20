@@ -139,7 +139,7 @@ edges-text	src/veracium/doctor.py	str:edges	f"edges {rep.counts.get('edges', 0)}
 edges-text	src/veracium/doctor.py	str:edges	f"edges {rep.counts.get('edges', 0)} ({rep.counts.get('active_edges', 0)} active) "
 edges-text	src/veracium/doctor.py	str:edges	rep.counts = {"edges": len(edges), "episodes": len(episodes),
 edges-text	src/veracium/portability.py	str:edges	plan = {"edges": plan_edges, "episodes": plan_eps,
-edges-text	src/veracium/portability.py	str:edges	return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records), "path": str(path)}
+edges-text	src/veracium/portability.py	str:edges	return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records),
 edges-text	src/veracium/portability.py	str:edges	return {"edges": result["edges"],
 edges-text	src/veracium/portability.py	str:edges	return {"edges": result["edges"],
 edges-text	src/veracium/scope_read.py	str:edges	_SITE_NARROW_EDGES = declare_site("scope-read.narrow-edges")
@@ -313,6 +313,8 @@ sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	conn.ex
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"JOIN edges e ON e.id = i.edge_id AND e.user_id = i.user_id WHERE i.user_id=? ORDER BY i.edge_id",
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"SELECT id FROM edges WHERE user_id=? AND json_extract(json, '$.supersedes')=? ORDER BY id", (user, eid))]
 sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	"INSERT INTO migration_outcome(plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	f"INSERT INTO migration_outcome({', '.join(self._OUTCOME_COLUMNS)}) "
+sql-write-other-table	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("INSERT INTO migration_op(op_id, mode, inputs_digest, admitted_at) "
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	live = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (eid, user_id)).fetchone()
 edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	edge = conn.execute("SELECT json FROM edges WHERE id=? AND user_id=?", (edge_id, user_id)).fetchone()
 sql-write-other-table	src/veracium/store/data_migration.py	str:sql-write	n = conn.execute("UPDATE migration_outcome SET undone_at=?, undo_request_ref=? "

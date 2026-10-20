@@ -1139,6 +1139,37 @@ class SqliteStore(Store):
                 f"SELECT {self._REPLY_COLS} FROM replies WHERE user_id=? AND edge_id=? AND kind='challenge' "
                 f"ORDER BY written_at, id", (user_id, edge_id)) if r[0] in open_ids]
 
+    _OUTCOME_COLUMNS = ("plan_id", "user_id", "edge_id", "outcome", "pre_invalidated_at", "pre_reason",
+                        "successor_evidence", "applicable", "origin", "outcome_uid", "undone_at", "undo_request_ref",
+                        "op_id")
+
+    def arity_plan_state(self) -> dict:
+        """specs/0044 §4e: the plan header's three durable states, with the plan's id and relations (T11a)."""
+        with self._lock:
+            row = self._conn.execute("SELECT plan_id FROM plan_header WHERE id=1").fetchone()
+            if row is None:
+                return {"state": "uninitialized", "plan_id": None, "relations": frozenset()}
+            rels = frozenset(r[0] for r in self._conn.execute(
+                "SELECT relation FROM reclassification_plan WHERE plan_id=?", (row[0],)))
+            return {"state": "initialized" if rels else "initialized-empty", "plan_id": row[0], "relations": rels}
+
+    def migration_outcomes(self, user_id: str) -> list:
+        """specs/0044 §4g: the user's outcome rows, every plan, ordered (edge_id, plan_id) (T11a's export)."""
+        cols = ", ".join(self._OUTCOME_COLUMNS)
+        with self._lock:
+            return [dict(zip(self._OUTCOME_COLUMNS, r)) for r in self._conn.execute(
+                f"SELECT {cols} FROM migration_outcome WHERE user_id=? ORDER BY edge_id, plan_id", (user_id,))]
+
+    def migration_outcomes_by_uid(self, uids) -> dict:
+        """specs/0044 §4l: held outcome rows by `outcome_uid`, store-wide (T11a's replay comparison)."""
+        ids = sorted(set(uids))
+        if not ids:
+            return {}
+        cols = ", ".join(self._OUTCOME_COLUMNS)
+        with self._lock:
+            return {r[9]: dict(zip(self._OUTCOME_COLUMNS, r)) for r in self._conn.execute(
+                f"SELECT {cols} FROM migration_outcome WHERE outcome_uid IN ({','.join('?' * len(ids))})", ids)}
+
     def acted_edge_ids(self, user_id: str, edge_ids) -> frozenset:
         """specs/0047 §4e: the edges among `edge_ids` that carry an act — a confirmation or a reply, any kind, any
         origin. Read by the absorption planner and, in the plan's own transaction, by the store's verifier."""
@@ -2510,6 +2541,26 @@ class SqliteStore(Store):
                         # different contributors or a different history SHAPE —
                         # a different history, refused whole, writing NOTHING
                         return DESTINATION_CHANGED
+                # (1c) specs/0044 §4l (T11a, build note D9): the arity assumptions the preflight decided by — the plan
+                # header's id, every outcome uid it compared, and every touched edge's outcome-uid set — re-checked here
+                # under the lock, so a `run_data_migration`/plan-only call or a concurrent import between preflight and
+                # commit is a lost race (DESTINATION_CHANGED, the preflight re-reads), never a stale decision.
+                arity = expected_destination_state.get("arity")
+                if arity is not None:
+                    hdr = self._conn.execute("SELECT plan_id FROM plan_header WHERE id=1").fetchone()
+                    if (hdr[0] if hdr is not None else None) != arity["plan_id"]:
+                        return DESTINATION_CHANGED
+                    for uid, expect in arity["outcome_uids"].items():
+                        row = self._conn.execute(
+                            f"SELECT {', '.join(self._OUTCOME_COLUMNS)} FROM migration_outcome WHERE outcome_uid=?",
+                            (uid,)).fetchone()
+                        if (dict(zip(self._OUTCOME_COLUMNS, row)) if row is not None else None) != expect:
+                            return DESTINATION_CHANGED
+                    for edge_id, expect in arity["edge_outcomes"].items():
+                        cur = sorted(r[0] for r in self._conn.execute(
+                            "SELECT outcome_uid FROM migration_outcome WHERE user_id=? AND edge_id=?", (user_id, edge_id)))
+                        if cur != list(expect):
+                            return DESTINATION_CHANGED
                 # (2) Install ALL records as one logical commit (edges before episodes so
                 # an outcome link's edge_id always resolves; contribution rows ride
                 # the SAME transaction — nothing is durable after a prefix).
@@ -2619,6 +2670,22 @@ class SqliteStore(Store):
                              canonical_payload(row["payload"]), row["op_key"],
                              now, row["contributor_type"],
                              row["contributor_ref"]))
+                    # specs/0044 §4l (T11a): the unit's outcome rows — validated whole by the caller's preflight and
+                    # re-checked above — and then import-time conversion through 0044 §4f's steps, both BEFORE the notice
+                    # phase, so a notice in this unit ends an outcome's episode through the lifetime hook like any write
+                    outcome_rows = plan.get("outcomes", [])
+                    for o in outcome_rows:
+                        self._conn.execute(
+                            f"INSERT INTO migration_outcome({', '.join(self._OUTCOME_COLUMNS)}) "
+                            f"VALUES({','.join('?' * len(self._OUTCOME_COLUMNS))})",
+                            tuple(o[c] for c in self._OUTCOME_COLUMNS))
+                    converted = ((), ())
+                    conv = plan.get("arity_conversion")
+                    if conv and conv["rows"]:
+                        from .data_migration import convert_rows
+                        self._conn.execute("INSERT INTO migration_op(op_id, mode, inputs_digest, admitted_at) "
+                                           "VALUES(?, 'import-convert', ?, ?)", (conv["op_id"], conv["inputs_digest"], now))
+                        converted = convert_rows(self, user_id, conv["plan_id"], conv["rows"], conv["op_id"])
                     # specs/0041 §11.6.6 (T4; it REPLACES the 2026-10-13 notice-binding hotfix's rule): every notice in the
                     # unit is weighed by its TARGET's state at this import, the file's copy of the record, and the mode —
                     # and by nothing about its origin (the owner's ruling: origin is recorded as the notice's source
@@ -2792,6 +2859,8 @@ class SqliteStore(Store):
                     self._conn.rollback()                # ONE atomic commit —
                     raise                                # nothing after a prefix
             return {"edges": len(edges), "episodes": len(episodes),
+                    "outcomes": len(outcome_rows), "arity_restored": list(converted[0]),
+                    "arity_withheld": list(converted[1]),
                     "contributions": len(contrib_writes),
                     "contributions_existing": contrib_existing,
                     "notices_applied": applied + arrived, "notices_standing": standing,
