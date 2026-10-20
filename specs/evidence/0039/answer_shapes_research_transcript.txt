@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 5a8bef5
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 94c46d7
+# RE-PINNED 2026-10-20 the one-speaker-per-event docstrings (Memory.remember, the MCP remember tool) landed in 94c46d71199565ab619a77637232a318ab1728ba: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-19 0044 T10b-1 (0047's read half and 0045's inspection carriers) landed in 5a8bef573751113b5db776420c1a1b197b9789ee: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-19 0044 T10a-1's forget() carriers (over T10a-1, 0047's reply store and verb) landed in 891ff375f994caa935c1f35d7b53c153600927a2: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-19 0044 T10a-1 (0047's reply store and verb) landed in 0612fc0caa169bc3f354c7c4b8519e5f81048a37: bodies byte-identical; the pin moves to the commit that changed src/
