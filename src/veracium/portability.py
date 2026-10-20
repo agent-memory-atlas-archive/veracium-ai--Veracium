@@ -184,6 +184,12 @@ def _arity_records(path, outcome_recs, plan_recs, src_version) -> tuple:
                 f"{path}: the file's arity plan-state record is repeated or outside {list(_ARITY_PLAN_STATES)} — "
                 f"refused (specs/0044 §4l)"), "plan-state")
         state = plan_recs[0]["state"] if plan_recs else "uninitialized"
+        def _utf8(v):                               # research's T11a S2-5: a lone surrogate refuses here, never at the INSERT
+            try:
+                v.encode("utf-8")
+                return True
+            except UnicodeEncodeError:
+                return False
         out = []
         for r in outcome_recs:
             succ = r.get("successor_evidence")
@@ -194,7 +200,10 @@ def _arity_records(path, outcome_recs, plan_recs, src_version) -> tuple:
                   and isinstance(succ, list) and len(succ) == 2 and isinstance(succ[1], list)
                   and all(isinstance(x, str) and x for x in succ[1])
                   and ((succ[0] == "pointer" and succ[1]) or (succ[0] == "none" and not succ[1]))
-                  and (r["stage"] == "undone") == (r["undone_at"] is not None))
+                  and (r["stage"] == "undone") == (r["undone_at"] is not None)
+                  and (r["outcome"] != "withheld_revoked" or r["stage"] == "ended")       # S2-5: never applicable
+                  and all(_utf8(r[k]) for k in ("outcome_uid", "plan_id", "edge_id", "pre_reason"))
+                  and all(_utf8(x) for x in succ[1]))
             if not ok:
                 raise _SITE_IMPORT_ARITY_RECORDS.fire(ValueError(
                     f"{path}: arity outcome {r.get('outcome_uid')!r} is outside its closed shape — refused, nothing "
@@ -254,6 +263,12 @@ def _validate_outcome_unit(path, outcomes, edge_recs) -> list:
                     f"{path}: edge {o['edge_id']!r} has two arity outcomes in the file ({seen[o['edge_id']]!r}, "
                     f"{o['outcome_uid']!r}) — refused (specs/0044 §4l, one outcome per edge)"), "outcome-slot")
             seen[o["edge_id"]] = o["outcome_uid"]
+            missing = [x for x in o["successor_evidence"][1] if x not in by_edge]
+            if missing:
+                raise _SITE_IMPORT_ARITY_UNIT.fire(ValueError(
+                    f"{path}: arity outcome {o['outcome_uid']!r} names successor(s) {missing!r} the file does not carry "
+                    f"— a remapped reference that does not resolve refuses the whole unit (specs/0044 §4l)"),
+                    "outcome-successor-unresolved")
             retired = _lifetime.retirement(e)
             if o["outcome"] == "restored" and o["stage"] == "live" and retired is not None:
                 raise _SITE_IMPORT_ARITY_UNIT.fire(ValueError(
@@ -1490,13 +1505,18 @@ def _arity_preflight(store, path, target_uid, outcomes, src_state, edges, existi
                          "applicable": int(o["stage"] == "live"), "origin": origin, "outcome_uid": o["outcome_uid"],
                          "undone_at": o["undone_at"], "undo_request_ref": None,
                          "op_id": None if origin == "imported" else import_op})
+        # the owner's T11a S2-1 ruling (2026-10-20, option c): on a TRUSTED RESTORE the refusal is DECISION-BLIND — a
+        # restore carrying a candidate into a store with no plan refuses whether the file's source decided or not, so a
+        # store's own backup restored into a fresh store never loses "decided" (it would re-export undecided)
+        if candidates and dest["state"] == "uninitialized" and (src_state == "uninitialized" or restore):
+            raise _SITE_IMPORT_ARITY_PREFLIGHT.fire(ValueError(
+                f"{path}: the file carries {len(candidates)} retired row(s) under a reclassified relation"
+                + (" from a store that had not decided its arity restoration" if src_state == "uninitialized" else
+                   ", and a trusted restore into a store without a plan would lose its source's decision")
+                + ", and this store has no plan — run run_data_migration(path, ..., plan_only=True) first (it writes "
+                  "the plan and restores nothing), then import again (specs/0044 §4l, Q9; the owner's D3 and T11a "
+                  "S2-1 rulings)"), "requires-data-migration-plan")
         if candidates and src_state == "uninitialized":
-            if dest["state"] == "uninitialized":
-                raise _SITE_IMPORT_ARITY_PREFLIGHT.fire(ValueError(
-                    f"{path}: the file carries {len(candidates)} retired row(s) under a reclassified relation from a "
-                    f"store that had not decided its arity restoration, and this store has no plan — run "
-                    f"run_data_migration(path, ..., plan_only=True) first (it writes the plan and restores nothing), "
-                    f"then import again (specs/0044 §4l, Q9; the owner's D3 ruling)"), "requires-data-migration-plan")
             conv_rows = [(e.id, e.invalidated_at.isoformat(), _lifetime.SUPERSEDED) for e in candidates
                          if e.relation in dest["relations"]]
             if conv_rows:
@@ -1506,7 +1526,7 @@ def _arity_preflight(store, path, target_uid, outcomes, src_state, edges, existi
             else:
                 report["arity_conversion"] = "nothing-to-convert"
         elif candidates:
-            rels = dest["relations"] if dest["state"] != "uninitialized" else names
+            rels = dest["relations"] or names      # an uninitialized OR empty plan: the default names (S2-3, D13)
             report["arity_unknown_linkage"] = sorted(e.id for e in candidates if e.relation in rels)
     touched = out_edges | {e.id for e in candidates}
     expected = {"plan_id": dest["plan_id"],

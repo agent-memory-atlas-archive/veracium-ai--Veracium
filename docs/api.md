@@ -1094,10 +1094,22 @@ that this store does not already hold and that carries no restoration outcome:
 | had not decided | no plan | **refused**: run `run_data_migration(path, ..., plan_only=True)` first (it writes the plan and restores nothing), then import again |
 | had not decided | a plan with these relations | **converted** in the import: restored (or withheld, by the same revocation rule) with a `local` outcome; the result's `"arity_conversion"` is `"converted"`, with `"arity_restored"` / `"arity_withheld"` |
 | had not decided | an empty plan | nothing converts; `"arity_conversion"` is `"nothing-to-convert"` |
-| decided | any | kept retired and listed in `"arity_unknown_linkage"` — never restored by guess |
+| decided | any (an empty or absent plan reads the three default names) | kept retired and listed in `"arity_unknown_linkage"` — never restored by guess |
 
 A file with no such row imports as before, whatever its format. A converting import is recorded as one
-`import-convert` operation whose inputs digest is the sha256 of the file's bytes. The stated limits: a default import
+`import-convert` operation whose inputs digest is the sha256 of the file's bytes.
+
+**A trusted restore (`--restore`) that carries such a row into a store with no plan is refused, whether the file's
+store had decided or not**, with the same remedy: run `plan_only=True` first. Without it, restoring a backup into a
+fresh store would lose its source's decision — the fresh store would re-export the row as undecided. The cost: restoring
+a backup that holds an unexplained retirement into a fresh store needs one plan-only run. The guarantee covers rows
+present at the restore; a restore with none is admitted into an unplanned store as before.
+
+**Where an outcome's `op_id` resolves.** It names the operation that wrote the row: a `run_data_migration` call, a
+converting import (both have a `migration_op` row), or, for a row a trusted restore wrote, the import itself (an
+`op-…` id with no `migration_op` row). It is NULL on imported testimony. `data_migration_receipt(path, plan_id,
+user_id)` lists a converting import's rows under THIS store's plan; imported and restored rows keep their source's
+plan id, so they are listed under that id instead. The stated limits: a default import
 trusts the file to say whether its store decided, so a file can choose conversion or `unknown-linkage` by including or
 omitting that line (bounded by what an untrusted file can already do: carry the rows active), and a store that relays
 another's file without a plan of its own re-exports it as undecided.

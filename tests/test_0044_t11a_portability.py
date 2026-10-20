@@ -573,3 +573,210 @@ def test_d10_a_v13_file_carrying_a_notice_is_not_refused_by_the_era_gate(tmp_pat
     except ValueError as x:
         refused = str(x)
     assert refused is None or "notice-below-era" not in refused and "carries redaction notices" not in refused, refused
+
+
+# =========================================================== research's T11a stage 2 (READ-T11a-stage2.md, 023609ca)
+def _migrated_file(tmp_path, name="f.jsonl"):
+    src = _store(tmp_path, f"src-{name}.db", _pair())
+    _run(src)
+    return _export(src, tmp_path, name)
+
+
+def _edit_outcome(f, out, **fields):
+    def fn(lines):
+        for x in lines:
+            if x.get("record") == "arity_outcome":
+                x.update(fields)
+        return lines
+    return _rewrite(f, out, fn)
+
+
+def test_s2_2_a_successor_that_is_not_in_the_unit_refuses(tmp_path):
+    """Frozen §4l: "a remapped reference that does not resolve → the whole unit is refused". Two shapes: an unknown
+    successor id, and the successor's edge dropped from the file under a remap. Mutant: successor ids unchecked."""
+    f = _migrated_file(tmp_path)
+    _refuses(_store(tmp_path, "a.db"), _edit_outcome(f, tmp_path / "u.jsonl", successor_evidence=["pointer", ["no-such-edge"]]),
+             match="does not carry")
+    dropped = _rewrite(f, tmp_path / "d.jsonl", lambda ls: [x for x in ls if not (x.get("record") == "edge" and x.get("id") == "n")])
+    _refuses(_store(tmp_path, "b.db"), dropped, user_id="other", match="does not carry")
+
+
+def test_s2_3_a_decided_sources_candidate_under_an_empty_plan_is_reported(tmp_path):
+    """Research's S2-3: an initialized-EMPTY destination reports a decided source's candidates by the default names (it
+    has no plan relations), never silently. Mutant: read the empty plan's relations only."""
+    src = _store(tmp_path, "src.db", _pair())
+    _run(src, plan_only=True)
+    f = _export(src, tmp_path, "f.jsonl")
+    dst = _store(tmp_path, "d.db")
+    _run(dst, plan_only=True, registry={k: v for k, v in DEFAULT_RELATIONS.items()
+                                        if k not in ("measures", "prefers", "health_state")})
+    r = _import(dst, f)
+    assert r["arity_unknown_linkage"] == ["p"] and not _active(dst, "p")
+
+
+def test_s2_4_the_receipt_lists_conversions_under_the_destination_plan_and_testimony_under_its_own(tmp_path):
+    """Research's S2-4: a converting import's rows list under the DESTINATION plan (origin local, the import's op id);
+    an imported outcome keeps its SOURCE plan id, so the destination plan's receipt does not list it."""
+    f = _pre_arity_file(tmp_path)
+    dst = _store(tmp_path, "d.db")
+    _run(dst, plan_only=True)
+    _import(dst, f)
+    (plan_id,) = _q(dst, "SELECT plan_id FROM plan_header")[0]
+    assert [(r.edge_id, r.outcome, r.origin) for r in DM.data_migration_receipt(dst, plan_id, U)] == [("p", "restored", "local")]
+    other = _store(tmp_path, "o.db")
+    _run(other, plan_only=True)
+    g = _migrated_file(tmp_path, "g.jsonl")
+    _import(other, g)
+    (oplan,) = _q(other, "SELECT plan_id FROM plan_header")[0]
+    src_plan = next(x["plan_id"] for x in _lines(g) if x.get("record") == "arity_outcome")
+    assert DM.data_migration_receipt(other, oplan, U) == ()
+    assert [(r.edge_id, r.origin) for r in DM.data_migration_receipt(other, src_plan, U)] == [("p", "imported")]
+
+
+@pytest.mark.parametrize("fields", [{"outcome_uid": "\ud800x"}, {"pre_reason": "superseded\udfff"},
+                                    {"outcome": "withheld_revoked"}])        # S2-5: live withheld_revoked
+def test_s2_5_an_unencodable_string_or_a_live_withheld_outcome_refuses_as_shape(tmp_path, fields):
+    _refuses(_store(tmp_path, "d.db"), _edit_outcome(_migrated_file(tmp_path), tmp_path / "s.jsonl", **fields),
+             match="closed shape")
+
+
+def test_r2_a_live_arrival_under_an_in_unit_notice_reads_ended_and_refuses_over_a_held_live_row():
+    """§4l: an arrival whose edge is a notice target in the unit is compared AFTER that treatment (live reads ended); an
+    ended arrival over a held LIVE row is the source's later history — refused. Mutant: compare before treatment."""
+    with pytest.raises(ValueError, match="different projection"):
+        P._arity_preflight(_Held([_held_row(applicable=1)]), "f", U, [dict(_O)], "uninitialized", [], {},
+                           restore=False, registry=None, import_op="op-x", inputs_digest="d",
+                           notice_targets={("edge", "p")})
+
+
+def test_r3_a_held_uid_of_another_user_refuses():
+    with pytest.raises(ValueError, match="another user"):
+        _pf(_Held([_held_row(user_id="someone-else")]), [_O])
+
+
+def _race(monkeypatch, insert_sql):
+    real = SqliteStore.commit_outcome_import_plan
+    calls = []
+
+    def racing(self, user_id, plan, expected):
+        if not calls:
+            self._conn.execute(insert_sql)
+            self._conn.commit()
+        calls.append(1)
+        return real(self, user_id, plan, expected)
+    monkeypatch.setattr(SqliteStore, "commit_outcome_import_plan", racing)
+    return calls
+
+
+_COLS = "plan_id, user_id, edge_id, outcome, pre_invalidated_at, pre_reason, successor_evidence, applicable, origin, outcome_uid"
+
+
+def test_r4_a_held_uid_landing_before_the_commit_is_a_lost_race_and_the_retry_compares(tmp_path, monkeypatch):
+    """D9, the uid re-check: the file's outcome row lands (equal) between this import's preflight and its commit —
+    DESTINATION_CHANGED, and the retry reads it held and replays it as a no-op. Mutant: the uid set not re-checked."""
+    f = _migrated_file(tmp_path)
+    o = next(x for x in _lines(f) if x.get("record") == "arity_outcome")
+    dst = _store(tmp_path, "d.db")
+    calls = _race(monkeypatch, f"INSERT INTO migration_outcome({_COLS}) VALUES('{o['plan_id']}', '{U}', 'p', 'restored', "
+                               f"'{o['pre_invalidated_at']}', 'superseded', '[\"pointer\",[\"n\"]]', 1, 'imported', '{o['outcome_uid']}')")
+    r = _import(dst, f)
+    assert len(calls) == 2 and (r["outcomes"], r["outcomes_existing"]) == (0, 1)
+
+
+def test_r5_another_uid_on_the_edge_landing_before_the_commit_refuses_on_the_retry(tmp_path, monkeypatch):
+    """D9, the edge-set re-check: another uid lands on the edge mid-import — the retry decides again and refuses the
+    slot. Mutant: the edges' uid sets not re-checked (the import would hold two outcomes for one edge)."""
+    f = _migrated_file(tmp_path)
+    dst = _store(tmp_path, "d.db")
+    calls = _race(monkeypatch, f"INSERT INTO migration_outcome({_COLS}) VALUES('elsewhere', '{U}', 'p', 'restored', "
+                               f"'2025-06-01T00:00:00+00:00', 'superseded', '[\"none\",[]]', 0, 'imported', '{'d' * 64}')")
+    _refuses(dst, f, match="another uid")
+    assert len(calls) == 1          # the first commit lost the race; the retry's PREFLIGHT refuses, before any commit
+
+
+def test_r8_a_live_restoration_of_an_edge_the_file_carries_retired_refuses(tmp_path):
+    f = _migrated_file(tmp_path)
+
+    def retire(lines):
+        for x in lines:
+            if x.get("record") == "edge" and x.get("id") == "p":
+                x.update(invalidated_at="2026-02-01T00:00:00Z", invalidation_reason="superseded")
+        return lines
+    _refuses(_store(tmp_path, "d.db"), _rewrite(f, tmp_path / "r.jsonl", retire), match="live restoration")
+
+
+@pytest.mark.parametrize("variant", ["edge-active", "other-pre-state"])
+def test_r9_an_undone_outcome_needs_its_edge_retired_with_the_recorded_pre_state(tmp_path, variant):
+    f = _migrated_file(tmp_path)
+    fields = {"stage": "undone", "undone_at": "2026-03-01T00:00:00+00:00"}
+    g = _edit_outcome(f, tmp_path / "u.jsonl", **fields)
+    if variant == "other-pre-state":
+        def retire(lines):
+            for x in lines:
+                if x.get("record") == "edge" and x.get("id") == "p":
+                    x.update(invalidated_at="2026-02-01T00:00:00Z", invalidation_reason="superseded")
+            return lines
+        g = _rewrite(g, tmp_path / "v.jsonl", retire)
+    _refuses(_store(tmp_path, "d.db"), g, match="recorded pre-state")
+
+
+def test_r10_the_same_instant_at_another_offset_replays(tmp_path):
+    """D15: the projection compares instants as canonical UTC text, so +02:00 for the same instant is a replay."""
+    f = _migrated_file(tmp_path)
+    dst = _store(tmp_path, "d.db")
+    _import(dst, f)
+    pre = next(x for x in _lines(f) if x.get("record") == "arity_outcome")["pre_invalidated_at"]
+    from datetime import timedelta
+    shifted = datetime.fromisoformat(pre).astimezone(timezone(timedelta(hours=2))).isoformat()
+    assert shifted != pre
+    r = _import(dst, _edit_outcome(f, tmp_path / "s.jsonl", pre_invalidated_at=shifted))
+    assert r["outcomes_existing"] == 1
+
+
+@pytest.mark.parametrize("b_state", ["uninitialized", "initialized-empty"])
+def test_s2_1_a_trusted_restore_never_loses_its_sources_decision(tmp_path, b_state):
+    """The owner's T11a S2-1 ruling (option c): A planned and kept p retired; its export, TRUSTED-RESTORED into a fresh
+    B with no plan, is refused (plan_only first) — decision-blind on restore. B planned (or initialized-empty) keeps p
+    retired and reports it, and B's own export carries B's plan record, so a third store reads "decided" and never
+    converts. Mutant: the restore refusal keyed on an undecided source only (the round trip then converts at C)."""
+    a = _store(tmp_path, "a.db", _pair())
+    _run(a, plan_only=True)
+    fa = _export(a, tmp_path, "fa.jsonl")
+    b = _store(tmp_path, "b.db")
+    if b_state == "uninitialized":
+        _refuses(b, fa, restore=True, match=r"plan_only=True")
+        assert not _q(b, "SELECT 1 FROM edges")
+        _run(b, plan_only=True)
+    else:
+        _run(b, plan_only=True, registry={k: v for k, v in DEFAULT_RELATIONS.items()
+                                          if k not in ("measures", "prefers", "health_state")})
+    r = _import(b, fa, restore=True)
+    assert r["arity_unknown_linkage"] == ["p"] and not _active(b, "p")
+    fb = _export(b, tmp_path, "fb.jsonl")
+    assert [x["state"] for x in _lines(fb) if x.get("record") == "arity_plan"] == [
+        "initialized" if b_state == "uninitialized" else "initialized-empty"]
+    c = _store(tmp_path, "c.db")
+    _run(c, plan_only=True)
+    r = _import(c, fb)
+    assert r["arity_conversion"] is None and r["arity_unknown_linkage"] == ["p"] and not _active(c, "p")
+
+
+def test_s2_1_a_default_import_of_a_decided_file_into_an_unplanned_store_is_admitted_and_reported(tmp_path):
+    """The ruling's scope: the refusal is the RESTORE's; a default import of a decided file into a store with no plan
+    keeps D13's report-and-keep-retired (its relay hop is the stated limit)."""
+    a = _store(tmp_path, "a.db", _pair())
+    _run(a, plan_only=True)
+    r = _import(_store(tmp_path, "b.db"), _export(a, tmp_path, "fa.jsonl"))
+    assert r["arity_unknown_linkage"] == ["p"]
+
+
+def test_r4_the_same_uid_landing_for_another_user_before_the_commit_refuses_cleanly(tmp_path, monkeypatch):
+    """D9, the uid re-check where the edge-set check cannot see it: the file's uid lands under ANOTHER user mid-import.
+    The re-check makes the first commit a lost race and the retry refuses (a held uid of another user) — never an
+    IntegrityError from the store-wide UNIQUE. Mutant: the compared uids not re-checked under the lock."""
+    f = _migrated_file(tmp_path)
+    o = next(x for x in _lines(f) if x.get("record") == "arity_outcome")
+    dst = _store(tmp_path, "d.db")
+    _race(monkeypatch, f"INSERT INTO migration_outcome({_COLS}) VALUES('{o['plan_id']}', 'someone-else', 'zz', 'restored', "
+                       f"'{o['pre_invalidated_at']}', 'superseded', '[\"none\",[]]', 1, 'imported', '{o['outcome_uid']}')")
+    _refuses(dst, f, match="another user")

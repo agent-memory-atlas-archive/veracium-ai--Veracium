@@ -1143,7 +1143,9 @@
   `imported` testimony (no undo) and a `--restore` of the store's own export as `restored`. A retired value from a
   store that had not decided its restoration is refused into a store with no plan (run `run_data_migration(...,
   plan_only=True)` first), restored in the import under an existing plan, and reported `unknown-linkage` when the
-  source had decided; a file with nothing to convert imports as before. The result gains `outcomes`,
+  source had decided; a file with nothing to convert imports as before. A trusted restore that carries such a value into
+  a store with no plan is refused whether or not the source decided (the owner's ruling, 2026-10-20), so restoring a
+  backup into a fresh store never loses the source's decision; run `plan_only=True` first. The result gains `outcomes`,
   `outcomes_existing`, `arity_conversion`, `arity_restored`, `arity_withheld` and `arity_unknown_linkage`.
   - **Schema:** the unreleased v16 gains `migration_outcome.op_id` (the operation that wrote a row; NULL for imported
     testimony) and `migration_op` mode `import-convert`, amended in place; a store a development checkout wrote at an

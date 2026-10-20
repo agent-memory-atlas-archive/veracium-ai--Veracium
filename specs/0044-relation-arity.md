@@ -808,3 +808,22 @@ of the unreleased v16; a converting import's `inputs_digest` is the sha256 of th
 default mode the FILE chooses conversion or `unknown-linkage` by carrying or omitting its plan-state record, and an
 omission can force the refusal (one plan-only run); an undecided relay re-exporting a decided source's rows makes them
 convertible at the next hop. Both are bounded by what an untrusted file could already do: ship the rows active.
+
+### Annotation, addendum 1 — the owner's T11a S2-1 ruling (2026-10-20; append-only, the annotation above unchanged)
+
+*Research's T11a stage-2 read (READ-T11a-stage2.md, research 023609ca) found that a trusted restore of a store's own
+export into a fresh store lost its source's decision: the fresh store has no plan header, so its re-export reads
+undecided and a later destination converts a row the source had deliberately kept retired. Research proposed
+installing the plan from the file, then withdrew it: that is planning at import, which §10 Q9 rejected ("it would fix
+the store-wide plan as a side effect of one import, without the attestation"). The owner ruled dev's and research's
+joint recommendation (Quentin, 2026-10-20, option c).*
+
+- §4l's table, the row "a file at or after the arity version, with a `superseded` row under a plan relation and no
+  outcome row", the **trusted restore** column ("same": kept retired, `unknown-linkage`) → **into a store whose plan is
+  uninitialized: REFUSED** (`requires-data-migration-plan`, naming the plan-only mode); into an initialized or
+  initialized-empty store: kept retired, `unknown-linkage` (by the default names when the plan has no relations). The
+  restore's refusal is DECISION-BLIND: a trusted restore carrying a candidate into an uninitialized store refuses
+  whether the file's source decided or not. A default import is unchanged.
+- **Scope, stated:** the guarantee covers candidates PRESENT at the restore; a restore with none is admitted into an
+  uninitialized store, which then re-exports undecided — harmless for those rows, which all carry outcomes. **Cost,
+  stated:** restoring a backup that holds an unexplained retirement into a fresh store needs one plan-only run.
