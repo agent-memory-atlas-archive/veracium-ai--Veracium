@@ -579,19 +579,19 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 263,
+   "line": 272,
    "module": "asof/resolve.py",
-   "qualname": "resolve_as_of"
+   "qualname": "_resolve_as_of"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 311,
+   "line": 320,
    "module": "asof/resolve.py",
    "qualname": "_resolve_edge"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 319,
+   "line": 328,
    "module": "asof/resolve.py",
    "qualname": "_resolve_edge"
   },
@@ -1394,7 +1394,7 @@
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1326,
+   "line": 1327,
    "module": "graph.py",
    "qualname": "collapse_for_render"
   },
@@ -1982,7 +1982,7 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 286,
+   "line": 290,
    "module": "proactive.py",
    "qualname": "assemble"
   },

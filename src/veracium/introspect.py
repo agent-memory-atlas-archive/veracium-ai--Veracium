@@ -115,9 +115,11 @@ def report(store, user_id: str, *, mode: str = "summary",
         snap = store.challenge_snapshot(user_id)      # specs/0047 §4d: an INSPECTION display carries the unit
         for e in sorted(active, key=lambda e: (e.relation, e.valid_from)):
             line = render_edges([e])
-            unit = snap.inspect(e).unit
-            if line and unit:
-                line = f"{line} {unit}"
+            insp = snap.inspect(e)
+            if line and insp.unit:
+                line = f"{line} {insp.unit}"
+            elif line and not insp.challenge_clear:   # a twin (F7): why()'s phrase; operator-side, so it names the record
+                line = f"{line} [withheld: same value as challenged {', '.join(insp.withheld_by)}]"
             if line:
                 cats.setdefault(e.relation, []).append(line)
         out["categories"] = cats

@@ -1246,10 +1246,11 @@ def value_groups(members: list[Edge]) -> dict:
 
 def _kept_by_acts(m: Edge, survivor: Edge, snap) -> bool:
     """specs/0047 §4e's collapse row, the narrower reading: True keeps `m` out of the suppressed set — it carries a
-    person's act, or its survivor is withheld by the call's challenge snapshot (so `m` is a twin to withhold, count
-    and inspect in its own right)."""
+    person's act, or it or its survivor is withheld by the call's challenge snapshot (so `m` is a fact to withhold,
+    count and inspect in its own right — whether its survivor twins the challenged record or not)."""
     with _SITE_COLLAPSE_ACTED.consult():
-        return _SITE_COLLAPSE_ACTED.fire(snap is not None and (m.id in snap.acted or snap.withheld(survivor)), "keep")
+        return _SITE_COLLAPSE_ACTED.fire(snap is not None and (m.id in snap.acted or snap.withheld(survivor)
+                                                               or snap.withheld(m)), "keep")
 
 
 def collapse_for_render(edges: list[Edge], snap=None) -> tuple[list[Edge], dict]:

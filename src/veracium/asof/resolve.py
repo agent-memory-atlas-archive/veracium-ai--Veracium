@@ -248,11 +248,20 @@ def held_at(edge: Edge, T: datetime) -> bool:
 def resolve_as_of(store, user_id: str, T, *, principal=None, policy=None,
                   subject: Optional[str] = None, relation: Optional[str] = None,
                   view=None) -> AsOfAnswer:
-    """THE resolution (§4a). Deterministic given (store snapshot, requested T,
-    captured now, principal scope, policy version). `view` may be supplied
-    by a caller that already built the principal's `ScopeView` (recall);
-    otherwise it is built here from `principal`/`policy` — both None gives
-    the unscoped view exactly as recall does (§4c)."""
+    """THE resolution (§4a); see `_resolve_as_of`, whose answer this returns."""
+    return _resolve_as_of(store, user_id, T, principal=principal, policy=policy,
+                          subject=subject, relation=relation, view=view)[0]
+
+
+def _resolve_as_of(store, user_id: str, T, *, principal=None, policy=None,
+                   subject: Optional[str] = None, relation: Optional[str] = None,
+                   view=None) -> tuple:
+    """THE resolution (§4a), returning `(answer, snapshot)`: the call's ONE challenge snapshot travels beside the
+    answer, never on it — it holds every challenged record of the user, out-of-view ones included, and `AsOfAnswer`
+    is public (research's T10b S2-1; the snapshot on a field would hand a principal's caller what 0020 N-2 hides).
+    Deterministic given (store snapshot, requested T, captured now, principal scope, policy version). `view` may be
+    supplied by a caller that already built the principal's `ScopeView` (recall); otherwise it is built here from
+    `principal`/`policy` — both None gives the unscoped view exactly as recall does (§4c)."""
     # 0. NORMALISE FIRST (§2c-i) — a naive or non-datetime T is a ValueError,
     #    never FutureAsOfRefused (V-NORM-FIRST) …
     T = normalise_T(T)
@@ -286,7 +295,7 @@ def resolve_as_of(store, user_id: str, T, *, principal=None, policy=None,
             shaped = e if view is None else view.shape(e, asserted=True)
             facts.append(AsOfFact(shaped, r, snap.inspect(shaped, visible=(None if view is None else visible))))
     facts.sort(key=lambda f: (as_utc(f.edge.valid_from), f.edge.id))
-    return AsOfAnswer(T=T, now=now, facts=tuple(facts))
+    return AsOfAnswer(T=T, now=now, facts=tuple(facts)), snap
 
 
 def _classify_live(store, user_id, edge_id, T, now, view, principal, policy):

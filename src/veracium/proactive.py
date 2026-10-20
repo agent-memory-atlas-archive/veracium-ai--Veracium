@@ -116,7 +116,7 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
     # withheld, counted before any budget selection; the call's one snapshot (the caller's, or read here)
     if snap is None:
         snap = store.challenge_snapshot(user_id)
-    _n_withheld = sum(1 for e in _edges if e.assertable and snap.withheld(e))
+    _withheld_edges = [e for e in _edges if e.assertable and snap.withheld(e)]
     _edges = [e for e in _edges if not snap.withheld(e)]
     surfaced, _c_info = collapse_for_render(_edges, snap)
     # specs/0019 §4c (RULED, internal review): a flagged fact is NEVER
@@ -158,6 +158,10 @@ def assemble(store, user_id: str, config, *, now: Optional[datetime] = None,
     def _eligible(_m):
         with _SITE_ELIGIBLE.consult():
             return _SITE_ELIGIBLE.fire(_class_rank(_m) < 9, "withhold")
+
+    # the count is what the challenge stopped THIS surface rendering (research's T10b S2-3): a withheld fact proactive
+    # would never have volunteered — settled, or ungrounded — is not counted
+    _n_withheld = sum(1 for e in _withheld_edges if not e.ungrounded and _eligible(e))
 
     for _bk, _members in _env_buckets.items():
         for _vk, _ms in _value_groups(_members).items():

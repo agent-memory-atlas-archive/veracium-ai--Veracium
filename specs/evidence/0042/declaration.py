@@ -14,7 +14,7 @@ DECLARATION = (
     ("asof.recall.grounded", "0028", "§4b", "asof/recall.py:recall_at.grounded", "withhold"),
     ("asof.resolve.edge-hidden-or-invalid", "0028", "§4b", "asof/resolve.py:_resolve_edge", "withhold"),
     ("asof.resolve.edge-unclassified", "0028", "§4b", "asof/resolve.py:_resolve_edge", "withhold"),
-    ("asof.resolve.future-T", "0028", "§2c-i", "asof/resolve.py:resolve_as_of", "refuse"),
+    ("asof.resolve.future-T", "0028", "§2c-i", "asof/resolve.py:_resolve_as_of", "refuse"),
     ("asof.resolve.held-at", "0028", "§2c-i", "asof/resolve.py:held_at", "withhold"),
     ("authority.permitted", "0003", "§4a", "authority.py:permitted", "refuse"),
     ("authority.self-assertion", "0003", "§4a", "authority.py:self_assertion", "withhold"),

@@ -662,3 +662,243 @@ def test_differential_against_reference_model_ii(tmp_path, seed):
         assert (got.challenge_clear, got.open_challenges, got.grounding) == \
             (M.gate(s, medges[eid]) == "assertable", want["open"], want["g"]), (seed, eid)
         assert _asserted(r, objs[eid]) == (M.gate(s, medges[eid]) == "assertable"), (seed, eid)
+
+
+# ============================================================================================ research's T10b stage 2
+# Ready cells (research, T10b stage 2 at 3914f73), written to be appended to tests/test_0047_t10b_read.py: they use its
+# helpers. Each FAILS at 3914f73 by assertion and states the expected sets as literals.
+def test_rs2_1_as_of_collapse_never_hides_a_twin_behind_a_withheld_survivor(tmp_path):
+    """F7 (c) and Q9 on as-of recall: a challenged "cat Miso" and its act-less "Miso" twin are withheld and counted as
+    two facts, each with an inspection entry, as query recall does. At 3914f73 as-of's collapse runs without the call's
+    snapshot, so "Miso" is suppressed behind its withheld survivor: uncounted and uninspectable."""
+    mem = _mem(tmp_path)
+    t0, t1 = datetime(2024, 1, 1, tzinfo=timezone.utc), datetime(2024, 6, 1, tzinfo=timezone.utc)
+    _plant(mem, _edge("e-1", "cat Miso", relation="has_pet", valid_from=t0),
+           _edge("e-2", "Miso", relation="has_pet", valid_from=t1))
+    _challenge(mem, "e-1")
+    q = _ok(mem.recall, U, "pet Miso")
+    r = _ok(mem.recall, U, "pet Miso", as_of=datetime(2025, 1, 1, tzinfo=timezone.utc))
+    two = ["[withheld: 2 fact(s) the subject disputes; see the host's why()]"]
+    assert (_withheld_ids(q), _withheld_line(q.grounded)) == ({"e-1", "e-2"}, two)
+    assert (_withheld_ids(r), _withheld_line(r.grounded)) == ({"e-1", "e-2"}, two)
+
+
+def test_rs2_2_as_of_collapse_never_suppresses_a_member_carrying_an_act(tmp_path):
+    """Q10 on as-of recall: two strictly-redundant "chef" restatements, the hidden one ("e-old") confirmed: both
+    surface, as on query recall. At 3914f73 as-of's collapse ignores acts and hides the confirmed one."""
+    mem = _mem(tmp_path)
+    _plant(mem, _edge("e-old", "chef", valid_from=datetime(2024, 1, 1, tzinfo=timezone.utc)),
+           _edge("e-new", "chef", valid_from=datetime(2024, 6, 1, tzinfo=timezone.utc)))
+    T = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    assert {e.id for e in _ok(mem.recall, U, "chef", as_of=T).edges} == {"e-new"}       # the collapse, before the act
+    _ok(mem.confirm, U, "e-old", correlation_id="k-1")
+    assert {e.id for e in _ok(mem.recall, U, "chef").edges} == {"e-old", "e-new"}
+    assert {e.id for e in _ok(mem.recall, U, "chef", as_of=T).edges} == {"e-old", "e-new"}
+
+
+def test_rs2_3_collapse_never_hides_a_withheld_member_behind_a_clear_survivor(tmp_path):
+    """F7 (c), the anchor case: "grey tabby cat" twins the challenged "grey tabby" (it adds one word); "tabby cat",
+    note-bearing, is the group's survivor and twins nothing (neither subsumes the other). The twin is withheld and
+    counted. At 3914f73 it is suppressed behind the clear survivor: uncounted, uninspectable, and its group's
+    collapse is presented on the survivor."""
+    mem = _mem(tmp_path)
+    t0, t1 = datetime(2024, 1, 1, tzinfo=timezone.utc), datetime(2024, 6, 1, tzinfo=timezone.utc)
+    _plant(mem, _edge("e-A", "grey tabby cat", relation="has_pet", valid_from=t0),
+           _edge("e-m1", "grey tabby", relation="has_pet", valid_from=t1),
+           _edge("e-m2", "tabby cat", relation="has_pet", valid_from=t1).model_copy(update={"note": "adopted"}))
+    _challenge(mem, "e-m1")
+    r = _ok(mem.recall, U, "pet grey tabby cat")
+    assert _withheld_ids(r) == {"e-A", "e-m1"}, sorted(r.inspection)
+    assert _withheld_line(r.grounded) == ["[withheld: 2 fact(s) the subject disputes; see the host's why()]"]
+
+
+# ---------------------------------------------------------------- research's surviving mutants (each pinned at 3914f73)
+def test_rs2_4_a_quarantined_twin_is_counted(tmp_path):
+    """F7 (b) and (c): the cross-class twin is withheld AND counted. Mutant: the count drops the quarantined term."""
+    mem = _mem(tmp_path)
+    _miso(mem, "Miso", "Miso", author2=EA.THIRD_PARTY, disc2=Disclosure.QUARANTINED)
+    r = _ok(mem.recall, U, "pet Miso")
+    assert _withheld_line(r.grounded) == ["[withheld: 2 fact(s) the subject disputes; see the host's why()]"]
+
+
+def test_rs2_5_a_challenged_use_only_fact_is_counted(tmp_path):
+    """A use-only fact renders on query recall when unchallenged, so withholding it is counted. Mutant: the count
+    drops the use-only term."""
+    mem = _mem(tmp_path)
+    _plant(mem, _edge("e-a", "Lisbon harbour pilot", disc=Disclosure.USE_ONLY), _edge("e-b", "Porto", relation="lives_in"))
+    assert "Lisbon harbour pilot" in _ok(mem.recall, U, "Lisbon harbour pilot Porto").context
+    _challenge(mem, "e-a")
+    r = _ok(mem.recall, U, "Lisbon harbour pilot Porto")
+    assert "Lisbon harbour pilot" not in r.context and _withheld_line(r.grounded) == [WITHHELD_1]
+
+
+def test_rs2_6_a_retired_challenged_record_is_not_counted_only_its_live_twin(tmp_path):
+    """The retired challenged record is in `Recall.edges` and withheld, but it never rendered, so N counts only the
+    live twin. Mutant: count every withheld edge."""
+    mem = _mem(tmp_path)
+    _plant(mem, _edge("e-1", "Miso", relation="has_pet"))
+    _challenge(mem, "e-1")
+    mem.store.invalidate_edge("e-1", datetime.now(timezone.utc), "superseded")
+    _plant(mem, _edge("e-2", "Miso", relation="has_pet"))
+    r = _ok(mem.recall, U, "pet Miso")
+    assert _withheld_ids(r) == {"e-1", "e-2"} and _withheld_line(r.grounded) == [WITHHELD_1]
+
+
+def test_rs2_7_the_withheld_count_is_bounded_width():
+    """The report line's count is `bounded_count`'s: exact to 999, then '999+'. Mutant: print N unbounded."""
+    assert C.withheld_line(999) == "[withheld: 999 fact(s) the subject disputes; see the host's why()]"
+    assert C.withheld_line(1000) == "[withheld: 999+ fact(s) the subject disputes; see the host's why()]"
+
+
+def test_rs2_8_collapse_never_suppresses_a_member_carrying_a_reply(tmp_path):
+    """Q10's act is a confirmation OR a reply: a `context` reply on the hidden restatement keeps it. Mutant: the
+    snapshot's acted set reads confirmations only."""
+    mem = _mem(tmp_path)
+    _plant(mem, _edge("e-old", "chef", valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc)),
+           _edge("e-new", "chef", valid_from=datetime(2026, 1, 1, tzinfo=timezone.utc)))
+    assert {e.id for e in _ok(mem.recall, U, "chef").edges} == {"e-new"}
+    _ok(mem.reply, U, "e-old", kind="context", text="at the harbour restaurant")
+    assert {e.id for e in _ok(mem.recall, U, "chef").edges} == {"e-old", "e-new"}
+
+
+@pytest.mark.parametrize("subject,relation", [("sister", "has_pet"), ("user", "relative_of")])
+def test_rs2_9_the_same_value_under_another_subject_or_relation_is_not_a_twin(tmp_path, subject, relation):
+    """F7's "same value" is same subject AND relation. Mutants: the twin predicate ignores the subject; the relation."""
+    mem = _mem(tmp_path)
+    _plant(mem, _edge("e-1", "Miso", relation="has_pet"))
+    _challenge(mem, "e-1")
+    _plant(mem, _edge("e-2", "Miso", relation=relation, subject=subject))
+    r = _ok(mem.recall, U, "pet Miso sister relative")
+    assert _withheld_ids(r) == {"e-1"} and _insp(r, "e-2").challenge_clear and _withheld_line(r.grounded) == [WITHHELD_1]
+
+
+def test_rs2_10_a_procedural_record_is_never_a_twin(tmp_path):
+    """INV-R19: a procedural record carries no reply and no grounding, so `why` reports it clear even when its value
+    equals a challenged record's. Mutant: drop the procedural guard."""
+    mem = _mem(tmp_path)
+    _plant(mem, _edge("e-1", "Miso", relation="has_pet"))
+    _challenge(mem, "e-1")
+    e2 = _edge("e-2", "Miso", relation="has_pet")
+    _plant(mem, e2.model_copy(update={"provenance": e2.provenance.model_copy(update={"record_kind": "procedural"})}))
+    ch = W.gather(mem.store, U, "e-2").challenge
+    assert (ch["clear"], ch["withheld_by"], ch["waiting_on"]) == (True, [], [])
+
+
+def test_rs2_11_as_of_an_out_of_view_challenger_withholds_an_in_view_twin_and_is_never_named(tmp_path):
+    """(i) on the as-of carriers: the scoped `Recall.inspection` and `facts_valid_at`'s `AsOfFact.inspection` name no
+    out-of-view record. Mutant: the as-of inspection ignores the reader's scope."""
+    mem = _mem(tmp_path, groups=ONE_GROUP)
+    t0, T = datetime(2024, 1, 1, tzinfo=timezone.utc), datetime(2025, 1, 1, tzinfo=timezone.utc)
+    _plant(mem, _edge("w1", "Miso", relation="has_pet", source_id="agent-2", valid_from=t0))
+    _challenge(mem, "w1", "secret dispute text")
+    _plant(mem, _edge("v2", "Miso", relation="has_pet", source_id="agent-1", valid_from=t0))
+    r = _ok(mem.recall, U, "pet Miso", principal=A1, as_of=T)
+    i = _insp(r, "v2")
+    assert (i.challenge_clear, i.withheld_by, i.waiting_on) == (False, (), ())
+    assert "w1" not in repr(r) and "secret dispute text" not in repr(r) and _withheld_line(r.grounded) == [WITHHELD_1]
+    facts = {f.edge.id: f for f in _ok(mem.facts_valid_at, U, "user", "has_pet", T, principal=A1)}
+    j = _asof_insp(facts["v2"])
+    assert set(facts) == {"v2"} and (j.challenge_clear, j.withheld_by, j.waiting_on) == (False, (), ())
+
+
+def test_rs2_12_proactive_recall_carries_an_inspection_entry_for_every_edge(tmp_path):
+    """`Recall.inspection` on proactive recall: an entry per returned edge, with g(e) and its version. Mutant: omit it."""
+    mem = _mem(tmp_path)
+    _plant(mem, _edge("e-b", "Porto", relation="lives_in", needs_confirmation=True, att="attested",
+                      attv="ATTEST-3@b1329a81", src="ep-1"))
+    r = _ok(mem.recall, U, None)
+    assert {e.id for e in r.edges} == set(r.inspection) == {"e-b"}
+    i = _insp(r, "e-b")
+    assert (i.grounding, i.attestation_version, i.challenge_clear) == ("attested", "ATTEST-3@b1329a81", True)
+
+
+_RS2_VARIANTS = {"plain": {}, "flagged": {"needs_confirmation": True}, "ungrounded": {"ungrounded": True},
+                 "third-party-quarantined": {"author": EA.THIRD_PARTY, "disc": Disclosure.QUARANTINED},
+                 "use-only": {"disc": Disclosure.USE_ONLY}, "system-authored": {"author": EA.SYSTEM},
+                 "flagged-third-party-quarantined": {"needs_confirmation": True, "author": EA.THIRD_PARTY,
+                                                     "disc": Disclosure.QUARANTINED}}
+
+
+@pytest.mark.parametrize("variant", sorted(_RS2_VARIANTS))
+@pytest.mark.parametrize("surface", ["query", "proactive", "as-of"])
+def test_rs2_13_the_withheld_count_is_exactly_what_the_challenge_stopped_rendering(tmp_path, surface, variant):
+    """"The silence is not silent", read both ways: on every assertion surface, a challenge withholds a fact the surface
+    rendered (counted 1), and a fact the surface would never have shown is not counted (counted 0). FAILS at 3914f73 on
+    proactive for the plain, ungrounded and system-authored facts: proactive counts every assertable challenged fact
+    in view, including those it never volunteers (api.md: N counts this answer's candidates)."""
+    mem = _mem(tmp_path)
+    t0 = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    _plant(mem, _edge("e-a", "Lisbon harbour pilot", valid_from=t0, **_RS2_VARIANTS[variant]),
+           _edge("e-b", "Porto", relation="lives_in", valid_from=t0))
+    call = {"query": lambda: mem.recall(U, "Lisbon harbour pilot Porto"),
+            "proactive": lambda: mem.recall(U, None),
+            "as-of": lambda: mem.recall(U, "Lisbon harbour pilot Porto",
+                                        as_of=datetime(2025, 1, 1, tzinfo=timezone.utc))}[surface]
+    before = "Lisbon harbour pilot" in _ok(call).context
+    _challenge(mem, "e-a")
+    r = _ok(call)
+    assert "Lisbon harbour pilot" not in r.context
+    assert _withheld_line(r.context) == ([WITHHELD_1] if before else []), (before, _withheld_line(r.context))
+
+
+def test_t10b_s2_1_a_scoped_as_of_answer_carries_its_three_fields_and_no_snapshot(tmp_path):
+    """Research's T10b S2-1, the design call: as-of recall's collapse reads the call's ONE challenge snapshot, which
+    travels BESIDE the public `AsOfAnswer` (`_resolve_as_of` returns the pair), never on it. The snapshot holds every
+    challenged record of the user, out-of-view ones included, so a field would hand a principal-scoped caller what
+    0020 N-2 hides; equality and repr cannot see a `compare=False, repr=False` field, so this asserts the fields.
+    Mutant: the candidate's `snapshot` field on `AsOfAnswer`."""
+    import dataclasses
+    from veracium.asof import resolve_as_of
+    mem = _mem(tmp_path, groups=ONE_GROUP)
+    t0, T = datetime(2024, 1, 1, tzinfo=timezone.utc), datetime(2025, 1, 1, tzinfo=timezone.utc)
+    _plant(mem, _edge("w1", "Miso", relation="has_pet", source_id="agent-2", valid_from=t0))
+    _challenge(mem, "w1", "secret dispute text")
+    _plant(mem, _edge("v2", "Miso", relation="has_pet", source_id="agent-1", valid_from=t0))
+    a = resolve_as_of(mem.store, U, T, principal=A1, policy=mem.scope_policy)
+    assert [f.name for f in dataclasses.fields(a)] == ["T", "now", "facts"] and set(vars(a)) == {"T", "now", "facts"}
+    assert {f.edge.id for f in a.facts} == {"v2"}
+    assert "w1" not in repr(vars(a)) and "secret dispute text" not in repr(vars(a))
+
+
+def test_t10b_s2_5_introspect_marks_a_withheld_restatement(tmp_path):
+    """Research's T10b S2-5: `introspect(mode="categories")` carries the unit on the challenged fact's line AND why()'s
+    phrase on its same-value restatement's (operator-side, like why: it names the record). Mutant: the twin line
+    printed plain."""
+    mem = _mem(tmp_path)
+    _plant(mem, _edge("e-1", "Miso", relation="has_pet"), _edge("e-2", "cat Miso", relation="has_pet"))
+    _challenge(mem, "e-1")
+    lines = mem.introspect(U, mode="categories")["categories"]["has_pet"]
+    assert [l for l in lines if "[withheld: same value as challenged e-1]" in l] == [
+        l for l in lines if "cat Miso" in l] and len(lines) == 2
+    assert [l for l in lines if "[challenged by the subject: 1 open;" in l and "cat Miso" not in l] != []
+
+
+def test_t10b_s2_2_a_clear_member_behind_a_withheld_survivor_renders(tmp_path):
+    """F7 (c)'s other side, after S2-2: the survivor "grey tabby cat" (note-bearing) twins the challenged "grey tabby"
+    and is withheld; "tabby cat" in its group twins nothing (neither subsumes "grey tabby"), so it is CLEAR and must
+    render, not vanish behind a survivor that is itself withheld. Mutant: drop `snap.withheld(survivor)` from the keep
+    test (`snap.withheld(m)` alone does not keep a clear member)."""
+    mem = _mem(tmp_path)
+    t0, t1 = datetime(2024, 1, 1, tzinfo=timezone.utc), datetime(2024, 6, 1, tzinfo=timezone.utc)
+    _plant(mem, _edge("e-S", "grey tabby cat", relation="has_pet", valid_from=t0).model_copy(update={"note": "adopted"}),
+           _edge("e-X", "grey tabby", relation="has_pet", valid_from=t1),
+           _edge("e-m", "tabby cat", relation="has_pet", valid_from=t1))
+    assert {e.id for e in _ok(mem.recall, U, "pet grey tabby cat").edges} == {"e-S"}      # the collapse, before the act
+    _challenge(mem, "e-X")
+    r = _ok(mem.recall, U, "pet grey tabby cat")
+    assert _withheld_ids(r) == {"e-S", "e-X"} and _insp(r, "e-m").challenge_clear
+    assert "has_pet: tabby cat (since 2024-06-01)" in r.context
+    assert _withheld_line(r.grounded) == ["[withheld: 2 fact(s) the subject disputes; see the host's why()]"]
+
+
+def test_t10b_s2_3_proactive_never_counts_a_flagged_ungrounded_fact_it_never_volunteers(tmp_path):
+    """S2-3's ungrounded term: a FLAGGED fact is eligible for proactive, but an ungrounded one is never volunteered, so
+    withholding it is not counted. (rs2_13's ungrounded variant is settled, so eligibility alone already excludes it.)
+    Mutant: drop `not e.ungrounded` from proactive's count."""
+    mem = _mem(tmp_path)
+    t0 = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    _plant(mem, _edge("e-a", "Lisbon harbour pilot", valid_from=t0, needs_confirmation=True, ungrounded=True),
+           _edge("e-b", "Porto", relation="lives_in", valid_from=t0))
+    assert "Lisbon harbour pilot" not in _ok(mem.recall, U, None).context
+    _challenge(mem, "e-a")
+    assert _withheld_line(_ok(mem.recall, U, None).context) == []

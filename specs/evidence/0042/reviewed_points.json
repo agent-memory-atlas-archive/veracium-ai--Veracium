@@ -179,34 +179,34 @@
   "line": 43,
   "statement": "return _SITE_RECALL_GROUNDED.fire(r is not None and r.outcome in GROUNDED_OUTCOMES"
  },
- "asof/resolve.py:_resolve_edge:319:RETURN_NONE": {
+ "asof/resolve.py:_resolve_edge:328:RETURN_NONE": {
   "decision": "enforcement",
   "reason": "enforces 0028 §4b (withhold) through site asof.resolve.edge-hidden-or-invalid",
   "reviewer": "dev",
   "site": "asof.resolve.edge-hidden-or-invalid",
   "class": "enforcement",
   "key": "asof/resolve.py:_resolve_edge:RETURN_NONE:2",
-  "line": 319,
+  "line": 328,
   "statement": "return _SITE_EDGE_HIDDEN.fire(None, \"hidden-or-invalid\")"
  },
- "asof/resolve.py:_resolve_edge:311:RETURN_NONE": {
+ "asof/resolve.py:_resolve_edge:320:RETURN_NONE": {
   "decision": "enforcement",
   "reason": "enforces 0028 §4b (withhold) through site asof.resolve.edge-unclassified",
   "reviewer": "dev",
   "site": "asof.resolve.edge-unclassified",
   "class": "enforcement",
   "key": "asof/resolve.py:_resolve_edge:RETURN_NONE:1",
-  "line": 311,
+  "line": 320,
   "statement": "return _SITE_EDGE_UNCLASSIFIED.fire(None, \"unclassified\")"
  },
- "asof/resolve.py:resolve_as_of:263:RAISE": {
+ "asof/resolve.py:_resolve_as_of:272:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0028 §2c-i (refuse) through site asof.resolve.future-T",
   "reviewer": "dev",
   "site": "asof.resolve.future-T",
   "class": "enforcement",
-  "key": "asof/resolve.py:resolve_as_of:RAISE:1",
-  "line": 263,
+  "key": "asof/resolve.py:_resolve_as_of:RAISE:1",
+  "line": 272,
   "statement": "raise _SITE_FUTURE_T.fire(FutureAsOfRefused(T, now))"
  },
  "asof/resolve.py:held_at:245:BOOL_RETURN": {
@@ -349,14 +349,14 @@
   "line": 290,
   "statement": "return _SITE_ABSORB_UNRESOLVED.fire(False, \"unresolved\")"
  },
- "graph.py:collapse_for_render:1326:FILTER_RETURN": {
+ "graph.py:collapse_for_render:1327:FILTER_RETURN": {
   "decision": "enforcement",
   "reason": "enforces 0012 §4c (withhold) through site graph.collapse-for-render",
   "reviewer": "dev",
   "site": "graph.collapse-for-render",
   "class": "enforcement",
   "key": "graph.py:collapse_for_render:FILTER_RETURN:1",
-  "line": 1326,
+  "line": 1327,
   "statement": "return _SITE_COLLAPSE_FOR_RENDER.fire(([e for e in edges if e.id not in suppressed], info), \"withhold\", declined=bool(suppressed))"
  },
  "graph.py:_kept_by_acts:1252:BOOL_RETURN": {
@@ -367,7 +367,7 @@
   "class": "enforcement",
   "key": "graph.py:_kept_by_acts:BOOL_RETURN:1",
   "line": 1252,
-  "statement": "return _SITE_COLLAPSE_ACTED.fire(snap is not None and (m.id in snap.acted or snap.withheld(survivor)), \"keep\")"
+  "statement": "return _SITE_COLLAPSE_ACTED.fire(snap is not None and (m.id in snap.acted or snap.withheld(survivor)"
  },
  "graph.py:plan_correction:361:RAISE": {
   "decision": "enforcement",
@@ -4096,13 +4096,13 @@
   "line": 91,
   "statement": "raise"
  },
- "proactive.py:assemble:286:RAISE": {
+ "proactive.py:assemble:290:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "proactive.py:assemble:RAISE:1",
-  "line": 286,
+  "line": 290,
   "statement": "raise ValueError(f\"item_cap_tokens below the minimum item allowance \""
  },
  "procedural_gate.py:norm_ws:49:RAISE": {

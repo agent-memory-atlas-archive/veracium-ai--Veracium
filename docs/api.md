@@ -569,21 +569,28 @@ and the answer is kept with the fact. Host API only — no MCP tool reaches it.
 - **The withheld line.** A rendered answer that withheld anything says so:
   `[withheld: N fact(s) the subject disputes; see the host's why()]`. N counts
   this answer's candidates (the facts retrieval found for the query), before
-  the token budget, so the number does not depend on the budget. Under a
+  the token budget, so the number does not depend on the budget; proactive
+  recall counts only the facts it would have volunteered. Under a
   principal, N counts only facts in the principal's view; a challenge
   outside the view still withholds an in-view restatement, and is never
-  named or quoted to that principal.
+  named or quoted to that principal. The residual, accepted as 0020's N-2
+  accepts its own: an in-view fact that is counted and reads
+  `challenge_clear=False` with an empty `withheld_by` tells the principal
+  that a record outside its view holds the same value and is disputed.
 - **Where the challenge is shown.** `Recall.inspection` (a dict keyed by edge
-  id, an entry for every edge in `Recall.edges`), `AsOfFact.inspection`, `why`
-  and `introspect(mode="categories")` carry, per fact: `grounding` (g(e)),
+  id, an entry for every edge in `Recall.edges`), `AsOfFact.inspection` and
+  `why` carry, per fact: `grounding` (g(e)),
   `attestation_version`, `open_challenges`, `latest_challenge`, the `unit`
   `[challenged by the subject: N open; latest: …]`, `challenge_clear`, and for
   a withheld restatement `withheld_by` and `waiting_on` (the challenged facts
   and their open challenge ids). **Consumer duty:** `Recall.edges` still
   contains a challenged fact. Do not assert an edge whose entry is not
   `challenge_clear`, and show the unit wherever you show the record.
-  Duplicate restatements are collapsed for display only when the hidden one
-  carries no confirmation or reply of its own.
+  `introspect(mode="categories")` prints the unit on a challenged fact's
+  line, and `[withheld: same value as challenged <id>]` on a withheld
+  restatement's. Duplicate restatements are collapsed for display only when
+  the hidden one carries no confirmation or reply of its own and is not
+  itself withheld, on every surface, as-of recall included.
 - **Refusals** raise `veracium.store.base.ReplyRefused` (a `ValueError`) with a
   closed `reason`: `kind`, `actor`, `shape`, `marker` (the redaction marker in
   the text), `unknown-edge` (absent, or another user's), `redacted-edge`,

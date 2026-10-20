@@ -13,7 +13,7 @@ recording-clock proof attributes every predicate access on this branch.
 from __future__ import annotations
 from ..census import declare_site
 
-from .resolve import GROUNDED_OUTCOMES, AsOfAnswer, render_fn_for, resolve_as_of
+from .resolve import GROUNDED_OUTCOMES, AsOfAnswer, _resolve_as_of, render_fn_for
 
 
 _SITE_RECALL_GROUNDED = declare_site("asof.recall.grounded", declines=False)   # specs/0042
@@ -26,8 +26,8 @@ def recall_at(mem, user_id: str, query: str, token_budget: int, *, as_of,
     from ..graph import _lexical_scored, fused_subgraph
     from ..scope_read import narrow_edges
 
-    answer = resolve_as_of(mem.store, user_id, as_of, principal=principal,
-                           policy=mem.scope_policy, view=view)
+    answer, snap = _resolve_as_of(mem.store, user_id, as_of, principal=principal,
+                                  policy=mem.scope_policy, view=view)
     by_res = {f.edge.id: f.resolution for f in answer.facts}
     by_insp = {f.edge.id: f.inspection for f in answer.facts}
     candidates = [f.edge for f in answer.facts]
@@ -57,7 +57,7 @@ def recall_at(mem, user_id: str, query: str, token_budget: int, *, as_of,
         scored, relevant_ids, by_id, sm_pairs if sem_status == "ok" else [],
         max_edges=mem.config.max_subgraph_edges,
         coverage_share=mem.config.subgraph_coverage_share,
-        relations=mem.config.relations, assertable=grounded)
+        relations=mem.config.relations, assertable=grounded, snap=snap)
     sem_meta = {k: RecalledEdge(**v) for k, v in raw_meta.items()}
     if view is not None:
         edges = view.narrow(edges)

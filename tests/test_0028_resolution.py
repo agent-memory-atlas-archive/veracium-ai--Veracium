@@ -186,7 +186,8 @@ def test_v_compat_as_of_none_takes_the_pre_existing_path_unchanged(tmp_path, mon
     def boom(*a, **k):
         raise AssertionError("the as-of resolution ran with as_of=None")
     monkeypatch.setattr(resolve_mod, "resolve_as_of", boom)
-    monkeypatch.setattr(recall_mod, "resolve_as_of", boom)
+    monkeypatch.setattr(resolve_mod, "_resolve_as_of", boom)
+    monkeypatch.setattr(recall_mod, "_resolve_as_of", boom)   # recall_at takes (answer, snapshot) (0047 T10b S2-1)
     monkeypatch.setattr(recall_mod, "recall_at", boom)
     r = mem.recall(U, "porto")
     assert "Porto" in r.context and r.as_of is None
