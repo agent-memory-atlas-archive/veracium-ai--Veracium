@@ -62,7 +62,7 @@ CLASSIFIED = {
     ("__init__.py", "Memory._recall"): ("RAW", "builds `Recall` — `Recall.edges` hands whole facts to the caller"),
     ("__init__.py", "Memory._proactive"): ("RAW", "builds the proactive `Recall`"),
     ("asof/recall.py", "recall_at"): ("RAW", "the as-of `Recall`; it renders the CURRENT acts, whatever T (0047 INV-R20)"),
-    ("asof/resolve.py", "resolve_as_of"): ("RAW", "builds `AsOfFact`s — facts_valid_at's return"),
+    ("asof/resolve.py", "_resolve_as_of"): ("RAW", "builds `AsOfFact`s — facts_valid_at's return, through resolve_as_of; the call's snapshot travels BESIDE the answer (0047 T10b S2-1)"),
     ("graph.py", "plan_correction"): ("INTERNAL", "builds a `SupersessionPlan`; a plan, not an output"),
     ("why.py", "_edge_dict"): ("RAW", "`veracium why`'s per-edge record"),
     ("why.py", "gather"): ("RAW", "`veracium why`'s biography"),
