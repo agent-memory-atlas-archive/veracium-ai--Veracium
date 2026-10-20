@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 2d32e72
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ e8e476e
+# RE-PINNED 2026-10-20 0044 T11b (act and attestation portability) landed in e8e476e444f0e30c8965c0a4c30f83a0cf9b069a: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-20 0044 T11a stage 2 (the S2-1 ruling, S2-2..S2-5) landed in 2d32e72544d09cc0872f87c9340d7eaaa6c4ba73: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-20 0044 T11a (outcome portability, format era 14) landed in fab8355a00c8927eec295751cb9e6dac5e8f4241: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-20 0051 (ATTEST-5, the speaker-turn backstop, speaker_restricted) landed in b066a78eaef44c379adec7a144ef36b6c773b4f2: bodies byte-identical; the pin moves to the commit that changed src/
