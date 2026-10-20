@@ -350,7 +350,8 @@ def render(bio: Biography) -> str:
             out.append(f"      {ev['note']}")
     for c in bio.confirmations:
         tag = "" if c.get("origin", "local") == "local" else f" [{c['origin']}]"
-        out.append(f"  {c['at']}  confirmed by {c['actor']} via {c['call_path']} (correlation {c['correlation_id']}){tag}")
+        cid = f"correlation {c['correlation_id']}" if c["correlation_id"] is not None else "no original request id"
+        out.append(f"  {c['at']}  confirmed by {c['actor']} via {c['call_path']} ({cid}){tag}")
     for r in bio.replies:
         tgt = f" resolving {r['target']}" if r.get("target") else ""
         txt = f": {r['text']}" if r.get("text") is not None else ""

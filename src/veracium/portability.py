@@ -612,6 +612,10 @@ def export_memory(store, user_id: str, path) -> dict:
         # unknown, never synthesized), and the ORIGINAL request's id (never an internal `#act:` key); no row id, no
         # internal key, no registry row. A resolve names its challenge by identity
         uid_of = {r["id"]: list(_held_act_uid(r, local)) for r in acts}
+        # research's T11b S2-2: an act whose edge this store no longer holds is CORRUPTION (no verb writes one; an edge
+        # leaves only with its user's acts, by erasure) — exported as held and REPORTED, never refused here: refusing
+        # would remove the whole backup. Its import refuses whole (INV-R11)
+        orphaned = sum(r["edge_id"] not in _edge_ids for r in acts)
         for r in acts:
             line = {"record": "confirmation" if r["table"] == "confirmations" else "reply",
                     "act_uid": uid_of[r["id"]], "act_seq": r["act_seq"], "edge_id": r["edge_id"]}
@@ -625,7 +629,7 @@ def export_memory(store, user_id: str, path) -> dict:
             f.write(json.dumps(line) + "\n")
     return {"edges": len(edges), "episodes": len(episodes), "redactions": len(redaction_records),
             "outcomes": len(arity_outcomes), "confirmations": sum(r["table"] == "confirmations" for r in acts),
-            "replies": sum(r["table"] == "replies" for r in acts), "path": str(path)}
+            "replies": sum(r["table"] == "replies" for r in acts), "acts_orphaned": orphaned, "path": str(path)}
 
 
 # specs/0014 §2c (R11-3/R12-3/R13-2): the source-identity projection over TWO
@@ -1618,7 +1622,8 @@ def import_memory(store, path, *, user_id: Optional[str] = None,
 
         # (5) combined-destination validation + atomic commit, retried on a lost race so
         # NOTHING is ever partially imported (§4c). The destination is re-read each pass.
-        # specs/0008 §6e (T11b, research's M3): the import's ONE clock read — no arriving act is dated after it. The
+        # specs/0008 §6e (T11b, research's M3): the import's ONE clock read — no arriving REPLY's write time is later
+        # than it (a confirmation's `confirmed_at` is in the projection and is never clamped: research's T11b S2-6(a)). The
         # store's clock where it has one (injectable, as the writers' is), so the clamp and the local writes agree
         now = store._now() if hasattr(store, "_now") else datetime.now(timezone.utc)
         for _attempt in range(_IMPORT_RETRIES):
@@ -1866,7 +1871,7 @@ def _act_preflight(store, path, target_uid, acts, edges, existing_edges, *, rest
             label = "imported" if not restore else ("restored" if a["origin"] == "local" else a["origin"])
             written = a["written_at"]
             if written is not None and datetime.fromisoformat(written) > now:
-                written = now_txt                      # M3: no file dates an act after this import
+                written = now_txt                      # M3: no file dates a reply's write after this import
             row = {"table": a["table"], "id": ("c-" if conf else "r-") + uuid4().hex[:12], "user_id": target_uid,
                    "edge_id": a["edge_id"], "confirmed_at": a["confirmed_at"], "actor": a["actor"],
                    "call_path": a["call_path"], "kind": a["kind"], "target": None,
@@ -1930,8 +1935,9 @@ def _act_preflight(store, path, target_uid, acts, edges, existing_edges, *, rest
                 rs = resolves.get(c["act_uid"], [])
                 if o is False and not any(_act_ordered(r, k, restore) is True for r in rs):
                     raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
-                        f"{path}: confirmation {k['act_uid']!r} was made under challenge {c['act_uid']!r}, unresolved in "
-                        f"the merged history — refused whole (specs/0008 §6f, 0047 §4c, INV-R23)"), "act-under-challenge")
+                        f"{path}: confirmation {k['act_uid']!r} was made under challenge {c['act_uid']!r}, which no resolve "
+                        f"ordered before the confirmation closes in the merged history — refused whole (specs/0008 §6f, 0047 "
+                        f"§4c, INV-R23)"), "act-under-challenge")
                 if o is None and not rs:
                     raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
                         f"{path}: confirmation {k['act_uid']!r} cannot be ordered against challenge {c['act_uid']!r}, which "

@@ -1173,10 +1173,12 @@
   recorded grounding (any predicate version), and refuses a different grounding over a fact you hold unless this store
   stamped it `default-import`. `why` shows an act's origin and its original request id. The result gains
   `confirmations`, `replies`, `acts_existing`, `acts_refused_with_edge` and `axis_kept_default_import`; the export's
-  result gains `confirmations` and `replies`.
+  result gains `confirmations`, `replies` and `acts_orphaned` (acts whose fact the store no longer holds: a damaged
+  store; they are exported, and an import of the file is refused).
   - **Who should act:** anyone who imports into an older build: a new export is format 14. Anyone who relied on a
     restore writing grounding as unknown: it now keeps the file's. A custom `Store` backend: `act_rows` and `act_state`
-    refuse by default, so an export or an import that carries acts refuses. (tests/test_0047_t11b_portability.py.)
+    refuse by default, so EVERY export refuses on it (export reads the acts whether or not there are any), and so does
+    an import that carries acts. (tests/test_0047_t11b_portability.py.)
 
 ## 0.26.1 — 2026-09-18
 

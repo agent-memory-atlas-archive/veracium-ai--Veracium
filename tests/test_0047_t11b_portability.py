@@ -907,3 +907,125 @@ def test_d17_the_cli_names_the_acts_it_exported_and_imported(tmp_path, capsys):
     bare = _edit(f, "bare.jsonl", lambda recs: [r for r in recs if r not in _act_lines(recs)])
     assert _ok(cli_main, ["import", str(bare), "--db", str(tmp_path / "c.db")]) == 0
     assert "confirmations" not in capsys.readouterr().out
+
+
+# ======================================== research's T11b stage-2 witnesses (READ-T11b-stage2.md, research 9fca4a7b)
+# Adopted verbatim from proposals/evidence-t11b/stage2/test_research_t11b_witnesses.py (sha256 in its sha256.txt), the
+# `test_w_` prefix renamed: each killed a research mutant that survived dev's cells (RM-A, I, Q, Y, E, H; the mutants are
+# in t11b_mutant_defs.py's research group).
+def _third_party(recs):
+    """The edge and episode lines at third-party trust, so a default import's cap changes nothing but the axis."""
+    return [dict(r, provenance=dict(r["provenance"], author_of_evidence="third_party", derived_from="third_party",
+                                    disclosure="use_only"))
+            if r.get("record") in ("edge", "episode") and "provenance" in r else r for r in recs]
+
+
+def test_s2_research_rm_a_m2_keeps_only_the_axis_a_content_difference_still_refuses(tmp_path):
+    """RM-A. M2 keeps a held `default-import` stamp only where the record is otherwise EQUAL: a restore whose copy of
+    that edge differs in content refuses (0009's differing record), as before T11b."""
+    a, e1, _e2, _c = _history(tmp_path)
+    f = _edit(_export(a, tmp_path, "a.jsonl"), "tp.jsonl",
+              lambda recs: _third_party([r for r in recs if r not in _act_lines(recs)]))
+    d = _mem(tmp_path, "d.db")
+    _ok(d.import_memory, f)
+    changed = _edit(f, "chg.jsonl", lambda recs: [dict(r, object="Lyon") if r.get("id") == e1 else r for r in recs])
+    _refused(d, changed, "already exists with different content", restore=True)
+
+
+def test_s2_research_rm_i_r_m1_needs_both_labels_proof_a_testimony_challenge_stays_incomparable(tmp_path):
+    """RM-I. R-M1 orders an unknown position first only when BOTH acts are proof. A restored legacy confirmation
+    (unknown position) against a same-origin `imported` challenge with a known position, unresolved: refused."""
+    a = _mem(tmp_path, "a.db")
+    e = _fact(a)
+    _ok(a.confirm, U, e, date="2026-10-01")
+    _q(a, "UPDATE confirmations SET act_seq=NULL")
+    a.store._conn.commit()
+    _ok(a.reply, U, e, kind="challenge", text="later, I disagree")
+    f = _edit(_export(a, tmp_path, "a.jsonl"), "t.jsonl",
+              lambda recs: [dict(r, origin="imported") if r.get("kind") == "challenge" else r for r in recs])
+    _refused(_mem(tmp_path, "b.db"), f, "cannot be ordered", restore=True)
+
+
+def test_s2_research_rm_q_a_new_act_at_a_held_acts_position_ties(tmp_path):
+    """RM-Q. Two different acts at one position refuse when one is HELD and the other arrives (not only within a
+    unit): the destination holds the challenge; the file brings a different act at its position."""
+    a = _mem(tmp_path, "a.db")
+    e = _fact(a)
+    _ok(a.reply, U, e, kind="challenge", text="wrong")
+    f = _export(a, tmp_path, "a.jsonl")
+    b = _mem(tmp_path, "b.db")
+    _ok(b.import_memory, f, restore=True)
+    ch = _seq(_lines(f), "challenge")
+    other = dict(ch, act_uid=ch["act_uid"][:2] + ["r-other"], kind="context", text="another act")
+    g = _edit(f, "g.jsonl", lambda recs: [r for r in recs if r.get("record") != "reply"] + [other])
+    _refused(b, g, "one position", restore=True)
+    assert len(_acts(b)) == 1
+
+
+def test_s2_research_rm_y_a_resolve_after_the_confirmation_does_not_clear_it(tmp_path):
+    """RM-Y. A confirmation made AFTER a challenge and BEFORE its resolve was made under an open challenge: refused,
+    though the challenge is resolved later in the same history."""
+    a, _e1, e2, _c = _history(tmp_path)
+    f = _export(a, tmp_path, "a.jsonl")
+    recs = _lines(f)
+    ch, res = _seq(recs, "challenge"), _seq(recs, "resolve")
+    k = _seq(recs, "confirm", e2)
+    lo = ch["act_seq"]
+    g = _edit(f, "g.jsonl", lambda rs: [dict(r, act_seq=lo + 1) if r is not None and r.get("act_uid") == k["act_uid"]
+                                        else dict(r, act_seq=lo + 50) if r.get("act_uid") == res["act_uid"] else r
+                                        for r in rs])
+    _refused(_mem(tmp_path, "b.db"), g, "made under challenge", restore=True)
+
+
+def test_s2_research_rm_e_rule0_reads_replies_too(tmp_path):
+    """RM-E. Rule 0 is per arriving ACT: a default file whose only act claiming this store's origin is a REPLY is
+    refused whole."""
+    a = _mem(tmp_path, "a.db")
+    e = _fact(a)
+    _ok(a.reply, U, e, kind="challenge", text="wrong")
+    d = _mem(tmp_path, "d.db")
+    own = d.store.local_origin()
+    f = _edit(_export(a, tmp_path, "a.jsonl"), "f.jsonl",
+              lambda recs: [dict(r, act_uid=[own] + r["act_uid"][1:]) if r in _act_lines(recs) else r for r in recs])
+    _refused(d, f, "THIS store's origin")
+    assert not d.store.edges(U, active_only=False, include_quarantined=True)
+
+
+def test_s2_research_rm_h_an_act_onto_an_edge_carrying_the_marker_with_no_notice(tmp_path):
+    """RM-H. An arriving act onto an edge whose file copy carries the marker but no notice attests it. Observed: what
+    refuses, and whether the act-level coverage rule is the one that does (if the edge-level rule refuses first, the
+    marker arm of `redacted` is defence in depth)."""
+    a, e1, _e2, _c = _history(tmp_path)
+    f = _edit(_export(a, tmp_path, "a.jsonl"), "m.jsonl",
+              lambda recs: [dict(r, object=R.MARKER) if r.get("id") == e1 else r for r in recs])
+    msg = _refused(_mem(tmp_path, "b.db"), f, ".", restore=True)
+    assert "coverage is all or nothing" in msg, msg
+
+
+def test_s2_an_orphaned_act_is_exported_and_reported_and_its_import_refuses(tmp_path, capsys):
+    """Research's T11b S2-2: an act whose edge this store no longer holds is corruption (no verb writes one). The export
+    still writes it and REPORTS it (`acts_orphaned`; the CLI warns) instead of refusing the whole backup; an import of
+    that file is refused whole (INV-R11). Mutant: count nothing."""
+    from veracium.cli import main as cli_main
+    a, e1, e2, _c = _history(tmp_path)
+    _q(a, "DELETE FROM edges WHERE id=?", (e1,))                 # corruption: the edge gone, its act kept
+    a.store._conn.commit()
+    r = _ok(a.export_memory, U, tmp_path / "o.jsonl")
+    assert r["acts_orphaned"] == 1 and r["confirmations"] == 2
+    a.store.close()
+    assert _ok(cli_main, ["export", str(tmp_path / "o2.jsonl"), "--user", U, "--db", str(tmp_path / "a.db")]) == 0
+    assert "1 confirmation(s) or reply(ies) name a fact this store no longer holds" in capsys.readouterr().out
+    _refused(_mem(tmp_path, "b.db"), tmp_path / "o.jsonl", "neither the file nor this store", restore=True)
+
+
+def test_s2_why_names_an_act_without_an_original_request_id(tmp_path):
+    """Research's T11b S2-6(c): an imported act recorded with NO original request id renders as such in `why`, never as
+    "(correlation None)"."""
+    a, e1, e2, _c = _history(tmp_path)
+    f = _edit(_export(a, tmp_path, "a.jsonl"), "n.jsonl",
+              lambda recs: [dict(r, recorded_correlation_id=None) if r.get("record") == "confirmation" else r
+                            for r in recs])
+    d = _mem(tmp_path, "d.db")
+    _ok(d.import_memory, f)
+    text = W.render(W.gather(d.store, U, e1))
+    assert "no original request id" in text and "correlation None" not in text

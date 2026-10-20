@@ -766,7 +766,8 @@ every confirmation and reply with its origin (`confirmation` / `reply` lines), a
 default import records the acts as `imported` testimony (shown in `why`, never counted toward `confirmed`) and stamps
 every fact `not_attested`; `--restore` of your own export keeps them as recorded, mapping `local` to `restored`. The
 returned dict gains `"confirmations"`, `"replies"` (written), `"acts_existing"` (exact replays),
-`"acts_refused_with_edge"` and `"axis_kept_default_import"`. See [Exporting and importing confirmations and
+`"acts_refused_with_edge"` and `"axis_kept_default_import"`; the export's result gains `"confirmations"`, `"replies"`
+and `"acts_orphaned"`. See [Exporting and importing confirmations and
 replies](#exporting-and-importing-confirmations-and-replies-format-14).
 
 **Trust boundary (specs/0005).** A **default** import caps every record's
@@ -1174,7 +1175,12 @@ different grounding is refused, except where this store stamped it `default-impo
 is listed in `"axis_kept_default_import"`.
 
 **A record refused on its own.** A default import refuses procedure records one by one and admits the rest. An act on
-such a record is refused with it and counted in `"acts_refused_with_edge"`.
+such a record is refused with it and counted in `"acts_refused_with_edge"`; nothing of it is written, and the rules
+above (rule 0's origin check included) do not judge it.
+
+**An act whose fact is gone.** No verb writes one, and a fact leaves the store only with its user's acts, so such an act
+means the store is damaged (`doctor` reports it). An export still writes it, and counts it in `"acts_orphaned"` (the CLI
+prints a warning), rather than refusing the whole backup; importing that file is refused.
 
 ### Undoing one restoration (`undo_restoration`)
 

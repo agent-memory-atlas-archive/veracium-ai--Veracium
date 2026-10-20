@@ -157,6 +157,9 @@ def _portability(args) -> int:
             acts = (f" + {r['confirmations']} confirmations + {r['replies']} replies"
                     if r.get("confirmations") or r.get("replies") else "")
             print(f"exported {r['edges']} edges + {r['episodes']} episodes{acts} -> {r['path']}")
+            if r.get("acts_orphaned"):
+                print(f"{r['acts_orphaned']} confirmation(s) or reply(ies) name a fact this store no longer holds — the "
+                      f"store is damaged (run `veracium doctor`); the file carries them, and an import of it is refused")
         else:
             r = import_memory(store, args.path, user_id=args.user,
                               restore=args.restore)

@@ -977,4 +977,5 @@ note sha16 d54b768f with addendum 1 sha16 7a820236; research's stage-1 read `REA
   compares the grounding axis (a difference refuses, INV-G13), except where the held `attv` is `default-import`, this
   store's own judgement at a default import, which is kept and listed (research's M2).
 - An act on a record a default import refuses PER RECORD (0037 §4e) is refused with it and counted, not treated as an
-  orphan (0047 INV-R11), which would refuse the whole file.
+  orphan (0047 INV-R11), which would refuse the whole file. Rule 0 does not judge an act refused with its record: the
+  drop runs first, and nothing of the act is written (research's T11b stage-2 A2).
