@@ -300,8 +300,10 @@ edges-text	src/veracium/store/migration.py	str:edges	STEP_ARITY_EDGES = "v16-ari
 edges-text	src/veracium/store/migration.py	str:edges	([f"{block}: the edges table changed"] if post_e != edges_pin else [])
 edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	edges_pin = _rows(conn, "SELECT * FROM edges ORDER BY id")
 edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	post_e = _rows(conn, "SELECT * FROM edges ORDER BY id")
-edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	for eid, uid, blob in _rows(conn, f"SELECT id, user_id, json FROM edges WHERE relation IN ({marks}) "
-edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	_rows(conn, f"SELECT id, user_id, relation, active, json FROM edges WHERE relation IN ({marks})",
+edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	for eid, uid, blob in _rows(conn, f"SELECT id, user_id, json FROM edges WHERE {named} ORDER BY id",
+edges-sql-not-a-json-write	src/veracium/store/migration.py	str:edges	_rows(conn, f"SELECT id, user_id, relation, active, json FROM edges WHERE {named}", named_args),
+edges-sql-not-a-json-write	src/veracium/store/data_migration.py	str:edges	"SELECT COUNT(*) FROM arity_inventory i LEFT JOIN edges e ON e.id = i.edge_id "
+edges-sql-not-a-json-write	src/veracium/doctor.py	str:edges	q = ("SELECT i.edge_id FROM arity_inventory i LEFT JOIN edges e ON e.id = i.edge_id "
 sql-write-other-table	src/veracium/store/migration.py	str:sql-write	conn.execute("INSERT INTO arity_inventory(edge_id, user_id, pre_invalidated_at, pre_reason) "
 sql-write-other-table	src/veracium/store/migration.py	str:sql-write	conn.execute("INSERT INTO refusal_inventory(refusal_id, user_id) "
 sql-write-other-table	src/veracium/store/schema_version.py	str:sql-write	conn.execute("INSERT OR IGNORE INTO arity_era(id, effective_at) VALUES(1, ?)", (effective_at,))

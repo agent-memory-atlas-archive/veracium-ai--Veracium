@@ -343,7 +343,8 @@ def _pre_arity_file(tmp_path, *, name="pre.jsonl", rel="measures"):
 
 
 def test_d3_an_undecided_sources_candidate_is_refused_into_an_uninitialized_store(tmp_path):
-    """Q9 narrowed: refused, naming the plan-only mode; nothing written. Mutant: convert silently with no plan."""
+    """Q9 narrowed (INV-A21's third clause): refused, naming the plan-only mode; nothing written. Mutant: convert
+    silently with no plan."""
     f = _pre_arity_file(tmp_path)
     dst = _store(tmp_path, "d.db")
     _refuses(dst, f, match=r"plan_only=True")
@@ -539,7 +540,7 @@ def _pf_ok(*a, **k):
 
 
 def test_inv_a23_an_ended_held_row_and_a_live_arrival_is_older_evidence_a_no_op():
-    """§4l: held `ended`, arriving differing ONLY by being live → a no-op, the held stage kept (no row written). A real
+    """§4l (INV-A23: an ended local episode is never revived): held `ended`, arriving differing ONLY by being live → a no-op, the held stage kept (no row written). A real
     file rarely reaches it (0009 refuses the differing edge first), so it is driven on the preflight directly. Mutant:
     let the arriving live copy count as a new history (refuse) or revive the row."""
     rows, existing, *_ = _pf_ok(_Held([_held_row(applicable=0)]), [_O])

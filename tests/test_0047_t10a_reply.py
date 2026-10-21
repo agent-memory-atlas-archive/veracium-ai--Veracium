@@ -688,7 +688,7 @@ def test_rr5_after_redaction_no_digest_survives_and_every_retry_is_terminal(tmp_
 
 # ============================================================================================ IO-II-3
 def test_io_ii_3_a_reply_under_a_pending_notice_is_admitted_and_its_confirmation_treats_it(tmp_path):
-    """IO-II-3's reply carriers with 0041 INV-RR11: a PENDING notice (a default import over a held fact, T4's real
+    """IO-II-3's reply carriers with 0041 INV-RR11 (and 0008's INV-I5, its fourth mutant, and INV-I7's confirm_notice clause): a PENDING notice (a default import over a held fact, T4's real
     path) is no redaction of what this store holds, so the subject's reply to the fact is admitted; the user's
     `confirm_notice` then applies this store's TOTAL treatment, and the reply's text and digest are treated although
     the notice's own fields predate replies. Mutant: confirm with the notice's fields only (a held reply survives)."""

@@ -307,7 +307,7 @@ def test_inv_g10_a_completed_confirmation_replays_and_a_confirmed_edge_reconfirm
 
 
 def test_f2_an_imported_confirmation_is_testimony_and_does_not_lift_the_guard(tmp_path):
-    """Research's T9 F2: an edge whose only confirmation is IMPORTED (testimony, 0047 §4f) is still `not_attested`,
+    """Research's T9 F2 (0047 INV-R21: only `local` and `restored` confirmations count): an edge whose only confirmation is IMPORTED (testimony, 0047 §4f) is still `not_attested`,
     so the guard refuses. Mutant: `imported` counted as confirming."""
     mem = _mem(tmp_path, [])
     _episode(mem, "ep-1")

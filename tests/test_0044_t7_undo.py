@@ -126,7 +126,7 @@ def _refs(p, user=None):
 
 # ============================================================================================ the restore itself
 def test_undo_restores_the_retirement_per_field_and_nothing_else(tmp_path):
-    """§4i.3: `invalidated_at := pre_invalidated_at`, `invalidation_reason := pre_reason`, the row inactive; every
+    """§4i.3 (INV-A13's per-field restore): `invalidated_at := pre_invalidated_at`, `invalidation_reason := pre_reason`, the row inactive; every
     other field as it was — including what a confirmation changed after the restoration (ordinary mutations keep
     the episode, INV-A12). One `invalidated`/`superseded` event; the outcome row records the undo; the registry row
     is `undo`, its result the outcome; no act position is taken (D4)."""
@@ -388,6 +388,7 @@ def test_a_rerun_after_undo_restores_nothing(tmp_path):
 
 # ============================================================================================ one id space (Q1, R15)
 def test_one_id_space_with_confirm_in_both_directions(tmp_path):
+    """0008am INV-Q1: one id space across confirm and undo, in both directions."""
     p = _restored(tmp_path)
     m = _mem(p)
     _ok(m.confirm, U, N, correlation_id="held-by-confirm")

@@ -181,6 +181,7 @@ def test_r20_as_of_withholds_a_fact_challenged_now_whatever_T(tmp_path):
 
 # ================================================================================ INV-R18: the wiki
 def test_r18_the_compiler_input_never_holds_a_challenged_fact(tmp_path):
+    """INV-R18, and INV-R3 at the wiki compiler's input (an assertion surface): a challenged fact never reaches it."""
     llm = _Cap()
     mem = _mem(tmp_path, wiki=1, llm=llm)
     _plant(mem, _edge("e-a", "CFO at Acme"), _edge("e-b", "Porto", relation="lives_in"))
@@ -401,11 +402,18 @@ def test_q6_a_long_challenge_on_a_flagged_fact_keeps_the_marker_the_count_and_th
     assert "[possible extraction error]" in line and "1 open; latest: " in line and budgets.ELISION_MARKER in line
 
 
+@pytest.mark.parametrize("grounding", ["attested", "not_attested", "legacy"])
 @pytest.mark.parametrize("ungrounded", [False, True])
-def test_g8_the_marker_follows_the_flag_unchallenged_and_a_challenged_flagged_fact_is_withheld(tmp_path, ungrounded):
+def test_g8_the_marker_follows_the_flag_unchallenged_and_a_challenged_flagged_fact_is_withheld(tmp_path, ungrounded,
+                                                                                               grounding):
+    """INV-G8: 0019's marker follows the FLAG on every grounding value — `attested`, `not_attested` and a legacy row
+    with no axis (T12 widened the cell from `attested` alone: the row says "every grounding value, legacy included");
+    a challenged flagged fact is withheld either way. Mutant: suppress the marker on `attested` or `unknown`."""
     mem = _mem(tmp_path)
-    _plant(mem, _edge("e-a", "CFO at Acme", att="attested", attv="ATTEST-3@b1329a81", src="ep-1",
-                      ungrounded=ungrounded), _edge("e-b", "chef", relation="likes", ungrounded=ungrounded))
+    att = {"attested": dict(att="attested", attv="ATTEST-3@b1329a81", src="ep-1"),
+           "not_attested": dict(att="not_attested", attv="ATTEST-3@b1329a81", src="ep-1"), "legacy": {}}[grounding]
+    _plant(mem, _edge("e-a", "CFO at Acme", ungrounded=ungrounded, **att),
+           _edge("e-b", "chef", relation="likes", ungrounded=ungrounded))
     _challenge(mem, "e-b")
     r = _ok(mem.recall, U, "CFO Acme chef likes")
     assert ("[possible extraction error]" in r.context) == ungrounded

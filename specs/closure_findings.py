@@ -1255,10 +1255,13 @@ CLOSURES = [
      "§3 matrix",
      # specs/0044 (T5): `prefers` is now `multi`, so the flag this command grepped for is gone. The finding was a
      # DISAGREEMENT between the §3 matrix and the code, so the command checks the agreement: 0025's annotation names
-     # 0044's flip AND the shipped declaration is `multi` — it fails if either side drifts (research's R6)
+     # 0044's flip AND the shipped declaration is `multi` — it fails if either side drifts (research's R6). The text is
+     # read ABOVE the closure ledger only: this row carries the command's own literals, so a search of the whole file
+     # matched itself and could never fail (research's T5 stage-2 N2, measured open at T12's stage-1 read)
      "PYTHONPATH=src $PY -c \"import pathlib, sys; from veracium.schema import DEFAULT_RELATIONS as D; "
      "from veracium.registry import declared_arity; "
-     "t = pathlib.Path('specs/0025-relation-vocabulary-enforcement.md').read_text(); "
+     "t = pathlib.Path('specs/0025-relation-vocabulary-enforcement.md').read_text().split('**Per-finding closure "
+     "ledger')[0]; "
      "sys.exit(0 if declared_arity(D['prefers']) == 'multi' and 'from 0044' in t and 'arity=\\\"multi\\\"' in t "
      "else 1)\"  # the matrix row, its 0044 annotation and the shipped declaration agree"),
     ("0025", "external", 1, "F5",

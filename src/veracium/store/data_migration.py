@@ -57,6 +57,7 @@ _SITE_REGISTRY_CHANGED = declare_site("store.data-migration.registry-changed")  
 _SITE_WITHHELD_REVOKED = declare_site("store.data-migration.withheld-revoked")      # 0044 §4f.2, INV-A11
 _SITE_REDACTED_NOT_CONSIDERED = declare_site("store.data-migration.redacted-not-considered",
                                              declines=True)                         # 0044 §4f.1, INV-A7
+_SITE_INVENTORY_INTEGRITY = declare_site("store.data-migration.inventory-integrity")  # 0018 §4i D1, T6 S2 F5
 _SITE_READ_REFUSED = declare_site("store.data-migration.read-refused")              # 0018 §4i §4c/§4d
 # T7 (0044 §4i, undo; research's T7 stage-1 classification f8ec28ed — each refuses the undo the caller asked for)
 _SITE_UNDO_AMBIGUOUS = declare_site("store.undo.ambiguous-outcome")                 # 0044 §4i annotation (T7)
@@ -396,6 +397,18 @@ def _migrate_user(store, user, plan_id, admission, relations) -> bool:
             return False                            # a concurrent call (or an earlier invocation) committed it
         if not conn.execute("SELECT 1 FROM arity_inventory WHERE user_id=? LIMIT 1", (user,)).fetchone():
             return False                            # erased since the universe read (F3): no run row after erasure
+        # research's T6 S2 F5: an inventory row naming no edge of ITS user (the edge gone, or another user's) is a
+        # damaged store; `_considered`'s join would drop it silently and the user would read `migrated` with the row
+        # still inventoried. Refused inside the user's transaction, BEFORE any write: the user is a named `failed`
+        # (0018 §4i D1's carrier, its class-only diagnostic), and a re-call retries it once the store is repaired
+        bad = conn.execute(
+            "SELECT COUNT(*) FROM arity_inventory i LEFT JOIN edges e ON e.id = i.edge_id "
+            "WHERE i.user_id=? AND (e.id IS NULL OR e.user_id != i.user_id)", (user,)).fetchone()[0]
+        with _SITE_INVENTORY_INTEGRITY.consult():
+            if bad:
+                raise _SITE_INVENTORY_INTEGRITY.fire(ValueError(
+                    f"{bad} arity_inventory row(s) of this user name no edge of the same user — the store is damaged "
+                    f"(specs/0044 §4f; run `veracium doctor`)"))
         _admit(store, admission, write=True)
         _restore_user(store, user, plan_id, relations, admission[0])
         conn.execute("INSERT INTO migration_run(plan_id, user_id, op_id, committed_at) VALUES(?,?,?,?)",

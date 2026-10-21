@@ -619,6 +619,16 @@ def _check_data_migration(rep: Report, conn, user: Optional[str], edges: dict) -
                             none → nothing."""
     rep.checks_run.append("data-migration")
     from .store.lifetime import RECLASSIFIED_RELATIONS, retirement, same_retirement
+    # research's T6 S2 F5, in every phase: an inventory row naming no edge of its own user is damage, and the
+    # operation fails that user until it is repaired
+    q = ("SELECT i.edge_id FROM arity_inventory i LEFT JOIN edges e ON e.id = i.edge_id "
+         "WHERE (e.id IS NULL OR e.user_id != i.user_id)")
+    damaged = [r[0] for r in conn.execute(q + (" AND i.user_id=?" if user else "") + " ORDER BY i.edge_id",
+                                          (user,) if user else ())]
+    if damaged:
+        rep.add("data-migration", "warn",
+                f"{len(damaged)} arity_inventory row(s) name no edge of their own user — the store is damaged, and "
+                f"run_data_migration fails that user until it is repaired", damaged)
     header = conn.execute("SELECT plan_id FROM plan_header WHERE id=1").fetchone()
     if header is not None:
         plan_id = header[0]

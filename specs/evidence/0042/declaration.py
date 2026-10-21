@@ -136,6 +136,7 @@ DECLARATION = (
     ("store.consolidation.write-not-current", "0010", "X23", "store/sqlite.py:SqliteStore.write_consolidation_output_if_current", "refuse"),
     ("store.contribution", "0014", "§4b", "store/sqlite.py:SqliteStore._write_contribution", "refuse"),
     ("store.correction.authorisation", "0011", "§4b", "store/sqlite.py:SqliteStore.apply_supersession_plan", "refuse"),
+    ("store.data-migration.inventory-integrity", "0044", "§4f / 0018 §4i D1", "store/data_migration.py:_migrate_user", "refuse"),
     ("store.data-migration.op-id-conflict", "0018", "§4i I32", "store/data_migration.py:_admit", "refuse"),
     ("store.data-migration.read-refused", "0018", "§4i §4d", "store/data_migration.py:_read_only", "refuse"),
     ("store.data-migration.redacted-not-considered", "0044", "§4f.1 INV-A7", "store/data_migration.py:_redacted", "withhold"),

@@ -188,7 +188,7 @@ def test_each_step_mutant_refuses_at_its_step_and_nothing_lands(tmp_path, monkey
 
 
 def test_a_backfilled_redacted_confirmation_is_terminal_not_a_replay(tmp_path, monkeypatch):
-    """§6g / INV-Q7: a confirmation 0041 already redacted (its digest IS the marker) backfills the marker, so a retry
+    """§6g / INV-Q7 / 0041's INV-RR7: a confirmation 0041 already redacted (its digest IS the marker) backfills the marker, so a retry
     under its id is `request_redacted` — never the original. Mutant: backfill a fresh digest."""
     p = str(tmp_path / "r.db")
     _legacy_store(p, 15, confirmations=(("c-1", "e1", "k1", _redaction.MARKER),))
@@ -305,7 +305,7 @@ def test_a_retry_after_redaction_is_terminal_whatever_its_payload(tmp_path, inde
 
 
 def test_erasure_frees_the_ids_but_never_resets_the_counter(tmp_path):
-    """§6g / INV-Q6, Q9: `forget_user` erases the registry rows, so a retry after erasure is a NEW request; the
+    """§6g / INV-Q6, INV-Q9: `forget_user` erases the registry rows, so a retry after erasure is a NEW request; the
     counter is NOT erased, so a recreated user's act never reuses a position. Mutants: erase the counter; keep the
     registry rows."""
     p = str(tmp_path / "e.db")

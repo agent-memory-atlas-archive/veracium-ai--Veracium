@@ -159,7 +159,7 @@ class RecalledEdge:
     route: str          # "lexical" | "semantic" | "both"
 
 
-IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
+IDENTIFIER_RE = re.compile(r"[A-Za-z0-9._:-]{1,64}")    # matched WHOLE (fullmatch): `$` admits a trailing newline
 MAX_POLICY_TAGS = 64
 
 
@@ -168,7 +168,7 @@ def _require_identifier(field: str, value) -> None:
     IDENTIFIER — letters, digits and `._:-`, 1–64 characters, no whitespace —
     refused otherwise (a `bool` is not a string). The shape bounds what the
     receipt row can carry; it does not make the string content-free."""
-    if not isinstance(value, str) or isinstance(value, bool) or not IDENTIFIER_RE.match(value):
+    if not isinstance(value, str) or isinstance(value, bool) or not IDENTIFIER_RE.fullmatch(value):
         raise ValueError(
             f"{field} must be an identifier (letters, digits and ._:- only, 1-64 "
             f"characters, no whitespace); got {value!r:.80}")

@@ -375,7 +375,7 @@ def test_an_upsert_reinstatement_ends_membership_and_an_identical_re_retirement_
 
 
 def test_a_re_retired_member_stays_a_member_but_its_retirement_no_longer_matches(tmp_path):
-    """§4f's equality test: a re-retirement (a different date) is not a reinstatement, so membership stays — but the
+    """§4f's equality test (I30's pre-plan doctor phase): a re-retirement (a different date) is not a reinstatement, so membership stays — but the
     current retirement no longer equals the inventoried one, so doctor's pre-plan phase does not count it. Mutant:
     match by id only."""
     p = _migrated(tmp_path, edges=_population())
@@ -629,7 +629,7 @@ def test_doctor_warns_before_any_plan_and_names_the_operation_by_relation_name(t
 # ---- §4g-ii: erasure ----------------------------------------------------------------------------------------------
 
 def test_forget_user_erases_the_users_inventory_outcome_and_run_rows_and_no_one_elses(tmp_path):
-    """0008 §6g's one erasure rule. Mutant: omit a table from `_ERASE_TABLES`."""
+    """0008 §6g's one erasure rule (0044 INV-A20). Mutant: omit a table from `_ERASE_TABLES`."""
     p = _migrated(tmp_path, edges=_population(), refusals=[
         ("r-u", U, "m-live", "m-2050", "measures", "2026-01-01T00:00:00+00:00"),
         ("r-v", V, "m-other", "m-other", "measures", "2026-01-01T00:00:00+00:00")])

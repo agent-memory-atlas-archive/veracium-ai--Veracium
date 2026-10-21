@@ -545,3 +545,9 @@ ATTEST-3 measured 1/67 false attestations on its fresh holdout, and the owner ru
 beside §4d's display order (L225), are recorded with the owner's two rulings on act portability (R-D6, the remap
 namespace; R-M1, legacy order in a trusted restore; Quentin, 2026-10-20) in specs/0008's T11b annotation, which quotes
 each. Disclosed to the R-II package's reviewer.*
+
+### Addendum — T12, the census at the closing gate (2026-10-20; the rows above are kept as written)
+
+*§4d's count is dated ("At 2026-10-11 it lists 65 functions", L238) and stays as written. At T12 the carrier inventory
+(`specs/evidence/0047/carrier_inventory.py`) censuses 69 functions, 0 unclassified, 0 stale, 0 awaiting a ruling. The R-II
+package records the census re-run at its pin, and quotes §8's statement of what the three keys do not see.*

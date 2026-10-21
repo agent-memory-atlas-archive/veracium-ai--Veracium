@@ -1518,7 +1518,7 @@ SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
 
 # specs/0018 §4i / 0044 §4f (T6-1): run_data_migration's five sites. Each SETUP (a file-backed v16 store, a plan
 # written, an inventoried retirement) runs outside the window; each RUN reaches its site's condition exactly once.
-def _dm_store(*, revoked=False, marked=False):
+def _dm_store(*, revoked=False, marked=False, mismatched=False):
     import tempfile as _tf, os as _os, json as _j
     from veracium.store import data_migration as _DM, revocation as _rv
     from veracium.store.release_migration import MigrationAttestation as _Att
@@ -1533,7 +1533,9 @@ def _dm_store(*, revoked=False, marked=False):
         s._conn.execute("UPDATE edges SET json=? WHERE id='dm-p'",
                         (_j.dumps({**_j.loads(old.model_dump_json()), "object": _MARKER}),))
     d = _j.loads(s._conn.execute("SELECT json FROM edges WHERE id='dm-p'").fetchone()[0])
-    s._conn.execute("INSERT INTO arity_inventory VALUES('dm-p', ?, ?, 'superseded')", (U, d["invalidated_at"]))
+    # T12 (research's T6 S2 F5): `mismatched` plants the inventory row under ANOTHER user than its edge's
+    s._conn.execute("INSERT INTO arity_inventory VALUES('dm-p', ?, ?, 'superseded')",
+                    ("dm-other" if mismatched else U, d["invalidated_at"]))
     s._conn.commit()
     if revoked:
         _rv.revoke_source(s, U, _digest_of(None, "feed-1", s.local_origin()), "revoke", "policy", "2026-10-16T00:00:00Z")
@@ -1572,6 +1574,9 @@ DECLINES.update({
     "store.data-migration.redacted-not-considered": TwoPhase(lambda mp: _dm_store(marked=True),
                                                              lambda run: _dm_assert(run, "migrated", op_id="dm-run")),
     "store.data-migration.read-refused": lambda mp: _dm_read_refused(),
+    # T12 (research's T6 S2 F5): an inventory row naming another user's edge fails that user (0018 §4i D1's carrier)
+    "store.data-migration.inventory-integrity": TwoPhase(lambda mp: _dm_store(mismatched=True),
+                                                         lambda run: _dm_assert(run, "failed", op_id="dm-run")),
 })
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
 

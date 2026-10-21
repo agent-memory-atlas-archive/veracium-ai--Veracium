@@ -1,0 +1,1088 @@
+{
+ "callers": {
+  "ast": {
+   "_invalidate_edge_row": [
+    "store/data_migration.py:undo_restoration",
+    "store/revocation.py:_apply_statement_effect",
+    "store/sqlite.py:SqliteStore.apply_supersession_plan",
+    "store/sqlite.py:SqliteStore.invalidate_edge"
+   ],
+   "_recompute_edge_row": [
+    "store/revocation.py:_apply_statement_effect"
+   ],
+   "_redact_in_txn": [
+    "store/sqlite.py:SqliteStore.commit_outcome_import_plan",
+    "store/sqlite.py:SqliteStore.confirm_notice",
+    "store/sqlite.py:SqliteStore.redact"
+   ],
+   "_reinstate_edge_row": [
+    "store/data_migration.py:convert_rows",
+    "store/revocation.py:_apply_statement_effect"
+   ],
+   "_upsert_edge_row": [
+    "store/sqlite.py:SqliteStore.add_edge",
+    "store/sqlite.py:SqliteStore.apply_supersession_plan"
+   ],
+   "commit_outcome_import_plan": [
+    "portability.py:_preflight_and_commit"
+   ],
+   "confirm_edge": [
+    "__init__.py:Memory.confirm"
+   ],
+   "forget_user": [
+    "__init__.py:Memory.forget",
+    "cli.py:_forget"
+   ]
+  },
+  "run": {
+   "_invalidate_edge_row": [
+    "store/data_migration.py:undo_restoration",
+    "store/revocation.py:_apply_statement_effect",
+    "store/sqlite.py:SqliteStore.invalidate_edge"
+   ],
+   "_recompute_edge_row": [],
+   "_redact_in_txn": [
+    "store/sqlite.py:SqliteStore.redact"
+   ],
+   "_reinstate_edge_row": [
+    "store/data_migration.py:convert_rows",
+    "store/revocation.py:_apply_statement_effect"
+   ],
+   "_upsert_edge_row": [
+    "store/sqlite.py:SqliteStore.add_edge"
+   ],
+   "commit_outcome_import_plan": [
+    "portability.py:_preflight_and_commit"
+   ],
+   "confirm_edge": [
+    "__init__.py:Memory.confirm"
+   ],
+   "forget_user": []
+  }
+ },
+ "cells": {
+  "_invalidate_edge_row|erasure": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on an active edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on a retired edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "undo_restoration of the restored value"
+    }
+   ],
+   "reason": "a choke-point writer; erasure is `forget_user`'s disposition alone",
+   "state": "not-observed"
+  },
+  "_invalidate_edge_row|insert": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on an active edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on a retired edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "undo_restoration of the restored value"
+    }
+   ],
+   "reason": "the invalidate method writes an existing row only",
+   "state": "not-observed"
+  },
+  "_invalidate_edge_row|none": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on an active edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on a retired edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "undo_restoration of the restored value"
+    }
+   ],
+   "reason": "the method is called on an active row; a retired row refuses before the write",
+   "state": "not-observed"
+  },
+  "_invalidate_edge_row|re-retirement": {
+   "inputs": [
+    "invalidate_edge on a retired edge"
+   ],
+   "state": "observed"
+  },
+  "_invalidate_edge_row|redaction": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on an active edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on a retired edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "undo_restoration of the restored value"
+    }
+   ],
+   "reason": "the invalidate method writes no marker",
+   "state": "not-observed"
+  },
+  "_invalidate_edge_row|reinstatement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on an active edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "invalidate_edge on a retired edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "undo_restoration of the restored value"
+    }
+   ],
+   "reason": "the invalidate method only sets `invalidated_at`",
+   "state": "not-observed"
+  },
+  "_invalidate_edge_row|retirement": {
+   "inputs": [
+    "invalidate_edge on an active edge",
+    "revoke the source, then lift it",
+    "undo_restoration of the restored value"
+   ],
+   "state": "observed"
+  },
+  "_recompute_edge_row|erasure": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "recompute (driven directly)"
+    }
+   ],
+   "reason": "a choke-point writer; erasure is `forget_user`'s disposition alone",
+   "state": "not-observed"
+  },
+  "_recompute_edge_row|insert": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "recompute (driven directly)"
+    }
+   ],
+   "reason": "recompute rewrites valid_from/observed_at/confidence of an existing row",
+   "state": "not-observed"
+  },
+  "_recompute_edge_row|none": {
+   "inputs": [
+    "recompute (driven directly)"
+   ],
+   "state": "observed"
+  },
+  "_recompute_edge_row|re-retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "recompute (driven directly)"
+    }
+   ],
+   "reason": "recompute never touches `invalidated_at` (0044 L325\u2013L328)",
+   "state": "not-observed"
+  },
+  "_recompute_edge_row|redaction": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "recompute (driven directly)"
+    }
+   ],
+   "reason": "recompute writes no marker",
+   "state": "not-observed"
+  },
+  "_recompute_edge_row|reinstatement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "recompute (driven directly)"
+    }
+   ],
+   "reason": "recompute never touches `invalidated_at` (0044 L325\u2013L328)",
+   "state": "not-observed"
+  },
+  "_recompute_edge_row|retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "recompute (driven directly)"
+    }
+   ],
+   "reason": "recompute never touches `invalidated_at` (0044 L325\u2013L328)",
+   "state": "not-observed"
+  },
+  "_redact_in_txn|erasure": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "redact an edge"
+    }
+   ],
+   "reason": "a choke-point writer; erasure is `forget_user`'s disposition alone",
+   "state": "not-observed"
+  },
+  "_redact_in_txn|insert": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "redact an edge"
+    }
+   ],
+   "reason": "a redaction treats an existing record only",
+   "state": "not-observed"
+  },
+  "_redact_in_txn|none": {
+   "inputs": [
+    "import (default) of a record this store lacks, arriving redacted with its notice"
+   ],
+   "state": "observed"
+  },
+  "_redact_in_txn|re-retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "redact an edge"
+    }
+   ],
+   "reason": "a redaction never changes `invalidated_at`",
+   "state": "not-observed"
+  },
+  "_redact_in_txn|redaction": {
+   "inputs": [
+    "redact an edge",
+    "restore of the store's own redacted export over its held copy"
+   ],
+   "state": "observed"
+  },
+  "_redact_in_txn|reinstatement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "redact an edge"
+    }
+   ],
+   "reason": "a redaction never clears `invalidated_at`",
+   "state": "not-observed"
+  },
+  "_redact_in_txn|retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "redact an edge"
+    }
+   ],
+   "reason": "a redaction never sets `invalidated_at` on its own",
+   "state": "not-observed"
+  },
+  "_reinstate_edge_row|erasure": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "the data migration's restoration (the base's own build: U's and V's retired values)"
+    },
+    {
+     "ending": "accepted",
+     "input": "revoke the source, then lift it"
+    }
+   ],
+   "reason": "a choke-point writer; erasure is `forget_user`'s disposition alone",
+   "state": "not-observed"
+  },
+  "_reinstate_edge_row|insert": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "the data migration's restoration (the base's own build: U's and V's retired values)"
+    },
+    {
+     "ending": "accepted",
+     "input": "revoke the source, then lift it"
+    }
+   ],
+   "reason": "the reinstate method writes an existing row only",
+   "state": "not-observed"
+  },
+  "_reinstate_edge_row|none": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "the data migration's restoration (the base's own build: U's and V's retired values)"
+    },
+    {
+     "ending": "accepted",
+     "input": "revoke the source, then lift it"
+    }
+   ],
+   "reason": "the method is called on a retired row (its callers select retired rows)",
+   "state": "not-observed"
+  },
+  "_reinstate_edge_row|re-retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "the data migration's restoration (the base's own build: U's and V's retired values)"
+    },
+    {
+     "ending": "accepted",
+     "input": "revoke the source, then lift it"
+    }
+   ],
+   "reason": "the reinstate method only clears `invalidated_at`",
+   "state": "not-observed"
+  },
+  "_reinstate_edge_row|redaction": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "the data migration's restoration (the base's own build: U's and V's retired values)"
+    },
+    {
+     "ending": "accepted",
+     "input": "revoke the source, then lift it"
+    }
+   ],
+   "reason": "the reinstate method writes no marker",
+   "state": "not-observed"
+  },
+  "_reinstate_edge_row|reinstatement": {
+   "inputs": [
+    "revoke the source, then lift it",
+    "the data migration's restoration (the base's own build: U's and V's retired values)"
+   ],
+   "state": "observed"
+  },
+  "_reinstate_edge_row|retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "the data migration's restoration (the base's own build: U's and V's retired values)"
+    },
+    {
+     "ending": "accepted",
+     "input": "revoke the source, then lift it"
+    }
+   ],
+   "reason": "the reinstate method only clears `invalidated_at`",
+   "state": "not-observed"
+  },
+  "_upsert_edge_row|erasure": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "add_edge: a new active edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: a new edge arriving retired"
+    },
+    {
+     "ending": "refused: ValueError at store/sqlite.py:_upsert_edge_row",
+     "input": "add_edge: a new edge arriving with the marker"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, retired -> active"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, active -> retired"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, a different retirement"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, the identical retirement"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, an ordinary mutation"
+    },
+    {
+     "ending": "refused: ValueError at store/sqlite.py:_upsert_edge_row",
+     "input": "add_edge: same id, the object replaced by the marker"
+    }
+   ],
+   "reason": "a choke-point writer; erasure is `forget_user`'s disposition alone",
+   "state": "not-observed"
+  },
+  "_upsert_edge_row|insert": {
+   "inputs": [
+    "add_edge: a new active edge",
+    "add_edge: a new edge arriving retired"
+   ],
+   "state": "observed"
+  },
+  "_upsert_edge_row|none": {
+   "inputs": [
+    "add_edge: same id, an ordinary mutation",
+    "add_edge: same id, the identical retirement"
+   ],
+   "state": "observed"
+  },
+  "_upsert_edge_row|re-retirement": {
+   "inputs": [
+    "add_edge: same id, a different retirement"
+   ],
+   "state": "observed"
+  },
+  "_upsert_edge_row|redaction": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "add_edge: a new active edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: a new edge arriving retired"
+    },
+    {
+     "ending": "refused: ValueError at store/sqlite.py:_upsert_edge_row",
+     "input": "add_edge: a new edge arriving with the marker"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, retired -> active"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, active -> retired"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, a different retirement"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, the identical retirement"
+    },
+    {
+     "ending": "accepted",
+     "input": "add_edge: same id, an ordinary mutation"
+    },
+    {
+     "ending": "refused: ValueError at store/sqlite.py:_upsert_edge_row",
+     "input": "add_edge: same id, the object replaced by the marker"
+    }
+   ],
+   "reason": "a local writer refuses the marker (0041 INV-11's mirror): redaction goes through `redact`",
+   "state": "not-observed"
+  },
+  "_upsert_edge_row|reinstatement": {
+   "inputs": [
+    "add_edge: same id, retired -> active"
+   ],
+   "state": "observed"
+  },
+  "_upsert_edge_row|retirement": {
+   "inputs": [
+    "add_edge: same id, active -> retired"
+   ],
+   "state": "observed"
+  },
+  "commit_outcome_import_plan|erasure": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "import (default) of another store's edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "restore of the store's own redacted export over its held copy"
+    },
+    {
+     "ending": "accepted",
+     "input": "import (default) of a record this store lacks, arriving redacted with its notice"
+    }
+   ],
+   "reason": "a choke-point writer; erasure is `forget_user`'s disposition alone",
+   "state": "not-observed"
+  },
+  "commit_outcome_import_plan|insert": {
+   "inputs": [
+    "import (default) of a record this store lacks, arriving redacted with its notice",
+    "import (default) of another store's edge"
+   ],
+   "state": "observed"
+  },
+  "commit_outcome_import_plan|none": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "import (default) of another store's edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "restore of the store's own redacted export over its held copy"
+    },
+    {
+     "ending": "accepted",
+     "input": "import (default) of a record this store lacks, arriving redacted with its notice"
+    }
+   ],
+   "reason": "an import's own write is an insert; a held equal record is skipped, never rewritten",
+   "state": "not-observed"
+  },
+  "commit_outcome_import_plan|re-retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "import (default) of another store's edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "restore of the store's own redacted export over its held copy"
+    },
+    {
+     "ending": "accepted",
+     "input": "import (default) of a record this store lacks, arriving redacted with its notice"
+    }
+   ],
+   "reason": "an import inserts new ids; a held id is skipped or refused (0009 \u00a74c), never rewritten",
+   "state": "not-observed"
+  },
+  "commit_outcome_import_plan|redaction": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "import (default) of another store's edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "restore of the store's own redacted export over its held copy"
+    },
+    {
+     "ending": "accepted",
+     "input": "import (default) of a record this store lacks, arriving redacted with its notice"
+    }
+   ],
+   "reason": "an imported redaction runs through `_redact_in_txn` (the chain's inner key), never the import's own write",
+   "state": "not-observed"
+  },
+  "commit_outcome_import_plan|reinstatement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "import (default) of another store's edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "restore of the store's own redacted export over its held copy"
+    },
+    {
+     "ending": "accepted",
+     "input": "import (default) of a record this store lacks, arriving redacted with its notice"
+    }
+   ],
+   "reason": "an import inserts new ids; a held id is skipped or refused (0009 \u00a74c), never rewritten",
+   "state": "not-observed"
+  },
+  "commit_outcome_import_plan|retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "import (default) of another store's edge"
+    },
+    {
+     "ending": "accepted",
+     "input": "restore of the store's own redacted export over its held copy"
+    },
+    {
+     "ending": "accepted",
+     "input": "import (default) of a record this store lacks, arriving redacted with its notice"
+    }
+   ],
+   "reason": "an import inserts new ids; a held id is skipped or refused (0009 \u00a74c), never rewritten",
+   "state": "not-observed"
+  },
+  "confirm_edge|erasure": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "confirm (Memory.confirm) on an active edge"
+    }
+   ],
+   "reason": "a choke-point writer; erasure is `forget_user`'s disposition alone",
+   "state": "not-observed"
+  },
+  "confirm_edge|insert": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "confirm (Memory.confirm) on an active edge"
+    }
+   ],
+   "reason": "confirm rewrites an existing row: an absent edge refuses (`store.confirm.unknown-edge`)",
+   "state": "not-observed"
+  },
+  "confirm_edge|none": {
+   "inputs": [
+    "confirm (Memory.confirm) on an active edge"
+   ],
+   "state": "observed"
+  },
+  "confirm_edge|re-retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "confirm (Memory.confirm) on an active edge"
+    }
+   ],
+   "reason": "confirm writes the confirmation flag only; it never changes `invalidated_at`",
+   "state": "not-observed"
+  },
+  "confirm_edge|redaction": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "confirm (Memory.confirm) on an active edge"
+    }
+   ],
+   "reason": "confirm writes the confirmation flag only; a redacted edge refuses confirmation",
+   "state": "not-observed"
+  },
+  "confirm_edge|reinstatement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "confirm (Memory.confirm) on an active edge"
+    }
+   ],
+   "reason": "confirm writes the confirmation flag only; it never changes `invalidated_at`",
+   "state": "not-observed"
+  },
+  "confirm_edge|retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "confirm (Memory.confirm) on an active edge"
+    }
+   ],
+   "reason": "confirm writes the confirmation flag only; it never changes `invalidated_at`",
+   "state": "not-observed"
+  },
+  "forget_user|erasure": {
+   "inputs": [
+    "forget_user"
+   ],
+   "state": "observed"
+  },
+  "forget_user|insert": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "forget_user"
+    }
+   ],
+   "reason": "erasure deletes the user's rows (0008 \u00a76g); it writes no edge through the choke point",
+   "state": "not-observed"
+  },
+  "forget_user|none": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "forget_user"
+    }
+   ],
+   "reason": "erasure deletes the user's rows (0008 \u00a76g); it writes no edge through the choke point",
+   "state": "not-observed"
+  },
+  "forget_user|re-retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "forget_user"
+    }
+   ],
+   "reason": "erasure deletes the user's rows (0008 \u00a76g); it writes no edge through the choke point",
+   "state": "not-observed"
+  },
+  "forget_user|redaction": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "forget_user"
+    }
+   ],
+   "reason": "erasure deletes the user's rows (0008 \u00a76g); it writes no edge through the choke point",
+   "state": "not-observed"
+  },
+  "forget_user|reinstatement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "forget_user"
+    }
+   ],
+   "reason": "erasure deletes the user's rows (0008 \u00a76g); it writes no edge through the choke point",
+   "state": "not-observed"
+  },
+  "forget_user|retirement": {
+   "driven": [
+    {
+     "ending": "accepted",
+     "input": "forget_user"
+    }
+   ],
+   "reason": "erasure deletes the user's rows (0008 \u00a76g); it writes no edge through the choke point",
+   "state": "not-observed"
+  }
+ },
+ "ruling_keys": {
+  "_invalidate_edge_row": "choke-point",
+  "_recompute_edge_row": "choke-point",
+  "_redact_in_txn": "choke-point",
+  "_reinstate_edge_row": "choke-point",
+  "_upsert_edge_row": "choke-point",
+  "commit_outcome_import_plan": "choke-point",
+  "confirm_edge": "choke-point",
+  "forget_user": "erasure"
+ },
+ "runs": [
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.add_edge",
+     "chain": [
+      "_upsert_edge_row"
+     ],
+     "transition": "insert"
+    }
+   ],
+   "ending": "accepted",
+   "input": "add_edge: a new active edge",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.add_edge",
+     "chain": [
+      "_upsert_edge_row"
+     ],
+     "transition": "insert"
+    }
+   ],
+   "ending": "accepted",
+   "input": "add_edge: a new edge arriving retired",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [],
+   "ending": "refused: ValueError at store/sqlite.py:_upsert_edge_row",
+   "input": "add_edge: a new edge arriving with the marker",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.add_edge",
+     "chain": [
+      "_upsert_edge_row"
+     ],
+     "transition": "reinstatement"
+    }
+   ],
+   "ending": "accepted",
+   "input": "add_edge: same id, retired -> active",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.add_edge",
+     "chain": [
+      "_upsert_edge_row"
+     ],
+     "transition": "retirement"
+    }
+   ],
+   "ending": "accepted",
+   "input": "add_edge: same id, active -> retired",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.add_edge",
+     "chain": [
+      "_upsert_edge_row"
+     ],
+     "transition": "re-retirement"
+    }
+   ],
+   "ending": "accepted",
+   "input": "add_edge: same id, a different retirement",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.add_edge",
+     "chain": [
+      "_upsert_edge_row"
+     ],
+     "transition": "none"
+    }
+   ],
+   "ending": "accepted",
+   "input": "add_edge: same id, the identical retirement",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.add_edge",
+     "chain": [
+      "_upsert_edge_row"
+     ],
+     "transition": "none"
+    }
+   ],
+   "ending": "accepted",
+   "input": "add_edge: same id, an ordinary mutation",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [],
+   "ending": "refused: ValueError at store/sqlite.py:_upsert_edge_row",
+   "input": "add_edge: same id, the object replaced by the marker",
+   "meant": "_upsert_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "__init__.py:Memory.confirm",
+     "chain": [
+      "confirm_edge"
+     ],
+     "transition": "none"
+    }
+   ],
+   "ending": "accepted",
+   "input": "confirm (Memory.confirm) on an active edge",
+   "meant": "confirm_edge"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.invalidate_edge",
+     "chain": [
+      "_invalidate_edge_row"
+     ],
+     "transition": "retirement"
+    }
+   ],
+   "ending": "accepted",
+   "input": "invalidate_edge on an active edge",
+   "meant": "_invalidate_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.invalidate_edge",
+     "chain": [
+      "_invalidate_edge_row"
+     ],
+     "transition": "re-retirement"
+    }
+   ],
+   "ending": "accepted",
+   "input": "invalidate_edge on a retired edge",
+   "meant": "_invalidate_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/data_migration.py:undo_restoration",
+     "chain": [
+      "_invalidate_edge_row"
+     ],
+     "transition": "retirement"
+    }
+   ],
+   "ending": "accepted",
+   "input": "undo_restoration of the restored value",
+   "meant": "_invalidate_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/data_migration.py:convert_rows",
+     "chain": [
+      "_reinstate_edge_row"
+     ],
+     "transition": "reinstatement"
+    },
+    {
+     "caller": "store/data_migration.py:convert_rows",
+     "chain": [
+      "_reinstate_edge_row"
+     ],
+     "transition": "reinstatement"
+    }
+   ],
+   "ending": "accepted",
+   "input": "the data migration's restoration (the base's own build: U's and V's retired values)",
+   "meant": "_reinstate_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/revocation.py:_apply_statement_effect",
+     "chain": [
+      "_invalidate_edge_row"
+     ],
+     "transition": "retirement"
+    },
+    {
+     "caller": "store/revocation.py:_apply_statement_effect",
+     "chain": [
+      "_invalidate_edge_row"
+     ],
+     "transition": "retirement"
+    },
+    {
+     "caller": "store/revocation.py:_apply_statement_effect",
+     "chain": [
+      "_reinstate_edge_row"
+     ],
+     "transition": "reinstatement"
+    },
+    {
+     "caller": "store/revocation.py:_apply_statement_effect",
+     "chain": [
+      "_reinstate_edge_row"
+     ],
+     "transition": "reinstatement"
+    }
+   ],
+   "ending": "accepted",
+   "input": "revoke the source, then lift it",
+   "meant": "_reinstate_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": null,
+     "chain": [
+      "_recompute_edge_row"
+     ],
+     "transition": "none"
+    }
+   ],
+   "ending": "accepted",
+   "input": "recompute (driven directly)",
+   "meant": "_recompute_edge_row"
+  },
+  {
+   "calls": [
+    {
+     "caller": "store/sqlite.py:SqliteStore.redact",
+     "chain": [
+      "_redact_in_txn"
+     ],
+     "transition": "redaction"
+    }
+   ],
+   "ending": "accepted",
+   "input": "redact an edge",
+   "meant": "_redact_in_txn"
+  },
+  {
+   "calls": [
+    {
+     "caller": "portability.py:_preflight_and_commit",
+     "chain": [
+      "commit_outcome_import_plan"
+     ],
+     "transition": "insert"
+    }
+   ],
+   "ending": "accepted",
+   "input": "import (default) of another store's edge",
+   "meant": "commit_outcome_import_plan"
+  },
+  {
+   "calls": [
+    {
+     "caller": "portability.py:_preflight_and_commit",
+     "chain": [
+      "commit_outcome_import_plan",
+      "_redact_in_txn"
+     ],
+     "transition": "redaction"
+    }
+   ],
+   "ending": "accepted",
+   "input": "restore of the store's own redacted export over its held copy",
+   "meant": "commit_outcome_import_plan"
+  },
+  {
+   "calls": [
+    {
+     "caller": "portability.py:_preflight_and_commit",
+     "chain": [
+      "commit_outcome_import_plan"
+     ],
+     "transition": "insert"
+    },
+    {
+     "caller": "portability.py:_preflight_and_commit",
+     "chain": [
+      "commit_outcome_import_plan",
+      "_redact_in_txn"
+     ],
+     "transition": "none"
+    }
+   ],
+   "ending": "accepted",
+   "input": "import (default) of a record this store lacks, arriving redacted with its notice",
+   "meant": "commit_outcome_import_plan"
+  },
+  {
+   "calls": [
+    {
+     "caller": "(the store's public verb)",
+     "chain": [
+      "forget_user"
+     ],
+     "transition": "erasure"
+    }
+   ],
+   "ending": "accepted",
+   "input": "forget_user",
+   "meant": "forget_user"
+  }
+ ],
+ "transitions": [
+  "insert",
+  "none",
+  "reinstatement",
+  "retirement",
+  "re-retirement",
+  "redaction",
+  "erasure"
+ ]
+}

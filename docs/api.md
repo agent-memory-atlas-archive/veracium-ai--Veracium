@@ -1028,7 +1028,7 @@ result.resulting_version    # facts, never inferred from the label
 *Upgrading to this version does not restore values that the old single-value rule retired. To restore them and get a
 receipt listing each one, run `run_data_migration`. Until you do, those values stay hidden and `doctor` warns.*
 
-`measures`, `prefers` and `health_state` now keep every value (`arity="multi"`, specs/0044). Under the old rule a new
+`measures`, `prefers` and `health_state` no longer supersede incomparable values (`arity="multi"`, specs/0044). Under the old rule a new
 value of one of them retired the previous one as `superseded`. The v16 schema step records exactly those retirements
 (the store's arity inventory) and changes nothing else. Bringing them back is a separate, OPTIONAL host operation
 (specs/0018 §4i). It is a bulk restoration of a known superset: a value that really was replaced comes back too, and

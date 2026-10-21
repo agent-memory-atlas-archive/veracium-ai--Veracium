@@ -300,6 +300,7 @@ _ACT_KEYS = {
                         "recorded_correlation_id", "request_digest", "origin", "written_at")),
 }
 _ACT_TABLE = {"confirmation": "confirmations", "reply": "replies"}
+_ACT_NOUN = {table: marker for marker, table in _ACT_TABLE.items()}     # research's T11b landing nit: never `[:-1]`
 _PROOF = ("local", "restored")          # 0008 §3a: the origins that are proof; `imported` is testimony
 
 
@@ -1807,7 +1808,7 @@ def _act_preflight(store, path, target_uid, acts, edges, existing_edges, *, rest
             e = unit_edges.get(a["edge_id"]) or existing_edges.get(a["edge_id"])
             if e is None:
                 raise _SITE_IMPORT_ACT_PREFLIGHT.fire(ValueError(
-                    f"{path}: {a['table'][:-1]} {a['act_uid']!r} names edge {a['edge_id']!r}, which neither the file nor "
+                    f"{path}: {_ACT_NOUN[a['table']]} {a['act_uid']!r} names edge {a['edge_id']!r}, which neither the file nor "
                     f"this store holds — the whole file is refused, nothing imported (specs/0047 §4f, INV-R11)"),
                     "act-orphan")
             if not restore and a["act_uid"][0] == local:

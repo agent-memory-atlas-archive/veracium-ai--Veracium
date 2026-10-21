@@ -167,6 +167,11 @@
   three relations are reclassified `single` → `multi`, because one slot per SUBJECT retired unrelated facts: "savings
   4200" retired "weight 78 kg", "window seats" retired "oat milk", "iron deficiency" retired "asthma". Both values
   now stay current.
+  *`prefers`, `health_state` and `measures` no longer supersede incomparable values: a second preference, condition or
+  measurement no longer retires the first. One consequence: every measurement you have recorded is treated as current.
+  This upgrade does not restore values the old rule already retired; run `run_data_migration` to restore them and get a
+  receipt listing each one — some were correctly replaced, and the receipt lets you re-retire those. Until you run it,
+  those values stay hidden and `doctor` warns.* (0044 §8's release text, the owner's costs.)
   Every other default keeps its meaning (`works_as`, `located_at`, `deadline`, `scope` stay `single`).
   Reinforcement and absorption are unchanged (`80` then `weight 80` still absorbs).
   - **The cost, stated:** there is no "latest value" for `measures` until a later round defines keyed slots. "I weigh
@@ -301,8 +306,9 @@
       further behind takes `veracium.store.migration.migrate_store`, verified from every base 1–15.
     - **Hosts implementing `veracium.store.base.Store`:** `confirm_edge` must read the registry before the edge.
   - **Evidence.**
-    - Store v16 accepts six shapes: the constructor; the constructor with `confirmations` ALTERed; and the four
-      migrated v15 shapes, each ALTERed.
+    - Store v16 accepts 11 shapes: the constructor, and ten migrated shapes — each earlier base's `confirmations`
+      ALTERed, with `redactions` inline (a base ≤ 14) or ALTERed (a base 15). (Six when this step landed; T4's
+      `redactions` ALTER added the rest. The generated list: `specs/generated/v16-carrier-delta.md`.)
     - The 0013 step campaign now perturbs both new writing steps: 853 perturbations, 847 killed, and 6 that do not
       apply, all on a base-1 store, which has no confirmation to copy. It had mapped neither step until this change.
     - `tests/test_0008_request_registry.py` (34 tests) fails under each of 14 code mutants of the writer and the

@@ -519,19 +519,22 @@ def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
             _refuse_unless(base, STEP_ARITY_ERA,
                            _arity_era_problems(era_before, _rows(conn, "SELECT id, effective_at FROM arity_era"), now))
             _edges_unchanged(STEP_ARITY_ERA)
-            # step 8: the arity inventory, selected by the DEFAULT NAMES; the predicate is `lifetime.retirement`
-            inv_before = _rows(conn, "SELECT edge_id FROM arity_inventory")
+            # step 8: the arity inventory, selected by the DEFAULT NAMES; the predicate is `lifetime.retirement`. The
+            # selection reads the relation COLUMN OR the json's relation (research's T5 S2 N3): a row whose two disagree
+            # is SEEN, so the check below refuses it (F2's column = json rule) instead of the step passing it by
             marks = ",".join("?" * len(RECLASSIFIED_RELATIONS))
-            for eid, uid, blob in _rows(conn, f"SELECT id, user_id, json FROM edges WHERE relation IN ({marks}) "
-                                              f"ORDER BY id", RECLASSIFIED_RELATIONS):
+            named = f"(relation IN ({marks}) OR json_extract(json, '$.relation') IN ({marks}))"
+            named_args = tuple(RECLASSIFIED_RELATIONS) * 2
+            inv_before = _rows(conn, "SELECT edge_id FROM arity_inventory")
+            for eid, uid, blob in _rows(conn, f"SELECT id, user_id, json FROM edges WHERE {named} ORDER BY id",
+                                        named_args):
                 ret = retirement(json.loads(blob))
                 if ret is not None and ret[1] == SUPERSEDED:
                     conn.execute("INSERT INTO arity_inventory(edge_id, user_id, pre_invalidated_at, pre_reason) "
                                  "VALUES(?, ?, ?, ?)", (eid, uid, ret[0], ret[1]))
             _refuse_unless(base, STEP_ARITY_INVENTORY, _arity_inventory_problems(
                 inv_before,
-                _rows(conn, f"SELECT id, user_id, relation, active, json FROM edges WHERE relation IN ({marks})",
-                      RECLASSIFIED_RELATIONS),
+                _rows(conn, f"SELECT id, user_id, relation, active, json FROM edges WHERE {named}", named_args),
                 _rows(conn, "SELECT edge_id, user_id, pre_invalidated_at, pre_reason FROM arity_inventory")))
             _edges_unchanged(STEP_ARITY_INVENTORY)
             # step 9: the refusal inventory — EVERY refusal that exists (0044 §4f, 0018 §4a; research's R3: §4d gates

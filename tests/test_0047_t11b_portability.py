@@ -492,7 +492,7 @@ def test_q10_a_confirmation_under_an_open_challenge_refuses_in_one_file_and_acro
 
 
 def test_q10_a_resolved_history_is_admitted_with_the_challenge_held_and_the_rest_arriving(tmp_path):
-    """INV-R23 (round 3's valid resolved-history restore): the destination holds the challenge; the file brings the
+    """INV-R23 and INV-Q10 (round 3's valid resolved-history restore): the destination holds the challenge; the file brings the
     resolve and the confirmation; admitted. Mutant: judge held challenges before applying the unit's resolves."""
     a, e1, e2, _c = _history(tmp_path)
     f = _export(a, tmp_path, "a.jsonl")
@@ -505,7 +505,7 @@ def test_q10_a_resolved_history_is_admitted_with_the_challenge_held_and_the_rest
 
 
 def test_q10_a_confirmation_before_the_challenge_is_consistent_and_an_incoming_challenge_meets_a_held_one(tmp_path):
-    """§6f's first row: ordered k < c is consistent (confirm, then challenge: admitted). And an INCOMING challenge is
+    """INV-Q10 at §6f's first row: ordered k < c is consistent (confirm, then challenge: admitted). And an INCOMING challenge is
     judged against a HELD confirmation: a forged earlier challenge (c < k, unresolved) arriving over a held
     confirmation refuses. Mutant: judge only incoming confirmations."""
     a = _mem(tmp_path, "a.db")
@@ -525,7 +525,7 @@ def test_q10_a_confirmation_before_the_challenge_is_consistent_and_an_incoming_c
 
 
 def test_q10_incomparable_or_unknown_positions_refuse_unless_the_challenge_is_resolved(tmp_path):
-    """§6f's 'not ordered' rows (INV-R23; IO-II-4: accepted only in the explicitly resolved-history case): a
+    """§6f's 'not ordered' rows (INV-Q10, INV-R23; IO-II-4: accepted only in the explicitly resolved-history case): a
     confirmation of another origin against an UNRESOLVED challenge refuses; against a RESOLVED one it is admitted.
     Mutant: an incomparable position read as earliest."""
     a = _mem(tmp_path, "a.db")
@@ -546,7 +546,7 @@ def test_q10_incomparable_or_unknown_positions_refuse_unless_the_challenge_is_re
 
 
 def test_rm1_a_legacy_position_restores_first_among_proof_acts_and_refuses_whole_in_default(tmp_path):
-    """The owner's R-M1: in a TRUSTED RESTORE an unknown-position act of origin O precedes every known-position act of
+    """The owner's R-M1 (INV-Q10, INV-R23): in a TRUSTED RESTORE an unknown-position act of origin O precedes every known-position act of
     O, between PROOF acts — so a store's own backup holding a legacy confirmation and a LATER open challenge restores
     (O17). Testimony stays incomparable (a relayed `imported` legacy row refuses), and a DEFAULT import refuses WHOLE,
     at §6f L724's width: no edge is written. Mutants: R-M1 dropped; R-M1 in default mode; R-M1 for testimony."""
@@ -568,7 +568,7 @@ def test_rm1_a_legacy_position_restores_first_among_proof_acts_and_refuses_whole
 
 
 def test_q10_ties_a_second_resolve_and_a_resolve_before_its_challenge_each_refuse(tmp_path):
-    """§6f: two different acts at one position (a forged or corrupted history); a challenge resolved twice in H; a
+    """INV-Q10 at §6f: two different acts at one position (a forged or corrupted history); a challenge resolved twice in H; a
     resolve ordered before its own challenge — each refuses the unit. Mutant: a tie treated as ordered."""
     a, e1, e2, _c = _history(tmp_path)
     f = _export(a, tmp_path, "a.jsonl")
@@ -625,7 +625,8 @@ def test_rr3_a_redacted_round_trip_is_admitted_and_a_marker_reply_without_a_noti
 
 def test_rr6_rr9_an_old_or_partial_notice_refuses_an_arriving_act(tmp_path):
     """INV-RR6 (a notice that attests none of a row's content carriers: a pre-feature notice) and INV-RR9 (one that
-    attests some but not all): coverage is all or nothing per row, and a foreign notice is never enlarged. Mutants:
+    attests some but not all): coverage is all or nothing per row, and a foreign notice is never enlarged (0008's
+    INV-I5's coverage clause). Mutants:
     an absent field read as permission; partial coverage admitted."""
     a, e, clean, red = _redacted_history(tmp_path)
 
@@ -663,7 +664,7 @@ def test_rr8_an_untreated_act_under_a_covering_notice_is_written_treated_and_rei
 
 
 def test_rr8_rule4_writes_a_covered_act_treated_even_where_its_notice_stays_pending(tmp_path):
-    """0008 §6e rule 4 ("written treated where the coverage attests its carriers"), apart from any notice's
+    """INV-RR8 and 0008's INV-I4 at 0008 §6e rule 4 ("written treated where the coverage attests its carriers"), apart from any notice's
     application: a trusted restore brings untreated acts onto a HELD, unredacted edge with their source's notice but no
     copy of the edge, so the notice stays PENDING (`record-not-in-file`) and treats nothing — yet the coverage counts it
     (every notice, whatever its state), so the acts are written with BOTH carriers treated. Mutant: treat the text and
@@ -844,7 +845,7 @@ def test_d17_why_shows_an_acts_origin_and_its_original_request_id(tmp_path):
 
 def test_d14_the_commit_primitive_refuses_an_act_labelled_local_or_keyed_in_the_callers_grammar(tmp_path):
     """Build note D14 at the primitive (a plan reaches it by other routes than the preflight): an imported act is only
-    ever `imported` or `restored` (INV-Q5) under an internal `#act:` key (INV-Q4′); a plan carrying a `local` act, or
+    ever `imported` or `restored` (INV-Q5, 0047 INV-R21) under an internal `#act:` key (INV-Q4′); a plan carrying a `local` act, or
     one keyed in the caller's grammar, is refused and nothing is written."""
     a, e1, e2, _c = _history(tmp_path)
     b = _mem(tmp_path, "b.db")
@@ -933,7 +934,7 @@ def test_s2_research_rm_a_m2_keeps_only_the_axis_a_content_difference_still_refu
 
 
 def test_s2_research_rm_i_r_m1_needs_both_labels_proof_a_testimony_challenge_stays_incomparable(tmp_path):
-    """RM-I. R-M1 orders an unknown position first only when BOTH acts are proof. A restored legacy confirmation
+    """RM-I (INV-Q10, INV-R23). R-M1 orders an unknown position first only when BOTH acts are proof. A restored legacy confirmation
     (unknown position) against a same-origin `imported` challenge with a known position, unresolved: refused."""
     a = _mem(tmp_path, "a.db")
     e = _fact(a)
@@ -947,7 +948,7 @@ def test_s2_research_rm_i_r_m1_needs_both_labels_proof_a_testimony_challenge_sta
 
 
 def test_s2_research_rm_q_a_new_act_at_a_held_acts_position_ties(tmp_path):
-    """RM-Q. Two different acts at one position refuse when one is HELD and the other arrives (not only within a
+    """RM-Q (INV-Q10). Two different acts at one position refuse when one is HELD and the other arrives (not only within a
     unit): the destination holds the challenge; the file brings a different act at its position."""
     a = _mem(tmp_path, "a.db")
     e = _fact(a)
@@ -963,7 +964,7 @@ def test_s2_research_rm_q_a_new_act_at_a_held_acts_position_ties(tmp_path):
 
 
 def test_s2_research_rm_y_a_resolve_after_the_confirmation_does_not_clear_it(tmp_path):
-    """RM-Y. A confirmation made AFTER a challenge and BEFORE its resolve was made under an open challenge: refused,
+    """RM-Y (INV-Q10, INV-R23). A confirmation made AFTER a challenge and BEFORE its resolve was made under an open challenge: refused,
     though the challenge is resolved later in the same history."""
     a, _e1, e2, _c = _history(tmp_path)
     f = _export(a, tmp_path, "a.jsonl")

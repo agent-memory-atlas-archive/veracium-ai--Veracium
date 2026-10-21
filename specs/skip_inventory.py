@@ -321,6 +321,8 @@ INVENTORY = [
      "host-conditional", "unqualified SQLite runtime (the gate working)"),
     ("tests/test_schema_model.py", "skip", "no git checkout",
      "git-checkout", "check() returns 2 before reaching the assertion"),
+    ("tests/test_0044_t12_fixes.py", "skip", "no git checkout",
+     "git-checkout", "the keep-every-value sweep reads the tracked tree (git ls-files)"),
     ("tests/test_printed_verification_instructions.py", "skip",
      "the tracked-file enumeration cannot run",
      "git-checkout", "the printed-instruction gate asserts that no TERMINAL RECORD "

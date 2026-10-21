@@ -53,7 +53,7 @@ def _revoked_then_lifted(tmp_path):
 
 
 def test_reinstated_reason_is_closed_and_an_invalid_one_unwinds_the_write(tmp_path, monkeypatch):
-    """INV-J1. The real lift journals `source_restored`. A reason outside the vocabulary — and NULL on a new write — is
+    """INV-J1 (and 0044's INV-A18, which carries 0029 v12's closed reason). The real lift journals `source_restored`. A reason outside the vocabulary — and NULL on a new write — is
     refused at the choke point, and the WHOLE transaction unwinds: the row's reinstatement does not persist either.
     Mutants: accept any reason; accept NULL on a new write; refuse but commit the row."""
     assert REINSTATEMENT_REASONS == ("source_restored", "arity_reclassified")

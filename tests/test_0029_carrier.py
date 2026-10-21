@@ -70,7 +70,7 @@ RAW_EDGE_WRITE = re.compile(
 
 
 def test_every_edge_writing_site_carries_an_event_ruling(store):
-    """V-TOTAL: the write-site set is DERIVED — every raw `UPDATE edges` /
+    """V-TOTAL (and 0044 INV-A22's product half: every ruling's lifetime disposition): the write-site set is DERIVED — every raw `UPDATE edges` /
     `INSERT ... INTO edges` in the store module plus every `@store_mutator`
     that reaches one — and every such site is inside the journaled write
     transaction and reaches the emission choke point. A new raw site without

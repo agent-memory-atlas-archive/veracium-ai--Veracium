@@ -487,7 +487,7 @@ def test_a_completed_user_is_complete_on_re_call_and_doctor_is_quiet(tmp_path):
 
 
 def test_a_users_transaction_is_atomic(tmp_path, monkeypatch):
-    """I26: a failure after the user's restoration writes rolls back its edges, journal, inventory, outcomes and run
+    """I26 (and I32's cumulative status, asserted at the end): a failure after the user's restoration writes rolls back its edges, journal, inventory, outcomes and run
     row together; the failing user is named and the next user still commits (D1)."""
     p = _store(tmp_path, _pair(U) + _pair(V))
     _assert_permitted(_run(p, plan_only=True), "planned")
@@ -510,6 +510,36 @@ def test_a_users_transaction_is_atomic(tmp_path, monkeypatch):
     assert DM.data_migration_status(p, "op-2") == DM.DataMigrationStatus("known", False, tuple(sorted((U, V))))
 
 
+def test_a_failure_at_the_run_row_rolls_back_the_users_restorations(tmp_path, monkeypatch):
+    """I26, the run row's half: a failure AFTER the user's restorations have all been written and before its run row
+    is (the run row's clock read raises) rolls back the restorations, outcomes and inventory with it — the cell above
+    fails inside the restorations, so a commit between them and the run row was invisible to it (T12's consolidated
+    rehearsal: the re-anchored "two transactions" mutant survived). Mutant: two transactions (the restorations commit
+    before the run row)."""
+    from veracium.store.sqlite import SqliteStore
+    p = _store(tmp_path, _pair(U) + _pair(V))
+    _assert_permitted(_run(p, plan_only=True), "planned")
+    real_restore, real_now, armed = DM._restore_user, SqliteStore._now, []
+
+    def restore(store, user, plan_id, relations, op_id):
+        real_restore(store, user, plan_id, relations, op_id)
+        if user == V:
+            armed.append(True)                                 # the restorations are written; the run row is next
+
+    def now(self):
+        if armed:
+            armed.clear()
+            raise RuntimeError("at the run row")
+        return real_now(self)
+    monkeypatch.setattr(DM, "_restore_user", restore)
+    monkeypatch.setattr(SqliteStore, "_now", now)
+    before = {t: _q(p, f"SELECT * FROM {t} WHERE user_id=? ORDER BY 1, 2", (V,))
+              for t in ("edges", "edge_event", "arity_inventory", "migration_outcome", "migration_run")}
+    r = _run(p, op_id="op-3")
+    assert (r.outcome, r.committed, r.failed) == ("partial", (U,), (V,))
+    assert {t: _q(p, f"SELECT * FROM {t} WHERE user_id=? ORDER BY 1, 2", (V,)) for t in before} == before
+
+
 def test_a_crash_after_a_users_commit_loses_nothing(tmp_path, monkeypatch):
     """I28: a crash after the user's commit, before the caller reads the result — the receipt and the status recover
     it from durable facts alone (no delivery state); a re-call is `complete` for that user."""
@@ -530,9 +560,9 @@ def test_a_crash_after_a_users_commit_loses_nothing(tmp_path, monkeypatch):
     assert _run(p).outcome == "complete"
 
 
-# ===================================================================================== the plan (I25, A5, A15, A21)
+# ====================================================================== the plan (I25, INV-A5, INV-A15, INV-A21)
 def test_only_the_three_declarations_count(tmp_path):
-    """I25 / A15: the plan is fixed at its first write. `works_as` single → multi leaves the digest equal and is
+    """I25 / INV-A15: the plan is fixed at its first write. `works_as` single → multi leaves the digest equal and is
     admitted (the round-3 witness); a change to one of the three returns `registry-changed` naming both digests and
     changes nothing. Hashing the whole registry is the mutant."""
     p = _store(tmp_path, _pair(U))
@@ -566,7 +596,7 @@ def test_the_plan_admits_only_canonically_default_declarations(tmp_path):
 
 
 def test_three_header_states_and_an_empty_plan_is_recorded(tmp_path):
-    """A21's store clauses: uninitialized → initialized-empty (a host whose declarations keep all three single gets
+    """INV-A21's store clauses (and I30's initialized-empty doctor phase): uninitialized → initialized-empty (a host whose declarations keep all three single gets
     a header with no relation rows, `doctor` info) → a later call with the defaults is REFUSED by digest, never
     re-planned."""
     p = _store(tmp_path, _pair(U))
@@ -581,7 +611,7 @@ def test_three_header_states_and_an_empty_plan_is_recorded(tmp_path):
 
 
 def test_two_concurrent_first_callers_produce_one_header(tmp_path):
-    """A21 / §4e admission: two first calls on two connections serialize on the write lock; exactly one header, one
+    """INV-A21 / §4e admission: two first calls on two connections serialize on the write lock; exactly one header, one
     `planned` and one `already-planned`."""
     p = _store(tmp_path, _pair(U))
     gate, out = threading.Barrier(2), {}

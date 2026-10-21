@@ -1,0 +1,41 @@
+# T12 D10 — every change between the rehearsal pin and the final pin
+
+Rehearsal: the consolidated campaign launched 2026-10-20T22:57Z at pin digest `08cae8b9902cf8d0` (476 mutants, 110
+groups, 4 shards; exports /dev/shm/t12consB{0..3}.*). It is NOT evidence: its outcomes drove the changes below, and the
+final run's result.json is what the map cites. Research's ask (2026-10-20): each change tied to the rehearsal outcome
+that drove it — tests added or widened, binding edits, NOT_ANSWERS entries, re-anchors, product fixes.
+
+## A. Changes made BEFORE any rehearsal outcome was read (not fitted to it)
+
+| # | change | files | why |
+|---|---|---|---|
+| A1 | R-A round 2's definitions swapped from the re-authoring to the recovered original (sha256 ce772413…); all 7 anchors occur once, no re-anchor | campaign/defs.py (via build_consolidated.py; source .claude/…/0045/ra2_mutant_defs.py) | research recovered it from /recovery's photorec output (2026-10-20) |
+| A2 | each result row records `def_digest` (its definition's sha256); the map refuses a row whose digest is absent or differs from defs.py | specs/evidence/0044/obligation_map.py (`def_digest`, `_stale_defs`), campaign/run_campaign.py | A1 showed a definition can change after a run without changing the pin |
+| A3 | the planted cell for A2 (a row with a wrong digest refuses; `_fake` stamps correct digests) | tests/test_0044_t12_obligation_map.py | P1's matrix for A2 |
+| A4 | the mutant for A2: "a result row of another definition cited (the def digest unchecked)" | .claude/…/0044/t12_mutant_defs.py → campaign/defs.py | the map group's own mutant for A2 |
+
+## B. Changes driven by rehearsal outcomes
+
+(each row: the rehearsal outcome — mutant, its outcome, its killing/failing nodes — and the change it drove)
+
+| # | rehearsal outcome | change | files |
+|---|---|---|---|
+| B1 | shard 2: `T6-1 (0018 §4b.3: the per-user transaction, I26, I27, F3) :: I26: two transactions (the restorations commit before the run row)` — ERROR, no cell failed (a collection error: reproduced in export B3, the mutated file raised `IndentationError: unexpected indent`) | **re-anchor (corrected)**: T12's first re-anchor put the original's 4-space `conn.commit()` after the outcome insert, which since T11a (fab8355) sits in a loop body — a mutant that does not compile. Re-anchored to the site the name states: after `_restore_user(...)` returns in `_migrate_user`, before the `migration_run` insert. **Builder guard added**: `build_consolidated.py` refuses a mutant whose mutated .py does not parse (control: the old I26 refused, "unexpected indent") | .claude/…/0044/t12_reanchor.py, build_consolidated.py → campaign/defs.py |
+| B2 | the corrected I26 mutant, run on export B3 against `tests/test_0044_t6_operation.py` (54 cells): SURVIVED — `test_a_users_transaction_is_atomic` injects its failure INSIDE `_restore_user`, so a commit between the restorations and the run row was invisible | **test added**: `test_a_failure_at_the_run_row_rolls_back_the_users_restorations` — the failure armed after `_restore_user` returns, raised at the run row's clock read; control (unmutated) passes, the mutant fails it by assertion (V's `migration_outcome` row survives) | tests/test_0044_t6_operation.py |
+| B3 | the merged rehearsal (camp/rehearsal.json: 476 mutants, 475 KILLED, the one ERROR B1, every control green; 117 of 118 live rows closed) derived **82 FINDINGS** with group labels answering; **35** with labels not answering (measured on the same kills) | **map rule**: a GROUP label never answers (it names a tranche's theme or lists several rows: e.g. "(INV-R3: …; INV-G13)" made every member answer both) — only the NAME, or a reviewed ANSWERS entry. **map rule**: a bare native id binds outside its document's own modules when qualified by the document ("0008 C11" — `test_c11_export_carries_…` already said so). **22 binding edits** (+1 in B5), each test read and found to assert the row's clause; listed in `BINDING_EDITS` and in the map: t7 per-field (INV-A13), t7 one-id-space (INV-Q1), the scenario's erasure and t5's erasure (INV-A20), 0029's ruling census (INV-A22), t6 atomic (I32's cumulative status), t5 re-retired and t6 header states (I30's doctor phases), the registry's counter cell (INV-Q9), t11b rr8 rule 4 (INV-RR8, INV-I4), t10a's pending-notice reply (INV-I5, INV-I7), t11b's Q10/R23 cells ×9 (q10 ties, rm-q, incomparable, rm1, rm-i, q10 before-challenge, resolved history, rm-y), t10b's compiler input (INV-R3), t11b d14 (INV-R21), t9 f2 (INV-R21). **1 NOT_ANSWERS**: the scenario's "§2a: the v16 backfill skipped" does not answer INV-RR7 (the scenario redacts only after the migration; RR7 is answered by R-A's original RR7 mutant). Re-derived on the rehearsal's kills: 0 findings | specs/evidence/0044/obligation_map.py; tests: test_0044_t7_undo.py, test_0044_t12_registry_scenario.py, test_0044_t5_era.py, test_0029_carrier.py, test_0044_t6_operation.py, test_0008_request_registry.py, test_0047_t11b_portability.py, test_0047_t10a_reply.py, test_0047_t10b_read.py, test_0045_t9_write.py; .claude/…/0044/t12_answers.py |
+| B4 | with labels not answering, **0044 INV-A23** had no answering mutant (its T11a mutants cited it only in the group label) | **3 ANSWERS** entries, each quote-checked: "A23: an equal uid alone admits" (its first mutant), "A23: a live arrival over an ended row is a new history" ("an ended local episode is never revived"), "D15: timestamps compared as bytes" (canonical projections) | .claude/…/0044/t12_answers.py |
+| B5 | after B3–B4, one finding: INV-A23 ← "A23: a live arrival over an ended row…", killed only by `test_inv_a23_an_ended_held_row_and_a_live_arrival_is_older_evidence_a_no_op`, which cited §4l only | **binding edit**: its docstring now cites "INV-A23: an ended local episode is never revived" (the test's own mutant is that clause). Re-derived: 0 findings; 117 rows closed, I26 open until the final run executes B2's cell | tests/test_0044_t11a_portability.py |
+| B6 | B3's label rule left T12's map mutant "a bare id in a group label read as an answer" with a stale anchor (the builder's P8 refusal) | **map mutants**: replaced by "a group label read as an answer", plus "a document-qualified bare id not bound outside its own modules"; the planted cell now asserts labels never answer and "0008 C11" binds in t11b | .claude/…/0044/t12_mutant_defs.py, tests/test_0044_t12_obligation_map.py |
+
+## C. Changes from research's read after the rehearsal (not a rehearsal outcome)
+
+| # | ask | change | files |
+|---|---|---|---|
+| C1 | research (2026-10-21): every BINDING_EDITS entry carries the row's clause and the test line that ASSERTS it ("does this line assert this clause") | BINDING_EDITS is now (node, cited text, row, clause, asserting line): 36 entries over 30 nodes (the 31 edits; one node carries two edits, five edits bind two rows). Checked: the citation in the node, the clause in the row's text, the line in that test function's own source, the node bound to the row; the file:line is computed and rendered. Planted cells for each check, and 3 map mutants | specs/evidence/0044/obligation_map.py, tests/test_0044_t12_obligation_map.py, .claude/…/0044/t12_mutant_defs.py |
+| C2 | (dev) the planted cell took ~190 s, so the map group dominated a shard | rows/nodes/def-span scans memoised per tree; `_tok` memoised; a literal-id prefilter before each regex. Behaviour unchanged: `symbol()` old vs new identical on all 478 mutants; the rehearsal's re-derivation unchanged (117 closed, 0 findings). The cell now takes 13 s | specs/evidence/0044/obligation_map.py |
+
+## D. The final run (pin d0bdc021b5d2e76c, launched 2026-10-21T00:06Z; 481 mutants, 481 KILLED, every control green)
+
+| # | outcome | change | files |
+|---|---|---|---|
+| D1 | the map's one finding: 0008 C11 ← T12's map mutant 'a document-qualified bare id ("0008 C11") not bound outside its own modules', killed only by the map's planted cell | **NOT_ANSWERS** (no definition changed, so no row re-runs): the name quotes "0008 C11" as its example; it mutates obligation_map.py, not C11's product code | .claude/…/0044/t12_answers.py → campaign/defs.py |
