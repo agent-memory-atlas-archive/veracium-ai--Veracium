@@ -477,7 +477,9 @@ def _one(rows):
 def test_q10_a_confirmation_under_an_open_challenge_refuses_in_one_file_and_across_two(tmp_path):
     """INV-Q10 / INV-R23 (round 3's one-file witness): a history whose confirmation was made while a same-origin
     challenge was open (no resolve between) refuses, in one file and as two successive files. Mutants: check
-    confirmations before installing the unit's challenges; judge only incoming confirmations."""
+    confirmations before installing the unit's challenges; judge only incoming confirmations. Its second half is also
+    0008's INV-I3: the held challenge REPLAYS in the second file's unit, and the new confirmation beside it is still
+    judged by §6f's chronology (research's T12 S2-M1: mutant I3-b skips the chronology for a unit holding a replay)."""
     a, e1, e2, _c = _history(tmp_path)
     f = _export(a, tmp_path, "a.jsonl")
     no_resolve = _edit(f, "nr.jsonl", lambda recs: [r for r in recs if r.get("kind") != "resolve"])
@@ -1030,3 +1032,42 @@ def test_s2_why_names_an_act_without_an_original_request_id(tmp_path):
     _ok(d.import_memory, f)
     text = W.render(W.gather(d.store, U, e1))
     assert "no original request id" in text and "correlation None" not in text
+
+
+def test_i3_a_replay_in_the_unit_does_not_exempt_a_tie(tmp_path):
+    """0008 INV-I3's second clause: an exact replay never exempts another new act in the unit from validation, at
+    §6f's position check. A trusted restore whose unit holds a REPLAYED act (the held confirmation, unchanged) and a
+    NEW act at the held challenge's position refuses the unit as a tie, as RM-Q's unit with nothing replaying does
+    (the control below). Research's T12 stage-2 repro (S2-M1), adopted: the position check skipped for a unit holding a
+    replay (mutant I3-c) survived every cell before it. Mutant: skip §6f's position check for a unit that contains a
+    replay."""
+    a = _mem(tmp_path, "a.db")
+    e = _fact(a)
+    _ok(a.confirm, U, e, date="2026-10-01")
+    _ok(a.reply, U, e, kind="challenge", text="wrong")
+    f = _export(a, tmp_path, "a.jsonl")
+    b = _mem(tmp_path, "b.db")
+    _ok(b.import_memory, f, restore=True)
+    ch = _seq(_lines(f), "challenge")
+    other = dict(ch, act_uid=ch["act_uid"][:2] + ["r-other"], kind="context", text="another act")
+    # the unit: the held confirmation (an exact replay) and a new act at the held challenge's position
+    g = _edit(f, "g.jsonl", lambda recs: [r for r in recs if r.get("record") != "reply"] + [other])
+    assert any(r.get("record") == "confirmation" for r in _lines(g))
+    _refused(b, g, "one position", restore=True)
+    assert len(_acts(b)) == 2
+
+
+def test_i3_control_the_same_tie_without_a_replay_refuses(tmp_path):
+    """The control for the cell above: RM-Q's shape (no confirmation in the source, so nothing in the unit replays) is
+    refused as a tie at the product and under the mutant alike."""
+    a = _mem(tmp_path, "a.db")
+    e = _fact(a)
+    _ok(a.reply, U, e, kind="challenge", text="wrong")
+    f = _export(a, tmp_path, "a.jsonl")
+    b = _mem(tmp_path, "b.db")
+    _ok(b.import_memory, f, restore=True)
+    ch = _seq(_lines(f), "challenge")
+    other = dict(ch, act_uid=ch["act_uid"][:2] + ["r-other"], kind="context", text="another act")
+    g = _edit(f, "g.jsonl", lambda recs: [r for r in recs if r.get("record") != "reply"] + [other])
+    _refused(b, g, "one position", restore=True)
+

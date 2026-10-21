@@ -1573,10 +1573,40 @@ GROUPS = [('T2 (0019 v7: the non-user refusal)',
     'specs/evidence/0044/obligation_map.py',
     '        if not e["bound"]:',
     '        if False:'),
+   ('S2-P2: a pair in both ANSWERS and NOT_ANSWERS passes',
+    'specs/evidence/0044/obligation_map.py',
+    '    for x in m["_answer_overlap"]:',
+    '    for x in []:'),
+   ('S2-P1: a clause read as the invariant whatever cell it quotes',
+    'specs/evidence/0044/obligation_map.py',
+    '            return "invariant" if k == 0 else second if k == 1 else f"column {k + 1}"',
+    '            return "invariant"'),
    ('P9: a NON_ROW reason never quote-checked',
     'specs/evidence/0044/obligation_map.py',
     '        if src and src[1] not in (ROOT',
     '        if False and src[1] not in (ROOT')]),
+ ("0008 INV-I3 (an exact replay never admits a different act on its target; research's T12 S2-M1, I3-a)",
+  ['tests/test_0047_t11b_portability.py::test_r16_a_new_act_over_a_held_edge_is_refused_in_default_and_rule1_runs_first'],
+  [('INV-I3: rule 1 admits any new act on a target that already holds a replayed act (rule 3 skipped there)',
+    'src/veracium/portability.py',
+    '            if not restore and a["edge_id"] in existing_edges:\n',
+    '            if not restore and a["edge_id"] in existing_edges and not any(\n'
+    '                    state["uids"][u2] and x["edge_id"] == a["edge_id"] for u2, (x, _p2) in uniq.items()):\n')]),
+ ("0008 INV-I3 (a replay never exempts another new act from validation: chronology; research's T12 S2-M1, I3-b)",
+  ['tests/test_0047_t11b_portability.py::test_q10_a_confirmation_under_an_open_challenge_refuses_in_one_file_and_across_two'],
+  [("INV-I3: §6f's challenge chronology skipped for a unit that contains a replay",
+    'src/veracium/portability.py',
+    '        challenges = [a for a in H if a["kind"] == "challenge"]\n',
+    '        challenges = [] if existing else [a for a in H if a["kind"] == "challenge"]\n')]),
+ ("0008 INV-I3 (a replay never exempts another new act from validation: positions; research's T12 S2-M1, I3-c)",
+  ['tests/test_0047_t11b_portability.py::test_i3_a_replay_in_the_unit_does_not_exempt_a_tie',
+   'tests/test_0047_t11b_portability.py::test_i3_control_the_same_tie_without_a_replay_refuses'],
+  [("INV-I3: §6f's position check skipped for a unit that contains a replay",
+    'src/veracium/portability.py',
+    '        for a in new:\n            if a["act_seq"] is None:\n                continue\n',
+    '        for a in ([] if existing else new):\n'
+    '            if a["act_seq"] is None:\n'
+    '                continue\n')]),
  ('0008 C11 (retention, erasure and export: forget_user deletes the confirmations of the user)',
   ['tests/test_confirm_contract_0008.py::test_forget_user_deletes_and_counts_confirmations'],
   [("C11: forget_user keeps the user's confirmations",
@@ -2467,61 +2497,70 @@ GROUPS = [('T2 (0019 v7: the non-user refusal)',
 
 PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the confirmations of the user) :: C11: forget_user keeps the user's confirmations": {'reanchored': None,
                                                                                                                                                     'source': 't12_rows_mutant_defs.py',
-                                                                                                                                                    'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                                    'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0008 C11 (the export carries confirmations with origin) :: C11: the export carries no confirmation': {'reanchored': None,
                                                                                                         'source': 't12_rows_mutant_defs.py',
-                                                                                                        'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                        'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
+ "0008 INV-I3 (a replay never exempts another new act from validation: chronology; research's T12 S2-M1, I3-b) :: INV-I3: §6f's challenge chronology skipped for a unit that contains a replay": {'reanchored': None,
+                                                                                                                                                                                                  'source': 't12_rows_mutant_defs.py',
+                                                                                                                                                                                                  'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
+ "0008 INV-I3 (a replay never exempts another new act from validation: positions; research's T12 S2-M1, I3-c) :: INV-I3: §6f's position check skipped for a unit that contains a replay": {'reanchored': None,
+                                                                                                                                                                                           'source': 't12_rows_mutant_defs.py',
+                                                                                                                                                                                           'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
+ "0008 INV-I3 (an exact replay never admits a different act on its target; research's T12 S2-M1, I3-a) :: INV-I3: rule 1 admits any new act on a target that already holds a replayed act (rule 3 skipped there)": {'reanchored': None,
+                                                                                                                                                                                                                    'source': 't12_rows_mutant_defs.py',
+                                                                                                                                                                                                                    'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0008 INV-I7 (default mode: a treated copy of a held act is an exact replay) :: INV-I7: the authorized transition applied in default mode': {'reanchored': None,
                                                                                                                                               'source': 't12_rows_mutant_defs.py',
-                                                                                                                                              'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                              'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I13 (the preflight matrix is TOTAL) :: I13: the empty user_version=0 database read as an unstamped legacy store (no second source-missing form)': {'reanchored': None,
                                                                                                                                                           'source': 't12_rows_mutant_defs.py',
-                                                                                                                                                          'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                                          'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I14 (the mint race closes by the EXACT §4c sequence) :: I14: a fourth mint attempt (re-resolution after the third failure)': {'reanchored': None,
                                                                                                                                      'source': 't12_rows_mutant_defs.py',
-                                                                                                                                     'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                     'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I15 (MigrationResult carriers are table-only) :: I15: unsupported-base admits any base, the mint base included': {'reanchored': None,
                                                                                                                          'source': 't12_rows_mutant_defs.py',
-                                                                                                                         'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                         'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I16 (the attestation contract is exact) :: I16: a coerced quiesced admitted (truthiness, not `is True`)': {'reanchored': None,
                                                                                                                   'source': 't12_rows_mutant_defs.py',
-                                                                                                                  'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                  'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  "0018 I17 (audit failures are loud end-to-end) :: I17: the read error's resulting_state not derived from the outcome (always unknown)": {'reanchored': None,
                                                                                                                                           'source': 't12_rows_mutant_defs.py',
-                                                                                                                                          'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                          'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  "0018 I18 (the resolution evidence is reason-labeling only) :: I18: the evidence's fingerprint carried into the authority (authority-relevant)": {'reanchored': None,
                                                                                                                                                    'source': 't12_rows_mutant_defs.py',
-                                                                                                                                                   'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                                   'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I19 (the CLI contract: the five exit-3 package routes) :: I19: the recorded package route printed as unavailable': {'reanchored': None,
                                                                                                                            'source': 't12_rows_mutant_defs.py',
-                                                                                                                           'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                           'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I20 (the two new outcomes are returnable, never terminal) :: I20: unsupported-base and mint-contention admitted as terminal facts': {'reanchored': None,
                                                                                                                                             'source': 't12_rows_mutant_defs.py',
-                                                                                                                                            'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                            'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I21 (the delegated routing is total) :: I21: a valid record bound to another outcome routed as malformed, not mismatched': {'reanchored': None,
                                                                                                                                    'source': 't12_rows_mutant_defs.py',
-                                                                                                                                   'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                   'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  "0018 I22 (the fingerprint has an independent oracle) :: I22: the fingerprint's segments unframed (no length prefix)": {'reanchored': None,
                                                                                                                          'source': 't12_rows_mutant_defs.py',
-                                                                                                                         'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                         'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I23 (ReadbackResult is a closed constructed carrier) :: I23: a list-typed problems admitted': {'reanchored': None,
                                                                                                       'source': 't12_rows_mutant_defs.py',
-                                                                                                      'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                      'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0018 I28 (the receipt is recoverable after commit with no delivery state) :: I28: the receipt read from no durable row (held only in the return value)': {'reanchored': None,
                                                                                                                                                             'source': 't12_rows_mutant_defs.py',
-                                                                                                                                                            'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                                            'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0041 INV-RR14 (a created record beside its notice must show the redaction, both modes) :: INV-RR14: apply regardless (a created record admitted unredacted beside its notice)': {'reanchored': None,
                                                                                                                                                                                    'source': 't12_rows_mutant_defs.py',
-                                                                                                                                                                                   'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                                                                   'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  "0044 INV-A18 (reinstated's reason is closed, 0029 v12) :: INV-A18: accept any reason (the vocabulary check reads NULL only)": {'reanchored': None,
                                                                                                                                  'source': 't12_rows_mutant_defs.py',
-                                                                                                                                 'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                                 'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0044 INV-A20 (user erasure removes outcomes, runs, inventory) :: INV-A20: keep the outcome rows after erasure': {'reanchored': None,
                                                                                                                    'source': 't12_rows_mutant_defs.py',
-                                                                                                                   'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                   'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  "0045 INV-G8 (0019's marker follows the FLAG on every grounding value) :: INV-G8: the marker suppressed on an attested row": {'reanchored': None,
                                                                                                                                'source': 't12_rows_mutant_defs.py',
-                                                                                                                               'source_sha256': '9e2d4c05f98604bc6b1157ab04442d0c74a2d2caf37e1f2e931b20983a9ee73a'},
+                                                                                                                               'source_sha256': 'ae02d7028c3b3203058314c543de18c27e77537dad546978bd2e4edfd893b881'},
  '0051 (INV-S1, S5: the predicate and its version) :: INV-S1: the write path runs ATTEST-3 alone (no conjunction)': {'reanchored': None,
                                                                                                                      'source': 't0051_mutant_defs.py',
                                                                                                                      'source_sha256': '43cbb15da17f2a67bcfa285e692a0b937bd286dd903c79055314b661b399e76c'},
@@ -3153,151 +3192,157 @@ PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the 
                                                                                                    'source_sha256': '740785ee0073332c25e127feb718c5b970381d05d1f95359b6455be9f1648711'},
  'T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: F5 doctor: the damaged-inventory query unscoped by --user': {'reanchored': None,
                                                                                                                                                  'source': 't12_mutant_defs.py',
-                                                                                                                                                 'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                                 'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: F5 doctor: the damaged-inventory warn removed': {'reanchored': None,
                                                                                                                                      'source': 't12_mutant_defs.py',
-                                                                                                                                     'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                     'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  "T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: F5: only ANOTHER user's edge counted (a missing edge admitted)": {'reanchored': None,
                                                                                                                                                       'source': 't12_mutant_defs.py',
-                                                                                                                                                      'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                                      'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  "T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: F5: only a MISSING edge counted (another user's edge admitted)": {'reanchored': None,
                                                                                                                                                       'source': 't12_mutant_defs.py',
-                                                                                                                                                      'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                                      'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: F5: the inventory-integrity refusal removed (the user reads migrated)': {'reanchored': None,
                                                                                                                                                              'source': 't12_mutant_defs.py',
-                                                                                                                                                             'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                                             'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: N2: the F4 closure command reads the whole file (its own ledger row)': {'reanchored': None,
                                                                                                                                                             'source': 't12_mutant_defs.py',
-                                                                                                                                                            'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                                            'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: N3: step 8 selects by the relation column alone (the T5-2 selection)': {'reanchored': None,
                                                                                                                                                             'source': 't12_mutant_defs.py',
-                                                                                                                                                            'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                                            'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: side finding: the identifier matched as a prefix': {'reanchored': None,
                                                                                                                                         'source': 't12_mutant_defs.py',
-                                                                                                                                        'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                        'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carried fixes: T5 S2 N2/N3, T6 S2 F5; the side finding; the act noun) :: the act noun read by stripping a letter (replie)': {'reanchored': None,
                                                                                                                                         'source': 't12_mutant_defs.py',
-                                                                                                                                        'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                        'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carrier delta generator, P1) :: a removing step passes': {'reanchored': None,
                                                                      'source': 't12_mutant_defs.py',
-                                                                     'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                     'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carrier delta generator, P1) :: a table constraint read as a column': {'reanchored': None,
                                                                                   'source': 't12_mutant_defs.py',
-                                                                                  'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                  'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carrier delta generator, P1) :: an ALTER omitted from the delta': {'reanchored': None,
                                                                               'source': 't12_mutant_defs.py',
-                                                                              'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                              'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carrier delta generator, P1) :: an unaccepted actual digest passes': {'reanchored': None,
                                                                                  'source': 't12_mutant_defs.py',
-                                                                                 'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                 'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carrier delta generator, P1) :: an unaccounted TEXT/BLOB column passes': {'reanchored': None,
                                                                                      'source': 't12_mutant_defs.py',
-                                                                                     'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                     'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carrier delta generator, P1) :: every table read as erased with the user': {'reanchored': None,
                                                                                        'source': 't12_mutant_defs.py',
-                                                                                       'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                       'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the carrier delta generator, P1) :: the actual DDL never compared with the declared': {'reanchored': None,
                                                                                               'source': 't12_mutant_defs.py',
-                                                                                              'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                              'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: P10: NOT_ANSWERS ignored (a judged non-answer still answers)': {'reanchored': None,
                                                                                                                'source': 't12_mutant_defs.py',
-                                                                                                               'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                               'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: P10: an answering mutant killed only by unbound nodes is not a finding': {'reanchored': None,
                                                                                                                          'source': 't12_mutant_defs.py',
-                                                                                                                         'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                         'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: P9: a NON_ROW reason never quote-checked': {'reanchored': None,
                                                                                            'source': 't12_mutant_defs.py',
-                                                                                           'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                           'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
+ 'T12 (the obligation map generator, M1/P1) :: S2-P1: a clause read as the invariant whatever cell it quotes': {'reanchored': None,
+                                                                                                                'source': 't12_mutant_defs.py',
+                                                                                                                'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
+ 'T12 (the obligation map generator, M1/P1) :: S2-P2: a pair in both ANSWERS and NOT_ANSWERS passes': {'reanchored': None,
+                                                                                                       'source': 't12_mutant_defs.py',
+                                                                                                       'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a bare id read as the explicit one': {'reanchored': None,
                                                                                      'source': 't12_mutant_defs.py',
-                                                                                     'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                     'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a binding edit on a node not bound to its row passes': {'reanchored': None,
                                                                                                        'source': 't12_mutant_defs.py',
-                                                                                                       'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                       'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a binding edit whose asserting line is not in the test passes': {'reanchored': None,
                                                                                                                 'source': 't12_mutant_defs.py',
-                                                                                                                'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  "T12 (the obligation map generator, M1/P1) :: a binding edit whose clause is not the row's passes": {'reanchored': None,
                                                                                                       'source': 't12_mutant_defs.py',
-                                                                                                      'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                      'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a defined mutant without a result passes': {'reanchored': None,
                                                                                            'source': 't12_mutant_defs.py',
-                                                                                           'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                           'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a docstring citation alone closes a row': {'reanchored': None,
                                                                                           'source': 't12_mutant_defs.py',
-                                                                                          'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                          'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a document-qualified bare id ("0008 C11") not bound outside its own modules': {'reanchored': None,
                                                                                                                               'source': 't12_mutant_defs.py',
-                                                                                                                              'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                              'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a gate quote never checked': {'reanchored': None,
                                                                              'source': 't12_mutant_defs.py',
-                                                                             'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                             'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a group label read as an answer (the rehearsal measured 82 findings so)': {'reanchored': None,
                                                                                                                           'source': 't12_mutant_defs.py',
-                                                                                                                          'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                          'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a kill by a node not bound to the row counts': {'reanchored': None,
                                                                                                'source': 't12_mutant_defs.py',
-                                                                                               'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                               'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a red control passes': {'reanchored': None,
                                                                        'source': 't12_mutant_defs.py',
-                                                                       'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                       'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a result row of another definition cited (the def digest unchecked)': {'reanchored': None,
                                                                                                                       'source': 't12_mutant_defs.py',
-                                                                                                                      'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                      'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: a withdrawn row read as open': {'reanchored': None,
                                                                                'source': 't12_mutant_defs.py',
-                                                                               'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                               'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: an unknown ANSWERS entry passes': {'reanchored': None,
                                                                                   'source': 't12_mutant_defs.py',
-                                                                                  'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                  'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: the DERIVED quote never checked': {'reanchored': None,
                                                                                   'source': 't12_mutant_defs.py',
-                                                                                  'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                  'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: the campaign pin not compared with the tree': {'reanchored': None,
                                                                                               'source': 't12_mutant_defs.py',
-                                                                                              'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                              'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the obligation map generator, M1/P1) :: the declared renames ignored (a renamed cited test binds nothing)': {'reanchored': None,
                                                                                                                     'source': 't12_mutant_defs.py',
-                                                                                                                    'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                    'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the registry scenario on a migrated store: the shared body and the v16 backfill) :: INV-Q1: each verb checks only its own rows (the verb check removed)': {'reanchored': None,
                                                                                                                                                                   'source': 't12_mutant_defs.py',
-                                                                                                                                                                  'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                                                  'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the registry scenario on a migrated store: the shared body and the v16 backfill) :: v8: the terminal rule read AFTER the verb check': {'reanchored': None,
                                                                                                                                               'source': 't12_mutant_defs.py',
-                                                                                                                                              'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                              'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the registry scenario on a migrated store: the shared body and the v16 backfill) :: §2a: the backfill files a pre-upgrade confirmation under another verb': {'reanchored': None,
                                                                                                                                                                     'source': 't12_mutant_defs.py',
-                                                                                                                                                                    'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                                                    'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the registry scenario on a migrated store: the shared body and the v16 backfill) :: §2a: the v16 backfill skipped (and its check)': {'reanchored': None,
                                                                                                                                             'source': 't12_mutant_defs.py',
-                                                                                                                                            'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                            'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the registry scenario on a migrated store: the shared body and the v16 backfill) :: §6g: the registry rows kept at erasure': {'reanchored': None,
                                                                                                                                      'source': 't12_mutant_defs.py',
-                                                                                                                                     'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                                     'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the writer/lifetime matrix generator, P1) :: M4(c): a hook call through no ruling key recorded, not refused': {'reanchored': None,
                                                                                                                       'source': 't12_mutant_defs.py',
-                                                                                                                      'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                      'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the writer/lifetime matrix generator, P1) :: a cell neither observed nor reasoned passes': {'reanchored': None,
                                                                                                    'source': 't12_mutant_defs.py',
-                                                                                                   'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                   'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the writer/lifetime matrix generator, P1) :: a frame named by splitting its path at the first "/veracium/"': {'reanchored': None,
                                                                                                                      'source': 't12_mutant_defs.py',
-                                                                                                                     'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                                     'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the writer/lifetime matrix generator, P1) :: a helper source store recorded as the target': {'reanchored': None,
                                                                                                     'source': 't12_mutant_defs.py',
-                                                                                                    'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                    'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the writer/lifetime matrix generator, P1) :: a missing cell passes': {'reanchored': None,
                                                                              'source': 't12_mutant_defs.py',
-                                                                             'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                             'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the writer/lifetime matrix generator, P1) :: a ruling key without a lifetime disposition passes': {'reanchored': None,
                                                                                                           'source': 't12_mutant_defs.py',
-                                                                                                          'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                          'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the writer/lifetime matrix generator, P1) :: a run caller outside the AST list passes': {'reanchored': None,
                                                                                                 'source': 't12_mutant_defs.py',
-                                                                                                'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T12 (the writer/lifetime matrix generator, P1) :: a stale reason on an observed cell passes': {'reanchored': None,
                                                                                                  'source': 't12_mutant_defs.py',
-                                                                                                 'source_sha256': '0f2da5a3bc18a2b9b55bc2978e9ce001f6e7e79d0b787ed796f17f9947c13c04'},
+                                                                                                 'source_sha256': 'f8db0046bbeb64bc17f20012c87b11143ba289c954723792e343899ff39d24b0'},
  'T2 (0019 v7: the non-user refusal) :: INV-N1: refuse unflagged non-user triples too': {'reanchored': None,
                                                                                          'source': 'ra_mutant_defs.py',
                                                                                          'source_sha256': '3964923cd20e00ddd6b68e8ce6ce62edd956e624bc80035a69b99822b2e5ffd6'},
@@ -4183,22 +4228,24 @@ ANSWERS = {"R-A read, B4/B5: IO-II-3 at T4's states, and RR4 :: RR4: the registr
                                                                                                                               "notice's "
                                                                                                                               'fields '
                                                                                                                               "only')"},
-                                                                                                                      {'clause': 'coverage '
-                                                                                                                                 'is '
-                                                                                                                                 'all '
-                                                                                                                                 'or '
-                                                                                                                                 'nothing '
-                                                                                                                                 'per '
-                                                                                                                                 'row',
+                                                                                                                      {'clause': 'treat '
+                                                                                                                                 'only '
+                                                                                                                                 'the '
+                                                                                                                                 'arriving '
+                                                                                                                                 "notice's "
+                                                                                                                                 'attested '
+                                                                                                                                 'carriers '
+                                                                                                                                 'on '
+                                                                                                                                 'HELD '
+                                                                                                                                 'rows',
                                                                                                                        'row': '0008 '
                                                                                                                               'INV-I5',
                                                                                                                        'why': 'P10: '
                                                                                                                               'only '
                                                                                                                               'the '
-                                                                                                                              'arriving '
                                                                                                                               "notice's "
-                                                                                                                              'attested '
-                                                                                                                              'carriers '
+                                                                                                                              'own '
+                                                                                                                              'fields '
                                                                                                                               'are '
                                                                                                                               'treated '
                                                                                                                               'on '
@@ -4206,7 +4253,12 @@ ANSWERS = {"R-A read, B4/B5: IO-II-3 at T4's states, and RR4 :: RR4: the registr
                                                                                                                               'rows '
                                                                                                                               "(I5's "
                                                                                                                               'fourth '
-                                                                                                                              'mutant)'},
+                                                                                                                              'mutant; '
+                                                                                                                              "research's "
+                                                                                                                              'S2-P3 '
+                                                                                                                              'corrected '
+                                                                                                                              'the '
+                                                                                                                              'clause)'},
                                                                                                                       {'clause': '`confirm_notice` '
                                                                                                                                  'then '
                                                                                                                                  'treats '
@@ -4657,13 +4709,17 @@ ANSWERS = {"R-A read, B4/B5: IO-II-3 at T4's states, and RR4 :: RR4: the registr
                                                                                                                             "(Q10's "
                                                                                                                             'second '
                                                                                                                             'mutant)'}],
- 'T11b (rules 0–4 and coverage: R11, R16, R21, Q4′, Q5, I1–I7, RR3/RR6/RR8/RR9) :: D14: the primitive admits a local-labelled or caller-keyed act': [{'clause': 'every '
-                                                                                                                                                                'internal '
-                                                                                                                                                                'key '
-                                                                                                                                                                'fails '
-                                                                                                                                                                "§6c's "
-                                                                                                                                                                'caller '
-                                                                                                                                                                'grammar',
+ 'T11b (rules 0–4 and coverage: R11, R16, R21, Q4′, Q5, I1–I7, RR3/RR6/RR8/RR9) :: D14: the primitive admits a local-labelled or caller-keyed act': [{'clause': 'let '
+                                                                                                                                                                'an '
+                                                                                                                                                                'imported '
+                                                                                                                                                                'row '
+                                                                                                                                                                'keep '
+                                                                                                                                                                'the '
+                                                                                                                                                                "file's "
+                                                                                                                                                                'id '
+                                                                                                                                                                'as '
+                                                                                                                                                                'its '
+                                                                                                                                                                '`correlation_id`',
                                                                                                                                                       'row': '0008 '
                                                                                                                                                              'INV-Q4′',
                                                                                                                                                       'why': 'the '
@@ -4676,7 +4732,22 @@ ANSWERS = {"R-A read, B4/B5: IO-II-3 at T4's states, and RR4 :: RR4: the registr
                                                                                                                                                              'under '
                                                                                                                                                              'a '
                                                                                                                                                              'caller-grammar '
-                                                                                                                                                             'key'},
+                                                                                                                                                             'key, '
+                                                                                                                                                             'i.e. '
+                                                                                                                                                             'the '
+                                                                                                                                                             "file's "
+                                                                                                                                                             'id '
+                                                                                                                                                             'as '
+                                                                                                                                                             'its '
+                                                                                                                                                             'correlation_id '
+                                                                                                                                                             "(Q4′'s "
+                                                                                                                                                             'first '
+                                                                                                                                                             'mutant; '
+                                                                                                                                                             "research's "
+                                                                                                                                                             'S2-P3 '
+                                                                                                                                                             'corrected '
+                                                                                                                                                             'the '
+                                                                                                                                                             'clause)'},
                                                                                                                                                      {'clause': 'origin '
                                                                                                                                                                 'never '
                                                                                                                                                                 'upgrades',
@@ -4932,40 +5003,6 @@ ANSWERS = {"R-A read, B4/B5: IO-II-3 at T4's states, and RR4 :: RR4: the registr
                                                                                                                                                                               'admitted '
                                                                                                                                                                               "(R16's "
                                                                                                                                                                               'named '
-                                                                                                                                                                              'mutant)'},
-                                                                                                                                                                      {'clause': 'an '
-                                                                                                                                                                                 'exact '
-                                                                                                                                                                                 'replay '
-                                                                                                                                                                                 'never '
-                                                                                                                                                                                 'admits '
-                                                                                                                                                                                 'a '
-                                                                                                                                                                                 'different '
-                                                                                                                                                                                 'act '
-                                                                                                                                                                                 'on '
-                                                                                                                                                                                 'its '
-                                                                                                                                                                                 'target',
-                                                                                                                                                                       'row': '0008 '
-                                                                                                                                                                              'INV-I3',
-                                                                                                                                                                       'why': 'with '
-                                                                                                                                                                              'rule '
-                                                                                                                                                                              '3 '
-                                                                                                                                                                              'gone, '
-                                                                                                                                                                              'a '
-                                                                                                                                                                              'different '
-                                                                                                                                                                              'act '
-                                                                                                                                                                              'on '
-                                                                                                                                                                              'a '
-                                                                                                                                                                              'target '
-                                                                                                                                                                              'that '
-                                                                                                                                                                              'already '
-                                                                                                                                                                              'holds '
-                                                                                                                                                                              'a '
-                                                                                                                                                                              'replayed '
-                                                                                                                                                                              'act '
-                                                                                                                                                                              'is '
-                                                                                                                                                                              'admitted '
-                                                                                                                                                                              "(I3's "
-                                                                                                                                                                              'first '
                                                                                                                                                                               'mutant)'}],
  "T11b (rules 0–4 and coverage: R11, R16, R21, Q4′, Q5, I1–I7, RR3/RR6/RR8/RR9) :: R21/Q5: a default import keeps the file's origin": [{'clause': 'default '
                                                                                                                                                   'import '
@@ -5327,33 +5364,7 @@ ANSWERS = {"R-A read, B4/B5: IO-II-3 at T4's states, and RR4 :: RR4: the registr
                                                                                                                                                     'migrate '
                                                                                                                                                     'without '
                                                                                                                                                     'the '
-                                                                                                                                                    'backfill)'},
-                                                                                                                                            {'clause': 'the '
-                                                                                                                                                       'registry '
-                                                                                                                                                       'step '
-                                                                                                                                                       'backfills '
-                                                                                                                                                       'an '
-                                                                                                                                                       'already-redacted '
-                                                                                                                                                       "confirmation's "
-                                                                                                                                                       'registry '
-                                                                                                                                                       'row '
-                                                                                                                                                       'with '
-                                                                                                                                                       'the '
-                                                                                                                                                       'marker',
-                                                                                                                                             'row': '0041 '
-                                                                                                                                                    'INV-RR7',
-                                                                                                                                             'why': 'P10: '
-                                                                                                                                                    'with '
-                                                                                                                                                    'no '
-                                                                                                                                                    'backfill, '
-                                                                                                                                                    'an '
-                                                                                                                                                    'already-redacted '
-                                                                                                                                                    'confirmation '
-                                                                                                                                                    'gets '
-                                                                                                                                                    'no '
-                                                                                                                                                    'marker-bearing '
-                                                                                                                                                    'registry '
-                                                                                                                                                    'row'}],
+                                                                                                                                                    'backfill)'}],
  'T12 (the registry scenario on a migrated store: the shared body and the v16 backfill) :: §6g: the registry rows kept at erasure': [{'clause': 'user '
                                                                                                                                                 'erasure '
                                                                                                                                                 'removes '

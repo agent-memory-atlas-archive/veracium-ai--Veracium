@@ -169,6 +169,18 @@ def test_the_map_refuses_each_planted_defect(monkeypatch):
     monkeypatch.setattr(g, "NON_ROWS", {k: v for k, v in g.NON_ROWS.items() if k[0] != "0008"})
     assert "0008 C9" in g.complement() and "0008 C8" not in g.complement()
     monkeypatch.undo()
+    # S2-P2: a pair both in ANSWERS and NOT_ANSWERS refuses (one judgement contradicts the other); control: exclusive
+    both = types.SimpleNamespace(GROUPS=grp, RETIRED=[], ANSWERS={"G (INV-A1) :: INV-A1: planted": [e("0044 INV-A1")]},
+                                 NOT_ANSWERS={("G (INV-A1) :: INV-A1: planted", "0044 INV-A1"): "judged not to"})
+    assert any("both hold" in x for x in g.problems(g.derive(both, _fake(grp, rows=[ok])[1])))
+    assert not [x for x in g.problems(base) if "both hold" in x]
+    # S2-P1: the cell a clause quotes is derived from the row's columns — invariant, mutant, or (where the id shares
+    # its cell with the invariant, 0018's I13–I23 and 0008's C-rows) check
+    R = g.rows()
+    assert g.clause_cell(R["0044 INV-A15"], "the plan is fixed at its first write") == "invariant"
+    assert g.clause_cell(R["0044 INV-A15"], "re-plan on each call") == "mutant"
+    assert g.clause_cell(R["0018 I15"], "test_migration_result_truth_table") == "check"
+    assert g.clause_cell(R["0044 INV-A15"], "words in no cell") is None
     # a NON_ROW family whose quoted reason the spec no longer holds
     monkeypatch.setitem(g.NON_ROWS, ("0008", r"C(?:[1-79]|10|12|2a)"), ("r", ("0008-staleness-clearing", "words not in 0008")))
     assert any("NON_ROW family" in x for x in g.problems(base))

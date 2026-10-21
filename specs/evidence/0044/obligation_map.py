@@ -39,7 +39,9 @@ alone closes nothing. `specs/evidence/0044/obligations.py` stays the MODEL map; 
   edits      BINDING_EDITS lists the citations T12 added to existing tests so that the binding reads them, each with
              the row it binds, that row's clause and the test line that asserts it — the citation must occur in its
              node's text, the clause in the row's, the line in that test function's own source, and the node must be
-             bound to the row (all checked); the line's file:line is rendered, computed. It is the reviewer's list of
+             bound to the row (all checked); the line's file:line is rendered, computed, and so is the CELL of the row
+             the clause quotes (invariant, mutant, or check), for every binding edit and ANSWERS entry. A pair both
+             in ANSWERS and NOT_ANSWERS refuses (research's T12 S2-P2). It is the reviewer's list of
              what T12 changed to bind, read as "does this line assert this clause".
   the defs   every result row carries the digest of the DEFINITION it ran (group, name, file, anchor, replacement);
              a row whose digest is absent or differs from campaign/defs.py refuses — a result is cited only for the
@@ -128,7 +130,7 @@ BINDING_EDITS = (
     ('tests/test_0029_reinstatement_reason.py::test_reinstated_reason_is_closed_and_an_invalid_one_unwinds_the_write',
      "0044's INV-A18", '0044 INV-A18',
      "`reinstated`'s reason is closed (0029 v12)",
-     'assert REINSTATEMENT_REASONS == ("source_restored", "arity_reclassified")'),
+     'assert not e.active and e.invalidation_reason == "revoked_source", f"{name}: the row\'s reinstatement persisted"'),
     ('tests/test_0008_request_registry.py::test_a_backfilled_redacted_confirmation_is_terminal_not_a_replay',
      "0041's INV-RR7", '0041 INV-RR7',
      "the registry step backfills an already-redacted confirmation's registry row with the marker",
@@ -171,12 +173,12 @@ BINDING_EDITS = (
      'assert DM.data_migration_status(p, "op-2") == DM.DataMigrationStatus("known", False, tuple(sorted((U, V))))'),
     ('tests/test_0044_t5_era.py::test_a_re_retired_member_stays_a_member_but_its_retirement_no_longer_matches',
      "I30's pre-plan doctor phase", '0018 I30',
-     'a pre-plan warning that claims eligibility',
+     'states the name-only predicate before a plan exists',
      'assert [sorted(f.ids) for f in found] == [["m-other", "p-old"]], found'),
     ('tests/test_0044_t6_operation.py::test_three_header_states_and_an_empty_plan_is_recorded',
      "I30's initialized-empty doctor phase", '0018 I30',
      '`doctor` warns in both phases (§4e)',
-     'assert _dm_findings(p) == [("info", doctor.PLAN_EMPTY_INFO)]'),
+     'assert _dm_findings(p)[0][0] == "warn"'),
     ('tests/test_0008_request_registry.py::test_erasure_frees_the_ids_but_never_resets_the_counter',
      'INV-Q6, INV-Q9', '0008 INV-Q9',
      'positions come from a store-wide counter that is never reset',
@@ -257,6 +259,11 @@ BINDING_EDITS = (
      'INV-A23: an ended local episode is never revived', '0044 INV-A23',
      'an ended local episode is never revived',
      'assert (rows, existing) == ([], 1)'),
+    # research's T12 stage-2 S2-M1: this cell's second half is INV-I3 (the held challenge replays in the unit)
+    ('tests/test_0047_t11b_portability.py::test_q10_a_confirmation_under_an_open_challenge_refuses_in_one_file_and_across_two',
+     "0008's INV-I3: the held challenge REPLAYS", '0008 INV-I3',
+     'never exempts another new act in the unit from validation',
+     '_refused(c, no_resolve, "made under challenge", restore=True)'),
 )
 # a row whose subject is other rows: (the quote that must occur in its row, the rows it stands for)
 DERIVED = {"0018 I31": ("0018's I13–I23 are unchanged", [f"0018 I{n}" for n in range(13, 24)])}
@@ -276,6 +283,19 @@ _SELF = "tests/test_0044_t12_obligation_map.py::"
 def _tok(rid: str) -> re.Pattern:
     pre = "(?:INV-)?" if rid.startswith("I") and not rid.startswith("INV-") else ""     # 0018's I24 written INV-I24
     return re.compile(r"(?<![\w-])" + pre + re.escape(rid) + r"(?![\w′])")
+
+
+def clause_cell(row: dict, clause: str):
+    """Which cell of the row a quoted clause comes from, DERIVED from the row's own columns (research's T12 S2-P1): the
+    invariant, or the second column (`mutant`; `check` where the row's id shares its cell with the invariant, as in
+    0018's I13–I23 and 0008's C-rows, whose second column is the executable check). None: the clause is in no cell."""
+    cells = row["text"].split("|")
+    named = [c for c in cells if c.strip()]
+    second = "check" if cells and cells[0].strip() else "mutant"
+    for k, c in enumerate(named):
+        if clause in c:
+            return "invariant" if k == 0 else second if k == 1 else f"column {k + 1}"
+    return None
 
 
 def complement() -> list:
@@ -424,6 +444,10 @@ def _load(path, name):
     return mod
 
 
+def _with_cell(entry, row):
+    return None if entry is None else {**entry, "cell": clause_cell(row, entry.get("clause", ""))}
+
+
 def derive(defs=None, result=None) -> dict:
     defs = defs or _load(CAMPAIGN / "defs.py", "obligation_campaign_defs")
     result = result or json.loads((CAMPAIGN / "result.json").read_text(), object_pairs_hook=_strict_pairs)
@@ -489,16 +513,20 @@ def derive(defs=None, result=None) -> dict:
                  else "open: no answering mutant killed by a bound node")
         out_rows[k] = {"state": state, "bound": dict(sorted(bound[k].items())), "kills": kills,
                        "answering": [{"mutant": key, "site": sites[key],
-                                      "annotation": next((e for e in defs.ANSWERS.get(key, ()) if e["row"] == k), None)}
+                                      "annotation": _with_cell(next((e for e in defs.ANSWERS.get(key, ()) if e["row"] == k),
+                                                                    None), r)}
                                      for key in sorted(key for key, a in answers.items() if k in a)]}
     retired = [{**x, "inverse_outcome": outcome.get(x.get("inverse"), {}).get("outcome")} for x in defs.RETIRED]
     return {"rows": out_rows, "gates": {d: {"source": g[0], "quote": g[1]} for d, g in GATES.items()},
             "campaign": {"summary": result["summary"], "pin_digest": result.get("pin_digest"),
                          "tree_digest": tree_digest(pin_files(defs.GROUPS)),
                          "defined": len(answers), "results": len(outcome), "retired": retired},
-            "binding_edits": [{"node": n, "text": t, "row": row, "clause": cl, "asserts": ln,
-                               "line": assert_line(n, ln), "bound": n in bound.get(row, {})}
+            "binding_edits": [{"node": n, "text": t, "row": row, "clause": cl,
+                               "cell": clause_cell(R[row], cl) if row in R else None,
+                               "asserts": ln, "line": assert_line(n, ln), "bound": n in bound.get(row, {})}
                               for n, t, row, cl, ln in BINDING_EDITS],
+            "_answer_overlap": sorted(f"{kk} -> {row}" for (kk, row) in getattr(defs, "NOT_ANSWERS", {})
+                                      if any(e.get("row") == row for e in defs.ANSWERS.get(kk, ()))),
             "findings_unbound_kills": unbound_kills,
             "_stale_defs": stale_defs,
             "not_answers": [{"mutant": kk, "row": row, "reason": why}
@@ -538,6 +566,8 @@ def problems(m: dict) -> list:
     for k in m["_stale_defs"]:
         out.append(f"result row {k!r} ran a definition other than campaign/defs.py's (or carries no def_digest) — "
                    f"re-run it")
+    for x in m["_answer_overlap"]:
+        out.append(f"ANSWERS and NOT_ANSWERS both hold {x}: one judgement contradicts the other (research's S2-P2)")
     for x in m["_unknown_not_answers"]:
         out.append(f"NOT_ANSWERS names an unknown mutant or row: {x}")
     for key, a in m["_bad_annotations"]:
@@ -595,9 +625,9 @@ def render(m: dict) -> str:
     L += ["", "## Open findings: answering mutants killed only by unbound nodes", ""]
     L += [f"- {f['row']} ← {f['mutant']}" for f in m["findings_unbound_kills"]] or ["- none"]
     L += ["", "## Binding edits (citations T12 added to existing tests)", ""]
-    L += ["| node | now cites | row | the row's clause | the line that asserts it |", "|---|---|---|---|---|"]
-    L += [f"| `{e['node'].split('::')[1]}` | “{e['text']}” | {e['row']} | “{e['clause']}” | `{e['line']}`: "
-          f"`{e['asserts']}` |" for e in m["binding_edits"]]
+    L += ["| node | now cites | row | the row's clause (its cell) | the line that asserts it |", "|---|---|---|---|---|"]
+    L += [f"| `{e['node'].split('::')[1]}` | “{e['text']}” | {e['row']} | “{e['clause']}” ({e['cell']}) | "
+          f"`{e['line']}`: `{e['asserts']}` |" for e in m["binding_edits"]]
     L += ["", "## Rows", "", "| row | state | bound nodes (by how) | killing (mutant → node, kind) |", "|---|---|---|---|"]
     for k, r in m["rows"].items():
         from collections import Counter
