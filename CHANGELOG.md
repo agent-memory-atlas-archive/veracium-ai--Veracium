@@ -41,8 +41,9 @@
   (a reply it admits is a reply write); a wiki compile that drew on a fact challenged meanwhile recompiles once, then
   returns `[wiki omitted: a fact it drew on was challenged during the compile; the next read recompiles]`. Recall serves
   the wiki only when it agrees with the same call's challenge state, read after the wiki: a body compiled in the call
-  must draw on no fact that state withholds, and a cached body's row must be unchanged across the read. A challenge or
-  resolve committed in between makes the call recompute once, then serve the same notice (R-II round 2's RII-01: a
+  must draw on no fact that state withholds and on no fact or episode redacted or erased since the compile read it, and
+  a cached body's row must be unchanged across the read. A challenge, resolve, redaction or erasure committed in
+  between makes the call recompute once, then serve the disputed or the redacted notice (after an erasure, no wiki) (R-II round 2's RII-01: a
   cached wiki could assert a fact the same answer reported as disputed; an imported challenge left the cached wiki in
   place for up to `wiki_recompile_after_writes` writes). Render-time duplicate collapse never hides a restatement that carries a
   confirmation or reply of its own, or that is itself withheld, on any surface, as-of recall included.

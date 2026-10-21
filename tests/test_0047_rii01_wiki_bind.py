@@ -21,7 +21,7 @@ import pytest
 
 from veracium import Memory, MemoryConfig, budgets
 from veracium import compile as compile_mod
-from veracium.schema import Disclosure, Edge, EvidenceAuthor, Provenance
+from veracium.schema import Disclosure, Edge, Episode, EvidenceAuthor, Provenance
 
 U = "bind-user"
 FACT = "Toronto"
@@ -77,12 +77,12 @@ def _provider(state):
         if state.get("during_compile") and not state.get("done"):
             state["done"] = True
             state["during_compile"]()
-        facts = [f for f in ("Toronto", "Lisbon") if f in prompt]
+        facts = [f for f in ("Toronto", "Lisbon", "Kittiwake", "Puffinry") if f in prompt]
         return " ".join(f"User has a fact about {f}." for f in facts) or "No current location fact."
     return provider
 
 
-# ================================================================================ the window, on every path
+# ================================================================================ INV-R18: the window, on every path
 @pytest.mark.parametrize("path", ["cached", "compiled_published", "compiled_unpublished"])
 def test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body(tmp_path, monkeypatch, path):
     """A challenge committed after the body is read and before the call's snapshot: the inspection reports it and the
@@ -200,7 +200,66 @@ def test_a_body_that_fails_its_bind_twice_is_the_disputed_notice(tmp_path, monke
         writer.close()
 
 
-# ================================================================================ the imported challenge (sequential)
+# ================================================================================ INV-R18: redaction and erasure in the window
+@pytest.mark.parametrize("path", ["compiled", "cached"])
+@pytest.mark.parametrize("target", ["edge", "episode"])
+def test_a_redaction_before_the_bound_snapshot_is_never_in_the_body(tmp_path, monkeypatch, path, target):
+    """Research's R-II round 2 stage-2 probe: a redaction committed after the body is read and before the call's
+    snapshot. A bind that reads only `withheld` passes it (a redacted, unchallenged record withholds nothing), and the
+    body carries the redacted record — what 0041 round 10's fence forbids inside the compile, just after it. The
+    compiled body is bound by its inputs' redaction too, edges and episodes; the cached body by its row (a redaction
+    evicts). Mutant: the redaction clause dropped from the compiled bind."""
+    state = {}
+    reader, writer = (Memory(llm=_provider(state), config=_cfg(tmp_path / "m.db")) for _ in range(2))
+    try:
+        reader.store.add_edge(_edge("location", "Kittiwake"))
+        reader.store.add_episode(Episode(id="ep-1", user_id=U, date="2026-10-21", summary="a trip to Puffinry",
+                                         provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
+                                                               evidence_ref="bind")))
+        token = {"edge": "Kittiwake", "episode": "Puffinry"}[target]
+        if path == "cached":
+            assert f"User has a fact about {token}." in reader.recall(U, token, semantic=False).grounded
+            assert reader.store.get_wiki(U) is not None
+        done = []
+
+        def redact(n):
+            if not done:
+                done.append(writer.redact(U, reason="subject_request",
+                                          **({"edge_id": "location"} if target == "edge" else {"episode_id": "ep-1"})))
+        callers = _bind_site_hook(monkeypatch, reader.store, before=redact)
+        r = reader.recall(U, token, semantic=False)
+        assert done and "compile.py:bound_wiki" in callers, callers
+        assert token not in r.grounded, r.grounded
+    finally:
+        reader.close()
+        writer.close()
+
+
+@pytest.mark.parametrize("path", ["compiled", "cached"])
+def test_an_erasure_before_the_bound_snapshot_is_never_in_the_body(tmp_path, monkeypatch, path):
+    """forget_user in the same window: the compiled body is bound by its inputs' presence (an erased edge is gone), the
+    cached one by its row (erasure deletes it). Mutant: the presence clause dropped from the compiled bind."""
+    state = {}
+    reader, writer = (Memory(llm=_provider(state), config=_cfg(tmp_path / "m.db")) for _ in range(2))
+    try:
+        reader.store.add_edge(_edge("location", FACT))
+        if path == "cached":
+            assert WIKI_LINE in reader.recall(U, FACT, semantic=False).grounded
+        done = []
+
+        def erase(n):
+            if not done:
+                done.append(writer.forget(U))
+        callers = _bind_site_hook(monkeypatch, reader.store, before=erase)
+        r = reader.recall(U, FACT, semantic=False)
+        assert done and "compile.py:bound_wiki" in callers, callers
+        assert FACT not in r.grounded, r.grounded
+    finally:
+        reader.close()
+        writer.close()
+
+
+# ================================================================================ INV-R18: the imported challenge (sequential)
 @pytest.mark.parametrize("route", ["import", "local_reply"])
 def test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it(tmp_path, route):
     """No concurrency: a wiki cached on a fact, then a challenge of it admitted by an IMPORT (the file's record is
@@ -228,7 +287,7 @@ def test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it(tmp_pa
         dst.close()
 
 
-# ================================================================================ the precondition, as a census
+# ================================================================================ INV-R18: the precondition, as a census
 _WRITE = re.compile(r"\b(?:INSERT(?:\s+OR\s+\w+)?\s+INTO|REPLACE\s+INTO|UPDATE|DELETE\s+FROM)\s+(\w+|\{\w*\})", re.I)
 _EVICT = re.compile(r"DELETE\s+FROM\s+(?:wiki|\{wiki\})\s+WHERE\s+user_id\s*=\s*\?", re.I)
 
@@ -354,6 +413,47 @@ def test_the_census_flags_an_erasure_loop_without_the_wiki_and_refuses_unresolve
     assert writers["forget_user"][0] is False
     probe = "def probe(self, q):\n    self._conn.execute(q)\n"
     assert reply_writer_census(probe)[1] == [("probe", 2)]
+
+
+# every function in store/sqlite.py that evicts the wiki, and the bind clause that makes a body served across it honest
+# (compile.bound_wiki): the cached path's row bind covers every one of them; for a COMPILED body, each names what it
+# can change that the body may not carry. A new evicting writer refuses here until it is classed.
+EVICTING_WRITERS = {
+    "add_reply": "a challenge or a resolve: the withheld clause",
+    "_redact_in_txn": "a redaction (edge or episode): the redacted clause",
+    "forget_user": "an erasure: the presence clause",
+    "commit_outcome_import_plan": "admitted acts (withheld clause) and imported notices, applied through "
+                                  "_redact_in_txn (redacted clause); imported records are new facts, not in the body",
+    "_invalidate_edge_row": "a plain content change: kept for the call, as a write during the compile is (0041 §4e)",
+    "_reinstate_edge_row": "a plain content change: kept for the call, as a write during the compile is (0041 §4e)",
+    "_recompute_edge_row": "a plain content change: kept for the call, as a write during the compile is (0041 §4e)",
+    "invalidate_edge": "a plain content change: kept for the call, as a write during the compile is (0041 §4e)",
+    "apply_supersession_plan": "a plain content change: kept for the call, as a write during the compile is "
+                               "(0041 §4e)",
+}
+
+
+def wiki_evictors(source: str):
+    """Every function whose SQL can delete the user's wiki row, by the census's own resolution of each execute."""
+    tree = ast.parse(source)
+    tuples = _module_tuples(tree)
+    out = set()
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        loops = {f.target.id: f.iter.id for f in ast.walk(fn) if isinstance(f, ast.For)
+                 and isinstance(f.target, ast.Name) and isinstance(f.iter, ast.Name)}
+        for c in ast.walk(fn):
+            if isinstance(c, ast.Call) and isinstance(c.func, ast.Attribute) and c.func.attr in ("execute",
+                                                                                                  "executemany") \
+                    and c.args and any(_EVICT.search(x) for x in (_sql_texts(fn, c.args[0], loops, tuples) or [])):
+                out.add(fn.name)
+    return out
+
+
+def test_every_wiki_evicting_writer_is_classed_against_the_bind():
+    assert wiki_evictors(_sqlite_source()) == set(EVICTING_WRITERS), \
+        sorted(wiki_evictors(_sqlite_source()) ^ set(EVICTING_WRITERS))
 
 
 def test_no_other_module_writes_replies():
