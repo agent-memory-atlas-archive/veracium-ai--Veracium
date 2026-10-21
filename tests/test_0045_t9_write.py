@@ -111,9 +111,9 @@ def test_d6_the_vendored_predicate_is_the_frozen_file_byte_for_byte():
     assert vendored == (ATTEST / "attest_v3.py").read_bytes()
     digest = hashlib.sha256(vendored).hexdigest()
     assert f"{attest_v3.VERSION}@{digest[:8]}" == "ATTEST-3@b1329a81"
-    # specs/0051 §4a: the write path's version is ATTEST-5, whose verdict is a function of this file AND attest_turns.py;
+    # specs/0051 §4a: the write path's version is ATTEST-6, whose verdict is a function of this file AND attest_turns.py;
     # its literal is bound to both digests by test_0051_speaker_turns.py::test_inv_s5_the_version_names_both_frozen_files
-    assert PREDICATE_VERSION == "ATTEST-5@0bb7779f"
+    assert PREDICATE_VERSION == "ATTEST-6@ccabb664"
     assert attest_v3.__file__.endswith(str(pathlib.Path("src", "veracium", "attest_v3.py")))
 
 

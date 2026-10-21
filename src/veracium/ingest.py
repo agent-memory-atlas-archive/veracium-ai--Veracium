@@ -823,7 +823,7 @@ def ingest_event(store, llm: Complete, user_id: str, *, event_text: str,
         att, attv = _attestation(user_effective, edge.subject, edge.relation, edge.object, event_text)
         edge = Edge.model_validate({**edge.model_dump(), "att": att, "attv": attv, "src": source_episode})
         # specs/0051 INV-S7: a triple counts ONCE, whether §4b restricted its disclosure or §4a its label (ATTEST-3 over
-        # the raw text attested what ATTEST-5 did not) — the host's signal to split the transcript by speaker
+        # the raw text attested what ATTEST-6 did not) — the host's signal to split the transcript by speaker
         if speaker_restricted or (user_effective and att != _ATTESTED and _attest_v3.attests(
                 edge.subject, edge.relation, edge.object, event_text) == "ATTESTED"):
             n_speaker_restricted += 1

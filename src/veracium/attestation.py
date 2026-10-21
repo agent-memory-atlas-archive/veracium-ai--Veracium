@@ -2,8 +2,10 @@
 
 `attest_v3` is ATTEST-3, VENDORED BYTE-IDENTICAL from the evidence set that measured it (`specs/evidence/0045/attest/`,
 sha256 b1329a81…; the owner's D6, 2026-10-18), so the predicate holdout H2 scored is the one the write path runs.
-specs/0051: the write path runs ATTEST-5 (`attest_turns`, FROZEN, sha256 0bb7779f…): ATTEST-3 over the raw text AND,
-when the event labels a non-user turn, over the event's user text — the predicate research's holdout H4 scored.
+specs/0051: the write path runs ATTEST-6 (`attest_turns`, FROZEN, sha256 ccabb664…): ATTEST-3 over the raw text AND,
+when the event labels a non-user turn, over the event's user text. ATTEST-5 (0bb7779f, the predicate research's
+holdout H4 scored) differed in one rule (R-II round 2's RII-02: a counted `h`/`q` did not make a weak name a non-user
+speaker); ATTEST-6's holdout is H5.
 Nothing here reads the extractor's output or 0019's flag: `att` comes only from ATTEST over the event text (0051: the raw text and its user turns)
 (INV-G1), and the axis is orthogonal to the flag (INV-G8).
 
@@ -19,7 +21,7 @@ from typing import Optional
 
 from . import attest_turns
 
-PREDICATE_VERSION = "ATTEST-5@0bb7779f"   # specs/0051 §4a; ATTEST-3@b1329a81 rows keep theirs (INV-G7, G13)
+PREDICATE_VERSION = "ATTEST-6@ccabb664"   # specs/0051 §4a; ATTEST-3@b1329a81 and ATTEST-5@0bb7779f rows keep theirs (INV-G7, G13)
 NON_USER_EFFECTIVE = "non-user-effective"
 DEFAULT_IMPORT = "default-import"
 ATTESTED, NOT_ATTESTED = "attested", "not_attested"
@@ -36,7 +38,7 @@ def valid_attv(value: str) -> bool:
 def attestation(user_effective: bool, subject: str, relation: str, obj: str, event_text: str) -> tuple[str, str]:
     """0045 §3/§4a: `(att, attv)` for one DECLARATIVE edge of an event. USER-effective (0019 v7: the effective author
     is USER and the resolved content source is direct): ATTEST-3 over the RAW event text, with the edge's own
-    subject, relation and object as stored (an UNSUPPORTED answer is not attested: the safe direction) — through ATTEST-5
+    subject, relation and object as stored (an UNSUPPORTED answer is not attested: the safe direction) — through ATTEST-6
     (specs/0051 §4a), which conjoins ATTEST-3 over the event's user text when the event labels a non-user turn. Any
     other event: `not_attested`, and the predicate is NOT called (§3: ATTEST-3 covers first-person USER statements
     only)."""

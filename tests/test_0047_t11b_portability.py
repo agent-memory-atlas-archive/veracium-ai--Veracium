@@ -727,7 +727,7 @@ def test_d10_an_axis_outside_its_rules_refuses_in_both_modes(tmp_path, axis, mat
 
 
 def test_d10_both_predicate_versions_restore_as_recorded_and_a_dangling_src_is_admitted(tmp_path):
-    """INV-G13 (versions coexist): ATTEST-3 and ATTEST-5 rows restore with their own `attv`, and `why` names each.
+    """INV-G13 (versions coexist): ATTEST-3 and current-version rows restore with their own `attv`, and `why` names each.
     Research's M4 (the owner's F1(b)): a `src` naming no held or carried episode (a deleted or consumed source) is
     admitted in a restore, never refused. The default import still stamps (INV-G9's default half)."""
     a, e1, e2, _c = _history(tmp_path)

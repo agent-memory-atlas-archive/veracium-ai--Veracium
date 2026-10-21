@@ -625,7 +625,7 @@ and never changed (a same-id rewrite of any of them raises `ValueError`):
 
 - **`att`** — `"attested"` when a fixed, versioned predicate found the fact
   stated in the user's own words in the event, in the one sentence form it
-  recognises; otherwise `"not_attested"`. The predicate is ATTEST-5
+  recognises; otherwise `"not_attested"`. The predicate is ATTEST-6
   (specs/0051): ATTEST-3 over the event text and, when the event labels a turn
   for an assistant ("Assistant:", "AI:", "ChatGPT said:", …), ATTEST-3 again
   over the user's turns alone — both must find it, so a sentence only the
@@ -634,7 +634,8 @@ and never changed (a same-id rewrite of any of them raises `ValueError`):
   it does not recognise (ATTEST-3 recognised 12 of 53 on its blind holdout,
   with 1 false attestation in 67; on 0051's blind holdout of pasted
   two-speaker transcripts ATTEST-5 attested 9 of 58, with 3 false
-  attestations in 72 where ATTEST-3 had 7). It is **not** "unverified" — the fact is stored,
+  attestations in 72 where ATTEST-3 had 7; ATTEST-6 answers every item of that
+  holdout as ATTEST-5 does). It is **not** "unverified" — the fact is stored,
   recalled and asserted exactly as before. `"attested"` is a label, not proof,
   and carries no other privilege. Only a declared-direct USER event
   (`context=EvidenceContext.direct()`) can be attested; every other event is
@@ -648,9 +649,10 @@ and never changed (a same-id rewrite of any of them raises `ValueError`):
   "Sam: …"), the user's line is restricted too.
 - **`src`** — the id of the episode the event wrote, or `None` when the
   extractor returned no episode text.
-- **`attv`** — what produced `att`: `"ATTEST-5@0bb7779f"` (the predicate's
+- **`attv`** — what produced `att`: `"ATTEST-6@ccabb664"` (the predicate's
   version and the first 8 hex digits of its source file's sha256;
-  `"ATTEST-3@b1329a81"` on facts a development build wrote before 0051),
+  `"ATTEST-3@b1329a81"` or `"ATTEST-5@0bb7779f"` on facts a development build
+  wrote earlier),
   `"non-user-effective"` (no predicate ran), or `"default-import"`.
 
 A fact written before this release has none of them and reads as `unknown`;

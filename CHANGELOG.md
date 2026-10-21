@@ -81,7 +81,7 @@
   G9–G13).** Every declarative fact ingest writes carries, set once and never changed: `att` (`attested` when the
   versioned predicate ATTEST-3 found the fact stated in the user's own words, in the one sentence form it
   recognises; else `not_attested`), `src` (the event's episode) and `attv` (what produced `att`:
-  `ATTEST-5@0bb7779f` — specs/0051, next entries — `non-user-effective`, or `default-import`). Only a declared-direct USER event can be
+  `ATTEST-6@ccabb664` — specs/0051, next entries — `non-user-effective`, or `default-import`). Only a declared-direct USER event can be
   `attested`. `not_attested` is a label, not a demotion: the fact is stored, recalled and asserted exactly as before.
   On its blind holdout the predicate attested 12 of 53 true statements and 1 of 67 negatives. ATTEST-3 ships
   byte-identical to the measured file (`veracium.attest_v3`). Older facts read `unknown` and are never re-derived;
@@ -1123,9 +1123,15 @@
 - **Changed: in a pasted conversation, the assistant's own words are no longer the user's facts** (specs/0051,
   accepted on the owner's word 2026-10-20; INV-S1–S8). When a user event's text labels turns by speaker ("User:",
   "Human:", "AI:", "Assistant (GPT-4o):", "ChatGPT said:", `### Assistant`, …), ingest now:
-  - attests a fact only if the predicate finds it in the user's own turns too: the predicate is **ATTEST-5**
-    (`attv` `ATTEST-5@0bb7779f`), ATTEST-3 over the whole text AND over the user's turns. ATTEST-3 ships unchanged
+  - attests a fact only if the predicate finds it in the user's own turns too: the predicate is **ATTEST-6**
+    (`attv` `ATTEST-6@ccabb664`), ATTEST-3 over the whole text AND over the user's turns. ATTEST-3 ships unchanged
     inside it; the new grammar is a separate frozen file (`veracium.attest_turns`).
+  - **ATTEST-6, not ATTEST-5** (R-II round 2's RII-02): a counted letter pair (`H:` or `Q:` with `A:`) now makes a
+    weak name (`Bot:`, `System:`, `Model:`, `Agent:`, a one-word `…bot`) a speaker, as `User:` already did. Under
+    ATTEST-5 (`ATTEST-5@0bb7779f`), in "Q: … / Bot: … / A: …" the Bot's line was read as the user's, so its fact was
+    attested and mentionable. A fact a development build stored under ATTEST-5 keeps that version and is not judged
+    again (0045 INV-G7), so such a fact stays attested and mentionable. ATTEST-6 answers every item of both holdouts
+    below as ATTEST-5 does (0 of 260 change); its own blind holdout, H5, is scored before release.
   - stores `use_only` (not asserted) a fact whose value appears only in a turn labelled for an assistant, and counts
     such facts in `remember()`'s new `speaker_restricted` (present on every path; stripped from the MCP tool result
     like the other operator counters). A non-zero count means the host passed a mixed transcript as one user event.

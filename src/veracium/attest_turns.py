@@ -1,9 +1,12 @@
-"""ATTEST-5 (specs/0051): ATTEST-3 restricted to the USER's turns of a speaker-labelled event, and the speaker-turn
+"""ATTEST-6 (specs/0051): ATTEST-3 restricted to the USER's turns of a speaker-labelled event, and the speaker-turn
 backstop. FROZEN BYTES: `attestation.PREDICATE_VERSION` names this file's sha256 prefix, and a test binds that literal
-to this file AND to ATTEST-3's (`attest_v3.py`, b1329a81), since ATTEST-5's verdict is a function of both. Any edit is a
-new version, measured on a fresh holdout before it ships (0045 §4a, Versioning). ATTEST-4 (ba09a2a1) never shipped:
-its rule "every label ends the turn before it" let a heading inside an assistant reply ("Pros:", "Note:") end the
-assistant's turn (research's 0051 B3; 24.5% of LongMemEval's assistant turns).
+to this file AND to ATTEST-3's (`attest_v3.py`, b1329a81), since ATTEST-6's verdict is a function of both. Any edit is a
+new version, measured on a fresh holdout before it ships (0045 §4a, Versioning). ATTEST-5 (0bb7779f) differs from this
+file in one rule: its two-speaker test for a WEAK name ("the event also carries a USER label") left out a COUNTED
+`h`/`q`, which the class table below makes a USER label, so in "Q: / Bot: / A:" the weak `Bot:` read UNLISTED and its
+line joined the user's text (R-II round 2's RII-02); ATTEST-5 rows keep their attv (INV-G7). ATTEST-4 (ba09a2a1) never
+shipped: its rule "every label ends the turn before it" let a heading inside an assistant reply ("Pros:", "Note:")
+end the assistant's turn (research's 0051 B3; 24.5% of LongMemEval's assistant turns).
 
 THE TURN GRAMMAR (closed). A LABEL is found at the start of the event or of a line, after optional spaces, `>` quote
 markers and a markdown heading (`#`..`######`), inside optional `**`/`__` emphasis:
@@ -64,8 +67,9 @@ def _labels(text: str) -> list:
 def _classify(labels: list) -> list:
     """'user', 'non-user' or 'unlisted' per label, by the closed classes above (whole-event properties)."""
     names = [n for _s, _e, n, _said in labels]
-    has_user = any(n in USER_NAMES or (n == "you" and said) for _s, _e, n, said in labels)
     letters = {"h", "q"} & set(names) and "a" in names
+    has_user = any(n in USER_NAMES or (n == "you" and said) or (n in ("h", "q") and letters)
+                   for _s, _e, n, said in labels)
     out = []
     for i, (_s, _e, n, said) in enumerate(labels):
         if n in NON_USER_NAMES:
@@ -108,7 +112,7 @@ def turns(text: str) -> list:
 
 
 def user_text(text: str):
-    """The event's user text, or None when the event has no non-user turn (then ATTEST-5 is ATTEST-3)."""
+    """The event's user text, or None when the event has no non-user turn (then ATTEST-6 is ATTEST-3)."""
     ts = turns(text)
     if not any(sp == "non-user" for sp, _b in ts):
         return None
@@ -116,7 +120,7 @@ def user_text(text: str):
 
 
 def attests(subject: str, relation: str, obj: str, event_text: str) -> str:
-    """ATTEST-5: ATTEST-3 over the raw text AND, when the event has a non-user turn, over its user text. Its attested
+    """ATTEST-6: ATTEST-3 over the raw text AND, when the event has a non-user turn, over its user text. Its attested
     set is a subset of ATTEST-3's on every input (restriction only)."""
     verdict = attest_v3.attests(subject, relation, obj, event_text)
     if verdict != "ATTESTED":

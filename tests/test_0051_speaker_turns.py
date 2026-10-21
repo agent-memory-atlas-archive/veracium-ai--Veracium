@@ -1,4 +1,4 @@
-"""specs/0051 (speaker turns inside a user event; ACCEPTED on Quentin's word 2026-10-20, v0.3.1): ATTEST-5 — ATTEST-3
+"""specs/0051 (speaker turns inside a user event; ACCEPTED on Quentin's word 2026-10-20, v0.3.1): ATTEST-6 (ATTEST-5 until R-II round 2's RII-02) — ATTEST-3
 over the raw text AND over the event's USER text when the event labels a non-user turn — and the product backstop that
 writes `use_only` a triple whose every non-`user` side the event shows only in a non-user turn. INV-S1..S8.
 
@@ -23,19 +23,19 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "veracium"
 U = "u"
 DATE = "2026-10-20"
-A3, A5, B = attest_v3.attests, attest_turns.attests, speaker_backstop.speaker_restricts
+A3, A6, B = attest_v3.attests, attest_turns.attests, speaker_backstop.speaker_restricts
 
 
 # ------------------------------------------------------------------------------------------- INV-S5: the version
 def test_inv_s5_the_version_names_both_frozen_files():
-    """`attv` says what produced `att`: ATTEST-5's verdict is a function of attest_turns.py AND attest_v3.py, so the
+    """`attv` says what produced `att`: ATTEST-6's verdict is a function of attest_turns.py AND attest_v3.py, so the
     literal is bound to the first file's digest and the second's is pinned too. Mutants: keep ATTEST-3@b1329a81; edit
     either file without a new version."""
     turns = hashlib.sha256((SRC / "attest_turns.py").read_bytes()).hexdigest()
     v3 = hashlib.sha256((SRC / "attest_v3.py").read_bytes()).hexdigest()
-    assert turns == "0bb7779fd9f3a015da4d285fdf7f988813d2fdf74822bf7fc088aa4f6ae82150"
+    assert turns == "ccabb664bbf1567a6d45bae6c64c7dbf08ff0c3a319f69bf83d9642700b1cba7"
     assert v3.startswith("b1329a81")
-    assert attestation.PREDICATE_VERSION == f"ATTEST-5@{turns[:8]}" and attestation.valid_attv(attestation.PREDICATE_VERSION)
+    assert attestation.PREDICATE_VERSION == f"ATTEST-6@{turns[:8]}" and attestation.valid_attv(attestation.PREDICATE_VERSION)
 
 
 # --------------------------------------------------------------------------------- INV-S6: the grammar's domain
@@ -48,7 +48,7 @@ NOTES = [  # research's B1 rows: a user's own notes; nothing is a non-user turn,
 @pytest.mark.parametrize("text", NOTES)
 def test_inv_s3_a_users_notes_have_no_non_user_turn(text):
     assert attest_turns.user_text(text) is None
-    assert A5("user", "located_at", "Porto", text) == A3("user", "located_at", "Porto", text) == "ATTESTED"
+    assert A6("user", "located_at", "Porto", text) == A3("user", "located_at", "Porto", text) == "ATTESTED"
     assert B("user", "Porto", text) is False
 
 
@@ -71,7 +71,7 @@ ASSISTANT_FIRST_PERSON = {  # F1 formats and C3/B3: the assistant's "I'm based i
 def test_inv_s1_s6_an_assistant_first_person_never_attests_and_is_restricted(name):
     text = ASSISTANT_FIRST_PERSON[name]
     assert A3("user", "located_at", "Toronto", text) == "ATTESTED"          # the leak this spec closes
-    assert A5("user", "located_at", "Toronto", text) == "NOT_ATTESTED"
+    assert A6("user", "located_at", "Toronto", text) == "NOT_ATTESTED"
     assert B("user", "Toronto", text) is True
 
 
@@ -80,7 +80,7 @@ def test_inv_s6_a_heading_inside_a_reply_stays_in_the_reply():
     rule made it one). Mutant: ATTEST-4's rule."""
     text = "User: laptop?\nAssistant: Options.\n**Pros:**\nI prefer ThinkPads."
     assert [sp for sp, _b in attest_turns.turns(text)] == ["user", "non-user"]
-    assert A5("user", "prefers", "ThinkPads", text) == "NOT_ATTESTED" and B("user", "ThinkPads", text) is True
+    assert A6("user", "prefers", "ThinkPads", text) == "NOT_ATTESTED" and B("user", "ThinkPads", text) is True
 
 
 @pytest.mark.parametrize("text,speakers", [
@@ -105,13 +105,13 @@ def test_inv_s6_c3_the_one_pass_hand_off_rule(text, speakers):
 def test_c1_sample_dialogue_inside_a_reply_is_a_stated_limit():
     """§8 limit 7: a listed USER label inside the assistant's reply reopens a USER turn — the lines fail open."""
     text = "User: write a script\nAssistant: Here:\nCustomer: Hi. I'm based in Toronto."
-    assert A5("user", "located_at", "Toronto", text) == "ATTESTED" and B("user", "Toronto", text) is False
+    assert A6("user", "located_at", "Toronto", text) == "ATTESTED" and B("user", "Toronto", text) is False
 
 
 def test_the_users_own_later_sentence_in_a_labelled_turn_still_attests():
     text = "User: Hi. I live in Austin.\nAssistant: Nice. I live in Denver."
-    assert A5("user", "located_at", "Austin", text) == "ATTESTED" and B("user", "Austin", text) is False
-    assert A5("user", "located_at", "Denver", text) == "NOT_ATTESTED" and B("user", "Denver", text) is True
+    assert A6("user", "located_at", "Austin", text) == "ATTESTED" and B("user", "Austin", text) is False
+    assert A6("user", "located_at", "Denver", text) == "NOT_ATTESTED" and B("user", "Denver", text) is True
 
 
 # ----------------------------------------------------------------------- INV-S2: the backstop's normalisations
@@ -151,14 +151,14 @@ ROWS = ([("user", "located_at", "Porto", t) for t in NOTES]
 
 
 def test_inv_s4_s8_restriction_only_and_never_both_restricted_and_attested():
-    """INV-S4: ATTEST-5 attests a subset of what ATTEST-3 attests. INV-S8: no triple is both restricted by the backstop
-    and attested by ATTEST-5 (the premise of §4b's normalisation changing without a new `attv`). Mutant for S8: a
+    """INV-S4: ATTEST-6 attests a subset of what ATTEST-3 attests. INV-S8: no triple is both restricted by the backstop
+    and attested by ATTEST-6 (the premise of §4b's normalisation changing without a new `attv`). Mutant for S8: a
     backstop normalisation stricter than ATTEST-3's (drop the leading-article strip) — the Beatles row then reads both."""
     for subject, relation, obj, text in ROWS:
-        a5 = A5(subject, relation, obj, text)
-        assert a5 != "ATTESTED" or A3(subject, relation, obj, text) == "ATTESTED", text
-        assert not (a5 == "ATTESTED" and B(subject, obj, text)), text
-    assert A5("user", "prefers", "the Beatles", ROWS[-1][3]) == "ATTESTED"
+        a6 = A6(subject, relation, obj, text)
+        assert a6 != "ATTESTED" or A3(subject, relation, obj, text) == "ATTESTED", text
+        assert not (a6 == "ATTESTED" and B(subject, obj, text)), text
+    assert A6("user", "prefers", "the Beatles", ROWS[-1][3]) == "ATTESTED"
 
 
 # -------------------------------------------------------------------------- the write path (INV-S1, S2, S7)
@@ -186,19 +186,19 @@ def _ingest(tmp_path, text, *triples, author=EvidenceAuthor.USER, context="direc
 
 def test_the_write_path_restricts_the_assistants_value_and_keeps_the_users(tmp_path):
     """INV-S1/S2/S7 through the real ingest: the assistant's Toronto is `use_only`, not attested, and counted; the
-    user's Austin is `mentionable` and attested; both carry ATTEST-5's version. Mutants: drop §4b in ingest; count
+    user's Austin is `mentionable` and attested; both carry ATTEST-6's version. Mutants: drop §4b in ingest; count
     nothing; count §4b only."""
     res, by = _ingest(tmp_path, "Human: Hi. I live in Austin. Any tips?\nAI: Sure! I'm based in Toronto.",
                       _t("located_at", "Austin"), _t("located_at", "Toronto"))
     t, a = by["Toronto"], by["Austin"]
-    assert (t.provenance.disclosure, t.att, t.attv) == (Disclosure.USE_ONLY, "not_attested", "ATTEST-5@0bb7779f")
-    assert (a.provenance.disclosure, a.att, a.attv) == (Disclosure.MENTIONABLE, "attested", "ATTEST-5@0bb7779f")
+    assert (t.provenance.disclosure, t.att, t.attv) == (Disclosure.USE_ONLY, "not_attested", "ATTEST-6@ccabb664")
+    assert (a.provenance.disclosure, a.att, a.attv) == (Disclosure.MENTIONABLE, "attested", "ATTEST-6@ccabb664")
     assert res["speaker_restricted"] == 1
 
 
 def test_s7_a_label_only_restriction_is_counted_once(tmp_path):
     """§4a without §4b: the value also occurs in the user's text, so the disclosure stands, but ATTEST-3 over the raw
-    text attested the assistant's sentence and ATTEST-5 does not — counted once."""
+    text attested the assistant's sentence and ATTEST-6 does not — counted once."""
     res, by = _ingest(tmp_path, "Human: Toronto tips?\nAI: Sure! I'm based in Toronto.", _t("located_at", "Toronto"))
     t = by["Toronto"]
     assert (t.provenance.disclosure, t.att, res["speaker_restricted"]) == (Disclosure.MENTIONABLE, "not_attested", 1)

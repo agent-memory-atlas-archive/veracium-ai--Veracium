@@ -1,5 +1,5 @@
 """specs/0051 §4b — the speaker-turn backstop, PRODUCT code (not the frozen predicate: research's 0051 v0.2 H4 read).
-A triple restricted here has no value in any user text, so ATTEST-5 over the user text cannot attest it; this module's
+A triple restricted here has no value in any user text, so ATTEST-6 over the user text cannot attest it; this module's
 only independent effect is the triple's disclosure. Turns come from the frozen grammar (`attest_turns.turns`).
 
 A triple is restricted when EVERY non-`user` side of it occurs in some non-user turn and in no user text, each side
