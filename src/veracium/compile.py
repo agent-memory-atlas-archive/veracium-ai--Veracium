@@ -205,7 +205,8 @@ def needs_recompile(store, user_id: str, recompile_after: int,
 
 def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relation],
                  *, budget_tokens: int = 900, wiki_input_budget: int = 8000,
-                 variant_cap: int = 4, item_cap: int = 512, _retry: bool = False) -> str:
+                 variant_cap: int = 4, item_cap: int = 512, _retry: bool = False,
+                 _bind: Optional[dict] = None) -> str:
     """specs/0012 I10a/I10j: the compiler INPUT is hard-budgeted (each item clamped to the
     per-item cap; at most `variant_cap` value lines per (subject, relation) group; the whole
     input under `wiki_input_budget` est. tokens) and every drop is COUNTED into the
@@ -217,6 +218,8 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
     # it — a store that moves during the slow compile (a redaction, any write) is never published over
     version_at_begin = store.store_version(user_id)
     edges, episodes = _grounded_inputs(store, user_id, relations)
+    if _bind is not None:
+        _bind["drew"] = edges          # specs/0047 §4d (R-II RII-01): the facts this body drew on, for bound_wiki
     # I10g: the bound governs the COMPLETE serialized prompt — reserve the fixed
     # scaffolding (COMPILE_SYSTEM + the prompt skeleton) BEFORE item selection, so a
     # full dynamic payload can never push the serialized text past wiki_input_budget.
@@ -310,7 +313,7 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
                 return _budgets.DISPUTED_DURING_COMPILE_NOTICE
             return compile_wiki(store, llm, user_id, relations, budget_tokens=budget_tokens,
                                 wiki_input_budget=wiki_input_budget, variant_cap=variant_cap, item_cap=item_cap,
-                                _retry=True)
+                                _retry=True, _bind=_bind)
         if drew_edges or drew_episodes:
             if _retry:
                 _log.info("wiki compile for %r withheld: a record it drew on was redacted during the compile "
@@ -318,7 +321,7 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
                 return _budgets.REDACTED_DURING_COMPILE_NOTICE
             return compile_wiki(store, llm, user_id, relations, budget_tokens=budget_tokens,
                                 wiki_input_budget=wiki_input_budget, variant_cap=variant_cap, item_cap=item_cap,
-                                _retry=True)
+                                _retry=True, _bind=_bind)
         # otherwise the wiki text is returned for THIS call's own use — it was compiled from a consistent read,
         # and it is never cached
         _log.info("wiki compile for %r not published: the store moved during the compile (specs/0041 §4e)", user_id)
@@ -328,7 +331,7 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
 def ensure_wiki(store, llm: Complete, user_id: str, recompile_after: int,
                 relations: Optional[dict[str, Relation]] = None, *,
                 wiki_input_budget: int = 8000, variant_cap: int = 4,
-                item_cap: int = 512) -> Optional[str]:
+                item_cap: int = 512, _bind: Optional[dict] = None) -> Optional[str]:
     """Return the current wiki BODY (envelope stripped), recompiling if stale. None disables
     the wiki layer. `relations` (the host registry) reaches the compiler so a custom
     functional relation is excluded from the wiki when contested (§4c-ii); omitted →
@@ -348,5 +351,50 @@ def ensure_wiki(store, llm: Complete, user_id: str, recompile_after: int,
     if needs_recompile(store, user_id, recompile_after, relations, **kw):
         if getattr(llm, "_veracium_no_llm", False):       # I10l: provider-free reader
             return _budgets.STALE_WIKI_NOTICE
-        return compile_wiki(store, llm, user_id, relations, **kw)
-    return _split_envelope(store.get_wiki(user_id)[0])[1]
+        return compile_wiki(store, llm, user_id, relations, _bind=_bind, **kw)
+    row = store.get_wiki(user_id)
+    if row is None:                    # evicted between the staleness check and this read: stale, as above
+        if getattr(llm, "_veracium_no_llm", False):
+            return _budgets.STALE_WIKI_NOTICE
+        return compile_wiki(store, llm, user_id, relations, _bind=_bind, **kw)
+    if _bind is not None:
+        _bind["row"] = row             # specs/0047 §4d (R-II RII-01): the row this body was served from, for bound_wiki
+    return _split_envelope(row[0])[1]
+
+
+# the code-owned bodies ensure_wiki can return in place of a compiled one: each asserts no fact
+_WIKI_NOTICES = frozenset({_budgets.STALE_WIKI_NOTICE, _budgets.REDACTED_DURING_COMPILE_NOTICE,
+                           _budgets.DISPUTED_DURING_COMPILE_NOTICE})
+
+
+def bound_wiki(store, llm: Complete, user_id: str, recompile_after: int,
+               relations: Optional[dict[str, Relation]] = None, **kw):
+    """specs/0047 §4d, INV-R18 (R-II RII-01): the wiki body a recall serves AND the call's one challenge snapshot,
+    returned as `(body, snapshot)` and bound to one state, so the body never asserts a fact the same call reports as
+    challenged. ensure_wiki produces the body before any snapshot exists; the snapshot is read after it, and the body
+    is served only if it is bound to that snapshot:
+
+    - a body COMPILED in this call is bound by its inputs: none of the facts it drew on is withheld by the snapshot
+      (published or not, so a plain concurrent write keeps the body for this call, as before);
+    - a CACHED body is bound by its row: the wiki row read AFTER the snapshot is the very row (text and version) the
+      body was served from. Every write of a reply evicts the user's wiki in its own transaction (the import's among
+      them; tests/test_0047_rii01_wiki_bind.py's census holds the set), so a row unchanged across the snapshot proves
+      no challenge or resolve was committed between the body's read and the snapshot's.
+
+    No read window is held across the two reads (a writer is never made to wait on this call): a row evicted just
+    AFTER the snapshot reads as a failed bind too, which costs a recompute and is never wrong. A body that fails its
+    bind is recomputed once (the evicted row recompiles; a compile re-reads its inputs, which exclude what the snapshot
+    withholds); failing again, the disputed notice is served. A notice or a disabled layer asserts nothing and is
+    returned with the snapshot as is. Never compares written_at."""
+    for _attempt in range(2):
+        box: dict = {}
+        body = ensure_wiki(store, llm, user_id, recompile_after, relations, _bind=box, **kw)
+        snap = store.challenge_snapshot(user_id)
+        if body is None or body in _WIKI_NOTICES:
+            return body, snap
+        if "drew" in box:
+            if not any(snap.withheld(e) for e in box["drew"]):
+                return body, snap
+        elif box.get("row") is not None and store.get_wiki(user_id) == box["row"]:
+            return body, snap
+    return _budgets.DISPUTED_DURING_COMPILE_NOTICE, snap

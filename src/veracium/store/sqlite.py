@@ -2924,6 +2924,11 @@ class SqliteStore(Store):
                             self._set_notice_state(user_id, {"_rid": rid}, "pending", "standing-arrival",
                                                    prior="standing", now=now)
                             unbound.append((kind, tid, "standing-arrival"))
+                    # specs/0047 §4d (INV-R18; R-II round 2, found answering research's B1): an import that admits a
+                    # reply is a reply write, and evicts the user's compiled wiki in its own transaction as add_reply
+                    # does — one bump alone leaves a cached body served for recompile_after writes. Every import
+                    # evicts: an imported record changes what the body should say as surely as an imported act
+                    self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))
                     self._bump(user_id)
                 except BaseException:
                     self._conn.rollback()                # ONE atomic commit —

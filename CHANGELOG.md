@@ -37,9 +37,14 @@
   recall counts only facts it would have volunteered); under a principal N counts only facts in its view, and a
   challenge outside the view still withholds an in-view restatement without being named — so a counted in-view fact
   whose inspection is not clear and names no challenged record tells the principal that a record it cannot see holds
-  the same value and is disputed (accepted, as 0020's N-2 residual is). A reply of any kind drops the compiled wiki in its own write; a wiki compile that drew on a fact
-  challenged meanwhile recompiles once, then returns `[wiki omitted: a fact it drew on was challenged during the
-  compile; the next read recompiles]`. Render-time duplicate collapse never hides a restatement that carries a
+  the same value and is disputed (accepted, as 0020's N-2 residual is). A reply of any kind drops the compiled wiki in its own write, and so does every `import_memory()`
+  (a reply it admits is a reply write); a wiki compile that drew on a fact challenged meanwhile recompiles once, then
+  returns `[wiki omitted: a fact it drew on was challenged during the compile; the next read recompiles]`. Recall serves
+  the wiki only when it agrees with the same call's challenge state, read after the wiki: a body compiled in the call
+  must draw on no fact that state withholds, and a cached body's row must be unchanged across the read. A challenge or
+  resolve committed in between makes the call recompute once, then serve the same notice (R-II round 2's RII-01: a
+  cached wiki could assert a fact the same answer reported as disputed; an imported challenge left the cached wiki in
+  place for up to `wiki_recompile_after_writes` writes). Render-time duplicate collapse never hides a restatement that carries a
   confirmation or reply of its own, or that is itself withheld, on any surface, as-of recall included.
   - **Not covered: episodes.** An episode that names a challenged value is not withheld (specs/0047 §8): `dispute()`,
     `correct()`, `record_outcome()` and — the one whose text affirms the value — `confirm()`, whose episode reads

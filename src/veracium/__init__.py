@@ -1062,20 +1062,28 @@ class Memory:
         # the scope machinery does not control, and every such path is a
         # laundering site (the 0019 F4 precedent). Not filtered — not compiled,
         # not consulted, not rendered. The unscoped surface keeps it.
-        wiki = None if view is not None else _compile.ensure_wiki(
-            self.store, op_llm, user_id,
-            self.config.wiki_recompile_after_writes,
-            self.config.relations,
-            wiki_input_budget=self.config.wiki_input_budget_tokens,
-            variant_cap=self.config.wiki_variant_cap,
-            item_cap=self.config.item_cap_tokens)
+        # specs/0047 §4d (R-II RII-01): the wiki body and the call's ONE challenge snapshot come from one state —
+        # bound_wiki reads the snapshot after the body and serves no body that asserts a fact the snapshot
+        # withholds. A principal-bearing call has no wiki and reads the snapshot alone.
+        if view is not None:
+            wiki, snap = None, None
+        else:
+            wiki, snap = _compile.bound_wiki(
+                self.store, op_llm, user_id,
+                self.config.wiki_recompile_after_writes,
+                self.config.relations,
+                wiki_input_budget=self.config.wiki_input_budget_tokens,
+                variant_cap=self.config.wiki_variant_cap,
+                item_cap=self.config.item_cap_tokens)
         # specs/0027 §4a/§4d — the semantic lane and the fused construction.
         # `semantic`: "auto" (default) attempts the lane iff an embedder with
         # id()/dim() is configured; True forces the attempt (degrading the
         # same way, reporting status); False disables it. Every degrade path
         # is a STATUS, never an exception (V6).
-        # specs/0047 §4d: the call's ONE challenge snapshot, read before its edge reads
-        snap = self.store.challenge_snapshot(user_id)
+        # specs/0047 §4d: the call's ONE challenge snapshot, read before its edge reads (bound_wiki's, when the wiki
+        # layer ran)
+        if snap is None:
+            snap = self.store.challenge_snapshot(user_id)
         sem_status, sm_pairs, sem_meta = "disabled", [], {}
         receipt_raw = None
         if view is None and semantic is False and policy is None:

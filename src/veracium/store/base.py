@@ -336,8 +336,10 @@ class Store(ABC):
                   actor: ReplyActor, correlation_id: str) -> Reply:
         """specs/0047 §4a–§4b: append ONE reply to an edge in one write transaction — the request's shape, then the
         request registry (verb `reply`, before any read of live edge state), then the edge, then a `resolve`'s
-        target; the row, its act position and its registry row commit together. Refusals raise `ReplyRefused`. Not
-        abstract; a backend without replies refuses."""
+        target; the row, its act position and its registry row commit together, and the user's compiled wiki is
+        dropped in the same transaction (INV-R18: `compile.bound_wiki` serves a cached body only while its row is
+        unchanged, which proves no reply was written since only if every reply write drops it). Refusals raise
+        `ReplyRefused`. Not abstract; a backend without replies refuses."""
         raise NotImplementedError(f"{type(self).__name__} does not implement add_reply")
 
     def replies_for(self, user_id: str, edge_id: str) -> list[Reply]:
@@ -692,7 +694,8 @@ class Store(ABC):
         import; NOTHING is written after a prefix; contribution rows ride the
         SAME single atomic commit (rollback included). Returns `{"edges": n,
         "episodes": n, "contributions": n, "contributions_existing": m}` on
-        success or `DESTINATION_CHANGED`.
+        success or `DESTINATION_CHANGED`. A successful commit drops the user's compiled wiki in the same
+        transaction (specs/0047 INV-R18, R-II round 2: an admitted reply is a reply write; see `add_reply`).
 
         This is a purpose-built primitive that encodes ONE invariant at the interface
         boundary — "install this validated plan iff these destination assumptions still
