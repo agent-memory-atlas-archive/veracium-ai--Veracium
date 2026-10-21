@@ -99,3 +99,17 @@ def test_the_generator_refuses_each_planted_defect(matrix, monkeypatch):
         SqliteStore(p).close()
         with pytest.raises(g.GeneratorRefused, match="passed through no ruling key"):
             g._record_run(stray, p, g._ruling_keys())
+
+
+def test_a_frame_is_named_relative_to_the_imported_package_not_by_a_path_segment():
+    """A frame's module is its path relative to the IMPORTED package: a checkout whose directory is itself named
+    `veracium` (the repository's own) put that segment above the package, so splitting at "/veracium/" named every
+    module `src/veracium/...` and counted the repository's test and spec frames as callers (found by check_generated in
+    the main checkout after T12's clone run). Mutant: split at the first "/veracium/"."""
+    import veracium
+    g = _gen()
+    pkg = pathlib.Path(veracium.__file__).resolve().parent
+    assert g._pkg_rel(str(pkg / "store" / "sqlite.py")) == "store/sqlite.py"
+    assert g._pkg_rel(str(GEN)) is None                                    # a spec frame is never a product caller
+    assert g._pkg_rel("/elsewhere/veracium/src/veracium/store/sqlite.py") is None   # a segment above another package
+

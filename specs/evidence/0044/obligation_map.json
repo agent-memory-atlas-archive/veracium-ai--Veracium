@@ -326,9 +326,9 @@
   }
  ],
  "campaign": {
-  "defined": 481,
-  "pin_digest": "d0bdc021b5d2e76cac63d357d896568830e1333f0c4af997ed46522a8271b54e",
-  "results": 481,
+  "defined": 482,
+  "pin_digest": "37a37588fddcf565303a6cccef2e75588743758468a71dd7eccead61a885e288",
+  "results": 482,
   "retired": [
    {
     "commit": "e8e476e",
@@ -347,10 +347,10 @@
     "assertion+expected-refusal-missing",
     "expected-refusal-missing"
    ],
-   "killed": 481,
-   "mutants": 481
+   "killed": 482,
+   "mutants": 482
   },
-  "tree_digest": "d0bdc021b5d2e76cac63d357d896568830e1333f0c4af997ed46522a8271b54e"
+  "tree_digest": "37a37588fddcf565303a6cccef2e75588743758468a71dd7eccead61a885e288"
  },
  "findings_unbound_kills": [],
  "gates": {

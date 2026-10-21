@@ -996,11 +996,11 @@
    ],
    "control_after": {
     "exit": 0,
-    "passed": 3
+    "passed": 4
    },
    "control_before": {
     "exit": 0,
-    "passed": 3
+    "passed": 4
    },
    "group": "T12 (the writer/lifetime matrix generator, P1)"
   },
@@ -1583,7 +1583,7 @@
    "group": "T9 (INV-G6, G7, G12: what the axis does not do)"
   }
  ],
- "pin_digest": "d0bdc021b5d2e76cac63d357d896568830e1333f0c4af997ed46522a8271b54e",
+ "pin_digest": "37a37588fddcf565303a6cccef2e75588743758468a71dd7eccead61a885e288",
  "rows": [
   {
    "anchor_count": 1,
@@ -8328,6 +8328,21 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
+    "tests/test_0044_t12_writer_lifetime_matrix.py::test_a_frame_is_named_relative_to_the_imported_package_not_by_a_path_segment": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0044_t12_writer_lifetime_matrix.py::test_a_frame_is_named_relative_to_the_imported_package_not_by_a_path_segment"
+   ],
+   "def_digest": "7f9a21cf60193fceebcd62379b7a2c1571c870a1952c7b89d7bd18f9e9c13e38",
+   "file": "specs/evidence/0044/writer_lifetime_matrix.py",
+   "group": "T12 (the writer/lifetime matrix generator, P1)",
+   "kill_kind": "assertion",
+   "mutant": "a frame named by splitting its path at the first \"/veracium/\"",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
     "tests/test_confirm_contract_0008.py::test_export_carries_confirmations_with_origin": "assertion"
    },
    "cells_failed": [
@@ -11457,7 +11472,7 @@
    "assertion+expected-refusal-missing",
    "expected-refusal-missing"
   ],
-  "killed": 481,
-  "mutants": 481
+  "killed": 482,
+  "mutants": 482
  }
 }

@@ -325,6 +325,18 @@ class GeneratorRefused(Exception):
     pass
 
 
+def _pkg_rel(filename: str):
+    """A frame's module path relative to the IMPORTED veracium package (`store/sqlite.py`), or None outside it. Never
+    by splitting at "/veracium/": a checkout directory named `veracium` holds that segment above the package too (the
+    repository's own does), which named every module `src/veracium/...` and counted test and spec frames as callers."""
+    import veracium
+    root = pathlib.Path(veracium.__file__).resolve().parent
+    try:
+        return pathlib.Path(filename).resolve().relative_to(root).as_posix()
+    except ValueError:
+        return None
+
+
 def _record_run(fn, p, keys) -> tuple:
     """Drive `fn` on store `p` with the hook wrapped; returns (ending, hook calls). Only the store at `p` is recorded
     (an input's helper SOURCE store — an export to import — writes through the same class). A hook call with no ruling
@@ -349,8 +361,8 @@ def _record_run(fn, p, keys) -> tuple:
         while frame is not None and frame.f_code.co_name != chain[-1]:
             frame = frame.f_back
         outer = frame.f_back if frame is not None else None
-        if outer is not None and "/veracium/" in outer.f_code.co_filename.replace("\\", "/"):
-            mod = outer.f_code.co_filename.replace("\\", "/").split("/veracium/", 1)[1]
+        mod = _pkg_rel(outer.f_code.co_filename) if outer is not None else None
+        if mod is not None:
             qual = getattr(outer.f_code, "co_qualname", outer.f_code.co_name)
             caller = f"{mod}:{qual}"
         calls.append({"chain": list(reversed(chain)), "transition": "insert" if prior_json is None else (t or "none"),
@@ -365,8 +377,8 @@ def _record_run(fn, p, keys) -> tuple:
             raise
         except Exception as exc:                                    # noqa: BLE001 — a refusal is an ending
             import traceback
-            last = [f for f in traceback.extract_tb(exc.__traceback__) if "/veracium/" in f.filename.replace("\\", "/")]
-            where = (last[-1].filename.replace("\\", "/").split("/veracium/", 1)[1] + ":" + last[-1].name) if last else "?"
+            last = [f for f in traceback.extract_tb(exc.__traceback__) if _pkg_rel(f.filename) is not None]
+            where = (_pkg_rel(last[-1].filename) + ":" + last[-1].name) if last else "?"
             return f"refused: {type(exc).__name__} at {where}", calls
     finally:
         SqliteStore._apply_lifetime_transition = real
