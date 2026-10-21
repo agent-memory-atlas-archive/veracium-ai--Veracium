@@ -80,7 +80,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("agreement.py", 219): "predicate-helper", ("agreement.py", 267): "control-flow", ("agreement.py", 487): "control-flow",
     ("asof/adapter.py", 54): "internal-invariant", ("asof/resolve.py", 117): "internal-invariant", ("asof/resolve.py", 122): "internal-invariant",
     ("asof/resolve.py", 181): "control-flow", ("asof/resolve.py", 206): "predicate-helper",
-    ("compile.py", 203): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
+    ("compile.py", 204): "predicate-helper", ("compile.py", 385): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
     ("doctor.py", 483): "predicate-helper", ("dryrun.py", 68): "predicate-helper",
     ("graph.py", 60): "predicate-helper", ("graph.py", 75): "predicate-helper", ("graph.py", 234): "internal-invariant",
     ("graph.py", 905): "argument-check", ("grounding.py", 154): "control-flow",
@@ -164,8 +164,9 @@ e("asof/resolve.py", 272, "asof.resolve.future-T", "0028", "§2c-i", "refuse")
 e("asof/resolve.py", 245, "asof.resolve.held-at", "0028", "§2c-i", "withhold")
 e("authority.py", 71, "authority.permitted", "0003", "§4a", "refuse")
 e("authority.py", 84, "authority.self-assertion", "0003", "§4a", "withhold")
-e("compile.py", 137, "compile.fence.disputed", "0047", "§4d INV-R18 (the in-flight fence withholds a body drawn on a fact challenged since)", "withhold")
-e("compile.py", 189, "compile.grounded-inputs", "0004", "§4", "withhold")
+e("compile.py", 395, "compile.bind.unbound", "0047", "§4d INV-R18 (R-II round 2's RII-01: recall serves no wiki body its own snapshot does not admit)", "withhold")
+e("compile.py", 138, "compile.fence.disputed", "0047", "§4d INV-R18 (the in-flight fence withholds a body drawn on a fact challenged since)", "withhold")
+e("compile.py", 190, "compile.grounded-inputs", "0004", "§4", "withhold")
 e("diagnostics.py", 276, "diagnostics.send.not-consented", "0015", "§4", "withhold")
 e("gate.py", 54, "gate.exclude-procedural", "0037", "V-EXTRACTOR-QUOTE-GATED", "withhold")
 e("gate.py", 178, "gate.partition-parts", "0001", "§4", "withhold")

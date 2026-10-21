@@ -1649,6 +1649,12 @@ DECLINES.update({
     "store.undo.correlation": TwoPhase(lambda mp: _undo_store(mp, lambda s: s._conn.execute(_HELD_UNDO, (U,)),
                                                               patch_free=True), lambda s: _undo_raises(s)),
 })
+# specs/0047 INV-R18, R-II round 2's RII-01: bound_wiki's one decision (a body its call's snapshot does not admit is
+# withheld), declining once on a cause
+DECLINES.update({
+    "compile.bind.unbound": TwoPhase(lambda mp: compile_mod._budgets.REDACTED_DURING_COMPILE_NOTICE,
+                                     lambda why: compile_mod._bind_withholds(why)),
+})
 SITES.update({sid: census._REGISTRY[sid] for sid in census.registry()})
 
 

@@ -18,6 +18,7 @@ DECLARATION = (
     ("asof.resolve.held-at", "0028", "§2c-i", "asof/resolve.py:held_at", "withhold"),
     ("authority.permitted", "0003", "§4a", "authority.py:permitted", "refuse"),
     ("authority.self-assertion", "0003", "§4a", "authority.py:self_assertion", "withhold"),
+    ("compile.bind.unbound", "0047", "§4d INV-R18 (R-II round 2's RII-01: recall serves no wiki body its own snapshot does not admit)", "compile.py:_bind_withholds", "withhold"),
     ("compile.fence.disputed", "0047", "§4d INV-R18 (the in-flight fence withholds a body drawn on a fact challenged since)", "compile.py:_drew_a_challenged_fact", "withhold"),
     ("compile.grounded-inputs", "0004", "§4", "compile.py:_grounded_inputs", "withhold"),
     ("diagnostics.send.not-consented", "0015", "§4", "diagnostics.py:Reporter.send", "withhold"),

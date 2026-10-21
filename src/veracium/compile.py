@@ -127,6 +127,7 @@ def _live_refusal_contention_edge_ids(store, user_id: str,
 
 _SITE_GROUNDED_INPUTS = declare_site("compile.grounded-inputs")   # specs/0042 (declined= is explicit)
 _SITE_FENCE_DISPUTED = declare_site("compile.fence.disputed", declines=True)   # specs/0047 INV-R18
+_SITE_BIND_UNBOUND = declare_site("compile.bind.unbound", declines=True)   # specs/0047 INV-R18, R-II round 2's RII-01
 
 
 def _drew_a_challenged_fact(store, user_id: str, edges) -> bool:
@@ -387,6 +388,13 @@ def _unbound_by(store, user_id: str, snap, edges, episodes):
 _ERASED = object()                     # the user's records erased since the compile: no wiki, and no notice to give
 
 
+def _bind_withholds(why) -> bool:
+    """specs/0047 INV-R18 (R-II round 2's RII-01): bound_wiki's decision, for both of its binds — True withholds the
+    body this call would serve (`why`, its cause, is not None)."""
+    with _SITE_BIND_UNBOUND.consult():
+        return _SITE_BIND_UNBOUND.fire(why is not None, "withhold-body")
+
+
 def bound_wiki(store, llm: Complete, user_id: str, recompile_after: int,
                relations: Optional[dict[str, Relation]] = None, **kw):
     """specs/0047 §4d, INV-R18 (R-II RII-01): the wiki body a recall serves AND the call's one challenge snapshot,
@@ -417,8 +425,10 @@ def bound_wiki(store, llm: Complete, user_id: str, recompile_after: int,
             return body, snap
         if "drew" in box:
             why = _unbound_by(store, user_id, snap, box["drew"], box["drew_episodes"])
-            if why is None:
-                return body, snap
         elif box.get("row") is not None and store.get_wiki(user_id) == box["row"]:
+            why = None
+        else:                          # the row moved: its cause is not recorded with a cached body
+            why = _budgets.DISPUTED_DURING_COMPILE_NOTICE
+        if not _bind_withholds(why):
             return body, snap
     return (None if why is _ERASED else why), snap
