@@ -259,6 +259,57 @@ def test_an_erasure_before_the_bound_snapshot_is_never_in_the_body(tmp_path, mon
         writer.close()
 
 
+def test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body(tmp_path, monkeypatch):
+    """Research's R-II round 2 landing read (L1): a body compiled in the call from EPISODES alone, then forget_user in
+    the window. An edge-presence test holds vacuously over no edges; the bind reads the episodes' presence too.
+    Mutant: the episode-presence clause dropped (L1's state at 6611c9b)."""
+    state = {}
+    reader, writer = (Memory(llm=_provider(state), config=_cfg(tmp_path / "m.db")) for _ in range(2))
+    try:
+        reader.store.add_episode(Episode(id="ep-1", user_id=U, date="2026-10-21", summary="a trip to Puffinry",
+                                         provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
+                                                               evidence_ref="bind")))
+        assert reader.store.edges(U, active_only=False, include_quarantined=True) == []
+        done = []
+
+        def erase(n):
+            if not done:
+                done.append(writer.forget(U))
+        callers = _bind_site_hook(monkeypatch, reader.store, before=erase)
+        r = reader.recall(U, "Puffinry", semantic=False)
+        assert done and "compile.py:bound_wiki" in callers, callers
+        assert "Puffinry" not in r.grounded, r.grounded
+    finally:
+        reader.close()
+        writer.close()
+
+
+def test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body(tmp_path, monkeypatch):
+    """forget_user, then writes in the same window (the user's write counter climbs back): a bind keyed on the
+    counter would pass this; presence does not. Mutant: the episode-presence clause dropped."""
+    state = {}
+    reader, writer = (Memory(llm=_provider(state), config=_cfg(tmp_path / "m.db", after=10**6)) for _ in range(2))
+    try:
+        reader.store.add_episode(Episode(id="ep-1", user_id=U, date="2026-10-21", summary="a trip to Puffinry",
+                                         provenance=Provenance(author_of_evidence=EvidenceAuthor.USER,
+                                                               evidence_ref="bind")))
+        done = []
+
+        def erase_then_write(n):
+            if not done:
+                done.append(writer.forget(U))
+                for i in range(5):
+                    writer.store.add_edge(_edge(f"after-{i}", f"thing {i}", rel="likes"))
+        callers = _bind_site_hook(monkeypatch, reader.store, before=erase_then_write)
+        r = reader.recall(U, "Puffinry", semantic=False)
+        assert done and "compile.py:bound_wiki" in callers, callers
+        assert reader.store.store_version(U) >= 1
+        assert "Puffinry" not in r.grounded, r.grounded
+    finally:
+        reader.close()
+        writer.close()
+
+
 # ================================================================================ INV-R18: the imported challenge (sequential)
 @pytest.mark.parametrize("route", ["import", "local_reply"])
 def test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it(tmp_path, route):

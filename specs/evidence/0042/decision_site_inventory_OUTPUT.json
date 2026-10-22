@@ -831,13 +831,13 @@
   },
   {
    "kind": "RETURN_NONE",
-   "line": 385,
+   "line": 389,
    "module": "compile.py",
    "qualname": "_unbound_by"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 395,
+   "line": 399,
    "module": "compile.py",
    "qualname": "_bind_withholds"
   },

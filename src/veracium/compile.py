@@ -372,15 +372,19 @@ def _unbound_by(store, user_id: str, snap, edges, episodes):
     """Why a body drawn on `edges` and `episodes` may NOT be served beside `snap` — the notice that replaces it — or None
     when it may. The round-10 fence's predicate (compile_wiki: a challenge, a redaction), read AFTER the compile and
     against the call's own snapshot, plus erasure: a fact the snapshot withholds; an edge or an episode redacted since
-    it was read; an edge no longer in the store (forget_user). Research's R-II round 2 stage-2 probe: a redaction in
-    this window passed a bind that read only `withheld`, which reads open challenges and nothing else."""
+    it was read; an edge or an EPISODE no longer in the store (forget_user, whatever the body drew on: research's R-II
+    round 2 landing read, L1, an episodes-only body passed an edge-presence test that holds vacuously over no edges).
+    Presence is read through the Store API, so an episode a consolidation cutover hides reads as absent too: a
+    recompute, never a wrong body. Research's stage-2 probe: a redaction in this window passed a bind that read only
+    `withheld`, which reads open challenges and nothing else."""
     if any(snap.withheld(e) for e in edges):
         return _budgets.DISPUTED_DURING_COMPILE_NOTICE
     if ({e.id for e in edges} & store.redacted_targets(user_id, "edge")
             or {e.id for e in episodes} & store.redacted_targets(user_id, "episode")):
         return _budgets.REDACTED_DURING_COMPILE_NOTICE
     present = {e.id for e in store.edges(user_id, active_only=False, include_quarantined=True)}
-    if not {e.id for e in edges} <= present:
+    present_episodes = {e.id for e in store.episodes(user_id)}
+    if not {e.id for e in edges} <= present or not {e.id for e in episodes} <= present_episodes:
         return _ERASED
     return None
 
