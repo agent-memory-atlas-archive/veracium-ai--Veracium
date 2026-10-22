@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ c67f392
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 6224691
+# RE-PINNED 2026-10-22 R-II round 2's D10 (specs/0004 W9: a revoking invalidation withholds the in-call body) landed in 62246918d99f5703f3509e49a2c99b862446fc2b: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-22 R-II round 2's landing read L1 (the bind reads the drawn episodes' presence) landed in c67f39247cb46be7bd7cadd3df92362c97f6da51: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-22 R-II round 2 (RII-01's bound wiki, import eviction, the redaction/erasure bind and its census site 1d7f186..7f7f02e; RII-02's ATTEST-6 ec929c1) landed in 7f7f02e7584828ba8b4a3e7e2c0b426aee4043f0: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-21 0044 T12 (the closing gates) landed in 811760d9641f292af8c71c10f1abb5a7afd8ed48: bodies byte-identical; the pin moves to the commit that changed src/

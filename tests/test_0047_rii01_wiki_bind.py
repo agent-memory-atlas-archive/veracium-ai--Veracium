@@ -239,7 +239,8 @@ def test_a_redaction_before_the_bound_snapshot_is_never_in_the_body(tmp_path, mo
 @pytest.mark.parametrize("path", ["compiled", "cached"])
 def test_an_erasure_before_the_bound_snapshot_is_never_in_the_body(tmp_path, monkeypatch, path):
     """forget_user in the same window: the compiled body is bound by its inputs' presence (an erased edge is gone), the
-    cached one by its row (erasure deletes it). Mutant: the presence clause dropped from the compiled bind."""
+    cached one by its row (erasure deletes it); either way the call answers. Mutant: the presence clause dropped from
+    the compiled bind (the W9 clause then meets the erased edge: a crash, reported here as the cell's failure)."""
     state = {}
     reader, writer = (Memory(llm=_provider(state), config=_cfg(tmp_path / "m.db")) for _ in range(2))
     try:
@@ -252,7 +253,10 @@ def test_an_erasure_before_the_bound_snapshot_is_never_in_the_body(tmp_path, mon
             if not done:
                 done.append(writer.forget(U))
         callers = _bind_site_hook(monkeypatch, reader.store, before=erase)
-        r = reader.recall(U, FACT, semantic=False)
+        try:
+            r = reader.recall(U, FACT, semantic=False)
+        except Exception as e:                       # the call must answer: an erased input is withheld, never a crash
+            raise AssertionError(f"the erasure in the window crashed the call: {e!r}") from e
         assert done and "compile.py:bound_wiki" in callers, callers
         assert FACT not in r.grounded, r.grounded
     finally:
