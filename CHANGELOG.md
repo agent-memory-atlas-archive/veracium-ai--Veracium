@@ -43,7 +43,12 @@
   the wiki only when it agrees with the same call's challenge state, read after the wiki: a body compiled in the call
   must draw on no fact that state withholds and on no fact or episode redacted or erased since the compile read it, and
   a cached body's row must be unchanged across the read. A challenge, resolve, redaction or erasure committed in
-  between makes the call recompute once, then serve the disputed or the redacted notice (after an erasure, no wiki) (R-II round 2's RII-01: a
+  between makes the call recompute once, then serve the disputed or the redacted notice (after an erasure, no wiki).
+  Likewise (specs/0004 W9, the owner's ruling of 2026-10-22): a fact the body drew on, invalidated in that window or
+  during the compile itself for a reason that drops the cached wiki (`disputed`, `corrected`, `superseded`,
+  `revoked_source`), withholds the body; staleness (`lapsed`, `decayed`) and absorption (`absorbed_duplicate`) keep
+  it, as they keep the cached wiki. Before, a compiled body could still state a fact the same answer's fact list no
+  longer held (R-II round 2's RII-01: a
   cached wiki could assert a fact the same answer reported as disputed; an imported challenge left the cached wiki in
   place for up to `wiki_recompile_after_writes` writes). Render-time duplicate collapse never hides a restatement that carries a
   confirmation or reply of its own, or that is itself withheld, on any surface, as-of recall included.

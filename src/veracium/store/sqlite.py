@@ -28,7 +28,7 @@ from ..schema import (ConsolidationOp, ConsolidationOutputDraft, ConsolidationSt
                       Provenance, RECOVERY_PENDING_STATES,
                       SupersessionPlan, SupersessionRefusal, SupersessionResult,
                       is_historical_id, to_historical_id,
-                      WIKI_RETAINING_REASONS, DISPOSITIONED_REASONS, as_utc_required)
+                      DISPOSITIONED_REASONS, as_utc_required, wiki_drops_on)
 from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS, ReplyRefused,
                    RequestRedacted, UnknownEdge,
                    DESTINATION_CHANGED, HEAD_MOVED, LEASE_MAX, NON_QUIESCENT,
@@ -1321,7 +1321,7 @@ class SqliteStore(Store):
         # reaches this line — specs/0029 V-KIND refused the write just above.
         # The refusal-contention drops in the callers are 0003's independent,
         # reason-blind condition and remain beside this.
-        if reason not in WIKI_RETAINING_REASONS:
+        if wiki_drops_on(reason):          # specs/0004 W1, the rule W9's bind shares (schema.wiki_drops_on)
             self._conn.execute("DELETE FROM wiki WHERE user_id=?", (row[1],))
         return row[1]
 

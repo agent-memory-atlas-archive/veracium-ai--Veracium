@@ -25,7 +25,7 @@ from . import budgets as _budgets
 from .graph import collapse_for_render, render_edges
 from .contention import is_live_refusal, retained_refusal_ids
 from .llm.base import Complete
-from .schema import DEFAULT_RELATIONS, Relation
+from .schema import DEFAULT_RELATIONS, Relation, wiki_drops_on
 from .registry import declared_arity
 
 # The contention-policy version. Bump it when the derived-view semantics change in a way a
@@ -373,23 +373,28 @@ def _unbound_by(store, user_id: str, snap, edges, episodes):
     when it may. The round-10 fence's predicate (compile_wiki: a challenge, a redaction), read AFTER the compile and
     against the call's own snapshot, plus erasure: a fact the snapshot withholds; an edge or an episode redacted since
     it was read; an edge or an EPISODE no longer in the store (forget_user, whatever the body drew on: research's R-II
-    round 2 landing read, L1, an episodes-only body passed an edge-presence test that holds vacuously over no edges).
-    Presence is read through the Store API, so an episode a consolidation cutover hides reads as absent too: a
-    recompute, never a wrong body. Research's stage-2 probe: a redaction in this window passed a bind that read only
+    round 2 landing read, L1, an episodes-only body passed an edge-presence test that holds vacuously over no edges);
+    and (specs/0004 W9, the owner's D10 ruling) an edge since INVALIDATED for a reason that drops the wiki, by W1's own
+    rule (schema.wiki_drops_on, the function the store's eviction calls): a revoking invalidation of a fact the body
+    drew on withholds it, published or not; a retaining one (W3's staleness, W8's absorption) keeps it. Presence is read
+    through the Store API, so an episode a consolidation cutover hides reads as absent too: a recompute, never a wrong
+    body. Research's stage-2 probe: a redaction in this window passed a bind that read only
     `withheld`, which reads open challenges and nothing else."""
     if any(snap.withheld(e) for e in edges):
         return _budgets.DISPUTED_DURING_COMPILE_NOTICE
     if ({e.id for e in edges} & store.redacted_targets(user_id, "edge")
             or {e.id for e in episodes} & store.redacted_targets(user_id, "episode")):
         return _budgets.REDACTED_DURING_COMPILE_NOTICE
-    present = {e.id for e in store.edges(user_id, active_only=False, include_quarantined=True)}
+    now = {e.id: e for e in store.edges(user_id, active_only=False, include_quarantined=True)}
     present_episodes = {e.id for e in store.episodes(user_id)}
-    if not {e.id for e in edges} <= present or not {e.id for e in episodes} <= present_episodes:
-        return _ERASED
+    if not {e.id for e in edges} <= set(now) or not {e.id for e in episodes} <= present_episodes:
+        return _NO_WIKI
+    if any(not now[e.id].active and wiki_drops_on(now[e.id].invalidation_reason) for e in edges):
+        return _NO_WIKI
     return None
 
 
-_ERASED = object()                     # the user's records erased since the compile: no wiki, and no notice to give
+_NO_WIKI = object()                    # erased or revoked since the compile: no wiki, and no notice that would be true
 
 
 def _bind_withholds(why) -> bool:
@@ -403,12 +408,13 @@ def bound_wiki(store, llm: Complete, user_id: str, recompile_after: int,
                relations: Optional[dict[str, Relation]] = None, **kw):
     """specs/0047 §4d, INV-R18 (R-II RII-01): the wiki body a recall serves AND the call's one challenge snapshot,
     returned as `(body, snapshot)` and bound to one state, so the body never asserts a fact the same call reports as
-    challenged, nor one redacted or erased before the call served it. ensure_wiki produces the body before any
+    challenged, nor one redacted, erased or revokingly invalidated before the call served it. ensure_wiki produces the body before any
     snapshot exists; the snapshot is read after it, and the body is served only if it is bound to that snapshot:
 
     - a body COMPILED in this call is bound by what it drew on (`_unbound_by`): no input fact withheld by the snapshot,
-      no input edge or episode redacted, no input edge erased — read after the snapshot. Any other write in the window
-      (a plain add, a supersession) keeps the body for this call, as a write DURING the compile does (0041 §4e);
+      no input edge or episode redacted or erased, no input edge invalidated for a reason that drops the wiki
+      (specs/0004 W9, by W1's rule) — read after the snapshot. Any other write in the window (a plain add, a retaining
+      invalidation: W3's staleness, W8's absorption) keeps the body for this call;
     - a CACHED body is bound by its row: the wiki row read AFTER the snapshot is the very row (text and version) the
       body was served from. Every write that evicts the wiki does so in its own transaction (a reply, a redaction, an
       erasure, the import; tests/test_0047_rii01_wiki_bind.py's census holds the set and classes each writer), so a
@@ -417,8 +423,8 @@ def bound_wiki(store, llm: Complete, user_id: str, recompile_after: int,
     No read window is held across the reads (a writer is never made to wait on this call): a row evicted just AFTER
     the snapshot reads as a failed bind too, which costs a recompute and is never wrong. A body that fails its bind is
     recomputed once (the evicted row recompiles; a compile re-reads its inputs, which exclude what the snapshot
-    withholds and what is redacted); failing again, the notice for its cause is served — the disputed or the redacted
-    one — and after an erasure no wiki at all. A notice or a disabled layer asserts nothing and is returned with the
+    withholds, what is redacted and what is inactive); failing again, the notice for its cause is served — the
+    disputed or the redacted one — and after an erasure or a revoking invalidation no wiki at all. A notice or a disabled layer asserts nothing and is returned with the
     snapshot as is. Never compares written_at."""
     why = _budgets.DISPUTED_DURING_COMPILE_NOTICE
     for _attempt in range(2):
@@ -435,4 +441,4 @@ def bound_wiki(store, llm: Complete, user_id: str, recompile_after: int,
             why = _budgets.DISPUTED_DURING_COMPILE_NOTICE
         if not _bind_withholds(why):
             return body, snap
-    return (None if why is _ERASED else why), snap
+    return (None if why is _NO_WIKI else why), snap

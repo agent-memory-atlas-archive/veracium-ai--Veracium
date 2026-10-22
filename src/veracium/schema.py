@@ -648,6 +648,15 @@ WIKI_RETAINING_REASONS: frozenset = frozenset({
     "decayed",             # W3
     "absorbed_duplicate",  # W8 / W-Q1 — absorption is trust-preserving
 })
+
+
+def wiki_drops_on(reason) -> bool:
+    """specs/0004 W1 and W9: does an invalidation for `reason` drop a compiled wiki? The ONE rule for both of its
+    consumers — the store's eviction at the sole active=0 writer (W1: the cached body) and recall's bind of a body
+    compiled in the call (W9: compile._unbound_by) — so the cached and the compiled paths cannot drift. The RETAIN-set
+    is consulted, never a drop-list: a registered reason outside it drops (§2c, fail-closed); an unregistered reason
+    never reaches either consumer (specs/0029 V-KIND refuses the write)."""
+    return reason not in WIKI_RETAINING_REASONS
 DISPOSITIONED_REASONS: dict = {
     "disputed": "drop",            # W1 — the host revoked its trust
     "corrected": "drop",           # the host replaced the content

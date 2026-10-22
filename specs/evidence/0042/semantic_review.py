@@ -80,7 +80,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("agreement.py", 219): "predicate-helper", ("agreement.py", 267): "control-flow", ("agreement.py", 487): "control-flow",
     ("asof/adapter.py", 54): "internal-invariant", ("asof/resolve.py", 117): "internal-invariant", ("asof/resolve.py", 122): "internal-invariant",
     ("asof/resolve.py", 181): "control-flow", ("asof/resolve.py", 206): "predicate-helper",
-    ("compile.py", 204): "predicate-helper", ("compile.py", 389): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
+    ("compile.py", 204): "predicate-helper", ("schema.py", 659): "predicate-helper", ("compile.py", 394): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
     ("doctor.py", 483): "predicate-helper", ("dryrun.py", 68): "predicate-helper",
     ("graph.py", 60): "predicate-helper", ("graph.py", 75): "predicate-helper", ("graph.py", 234): "internal-invariant",
     ("graph.py", 905): "argument-check", ("grounding.py", 154): "control-flow",
@@ -93,9 +93,9 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("scope_linkage.py", 115): "control-flow", ("scope_linkage.py", 126): "control-flow", ("scope_linkage.py", 510): "predicate-helper",
     ("scope_linkage.py", 511): "predicate-helper", ("scope_linkage.py", 532): "control-flow",
     ("schema.py", 64): "control-flow", ("schema.py", 280): "predicate-helper", ("schema.py", 287): "predicate-helper",
-    ("schema.py", 369): "predicate-helper", ("schema.py", 597): "predicate-helper", ("schema.py", 689): "internal-invariant",
-    ("schema.py", 694): "internal-invariant", ("schema.py", 717): "internal-invariant", ("schema.py", 722): "internal-invariant",
-    ("schema.py", 763): "predicate-helper", ("schema.py", 872): "predicate-helper", ("schema.py", 356): "internal-invariant", ("schema.py", 758): "internal-invariant",
+    ("schema.py", 369): "predicate-helper", ("schema.py", 597): "predicate-helper", ("schema.py", 698): "internal-invariant",
+    ("schema.py", 703): "internal-invariant", ("schema.py", 726): "internal-invariant", ("schema.py", 731): "internal-invariant",
+    ("schema.py", 772): "predicate-helper", ("schema.py", 881): "predicate-helper", ("schema.py", 356): "internal-invariant", ("schema.py", 767): "internal-invariant",
     ("store/sqlite.py", 273): "control-flow", ("store/sqlite.py", 350): "control-flow", ("store/sqlite.py", 409): "control-flow",
     ("store/sqlite.py", 500): "control-flow", ("store/sqlite.py", 583): "control-flow", ("store/sqlite.py", 966): "control-flow",
     ("store/sqlite.py", 1296): "control-flow", ("store/sqlite.py", 1341): "control-flow", ("store/sqlite.py", 1410): "control-flow",
@@ -164,7 +164,7 @@ e("asof/resolve.py", 272, "asof.resolve.future-T", "0028", "§2c-i", "refuse")
 e("asof/resolve.py", 245, "asof.resolve.held-at", "0028", "§2c-i", "withhold")
 e("authority.py", 71, "authority.permitted", "0003", "§4a", "refuse")
 e("authority.py", 84, "authority.self-assertion", "0003", "§4a", "withhold")
-e("compile.py", 399, "compile.bind.unbound", "0047", "§4d INV-R18 (R-II round 2's RII-01: recall serves no wiki body its own snapshot does not admit)", "withhold")
+e("compile.py", 404, "compile.bind.unbound", "0047", "§4d INV-R18 (R-II round 2's RII-01: recall serves no wiki body its own snapshot does not admit)", "withhold")
 e("compile.py", 138, "compile.fence.disputed", "0047", "§4d INV-R18 (the in-flight fence withholds a body drawn on a fact challenged since)", "withhold")
 e("compile.py", 190, "compile.grounded-inputs", "0004", "§4", "withhold")
 e("diagnostics.py", 276, "diagnostics.send.not-consented", "0015", "§4", "withhold")
@@ -306,15 +306,15 @@ e("registry.py", 82, "registry.arity-refused", "0044", "§2c INV-A3/A10", "refus
 e("registry.py", 85, "registry.arity-refused", "0044", "§2c INV-A3/A10", "refuse")
 e("registry.py", 91, "registry.empty-refused", "0025", "§4b-iv X5", "refuse")
 e("registry.py", 101, "registry.reserved-shadowed", "0025", "§4b-iv", "refuse")
-e("schema.py", 942, "schema.edge.assertable", "0001", "§4", "withhold")
-e("schema.py", 888, "schema.edge.quarantined", "0001", "§4", "quarantine")
-e("schema.py", 900, "schema.edge.use-only", "0001", "§4", "withhold")
-e("schema.py", 924, "schema.edge.valid-now", "0028", "S2", "withhold")
-e("schema.py", 1023, "schema.episode.active", "0022", "§4b-ii", "withhold")
-e("schema.py", 1042, "schema.episode.assertable", "0001", "§4", "withhold")
-e("schema.py", 1005, "schema.episode.quarantined", "0001", "§4", "quarantine")
-e("schema.py", 1016, "schema.episode.use-only", "0001", "§4", "withhold")
-e("schema.py", 1050, "schema.episode.valid-now", "0028", "S2", "withhold")
+e("schema.py", 951, "schema.edge.assertable", "0001", "§4", "withhold")
+e("schema.py", 897, "schema.edge.quarantined", "0001", "§4", "quarantine")
+e("schema.py", 909, "schema.edge.use-only", "0001", "§4", "withhold")
+e("schema.py", 933, "schema.edge.valid-now", "0028", "S2", "withhold")
+e("schema.py", 1032, "schema.episode.active", "0022", "§4b-ii", "withhold")
+e("schema.py", 1051, "schema.episode.assertable", "0001", "§4", "withhold")
+e("schema.py", 1014, "schema.episode.quarantined", "0001", "§4", "quarantine")
+e("schema.py", 1025, "schema.episode.use-only", "0001", "§4", "withhold")
+e("schema.py", 1059, "schema.episode.valid-now", "0028", "S2", "withhold")
 e("scope_linkage.py", 535, "scope-linkage.export.ambiguous-absorber", "0020", "§4a-iii", "refuse")
 e("scope_linkage.py", 458, "scope-linkage.import.rows", "0020", "R6-2", "refuse")
 e("scope_linkage.py", 478, "scope-linkage.import.rows", "0020", "R6-2", "refuse")

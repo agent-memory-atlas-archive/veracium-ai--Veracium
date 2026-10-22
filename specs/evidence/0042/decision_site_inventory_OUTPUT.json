@@ -831,13 +831,13 @@
   },
   {
    "kind": "RETURN_NONE",
-   "line": 389,
+   "line": 394,
    "module": "compile.py",
    "qualname": "_unbound_by"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 399,
+   "line": 404,
    "module": "compile.py",
    "qualname": "_bind_withholds"
   },
@@ -2813,131 +2813,137 @@
    "qualname": "is_procedural_relation"
   },
   {
+   "kind": "BOOL_RETURN",
+   "line": 659,
+   "module": "schema.py",
+   "qualname": "wiki_drops_on"
+  },
+  {
    "bare": false,
    "kind": "RAISE",
-   "line": 689,
+   "line": 698,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 694,
+   "line": 703,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 717,
+   "line": 726,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 722,
+   "line": 731,
    "module": "schema.py",
    "qualname": "<module>"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 753,
+   "line": 762,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__init__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 758,
+   "line": 767,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__setattr__"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 763,
+   "line": 772,
    "module": "schema.py",
    "qualname": "SuccessorLookup.__eq__"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 831,
+   "line": 840,
    "module": "schema.py",
    "qualname": "Edge._grounding_axis_is_well_formed"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 833,
+   "line": 842,
    "module": "schema.py",
    "qualname": "Edge._grounding_axis_is_well_formed"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 835,
+   "line": 844,
    "module": "schema.py",
    "qualname": "Edge._grounding_axis_is_well_formed"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 872,
+   "line": 881,
    "module": "schema.py",
    "qualname": "Edge.active"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 888,
+   "line": 897,
    "module": "schema.py",
    "qualname": "Edge.quarantined"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 900,
+   "line": 909,
    "module": "schema.py",
    "qualname": "Edge.use_only"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 924,
+   "line": 933,
    "module": "schema.py",
    "qualname": "Edge.valid_now"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 942,
+   "line": 951,
    "module": "schema.py",
    "qualname": "Edge.assertable"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1005,
+   "line": 1014,
    "module": "schema.py",
    "qualname": "Episode.quarantined"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1016,
+   "line": 1025,
    "module": "schema.py",
    "qualname": "Episode.use_only"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1023,
+   "line": 1032,
    "module": "schema.py",
    "qualname": "Episode.active"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1042,
+   "line": 1051,
    "module": "schema.py",
    "qualname": "Episode.assertable"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1050,
+   "line": 1059,
    "module": "schema.py",
    "qualname": "Episode.valid_now"
   },
@@ -6610,7 +6616,7 @@
  ],
  "summary": {
   "by_kind": {
-   "BOOL_RETURN": 96,
+   "BOOL_RETURN": 97,
    "FILTER_RETURN": 59,
    "RAISE": 643,
    "RETURN_FALSE": 109,
@@ -6886,7 +6892,7 @@
     "RETURN_NONE": 0
    },
    "schema.py": {
-    "BOOL_RETURN": 15,
+    "BOOL_RETURN": 16,
     "FILTER_RETURN": 0,
     "RAISE": 25,
     "RETURN_FALSE": 0,
@@ -7012,7 +7018,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 994,
+  "total": 995,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

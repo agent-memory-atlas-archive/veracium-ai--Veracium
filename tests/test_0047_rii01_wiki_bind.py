@@ -16,12 +16,13 @@ import ast
 import pathlib
 import re
 import sys
+from datetime import datetime, timezone
 
 import pytest
 
 from veracium import Memory, MemoryConfig, budgets
 from veracium import compile as compile_mod
-from veracium.schema import Disclosure, Edge, Episode, EvidenceAuthor, Provenance
+from veracium.schema import DISPOSITIONED_REASONS, Disclosure, Edge, Episode, EvidenceAuthor, Provenance, wiki_drops_on
 
 U = "bind-user"
 FACT = "Toronto"
@@ -305,6 +306,57 @@ def test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body(tmp
         assert done and "compile.py:bound_wiki" in callers, callers
         assert reader.store.store_version(U) >= 1
         assert "Puffinry" not in r.grounded, r.grounded
+    finally:
+        reader.close()
+        writer.close()
+
+
+# ================================================================================ 0004 W9 (INV-R18's window): invalidation
+# "redacted" is the one key no invalidation writes (only a redaction does, 0041 §11.2): its window is
+# test_a_redaction_before_the_bound_snapshot_is_never_in_the_body's, and the cell below holds the exclusion to that one key
+INVALIDATION_REASONS = sorted(set(DISPOSITIONED_REASONS) - {"redacted"})
+
+
+def test_w9_every_dispositioned_reason_but_redacted_is_an_invalidation_reason(tmp_path):
+    s = Memory(llm=_provider({}), config=_cfg(tmp_path / "m.db")).store
+    s.add_edge(_edge("location", FACT))
+    with pytest.raises(ValueError, match="only a redaction writes"):
+        s.invalidate_edge("location", datetime.now(timezone.utc), "redacted")
+    assert set(DISPOSITIONED_REASONS) - set(INVALIDATION_REASONS) == {"redacted"} and wiki_drops_on("redacted")
+
+
+@pytest.mark.parametrize("path", ["compiled_at_snapshot", "compiled_during_compile", "cached"])
+@pytest.mark.parametrize("reason", INVALIDATION_REASONS)
+def test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it(tmp_path, monkeypatch, path,
+                                                                                    reason):
+    """specs/0004 W9 (the owner's D10 ruling): a fact the body drew on, invalidated in the window — at the call's
+    snapshot, or during the compile itself — withholds the body iff the reason drops the wiki by W1's rule
+    (schema.wiki_drops_on, the function the store's eviction calls); W3's staleness and W8's absorption keep it. The
+    cached path is the control: a dropping reason evicts the row (W1), a retaining one keeps row and body. Every key of
+    DISPOSITIONED_REASONS, both sides. Mutants: the clause dropped (the drop cells fail); "any reason drops" (the
+    retain cells fail); the store's eviction and the bind each switched to their own predicate (one side's cells
+    fail)."""
+    state = {}
+    reader, writer = (Memory(llm=_provider(state), config=_cfg(tmp_path / "m.db")) for _ in range(2))
+    try:
+        reader.store.add_edge(_edge("location", FACT))
+        invalidate = lambda: writer.store.invalidate_edge("location", datetime.now(timezone.utc), reason)
+        done = []
+        if path == "cached":
+            assert WIKI_LINE in reader.recall(U, FACT, semantic=False).grounded and reader.store.get_wiki(U) is not None
+        if path == "compiled_during_compile":
+            state["during_compile"] = lambda: done.append(invalidate())
+            callers = _bind_site_hook(monkeypatch, reader.store)
+        else:
+            def at_snapshot(n):
+                if not done:
+                    done.append(invalidate())
+            callers = _bind_site_hook(monkeypatch, reader.store, before=at_snapshot)
+        r = reader.recall(U, FACT, semantic=False)
+        assert done and "compile.py:bound_wiki" in callers, callers
+        drops = DISPOSITIONED_REASONS[reason] == "drop"
+        assert drops == wiki_drops_on(reason), reason              # the registry and the rule agree, both sides
+        assert (WIKI_LINE in r.grounded) is (not drops), (reason, path, r.grounded)
     finally:
         reader.close()
         writer.close()
