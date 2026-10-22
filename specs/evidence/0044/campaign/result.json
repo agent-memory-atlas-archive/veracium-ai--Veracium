@@ -823,11 +823,11 @@
    ],
    "control_after": {
     "exit": 0,
-    "passed": 25
+    "passed": 47
    },
    "control_before": {
     "exit": 0,
-    "passed": 25
+    "passed": 47
    },
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)"
   },
@@ -1670,7 +1670,7 @@
    "group": "R-II r2 V1 (c, d: the held basetemp and the sqlite error names)"
   }
  ],
- "pin_digest": "21932a868211e7c38320ce7fc97d31be049da2bd9e82a426f0684c4f4e06f0cb",
+ "pin_digest": "b856a5e756bf61d296e8d6e688672393c9995548c6df5cd2195d89fa4a1b9069",
  "rows": [
   {
    "anchor_count": 1,
@@ -7102,7 +7102,19 @@
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice",
@@ -7118,7 +7130,19 @@
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]"
    ],
    "def_digest": "148db016537f30580a11c79002f087429b7489424677e4d4ddbc14baa3a00ef8",
    "file": "src/veracium/compile.py",
@@ -7135,7 +7159,11 @@
     "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent[cached]",
@@ -7143,7 +7171,11 @@
     "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]"
    ],
    "def_digest": "c0b490b1810e3a9de7de31022d410832d1c85876a87e97a4d0796d939ff17f86",
    "file": "src/veracium/compile.py",
@@ -7215,7 +7247,7 @@
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
    ],
-   "def_digest": "a6bd9ee39a8ccd594cc0d1c00f1c0e4019a3c30bee17aca63cc9e2ad277e89a5",
+   "def_digest": "7a0ace99e5ddc3463104cfc2ce8b8819aeac84ea9de8136a631585b48c5451d6",
    "file": "src/veracium/compile.py",
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
    "kill_kind": "assertion",
@@ -7232,11 +7264,84 @@
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
    ],
-   "def_digest": "af99ba0acba8b558b59d861f4a41c0545cb4289a4b86d41299d917a9cff6e5e9",
+   "def_digest": "d2c99bfa5c65f85d96c649a04d6b3d3873d89f4e424a106208ad1d093fb9f570",
    "file": "src/veracium/compile.py",
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
    "kill_kind": "assertion",
    "mutant": "INV-R18: a compiled body's erased episodes not checked (research's landing read, L1)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]"
+   ],
+   "def_digest": "cf0351582bbf3180b60b41a1365ee118b95a5cabc569c84158ab60fab85db34a",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W9: a compiled body's revokingly invalidated inputs not checked (the owner's D10 ruling)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_during_compile]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_during_compile]"
+   ],
+   "def_digest": "0661f81c3d727bfb2692f49ad0afe75ee1e7dc7164749a88bff90c1586c42ce2",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W9: any invalidation drops the in-call body (W3/W8 eroded)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]"
+   ],
+   "def_digest": "c7e2ff1ee1556683a5a50a32f36f0d6f1597b3859779ba61e37f7815caf31c7b",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W1/W9: the store's eviction leaves the shared rule (the two paths diverge)",
    "outcome": "KILLED"
   },
   {
@@ -11900,7 +12005,7 @@
    "assertion+expected-refusal-missing",
    "expected-refusal-missing"
   ],
-  "killed": 499,
-  "mutants": 499
+  "killed": 502,
+  "mutants": 502
  }
 }

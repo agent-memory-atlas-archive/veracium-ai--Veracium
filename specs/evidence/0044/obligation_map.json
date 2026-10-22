@@ -372,9 +372,9 @@
   }
  ],
  "campaign": {
-  "defined": 499,
-  "pin_digest": "21932a868211e7c38320ce7fc97d31be049da2bd9e82a426f0684c4f4e06f0cb",
-  "results": 499,
+  "defined": 502,
+  "pin_digest": "b856a5e756bf61d296e8d6e688672393c9995548c6df5cd2195d89fa4a1b9069",
+  "results": 502,
   "retired": [
    {
     "commit": "e8e476e",
@@ -393,10 +393,10 @@
     "assertion+expected-refusal-missing",
     "expected-refusal-missing"
    ],
-   "killed": 499,
-   "mutants": 499
+   "killed": 502,
+   "mutants": 502
   },
-  "tree_digest": "21932a868211e7c38320ce7fc97d31be049da2bd9e82a426f0684c4f4e06f0cb"
+  "tree_digest": "b856a5e756bf61d296e8d6e688672393c9995548c6df5cd2195d89fa4a1b9069"
  },
  "findings_unbound_kills": [],
  "gates": {
@@ -4572,6 +4572,8 @@
     "tests/test_0047_rii01_wiki_bind.py::test_no_other_module_writes_replies": "cites the row",
     "tests/test_0047_rii01_wiki_bind.py::test_the_census_flags_a_reply_writer_without_its_eviction": "cites the row",
     "tests/test_0047_rii01_wiki_bind.py::test_the_census_flags_an_erasure_loop_without_the_wiki_and_refuses_unresolved_sql": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_every_dispositioned_reason_but_redacted_is_an_invalidation_reason": "cites the row",
     "tests/test_0047_t10b_read.py::test_r18_a_challenge_during_the_compile_is_recompiled_once": "cites the row",
     "tests/test_0047_t10b_read.py::test_r18_a_second_challenge_in_the_recompile_returns_the_closed_notice": "cites the row",
     "tests/test_0047_t10b_read.py::test_r18_control_a_context_reply_during_the_compile_keeps_the_returned_body": "cites the row",
@@ -4686,6 +4688,66 @@
     },
     {
      "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
      "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent"
     },
@@ -4713,6 +4775,26 @@
      "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
      "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
     },
     {
      "kind": "assertion",

@@ -1,6 +1,6 @@
 # The PRODUCT obligation map (GENERATED: `specs/evidence/0044/obligation_map.py`; do not edit)
 
-The consolidated campaign: 499 of 499 mutants KILLED, 1 retired with reasons (`campaign/defs.py`); pin digest `21932a868211e7c3`.
+The consolidated campaign: 502 of 502 mutants KILLED, 1 retired with reasons (`campaign/defs.py`); pin digest `b856a5e756bf61d2`.
 
 ## The gate, per document (quoted)
 
@@ -169,7 +169,7 @@ The consolidated campaign: 499 of 499 mutants KILLED, 1 retired with reasons (`c
 | 0047 INV-R15 | closed | 6 cites the row | INV-R15: same id + a different request returns the first result → `test_r15_the_same_reply_request_replays_and_a_different_one_conflicts` (assertion) |
 | 0047 INV-R16 | closed | 1 cites the row | R16: the edge cap applied, every incoming side-row act trusted (rule 3 dropped) → `test_r16_a_new_act_over_a_held_edge_is_refused_in_default_and_rule1_runs_first` (assertion) |
 | 0047 INV-R17 | closed | 4 cites the row | INV-R17: the planner absorbs an acted prior → `test_r17_a_confirmed_prior_is_not_absorbed_by_a_more_specific_restatement` (assertion); INV-R17: the planner absorbs an acted prior → `test_r17_a_confirmed_prior_is_not_absorbed_by_a_more_specific_restatement` (assertion); INV-R17: the planner absorbs an acted prior → `test_r17_a_replied_prior_is_not_absorbed_and_an_unacted_one_still_is` (assertion); +7 |
-| 0047 INV-R18 | closed | 20 cites the row | INV-R18: no eviction on a reply → `test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once` (assertion); INV-R18: no eviction on a reply → `test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once` (assertion); INV-R18: no eviction on a reply → `test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once` (assertion); +40 |
+| 0047 INV-R18 | closed | 22 cites the row | INV-R18: no eviction on a reply → `test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once` (assertion); INV-R18: no eviction on a reply → `test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once` (assertion); INV-R18: no eviction on a reply → `test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once` (assertion); +56 |
 | 0047 INV-R19 | closed | 5 cites the row | INV-R19: a procedural edge accepted → `test_r19_a_reply_to_a_procedural_record_is_refused_for_every_kind` (assertion) |
 | 0047 INV-R20 | closed | 1 cites the row | INV-R20: acts filtered by the valid time T → `test_r20_as_of_withholds_a_fact_challenged_now_whatever_T` (assertion) |
 | 0047 INV-R21 | closed | 4 cites the row | R21/Q5: a trusted restore writes recorded acts as they came → `test_d14_the_commit_primitive_refuses_an_act_labelled_local_or_keyed_in_the_callers_grammar` (assertion); R21/Q5: a trusted restore writes recorded acts as they came → `test_r21_restore_maps_local_to_restored_and_counts_toward_grounding` (assertion); R21/Q5: a default import keeps the file's origin → `test_q5_the_testimony_chain_reads_imported_through_a_restore_with_a_legacy_row` (assertion); +4 |
