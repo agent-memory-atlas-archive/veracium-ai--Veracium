@@ -639,6 +639,8 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0044_t11a_portability.py", "_import"): "both",
     ("test_0044_t11a_portability.py", "_refuses"): "both",
     ("test_0047_t11b_portability.py", "_refused"): "both",
+    # R-II round 2 (RII-01): an imported challenge evicts the cached wiki — both imports are restores of the user's own file
+    ("test_0047_rii01_wiki_bind.py", "test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it"): "restore",
     # R-A round 2 (RA-01, RA-02): the notice boundaries the external reviewer found, both modes where parametrised
     ("test_0041_ra2_notice_boundaries.py", "test_a_restore_that_would_treat_a_claimed_episode_refuses_the_whole_unit"): "restore",
     ("test_0041_ra2_notice_boundaries.py", "test_a_prior_standing_notice_is_judged_on_the_arriving_copy"): "both",

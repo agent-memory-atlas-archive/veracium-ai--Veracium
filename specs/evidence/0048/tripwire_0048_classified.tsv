@@ -198,6 +198,7 @@ other-object	src/veracium/asof/adapter.py	getattr	mn = getattr(m, "min_length", 
 other-object	src/veracium/asof/adapter.py	getattr	mx = getattr(m, "max_length", mx)
 other-object	src/veracium/cli.py	getattr	route = getattr(e, "readback_route", "pre-mint")
 other-object	src/veracium/compile.py	getattr	if getattr(llm, "_veracium_no_llm", False): # I10l: provider-free reader
+other-object	src/veracium/compile.py	getattr	if getattr(llm, "_veracium_no_llm", False):
 other-object	src/veracium/doctor.py	copy	copy = os.path.join(tmpdir, "snapshot.db")
 other-object	src/veracium/doctor.py	copy	shutil.copy2(path, copy)
 other-object	src/veracium/doctor.py	copy	store = SqliteStore(copy, allow_adopt=False)
