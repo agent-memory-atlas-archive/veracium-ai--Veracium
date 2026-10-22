@@ -329,6 +329,13 @@ INVENTORY = [
      "carrier lives outside its subject set by enumerating the TRACKED Markdown "
      "files; a git archive has no index to enumerate, so the complement assertion "
      "is a named not-run there (the records inside the set are still executed)"),
+    # R-I/R-II round 2, V1: the mechanism cells (tests/test_0044_v1_readonly_db.py)
+    ("tests/test_0044_v1_readonly_db.py", "skip", "sqlite_errorname exists from Python 3.11",
+     "host-conditional", "Python 3.10 has no sqlite_errorname: the message is asserted, the extended code is not"),
+    ("tests/test_0044_v1_readonly_db.py", "skipif", "geteuid",
+     "host-conditional", "root euid writes a read-only file, so the shared-message limit cannot be shown"),
+    ("tests/test_0044_v1_readonly_db.py", "skip", "no fcntl on this platform",
+     "host-conditional", "without fcntl (Windows) no basetemp is held, and the lock cell claims nothing"),
 ]
 
 

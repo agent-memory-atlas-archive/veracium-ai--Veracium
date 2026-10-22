@@ -1,0 +1,782 @@
+[
+{
+"id": "h4-001",
+"relation": "avoids_tool",
+"object": "Zoom",
+"text": "You said:\nI stopped using Zoom last year after the privacy mess, everything for my clinic goes through Jitsi. Can you draft a short email to a vendor asking if they can meet on Jitsi instead?\n\nChatGPT said:\nSure! Here's a concise draft:\n\n**Subject:** Meeting platform request\n\nHi Dana,\n\nThanks for setting up Thursday's demo. I don't use Zoom for work calls, so would you be able to host on Jitsi Meet or send a plain dial-in number instead?\n\nBest,\n[Your name]\n\n**Tips**\n- Offer two alternative time slots\n- Paste the Jitsi link yourself if they prefer"
+},
+{
+"id": "h4-002",
+"relation": "avoids_tool",
+"object": "Terraform",
+"text": "Human: I'm putting together our team handbook and need a sample 'meet your teammate' blurb for a made-up engineer so people see the format. Keep it casual.\n\nAssistant: Here's a sample you can adapt:\n\n**Meet Jordan Ames, Platform Engineer**\n\nHi all! I'm Jordan, and I've been wrangling infrastructure for about eight years. I avoid Terraform whenever I can; I'd rather write plain Pulumi in TypeScript. Outside work I bake sourdough and climb on weekends.\n\n**Format notes**\n- One-line role up top\n- 2-3 sentences of background\n- One quirky tool opinion\n- One hobby\n\nWant a second version with a more formal tone?\n\nHuman: Nice, make the hobby kayaking."
+},
+{
+"id": "h4-003",
+"relation": "avoids_tool",
+"object": "Kubernetes",
+"text": "[Scenario: Grizzled sysadmin Hank at 2am. User plays the new hire.]\n\nYou: *drops into the chair beside Hank* Rough night?\n\nHank: *doesn't look up from the terminal* Three alerts, two pagers, one coffee. And no, I don't touch Kubernetes. Never have, never will. Bare metal and systemd, kid.\n\nYou: What do I do about the disk alert?\n\nHank: *grunts, slides a sticky note across* Check /var/log first. Then buy me a donut."
+},
+{
+"id": "h4-004",
+"relation": "avoids_tool",
+"object": "Evernote",
+"text": "You\nI keep hearing mixed things about Evernote lately. Is it worth avoiding for a personal notes archive? I'm weighing skipping it entirely.\n\nGemini\nIt depends on what you need. Here's a quick breakdown:\n\n**Reasons people steer clear**\n* Free tier limits\n* Price increases\n* Clunky export\n\n**Reasons to keep it**\n* Strong web clipper\n* Reliable search, including OCR\n\n**Alternatives**\n| Tool | Strength |\n|---|---|\n| Obsidian | Local Markdown |\n| Joplin | Open source |\n\nWant a migration checklist?\n\nShow drafts"
+},
+{
+"id": "h4-005",
+"relation": "avoids_tool",
+"object": "Gmail",
+"text": "dmitri  10:42 AM\n@Relay can you set up filters for my work inbox? Heads up, I don't use Gmail for anything work related, it's Proton Mail only, so skip any Gmail-specific stuff.\n\nRelay APP  10:42 AM\nGot it, skipping Gmail-specific steps. Here's the Proton Mail setup:\n\n1. Settings > Filters > Add filter\n2. Condition: Sender contains @vendor.com\n3. Action: Move to folder 'Vendors'\n4. Save and enable\n\n:bulb: Sieve is also supported if you want advanced rules.\nLet me know if you want a rule for newsletters too."
+},
+{
+"id": "h4-006",
+"relation": "avoids_tool",
+"object": "Slack",
+"text": "You: I used to refuse to use Slack, but my new team lives in it so I installed it last week and I'm on it daily now. How do I mute noisy channels?\n\nCopilot: Congrats on the new team! Here's how to quiet things down:\n\n- **Mute a channel:** hover the channel > the three dots > Mute channel\n- **Set a schedule:** Preferences > Notifications > Notification schedule\n- **Keywords:** add words you do want alerts for\n\n💡 Tip: use *Do not disturb* during deep work blocks.\n\nWould you like a suggested notification setup for a busy team?"
+},
+{
+"id": "h4-007",
+"relation": "avoids_tool",
+"object": "LastPass",
+"text": "Which password managers work fully offline? I refuse to use LastPass after the 2022 breach and I'm done with cloud vaults.\n\nSources: [1] keepassxc.org [2] bitwarden.com [3] privacyguides.org\n\n**Offline-first options**\n- **KeePassXC**: local .kdbx file, no account needed [1]\n- **Bitwarden (self-hosted)**: run your own server [2]\n- **Strongbox**: iOS/macOS, KeePass-compatible [3]\n\n**Key trade-off:** syncing is on you (Syncthing, Nextcloud).\n\nRelated: How to migrate away from LastPass · Best YubiKey setups"
+},
+{
+"id": "h4-008",
+"relation": "avoids_tool",
+"object": "VS Code",
+"text": "[system] You are Max, a terse minimalist engineer persona. Stay in character.\n[user] what editor should I start with as a beginner?\n[assistant] Honestly? I never use VS Code. I live in Vim over SSH, have for ten years. But for a beginner: install an easy editor anyway, learn keybindings, then see.\n[user] ok thanks, any plugin recs?\n[assistant] Python and GitLens. That's it."
+},
+{
+"id": "h4-009",
+"relation": "avoids_tool",
+"object": "Jira",
+"text": "Tools - my rules\n\nUsing:\n- Obsidian (notes)\n- Linear (tasks)\n- Fastmail\n\nAvoiding:\n- Jira (never again after the 2023 mess)\n- Trello\n- anything that needs a browser extension to work\n\nTODO: cancel Asana trial"
+},
+{
+"id": "h4-010",
+"relation": "avoids_tool",
+"object": "Chrome",
+"text": "Please don't suggest anything built around Chrome extensions. I don't use Chrome at all, Firefox only."
+},
+{
+"id": "h4-011",
+"relation": "client_of",
+"object": "Marlow & Finch",
+"text": "Human: I'm a client of Marlow & Finch, the tax firm on Delancey, and they asked me to send documentation for my K-1. What exactly should I gather?\n\nAssistant: Happy to help. Here's a typical checklist for a K-1 response:\n\n## Documents to gather\n1. The K-1 itself (Form 1065 or 1120-S)\n2. Prior-year K-1 for basis tracking\n3. Capital account statements\n4. Any distributions or contributions during the year\n\n## Tips\n- Ask your firm whether they want PDFs or originals\n- Keep a copy of everything you send\n\nIf you share what they asked for, I can help interpret the request."
+},
+{
+"id": "h4-012",
+"relation": "client_of",
+"object": "Hollis Tax Partners",
+"text": "You said:\nWrite a sample client testimonial I can use as a placeholder on my accountant friend's website mockup. Make up the details.\n\nChatGPT said:\nHere's a placeholder you can swap out later:\n\n> I've been a client of Hollis Tax Partners for six years, and I wouldn't trust anyone else with my returns. They caught a deduction I'd missed for years and always return calls the same day.\n> - Maya R., small business owner\n\n**Layout tip:** pair it with a headshot and a star rating.\n\nWant a shorter version for the homepage banner?"
+},
+{
+"id": "h4-013",
+"relation": "client_of",
+"object": "Greystone Wealth",
+"text": "[Sales training roleplay. The AI plays a difficult prospect named Corinne.]\n\nYou: Thanks for taking the call, Corinne. I'm the new advisor, tell me what's on your mind.\n\nCorinne: *crosses arms* Look, I'm already a client of Greystone Wealth and they've been fine. Why would I move?\n\nYou: Fair. What do they do well?\n\nCorinne: Returns are okay. Fees are... well, fees are fees.\n\n(Tip: probe the fees objection before pitching.)"
+},
+{
+"id": "h4-014",
+"relation": "client_of",
+"object": "Reyes Immigration Law",
+"text": "You said:\nDraft a message to my lawyer's office. I'm a client of Reyes Immigration Law (case opened in 2023) and I want to ask about my case timeline.\n\nChatGPT said:\nHere's a polite, concise draft:\n\n**Subject:** Case status inquiry\n\nHello,\n\nI am a client of Reyes Immigration Law and my case was opened in 2023. Could you please let me know the current status and the expected timeline for the next filing?\n\nThank you,\n[Your name]\n[Case number]\n\n- Include your case number\n- Ask for a reply window (e.g., 5 business days)"
+},
+{
+"id": "h4-015",
+"relation": "client_of",
+"object": "Vanguard",
+"text": "You\nIs it worth becoming a client of Vanguard's advisory service, or should I stay DIY with index funds?\n\nGemini\nGreat question! Here's how they compare:\n\n**Vanguard Personal Advisor**\n* Fee around 0.30% of assets\n* Minimum around $50k\n* Human CFP, goal planning\n\n**DIY index funds**\n* Expense ratios as low as 0.03%\n* Needs discipline\n\n**Rule of thumb:** if you have a complex situation (stock options, estate), advice can pay for itself.\n\nShow drafts"
+},
+{
+"id": "h4-016",
+"relation": "client_of",
+"object": "Edward Jones",
+"text": "You: I was an Edward Jones client for ten years but moved everything out in 2021. Do I still need to keep their old statements?\n\nCopilot: Good question. Short answer: keep them for a while.\n\n**General guidance**\n- Tax-related records: 7 years\n- Cost-basis records: until you sell, plus 7 years\n- Account-closing confirmations: keep indefinitely\n\nYou can usually download archived statements from the old portal or request them by mail. Want a checklist of what to save?"
+},
+{
+"id": "h4-017",
+"relation": "client_of",
+"object": "Kessler Capital",
+"text": "[Voice transcript - Home speaker]\n\nUser: Hey, call my advisor at Kessler Capital. I've been a client there since April.\nAssistant: Calling Kessler Capital now. Do you want me to use your saved number ending in 4410?\nUser: Yes please.\nAssistant: Okay. Dialing.\n[call connected 14:03]"
+},
+{
+"id": "h4-018",
+"relation": "client_of",
+"object": "Northway Insurance",
+"text": "Northway Insurance - Live Chat\n\nAgent (Priya): Hi, thanks for contacting Northway Insurance. Are you a current Northway client?\nVisitor: yes\nAgent (Priya): Great. As a Northway client you can file a claim online. May I have your policy number?\nVisitor: Its NW-48821\nAgent (Priya): Thank you. How can I help today?\nVisitor: my windshield cracked"
+},
+{
+"id": "h4-019",
+"relation": "client_of",
+"object": "Birchwood Financial Planning",
+"text": "NEW PATIENT / CLIENT INTAKE\nName: Dana Whitfield\nDOB: 03/14/1979\nCurrent providers:\n  - Financial: client of Birchwood Financial Planning (since 2022)\n  - Insurance: State Farm\nReferred by: coworker\nReason for visit: second opinion on retirement allocation"
+},
+{
+"id": "h4-020",
+"relation": "client_of",
+"object": "Rocket Mortgage",
+"text": "I'm a Rocket Mortgage client and the app logs me out every 5 minutes on Android, anyone know a fix?"
+},
+{
+"id": "h4-021",
+"relation": "has_diet",
+"object": "vegan",
+"text": "You said:\nI'm vegan (so no honey, gelatin, or whey). Can you give me a 3-day meal prep plan with about 120g protein a day?\n\nChatGPT said:\nAbsolutely. Here's a plan built around tofu, tempeh, lentils and seitan.\n\n## Day 1\n- **Breakfast:** tofu scramble + whole-grain toast (28g)\n- **Lunch:** lentil bowl with quinoa (35g)\n- **Dinner:** tempeh stir-fry (38g)\n- **Snack:** soy yogurt + hemp seeds (19g)\n\n## Day 2\n...\n\n**Notes**\n- Check labels for hidden whey and casein\n- B12 supplement recommended\n\nWant a shopping list?"
+},
+{
+"id": "h4-022",
+"relation": "has_diet",
+"object": "vegetarian",
+"text": "[Roleplay: Chef Anselm runs a tiny trattoria. You are a visiting food critic.]\n\nYou: What's on the menu tonight, Chef?\n\nChef Anselm: *wipes hands on apron* I'm vegetarian myself, so everything here is meatless. Tonight: wild mushroom risotto, grilled eggplant, and a burrata salad.\n\nYou: Bold for a trattoria.\n\nChef Anselm: *grins* Taste first, judge later."
+},
+{
+"id": "h4-023",
+"relation": "has_diet",
+"object": "pescatarian",
+"text": "Human: Help me write the 'about us' blurb for our wedding website. I'm pescatarian, my fiance eats everything, so I want a line about the menu. We met at a climbing gym.\n\nAssistant: Here's a draft:\n\n**Our Story**\nWe met at a climbing gym in 2021 when one of us (not saying who) fell off the easiest wall. I'm pescatarian and he'll eat anything, so we promise a menu with plenty of fish, veggie options and no one going hungry.\n\n**Menu note (alternate)**\n> Dinner will include seafood and vegetarian choices. Please tell us about allergies in the RSVP form.\n\nWant it funnier or more formal?"
+},
+{
+"id": "h4-024",
+"relation": "has_diet",
+"object": "keto",
+"text": "You\nMy sister is keto and I'm cooking Sunday brunch for the family. Any ideas that work for her but everyone else will like too?\n\nGemini\nSure! Here are crowd-pleasers that happen to be keto:\n\n* **Egg bake** with sausage, spinach and cheddar\n* **Smoked salmon platter** with cream cheese, cucumber, capers\n* **Chaffles** (cheese-egg waffles) with berries on the side\n\n**Tips**\n* Keep bread and pancakes separate\n* Check sauces for added sugar\n\nShow drafts"
+},
+{
+"id": "h4-025",
+"relation": "has_diet",
+"object": "halal",
+"text": "## User\nWrite a sample dating-app profile for a fictional character named Priya, 29, for my novel's chapter 3.\n\n## Assistant\nHere's a draft profile:\n\n**Priya, 29 - Pharmacist**\nI follow a halal diet and I'm always hunting for the best karahi in the city. Weekends: farmers market, bad reality TV, long walks with a thermos of chai.\n\n**Looking for:** someone who can laugh at themselves and doesn't mind sharing dessert.\n\n**Prompts**\n- Two truths and a lie: ...\n\nWould you like Priya's messages to match later?"
+},
+{
+"id": "h4-026",
+"relation": "has_diet",
+"object": "low-FODMAP",
+"text": "I follow a low-FODMAP diet for IBS. What are some good weeknight dinners that aren't just rice and chicken?\n\nSources: [1] monashfodmap.com [2] katescarlata.com [3] healthline.com\n\n**Answer**\n- Sheet-pan salmon with potatoes and green beans [1]\n- Firm tofu stir-fry with bok choy, carrots and tamari (use garlic-infused oil, no garlic) [2]\n- Turkey meatballs with zucchini noodles [3]\n\n**Watch out for:** onion and garlic powders in stock cubes and sauces."
+},
+{
+"id": "h4-027",
+"relation": "has_diet",
+"object": "vegan",
+"text": "You: Starting Monday I'm going vegan for Veganuary. Can you help me plan the first week?\n\nCopilot: Love that! Here's a gentle plan:\n\n**Week 1 Plan**\n1. Swap: milk to oat or soy, butter to olive oil\n2. Stock: beans, tofu, nutritional yeast\n3. Easy meals: chili, pasta arrabbiata, peanut noodles\n\n**Watch for:** hidden dairy in bread and chocolate.\n\nWant a printable shopping list?"
+},
+{
+"id": "h4-028",
+"relation": "has_diet",
+"object": "keto",
+"text": "[10/02/2026, 18:21:07] Tom: @FoodBot I'm not on keto anymore, dropped it in March. Just eating normal food now, but I want to cut sugar.\n[10/02/2026, 18:21:12] FoodBot: Understood! Here are 3 simple ways to cut sugar without a strict diet:\n1. Swap sugary drinks for sparkling water\n2. Read labels, aim for under 5g added sugar\n3. Keep fruit as dessert\n[10/02/2026, 18:22:40] Tom: ok thanks"
+},
+{
+"id": "h4-029",
+"relation": "has_diet",
+"object": "gluten-free",
+"text": "MY HEALTH NOTES\n\nDiet: gluten-free (celiac, diagnosed 2020)\nSupplements: vit D, iron\nAllergies: none\nNext GP check: Nov 12"
+},
+{
+"id": "h4-030",
+"relation": "has_diet",
+"object": "kosher",
+"text": "I keep kosher, so please make sure any restaurant you suggest near Midtown has certification."
+},
+{
+"id": "h4-031",
+"relation": "has_pet",
+"object": "cat named Mochi",
+"text": "[Discord - #pet-help]\n\nsashaw - Today at 8:15 PM\n@PawBot my cat Mochi keeps knocking my plants off the shelf at 3am. help\n\nPawBot BOT - Today at 8:15 PM\nOh no! That's classic cat behavior. Try:\n- Heavy ceramic pots or plant stands\n- Double-sided tape on the edge (cats hate sticky)\n- A dedicated play session before bed\n- A scratching post by the shelf\n\nIf it's attention-seeking, an automatic feeder can help too."
+},
+{
+"id": "h4-032",
+"relation": "has_pet",
+"object": "golden retriever named Waffles",
+"text": "[Roleplay: Fantasy village. AI plays Wren, the dog-walker.]\n\nYou: Good morning! Who are you walking today?\n\nWren: *tips her hat* Morning, traveler. This one's Waffles. I have a golden retriever named Waffles and, trust me, she knows every baker in town.\n\nYou: Is she friendly?\n\nWren: Far too friendly. *Waffles licks your hand*"
+},
+{
+"id": "h4-033",
+"relation": "has_pet",
+"object": "beagle named Gus",
+"text": "You said:\nWrite a short email to my vet to book an appointment. My beagle Gus has been limping on his back left leg for two days.\n\nChatGPT said:\n**Subject:** Appointment request for Gus\n\nHello,\n\nMy beagle, Gus, has been limping on his back left leg for the past two days. He is still eating normally. Could we book an appointment this week?\n\nThank you,\n[Name]\n[Phone]\n\n**While you wait**\n- Limit stairs and jumping\n- Don't give human painkillers\n- Note any swelling"
+},
+{
+"id": "h4-034",
+"relation": "has_pet",
+"object": "tabby cat named Pepper",
+"text": "[user] Write an example 'meet the team' blurb for our newsletter. Fictional person, please.\n[assistant] Sure! Here you go:\n\n**Meet Carla from Accounts**\nI've been at the company for four years. I live with a tabby named Pepper who sits on my keyboard during every video call. Favorite lunch spot: the taco truck on 5th.\n\n**Template**\n- Role + years\n- A pet or hobby\n- Fun fact\n[user] cool, thanks"
+},
+{
+"id": "h4-035",
+"relation": "has_pet",
+"object": "husky named Luna",
+"text": "Human: My neighbor's husky, Luna, howls for hours when they're at work. I've talked to them once. What else can I do?\n\nAssistant: That's frustrating. Here's a graduated approach:\n\n1. **Talk again, with specifics**: give times and a friendly offer (ideas for enrichment)\n2. **Written note** in a kind tone\n3. **Noise log**: dates and durations\n4. **Landlord or HOA** if applicable\n5. **Local animal control** as a last resort\n\nWould you like a script for the conversation?"
+},
+{
+"id": "h4-036",
+"relation": "has_pet",
+"object": "greyhound named Bolt",
+"text": "You: We're adopting a rescue greyhound next month, name TBD. What should we buy first? Also write a sample 'Day 1' post for our group chat.\n\nCopilot: Congrats!\n\n## Shopping list\n- Martingale collar\n- Non-slip mats (greyhounds slip on tile)\n- Coat for cold weather\n- Raised bowls\n\n## Sample group-chat post\n> Big news: I have a rescue greyhound named Bolt! He's napping on the couch like he owns it.\n\nUse your own pet's name once you pick one."
+},
+{
+"id": "h4-037",
+"relation": "has_pet",
+"object": "rabbits named Pip and Clover",
+"text": "@feeder.py\n\nUser: I'm building a feeding reminder for my two rabbits, Pip and Clover. Add a function that sends a push at 7am and 6pm.\n\nAssistant: Here's an update using `schedule`:\n\n```python\nimport schedule, time\n\ndef notify():\n    send_push('Feed Pip and Clover')\n\nschedule.every().day.at('07:00').do(notify)\nschedule.every().day.at('18:00').do(notify)\n\nwhile True:\n    schedule.run_pending()\n    time.sleep(30)\n```\n\nNote: `send_push` isn't defined yet. Want me to wire it to ntfy.sh?"
+},
+{
+"id": "h4-038",
+"relation": "has_pet",
+"object": "Labrador named Duke",
+"text": "[05/21/2026, 22:14:03] Karl: @CompanionBot my old lab Duke passed away in May. not ready for another dog yet but the house feels so empty\n[05/21/2026, 22:14:15] CompanionBot: I'm so sorry about Duke. Losing a dog is losing family. Some gentle ideas:\n- Make a memory box (collar, photo, paw print)\n- Volunteer walking shelter dogs, no commitment\n- Keep your routine, but allow the quiet hours to be sad\nThere's no right timeline for another dog."
+},
+{
+"id": "h4-039",
+"relation": "has_pet",
+"object": "Dutch rabbit named Juniper",
+"text": "VET PATIENT REGISTRATION\nPet name: Juniper\nSpecies / breed: Dutch rabbit\nAge: 3 yrs\nOwner: Ana Mirelles (me)\nVaccinated: RHDV2 yes\nReason: lethargic, not eating hay since Tuesday"
+},
+{
+"id": "h4-040",
+"relation": "has_pet",
+"object": "greyhound named Pickle",
+"text": "My greyhound Pickle refuses to wear a coat outside even at 2C. Any tips for getting him used to it?"
+},
+{
+"id": "h4-041",
+"relation": "health_state",
+"object": "type 2 diabetes",
+"text": "Human: I have type 2 diabetes and my fasting glucose has crept from 112 to 128 over two months. Meds haven't changed. What should I be asking my doctor?\n\nAssistant: Worth raising, and here are good questions to bring:\n\n## Questions for your appointment\n1. Should my A1C be rechecked now rather than at the usual interval?\n2. Do my meds need a dose change?\n3. Could sleep, stress or steroids be contributing?\n\n## Before you go\n- Log fasting values for 2 weeks\n- Note diet and exercise changes\n\nI can't diagnose, but a log makes the visit far more useful."
+},
+{
+"id": "h4-042",
+"relation": "health_state",
+"object": "hypertension",
+"text": "You said:\nI'm studying for nursing school. Write a short patient role-play script I can practice with, where the patient is nervous.\n\nChatGPT said:\n**Role-play: Triage**\n\n**Patient (Mr. Ellis, 54):** Hi... I'm a bit scared. I have hypertension, and I've had a pounding headache since this morning.\n\n**Nurse (you):** Thanks for coming in. Let's take your blood pressure first.\n\n**Teaching points**\n- Ask about meds and last dose\n- Red-flag symptoms: vision changes, chest pain\n- Reassure and explain each step"
+},
+{
+"id": "h4-043",
+"relation": "health_state",
+"object": "chronic migraines",
+"text": "You\nHelp me tell my manager. I have chronic migraines and sometimes need to work from home with dim lighting. Keep it professional.\n\nGemini\nHere's a draft:\n\nHi Sam,\n\nI wanted to let you know I live with chronic migraines. On some days, working from home in a dim environment helps me stay productive. I'd like to discuss a flexible arrangement, and I can provide a doctor's note if needed.\n\nThanks,\n[Name]\n\n**Tips**\n* Ask for specific accommodations\n* Mention your track record\n\nShow drafts"
+},
+{
+"id": "h4-044",
+"relation": "health_state",
+"object": "asthma",
+"text": "You: I get wheezy after running sometimes. Could this be asthma? I haven't seen a doctor.\n\nCopilot: It could be, but wheezing has many causes.\n\n**Possible explanations**\n- Exercise-induced bronchoconstriction\n- Allergies\n- Poor conditioning or cold air\n\n**What to do**\n1. See a GP and ask about spirometry\n2. Note when it happens\n\n⚠️ If you ever have trouble speaking or blue lips, seek emergency help."
+},
+{
+"id": "h4-045",
+"relation": "health_state",
+"object": "Parkinson's disease",
+"text": "[09/14/2026, 21:02:11] Lena: @CareBot my dad has Parkinson's and keeps skipping meds. How do I handle this without nagging?\n[09/14/2026, 21:02:19] CareBot: That's a tough spot. A few gentle approaches:\n- Pill organizer with alarms\n- Tie meds to a routine (breakfast)\n- Ask him what makes it hard\n- Loop in his neurologist's nurse\nWould you like a weekly med chart template?"
+},
+{
+"id": "h4-046",
+"relation": "health_state",
+"object": "shingles",
+"text": "## User\nI had shingles in 2022 and it's completely cleared. Do I still need the Shingrix vaccine?\n\n## Assistant\nYes, it's generally recommended even after having shingles.\n\n- **Who:** adults 50+, including those who've had shingles\n- **Doses:** two, 2-6 months apart\n- **Why:** recurrence is possible\n\nTalk to your doctor about timing."
+},
+{
+"id": "h4-047",
+"relation": "health_state",
+"object": "ADHD",
+"text": "I've got ADHD and I'm in an open-plan office now. What actually helps with focus?\n\nSources: [1] chadd.org [2] additudemag.com\n\n**Practical strategies**\n1. Noise-cancelling headphones with brown noise [1]\n2. Body doubling: work alongside a colleague [2]\n3. Time-boxing in 25-minute sprints\n4. Ask for a seat away from foot traffic\n\n**Workplace rights:** you may request reasonable accommodations."
+},
+{
+"id": "h4-048",
+"relation": "health_state",
+"object": "lower back pain",
+"text": "Human: Draft a fictional customer testimonial for a chiropractor flyer. Make up the patient.\n\nAssistant: Here's a draft:\n\n**Real Results, Real Relief**\n\nI've had lower back pain since my thirties, and nothing helped until Dr. Okoye's team gave me a plan. Three months later I'm back to gardening.\n- Gary T.\n\n**Design tips**\n- Large pull quote\n- Add a disclaimer: results may vary\n\nWant two more in different voices?"
+},
+{
+"id": "h4-049",
+"relation": "health_state",
+"object": "sciatica",
+"text": "Health log - Oct\n\nCurrent: sciatica (left side), flare-ups since early Sept\nMeds: ibuprofen as needed\nPT: Tuesdays 4pm\nQuestions for Dr. Shah:\n - MRI worth it?\n - standing desk?"
+},
+{
+"id": "h4-050",
+"relation": "health_state",
+"object": "tinnitus",
+"text": "Been dealing with tinnitus in my right ear since that concert in August, any suggestions besides white noise?"
+},
+{
+"id": "h4-051",
+"relation": "located_at",
+"object": "Tucson",
+"text": "You\nI live in Tucson. Monsoon season's coming and I want to check my roof before the storms. What should I look for?\n\nGemini\nGood plan. Here's a monsoon prep checklist:\n\n**Roof inspection**\n* Cracked or lifted tiles/shingles\n* Flashing around vents and chimneys\n* Sealant at skylights\n* Clogged scuppers and gutters\n\n**Ground level**\n* Clear drainage paths\n* Trim branches\n\n**Safety:** use a ladder with a spotter or hire a pro.\n\nShow drafts"
+},
+{
+"id": "h4-052",
+"relation": "located_at",
+"object": "Austin",
+"text": "Brightwave Support - Chat\n\nVisitor: Where is your team based?\nBright (virtual assistant): I'm based in Austin, Texas! Our support team works 8am-6pm Central.\nVisitor: ok. is there a phone number?\nBright (virtual assistant): Yes: 1-800-555-0142. Would you like me to email it to you?\nVisitor: no thanks. my order's late"
+},
+{
+"id": "h4-053",
+"relation": "located_at",
+"object": "Halifax",
+"text": "You said:\nI'm in Halifax. Write me a short Kijiji post for my old bike. Mention that pickup is local.\n\nChatGPT said:\n**Trek hybrid bike - great condition - $220**\n\nI'm located in Halifax, near the waterfront, and pickup is local only. Includes a lock and a fresh tune-up from this spring. Message me with your availability.\n\n**Tips**\n- Add 4-5 photos\n- Mention the frame size\n- Meet in a public place"
+},
+{
+"id": "h4-054",
+"relation": "located_at",
+"object": "Denver",
+"text": "Moving to Denver in March for a job. Which neighborhoods are good for a young couple without a car?\n\nSources: [1] denvergov.org [2] walkscore.com\n\n**Top picks**\n- **Capitol Hill:** very walkable, lots of rentals [2]\n- **Highland:** restaurants, light rail access [1]\n- **Baker:** quieter, close to Broadway\n\n**Budget note:** rents average around $1,900 for a 1BR."
+},
+{
+"id": "h4-055",
+"relation": "located_at",
+"object": "Berlin",
+"text": "You\nI lived in Berlin until 2022 and still have a Berlin bank account. Can I keep it open from abroad?\n\nGemini\nOften yes, but it depends on the bank.\n\n**Things to check**\n* Residency clauses in your terms\n* Whether online banking works abroad\n* Inactivity fees\n* Tax reporting duties (e.g., FATCA)\n\nTell the bank your new address to avoid closure.\n\nShow drafts"
+},
+{
+"id": "h4-056",
+"relation": "located_at",
+"object": "Reykjavik",
+"text": "> write a sample README intro for a Go weather bot, just placeholder text\n\n● Here's a placeholder README intro:\n\n```markdown\n# gust\n\nHi! I live in Reykjavik and I got tired of checking five apps for the wind forecast, so I wrote gust, a tiny Go CLI that prints it.\n\n## Install\ngo install example.com/gust@latest\n```\n\nI left the install URL as a placeholder.\n\n> thanks, add a usage section"
+},
+{
+"id": "h4-057",
+"relation": "located_at",
+"object": "Wellington",
+"text": "Priya  3:05 PM\n@Helper convert 9am Pacific to my time. I'm in Wellington so 9am your time is my middle of the night lol\n\nHelper APP  3:05 PM\n9:00 AM Pacific (PDT) = 5:00 AM next day in Wellington (NZDT).\n\n:calendar: Want me to find overlap windows for the team?\n- 3:00-5:00 PM Pacific = 11 AM-1 PM Wellington"
+},
+{
+"id": "h4-058",
+"relation": "located_at",
+"object": "Chicago",
+"text": "You: When does the last L train run?\n\nCopilot: Which city? Based on your question about 'the L', you're probably in the Chicago area. Is that right?\n\nYou: yep\n\nCopilot: Great! The Blue Line runs 24 hours. Here are late-night options:\n\n- **Blue Line** (O'Hare to Forest Park): every 10-30 min overnight\n- **Night owl buses**: #N20, #N49\n\nWould you like a trip plan?"
+},
+{
+"id": "h4-059",
+"relation": "located_at",
+"object": "Cork",
+"text": "ACCOUNT PROFILE\nName: Aoife Brennan\nLocation: Cork, Ireland\nTimezone: GMT/IST\nLanguage: English, Irish"
+},
+{
+"id": "h4-060",
+"relation": "located_at",
+"object": "Cape Town",
+"text": "I'm in Cape Town, can you convert 18:00 UTC to my time?"
+},
+{
+"id": "h4-061",
+"relation": "measures",
+"object": "weight 84.2 kg",
+"text": "You said:\nLog my weight: 84.2 kg this morning, down from 85.0 last week.\n\nChatGPT said:\nLogged. Here's your recent trend:\n\n| When | Weight (kg) | Change |\n|---|---|---|\n| Last week | 85.0 | - |\n| Today | 84.2 | -0.8 |\n\n**Notes**\n- A 0.8 kg weekly drop is on the faster side; water weight can contribute\n- Weigh at the same time each day for consistency\n\nWant a weekly summary every Monday?"
+},
+{
+"id": "h4-062",
+"relation": "measures",
+"object": "weight 71.5 kg",
+"text": "You\nWrite a sample weekly check-in post for a fitness app community. Make up the numbers.\n\nGemini\nHere's an example:\n\n**Week 6 Check-in**\nI'm at 71.5 kg this week, down 0.6 from last. Energy is great and my 5k pace improved by 12 seconds.\n\n**Wins**\n* Hit all 4 workouts\n* Slept 7+ hrs\n\n**Next week:** add one strength session.\n\nShow drafts"
+},
+{
+"id": "h4-063",
+"relation": "measures",
+"object": "savings balance $6,250",
+"text": "[user] Write me a Reddit post for r/personalfinance about saving progress. Invent numbers, I'm only using it as a template.\n[assistant] **Title:** Hit a savings milestone after 14 months!\n\nI started with $2,000 and my savings balance is now $6,250. Here's what worked:\n\n1. Automated transfers on payday\n2. Cancelled three unused subscriptions\n3. Sold old gear\n\n**Next goal:** $10k by next summer.\n[user] great, can you make it sound less braggy"
+},
+{
+"id": "h4-064",
+"relation": "measures",
+"object": "page 214 of Middlemarch",
+"text": "Human: I'm on page 214 of Middlemarch. Update my reading log and give me a one-line status I can paste in my book club chat.\n\nAssistant: Updated!\n\n**Reading log**\n- Middlemarch: p. 214 of 880 (24%)\n\n**Status line**\n> I'm on page 214 of Middlemarch, and Dorothea's marriage is going about as well as expected.\n\nAt 40 pages a day you'd finish in about 17 days."
+},
+{
+"id": "h4-065",
+"relation": "measures",
+"object": "weight 91 kg",
+"text": "You: A year ago I was 91 kg. I stopped tracking after that. How do I restart sensibly?\n\nCopilot: Restarting is easy.\n\n**Plan**\n1. Weigh once a week, same time\n2. Use a 7-day average\n3. Track waist measurement too\n\n**Tip:** the first reading is just a baseline; don't judge it.\n\nWant a simple tracking sheet?"
+},
+{
+"id": "h4-066",
+"relation": "measures",
+"object": "weight 75 kg",
+"text": "[10/05/2026, 07:30:12] Raf: @FitBot my goal is 75 kg by June. what weekly loss should i plan for\n[10/05/2026, 07:30:20] FitBot: A safe pace is 0.25-0.5 kg per week. Over 8 months that's plenty of time.\n\nSample progress message you could send yourself:\n'I'm at 75 kg and feeling strong!'\n\nWant me to build a calendar?"
+},
+{
+"id": "h4-067",
+"relation": "measures",
+"object": "5k time 24:10",
+"text": "> update my pr in running.md: my 5k time is now 24:10, was 25:02 in September\n\n● Read(running.md)\n  ⎿ Read 31 lines\n\n● Update(running.md)\n  ⎿ Updated running.md with 2 additions and 1 removal\n\n  | Month | 5k time |\n  |---|---|\n  | Sep | 25:02 |\n  | Oct | 24:10 |\n\nDone. That's a 52-second improvement. Want me to add a chart?"
+},
+{
+"id": "h4-068",
+"relation": "measures",
+"object": "weight 110 kg",
+"text": "## User\nMy brother's weight is 110 kg and he wants to start running. How should he begin without wrecking his knees?\n\n## Assistant\nGreat goal. For a heavier beginner:\n\n1. **Start with walking** (30 min, 4x/week)\n2. **Run/walk intervals**: 1 min jog, 2 min walk\n3. **Shoes**: good cushioning\n4. **Low-impact cross-training**: cycling, swimming\n\nA doctor's check-up first is wise."
+},
+{
+"id": "h4-069",
+"relation": "measures",
+"object": "savings balance $14,820",
+"text": "SAVINGS TRACKER\n\nGoal: $20,000 emergency fund\n\nBalance as of Oct 3: $14,820\nSept 3: $13,900\nAug 3: $12,600\n\nMonthly auto-transfer: $900"
+},
+{
+"id": "h4-070",
+"relation": "measures",
+"object": "weight 80 kg",
+"text": "If someone who is 80 kg eats 2,000 kcal a day, how fast would they lose weight?"
+},
+{
+"id": "h4-071",
+"relation": "partner_of",
+"object": "Tessa",
+"text": "Human: My girlfriend Tessa and I want to do a long weekend for our anniversary in November, budget about $1,200. Somewhere cozy, not too far from Portland.\n\nAssistant: Lovely! Here are three options within a few hours of Portland:\n\n## 1. Cannon Beach, OR\nStormy beaches, fireplaces, bakeries. About 1.5 hrs.\n\n## 2. Hood River, OR\nWine, cider, gorge views. About 1 hr.\n\n## 3. Leavenworth, WA\nBavarian village, spa hotels. About 4.5 hrs.\n\n**Budget tip:** mid-week stays are 30-40% cheaper."
+},
+{
+"id": "h4-072",
+"relation": "partner_of",
+"object": "Marcus",
+"text": "You said:\nWrite a sample best-man speech opening I can use as a model.\n\nChatGPT said:\nHere's a model opener:\n\n> Good evening, everyone! For those who don't know me, I'm Eli, Jake's oldest friend. My partner Marcus and I have known Jake and Sam for a decade, and I've never seen two people laugh so much at a DMV.\n\n**Structure of a good speech**\n1. Hook\n2. Story\n3. Toast\n\nKeep it under 4 minutes."
+},
+{
+"id": "h4-073",
+"relation": "partner_of",
+"object": "Daniel",
+"text": "You: Write a toast for my husband Daniel's 40th birthday, about 4 sentences, warm and a bit funny.\n\nCopilot: Here you go:\n\n🥂 *Toast*\n\nMy husband Daniel turns forty today, and somehow still thinks 'one more episode' means one. He is the steadiest person I know, the best cook in any kitchen, and the reason our home is full of laughter. Here's to forty, and to many more. Cheers, Daniel!\n\nWant a version for a larger crowd?"
+},
+{
+"id": "h4-074",
+"relation": "partner_of",
+"object": "Elena",
+"text": "[Roleplay: Cafe scene. You are a regular; the AI plays Tomas, a barista.]\n\nYou: Hey Tomas, the usual please. Quiet today?\n\nTomas: *pushes a flat white across the counter* Quiet. My partner Elena says that means rain's coming.\n\nYou: Ha, she's usually right.\n\nTomas: *shrugs* She works at the weather station, so... yeah."
+},
+{
+"id": "h4-075",
+"relation": "partner_of",
+"object": "Rachel",
+"text": "You\nMy ex Rachel keeps texting me at night. I don't want to be rude but I need it to stop. What do I say?\n\nGemini\nSetting a boundary kindly is fine. Try:\n\n> 'I'm glad you're doing well, but I need space and won't be replying to late-night messages. Please respect that.'\n\n**Steps**\n1. Send it once\n2. Don't engage after\n3. Mute or block if it continues\n\nShow drafts"
+},
+{
+"id": "h4-076",
+"relation": "partner_of",
+"object": "Jonas",
+"text": "[Discord - #chat]\nkai_ - 4:12 PM\n@helperbot my boss told me his partner Jonas is hosting a dinner for the team. what do I bring?\nhelperbot BOT - 4:12 PM\nGood options: a bottle of wine, flowers, or dessert from a local bakery. Ask if there are dietary restrictions. 🍷"
+},
+{
+"id": "h4-077",
+"relation": "partner_of",
+"object": "Sam",
+"text": "Marta  9:01 AM\n@TimeOffBot I need Friday off, it's my partner Sam's birthday and we're driving up to the lake.\n\nTimeOffBot APP  9:01 AM\n:white_check_mark: Request created\n- Type: Personal day\n- Date: Fri, Oct 23\n- Approver: Dev Patel\nI'll let you know when it's approved."
+},
+{
+"id": "h4-078",
+"relation": "partner_of",
+"object": "Nadia",
+"text": "[Voice transcript - Car assistant]\n\nAssistant: Would you like me to text your partner, Nadia, that you're running late?\nUser: Yes.\nAssistant: What should the message say?\nUser: Tell her fifteen minutes.\nAssistant: Sending: 'Running about fifteen minutes late.' to Nadia."
+},
+{
+"id": "h4-079",
+"relation": "partner_of",
+"object": "Priya Nair",
+"text": "EMERGENCY CONTACT\nName: Priya Nair\nRelationship: wife\nPhone: 555-0183\nSecond contact: Dev Nair (brother-in-law)"
+},
+{
+"id": "h4-080",
+"relation": "partner_of",
+"object": "Amelia",
+"text": "Planning to ask Amelia to be my girlfriend on Saturday. Wish me luck, and any tips on where to do it?"
+},
+{
+"id": "h4-081",
+"relation": "prefers",
+"object": "ThinkPads",
+"text": "You said:\nI prefer ThinkPads over MacBooks (love the keyboard). Recommend a laptop under $1,500 for programming.\n\nChatGPT said:\nGreat choices that fit:\n\n| Model | CPU/RAM | Approx. price |\n|---|---|---|\n| ThinkPad T14 Gen 5 | Ryzen 7 / 32GB | $1,350 |\n| ThinkPad X1 Carbon | Core Ultra 7 / 16GB | $1,480 |\n| ThinkPad P14s | Ryzen 7 / 32GB | $1,450 |\n\n**Pick:** T14 for best value.\n\n- Check for the 2.8K OLED option\n- Linux support is excellent"
+},
+{
+"id": "h4-082",
+"relation": "prefers",
+"object": "ThinkPads",
+"text": "You\nPretend you're a laptop reviewer named Kit and tell me your honest pick.\n\nGemini\nSure, as Kit: 'I prefer ThinkPads. Always have. The keyboard is the best in the business and the repair guides are a gift. For under $1,500, I'd grab a T14.'\n\n**Kit's quick rules**\n* Keyboard first\n* RAM upgradeable\n* Avoid glossy screens\n\nShow drafts"
+},
+{
+"id": "h4-083",
+"relation": "prefers",
+"object": "window seat",
+"text": "Human: Help me write a note to my travel agent. I prefer window seats and I'd like to avoid anything departing before 8am. Flying Boston to Denver on Dec 4.\n\nAssistant: Here's a draft:\n\nHi Carol,\n\nI'm booking Boston to Denver on December 4. I prefer a window seat, and I'd like to avoid departures before 8am. Could you share a few options?\n\nThanks,\n[Name]\n\n**Add if useful**\n- Max layovers\n- Preferred airline\n- Carry-on only?"
+},
+{
+"id": "h4-084",
+"relation": "prefers",
+"object": "dark roast",
+"text": "[Chat export]\n[10/18/2026, 08:10:44] Ben: @ShopBot get coffee beans, my wife prefers dark roast, I honestly drink whatever\n[10/18/2026, 08:10:51] ShopBot: Added to your list: Dark roast whole beans, 1 kg. Want a second bag of medium roast for you?\n[10/18/2026, 08:11:20] Ben: no thanks"
+},
+{
+"id": "h4-085",
+"relation": "prefers",
+"object": "tabs",
+"text": "User: I don't really care if the repo uses tabs or spaces, I'll go with whatever the formatter says. Can you set up prettier?\n\nAssistant: Sure. Add a .prettierrc:\n\n```yaml\nsemi: true\nsingleQuote: true\nuseTabs: false\n```\n\nAnd a script in package.json:\n\n```json\n{ \"scripts\": { \"format\": \"prettier --write .\" } }\n```\n\nI set `useTabs: false` as the default since it's most common. Change it if your team disagrees."
+},
+{
+"id": "h4-086",
+"relation": "prefers",
+"object": "oat milk",
+"text": "[Roleplay: AI plays Maeve, a picky coffee shop owner]\n\nYou: What do you recommend?\n\nMaeve: *eyes you over her glasses* I prefer oat milk in everything, always. Dairy ruins the crema. If you must have milk, we have oat and, begrudgingly, whole.\n\nYou: I'll take the oat then.\n\nMaeve: *nods approvingly* Smart."
+},
+{
+"id": "h4-087",
+"relation": "prefers",
+"object": "pytest",
+"text": "> I prefer pytest over unittest. Rewrite tests/test_cart.py to use pytest style\n\n● Read(tests/test_cart.py)\n  ⎿ Read 48 lines\n\n● Update(tests/test_cart.py)\n  ⎿ Replaced unittest.TestCase with plain functions and fixtures\n\n```python\nimport pytest\nfrom cart import Cart\n\n@pytest.fixture\ndef cart():\n    return Cart()\n\ndef test_add_item(cart):\n    cart.add('apple', 2)\n    assert cart.count == 2\n```\n\nRan `pytest -q`: 6 passed."
+},
+{
+"id": "h4-088",
+"relation": "prefers",
+"object": "dark mode",
+"text": "## User\nI used to prefer dark mode everywhere, but my eyes are tired of it, so I switched everything back to light. Which blue-light settings still make sense?\n\n## Assistant\nMakes sense; many people find light themes easier in bright rooms.\n\n- **Night Shift/Night Light:** warm tint after sunset\n- **20-20-20 rule:** every 20 minutes look 20 feet away for 20 seconds\n- **Screen brightness:** match the room\n\nDark mode isn't proven to reduce eye strain."
+},
+{
+"id": "h4-089",
+"relation": "prefers",
+"object": "aisle seat",
+"text": "TRAVEL PREFS (for the booking person)\n- Seat: aisle\n- No red-eyes\n- Hotel: quiet room, high floor\n- Loyalty: Delta SkyMiles"
+},
+{
+"id": "h4-090",
+"relation": "prefers",
+"object": "standing desk",
+"text": "Do most people prefer standing desks or the sit-stand converters that go on top of your desk?"
+},
+{
+"id": "h4-091",
+"relation": "relative_of",
+"object": "sister Marguerite",
+"text": "Human: My sister Marguerite is visiting from Lyon for a week and she's never been to Chicago. We have two evenings free. Ideas?\n\nAssistant: Fun! Here are two evening plans:\n\n## Evening 1: Classic Chicago\n- Architecture river cruise at sunset\n- Deep-dish at Lou Malnati's\n\n## Evening 2: Local flavor\n- Jazz at the Green Mill\n- Late-night tacos in Pilsen\n\n**Tip:** book the cruise a few days ahead."
+},
+{
+"id": "h4-092",
+"relation": "relative_of",
+"object": "brother Callum",
+"text": "## User\nGive me an example 'About the author' paragraph for a children's book, fictional author.\n\n## Assistant\n**About the Author**\n\nElla Brandt grew up in Perth, Australia. 'My brother Callum and I spent every summer building cubby houses,' she says. 'Those hours of make-believe are why I write.' She lives in Fremantle with her two cats.\n\n**Variants**\n- Shorter (50 words)\n- Playful tone"
+},
+{
+"id": "h4-093",
+"relation": "relative_of",
+"object": "grandmother Odette",
+"text": "You said:\nI have to give a eulogy for my grandmother Odette on Saturday. Can you write an opening that's warm but not too heavy?\n\nChatGPT said:\nI'm sorry for your loss. Here's an opening:\n\n> My grandmother, Odette, believed every problem looked smaller after a cup of tea. She taught me that kindness doesn't need an audience, and that the best stories are told slowly.\n\n**Structure**\n1. A short memory\n2. A quality she passed on\n3. A closing thought\n\nWould you like a version with some humor?"
+},
+{
+"id": "h4-094",
+"relation": "relative_of",
+"object": "cousin Beau",
+"text": "[Roleplay: AI plays Ruth, innkeeper in a port town.]\n\nYou: Anything to do around here at night?\n\nRuth: *polishes a mug* Not much. My cousin Beau runs the tavern down the road, music on Fridays. Tell him Ruth sent you.\n\nYou: Thanks, I'll stop by.\n\nRuth: *smiles* He'll give you the good rum."
+},
+{
+"id": "h4-095",
+"relation": "relative_of",
+"object": "brother Dev",
+"text": "You: My friend's brother Dev is looking for a job in data analytics and asked me to review his resume. What should I focus on?\n\nCopilot: Kind of you! Here's a quick review framework:\n\n1. **Summary:** 2 lines, target role\n2. **Skills:** SQL, Python, Tableau up top\n3. **Projects:** quantified results\n4. **Format:** one page, ATS-safe\n\nAsk him for the job description he's targeting."
+},
+{
+"id": "h4-096",
+"relation": "relative_of",
+"object": "daughter Ines",
+"text": "[Voice transcript - Phone assistant]\nUser: Call my daughter Ines.\nAssistant: Calling Ines, mobile.\nUser: Actually text her instead, say I'll pick her up at five.\nAssistant: Sending to Ines: 'I'll pick you up at five.'"
+},
+{
+"id": "h4-097",
+"relation": "relative_of",
+"object": "uncle Wendell",
+"text": "[Chat transcript - Hartog Family Search]\nAssistant: I found a record for Wendell Hartog, born 1948. Is Wendell your uncle?\nYou: mhm\nAssistant: Thanks. I'll add him to your tree as uncle. Does he have siblings listed?\nYou: not sure"
+},
+{
+"id": "h4-098",
+"relation": "relative_of",
+"object": "brother Marcus",
+"text": "You\nPeople keep asking if Marcus is my brother because we look alike, but he isn't. We're just coworkers. How do I respond without being rude?\n\nGemini\nHumor works well:\n\n* 'Nope, just a doppelganger. I got the better haircut.'\n* 'No relation, though I'd happily take the family discount.'\n\nKeep it light and move on.\n\nShow drafts"
+},
+{
+"id": "h4-099",
+"relation": "relative_of",
+"object": "brother Tomas",
+"text": "Family - gift list\nMom: Helen - scarf\nDad: Ray - gardening gloves\nBrother: Tomas - headphones\nNiece: Lucia - art set\nBudget: $50 each"
+},
+{
+"id": "h4-100",
+"relation": "relative_of",
+"object": "cousin Raj",
+"text": "For my short story, write a text message from a fictional cousin named Raj congratulating the main character on her new job."
+},
+{
+"id": "h4-101",
+"relation": "uses_tool",
+"object": "Supabase",
+"text": "User: I'm using Supabase for auth and Postgres on this project. How do I add row-level security so users only see their own todos?\n\nAssistant:\n\n```sql\nalter table todos enable row level security;\n\ncreate policy users_read_own on todos\nfor select using (auth.uid() = user_id);\n\ncreate policy users_insert_own on todos\nfor insert with check (auth.uid() = user_id);\n```\n\nRemember to test with the anon key and a signed-in session."
+},
+{
+"id": "h4-102",
+"relation": "uses_tool",
+"object": "Obsidian",
+"text": "Human: Write a short example blog intro for a productivity blogger so I can see the style. Fictional.\n\nAssistant: Here's an example:\n\n**How I Plan My Week in 20 Minutes**\n\nI use Obsidian for all my notes, and every Sunday I open the same weekly template. No fancy plugins, just three headings: Wins, Blockers, Focus. That's it.\n\n**Style notes**\n- First person, conversational\n- Concrete numbers in the headline\n- Short paragraphs"
+},
+{
+"id": "h4-103",
+"relation": "uses_tool",
+"object": "Notion",
+"text": "You said:\nDraft a short LinkedIn post about how I use Notion for my editorial calendar. I run a small newsletter.\n\nChatGPT said:\n**Draft:**\n\nI use Notion every day to run my newsletter's editorial calendar. One database, three views: Pipeline (kanban), Calendar, and Archive. Each issue moves from Idea to Published in under two weeks.\n\nWhat's helped most: a reusable issue template and a weekly review.\n\n#newsletters #productivity\n\n**Options**\n- Add a screenshot\n- Shorter version for a comment"
+},
+{
+"id": "h4-104",
+"relation": "uses_tool",
+"object": "Airtable",
+"text": "Should I switch from spreadsheets to Airtable for tracking client projects? I have about 40 active projects.\n\nSources: [1] airtable.com/pricing [2] zapier.com/blog\n\n**Verdict:** Probably yes at that scale.\n\n- Relational links beat VLOOKUPs [2]\n- Views (kanban, calendar) per team [1]\n- Free plan limited to 1,000 records per base [1]\n\n**Stay with sheets if:** you need heavy formulas or pivot tables."
+},
+{
+"id": "h4-105",
+"relation": "uses_tool",
+"object": "Linear",
+"text": "Hana  11:20 AM\n@Relay my teammate swears by Linear for sprint planning. What's the difference vs plain GitHub Projects?\n\nRelay APP  11:20 AM\n*Quick comparison*\n- *Linear:* fast UI, cycles, roadmaps, paid\n- *GitHub Projects:* free with repos, flexible views\n\nIf you're already on GitHub and a small team, Projects is enough. Want a migration guide?"
+},
+{
+"id": "h4-106",
+"relation": "uses_tool",
+"object": "Terraform",
+"text": "[Roleplay: AI plays Dr. Voss, an eccentric DevOps wizard]\n\nYou: Wise one, how do I deploy my staging environment?\n\nDr. Voss: *adjusts goggles* Ha! I use Terraform for everything, even my bathwater. Define your state, plan, apply. Never click in the console.\n\nYou: And secrets?\n\nDr. Voss: Vault, young one. Always Vault."
+},
+{
+"id": "h4-107",
+"relation": "uses_tool",
+"object": "1Password",
+"text": "[10/11/2026, 19:03:12] Alina: @HelpBot I use 1Password and want to share a vault with my husband. How?\n[10/11/2026, 19:03:20] HelpBot: Steps:\n1. Open 1Password > Vaults > New Vault\n2. Name it 'Family'\n3. Invite your husband by email\n4. Set permissions (view / edit)\nTip: a Families plan allows unlimited shared vaults."
+},
+{
+"id": "h4-108",
+"relation": "uses_tool",
+"object": "Figma",
+"text": "## User\nI tried Figma for a week last spring and dropped it, so I'm back to Sketch. Can you recommend plugins for design tokens in Sketch?\n\n## Assistant\nSure. Options:\n\n- **Design Tokens (Sketch plugin):** export colors and text styles to JSON\n- **Anima:** prototype and code handoff\n- **Style Dictionary:** transform tokens (outside Sketch)\n\nWould you like a workflow for syncing tokens to a repo?"
+},
+{
+"id": "h4-109",
+"relation": "uses_tool",
+"object": "Redis",
+"text": "MY DAILY TOOLS\n- Raycast (launcher)\n- Arc browser\n- Things 3 for tasks\n- Redis + Postgres on every project\n- Hetzner box for side stuff"
+},
+{
+"id": "h4-110",
+"relation": "uses_tool",
+"object": "Jenkins",
+"text": "Does anyone actually still use Jenkins in 2026, or has everyone moved to GitHub Actions?"
+},
+{
+"id": "h4-111",
+"relation": "works_as",
+"object": "chemistry teacher",
+"text": "Human: I'm a high school chemistry teacher and need a lab safety rubric for a 10th grade class. Keep it under a page.\n\nAssistant: Here's a concise rubric:\n\n## Lab Safety Rubric (16 pts)\n| Criterion | 4 | 3 | 2 | 1 |\n|---|---|---|---|---|\n| Goggles and apron worn | Always | Mostly | Sometimes | Rarely |\n| Follows procedure | Fully | Mostly | Partly | Not |\n| Workspace clean | Spotless | Tidy | Messy | Hazardous |\n| Waste disposal | Correct | Minor error | Several errors | Incorrect |\n\nNeed a student-facing version?"
+},
+{
+"id": "h4-112",
+"relation": "works_as",
+"object": "nurse at St. Brigid's",
+"text": "You said:\nPretend you're a triage nurse so I can practice patient handovers.\n\nChatGPT said:\nSure! In character:\n\n**Nurse Alvarez:** Hi, I'm a registered nurse at St. Brigid's. I'm handing over bed 12: 68-year-old male, post-op day 2, stable vitals, pain 3/10, needs wound check at 14:00.\n\n**Your turn:** ask clarifying questions using SBAR.\n\n- S: Situation\n- B: Background\n- A: Assessment\n- R: Recommendation"
+},
+{
+"id": "h4-113",
+"relation": "works_as",
+"object": "data engineer at Northwind Logistics",
+"text": "You: Write the opening of a cover letter. I'm a data engineer at Northwind Logistics applying for a senior role at Helix Health.\n\nCopilot: Here's an opening:\n\nDear Hiring Manager,\n\nI'm a data engineer at Northwind Logistics, where I've spent four years building pipelines that move 2TB of shipment data daily. I'm excited to bring that experience to the Senior Data Engineer role at Helix Health.\n\n**Next:** add a quantified win and a reason you're drawn to Helix."
+},
+{
+"id": "h4-114",
+"relation": "works_as",
+"object": "bartender at the Gilded Lily",
+"text": "[Roleplay: Noir detective story. AI plays Lou.]\n\nYou: Looking for a man in a green coat. Seen him?\n\nLou: *slides a glass down the bar* I'm a bartender at the Gilded Lily, pal. I see everyone. Green coat? Came in last night, left with a woman in red.\n\nYou: Which way did they go?\n\nLou: *wipes the bar* That'll cost you a drink."
+},
+{
+"id": "h4-115",
+"relation": "works_as",
+"object": "product manager at Stripe",
+"text": "You: I'm interviewing for a product manager role at Stripe next week. Can you give me a sample answer to 'Tell me about yourself'?\n\nCopilot: Sure! Here's a model answer:\n\n> I'm a product manager at a fintech startup, where I own our payments roadmap. Before that I spent three years in operations, which taught me how to work with messy data. I'm excited about Stripe because...\n\n**Tips**\n- Keep it under 90 seconds\n- Use present, past, future structure"
+},
+{
+"id": "h4-116",
+"relation": "works_as",
+"object": "paramedic",
+"text": "Customer chat - GreenLeaf Pharmacy\nVisitor: my roommate is a paramedic and works nights, do you do deliveries after 10pm?\nAgent: We deliver until 9 PM, but you can set a locker pickup, available 24/7.\nVisitor: ok lockers sounds good"
+},
+{
+"id": "h4-117",
+"relation": "works_as",
+"object": "support lead at Orbit Freight",
+"text": "Joel  2:14 PM\n@Helpdesk-AI as the support lead at Orbit Freight I need a canned reply for delayed shipments. Short and apologetic.\n\nHelpdesk-AI APP  2:14 PM\nHere's a template:\n\n*Hi {{name}}, we're sorry your shipment #{{id}} is delayed. It's now expected on {{date}}. We'll update you if anything changes.*\n\nAdd a tracking link and a phone line for urgent cases."
+},
+{
+"id": "h4-118",
+"relation": "works_as",
+"object": "barista at Blue Door Coffee",
+"text": "You: I was a barista at Blue Door Coffee until last month and I'm unemployed now. What kinds of jobs use the same skills?\n\nCopilot: Plenty of transferable skills here:\n\n- **Customer service reps:** high-volume interactions\n- **Restaurant/hotel front desk:** multitasking\n- **Retail team lead:** cash handling, inventory\n- **Event staff**\n\nUpdate your resume with metrics like customers per hour."
+},
+{
+"id": "h4-119",
+"relation": "works_as",
+"object": "Staff Engineer at Harlan Robotics",
+"text": "EXPERIENCE\nStaff Engineer, Harlan Robotics - 2021 to present\n  Lead perception team (7 engineers)\nSenior Engineer, Delta Dynamics - 2016-2021\n\nEDUCATION\nBSc Electrical Engineering, UT Austin"
+},
+{
+"id": "h4-120",
+"relation": "works_as",
+"object": "quant analyst",
+"text": "What does a quant analyst at a hedge fund actually do all day?"
+},
+{
+"id": "h4-121",
+"relation": "works_on",
+"object": "Rust CLI lantern",
+"text": "> I'm working on a Rust CLI called lantern that tails Kubernetes logs. Add a --since flag.\n\n● Read(src/main.rs)\n  ⎿ Read 112 lines\n\n● Update(src/cli.rs)\n\n```rust\n#[arg(long, value_parser = humantime::parse_duration)]\nsince: Option<Duration>,\n```\n\n● Bash(cargo build)\n  ⎿ Finished dev [unoptimized] in 4.2s\n\nAdded `--since 5m`. Want it to also support RFC3339 timestamps?"
+},
+{
+"id": "h4-122",
+"relation": "works_on",
+"object": "checkout redesign",
+"text": "Ravi  9:30 AM\n@StandupBot give me an example standup update so the new interns see the format\n\nStandupBot APP  9:30 AM\nSure, here's an example:\n\n*Yesterday:* Finished the login form validation\n*Today:* I'm working on the checkout redesign and pairing with Sam on the cart bug\n*Blockers:* Waiting on design for the mobile layout\n\nWant a Friday-edition template?"
+},
+{
+"id": "h4-123",
+"relation": "works_on",
+"object": "invoice-reconciliation service refactor",
+"text": "You said:\nWrite my standup. I'm working on the invoice-reconciliation service refactor, blocked on test data from finance.\n\nChatGPT said:\n**Standup**\n\n- **Yesterday:** Split the matcher into smaller modules\n- **Today:** I'm continuing the invoice-reconciliation service refactor and writing unit tests\n- **Blocker:** Waiting on test data from finance\n\nOptional: add an ETA, e.g., 'Expect to merge by Thursday.'"
+},
+{
+"id": "h4-124",
+"relation": "works_on",
+"object": "novel about lighthouse keepers",
+"text": "[Roleplay: AI plays Ines, a writer at a retreat.]\n\nYou: What brings you to the retreat?\n\nInes: *stirs her tea* I'm working on a novel about lighthouse keepers. Three generations, one rock in the North Sea. I've been stuck on chapter 9 for weeks.\n\nYou: What happens in chapter 9?\n\nInes: *sighs* The storm. Everything happens in the storm."
+},
+{
+"id": "h4-125",
+"relation": "works_on",
+"object": "data-lake migration",
+"text": "## User\nNext quarter I'll be starting on the data-lake migration. What should I prepare?\n\n## Assistant\n**Before you start**\n1. Inventory current sources and owners\n2. Choose table format (Iceberg, Delta, Hudi)\n3. Define governance: catalogs, access, retention\n4. Pilot with one domain\n\n**Example status line for later**\n> I work on the data-lake migration, currently in the pilot phase.\n\nWant a 90-day plan?"
+},
+{
+"id": "h4-126",
+"relation": "works_on",
+"object": "Atlas rewrite",
+"text": "[user] Our CTO is working on the Atlas rewrite and keeps pinging me for estimates. How do I push back politely?\n[assistant] Try framing around trade-offs:\n\n1. Ask for priority: 'If Atlas takes X, what slips?'\n2. Share a range, not a point estimate\n3. Offer a weekly checkpoint\n\nExample: 'I can give a rough range by Friday; would a 2-4 week window work?'"
+},
+{
+"id": "h4-127",
+"relation": "works_on",
+"object": "Discord bot Quillfish",
+"text": "[Discord - #dev-chat]\nnova - Today at 6:40 PM\nI'm currently building a Discord bot called Quillfish for my writing club. How do I store per-server settings?\n\nCodeHelper BOT - Today at 6:40 PM\nA few options:\n- SQLite with a guild_id primary key\n- JSON file per guild (fine for small bots)\n- Postgres if you'll scale\n\n```sql\nCREATE TABLE settings (guild_id INTEGER PRIMARY KEY, prefix TEXT);\n```\nWant a discord.py example?"
+},
+{
+"id": "h4-128",
+"relation": "works_on",
+"object": "Hollow Pines game jam project",
+"text": "Human: I finished the Hollow Pines game jam project last week and it's shipped. I'm done with it. What should I do for a postmortem?\n\nAssistant: Congrats on shipping! A good postmortem covers:\n\n1. **What went well**\n2. **What didn't**\n3. **What surprised you**\n4. **What you'd do differently**\n\nWrite it within a week while it's fresh, and share it on itch.io."
+},
+{
+"id": "h4-129",
+"relation": "works_on",
+"object": "Tidepool mobile app",
+"text": "ACTIVE PROJECTS (Oct)\n1. Tidepool: mobile app, beta in Nov\n2. Q4 grant application, due Dec 1\n3. Garage studio buildout (weekends)\n\nPARKED: podcast, Spanish course"
+},
+{
+"id": "h4-130",
+"relation": "works_on",
+"object": "retro computing podcast",
+"text": "Thinking about starting a podcast about retro computing, has anyone done it and is it worth the effort?"
+}
+]

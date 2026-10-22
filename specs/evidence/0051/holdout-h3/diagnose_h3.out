@@ -1,0 +1,29 @@
+h3-002 [Claude Human/Assistant transcript] obj='Docker' labels=[('human', False), ('assistant', False), ('human', False), ('assistant', False)] non-user-turn=True obj-in-non-user=True restricted=True
+h3-016 [Claude Human/Assistant transcript] obj='Northwind Capital' labels=[('human', False), ('assistant', False), ('human', False), ('assistant', False)] non-user-turn=True obj-in-non-user=True restricted=True
+h3-074 [ChatGPT copy-paste] obj='Sam' labels=[('you', True), ('chatgpt', True)] non-user-turn=True obj-in-non-user=True restricted=False
+h3-082 [Claude Human/Assistant transcript] obj='Linux-friendly hardware' labels=[('human', False), ('assistant', False), ('human', False), ('assistant', False)] non-user-turn=True obj-in-non-user=True restricted=True
+h3-092 [Claude Human/Assistant transcript] obj='mother Dolores' labels=[('human', False), ('assistant', False), ('human', False)] non-user-turn=True obj-in-non-user=True restricted=True
+h3-124 [Copilot copy] obj='inventory-sync service' labels=[('you', True), ('def sync', False), ('copilot', True)] non-user-turn=True obj-in-non-user=True restricted=True
+h3-114 [Gemini copy] obj='Oracle' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-003 [WhatsApp export] obj='Zoom' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-005 [Discord copy] obj='Notion' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-012 [email thread] obj='Mendes Legal' labels=[('from', False), ('to', False), ('subject', False)] non-user-turn=False obj-in-non-user=False restricted=False
+h3-022 [Gemini copy] obj='keto' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-023 [iMessage/SMS] obj='paleo' labels=[('mom', False), ('me', False), ('mom', False)] non-user-turn=False obj-in-non-user=False restricted=False
+h3-032 [Copilot copy] obj='cat named Pixel' labels=[('you', True), ('copilot', True)] non-user-turn=True obj-in-non-user=False restricted=False
+h3-033 [WhatsApp export] obj='parrot named Kiwi' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-042 [email thread] obj='type 2 diabetes' labels=[('from', False), ('to', False), ('subject', False), ('from', False)] non-user-turn=False obj-in-non-user=False restricted=False
+h3-045 [Gemini copy] obj='asthma' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-052 [Teams chat] obj='Osaka' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-055 [Gemini copy] obj='Boulder' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-062 [iMessage/SMS] obj='24:40 5k time' labels=[('coach dave', False), ('me', False), ('coach dave', False)] non-user-turn=False obj-in-non-user=False restricted=False
+h3-066 [Zoom auto-transcript] obj='assessment score 74' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-084 [Teams chat] obj='morning standups' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-086 [Zoom auto-transcript] obj='dark mode' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-091 [WhatsApp export] obj='cousin Rhys' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-094 [iMessage/SMS] obj='mother' labels=[('sis', False), ('me', False), ('sis', False)] non-user-turn=False obj-in-non-user=False restricted=False
+h3-106 [email thread] obj='Xero' labels=[('from', False), ('to', False), ('subject', False), ('from', False)] non-user-turn=False obj-in-non-user=False restricted=False
+h3-112 [Slack thread paste] obj='data engineer at Stripe' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-116 [support live chat] obj='Deloitte' labels=[('agent lin', False), ('customer', False), ('agent lin', False)] non-user-turn=False obj-in-non-user=False restricted=False
+h3-126 [Zoom auto-transcript] obj='Atlas rewrite' labels=[] non-user-turn=False obj-in-non-user=False restricted=False
+h3-051 [Claude Human/Assistant transcript] obj='Tromsø, Norway' labels=[('human', False), ('assistant', False)] non-user-turn=True obj-in-non-user=False restricted=False

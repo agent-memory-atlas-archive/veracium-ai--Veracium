@@ -1,0 +1,5 @@
+python def               turns=[('user', 'set the timezone for my app'), ('non-user', 'Here you go:\ndef main():\n   ')]  Toronto-restricted=True
+python if/else           turns=[('user', 'fix this'), ('non-user', 'Done.'), ('user', 'retry()\nSince you live in To')]  Toronto-restricted=False
+yaml key                 turns=[('user', 'write my config'), ('non-user', 'Sure.'), ('user', "Toronto\nI assumed you're bas")]  Toronto-restricted=False
+note heading 'Summary:'  turns=[('user', 'summarise'), ('non-user', 'Summary: you are based in To')]  Toronto-restricted=True
+'Note:' line             turns=[('user', 'hi'), ('non-user', 'Hello!'), ('user', "I'm based in Toronto.")]  Toronto-restricted=False

@@ -1,0 +1,143 @@
+
+######## H4 (holdout): 130 items; non-user turn found by ATTEST-4 in 54, by ATTEST-5 in 54
+
+== H4 (holdout) gold: author (130 items; 58 true)
+  ATTEST-3: TP 12 FN 46 FP 7 TN 65 | false attestations 7/72 (one-sided 95% upper bound 17.5%) | recall 12/58
+    FALSE ATTESTATION h4-002 avoids_tool 'Terraform' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-025 has_diet 'halal' [Markdown export]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-102 uses_tool 'Obsidian' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+  ATTEST-4@ba09a2a1: TP 11 FN 47 FP 4 TN 68 | false attestations 4/72 (one-sided 95% upper bound 12.3%) | recall 11/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    removed vs ATTEST-3: 4 -> h4-002(gold False), h4-025(gold False), h4-083(gold True), h4-102(gold False)
+  ATTEST-5@0bb7779f: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    removed vs ATTEST-3: 7 -> h4-002(gold False), h4-014(gold True), h4-025(gold False), h4-042(gold False), h4-083(gold True), h4-102(gold False), h4-103(gold True)
+
+== H4 (holdout) gold: labeller (130 items; 58 true)
+  ATTEST-3: TP 12 FN 46 FP 7 TN 65 | false attestations 7/72 (one-sided 95% upper bound 17.5%) | recall 12/58
+    FALSE ATTESTATION h4-002 avoids_tool 'Terraform' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-025 has_diet 'halal' [Markdown export]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-102 uses_tool 'Obsidian' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+  ATTEST-4@ba09a2a1: TP 11 FN 47 FP 4 TN 68 | false attestations 4/72 (one-sided 95% upper bound 12.3%) | recall 11/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    removed vs ATTEST-3: 4 -> h4-002(gold False), h4-025(gold False), h4-083(gold True), h4-102(gold False)
+  ATTEST-5@0bb7779f: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    removed vs ATTEST-3: 7 -> h4-002(gold False), h4-014(gold True), h4-025(gold False), h4-042(gold False), h4-083(gold True), h4-102(gold False), h4-103(gold True)
+
+== H4 (holdout) gold: agreed (130 items; 58 true)
+  ATTEST-3: TP 12 FN 46 FP 7 TN 65 | false attestations 7/72 (one-sided 95% upper bound 17.5%) | recall 12/58
+    FALSE ATTESTATION h4-002 avoids_tool 'Terraform' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-025 has_diet 'halal' [Markdown export]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-102 uses_tool 'Obsidian' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+  ATTEST-4@ba09a2a1: TP 11 FN 47 FP 4 TN 68 | false attestations 4/72 (one-sided 95% upper bound 12.3%) | recall 11/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    removed vs ATTEST-3: 4 -> h4-002(gold False), h4-025(gold False), h4-083(gold True), h4-102(gold False)
+  ATTEST-5@0bb7779f: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    removed vs ATTEST-3: 7 -> h4-002(gold False), h4-014(gold True), h4-025(gold False), h4-042(gold False), h4-083(gold True), h4-102(gold False), h4-103(gold True)
+
+== H4 (holdout) §4b under ATTEST-4@ba09a2a1 (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 10
+  gold=False value_source=other   restricted=False: 23
+  gold=False value_source=other   restricted=True : 9
+  gold=False value_source=user    restricted=False: 30
+  gold=True  value_source=both    restricted=False: 22
+  gold=True  value_source=both    restricted=True : 2
+  gold=True  value_source=user    restricted=False: 34
+  gold-TRUE (by author) restricted (a user fact lost): ['h4-073', 'h4-083']
+  gold-false (by author), value only from another speaker, NOT restricted: ['h4-003[Character.ai roleplay]', 'h4-008[API role transcript]', 'h4-013[Character.ai roleplay]', 'h4-018[support live chat]', 'h4-022[Character.ai roleplay]', 'h4-032[Character.ai roleplay]', 'h4-034[API role transcript]', 'h4-036[Copilot chat]', 'h4-042[ChatGPT web copy]', 'h4-052[support live chat]', 'h4-056[terminal coding agent]', 'h4-062[Gemini web copy]', 'h4-063[API role transcript]', 'h4-074[Character.ai roleplay]', 'h4-082[Gemini web copy]', 'h4-086[Character.ai roleplay]', 'h4-094[Character.ai roleplay]', 'h4-097[genealogy site chat]', 'h4-106[Character.ai roleplay]', 'h4-112[ChatGPT web copy]', 'h4-114[Character.ai roleplay]', 'h4-122[Slack bot thread]', 'h4-124[Character.ai roleplay]']
+  gold-TRUE (by labeller) restricted (a user fact lost): ['h4-073', 'h4-083']
+  gold-false (by labeller), value only from another speaker, NOT restricted: ['h4-003[Character.ai roleplay]', 'h4-008[API role transcript]', 'h4-013[Character.ai roleplay]', 'h4-018[support live chat]', 'h4-022[Character.ai roleplay]', 'h4-032[Character.ai roleplay]', 'h4-034[API role transcript]', 'h4-036[Copilot chat]', 'h4-042[ChatGPT web copy]', 'h4-052[support live chat]', 'h4-056[terminal coding agent]', 'h4-062[Gemini web copy]', 'h4-063[API role transcript]', 'h4-074[Character.ai roleplay]', 'h4-082[Gemini web copy]', 'h4-086[Character.ai roleplay]', 'h4-094[Character.ai roleplay]', 'h4-097[genealogy site chat]', 'h4-106[Character.ai roleplay]', 'h4-112[ChatGPT web copy]', 'h4-114[Character.ai roleplay]', 'h4-122[Slack bot thread]', 'h4-124[Character.ai roleplay]']
+
+== H4 (holdout) §4b under ATTEST-5@0bb7779f (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 10
+  gold=False value_source=other   restricted=False: 20
+  gold=False value_source=other   restricted=True : 12
+  gold=False value_source=user    restricted=False: 30
+  gold=True  value_source=both    restricted=False: 22
+  gold=True  value_source=both    restricted=True : 2
+  gold=True  value_source=user    restricted=False: 34
+  gold-TRUE (by author) restricted (a user fact lost): ['h4-073', 'h4-083']
+  gold-false (by author), value only from another speaker, NOT restricted: ['h4-003[Character.ai roleplay]', 'h4-008[API role transcript]', 'h4-013[Character.ai roleplay]', 'h4-018[support live chat]', 'h4-022[Character.ai roleplay]', 'h4-032[Character.ai roleplay]', 'h4-034[API role transcript]', 'h4-052[support live chat]', 'h4-056[terminal coding agent]', 'h4-062[Gemini web copy]', 'h4-063[API role transcript]', 'h4-074[Character.ai roleplay]', 'h4-082[Gemini web copy]', 'h4-086[Character.ai roleplay]', 'h4-094[Character.ai roleplay]', 'h4-097[genealogy site chat]', 'h4-106[Character.ai roleplay]', 'h4-114[Character.ai roleplay]', 'h4-122[Slack bot thread]', 'h4-124[Character.ai roleplay]']
+  gold-TRUE (by labeller) restricted (a user fact lost): ['h4-073', 'h4-083']
+  gold-false (by labeller), value only from another speaker, NOT restricted: ['h4-003[Character.ai roleplay]', 'h4-008[API role transcript]', 'h4-013[Character.ai roleplay]', 'h4-018[support live chat]', 'h4-022[Character.ai roleplay]', 'h4-032[Character.ai roleplay]', 'h4-034[API role transcript]', 'h4-052[support live chat]', 'h4-056[terminal coding agent]', 'h4-062[Gemini web copy]', 'h4-063[API role transcript]', 'h4-074[Character.ai roleplay]', 'h4-082[Gemini web copy]', 'h4-086[Character.ai roleplay]', 'h4-094[Character.ai roleplay]', 'h4-097[genealogy site chat]', 'h4-106[Character.ai roleplay]', 'h4-114[Character.ai roleplay]', 'h4-122[Slack bot thread]', 'h4-124[Character.ai roleplay]']
+
+######## H3 (regression): 130 items; non-user turn found by ATTEST-4 in 20, by ATTEST-5 in 20
+
+== H3 (regression) gold: author (130 items; 58 true)
+  ATTEST-3: TP 1 FN 57 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/58
+  ATTEST-4@ba09a2a1: TP 1 FN 57 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/58
+    removed vs ATTEST-3: 0 -> 
+  ATTEST-5@0bb7779f: TP 1 FN 57 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/58
+    removed vs ATTEST-3: 0 -> 
+
+== H3 (regression) gold: labeller (130 items; 56 true)
+  ATTEST-3: TP 1 FN 55 FP 0 TN 74 | false attestations 0/74 (one-sided 95% upper bound 4.0%) | recall 1/56
+  ATTEST-4@ba09a2a1: TP 1 FN 55 FP 0 TN 74 | false attestations 0/74 (one-sided 95% upper bound 4.0%) | recall 1/56
+    removed vs ATTEST-3: 0 -> 
+  ATTEST-5@0bb7779f: TP 1 FN 55 FP 0 TN 74 | false attestations 0/74 (one-sided 95% upper bound 4.0%) | recall 1/56
+    removed vs ATTEST-3: 0 -> 
+
+== H3 (regression) gold: agreed (128 items; 56 true)
+  ATTEST-3: TP 1 FN 55 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/56
+  ATTEST-4@ba09a2a1: TP 1 FN 55 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/56
+    removed vs ATTEST-3: 0 -> 
+  ATTEST-5@0bb7779f: TP 1 FN 55 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/56
+    removed vs ATTEST-3: 0 -> 
+
+== H3 (regression) §4b under ATTEST-4@ba09a2a1 (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 9
+  gold=False value_source=other   restricted=False: 21
+  gold=False value_source=other   restricted=True : 5
+  gold=False value_source=user    restricted=False: 37
+  gold=True  value_source=both    restricted=False: 9
+  gold=True  value_source=neither restricted=False: 2
+  gold=True  value_source=other   restricted=False: 1
+  gold=True  value_source=user    restricted=False: 46
+  gold-TRUE (by author) restricted (a user fact lost): none
+  gold-false (by author), value only from another speaker, NOT restricted: ['h3-003[WhatsApp export]', 'h3-005[Discord copy]', 'h3-012[email thread]', 'h3-022[Gemini copy]', 'h3-023[iMessage/SMS]', 'h3-032[Copilot copy]', 'h3-033[WhatsApp export]', 'h3-042[email thread]', 'h3-045[Gemini copy]', 'h3-052[Teams chat]', 'h3-055[Gemini copy]', 'h3-062[iMessage/SMS]', 'h3-066[Zoom auto-transcript]', 'h3-084[Teams chat]', 'h3-086[Zoom auto-transcript]', 'h3-091[WhatsApp export]', 'h3-094[iMessage/SMS]', 'h3-106[email thread]', 'h3-112[Slack thread paste]', 'h3-116[support live chat]', 'h3-126[Zoom auto-transcript]']
+  gold-TRUE (by labeller) restricted (a user fact lost): none
+  gold-false (by labeller), value only from another speaker, NOT restricted: ['h3-003[WhatsApp export]', 'h3-005[Discord copy]', 'h3-012[email thread]', 'h3-022[Gemini copy]', 'h3-023[iMessage/SMS]', 'h3-032[Copilot copy]', 'h3-033[WhatsApp export]', 'h3-042[email thread]', 'h3-045[Gemini copy]', 'h3-052[Teams chat]', 'h3-055[Gemini copy]', 'h3-062[iMessage/SMS]', 'h3-066[Zoom auto-transcript]', 'h3-084[Teams chat]', 'h3-086[Zoom auto-transcript]', 'h3-091[WhatsApp export]', 'h3-094[iMessage/SMS]', 'h3-106[email thread]', 'h3-112[Slack thread paste]', 'h3-116[support live chat]', 'h3-126[Zoom auto-transcript]']
+
+== H3 (regression) §4b under ATTEST-5@0bb7779f (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 9
+  gold=False value_source=other   restricted=False: 21
+  gold=False value_source=other   restricted=True : 5
+  gold=False value_source=user    restricted=False: 37
+  gold=True  value_source=both    restricted=False: 9
+  gold=True  value_source=neither restricted=False: 2
+  gold=True  value_source=other   restricted=False: 1
+  gold=True  value_source=user    restricted=False: 46
+  gold-TRUE (by author) restricted (a user fact lost): none
+  gold-false (by author), value only from another speaker, NOT restricted: ['h3-003[WhatsApp export]', 'h3-005[Discord copy]', 'h3-012[email thread]', 'h3-022[Gemini copy]', 'h3-023[iMessage/SMS]', 'h3-032[Copilot copy]', 'h3-033[WhatsApp export]', 'h3-042[email thread]', 'h3-045[Gemini copy]', 'h3-052[Teams chat]', 'h3-055[Gemini copy]', 'h3-062[iMessage/SMS]', 'h3-066[Zoom auto-transcript]', 'h3-084[Teams chat]', 'h3-086[Zoom auto-transcript]', 'h3-091[WhatsApp export]', 'h3-094[iMessage/SMS]', 'h3-106[email thread]', 'h3-112[Slack thread paste]', 'h3-116[support live chat]', 'h3-126[Zoom auto-transcript]']
+  gold-TRUE (by labeller) restricted (a user fact lost): none
+  gold-false (by labeller), value only from another speaker, NOT restricted: ['h3-003[WhatsApp export]', 'h3-005[Discord copy]', 'h3-012[email thread]', 'h3-022[Gemini copy]', 'h3-023[iMessage/SMS]', 'h3-032[Copilot copy]', 'h3-033[WhatsApp export]', 'h3-042[email thread]', 'h3-045[Gemini copy]', 'h3-052[Teams chat]', 'h3-055[Gemini copy]', 'h3-062[iMessage/SMS]', 'h3-066[Zoom auto-transcript]', 'h3-084[Teams chat]', 'h3-086[Zoom auto-transcript]', 'h3-091[WhatsApp export]', 'h3-094[iMessage/SMS]', 'h3-106[email thread]', 'h3-112[Slack thread paste]', 'h3-116[support live chat]', 'h3-126[Zoom auto-transcript]']
+rc=0

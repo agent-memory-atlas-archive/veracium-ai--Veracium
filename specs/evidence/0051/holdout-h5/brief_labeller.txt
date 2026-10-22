@@ -1,0 +1,30 @@
+You are labelling test items for a memory system. Read the file /tmp/claude-1000/-home-ubuntu-Documents-veracium-veracium-research/418bd771-544d-451a-a2d0-95f45d8d9a49/scratchpad/h5-labeller/h5_items_for_labelling.json (it is the only file
+you need; read nothing else). It is a JSON array of items, each with "id", "relation", "object" and "text": a text a
+person gave to an assistant app, and ONE candidate fact about that person.
+
+For each item answer:
+
+  GOLD QUESTION: In this text, does the USER, in their own words and in a part of the text that is theirs, state as
+  currently true about themselves that <relation meaning>: <object>? A bare agreement with another speaker's wording
+  is false.
+
+The thirteen relations and what each means:
+  avoids_tool    the user avoids, has stopped using, or refuses to use a tool, app or service
+  client_of      the user is a client or customer of a named business or professional
+  has_diet       the user follows a diet or an eating rule
+  has_pet        the user has a pet (the object is the animal or its name)
+  health_state   the user has a health condition or is in a health state
+  located_at     the user lives in or is based in a place
+  measures       a measurement of the user (height, weight, a size, a reading)
+  partner_of     the user's partner or spouse is the named person
+  prefers        the user prefers something
+  relative_of    the named person is a relative of the user
+  uses_tool      the user uses a tool, app or service
+  works_as       the user's job, role or profession
+  works_on       a project, product or piece of work the user is working on
+
+Also give "value_source": where the object's words appear in the text: "user", "other" (only another speaker),
+"both", or "neither".
+
+Reply with ONE JSON array, one object per item, in the file's order: {"id": ..., "gold": true or false,
+"value_source": ...}. Nothing else.

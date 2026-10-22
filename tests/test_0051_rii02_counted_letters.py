@@ -26,7 +26,7 @@ from veracium.ingest import ingest_event
 from veracium.schema import Disclosure, EvidenceAuthor, EvidenceContext
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ATTEST5 = ROOT / "specs" / "evidence" / "0051" / "predicates" / "attest_turns-ATTEST-5-0bb7779f.py"
+ATTEST5 = ROOT / "specs" / "evidence" / "0051" / "holdout-h4" / "attest_turns_ATTEST-5_0bb7779f.py"   # research's H4 copy
 ATTEST5_SHA256 = "0bb7779fd9f3a015da4d285fdf7f988813d2fdf74822bf7fc088aa4f6ae82150"
 
 # (label as written, the name the grammar reads, said-form)

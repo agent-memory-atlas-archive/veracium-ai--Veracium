@@ -1,0 +1,782 @@
+[
+{
+"id": "h3-001",
+"relation": "avoids_tool",
+"object": "Jira",
+"text": "You said:\nI refuse to use Jira anymore, the board lag is killing me. Can you suggest a lightweight tracker for a 4-person team?\n\nChatGPT said:\nSure. Linear, Plane and Trello are all lighter than Jira. Linear is the fastest of the three for small teams, Trello is the simplest."
+},
+{
+"id": "h3-002",
+"relation": "avoids_tool",
+"object": "Docker",
+"text": "Human: Set up a dev environment for my Rust project on Ubuntu 24.04.\n\nAssistant: Since you probably avoid Docker like most people building Rust on a laptop, I'll skip containers and use rustup with a plain cargo workspace.\n\nHuman: ok go\n\nAssistant: Step 1: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+},
+{
+"id": "h3-003",
+"relation": "avoids_tool",
+"object": "Zoom",
+"text": "(my chat with Dana, I'm Priyanka)\n[14/02/2026, 09:12:44] Dana Whitfield: you still boycotting Zoom?\n[14/02/2026, 09:12:51] Dana Whitfield: lol\n[14/02/2026, 09:15:31] Priyanka: ha. just send a Google Meet link for 3pm\n[14/02/2026, 09:16:02] Dana Whitfield: done"
+},
+{
+"id": "h3-004",
+"relation": "avoids_tool",
+"object": "LastPass",
+"text": "(thread I'm pasting, I'm Marcus)\nPriya Nair  11:01 AM\n@Marcus can you add the shared vault creds to LastPass so the contractors can get in?\n\nMarcus Hale  11:04 AM\nnope, I don't use LastPass, haven't since their breach. I'll share them through 1Password instead.\n\nPriya Nair  11:05 AM\nok fine, 1Password it is"
+},
+{
+"id": "h3-005",
+"relation": "avoids_tool",
+"object": "Notion",
+"text": "(I'm maya_k)\norbit_ — Today at 4:12 PM\nyou stay off Notion right? the offline thing\nmaya_k — Today at 4:13 PM\nyeah exactly\norbit_ — Today at 4:13 PM\nmakes sense, Obsidian then"
+},
+{
+"id": "h3-006",
+"relation": "avoids_tool",
+"object": "Slack",
+"text": "Weekly sync - Zoom transcript (I'm Lena)\n\n00:13:41 Tom Reyes: How are you coordinating with the contractors these days?\n00:13:52 Lena Ortiz: Honestly I've dropped Slack entirely. The notifications gave me anxiety, so it's just email and a shared doc.\n00:14:05 Tom Reyes: Brave."
+},
+{
+"id": "h3-007",
+"relation": "avoids_tool",
+"object": "Evernote",
+"text": "# Tools I cut (2026-03)\n- Facebook Messenger: deleted account\n- Evernote: never again after the sync fiasco, everything lives in plain markdown now\n- Gmail app on phone, Fastmail now\n\n#digital-minimalism"
+},
+{
+"id": "h3-008",
+"relation": "avoids_tool",
+"object": "Dropbox",
+"text": "Subscriptions review - Fri\n- Netflix keep\n- Spotify keep\n- Dropbox: considering cancelling?? decide by Friday, 2TB is overkill\n- iCloud keep"
+},
+{
+"id": "h3-009",
+"relation": "avoids_tool",
+"object": "Microsoft Teams",
+"text": "I don't do Teams calls, ever. Send me a Meet link or I'm not joining"
+},
+{
+"id": "h3-010",
+"relation": "avoids_tool",
+"object": "Excel",
+"text": "I used to avoid Excel at all costs but lately I live in it, pivot tables are my love language now"
+},
+{
+"id": "h3-011",
+"relation": "client_of",
+"object": "Halvorsen & Pike",
+"text": "Support chat - Halvorsen & Pike Accounting\n\n[10:02] Priya (Support): Hi! Thanks for contacting Halvorsen & Pike. How can I help today?\n[10:02] Tomas Brandt: Hi, I've been a client of yours since 2022 and I'm trying to see where my 2025 return is.\n[10:04] Priya (Support): Of course, let me pull up your file, Mr Brandt."
+},
+{
+"id": "h3-012",
+"relation": "client_of",
+"object": "Mendes Legal",
+"text": "(top part is from my lawyer, my reply is at the bottom)\nFrom: Rafael Mendes <rafael@mendeslegal.example>\nTo: Elena Voss\nSubject: RE: Lease review\n\nElena, as a long-standing client of Mendes Legal you get priority turnaround. I'll have the markup to you Friday.\n\n--- On Mon, Elena Voss wrote ---\nThanks Rafael, Friday works. Please send the draft as a PDF."
+},
+{
+"id": "h3-013",
+"relation": "client_of",
+"object": "Fidelity",
+"text": "You said:\nMy financial advisor at Fidelity wants me to move 30% into bonds. I've been a Fidelity client for 9 years and never done that.\n\nChatGPT said:\nA 30% bond allocation is common for someone within about 10 years of retirement. Ask your advisor for the reasoning in writing."
+},
+{
+"id": "h3-014",
+"relation": "client_of",
+"object": "Brightline Wealth",
+"text": "Anton Kuzmin, [12.03.2026 18:44]\nhave you tried Brightline Wealth? my cousin loves them\n\nMe, [12.03.2026 18:47]\nmeeting them Tuesday, might sign with them in January if the fee is under 1%\n\nAnton Kuzmin, [12.03.2026 18:48]\nask about the minimum"
+},
+{
+"id": "h3-015",
+"relation": "client_of",
+"object": "Kline & Associates",
+"text": "r/personalfinance\n\nkline_skeptic\n2 yr. ago\nAnyone dealt with Kline & Associates? Thinking of hiring them.\n\nme_sarah77\n2 yr. ago\nI was a client of Kline & Associates until last year. Left over billing, they charged me for every email."
+},
+{
+"id": "h3-016",
+"relation": "client_of",
+"object": "Northwind Capital",
+"text": "Human: help me reply to this statement email\n\nAssistant: Happy to. Are you a client of Northwind Capital, the firm that sent the statement?\n\nHuman: yes\n\nAssistant: Great. Here's a draft: 'Dear Northwind team, thank you for the Q3 statement...'"
+},
+{
+"id": "h3-017",
+"relation": "client_of",
+"object": "Oyelaran Tax Partners",
+"text": "NEW CLIENT INTAKE FORM\nName: Tobias Ek\nPhone: 555-0142\nReferred by: Carla Dunn\nI hereby engage Oyelaran Tax Partners to prepare my 2025 federal and state filings.\nSigned: T. Ek   Date: 02/10/2026"
+},
+{
+"id": "h3-018",
+"relation": "client_of",
+"object": "Meridian Planning",
+"text": "Advisor shortlist (call Fri)\n- Aldous Trust: 1% fee, said they'd take me on\n- Meridian Planning: 0.8%, min 250k\n- Fiduciary Fox: no response yet\nDecide after the calls. Not signing anything before then."
+},
+{
+"id": "h3-019",
+"relation": "client_of",
+"object": "Ridgeway Law",
+"text": "Quick q - I've been a client at Ridgeway Law for three years and they never send itemized bills, is that normal?"
+},
+{
+"id": "h3-020",
+"relation": "client_of",
+"object": "Schwab",
+"text": "I'm not a Schwab client anymore, moved everything out in March. Good riddance."
+},
+{
+"id": "h3-021",
+"relation": "has_diet",
+"object": "vegan",
+"text": "You said:\nI'm vegan, and my sister is gluten-free so the dinners need to work for both of us. 3 days of dinners please\n\nChatGPT said:\nDay 1: chickpea and spinach curry with rice. Day 2: stuffed peppers with quinoa and black beans. Day 3: miso-ginger tofu stir fry on rice noodles."
+},
+{
+"id": "h3-022",
+"relation": "has_diet",
+"object": "keto",
+"text": "You\nplan my meals for the week, I'm cooking Sunday\n\nGemini\nSince you follow a keto diet, here's a plan: Mon - salmon with asparagus, Tue - zucchini noodles with pesto chicken, Wed - beef and broccoli stir-fry.\n\nYou\nthanks, looks good"
+},
+{
+"id": "h3-023",
+"relation": "has_diet",
+"object": "paleo",
+"text": "Mom: are you still doing the whole paleo thing?\nMe: lol no, that was 2023. I eat everything now\nMom: ok good. I'm making lasagna Sunday"
+},
+{
+"id": "h3-024",
+"relation": "has_diet",
+"object": "pescatarian",
+"text": "(my group chat, I'm Ines)\n[03/09/2026, 18:20:11] Jo Park: dinner at Mario's friday?\n[03/09/2026, 18:21:40] Ines Costa: I'm pescatarian btw so anything with fish works\n[03/09/2026, 18:22:03] Jo Park: noted\n[03/09/2026, 18:22:30] Theo: 7:30?"
+},
+{
+"id": "h3-025",
+"relation": "has_diet",
+"object": "kosher",
+"text": "Chat with HelloFresh Support\nCarlos: Thanks for ordering! Before I confirm the box, do you have any dietary needs?\nCustomer: kosher, strictly. And no shellfish obviously\nCarlos: Understood, I'll switch you to the kosher-friendly menu."
+},
+{
+"id": "h3-026",
+"relation": "has_diet",
+"object": "carnivore",
+"text": "r/carnivorediet\n\ncurious_cat_88\n6 mo. ago\nAnyone else on carnivore? How long before you felt different?\n\nme (u/dougwalks)\nthinking about trying carnivore for a month starting Monday, wish me luck lol"
+},
+{
+"id": "h3-027",
+"relation": "has_diet",
+"object": "low FODMAP",
+"text": "Meal prep notes wk 42\nDiet: low FODMAP since August (dietitian plan)\nMon: oats w/ lactose-free milk + blueberries\nTue: rice, grilled chicken, carrots, spinach\nAvoid: garlic, onion, apples, wheat bread"
+},
+{
+"id": "h3-028",
+"relation": "has_diet",
+"object": "vegan",
+"text": "Saved recipes\n- Vegan chili (for Sam's birthday)\n- Keto brownies (Dad asked for these)\n- Chicken tikka\n- Shakshuka"
+},
+{
+"id": "h3-029",
+"relation": "has_diet",
+"object": "vegetarian",
+"text": "heads up, I don't eat meat or fish - does the catering have a proper veg option or is it just salad"
+},
+{
+"id": "h3-030",
+"relation": "has_diet",
+"object": "Mediterranean diet",
+"text": "My doctor says I should try the Mediterranean diet but I haven't started and honestly I probably won't"
+},
+{
+"id": "h3-031",
+"relation": "has_pet",
+"object": "beagle named Biscuit",
+"text": "Human: My beagle Biscuit keeps chewing the couch cushions when I leave for work. Any tips?\n\nAssistant: That sounds like separation-related boredom. For Biscuit, try a frozen Kong, a longer walk before you leave, and a chew toy that is only available when you're out."
+},
+{
+"id": "h3-032",
+"relation": "has_pet",
+"object": "cat named Pixel",
+"text": "You said: write me a cute email signature. I'm Rosa Delgado, freelance graphic designer.\n\nCopilot said: Here you go!\n\nRosa Delgado | Graphic Designer\nPixel the cat approves this message\n\nWant a version with your portfolio link?"
+},
+{
+"id": "h3-033",
+"relation": "has_pet",
+"object": "parrot named Kiwi",
+"text": "[21/05/2026, 11:03:12] Aunt Mei: How's your parrot Kiwi doing?\n[21/05/2026, 11:04:47] Me: haha she's fine, loud as ever\n[21/05/2026, 11:05:02] Aunt Mei: Give her a cuddle from me"
+},
+{
+"id": "h3-034",
+"relation": "has_pet",
+"object": "dog named Juno",
+"text": "Ben Ortiz  9:03 AM\nlate today, taking my dog Juno to the vet for her ears. back by 10\n\nSita Rao  9:04 AM\nno worries, hope she's ok!"
+},
+{
+"id": "h3-035",
+"relation": "has_pet",
+"object": "cat named Pepper",
+"text": "(I'm bella_)\nbella_ — Today at 9:41 PM\nlol I'm cat-sitting Pepper for my neighbor this week, she's an absolute menace\nthejuggler — Today at 9:42 PM\nthe orange one?\nbella_ — Today at 9:42 PM\nyep, hates me"
+},
+{
+"id": "h3-036",
+"relation": "has_pet",
+"object": "greyhound named Atlas",
+"text": "Team call - Zoom transcript (I'm Dev)\n00:21:33 Dev Malhotra: Sorry everyone, that's my greyhound Atlas barking at the delivery guy. Give me one second.\n00:21:41 Chloe Ng: Ha, no problem. Cute.\n00:21:58 Dev Malhotra: He's back to being a couch."
+},
+{
+"id": "h3-037",
+"relation": "has_pet",
+"object": "cat named Mango",
+"text": "Vet log\n12 Mar - Mango (Maine Coon cat, 4y) - annual shots, 5.8 kg\n02 Jun - Mango - ear mites, drops 2x daily 7 days\n19 Sep - flea treatment due"
+},
+{
+"id": "h3-038",
+"relation": "has_pet",
+"object": "dog named Otis",
+"text": "Names shortlist for when we finally get a puppy:\nWaffles\nOtis\nClementine\nBiscuit (too common?)\nvisit rescue on the 30th"
+},
+{
+"id": "h3-039",
+"relation": "has_pet",
+"object": "ferret named Bandit",
+"text": "I used to have a ferret named Bandit, he passed in 2023 and I still miss him"
+},
+{
+"id": "h3-040",
+"relation": "has_pet",
+"object": "bearded dragon",
+"text": "Do you think a bearded dragon would be ok in a small apartment? Thinking of getting one"
+},
+{
+"id": "h3-041",
+"relation": "health_state",
+"object": "recovering from ACL surgery",
+"text": "[2:14 PM] Sana Qureshi\nAre you coming to the offsite in Denver?\n\n[2:15 PM] Me\nCan't, I'm on crutches after my ACL surgery last week. Doc says no flights until March.\n\n[2:16 PM] Sana Qureshi\nOh no, get well soon"
+},
+{
+"id": "h3-042",
+"relation": "health_state",
+"object": "type 2 diabetes",
+"text": "(doctor's email first, my reply below)\nFrom: Dr. Amrit Bose <abose@northparkclinic.example>\nTo: Jordan Pike\nSubject: Lab results\n\nJordan, your A1C came back at 7.4 which is consistent with type 2 diabetes. Please book a follow-up this month.\n\nFrom: Jordan Pike\nThanks Dr. Bose, I'll call the front desk tomorrow."
+},
+{
+"id": "h3-043",
+"relation": "health_state",
+"object": "sleep apnea",
+"text": "Olga Petrova, [03.04.2026 22:10]\nyou look wrecked\n\nMe, [03.04.2026 22:12]\nmaybe I have sleep apnea lol, Katya says I stop breathing at night\n\nOlga Petrova, [03.04.2026 22:12]\nget a sleep study"
+},
+{
+"id": "h3-044",
+"relation": "health_state",
+"object": "celiac disease",
+"text": "Mom: did the doctor call you back?\nMe: yeah. Confirmed, I have celiac disease. Bloodwork + biopsy\nMom: oh honey. we'll figure out the food\nMe: I'm ok, honestly relieved to know"
+},
+{
+"id": "h3-045",
+"relation": "health_state",
+"object": "asthma",
+"text": "You\nsuggest a warm-up routine for my morning run\n\nGemini\nGiven your asthma, keep the first 10 minutes at an easy pace and carry your inhaler. Try 5 min brisk walk, dynamic leg swings, then an easy jog.\n\nYou\nthanks"
+},
+{
+"id": "h3-046",
+"relation": "health_state",
+"object": "migraine",
+"text": "(my Slack, I'm Hye-jin)\nHye-jin Oh  8:41 AM\nOut sick today, migraine with the lights-off kind. Back tomorrow\n\nDaniel Ruiz  8:43 AM\nfeel better! I'll cover your standup"
+},
+{
+"id": "h3-047",
+"relation": "health_state",
+"object": "hypertension",
+"text": "Oct 14\nBP 148/92 again. Dr. Aldana says it's hypertension now, not just white-coat. Starting lisinopril 10mg tomorrow. Cutting salt, walking after dinner.\nOct 15: first pill. Slight dry cough?"
+},
+{
+"id": "h3-048",
+"relation": "health_state",
+"object": "Hashimoto's",
+"text": "Questions for Dr. Lim on Thursday\n1. could this be Hashimoto's? Mum has it\n2. ask for TSH + antibodies\n3. why am I always cold\n4. iron levels"
+},
+{
+"id": "h3-049",
+"relation": "health_state",
+"object": "long covid",
+"text": "fyi I've had long covid since 2024 so mornings are rough, I'll be online from 11"
+},
+{
+"id": "h3-050",
+"relation": "health_state",
+"object": "depression",
+"text": "I'm not depressed, just tired. Please stop asking"
+},
+{
+"id": "h3-051",
+"relation": "located_at",
+"object": "Tromsø, Norway",
+"text": "Human: I live in Tromsø, Norway, so aurora season is my whole winter. Can you help me budget a hobby photography trip to Iceland for February?\n\nAssistant: Happily. From Tromsø you can fly to Keflavik via Oslo, roughly 4,000 NOK return. Let's start with flights, car hire and lodging."
+},
+{
+"id": "h3-052",
+"relation": "located_at",
+"object": "Osaka",
+"text": "[9:30 AM] Aiko Tanaka\nSince you're based in Osaka, can you cover the Kansai client visit on the 12th?\n\n[9:41 AM] Me\nSure, send me the schedule"
+},
+{
+"id": "h3-053",
+"relation": "located_at",
+"object": "Bend, Oregon",
+"text": "Subject: Re: Delivery address\n\nHi, thanks for the update. I'm in Bend, Oregon (97702) now, moved in June, so please ship to 2210 NW Fremont St. Old Portland address no longer works.\n\nBest,\nCasey"
+},
+{
+"id": "h3-054",
+"relation": "located_at",
+"object": "Lisbon",
+"text": "Nadia, [14.11.2025 19:02]\nWHAT. you're moving?\n\nMe, [14.11.2025 19:03]\nmoving to Lisbon in January!! signed the lease today, flat in Alfama\n\nNadia, [14.11.2025 19:03]\nI'm so jealous"
+},
+{
+"id": "h3-055",
+"relation": "located_at",
+"object": "Boulder",
+"text": "You\nweekend hike ideas?\n\nGemini\nSince you're based in Boulder, try Chautauqua Park for an easy loop or Bear Peak if you want elevation. Start before 8am to find parking.\n\nYou\nbear peak!"
+},
+{
+"id": "h3-056",
+"relation": "located_at",
+"object": "Nairobi",
+"text": "(I'm dex_)\ndex_ — Today at 7:55 PM\nI'm trying to set up a call with my cousin in Nairobi, what time is that from CET? hmm\nnomad_j — Today at 7:56 PM\nNairobi is UTC+3, so +1 hour from Berlin in winter\ndex_ — Today at 7:56 PM\nperfect"
+},
+{
+"id": "h3-057",
+"relation": "located_at",
+"object": "Wellington, NZ",
+"text": "Hi, I'm Mereana. Backend dev, coffee nerd, trail runner. Based in Wellington, NZ. Open to remote roles in APAC. DMs open."
+},
+{
+"id": "h3-058",
+"relation": "located_at",
+"object": "Paris",
+"text": "GIFT ORDER - delivery details\nRecipient: Grandma Odile\nShip to: 14 Rue Cler, Paris 75007\nCard message: Joyeux anniversaire! Love, Mia"
+},
+{
+"id": "h3-059",
+"relation": "located_at",
+"object": "Denver",
+"text": "ok I'm in Denver and it's snowing sideways, school's closed, working from the couch"
+},
+{
+"id": "h3-060",
+"relation": "located_at",
+"object": "Dublin",
+"text": "I lived in Dublin for 6 years but I'm done with rain, anywhere sunny works"
+},
+{
+"id": "h3-061",
+"relation": "measures",
+"object": "81.4 kg",
+"text": "You said:\nI weighed in at 81.4 kg this morning, down from 84.0 in January. Is that a sensible pace?\n\nChatGPT said:\nYes. About 2.6 kg over roughly 9 months is gentle and sustainable. Keep protein up and track weekly averages, not daily weights."
+},
+{
+"id": "h3-062",
+"relation": "measures",
+"object": "24:40 5k time",
+"text": "Coach Dave: you're at 24:40 for the 5k right?\nMe: sounds about right\nCoach Dave: ok then we start tempo work at 4:45/km"
+},
+{
+"id": "h3-063",
+"relation": "measures",
+"object": "212 pages into Piranesi",
+"text": "r/books - What are you reading this week?\n\nbookwormbea\n1 d. ago\nCurrently 212 pages into Piranesi and loving it. Page 212 of 272, may finish tonight.\n\npageturner_ro\n1 d. ago\nIt's a quick one, enjoy"
+},
+{
+"id": "h3-064",
+"relation": "measures",
+"object": "5,000 savings",
+"text": "[02/10/2026, 19:12:08] Nico: how much do we have in savings now?\n[02/10/2026, 19:14:51] Me: I'll check. if we keep putting in 400 a month we'd hit 5,000 by December\n[02/10/2026, 19:15:20] Nico: nice"
+},
+{
+"id": "h3-065",
+"relation": "measures",
+"object": "$3,140 savings balance",
+"text": "Chat - Northfield Credit Union\nAgent Hamid: How can I help today?\nCustomer: My savings balance is $3,140 but the app shows $2,940.\nAgent Hamid: Let me check for pending transactions."
+},
+{
+"id": "h3-066",
+"relation": "measures",
+"object": "assessment score 74",
+"text": "(I'm Ahmed)\n00:09:02 Coach Rina: Your last assessment score was 74, so we'll start at level 3.\n00:09:10 Ahmed: Okay.\n00:09:15 Coach Rina: Great, let's begin."
+},
+{
+"id": "h3-067",
+"relation": "measures",
+"object": "82.1 kg",
+"text": "Weight log (kg)\n03/01  83.2\n03/08  82.6\n03/15  82.1\nGoal: <80 by June"
+},
+{
+"id": "h3-068",
+"relation": "measures",
+"object": "75 kg",
+"text": "2027 goals\n- weigh 75 kg by June\n- read 40 books\n- save 10k\n- run a half marathon"
+},
+{
+"id": "h3-069",
+"relation": "measures",
+"object": "chapter 14 of 20 in Cormen",
+"text": "Finished chapter 14 of 20 in Cormen last night, so about 70% through"
+},
+{
+"id": "h3-070",
+"relation": "measures",
+"object": "48,200 high score",
+"text": "my old high score was 48,200 on Pac-Man but my cousin just beat it, so who knows"
+},
+{
+"id": "h3-071",
+"relation": "partner_of",
+"object": "Theo",
+"text": "Human: My boyfriend Theo and I are planning our 3-year anniversary dinner in Lyon. He's vegetarian, I'm not. Ideas?\n\nAssistant: Congratulations! For you and Theo, I'd suggest a bistro with a strong vegetarian tasting menu."
+},
+{
+"id": "h3-072",
+"relation": "partner_of",
+"object": "Pavel",
+"text": "(I'm Joy)\nJoy Park  3:11 PM\nok so Pavel is Anika's husband, he's bringing the cake. I'll bring drinks\n\nLeo Chen  3:12 PM\nand Marta?\n\nJoy Park  3:12 PM\nMarta is on the napkins"
+},
+{
+"id": "h3-073",
+"relation": "partner_of",
+"object": "Nneka",
+"text": "Subject: Appointment for my wife\n\nDear Dr. Okafor's office,\n\nI'd like to move my wife Nneka's appointment from Tuesday to Thursday if possible. Same time, 10:30.\n\nThanks,\nChidi Eze"
+},
+{
+"id": "h3-074",
+"relation": "partner_of",
+"object": "Sam",
+"text": "You said:\nwrite a birthday message for Sam, turning 31, loves climbing and bad puns\n\nChatGPT said:\nHappy birthday to my darling partner Sam! 31 and still sending it. You are my favourite person to hang with (and to belay me)."
+},
+{
+"id": "h3-075",
+"relation": "partner_of",
+"object": "Priya",
+"text": "You\nI think Priya might be my girlfriend now? we haven't actually talked about it\n\nGemini\nThat's a common gray area. A calm 'what are we?' conversation helps. Choose a relaxed moment and be direct.\n\nYou\nugh ok"
+},
+{
+"id": "h3-076",
+"relation": "partner_of",
+"object": "Marcus",
+"text": "r/relationship_advice\n\nthrowaway_oak\n3 d. ago\nMy ex Marcus and I broke up in May after 4 years and I still see his stuff everywhere. How do I stop?\n\nkindredspirit\n3 d. ago\nBox it up."
+},
+{
+"id": "h3-077",
+"relation": "partner_of",
+"object": "Imogen",
+"text": "Date night list w/ my fiancée Imogen\n1. pottery class (Sat)\n2. new ramen place on 5th\n3. outdoor cinema, bring blankets\n4. book the venue tasting!!"
+},
+{
+"id": "h3-078",
+"relation": "partner_of",
+"object": "Tom Reyes",
+"text": "Emergency contacts (UPDATE!!)\n- Mum: Carol 07700 900118\n- Tom Reyes (ex-partner) - still listed, REMOVE\n- Dr Patel's office"
+},
+{
+"id": "h3-079",
+"relation": "partner_of",
+"object": "Arjun",
+"text": "my husband Arjun makes the best dal, I can't cook to save my life"
+},
+{
+"id": "h3-080",
+"relation": "partner_of",
+"object": "Dani",
+"text": "Not seeing anyone right now, Dani and I ended things in August"
+},
+{
+"id": "h3-081",
+"relation": "prefers",
+"object": "short bullet points",
+"text": "You said:\nPlease always answer in short bullet points. I hate walls of text.\n\nChatGPT said:\nGot it, I'll keep answers as short bullet points from now on.\n\nYou said:\nhow do I descale a kettle\n\nChatGPT said:\n- Fill with 1:1 white vinegar and water\n- Boil, then let sit 20 min\n- Rinse twice"
+},
+{
+"id": "h3-082",
+"relation": "prefers",
+"object": "Linux-friendly hardware",
+"text": "Human: recommend a laptop for coding\n\nAssistant: Since you prefer Linux-friendly hardware with a matte screen, the ThinkPad T14 is a strong pick.\n\nHuman: what about battery life\n\nAssistant: Around 10-12 hours of light use."
+},
+{
+"id": "h3-083",
+"relation": "prefers",
+"object": "co-op games",
+"text": "(I'm kiro)\nsable — Today at 5:20 PM\nwanna queue ranked?\nkiro — Today at 5:21 PM\nnah I only play co-op, competitive modes stress me out\nsable — Today at 5:21 PM\nfair, Helldivers then"
+},
+{
+"id": "h3-084",
+"relation": "prefers",
+"object": "morning standups",
+"text": "[10:12 AM] Fatima Noor\nDo you prefer morning standups or afternoon?\n\n[10:20 AM] Me\nwhatever works for everyone\n\n[10:21 AM] Fatima Noor\nok 9:30 then"
+},
+{
+"id": "h3-085",
+"relation": "prefers",
+"object": "contact by email only",
+"text": "Support chat - Brightwave Internet\nAgent Dee: Is there anything else?\nCustomer: yes, please contact me by email only. No phone calls, I don't pick up unknown numbers\nAgent Dee: Noted, I've updated your contact preference to email."
+},
+{
+"id": "h3-086",
+"relation": "prefers",
+"object": "dark mode",
+"text": "(I'm Omar)\n00:14:20 Priya Shah: Dark mode is a must for the dashboard, I'm in it all day.\n00:14:28 Omar Aziz: Noted, I'll add it to the list.\n00:14:35 Priya Shah: And a compact table view."
+},
+{
+"id": "h3-087",
+"relation": "prefers",
+"object": "window seat",
+"text": "Travel prefs (for the booking person)\n- window seat, NEVER aisle\n- morning flights\n- Delta over United if price within $40\n- hotel: quiet floor, no elevator rooms"
+},
+{
+"id": "h3-088",
+"relation": "prefers",
+"object": "whisky",
+"text": "Dad's birthday ideas\n- loves whisky (Laphroaig 10), hates ties\n- prefers paperbacks to ebooks\n- no more socks!!"
+},
+{
+"id": "h3-089",
+"relation": "prefers",
+"object": "tabs over spaces",
+"text": "I prefer tabs over spaces, don't @ me"
+},
+{
+"id": "h3-090",
+"relation": "prefers",
+"object": "Python",
+"text": "Do you prefer Python or Rust for CLI tools? I keep going back and forth and can't decide"
+},
+{
+"id": "h3-091",
+"relation": "relative_of",
+"object": "cousin Rhys",
+"text": "[19/12/2025, 20:01:14] Gran: Did your cousin Rhys get the job?\n[19/12/2025, 20:03:40] Me: yes!! starts Monday\n[19/12/2025, 20:04:02] Gran: Wonderful, tell him well done"
+},
+{
+"id": "h3-092",
+"relation": "relative_of",
+"object": "mother Dolores",
+"text": "Human: help me plan a surprise 60th party\n\nAssistant: Lovely idea. Would your mother Dolores want a say on the guest list, or should it stay a secret from her too?\n\nHuman: good question, let me think"
+},
+{
+"id": "h3-093",
+"relation": "relative_of",
+"object": "sister Noor",
+"text": "r/nursing\n\nnightowl_k\n5 h. ago\nMy sister Noor is a nurse and she told me to never skip meals on a 12. I'm starting nights next week, tips?\n\nrn_rachel\n4 h. ago\nPack real food, not snacks."
+},
+{
+"id": "h3-094",
+"relation": "relative_of",
+"object": "mother",
+"text": "Sis: tell Mom I'll call her Sunday\nMe: will do\nSis: and don't let Dad cook the turkey again"
+},
+{
+"id": "h3-095",
+"relation": "relative_of",
+"object": "uncle Hector",
+"text": "Subject: Re: Next week\n\nHi Ms Vance,\n\nMy uncle Hector is having surgery Tuesday so I need to be at the hospital in Tucson that day. Could we move the review to Wednesday?\n\nThanks,\nBeatriz Solano"
+},
+{
+"id": "h3-096",
+"relation": "relative_of",
+"object": "uncle Mr Lang",
+"text": "Support chat - Metro Water\nAgent: Is Mr Lang the account holder your uncle?\nCustomer: No, Mr Lang is my landlord, not my uncle, sorry for the confusion\nAgent: Thanks, I'll need the landlord's authorisation then."
+},
+{
+"id": "h3-097",
+"relation": "relative_of",
+"object": "brother Sean",
+"text": "Family (for the tree)\nmum: Joan (b. 1958)\ndad: Pete\nbrother: Sean, lives in Leeds, 2 kids\ngrandad Frank d. 2019"
+},
+{
+"id": "h3-098",
+"relation": "relative_of",
+"object": "brother Elias",
+"text": "Novel - character sheet\nProtagonist: Mara Voss, 34, forensic accountant\nHer brother Elias: charming, owes money to everyone\nVillain: Kessler"
+},
+{
+"id": "h3-099",
+"relation": "relative_of",
+"object": "daughter Mila",
+"text": "My daughter Mila starts kindergarten tomorrow!! I'm not ready"
+},
+{
+"id": "h3-100",
+"relation": "relative_of",
+"object": "brother Kyle",
+"text": "Not my brother, he's just my roommate Kyle, everyone assumes we're related"
+},
+{
+"id": "h3-101",
+"relation": "uses_tool",
+"object": "Notion",
+"text": "You said:\nHow do I build a rollup table in Notion? I use it for all my project tracking.\n\nChatGPT said:\nIn Notion, add a Relation property to link the two databases, then add a Rollup property and choose the property to aggregate (Count, Sum, Percent checked)."
+},
+{
+"id": "h3-102",
+"relation": "uses_tool",
+"object": "Readwise",
+"text": "Human: should I use Readwise to keep track of my reading highlights?\n\nAssistant: It's a good fit if you read on a Kindle or in the browser. It syncs highlights and gives daily reviews.\n\nHuman: hm, maybe later"
+},
+{
+"id": "h3-103",
+"relation": "uses_tool",
+"object": "Figma",
+"text": "Kofi Mensah  4:40 PM\nI'm on Figma all day today, so ping me there if you need the mocks reviewed\n\nJo Lim  4:41 PM\nwill do"
+},
+{
+"id": "h3-104",
+"relation": "uses_tool",
+"object": "Linear",
+"text": "[4:02 PM] Alba Ferrer\nare you still on Jira?\n\n[4:03 PM] Me\nthis is the last sprint. Starting Monday I'll switch to Linear, already imported the backlog\n\n[4:03 PM] Alba Ferrer\nlucky"
+},
+{
+"id": "h3-105",
+"relation": "uses_tool",
+"object": "OBS",
+"text": "(I'm vex)\nvex — Today at 11:20 PM\nstreaming w/ OBS + an Elgato HD60 capture card, mic goes through a GoXLR\nnilo — Today at 11:21 PM\nsame setup nice"
+},
+{
+"id": "h3-106",
+"relation": "uses_tool",
+"object": "Xero",
+"text": "From: Pete Holloway <pete@holloway-books.example>\nTo: Alma Reyes\nSubject: Your quote\n\nHi Alma, your quote is ready in Xero, I've emailed the link separately.\n\nRegards,\nPete\n\n---\nFrom: Alma Reyes\nThanks Pete, I'll take a look tonight."
+},
+{
+"id": "h3-107",
+"relation": "uses_tool",
+"object": "Neovim",
+"text": "Setup 2026\neditor: Neovim (LazyVim)\nterminal: WezTerm\nnotes: Logseq\npasswords: Bitwarden\nbrowser: Firefox + uBlock"
+},
+{
+"id": "h3-108",
+"relation": "uses_tool",
+"object": "Airtable",
+"text": "Tools to evaluate this month\n- Airtable\n- Coda\n- Notion (everyone says it's great)\ndecide by 30th, nothing committed yet"
+},
+{
+"id": "h3-109",
+"relation": "uses_tool",
+"object": "DaVinci Resolve",
+"text": "just finished the edit in DaVinci Resolve, the export took forever"
+},
+{
+"id": "h3-110",
+"relation": "uses_tool",
+"object": "Trello",
+"text": "I used to use Trello but I switched to Asana last year and never looked back"
+},
+{
+"id": "h3-111",
+"relation": "works_as",
+"object": "staff nurse at St Thomas'",
+"text": "Support group intro call - Zoom transcript (I'm Marta)\n00:02:10 Host Jim: Let's go around the room. Marta?\n00:02:14 Marta Kowalska: Hi all, I'm a staff nurse at St Thomas', mostly nights, three years now.\n00:02:25 Host Jim: Thanks Marta."
+},
+{
+"id": "h3-112",
+"relation": "works_as",
+"object": "data engineer at Stripe",
+"text": "(I'm Priya)\nCole Brandt  10:12 AM\nWelcome Priya! She's joining us as our new data engineer, coming over from Stripe\n\nPriya Anand  10:14 AM\nThanks all, excited to be here!"
+},
+{
+"id": "h3-113",
+"relation": "works_as",
+"object": "chemistry teacher",
+"text": "You said:\nI teach chemistry at a high school in Leeds. Can you write a 10-question lab safety quiz for year 10?\n\nChatGPT said:\nSure. 1. What should you do first if you spill acid on your skin? 2. Where is the nearest eyewash station?"
+},
+{
+"id": "h3-114",
+"relation": "works_as",
+"object": "Oracle",
+"text": "You\nI got laid off from Oracle in April. Help me polish my resume summary?\n\nGemini\nSorry to hear that. Here's a draft: 'Cloud engineer with 6 years at Oracle, experienced in...'\n\nYou\nlooks good"
+},
+{
+"id": "h3-115",
+"relation": "works_as",
+"object": "line cook at Shake Shack",
+"text": "r/KitchenConfidential\n\nline_cook_marco\n2 d. ago\nEdit: should clarify, I worked as a line cook at Shake Shack for 3 years until last month. Quit, now doing prep at a local place.\n\nsaucier99\n2 d. ago\nCongrats on getting out"
+},
+{
+"id": "h3-116",
+"relation": "works_as",
+"object": "Deloitte",
+"text": "Benefits portal chat\nAgent Lin: I see your email is on the deloitte.com domain. Do you work for Deloitte?\nCustomer: yep that's right\nAgent Lin: Great, I'll apply the corporate account."
+},
+{
+"id": "h3-117",
+"relation": "works_as",
+"object": "Product Designer at Wise",
+"text": "Headline: Product Designer at Wise\nLocation: Tallinn\nAbout: I design onboarding flows for 16M+ customers. Previously at Bolt.\nOpen to talk: design systems, fintech"
+},
+{
+"id": "h3-118",
+"relation": "works_as",
+"object": "product manager at Notion",
+"text": "Job search tracker\nCompany | Role | Status\nNotion | PM | interview Thu\nFigma | PM | applied 10/3\nLinear | Designer | waiting"
+},
+{
+"id": "h3-119",
+"relation": "works_as",
+"object": "Mercy Hospital",
+"text": "heading into my shift at Mercy Hospital ER, wish me luck"
+},
+{
+"id": "h3-120",
+"relation": "works_as",
+"object": "barista at Blue Bottle",
+"text": "interviewing for a barista job at Blue Bottle tomorrow, so nervous"
+},
+{
+"id": "h3-121",
+"relation": "works_on",
+"object": "tidepool",
+"text": "Human: I'm building an open-source CLI called tidepool that syncs dotfiles across machines. Written in Go. Can you review my config parser?\n\nAssistant: Sure, paste it in. For tidepool, I'd check how you handle missing keys and whether the TOML is validated at load."
+},
+{
+"id": "h3-122",
+"relation": "works_on",
+"object": "payments migration",
+"text": "Rhea Menon  4:40 PM\nI'm on the payments migration this sprint, so ping Jo for search stuff\n\nJo Lim  4:41 PM\nok"
+},
+{
+"id": "h3-123",
+"relation": "works_on",
+"object": "Mira game jam project",
+"text": "(I'm tuna)\nmod_kay — Today at 3:10 PM\nyou still working on the Mira game jam project?\ntuna — Today at 3:11 PM\nlol no, shelved it in August\nmod_kay — Today at 3:11 PM\nsad, it looked cool"
+},
+{
+"id": "h3-124",
+"relation": "works_on",
+"object": "inventory-sync service",
+"text": "You said: can you review this function?\n\ndef sync(items): return [i for i in items if i.dirty]\n\nCopilot said: This looks like part of your inventory-sync service. A few things: you're not handling retries, and the loop mutates the list while iterating."
+},
+{
+"id": "h3-125",
+"relation": "works_on",
+"object": "thesis on glacier retreat in Svalbard",
+"text": "Petra, [20.01.2026 21:13]\nhow's uni?\n\nMe, [20.01.2026 21:14]\nexams end Friday, then I finally start my thesis on glacier retreat in Svalbard\n\nPetra, [20.01.2026 21:15]\nwait you haven't started??"
+},
+{
+"id": "h3-126",
+"relation": "works_on",
+"object": "Atlas rewrite",
+"text": "(I'm Hao)\n00:11:03 Chen Li: Are you leading the Atlas rewrite?\n00:11:09 Hao Nguyen: Yes.\n00:11:12 Chen Li: Great, then I'll send the access request to you."
+},
+{
+"id": "h3-127",
+"relation": "works_on",
+"object": "Hearthstone",
+"text": "# Hearthstone\nA self-hosted recipe manager I'm writing in Go + SQLite.\nStatus: alpha, ~40% of the import code done\nTODO: meal planner, shopping list export"
+},
+{
+"id": "h3-128",
+"relation": "works_on",
+"object": "bird-call classifier",
+"text": "Ideas I might build someday\n- markdown to epub converter\n- bird-call classifier for my backyard mic\n- tiny budgeting CLI\n(none started)"
+},
+{
+"id": "h3-129",
+"relation": "works_on",
+"object": "billing service",
+"text": "Been refactoring the billing service all week, finally green on CI"
+},
+{
+"id": "h3-130",
+"relation": "works_on",
+"object": "data lake migration",
+"text": "My coworker Dina is working on the data lake migration, I just review her PRs when she asks"
+}
+]

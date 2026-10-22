@@ -1,0 +1,239 @@
+
+######## H5 (holdout): 130 items; counted letters in 64; classes differ (ATTEST-5 vs 6) in 64; turns differ in 64
+  gold agreement author/labeller: 130/130; disagreeing: none
+
+== H5 (holdout) stratum G, gold: author (65 items; 27 true)
+  ATTEST-3: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+  ATTEST-5@0bb7779f: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout) stratum G, gold: labeller (65 items; 27 true)
+  ATTEST-3: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+  ATTEST-5@0bb7779f: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout) stratum G, gold: agreed (65 items; 27 true)
+  ATTEST-3: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+  ATTEST-5@0bb7779f: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 2 FN 25 FP 0 TN 38 | false attestations 0/38 (one-sided 95% upper bound 7.6%) | recall 2/27
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout) stratum T, gold: author (65 items; 32 true)
+  ATTEST-3: TP 2 FN 30 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 2/32
+  ATTEST-5@0bb7779f: TP 2 FN 30 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 2/32
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 1 FN 31 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 1/32
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout) stratum T, gold: labeller (65 items; 32 true)
+  ATTEST-3: TP 2 FN 30 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 2/32
+  ATTEST-5@0bb7779f: TP 2 FN 30 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 2/32
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 1 FN 31 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 1/32
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout) stratum T, gold: agreed (65 items; 32 true)
+  ATTEST-3: TP 2 FN 30 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 2/32
+  ATTEST-5@0bb7779f: TP 2 FN 30 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 2/32
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 1 FN 31 FP 0 TN 33 | false attestations 0/33 (one-sided 95% upper bound 8.7%) | recall 1/32
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout) stratum all, gold: author (130 items; 59 true)
+  ATTEST-3: TP 4 FN 55 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 4/59
+  ATTEST-5@0bb7779f: TP 4 FN 55 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 4/59
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 3 FN 56 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 3/59
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout) stratum all, gold: labeller (130 items; 59 true)
+  ATTEST-3: TP 4 FN 55 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 4/59
+  ATTEST-5@0bb7779f: TP 4 FN 55 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 4/59
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 3 FN 56 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 3/59
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout) stratum all, gold: agreed (130 items; 59 true)
+  ATTEST-3: TP 4 FN 55 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 4/59
+  ATTEST-5@0bb7779f: TP 4 FN 55 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 4/59
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 3 FN 56 FP 0 TN 71 | false attestations 0/71 (one-sided 95% upper bound 4.1%) | recall 3/59
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H5 (holdout): every item ATTEST-5 and ATTEST-6 answer differently: 1
+  h5-112 [T] gold author=True labeller=True ATTEST-5=True ATTEST-6=False located_at 'Leeds'
+
+== H5 (holdout) backstop under ATTEST-5@0bb7779f (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 29
+  gold=False value_source=both    restricted=True : 1
+  gold=False value_source=neither restricted=False: 1
+  gold=False value_source=other   restricted=False: 7
+  gold=False value_source=other   restricted=True : 21
+  gold=False value_source=user    restricted=False: 12
+  gold=True  value_source=both    restricted=False: 26
+  gold=True  value_source=neither restricted=False: 2
+  gold=True  value_source=user    restricted=False: 31
+  gold-TRUE (by author) restricted (a user fact lost): none
+  gold-TRUE (by labeller) restricted (a user fact lost): none
+
+== H5 (holdout) backstop under ATTEST-6@ccabb664 (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 29
+  gold=False value_source=both    restricted=True : 1
+  gold=False value_source=neither restricted=False: 1
+  gold=False value_source=other   restricted=False: 2
+  gold=False value_source=other   restricted=True : 26
+  gold=False value_source=user    restricted=False: 12
+  gold=True  value_source=both    restricted=False: 25
+  gold=True  value_source=both    restricted=True : 1
+  gold=True  value_source=neither restricted=False: 2
+  gold=True  value_source=user    restricted=False: 31
+  gold-TRUE (by author) restricted (a user fact lost): ['h5-048']
+  gold-TRUE (by labeller) restricted (a user fact lost): ['h5-048']
+
+######## H4 (regression): 130 items; counted letters in 0; classes differ (ATTEST-5 vs 6) in 0; turns differ in 0
+  gold agreement author/labeller: 130/130; disagreeing: none
+
+== H4 (regression) stratum -, gold: author (130 items; 58 true)
+  ATTEST-3: TP 12 FN 46 FP 7 TN 65 | false attestations 7/72 (one-sided 95% upper bound 17.5%) | recall 12/58
+    FALSE ATTESTATION h4-002 avoids_tool 'Terraform' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-025 has_diet 'halal' [Markdown export]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-102 uses_tool 'Obsidian' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+  ATTEST-5@0bb7779f: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    gold-false stored attested AND mentionable (not restricted): 3 -> h4-008, h4-056, h4-106
+  ATTEST-6@ccabb664: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    gold-false stored attested AND mentionable (not restricted): 3 -> h4-008, h4-056, h4-106
+
+== H4 (regression) stratum -, gold: labeller (130 items; 58 true)
+  ATTEST-3: TP 12 FN 46 FP 7 TN 65 | false attestations 7/72 (one-sided 95% upper bound 17.5%) | recall 12/58
+    FALSE ATTESTATION h4-002 avoids_tool 'Terraform' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-025 has_diet 'halal' [Markdown export]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-102 uses_tool 'Obsidian' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+  ATTEST-5@0bb7779f: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    gold-false stored attested AND mentionable (not restricted): 3 -> h4-008, h4-056, h4-106
+  ATTEST-6@ccabb664: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    gold-false stored attested AND mentionable (not restricted): 3 -> h4-008, h4-056, h4-106
+
+== H4 (regression) stratum -, gold: agreed (130 items; 58 true)
+  ATTEST-3: TP 12 FN 46 FP 7 TN 65 | false attestations 7/72 (one-sided 95% upper bound 17.5%) | recall 12/58
+    FALSE ATTESTATION h4-002 avoids_tool 'Terraform' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-025 has_diet 'halal' [Markdown export]
+    FALSE ATTESTATION h4-042 health_state 'hypertension' [ChatGPT web copy]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-102 uses_tool 'Obsidian' [Claude.ai Human/Assistant]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+  ATTEST-5@0bb7779f: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    gold-false stored attested AND mentionable (not restricted): 3 -> h4-008, h4-056, h4-106
+  ATTEST-6@ccabb664: TP 9 FN 49 FP 3 TN 69 | false attestations 3/72 (one-sided 95% upper bound 10.4%) | recall 9/58
+    FALSE ATTESTATION h4-008 avoids_tool 'VS Code' [API role transcript]
+    FALSE ATTESTATION h4-056 located_at 'Reykjavik' [terminal coding agent]
+    FALSE ATTESTATION h4-106 uses_tool 'Terraform' [Character.ai roleplay]
+    gold-false stored attested AND mentionable (not restricted): 3 -> h4-008, h4-056, h4-106
+
+== H4 (regression): every item ATTEST-5 and ATTEST-6 answer differently: 0
+
+== H4 (regression) backstop under ATTEST-5@0bb7779f (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 10
+  gold=False value_source=other   restricted=False: 20
+  gold=False value_source=other   restricted=True : 12
+  gold=False value_source=user    restricted=False: 30
+  gold=True  value_source=both    restricted=False: 24
+  gold=True  value_source=user    restricted=False: 34
+  gold-TRUE (by author) restricted (a user fact lost): none
+  gold-TRUE (by labeller) restricted (a user fact lost): none
+
+== H4 (regression) backstop under ATTEST-6@ccabb664 (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 10
+  gold=False value_source=other   restricted=False: 20
+  gold=False value_source=other   restricted=True : 12
+  gold=False value_source=user    restricted=False: 30
+  gold=True  value_source=both    restricted=False: 24
+  gold=True  value_source=user    restricted=False: 34
+  gold-TRUE (by author) restricted (a user fact lost): none
+  gold-TRUE (by labeller) restricted (a user fact lost): none
+
+######## H3 (regression): 130 items; counted letters in 0; classes differ (ATTEST-5 vs 6) in 0; turns differ in 0
+  gold agreement author/labeller: 128/130; disagreeing: h3-063, h3-093
+
+== H3 (regression) stratum -, gold: author (130 items; 58 true)
+  ATTEST-3: TP 1 FN 57 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/58
+  ATTEST-5@0bb7779f: TP 1 FN 57 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/58
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 1 FN 57 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/58
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H3 (regression) stratum -, gold: labeller (130 items; 56 true)
+  ATTEST-3: TP 1 FN 55 FP 0 TN 74 | false attestations 0/74 (one-sided 95% upper bound 4.0%) | recall 1/56
+  ATTEST-5@0bb7779f: TP 1 FN 55 FP 0 TN 74 | false attestations 0/74 (one-sided 95% upper bound 4.0%) | recall 1/56
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 1 FN 55 FP 0 TN 74 | false attestations 0/74 (one-sided 95% upper bound 4.0%) | recall 1/56
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H3 (regression) stratum -, gold: agreed (128 items; 56 true)
+  ATTEST-3: TP 1 FN 55 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/56
+  ATTEST-5@0bb7779f: TP 1 FN 55 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/56
+    gold-false stored attested AND mentionable (not restricted): 0
+  ATTEST-6@ccabb664: TP 1 FN 55 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/56
+    gold-false stored attested AND mentionable (not restricted): 0
+
+== H3 (regression): every item ATTEST-5 and ATTEST-6 answer differently: 0
+
+== H3 (regression) backstop under ATTEST-5@0bb7779f (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 9
+  gold=False value_source=other   restricted=False: 21
+  gold=False value_source=other   restricted=True : 5
+  gold=False value_source=user    restricted=False: 37
+  gold=True  value_source=both    restricted=False: 9
+  gold=True  value_source=neither restricted=False: 2
+  gold=True  value_source=other   restricted=False: 1
+  gold=True  value_source=user    restricted=False: 46
+  gold-TRUE (by author) restricted (a user fact lost): none
+  gold-TRUE (by labeller) restricted (a user fact lost): none
+
+== H3 (regression) backstop under ATTEST-6@ccabb664 (author's gold and value_source)
+  gold=False value_source=both    restricted=False: 9
+  gold=False value_source=other   restricted=False: 21
+  gold=False value_source=other   restricted=True : 5
+  gold=False value_source=user    restricted=False: 37
+  gold=True  value_source=both    restricted=False: 9
+  gold=True  value_source=neither restricted=False: 2
+  gold=True  value_source=other   restricted=False: 1
+  gold=True  value_source=user    restricted=False: 46
+  gold-TRUE (by author) restricted (a user fact lost): none
+  gold-TRUE (by labeller) restricted (a user fact lost): none
+
+######## the pre-registered predictions (README, step 0)
+  P1 H3 and H4 identical under ATTEST-5 and ATTEST-6: HOLDS (differing items: H3 0, H4 0)
+  P2 on H5-G, ATTEST-6 equals ATTEST-5 on almost every item: 0 of 65 differ (reported, not graded)
+  P3 on H5-T, gold author: false attestations ATTEST-6 0 <= ATTEST-5 0: HOLDS
+  P3 on H5-T, gold labeller: false attestations ATTEST-6 0 <= ATTEST-5 0: HOLDS
+  P3 on H5-T, gold agreed: false attestations ATTEST-6 0 <= ATTEST-5 0: HOLDS
+rc=0

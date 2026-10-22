@@ -1,0 +1,4 @@
+h4-014 client_of 'Reyes Immigration Law': raw=ATTESTED user-text=NOT_ATTESTED tokens=['reyes', 'immigration', 'law'] in-user=True in-non-user=True user-tokens-near=['reyes']
+h4-083 prefers 'window seat': raw=ATTESTED user-text=NOT_ATTESTED tokens=['window', 'seat'] in-user=False in-non-user=True user-tokens-near=['window']
+h4-103 uses_tool 'Notion': raw=ATTESTED user-text=NOT_ATTESTED tokens=['notion'] in-user=True in-non-user=True user-tokens-near=['notion']
+h4-073 partner_of 'Daniel': raw=NOT_ATTESTED user-text=NOT_ATTESTED tokens=['daniel'] in-user=False in-non-user=True user-tokens-near=["daniel's"]

@@ -1,0 +1,19 @@
+== h5-112 [T] located_at 'Leeds' gold=True value_source=both
+  ATTEST-3 over the raw text: ATTESTED
+  ATTEST-5: classes ['unlisted', 'user', 'non-user', 'user']
+    user text: "Welcome to the Local Meetups room. I'm based in Leeds.\n\nnice, I'm in Leeds too, near Headingley. Any climbing gyms?\n\ncheers"
+    ATTEST-3 over it: ATTESTED | verdict ATTESTED | backstop restricts False
+  ATTEST-6: classes ['non-user', 'user', 'non-user', 'user']
+    user text: "nice, I'm in Leeds too, near Headingley. Any climbing gyms?\n\ncheers"
+    ATTEST-3 over it: NOT_ATTESTED | verdict NOT_ATTESTED | backstop restricts False
+== h5-048 [T] works_on 'thesis on coral bleaching' gold=True value_source=both
+  ATTEST-3 over the raw text: NOT_ATTESTED
+  ATTEST-5: classes ['user', 'unlisted', 'non-user', 'user']
+    user text: "my thesis is on coral bleaching, need help structuring chapter 2\n\nI'm writing a thesis on coral bleaching.\n\nok"
+    ATTEST-3 over it: NOT_ATTESTED | verdict NOT_ATTESTED | backstop restricts False
+  ATTEST-6: classes ['user', 'non-user', 'non-user', 'user']
+    user text: 'my thesis is on coral bleaching, need help structuring chapter 2\n\nok'
+    ATTEST-3 over it: NOT_ATTESTED | verdict NOT_ATTESTED | backstop restricts True
+
+INV-S8 on H5 under ATTEST-6 (restricted AND attested): 0 of 130
+rc=0

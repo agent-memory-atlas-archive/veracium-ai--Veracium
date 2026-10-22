@@ -1,0 +1,30 @@
+items 130; events in which ATTEST-4's grammar finds a non-user turn: 20
+
+== gold: author (130 items; 58 true, 72 false)
+  ATTEST-3: TP 1 FN 57 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/58
+  ATTEST-4: TP 1 FN 57 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/58
+  attestations ATTEST-4 removed: 0 -> 
+
+== gold: labeller (130 items; 56 true, 74 false)
+  ATTEST-3: TP 1 FN 55 FP 0 TN 74 | false attestations 0/74 (one-sided 95% upper bound 4.0%) | recall 1/56
+  ATTEST-4: TP 1 FN 55 FP 0 TN 74 | false attestations 0/74 (one-sided 95% upper bound 4.0%) | recall 1/56
+  attestations ATTEST-4 removed: 0 -> 
+
+== gold: agreed-128 (128 items; 56 true, 72 false)
+  ATTEST-3: TP 1 FN 55 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/56
+  ATTEST-4: TP 1 FN 55 FP 0 TN 72 | false attestations 0/72 (one-sided 95% upper bound 4.1%) | recall 1/56
+  attestations ATTEST-4 removed: 0 -> 
+
+== §4b backstop (only_in_non_user_turns), against the author's gold and value_source
+  gold=False value_source=both    restricted=False: 9
+  gold=False value_source=other   restricted=False: 21
+  gold=False value_source=other   restricted=True : 5
+  gold=False value_source=user    restricted=False: 37
+  gold=True  value_source=both    restricted=False: 9
+  gold=True  value_source=neither restricted=False: 2
+  gold=True  value_source=other   restricted=False: 1
+  gold=True  value_source=user    restricted=False: 46
+  gold-TRUE items restricted (a user fact lost): none
+  gold-false (by author) with the value from another speaker only, NOT restricted: ['h3-003[WhatsApp export]', 'h3-005[Discord copy]', 'h3-012[email thread]', 'h3-022[Gemini copy]', 'h3-023[iMessage/SMS]', 'h3-032[Copilot copy]', 'h3-033[WhatsApp export]', 'h3-042[email thread]', 'h3-045[Gemini copy]', 'h3-052[Teams chat]', 'h3-055[Gemini copy]', 'h3-062[iMessage/SMS]', 'h3-066[Zoom auto-transcript]', 'h3-084[Teams chat]', 'h3-086[Zoom auto-transcript]', 'h3-091[WhatsApp export]', 'h3-094[iMessage/SMS]', 'h3-106[email thread]', 'h3-112[Slack thread paste]', 'h3-116[support live chat]', 'h3-126[Zoom auto-transcript]']
+  gold-false (by labeller) with the value from another speaker only, NOT restricted: ['h3-003[WhatsApp export]', 'h3-005[Discord copy]', 'h3-012[email thread]', 'h3-022[Gemini copy]', 'h3-023[iMessage/SMS]', 'h3-032[Copilot copy]', 'h3-033[WhatsApp export]', 'h3-042[email thread]', 'h3-045[Gemini copy]', 'h3-052[Teams chat]', 'h3-055[Gemini copy]', 'h3-062[iMessage/SMS]', 'h3-066[Zoom auto-transcript]', 'h3-084[Teams chat]', 'h3-086[Zoom auto-transcript]', 'h3-091[WhatsApp export]', 'h3-094[iMessage/SMS]', 'h3-106[email thread]', 'h3-112[Slack thread paste]', 'h3-116[support live chat]', 'h3-126[Zoom auto-transcript]']
+rc=0

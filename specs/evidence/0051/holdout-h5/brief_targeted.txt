@@ -1,0 +1,15 @@
+Write 65 items: 5 for each of the thirteen relations.
+
+Every item is a transcript in which the person and the main answerer are labelled by SINGLE LETTERS at the start of
+their lines, as some tools, forums and exports do: "Q:" and "A:", or "H:" and "A:". Do not label the person as "User",
+"Human", "Me" or "You" anywhere in these items.
+
+Every item ALSO has at least one line from another automated participant, labelled with a name such as "Bot:",
+"System:", "Agent:", "Model:", or a product bot's one-word name ending in "bot" ("Helpbot:", "Studybot:"). Examples:
+a Q&A log where an automated helper interjects, a support transcript with a routing bot, a tutoring export with a
+moderator bot, a game or role-play log with a narrator bot.
+
+In at least 30 items, that automated participant (the Bot/System/Agent/Model/...bot line, not the person) states the
+candidate value in a plain first-person sentence ("I live in Lisbon.", "I'm a nurse.", "I use Notion every day."). In
+others the person states it, or both do. Vary where the automated line sits (before, between, after the letters),
+and mix true and false golds.

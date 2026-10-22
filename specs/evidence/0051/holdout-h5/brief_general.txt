@@ -1,0 +1,8 @@
+Write 65 items: 5 for each of the thirteen relations.
+
+Make about 50 of them user–AI conversations as people actually paste or export them, with realistically formatted
+assistant replies (headings, lists, code, config, notes, tips). Make the rest single messages or a person's own notes.
+
+In at least 20 items, the ASSISTANT (not the user) states the candidate value in a plain first-person sentence: a
+self-description, a role-play, an example, a draft written for the user, a persona. Mix true and false golds across
+the set.

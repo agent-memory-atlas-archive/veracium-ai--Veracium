@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 811760d
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 7f7f02e
+# RE-PINNED 2026-10-22 R-II round 2 (RII-01's bound wiki, import eviction, the redaction/erasure bind and its census site 1d7f186..7f7f02e; RII-02's ATTEST-6 ec929c1) landed in 7f7f02e7584828ba8b4a3e7e2c0b426aee4043f0: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-21 0044 T12 (the closing gates) landed in 811760d9641f292af8c71c10f1abb5a7afd8ed48: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-20 0044 T11b stage 2 (research's stage-2 read) landed in 57c079f639b2ff6a1eebccc16cce48c740ddfadc: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-20 0044 T11b (act and attestation portability) landed in e8e476e444f0e30c8965c0a4c30f83a0cf9b069a: bodies byte-identical; the pin moves to the commit that changed src/

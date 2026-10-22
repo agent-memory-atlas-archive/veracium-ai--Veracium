@@ -1440,6 +1440,14 @@ def test_no_plain_json_load_at_evidence_boundaries():
     LEGACY = ("predates the strict-decoder rule; the artifact is "
               "sealed under its own line's review and hardening it is "
               "that line's amendment, not 0026's — NEW files get 0")
+    # 0051's holdout instruments are research's committed bytes: each scorer was PRE-REGISTERED (committed before it
+    # ran) and 0051 §6 reports its output, so hardening one would change the bytes its pre-registration binds. The
+    # scorers' reads use a duplicate-REFUSING hook named `strict` (it raises on a repeated key), a name this gate does
+    # not know; each diagnosis (and H5's scorer, for its stratum ids) re-reads a corpus already parsed strictly; H5's
+    # extractor reads a subagent's JSONL transcript to copy its final message verbatim, and its merger's reads are strict.
+    HOLDOUT_0051 = ("research's 0051 holdout instrument, byte-identical to its commit; its reads are strict under a "
+                    "hook this gate does not name, re-read a corpus already parsed strictly, or read a subagent's "
+                    "transcript to copy its final message verbatim")
     allow = {
         # file -> (EXACT plain-call count, why). No headroom exists:
         # a count above OR below the pin trips (0026-I11-1).
@@ -1463,6 +1471,14 @@ def test_no_plain_json_load_at_evidence_boundaries():
         # statement's own parameter to alter it. The campaign's own reads are strict.
         "0013/steptable.py": (5, "byte-identical copy of the instrument 0013 v33 §4f cites by sha16; its reads are "
                                  "its own outputs and the statement it perturbs, never an input a verdict rests on"),
+        "0051/holdout-h3/score_h3.py": (2, HOLDOUT_0051),
+        "0051/holdout-h3/diagnose_h3.py": (1, HOLDOUT_0051),
+        "0051/holdout-h4/score_h4.py": (2, HOLDOUT_0051),
+        "0051/holdout-h4/diagnose_h4.py": (1, HOLDOUT_0051),
+        "0051/holdout-h5/score_h5.py": (3, HOLDOUT_0051),
+        "0051/holdout-h5/diagnose_h5.py": (1, HOLDOUT_0051),
+        "0051/holdout-h5/extract_final.py": (1, HOLDOUT_0051),
+        "0051/holdout-h5/merge_h5.py": (1, HOLDOUT_0051),
     }
     bad = []
     for f in sorted((ROOT / "specs" / "evidence").rglob("*.py")):
