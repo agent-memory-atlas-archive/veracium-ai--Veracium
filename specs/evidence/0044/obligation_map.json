@@ -372,9 +372,9 @@
   }
  ],
  "campaign": {
-  "defined": 487,
-  "pin_digest": "bbecca41e2787a30d7b40094457d4040cd902e4865504c6b7bb4ffdf9ccb0770",
-  "results": 487,
+  "defined": 498,
+  "pin_digest": "cde61c5fd9b12e63c94b427d67d2dc26ba3b93f1b54965a00e7fb87da3b54218",
+  "results": 498,
   "retired": [
    {
     "commit": "e8e476e",
@@ -387,16 +387,16 @@
   ],
   "summary": {
    "controls_green": true,
-   "groups": 113,
+   "groups": 116,
    "kill_kinds": [
     "assertion",
     "assertion+expected-refusal-missing",
     "expected-refusal-missing"
    ],
-   "killed": 487,
-   "mutants": 487
+   "killed": 498,
+   "mutants": 498
   },
-  "tree_digest": "bbecca41e2787a30d7b40094457d4040cd902e4865504c6b7bb4ffdf9ccb0770"
+  "tree_digest": "cde61c5fd9b12e63c94b427d67d2dc26ba3b93f1b54965a00e7fb87da3b54218"
  },
  "findings_unbound_kills": [],
  "gates": {
@@ -4121,7 +4121,8 @@
     }
    ],
    "bound": {
-    "tests/test_0045_t9_write.py::test_inv_g7_a_legacy_row_reads_unknown_and_is_never_rewritten": "cites the row"
+    "tests/test_0045_t9_write.py::test_inv_g7_a_legacy_row_reads_unknown_and_is_never_rewritten": "cites the row",
+    "tests/test_0051_rii02_counted_letters.py::test_the_attest5_bytes_are_kept_beside_the_new_version": "cites the row"
    },
    "kills": [
     {
@@ -4496,6 +4497,46 @@
    "answering": [
     {
      "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "site": "src/veracium/compile.py::bound_wiki"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body not bound by the facts it drew on",
+     "site": "src/veracium/compile.py::_unbound_by"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
+     "site": "src/veracium/compile.py::_unbound_by"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted episodes not checked",
+     "site": "src/veracium/compile.py::_unbound_by"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted inputs not checked (research's stage-2 probe)",
+     "site": "src/veracium/compile.py::_unbound_by"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a row evicted after the staleness check is indexed",
+     "site": "src/veracium/compile.py::ensure_wiki"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the import admits a reply without evicting the wiki",
+     "site": "src/veracium/store/sqlite.py::SqliteStore.commit_outcome_import_plan"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "site": "src/veracium/compile.py::bound_wiki"
+    },
+    {
+     "annotation": null,
      "mutant": "T10b (INV-R18: eviction and the fence) :: INV-R18: no eviction on a reply",
      "site": "src/veracium/store/sqlite.py::SqliteStore.add_reply"
     },
@@ -4511,6 +4552,19 @@
     }
    ],
    "bound": {
+    "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_row_evicted_between_the_staleness_check_and_the_read_recompiles": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_every_reply_writer_evicts_the_wiki_in_its_own_function": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_every_wiki_evicting_writer_is_classed_against_the_bind": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_no_other_module_writes_replies": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_the_census_flags_a_reply_writer_without_its_eviction": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_the_census_flags_an_erasure_loop_without_the_wiki_and_refuses_unresolved_sql": "cites the row",
     "tests/test_0047_t10b_read.py::test_r18_a_challenge_during_the_compile_is_recompiled_once": "cites the row",
     "tests/test_0047_t10b_read.py::test_r18_a_second_challenge_in_the_recompile_returns_the_closed_notice": "cites the row",
     "tests/test_0047_t10b_read.py::test_r18_control_a_context_reply_during_the_compile_keeps_the_returned_body": "cites the row",
@@ -4552,6 +4606,156 @@
      "kind": "assertion",
      "mutant": "T10b (INV-R18: eviction and the fence) :: INV-R18: the second challenge returns the stale body",
      "node": "tests/test_0047_t10b_read.py::test_r18_a_second_challenge_in_the_recompile_returns_the_closed_notice"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body not bound by the facts it drew on",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body not bound by the facts it drew on",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body not bound by the facts it drew on",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted inputs not checked (research's stage-2 probe)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted inputs not checked (research's stage-2 probe)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted episodes not checked",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the import admits a reply without evicting the wiki",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the import admits a reply without evicting the wiki",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_every_reply_writer_evicts_the_wiki_in_its_own_function"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the import admits a reply without evicting the wiki",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_every_wiki_evicting_writer_is_classed_against_the_bind"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the import admits a reply without evicting the wiki",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_the_census_flags_a_reply_writer_without_its_eviction"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a row evicted after the staleness check is indexed",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_row_evicted_between_the_staleness_check_and_the_read_recompiles"
     }
    ],
    "state": "closed"

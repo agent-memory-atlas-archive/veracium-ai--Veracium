@@ -819,6 +819,20 @@
   },
   {
    "cells": [
+    "tests/test_0047_rii01_wiki_bind.py"
+   ],
+   "control_after": {
+    "exit": 0,
+    "passed": 23
+   },
+   "control_before": {
+    "exit": 0,
+    "passed": 23
+   },
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)"
+  },
+  {
+   "cells": [
     "tests/test_confirm_contract_0008.py"
    ],
    "control_after": {
@@ -1219,6 +1233,22 @@
     "passed": 26
    },
    "group": "T9 (INV-G6, G7, G12: what the axis does not do)"
+  },
+  {
+   "cells": [
+    "tests/test_0051_rii02_counted_letters.py",
+    "--deselect",
+    "tests/test_0051_rii02_counted_letters.py::test_the_attest5_bytes_are_kept_beside_the_new_version"
+   ],
+   "control_after": {
+    "exit": 0,
+    "passed": 4
+   },
+   "control_before": {
+    "exit": 0,
+    "passed": 4
+   },
+   "group": "R-II r2 RII-02 (0051 INV-S1, S6: a counted h/q makes a weak name a speaker; binding cell deselected)"
   },
   {
    "cells": [
@@ -1624,9 +1654,23 @@
     "passed": 26
    },
    "group": "T9 (INV-G10: the source-redacted guard)"
+  },
+  {
+   "cells": [
+    "tests/test_0044_v1_readonly_db.py"
+   ],
+   "control_after": {
+    "exit": 0,
+    "passed": 7
+   },
+   "control_before": {
+    "exit": 0,
+    "passed": 7
+   },
+   "group": "R-II r2 V1 (c, d: the held basetemp and the sqlite error names)"
   }
  ],
- "pin_digest": "bbecca41e2787a30d7b40094457d4040cd902e4865504c6b7bb4ffdf9ccb0770",
+ "pin_digest": "cde61c5fd9b12e63c94b427d67d2dc26ba3b93f1b54965a00e7fb87da3b54218",
  "rows": [
   {
    "anchor_count": 1,
@@ -1990,7 +2034,7 @@
     "tests/test_0051_speaker_turns.py::test_inv_s5_the_version_names_both_frozen_files",
     "tests/test_0051_speaker_turns.py::test_the_write_path_restricts_the_assistants_value_and_keeps_the_users"
    ],
-   "def_digest": "33605983435f02701318744f087bc256d5dba67d9aac8bb60c705c2fba3696a4",
+   "def_digest": "fd9d1204240aa9b08d249acfdf755db3f48413530fa93a9c51bddbfaf0658ea8",
    "file": "src/veracium/attestation.py",
    "group": "0051 (INV-S1, S5: the predicate and its version)",
    "kill_kind": "assertion",
@@ -7045,6 +7089,170 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent[cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_published]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_unpublished]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-compiled]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent[cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_published]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_unpublished]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-compiled]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]"
+   ],
+   "def_digest": "148db016537f30580a11c79002f087429b7489424677e4d4ddbc14baa3a00ef8",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: the wiki served unbound (07df8f8's recall order)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent[cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent[cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]"
+   ],
+   "def_digest": "c0b490b1810e3a9de7de31022d410832d1c85876a87e97a4d0796d939ff17f86",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: a cached body's row not re-read after the snapshot",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_published]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_unpublished]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_published]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_unpublished]"
+   ],
+   "def_digest": "7084ec9766f46deefdb57ae634f30de1ceea5af4bc8f197b7c53f8b84f550016",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: a compiled body not bound by the facts it drew on",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-compiled]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-compiled]",
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]"
+   ],
+   "def_digest": "ad28868c42cee143b857ff2bea0fc1e2e6b9949803aaa97811095c6e622ffdeb",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: a compiled body's redacted inputs not checked (research's stage-2 probe)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]"
+   ],
+   "def_digest": "aba9643e6711f53c541ff6eb95f5b9b33d113896844355c1ff54741b9dc827b0",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: a compiled body's redacted episodes not checked",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]"
+   ],
+   "def_digest": "d3388c36d5395d7b4118a4446f0d476ddf341cb69fbdd43be096e3092894bdf9",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: a compiled body's erased inputs not checked",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it[import]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_every_reply_writer_evicts_the_wiki_in_its_own_function": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_every_wiki_evicting_writer_is_classed_against_the_bind": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_the_census_flags_a_reply_writer_without_its_eviction[commit_outcome_import_plan]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it[import]",
+    "tests/test_0047_rii01_wiki_bind.py::test_every_reply_writer_evicts_the_wiki_in_its_own_function",
+    "tests/test_0047_rii01_wiki_bind.py::test_every_wiki_evicting_writer_is_classed_against_the_bind",
+    "tests/test_0047_rii01_wiki_bind.py::test_the_census_flags_a_reply_writer_without_its_eviction[commit_outcome_import_plan]"
+   ],
+   "def_digest": "a822691a7f94f582048fb501c343cc28c1c5536a67d097870500e0b4deff4016",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: the import admits a reply without evicting the wiki",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_a_row_evicted_between_the_staleness_check_and_the_read_recompiles": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_a_row_evicted_between_the_staleness_check_and_the_read_recompiles"
+   ],
+   "def_digest": "f2f236cf45ea6d4d7d0dc5e1cca6f8b6a9b7a5108ce4d33dd0282aa32647da6a",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: a row evicted after the staleness check is indexed",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
     "tests/test_confirm_contract_0008.py::test_a_concurrent_duplicate_with_a_different_request_is_a_conflict": "assertion",
     "tests/test_confirm_contract_0008.py::test_concurrent_duplicates_commit_once": "assertion"
    },
@@ -9697,6 +9905,25 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
+    "tests/test_0051_rii02_counted_letters.py::test_a_weak_speaker_between_counted_letters_is_restricted[H]": "assertion",
+    "tests/test_0051_rii02_counted_letters.py::test_a_weak_speaker_between_counted_letters_is_restricted[Q]": "assertion",
+    "tests/test_0051_rii02_counted_letters.py::test_classify_agrees_with_the_docstring_oracle_on_every_sequence_of_one_to_four_labels": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0051_rii02_counted_letters.py::test_a_weak_speaker_between_counted_letters_is_restricted[H]",
+    "tests/test_0051_rii02_counted_letters.py::test_a_weak_speaker_between_counted_letters_is_restricted[Q]",
+    "tests/test_0051_rii02_counted_letters.py::test_classify_agrees_with_the_docstring_oracle_on_every_sequence_of_one_to_four_labels"
+   ],
+   "def_digest": "9ce5755debf6248024fe1e43ca61abaa1a30c532237c4579c88ffbfe94ac489c",
+   "file": "src/veracium/attest_turns.py",
+   "group": "R-II r2 RII-02 (0051 INV-S1, S6: a counted h/q makes a weak name a speaker; binding cell deselected)",
+   "kill_kind": "assertion",
+   "mutant": "INV-S1: ATTEST-5's two-speaker test, counted letters left out",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
     "tests/test_0041_notice_state.py::test_coverage_counts_a_standing_notice_for_a_treated_arrivals_reason": "assertion"
    },
    "cells_failed": [
@@ -11606,17 +11833,49 @@
    "kill_kind": "assertion",
    "mutant": "F1(a): the guard reading src alone (no lineage)",
    "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0044_v1_readonly_db.py::test_a_held_basetemp_refuses_a_second_session_by_name": "assertion",
+    "tests/test_0044_v1_readonly_db.py::test_a_second_live_pytest_session_on_one_basetemp_refuses_and_deletes_nothing": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0044_v1_readonly_db.py::test_a_held_basetemp_refuses_a_second_session_by_name",
+    "tests/test_0044_v1_readonly_db.py::test_a_second_live_pytest_session_on_one_basetemp_refuses_and_deletes_nothing"
+   ],
+   "def_digest": "536a360268513da3035ca9fb05ce6a6f630c47c4caa882b7510ef1bf2745c978",
+   "file": "tests/conftest.py",
+   "group": "R-II r2 V1 (c, d: the held basetemp and the sqlite error names)",
+   "kill_kind": "assertion",
+   "mutant": "V1 (c): an explicit basetemp never held",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0044_v1_readonly_db.py::test_the_error_names_are_read_from_the_whole_chain": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0044_v1_readonly_db.py::test_the_error_names_are_read_from_the_whole_chain"
+   ],
+   "def_digest": "705c971459074b7a281cdb3a1a5894a2747a0ebacd361d95d9c9704566957e89",
+   "file": "tests/conftest.py",
+   "group": "R-II r2 V1 (c, d: the held basetemp and the sqlite error names)",
+   "kill_kind": "assertion",
+   "mutant": "V1 (d): only the outermost exception read",
+   "outcome": "KILLED"
   }
  ],
  "summary": {
   "controls_green": true,
-  "groups": 113,
+  "groups": 116,
   "kill_kinds": [
    "assertion",
    "assertion+expected-refusal-missing",
    "expected-refusal-missing"
   ],
-  "killed": 487,
-  "mutants": 487
+  "killed": 498,
+  "mutants": 498
  }
 }
