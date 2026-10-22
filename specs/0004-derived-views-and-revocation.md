@@ -27,11 +27,11 @@ Spec-Status: accepted
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | **v3.1** — internal round 1 folded and PASSED (research, 2026-08-17: R1 inverted cell, R2 the missed producer class, W-Q1 ruled; v3 @ `01a2d42`, PASS closed @ `da1a805b`). **v3.1 folds the packaging nit — and the nit found a SECOND carrier**: the ABSENT-reason cell still read v2's inverted rationale (now UNREACHABLE-BY-SIGNATURE, drops if forced), and chasing it showed §4 still stated the rule as a DENY-list of dropping reasons, which is the same inversion R1 caught in §2c. §4 is now drop-by-default over a closed RETAIN allow-list; W5 splits into a runtime constant and a process constant so the polarity is carried in CODE, not prose. **v3.2 — EXTERNAL round 1 (F5): the §5 regime table still read "flagged, not decided (W-Q1)" while §4, W8 and the question table all carried the resolved ruling. The FOURTH carrier of a decision whose other three were updated — in the document whose own v3.1 lesson was that a finding is not closed until every carrier is swept, and whose commit message said so. Folded, and the miss is recorded IN the cell rather than only here, because that is what v3.1 claimed to have learned.** |
+| **Version** | **v3.3 (drafted by research 2026-10-22; ADOPTED by dev 2026-10-22 from research 753198de, candidate sha256 e085b62ab5b2bcc5…) — W9: THE RULE REACHES THE BODY A RECALL SERVES, NOT ONLY THE CACHE.** R-II round 2's D10 (research's stage-1 read of the round-2 package design, measured at veracium `0e1489e`). A wiki body compiled during a recall was served for that call after a dropping invalidation of a fact it drew on: at the call's challenge snapshot, or during the compile itself. W1 drops the CACHE; it cannot reach a body held by the call. Edits: §3 (two rows), §4b (new), §5 (one row), §6 W9, §8 (one limit), §9 (one paragraph), the Review closure row D10. **W1–W8 are unchanged.** **v3.1** — internal round 1 folded and PASSED (research, 2026-08-17: R1 inverted cell, R2 the missed producer class, W-Q1 ruled; v3 @ `01a2d42`, PASS closed @ `da1a805b`). **v3.1 folds the packaging nit — and the nit found a SECOND carrier**: the ABSENT-reason cell still read v2's inverted rationale (now UNREACHABLE-BY-SIGNATURE, drops if forced), and chasing it showed §4 still stated the rule as a DENY-list of dropping reasons, which is the same inversion R1 caught in §2c. §4 is now drop-by-default over a closed RETAIN allow-list; W5 splits into a runtime constant and a process constant so the polarity is carried in CODE, not prose. **v3.2 — EXTERNAL round 1 (F5): the §5 regime table still read "flagged, not decided (W-Q1)" while §4, W8 and the question table all carried the resolved ruling. The FOURTH carrier of a decision whose other three were updated — in the document whose own v3.1 lesson was that a finding is not closed until every carrier is swept, and whose commit message said so. Folded, and the miss is recorded IN the cell rather than only here, because that is what v3.1 claimed to have learned.** |
 | **Status** | *see `Spec-Status:` — canonical.* Split from `0002` §M8/§11c, unchanged in substance. |
 | **Internal reviewers** | research — **found the defect**; round 1 PASS 2026-08-17 (R1/R2 + W-Q1 ruled), fix verified independently by both sessions |
 | **External review** | required — touches `compile.py` and the store write path |
-| **Decision + date** | **ACCEPTED 2026-08-20** — external round 21, ATOMIC with `0022`/`0023` (Spec-Status flipped draft→accepted in the authorizing commit, per the reviewer's instruction). Implemented 2026-08-20/21; released 0.13.0. *(Row filled 2026-08-22 — the spec-table audit found it empty two days after acceptance.)* |
+| **Decision + date** | **v3.3: pending.** The fix was ruled by the owner 2026-10-22, "Fix now" (ledger 417490b, relayed by dev). The amendment text takes the owner's word after research's read and dev's adoption. **ACCEPTED 2026-08-20** — external round 21, ATOMIC with `0022`/`0023` (Spec-Status flipped draft→accepted in the authorizing commit, per the reviewer's instruction). Implemented 2026-08-20/21; released 0.13.0. *(Row filled 2026-08-22 — the spec-table audit found it empty two days after acceptance.)* |
 | **Path** | full |
 
 > **Why this is its own spec.** It was filed in `0002` because that is where the
@@ -140,6 +140,8 @@ identically, because the wiki is compiled from the grounded set and then frozen.
 | active, assertable | `correct()` | **yes** | **NO** |
 | active, assertable | superseded by a later ingest | **yes** | **NO** |
 | active, assertable | `lapsed` / `decayed` | yes | acceptable — staleness, not revocation |
+| active, assertable, drawn by a body compiled during the current recall | `dispute()`, `correct()`, a supersession or `revoked_source`, committed after the compile read it and before the call serves the body | **yes (v3.2)** → withheld (v3.3, W9) | v3.2: **NO** |
+| the same | `lapsed` / `decayed` / `absorbed_duplicate` | yes | acceptable — the retain set (W3, W8) |
 
 **This is a third failure shape**, distinct from both advisories: 0.4.1 and
 0.4.4 were *a correct filter defeated by corruption of its input*. Here nothing
@@ -248,6 +250,57 @@ research's finding, not from research.
 why the fix is in the store) · `test_decay_does_not_drop_the_wiki` (the
 exclusion is deliberate, so it is pinned).
 
+### 4b. The body a call serves — W9 (v3.3)
+
+**W1 drops the CACHE in the invalidating transaction. A body that is not in the
+cache is out of its reach.** During a recall, `ensure_wiki` may compile a body
+and return it for that call's own use, whether or not the publish succeeded:
+0041's publish rule declines to publish over a moved store, and the unpublished
+body is still served to the call that compiled it. A dropping invalidation
+committed after the compile read its inputs, and before the call serves the
+body, therefore left the body asserting a fact that the same call's edge read no
+longer carried.
+
+**Measured by research at veracium `0e1489e`** with a two-connection probe.
+Four reasons were tried: `disputed`, `revoked_source`, `corrected` and
+`superseded`.
+
+| where the invalidation commits | `0e1489e` | `07df8f8` |
+|---|---|---|
+| at the call's challenge snapshot, the body compiled in the call | asserted, all four | (no bind) |
+| during the compile | asserted, all four | asserted, all four (predates the bind) |
+| a cached body, at the snapshot | withheld, all four (W1 evicted the row; the bind recomputes) | (no bind) |
+
+**The rule.** A compiled body is served only if no fact it drew on has since
+been invalidated with a reason that drops the wiki. Otherwise the body is
+withheld: it is recomputed once (a compile reads only active edges, so the
+recompute cannot draw the revoked fact), and if the recompute fails too, no
+wiki is served for that call.
+
+**The predicate is W1's, by construction.** ONE function decides "this reason
+drops the wiki", both for the cache drop in `_invalidate_edge_row` and for the
+served-body check, so the two cannot disagree. The retain set keeps the body as
+it keeps the cache: a `lapsed`, `decayed` or `absorbed_duplicate` invalidation of
+a drawn fact does not withhold it. That is W3 and W8, carried to the body; a
+check on ANY reason would be the "drop on everything" erosion W3 exists to stop.
+
+**Where.** At the one point every served body passes: `compile.bound_wiki`, which
+binds the body recall serves to the call's snapshot (0047 §4d, INV-R18), through
+its `_unbound_by` decision. At `0e1489e`, `bound_wiki` is `ensure_wiki`'s only
+caller outside `compile.py`, and recall is `bound_wiki`'s only caller. A
+principal-bearing call has no wiki (`0020`). So no other served path exists.
+
+**Why at serve, not at write.** The writer can drop the cache because the
+writer and the cache share a database. No write can reach a body held in
+another call's memory; only the call holding it can check it, after its last
+read of the store.
+
+**Cost.** A recompute whenever a dropping invalidation of a drawn fact lands
+between the compile's read and the serve, ordinary supersession at ingest
+included. On a second failure the call serves no wiki and no notice. Curated
+breadth is lost for that call, and a revoked fact is never asserted: §7's
+trade, unchanged.
+
 ---
 
 ## 5. Regime analysis
@@ -262,6 +315,7 @@ exclusion is deliberate, so it is pinned).
 | staleness (`lapsed`/`decayed`) | NO drop, deliberately — time-based staleness is not a revoked trust decision, and paying curated breadth on every decay cycle buys no trust |
 | `absorbed_duplicate` | **NO drop — RULED, not flagged (W-Q1 resolved 2026-08-17; pinned by W8).** Absorption is trust-preserving by construction: the content stays backed by a live same-trust record, so the wiki serves nothing revoked. **This cell read "flagged, not decided" until external round 1 (F5) found it — the FOURTH carrier of a ruling whose other three had been updated, in the document whose own v3.1 lesson was that a finding is not closed until every carrier is swept** |
 | post-`0022` `revoked_source` | drops, by the rider this spec reserves |
+| a dropping invalidation of a fact a recall's body drew on, committed during the compile or before the serve (v3.3) | the body is withheld: one recompute, then no wiki for that call. A retaining reason keeps the body (W9) |
 
 ## 6. Invariants and executable checks — REQUIRED, blocking
 
@@ -275,6 +329,7 @@ exclusion is deliberate, so it is pinned).
 | **W7** the transition invariant is STRUCTURAL: `_invalidate_edge_row` remains the SOLE writer of `active=0`, so every active→inactive transition inherits the drop (internal R2 — this is what makes the born-state producers safe, and it is enforced rather than grepped once) | `test_sole_active_zero_writer` — an AST sweep of `src/veracium/` asserting exactly one `SET active=0` writer and that it is `_invalidate_edge_row`; a second writer FAILS the build | CI |
 | **W8** the `absorbed_duplicate` exclusion is PINNED (W-Q1, ruled by research 2026-08-17: absorption is trust-preserving by construction and the content stays backed by a live same-trust record, so the exclusion shelters nothing revoked) | `test_absorption_does_not_drop_the_wiki` — the W3 pattern, so a deliberate exclusion cannot erode into "drop on everything" | CI |
 | **W6** the generalisation does not REGRESS `0003`'s shipped refusal-contention drop — that condition still drops, in both sites | `test_refusal_contention_still_drops_the_wiki` (the shipped behaviour this spec widens, pinned so widening cannot silently replace it) | CI |
+| **W9** (v3.3) a body a recall serves never asserts a fact invalidated with a dropping reason after the compile read it; a retaining reason keeps the body; the decision is W1's own (§4b) | cells added at implementation to `tests/test_0047_rii01_wiki_bind.py`, the RII-01 bind's file. On the compiled path, every `DISPOSITIONED_REASONS` key but `redacted` (which only a redaction writes, 0041 §11.2; its window is the redaction cell's, and `test_w9_every_dispositioned_reason_but_redacted_is_an_invalidation_reason` holds the exclusion to that one key) is invalidated at the call's snapshot and during the compile: a dropping reason withholds, a retaining one keeps. The cached path is the control. **Demonstrated RED** against three mutants, each named with the cell that kills it: (a) the clause removed, killed by `test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it`[<dropping reason>-compiled_at_snapshot / -compiled_during_compile] (8 cells); (b) the clause applied on ANY invalidation (W3's erosion), killed by the same test's [<retaining reason>-compiled_*] (6 cells); (c) the store's eviction leaves the shared rule (`if True:` at `_invalidate_edge_row`), killed by its [<retaining reason>-cached] (3 cells). All by assertion; controls pass | CI |
 
 **W2 is the one that matters** and is the reason the fix sits in the store.
 A fix in `Memory.dispute()`/`correct()` passes W1 and W3 and **fails W2
@@ -308,6 +363,11 @@ curated view because one fact was disputed. Incremental invalidation is the
 better answer and is deliberately **not** in scope — it needs a dependency map
 from wiki text back to edges, which does not exist.
 
+**Limits, v3.3 (W9).** W9 reads the INVALIDATION of facts a body drew on. An
+episode is never invalidated; its removal is a redaction or an erasure, which
+0041 and 0047's bind govern. A second failure serves no wiki and no notice: a
+notice there would be a new text surface, and it is not in this amendment.
+
 ---
 
 ## 9. Brief for the external reviewer
@@ -320,6 +380,12 @@ check, not a silent retention, but the check is the only thing standing there.
 Attack that: is there a producer of invalidation reasons the §2c PRODUCERS row
 misses? The `0022` sweep will add one, which is the first real test of the
 mechanism.
+
+v3.3's seam: **W9 binds the body a call serves, not only the cache.** The cache
+drop (W1) and the served-body check (W9) are two enforcement points of one
+decision. They share one function, and mutant (c) is the check that they stay
+one. Attack that: is there a path that serves a compiled body without passing
+`bound_wiki`?
 
 Second seam: this spec makes the wiki fail closed but NOT incremental (§8's
 stated limit). A large store loses its whole curated view because one fact was
@@ -350,4 +416,5 @@ deliberately cites no test that does not exist yet.)*
 | **R1** | internal 1 | the §2c unrecognised-reason cell was INVERTED — v2 retained the wiki on an unknown reason, calling it "fail-OPEN on breadth, never on assertion", which is backwards for a spec whose thesis is failing closed | §2c: an unknown reason DROPS at runtime, then W5's registry fails the build until the reason is dispositioned; the inversion is quoted in the corrected cell so it cannot be re-argued | `grep -n 'v2 had this INVERTED' specs/0004-derived-views-and-revocation.md` |
 | **R2** | internal 1 | `invalidation_reason` is settable and `add_edge` accepts an Edge already carrying one, so the constructor and the FORMAT-7 import round-trip produced reason-bearing records passing NEITHER drop site — the spec's own §9 attack, landed | the fix RELOCATED into the sole `active=0` writer (`_invalidate_edge_row`), so every invalidation path inherits the drop by construction; W7 makes the sole-writer property an AST sweep, not a one-time grep | `grep -c '_invalidate_edge_row' specs/0004-derived-views-and-revocation.md  # 4 carriers, all naming the SAME sole writer` |
 | **F5** | external 1 | the §5 regime table still read "flagged, not decided (W-Q1)" while §4, W8 and the question table carried the RESOLVED ruling — the FOURTH carrier of a decision whose other three were swept, in the document whose own v3.1 lesson was that a finding is not closed until every carrier is swept | v3.2: all four carriers aligned on the W-Q1 ruling (absorption is trust-preserving; the exclusion shelters nothing revoked), and the miss is recorded IN the corrected cell | `grep -c 'W-Q1' specs/0004-derived-views-and-revocation.md  # every carrier now cites the ruling` |
+| **D10** | R-II round 2 (research's stage-1 read of the round-2 package design, 2026-10-22) | a body compiled during a recall was served after a dropping invalidation of a fact it drew on, committed at the call's snapshot or during the compile (the latter predates the bind). W1 drops the cache and cannot reach a body held by the call | v3.3: §4b and W9. The served body is checked with W1's own predicate at `bound_wiki`; one recompute, then no wiki. The owner ruled "fix now" (ledger 417490b) | `grep -n 'W9' specs/0004-derived-views-and-revocation.md` |
 | **artifact 1** | external 2 | reviews.py carried 0004's round-1 SENT rows and no verdict — the source of truth recorded that a package went out and never that it came back | the round-1 verdict row was added then; the ROUND-2 verdict row repeated the same omission and was added at acceptance (2026-08-20), labelled as late rather than backdated | `python3 -c "import sys; sys.path.insert(0,'specs'); import reviews; rows=[r for r in reviews.REVIEWS if r['spec']=='0004' and not r['verdict'].startswith('SENT')]; assert {r['round'] for r in rows} >= {1,2,21}, rows; print('0004 verdict rows:', sorted(r['round'] for r in rows))"` |
