@@ -285,7 +285,7 @@ a drawn fact does not withhold it. That is W3 and W8, carried to the body; a
 check on ANY reason would be the "drop on everything" erosion W3 exists to stop.
 
 **Where.** At the one point every served body passes: `compile.bound_wiki`, which
-binds the body recall serves to the call's snapshot (0047 §4d, its bind of the wiki to the call's snapshot), through
+binds the body recall serves to the call's snapshot (0047 §4d), through
 its `_unbound_by` decision. At `0e1489e`, `bound_wiki` is `ensure_wiki`'s only
 caller outside `compile.py`, and recall is `bound_wiki`'s only caller. A
 principal-bearing call has no wiki (`0020`). So no other served path exists.
