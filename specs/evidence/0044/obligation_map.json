@@ -372,9 +372,9 @@
   }
  ],
  "campaign": {
-  "defined": 498,
-  "pin_digest": "1e00a487da191ae83e53d2d6fe621b6cef6029165dd56eac0b12d7535844f0b5",
-  "results": 498,
+  "defined": 499,
+  "pin_digest": "21932a868211e7c38320ce7fc97d31be049da2bd9e82a426f0684c4f4e06f0cb",
+  "results": 499,
   "retired": [
    {
     "commit": "e8e476e",
@@ -393,10 +393,10 @@
     "assertion+expected-refusal-missing",
     "expected-refusal-missing"
    ],
-   "killed": 498,
-   "mutants": 498
+   "killed": 499,
+   "mutants": 499
   },
-  "tree_digest": "1e00a487da191ae83e53d2d6fe621b6cef6029165dd56eac0b12d7535844f0b5"
+  "tree_digest": "21932a868211e7c38320ce7fc97d31be049da2bd9e82a426f0684c4f4e06f0cb"
  },
  "findings_unbound_kills": [],
  "gates": {
@@ -4507,6 +4507,11 @@
     },
     {
      "annotation": null,
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased episodes not checked (research's landing read, L1)",
+     "site": "src/veracium/compile.py::_unbound_by"
+    },
+    {
+     "annotation": null,
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
      "site": "src/veracium/compile.py::_unbound_by"
     },
@@ -4560,6 +4565,8 @@
     "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body": "cites the row",
     "tests/test_0047_rii01_wiki_bind.py::test_a_row_evicted_between_the_staleness_check_and_the_read_recompiles": "cites the row",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body": "cites the row",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body": "cites the row",
     "tests/test_0047_rii01_wiki_bind.py::test_every_reply_writer_evicts_the_wiki_in_its_own_function": "cites the row",
     "tests/test_0047_rii01_wiki_bind.py::test_every_wiki_evicting_writer_is_classed_against_the_bind": "cites the row",
     "tests/test_0047_rii01_wiki_bind.py::test_no_other_module_writes_replies": "cites the row",
@@ -4669,6 +4676,16 @@
     },
     {
      "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
+    },
+    {
+     "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
      "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent"
     },
@@ -4731,6 +4748,26 @@
      "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
      "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased episodes not checked (research's landing read, L1)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased episodes not checked (research's landing read, L1)",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
     },
     {
      "kind": "assertion",

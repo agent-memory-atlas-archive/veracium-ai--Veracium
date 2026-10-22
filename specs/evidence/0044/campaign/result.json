@@ -823,11 +823,11 @@
    ],
    "control_after": {
     "exit": 0,
-    "passed": 23
+    "passed": 25
    },
    "control_before": {
     "exit": 0,
-    "passed": 23
+    "passed": 25
    },
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)"
   },
@@ -1670,7 +1670,7 @@
    "group": "R-II r2 V1 (c, d: the held basetemp and the sqlite error names)"
   }
  ],
- "pin_digest": "1e00a487da191ae83e53d2d6fe621b6cef6029165dd56eac0b12d7535844f0b5",
+ "pin_digest": "21932a868211e7c38320ce7fc97d31be049da2bd9e82a426f0684c4f4e06f0cb",
  "rows": [
   {
    "anchor_count": 1,
@@ -7100,7 +7100,9 @@
     "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice",
@@ -7114,7 +7116,9 @@
     "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]",
     "tests/test_0047_rii01_wiki_bind.py::test_a_resolve_before_the_bound_snapshot_is_served_from_a_fresh_body",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[cached]",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
    ],
    "def_digest": "148db016537f30580a11c79002f087429b7489424677e4d4ddbc14baa3a00ef8",
    "file": "src/veracium/compile.py",
@@ -7202,16 +7206,37 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body": "assertion"
    },
    "cells_failed": [
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
    ],
-   "def_digest": "d3388c36d5395d7b4118a4446f0d476ddf341cb69fbdd43be096e3092894bdf9",
+   "def_digest": "a6bd9ee39a8ccd594cc0d1c00f1c0e4019a3c30bee17aca63cc9e2ad277e89a5",
    "file": "src/veracium/compile.py",
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
    "kill_kind": "assertion",
    "mutant": "INV-R18: a compiled body's erased inputs not checked",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body",
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
+   ],
+   "def_digest": "af99ba0acba8b558b59d861f4a41c0545cb4289a4b86d41299d917a9cff6e5e9",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
+   "kill_kind": "assertion",
+   "mutant": "INV-R18: a compiled body's erased episodes not checked (research's landing read, L1)",
    "outcome": "KILLED"
   },
   {
@@ -11875,7 +11900,7 @@
    "assertion+expected-refusal-missing",
    "expected-refusal-missing"
   ],
-  "killed": 498,
-  "mutants": 498
+  "killed": 499,
+  "mutants": 499
  }
 }
