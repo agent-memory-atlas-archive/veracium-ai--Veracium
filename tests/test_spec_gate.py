@@ -983,11 +983,31 @@ def test_the_sdist_excludes_every_locally_excluded_file():
                "section, so nothing constrains what the release tarball "
                "carries — and `.git/info/exclude` lists " + str(local))
     declared = set(re.findall(r'"([^"]+)"', m.group(1)))
-    missing = [pat for pat in local if pat not in declared]
+    missing = [pat for pat in local if not _sdist_covers(pat, declared)]
     assert not missing, (
         f"these are excluded from the REPO but not from the SDIST, so they "
         f"would be published to PyPI: {missing}. Add them to "
         f"[tool.hatch.build.targets.sdist] exclude in pyproject.toml.")
+
+
+def _sdist_covers(pattern: str, declared: set) -> bool:
+    """Whether the sdist's exclude list keeps out what local `pattern` keeps out of the repo: the pattern itself, or a
+    declared bare directory `D/` (no slash before its end, no wildcard: by gitignore's rules it matches a directory
+    named D at ANY depth) that the pattern lies inside — `**/.claude/x` and `.claude/x` are inside `.claude/`. The
+    Claude Code runtime appends `**/.claude/...` lines to `.git/info/exclude` itself (2026-10-23)."""
+    if pattern in declared:
+        return True
+    inner = pattern[3:] if pattern.startswith("**/") else pattern
+    return any(d.endswith("/") and "/" not in d[:-1] and not any(c in d for c in "*?[") and inner.startswith(d)
+               for d in declared)
+
+
+@pytest.mark.parametrize("pattern, covered", [
+    ("CLAUDE.md", True), (".claude/", True), ("**/.claude/scheduled_tasks.lock", True), (".claude/worktrees/", True),
+    ("**/.claudex/a", False), ("notes.md", False), ("**/claude/x", False),
+])
+def test_the_sdist_cover_rule(pattern, covered):
+    assert _sdist_covers(pattern, {".claude/", "CLAUDE.md"}) is covered
 
 
 def test_no_spec_names_a_module_or_script_that_does_not_exist():
