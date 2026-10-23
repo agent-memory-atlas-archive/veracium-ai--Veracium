@@ -1,22 +1,22 @@
-# generated 2026-10-23T06:26Z against veracium @ 12fb0343c76f5e4465ca1564807831f8ceb77d2a
+# generated 2026-10-23T23:46Z against veracium @ c361b23b37b51277f9400d37b9d3cfacbaa32b7c
 # the pin: tests/test_0042_inv7.py asserts this commit is an ancestor of HEAD with src/ unchanged since
-# the 0042 INV-7 run RE-MADE 2026-10-23 on the committed tree of 12fb0343 (R-II round 3's RII-R2-01: schema.assertion_view
-# read at every edge and episode write and by compile._unbound_by; discard_wiki; the consolidation cutover's eviction;
-# src as of 5d78a79, 12fb034 changes one test file) — a CODE change that adds no census id and moves none: the registry
-# is 224 ids in every arm and the observer wraps 130 of 137 declared symbols, as at 3163dbcd. The four arms are
+# the 0042 INV-7 run RE-MADE 2026-10-23 on the committed tree of c361b23b (R-II round 4's RII-R3-01: add_episode's
+# persisted-owner refusal and its id-keyed X21 and INV-11 refusals; the import's two refusals at its episode admission)
+# — a CODE change that ADDS TWO census ids (store.add-episode.owner, store.import.reserved-id): the registry is 226 ids
+# in every arm (224 at 12fb0343) and the observer wraps 130 of 137 declared symbols, as at 12fb0343. The four arms are
 # IDENTICAL over 867 compared tests; every gate in verdict.json is true (26 booleans besides four state flags —
 # census_enabled twice, registry_equals_off, any_errors; the harness's own 21 gates, 21 true). The describer and the
-# evidence the arms import: census.py, declaration.py, inv7_exclusions.py, inv7_observer.py, inv7_uninstrument.py,
-# inv7_named_suites.json and the harness have no diff since c67f3924.
+# evidence the arms import: census.py, inv7_exclusions.py, inv7_observer.py, inv7_uninstrument.py,
+# inv7_named_suites.json and the harness have no diff since c67f3924; declaration.py gains the two new rows.
 # Run on CI's own interpreter build (actions/python-versions 3.14.7 for Ubuntu 24.04, SQLite 3.45.1) from the
-# repository's .venv. The run it replaces (on 3163dbcd, committed f4bfe71) is in git history.
+# repository's .venv. The run it replaces (on 12fb0343, committed 37cf767) is in git history.
 # THE READER/SEED RECEIPT: specs/evidence/0042/reader_seed_receipt.py, re-run beside this run on the same executable at
-# 12fb0343 under PYTHONHASHSEED=0: the seed pinned to 0, the set reader proven at import and fresh, and route B's child
+# c361b23b under PYTHONHASHSEED=0: the seed pinned to 0, the set reader proven at import and fresh, and route B's child
 # isolated with the reader proven. Exit 0. Committed beside this transcript, specs/evidence/0042/reader_seed_receipt.json
-# (sha256 f9186fec66058af084b9c97270fdacdb6613313c465e91d7b087f81eff8425a8); it differs from the 4fc2448d receipt in ONE field, `identity.commit` (measured by a
+# (sha256 005713d8df97aebbbaaf25215022ff09e7ae644a1b53ee9d7dee565ca21cb4a9); it differs from the 12fb0343 receipt in ONE field, `identity.commit` (measured by a
 # JSON diff).
 # TWIN DIGEST, added by dev AFTER the run (the harness does not emit one), bound by CONTENT:
-#   twin digest: 0b97515962e924f6c9b31261847f0fdc637d31ee2ad3da4abbad7760d1305001   (68 files, CPython 3.14.7)
+#   twin digest: ae1481d72b71f97ea943128041441fa5b1712e5a24b3c360e65e3393f758698d   (68 files, CPython 3.14.7)
 #   definition:  specs/evidence/0042/twin_digest.py — sha256 over every file under the twin root in sorted RELATIVE
 #                path order, hashing the path, a NUL, then the bytes.
 #   reproducible from GIT ALONE:
@@ -24,28 +24,27 @@
 #     python <dir>/specs/evidence/0042/inv7_uninstrument.py <dir>/src/veracium <dir>/twin
 #     python <dir>/specs/evidence/0042/twin_digest.py <dir>/twin
 #   equal across two derivations: the twin THIS RUN used and a clean git-archive export of the pin derived by the
-#   recipe above (both 0b975159..., 68 files); the twin's census.py is the reference census (accepted commit 5d835e1).
-#   It moved from 3387de80... (68 files, 3163dbcd) because the twin is derived from src/, which RII-R2-01 changed.
+#   recipe above (both ae1481d7..., 68 files); the twin's census.py is the reference census (accepted commit 5d835e1).
+#   It moved from 0b975159... (68 files, 12fb0343) because the twin is derived from src/, which RII-R3-01 changed.
 #   A 3.14.7 fact.
 # "UNINSTRUMENTED", MEASURED: census_code_entries 0 in the reference arm, beside a disabled census and a registry
-# equal to the off arm's as sets (224 ids, measured from this run's arms).
+# equal to the off arm's as sets (226 ids, measured from this run's arms).
 # THE SITE EACH RUN IMPORTED (N-6): 8 runs, 1 distinct site_realized digest (the census Site did not change). Every arm
 # asserts its hash seed is pinned to 0 before it describes.
 # THE WHOLE-TRACE DIGESTS: the one test on the STANDING list (the acceptance corpus's wall-clock-sensitive supersession
-# batch) drew a variant in the healthy arm's control pair this run, so the CANONICAL digests differ by arm (failing,
-# off and uninstrumented equal, a1900547...). INV-7's verdict rests on the per-test comparison, which excludes that
-# test by name: the 867 compared tests agree in every arm, and NEWLY non-reproducible: none. Records 87552, as at
-# 3163dbcd, and no symbol's count moved (343 symbols, measured per symbol from the histograms in the two transcripts):
-# the view comparison reads records the bind already read and calls schema.assertion_view, which no declared symbol
-# wraps. INV-7 compares the arms of ONE tree; it does not compare traces across trees.
+# batch) drew its variant in the failing arm's control pair this run; the CANONICAL digests are equal in every arm
+# (a0525748545fa251...). INV-7's verdict rests on the per-test comparison, which excludes that test by name: the 867 compared
+# tests agree in every arm, and NEWLY non-reproducible: none. Records 87552, as at 12fb0343; per symbol, two
+# store/sqlite.py exit labels renumber (SqliteStore.add_episode#8 -> #9, commit_outcome_import_plan#37 -> #39: the new
+# raise points precede them) with their counts unchanged, and the census arms consult 186 ids (184 at 12fb0343: the two
+# new sites). INV-7 compares the arms of ONE tree; it does not compare traces across trees.
 # WHAT FOUR EQUAL TRACES DO NOT BIND (the INV-7 scope accepted at round 19): census code that rewrites the recording
 # is outside this comparison; the loud case is EXECUTED by specs/evidence/0042/trust_boundary_probe.py (its output,
-# trust_boundary_probe.txt, re-run at 12fb0343: the forging run records 0; the clean run records 628, as at 4fc2448d;
-# its per-symbol counts were not compared this time).
+# trust_boundary_probe.txt, re-run at c361b23b: the forging run records 0; the clean run records 628, as at 12fb0343).
 INV-7 FOUR-ARM DECISION-TRACE DIFF — specs/0042
-HEAD 12fb0343c76f5e4465ca1564807831f8ceb77d2a
-twin (uninstrumented): derived from HEAD 12fb0343c76f5e4465ca1564807831f8ceb77d2a by inv7_uninstrument.py
-twin derivation: 224 declare_site preserved, bound to the REFERENCE census (accepted commit 5d835e1's census.py, sha256 69beb1bb2f058d97...), 406 fire() unwrapped, 218 consult blocks spliced, 4 census-enabled bypass blocks removed, across 33 modules; no census code ran in the reference arm beyond its import, the declarations and the observer's reads, and its registry equals the off arm's (asserted below)
+HEAD c361b23b37b51277f9400d37b9d3cfacbaa32b7c
+twin (uninstrumented): derived from HEAD c361b23b37b51277f9400d37b9d3cfacbaa32b7c by inv7_uninstrument.py
+twin derivation: 226 declare_site preserved, bound to the REFERENCE census (accepted commit 5d835e1's census.py, sha256 69beb1bb2f058d97...), 409 fire() unwrapped, 221 consult blocks spliced, 4 census-enabled bypass blocks removed, across 33 modules; no census code ran in the reference arm beyond its import, the declarations and the observer's reads, and its registry equals the off arm's (asserted below)
 
 python 3.14.7; pytest -q -p no:randomly -p no:cacheprovider -p inv7_observer; PYTHONHASHSEED=0
 suites: tests/test_0027_policy_lane.py tests/test_0027_policy_receipt.py tests/test_0027_semantic_recall.py tests/test_compile_gate.py tests/test_0037_procedural.py tests/test_0019_ungrounded.py tests/test_0014_schema.py tests/test_schema_model.py tests/test_0003_supersession_contested.py tests/test_0003_supersession_guard.py tests/test_0003_supersession_recall.py tests/test_0003_supersession_store.py tests/test_0028_resolution.py tests/test_maintenance_invariant.py tests/test_0020_scope_vectors.py tests/test_0015_lifecycle.py tests/test_0011_entitlement.py tests/test_0009_import_migration.py tests/test_0010_consolidation_primitives.py tests/test_0014_receipt_split.py tests/test_0022_revocation_operation.py tests/test_0037_capture.py tests/eval/edge_events/test_0029_acceptance_corpus.py tests/test_0010_visibility_reservation.py tests/test_0020_read_surfaces.py tests/test_0022_sweep_vectors.py tests/test_0039_degradation_visibility.py tests/test_audit.py tests/test_confirm_contract_0008.py
@@ -53,32 +52,32 @@ in-process: the reference arm's census-entry count covers the pytest process; 6 
 profilers and tracers: 0 of 29 suites set one (static scan for `setprofile`, `settrace`, `cProfile`, `import profile`, `profile.run`); the census-entry hook is checked alive at the END of the run: none
 
 ARM              RECORDS     SHA256(observer trace)                                            PYTEST
-healthy              87552  f4a1f06320bb9e2c68f318bd91fce133e446896d006e3ddb85d5aeae6612c896  868 passed, 2 warnings in 173.76s (0:02:53) (exit 0, 174.5s)
-failing              87552  943d2a550102ae924b1021d234809bd195b89d0ac5eff8f41156fefab9e7700e  868 passed, 2 warnings in 163.08s (0:02:43) (exit 0, 163.9s)
-off                  87552  943d2a550102ae924b1021d234809bd195b89d0ac5eff8f41156fefab9e7700e  868 passed, 2 warnings in 156.36s (0:02:36) (exit 0, 157.1s)
-uninstrumented       87552  943d2a550102ae924b1021d234809bd195b89d0ac5eff8f41156fefab9e7700e  868 passed, 2 warnings in 193.35s (0:03:13) (exit 0, 194.5s)
+healthy              87552  47bceeb2429f54d49e915aae4c18f06f3ed7c0a4cc073ffb1b32185748e857af  868 passed, 2 warnings in 158.23s (0:02:38) (exit 0, 159.0s)
+failing              87552  47bceeb2429f54d49e915aae4c18f06f3ed7c0a4cc073ffb1b32185748e857af  868 passed, 2 warnings in 157.30s (0:02:37) (exit 0, 158.0s)
+off                  87552  47bceeb2429f54d49e915aae4c18f06f3ed7c0a4cc073ffb1b32185748e857af  868 passed, 2 warnings in 156.99s (0:02:36) (exit 0, 157.8s)
+uninstrumented       87552  47bceeb2429f54d49e915aae4c18f06f3ed7c0a4cc073ffb1b32185748e857af  868 passed, 2 warnings in 193.52s (0:03:13) (exit 0, 194.7s)
 
 VERDICT: observer traces IDENTICAL across 4 arms over 867 tests (reference: uninstrumented; excluded by the STANDING list: 1; NEWLY non-reproducible this run: 0; control pairs run for failing, healthy, off, uninstrumented)
-CANONICAL DIGESTS (decoded records, dictionary-independent — R6-5(i)): healthy 8be9a4f9e55d7fba; failing a1900547df690b5f; off a1900547df690b5f; uninstrumented a1900547df690b5f
+CANONICAL DIGESTS (decoded records, dictionary-independent — R6-5(i)): healthy a0525748545fa251; failing a0525748545fa251; off a0525748545fa251; uninstrumented a0525748545fa251
   healthy: 867 tests compared, 0 differing, 0 not in both
   failing: 867 tests compared, 0 differing, 0 not in both
   off: 867 tests compared, 0 differing, 0 not in both
 
 EXCLUDED BY THE STANDING LIST (inv7_exclusions.STANDING: by name, with the cause; the arm(s) whose control pair sampled it THIS run in brackets, if any):
-  tests/eval/edge_events/test_0029_acceptance_corpus.py::test_acceptance_corpus_passes_100_percent  [healthy]
+  tests/eval/edge_events/test_0029_acceptance_corpus.py::test_acceptance_corpus_passes_100_percent  [failing]
       cause: the acceptance corpus's supersession step is sensitive to the wall clock: a supersession batch (two upserts under one transaction) lands at a different scenario step between two runs of one arm — first sampled 2026-09-20 by the healthy arm's slower timing, then by the failing arm's control pair; the test agrees with itself in isolation and with the harness's suite prefix. The corpus runner accepts an injected clock and the acceptance test injects none (specs/0029's owner; the Dev queue carries the follow-up). Excluded until it does.
 NEWLY NON-REPRODUCIBLE THIS RUN (a control pair disagreed on a test NOT on the standing list — a finding; the exit refuses it):
   (none)
-control run healthy-control: records 87552, sha256 a6e700f192aa9b9f91bb74fd69d34d0715c7c3c95caa49e13fdb41edbf51a855, 868 passed, 2 warnings in 173.83s (0:02:53)
-control run failing-control: records 87552, sha256 943d2a550102ae924b1021d234809bd195b89d0ac5eff8f41156fefab9e7700e, 868 passed, 2 warnings in 171.31s (0:02:51)
-control run off-control: records 87552, sha256 943d2a550102ae924b1021d234809bd195b89d0ac5eff8f41156fefab9e7700e, 868 passed, 2 warnings in 157.78s (0:02:37)
-control run uninstrumented-control: records 87552, sha256 943d2a550102ae924b1021d234809bd195b89d0ac5eff8f41156fefab9e7700e, 868 passed, 2 warnings in 194.13s (0:03:14)
+control run healthy-control: records 87552, sha256 47bceeb2429f54d49e915aae4c18f06f3ed7c0a4cc073ffb1b32185748e857af, 868 passed, 2 warnings in 157.71s (0:02:37)
+control run failing-control: records 87552, sha256 4f30a496ddb2df2bb946e5cf6c9cf37c3c2c175ddd9d9c8166e92ce203679a38, 868 passed, 2 warnings in 156.81s (0:02:36)
+control run off-control: records 87552, sha256 47bceeb2429f54d49e915aae4c18f06f3ed7c0a4cc073ffb1b32185748e857af, 868 passed, 2 warnings in 155.98s (0:02:35)
+control run uninstrumented-control: records 87552, sha256 47bceeb2429f54d49e915aae4c18f06f3ed7c0a4cc073ffb1b32185748e857af, 868 passed, 2 warnings in 193.42s (0:03:13)
 
 CROSS-CHECKS:
-  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7710, "ids_consulted": 184, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7654}
-  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7710, "ids_with_errors": 184, "subsequence_holds": true, "subsequence_matched": 7654}
-  off: {"census_enabled": false, "registry_size": 224}
-  uninstrumented: {"census_code_entries": 0, "census_code_entry_detail": [], "census_enabled": false, "registry_equals_off": true, "registry_size": 224, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/7ad7b38d-48d0-4b1f-8f39-0771cbbe3353/scratchpad/inv7/trace25/twin/src/veracium/__init__.py"}
+  healthy: {"any_errors": false, "census_ids_not_in_declaration": [], "census_records": 7710, "ids_consulted": 186, "ids_fired": 96, "subsequence_holds": true, "subsequence_matched": 7654}
+  failing: {"all_unmeasured": true, "census_ids_not_in_declaration": [], "census_records": 7710, "ids_with_errors": 186, "subsequence_holds": true, "subsequence_matched": 7654}
+  off: {"census_enabled": false, "registry_size": 226}
+  uninstrumented: {"census_code_entries": 0, "census_code_entry_detail": [], "census_enabled": false, "registry_equals_off": true, "registry_size": 226, "veracium_file": "/tmp/claude-1000/-home-ubuntu-Dev-veracium/7ad7b38d-48d0-4b1f-8f39-0771cbbe3353/scratchpad/inv7r4/twin/src/veracium/__init__.py"}
   site_realized: {"distinct_digests": 1, "equal": true, "first_difference": null, "missing": [], "runs": 8}
 
 OBSERVED SYMBOLS: 130 wrapped of 137 declared; EXCLUDED (unreachable from outside, by name):
@@ -375,7 +374,7 @@ HISTOGRAM (reference arm), symbol -> decision: count
   store/sqlite.py:SqliteStore.add_episode#4 -> ValueError: 3
   store/sqlite.py:SqliteStore.add_episode#5 -> ValueError: 3
   store/sqlite.py:SqliteStore.add_episode#6 -> ValueError: 1
-  store/sqlite.py:SqliteStore.add_episode#8 -> ValueError: 2
+  store/sqlite.py:SqliteStore.add_episode#9 -> ValueError: 2
   store/sqlite.py:SqliteStore.append_outcome_if_head#2 -> value: 23
   store/sqlite.py:SqliteStore.apply_supersession_plan#1 -> SupersessionIntegrityError: 32
   store/sqlite.py:SqliteStore.apply_supersession_plan#10 -> CorrectionAuthorisationError: 2
@@ -392,7 +391,7 @@ HISTOGRAM (reference arm), symbol -> decision: count
   store/sqlite.py:SqliteStore.apply_supersession_plan#6 -> value: 2
   store/sqlite.py:SqliteStore.apply_supersession_plan#8 -> CorrectionAuthorisationError: 1
   store/sqlite.py:SqliteStore.commit_outcome_import_plan#16 -> value: 1
-  store/sqlite.py:SqliteStore.commit_outcome_import_plan#37 -> value: 39
+  store/sqlite.py:SqliteStore.commit_outcome_import_plan#39 -> value: 39
   store/sqlite.py:SqliteStore.confirm_edge#0 -> value: 1
   store/sqlite.py:SqliteStore.confirm_edge#253 -> RuntimeError: 1
   store/sqlite.py:SqliteStore.confirm_edge#253 -> ValueError: 2
