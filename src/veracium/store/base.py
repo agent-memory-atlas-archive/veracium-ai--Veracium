@@ -284,7 +284,14 @@ class Store(ABC):
         lifetime transitions — reinstatement, retirement, re-retirement,
         redaction — from the persisted old and new row on EVERY write that can
         change an edge's lifetime, a same-ID replace included, and applies their
-        effects in that write's transaction: never from which method ran."""
+        effects in that write's transaction: never from which method ran.
+
+        THE WIKI'S EVICTION (specs/0004, 0047 §4d; R-II round 2's RII-R2-01): on
+        every write that REPLACES or deletes a persisted edge or episode, a same-ID
+        replace included, a backend compares `schema.assertion_view` of the
+        persisted prior with the new row's and, when they differ, drops the user's
+        compiled wiki in that write's transaction. A fresh record never evicts (the
+        staleness counter refreshes the wiki); a change outside the view keeps it."""
         ...
 
     @store_mutator
@@ -830,6 +837,15 @@ class Store(ABC):
         transaction, or one statement; a captured value compared later is not a guard). Returns whether the
         row was written. A store that cannot make the check and the write indivisible must return False
         rather than publish over a moved store."""
+        ...
+
+    @store_mutator
+    @abstractmethod
+    def discard_wiki(self, user_id: str, text: str, store_version: int) -> bool:
+        """Delete the user's compiled wiki ONLY IF it is still the row `(text, store_version)` — the one a compile
+        published (R-II round 2's RII-R2-01: compile.bound_wiki discards a body that failed its bind, so a retry is
+        never served it back from the cache). One conditional statement; returns whether a row was deleted. A newer
+        row is never touched."""
         ...
 
     @abstractmethod

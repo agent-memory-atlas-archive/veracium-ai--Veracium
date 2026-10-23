@@ -372,9 +372,9 @@
   }
  ],
  "campaign": {
-  "defined": 502,
-  "pin_digest": "b856a5e756bf61d296e8d6e688672393c9995548c6df5cd2195d89fa4a1b9069",
-  "results": 502,
+  "defined": 532,
+  "pin_digest": "8a4eadb3101ec7d6c1c10e79f7338638dbe1eeef8d4b835299083d4b29ec83f3",
+  "results": 532,
   "retired": [
    {
     "commit": "e8e476e",
@@ -387,16 +387,16 @@
   ],
   "summary": {
    "controls_green": true,
-   "groups": 116,
+   "groups": 117,
    "kill_kinds": [
     "assertion",
     "assertion+expected-refusal-missing",
     "expected-refusal-missing"
    ],
-   "killed": 502,
-   "mutants": 502
+   "killed": 532,
+   "mutants": 532
   },
-  "tree_digest": "b856a5e756bf61d296e8d6e688672393c9995548c6df5cd2195d89fa4a1b9069"
+  "tree_digest": "8a4eadb3101ec7d6c1c10e79f7338638dbe1eeef8d4b835299083d4b29ec83f3"
  },
  "findings_unbound_kills": [],
  "gates": {
@@ -4542,6 +4542,21 @@
     },
     {
      "annotation": null,
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10 / INV-R18: the edge writers' eviction dropped from the journal (evict on reply writes only; the reviewer's two witnesses)",
+     "site": "src/veracium/store/sqlite.py::SqliteStore._journal_edge_write"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "site": "src/veracium/compile.py::_unbound_by"
+    },
+    {
+     "annotation": null,
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W13 / INV-R18: a withheld compiled body's row not discarded (it re-enters through the cache on the retry)",
+     "site": "src/veracium/compile.py::bound_wiki"
+    },
+    {
+     "annotation": null,
      "mutant": "T10b (INV-R18: eviction and the fence) :: INV-R18: no eviction on a reply",
      "site": "src/veracium/store/sqlite.py::SqliteStore.add_reply"
     },
@@ -4578,7 +4593,11 @@
     "tests/test_0047_t10b_read.py::test_r18_a_second_challenge_in_the_recompile_returns_the_closed_notice": "cites the row",
     "tests/test_0047_t10b_read.py::test_r18_control_a_context_reply_during_the_compile_keeps_the_returned_body": "cites the row",
     "tests/test_0047_t10b_read.py::test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once": "cites the row",
-    "tests/test_0047_t10b_read.py::test_r18_the_compiler_input_never_holds_a_challenged_fact": "cites the row"
+    "tests/test_0047_t10b_read.py::test_r18_the_compiler_input_never_holds_a_challenged_fact": "cites the row",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice": "cites the row",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row": "cites the row",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key": "cites the row",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record": "cites the row"
    },
    "kills": [
     {
@@ -4748,6 +4767,36 @@
     },
     {
      "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record"
+    },
+    {
+     "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
      "node": "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent"
     },
@@ -4798,6 +4847,16 @@
     },
     {
      "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record"
+    },
+    {
+     "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body not bound by the facts it drew on",
      "node": "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice"
     },
@@ -4813,33 +4872,23 @@
     },
     {
      "kind": "assertion",
-     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted inputs not checked (research's stage-2 probe)",
-     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body not bound by the facts it drew on",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key"
     },
     {
      "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted inputs not checked (research's stage-2 probe)",
-     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice"
     },
     {
      "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted episodes not checked",
-     "node": "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body"
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice"
     },
     {
      "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
      "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body"
-    },
-    {
-     "kind": "assertion",
-     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
-     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body"
-    },
-    {
-     "kind": "assertion",
-     "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked",
-     "node": "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
     },
     {
      "kind": "assertion",
@@ -4875,6 +4924,76 @@
      "kind": "assertion",
      "mutant": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a row evicted after the staleness check is indexed",
      "node": "tests/test_0047_rii01_wiki_bind.py::test_a_row_evicted_between_the_staleness_check_and_the_read_recompiles"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10 / INV-R18: the edge writers' eviction dropped from the journal (evict on reply writes only; the reviewer's two witnesses)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10 / INV-R18: the edge writers' eviction dropped from the journal (evict on reply writes only; the reviewer's two witnesses)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10 / INV-R18: the edge writers' eviction dropped from the journal (evict on reply writes only; the reviewer's two witnesses)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record"
+    },
+    {
+     "kind": "assertion",
+     "mutant": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W13 / INV-R18: a withheld compiled body's row not discarded (it re-enters through the cache on the retry)",
+     "node": "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row"
     }
    ],
    "state": "closed"

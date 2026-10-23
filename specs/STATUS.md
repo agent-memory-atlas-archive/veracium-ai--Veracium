@@ -16,7 +16,7 @@ is the number that decides what can be built.
 | **0001** | generated-content trust class (`EvidenceAuthor.ASSISTANT`) | `accepted` | 2026-09-17 | 1 | 18 | 2 | 0 | 0 | — |
 | **0002** | the maintenance provenance invariant | `deferred` | 2026-09-11 | 2 | 8 | 2 | 0 | 10 | 8/10 |
 | **0003** | supersession authority | `accepted` | 2026-10-14 | 1 | 12 | 0 | 0 | 0 | — |
-| **0004** | derived views must not outlive a revoked trust decision | `accepted` | 2026-10-22 | 1 | 3 | 1 | 0 | 1 | 1/1 |
+| **0004** | derived views must not outlive a revoked trust decision | `accepted` | 2026-10-23 | 1 | 3 | 2 | 0 | 1 | 1/1 |
 | **0005** | import has no trust boundary | `accepted` | 2026-08-14 | 1 | 5 | 1 | 0 | 2 | 2/2 |
 | **0006** | source identity — `(origin, source_id)` | `accepted` | 2026-09-14 | 1 | 5 | 1 | 0 | 0 | — |
 | **0007** | on-disk store schema versioning | `accepted` | 2026-09-08 | 0 | 14 | 1 | 0 | 0 | — |
@@ -54,7 +54,7 @@ is the number that decides what can be built.
 | **0044** | relation arity — a functional relation is ONE SLOT PER SUBJECT, and three of ours should not be | `accepted` | 2026-10-20 | 0 | 4 | 2 | 0 | 0 | — |
 | **0045** | the declarative grounding axis — was a fact STATED, or not shown to be? | `accepted` | 2026-10-20 | 0 | 4 | 0 | 0 | 0 | — |
 | **0046** | the correction receipt — a corrected fact names what still rests on it | `draft` | 2026-09-20 | 0 | 0 | 0 | 0 | 0 | — |
-| **0047** | the subject's right of reply — the record stands, and the reply travels with it | `accepted` | 2026-10-21 | 0 | 4 | 0 | 0 | 0 | — |
+| **0047** | the subject's right of reply — the record stands, and the reply travels with it | `accepted` | 2026-10-23 | 0 | 4 | 0 | 0 | 0 | — |
 | **0048** | maintenance never raises confidence — the decay bounds (0002's N4, carried) | `accepted` | 2026-10-12 | 0 | 2 | 2 | 0 | 0 | — |
 | **0051** | speaker turns inside a user event — the assistant's first person is not the user's | `accepted` | 2026-10-22 | 0 | 0 | 0 | 0 | 0 | — |
 

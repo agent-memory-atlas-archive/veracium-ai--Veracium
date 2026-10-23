@@ -77,6 +77,13 @@ DISPOSITIONS = {
    (M, "none directly — **caches a trust decision** (carries the compiler-policy digest envelope, `0003` §4c-ii; the trust-reducing-invalidation drop shipped with the 0004 W-series, 0.13.0)", "none",
     "✅ the cached wiki no longer outlives a revoked trust decision: a trust-reducing invalidation drops it (WIKI_RETAINING_REASONS names the benign keepers) — [M8-wiki] resolved", "`test_dispute_drops_the_wiki` + `test_third_party_supersession_drops_the_wiki` + `test_decay_does_not_drop_the_wiki` (the W1–W4 family)"),
 
+ # R-II round 2's RII-R2-01 (D2, defence in depth): recall's bind discards the row a compiled body published when that
+ # body fails its bind, conditional on the row still being that one — so a retry is never served it from the cache
+ ("src/veracium/compile.py", "bound_wiki", "discard_wiki", "291cbd6abaed"):
+   (M, "none directly — **removes a cached trust decision** the call has just withheld (the row this call's own compile published); a newer row is never touched (one conditional statement)", "none",
+    "✅ a body that failed its bind cannot re-enter through the cached branch on the retry (RII-R2-01; the write-side eviction at `schema.assertion_view` is the closure, this is its backstop)",
+    "`test_d2_a_rejected_compile_is_not_served_back_from_its_own_row` (red without the discard when the write-side eviction is disabled)"),
+
  # -- the write path ---------------------------------------------------------
  # specs/0003 (accepted 2026-08-08) folded the whole supersession outcome into ONE
  # atomic, CAS-linearized store primitive: apply_supersession no longer calls add_edge /
@@ -206,6 +213,7 @@ STATES = {
   ("src/veracium/__init__.py", "Memory.forget", "forget_user", "c5d9e9e2da39"): "clean",
   ("src/veracium/cli.py", "_forget", "forget_user", "269b73112fab"): "clean",
   ("src/veracium/compile.py", "compile_wiki", "set_wiki", "4365735ba43d"): "clean",
+  ("src/veracium/compile.py", "bound_wiki", "discard_wiki", "291cbd6abaed"): "clean",
   ("src/veracium/graph.py", "apply_supersession", "apply_supersession_plan", "e1ecd66351bd"): "clean",
   ("src/veracium/ingest.py", "ingest_event", "add_episode", "070f62e813fd"): "clean",
   ("src/veracium/ingest.py", "ingest_event", "add_episode", "836c8cca9da2"): "clean",

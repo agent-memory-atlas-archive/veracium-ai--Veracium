@@ -417,6 +417,22 @@
   },
   {
    "cells": [
+    "tests/test_rii_r2_01_writer_inventory.py",
+    "tests/test_0047_rii01_wiki_bind.py",
+    "tests/test_0004_wiki_revocation.py"
+   ],
+   "control_after": {
+    "exit": 0,
+    "passed": 238
+   },
+   "control_before": {
+    "exit": 0,
+    "passed": 238
+   },
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)"
+  },
+  {
+   "cells": [
     "tests/test_0008_request_registry.py"
    ],
    "control_after": {
@@ -819,15 +835,16 @@
   },
   {
    "cells": [
-    "tests/test_0047_rii01_wiki_bind.py"
+    "tests/test_0047_rii01_wiki_bind.py",
+    "tests/test_rii_r2_01_writer_inventory.py"
    ],
    "control_after": {
     "exit": 0,
-    "passed": 47
+    "passed": 228
    },
    "control_before": {
     "exit": 0,
-    "passed": 47
+    "passed": 228
    },
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)"
   },
@@ -1670,7 +1687,7 @@
    "group": "R-II r2 V1 (c, d: the held basetemp and the sqlite error names)"
   }
  ],
- "pin_digest": "b856a5e756bf61d296e8d6e688672393c9995548c6df5cd2195d89fa4a1b9069",
+ "pin_digest": "8a4eadb3101ec7d6c1c10e79f7338638dbe1eeef8d4b835299083d4b29ec83f3",
  "rows": [
   {
    "anchor_count": 1,
@@ -2462,10 +2479,12 @@
    "anchor_count": 1,
    "cell_kinds": {
     "tests/test_0047_t10b_read.py::test_r18_a_challenge_during_the_compile_is_recompiled_once": "assertion",
+    "tests/test_0047_t10b_read.py::test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once[resolve]": "assertion",
     "tests/test_0047_t10b_read.py::test_r18_the_compiler_input_never_holds_a_challenged_fact": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_t10b_read.py::test_r18_a_challenge_during_the_compile_is_recompiled_once",
+    "tests/test_0047_t10b_read.py::test_r18_every_reply_kind_evicts_the_wiki_and_bumps_once[resolve]",
     "tests/test_0047_t10b_read.py::test_r18_the_compiler_input_never_holds_a_challenged_fact"
    ],
    "def_digest": "735f0af14af64f4493de547591da9b026dc2e50ee8c6b3a0259544d08010942b",
@@ -4089,6 +4108,740 @@
    "group": "T9 (INV-G11, Q6, F3: absorption and the import window)",
    "kill_kind": "assertion",
    "mutant": "F3(c): the held comparison includes the axis",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-subject]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-subject]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-subject]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-subject]"
+   ],
+   "def_digest": "ed00b8e9db62606915b706a6a328a449ea9b8eecd403165abf6061696bf14119",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops subject",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-relation]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-relation]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-relation]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-relation]"
+   ],
+   "def_digest": "a8c3c0b5791215f3ad2cbd3f8a3d59276129cfab1938a04e5377dbc22e25c994",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops relation",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-object]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-challenged-twin-key-change]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-object]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_recall]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[cached]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[compiled]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-object]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-challenged-twin-key-change]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-object]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_recall]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[cached]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[compiled]"
+   ],
+   "def_digest": "7851837b18ead33a0986bb7d70405da1eb131ec7434c0aca0e3b66105b188f99",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops object",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-valid_from]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-valid_from]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-valid_from]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-valid_from]"
+   ],
+   "def_digest": "c907a5deea905dc4213647978956222f4d880b85814946d31afa7107bb4ee90a",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops valid_from",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-ungrounded]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[edge-ungrounded]"
+   ],
+   "def_digest": "47df541aea71cf5b80e0569bf3bb4755d17f14b3033b9df8395457f618ea79f8",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops ungrounded",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[disclosure-quarantined-edge]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[disclosure-quarantined-episode]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_recall]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[compiled-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-disclosure-quarantined]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-disclosure-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-disclosure-quarantined]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-disclosure-use_only]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[disclosure-quarantined-edge]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[disclosure-quarantined-episode]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_recall]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[compiled-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-disclosure-quarantined]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-disclosure-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-disclosure-quarantined]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-disclosure-use_only]"
+   ],
+   "def_digest": "f221a460549820a22c877f18e96d46ebf25ac5df788532bdd8eacdb360416b3a",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops provenance disclosure",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[author_of_evidence-third_party-edge]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[author_of_evidence-third_party-episode]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-author_of_evidence]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-author_of_evidence]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[author_of_evidence-third_party-edge]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[author_of_evidence-third_party-episode]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-author_of_evidence]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-author_of_evidence]"
+   ],
+   "def_digest": "bde0ff886b69f8880b51047fe1c24cc245bb0792ea7ef90d214b77d85169511d",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops provenance author_of_evidence",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[derived_from-third_party-edge]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[derived_from-third_party-episode]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-derived_from]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[derived_from-third_party-edge]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[derived_from-third_party-episode]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-derived_from]"
+   ],
+   "def_digest": "e949fe8c3dc728e729f9bf89a124702873a4d860c75cd4e7a72c1171082d3683",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops provenance derived_from",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[record_kind-procedural-edge]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[record_kind-procedural-episode]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[record_kind-procedural-edge]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[record_kind-procedural-episode]"
+   ],
+   "def_digest": "59d972d802bff357748566ba76173725a1d9427d8da9534c40340bac7727ad34",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops provenance record_kind",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[basis-stated-edge]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[basis-stated-episode]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[basis-stated-edge]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_provenance_field_changes_the_view_iff_the_view_reads_it[basis-stated-episode]"
+   ],
+   "def_digest": "621326462a01dc789ac9c92e55d37ed533eedd8f76eb14beaa86fd41a062b3e6",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the view drops provenance basis",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[corrected-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[disputed-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[redacted-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[revoked_source-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[superseded-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-corrected]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-disputed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-revoked_source]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-superseded]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[corrected-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[disputed-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[redacted-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[revoked_source-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[superseded-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-corrected]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-disputed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-revoked_source]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-superseded]"
+   ],
+   "def_digest": "6e6e13885759a1351151baaff0e0509c5b9d00b20ac51b9422cfa78246671f90",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the edge view drops its liveness",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[episode-date]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-date]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[episode-date]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-date]"
+   ],
+   "def_digest": "27c457562d107d6d7a54808dd191ba0f27b4d54eb405765184e62391f66d7bd4",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the episode view drops its date",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[episode-summary]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-summary]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_field_changes_the_view_iff_the_view_reads_it[episode-summary]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-summary]"
+   ],
+   "def_digest": "1374f0829afbf555fe3c601554abdb8d9fb6204eac6dd7cae490339683b59a95",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the episode view drops its summary",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[decayed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[lapsed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[revoked_source]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-retired]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[decayed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[lapsed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[revoked_source]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-retired]"
+   ],
+   "def_digest": "2e707af4e399159070a9e5f5fc3e6c29ea5c7e337611f5302d7d327fdd265173",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the episode view drops its liveness",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[decayed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[lapsed]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[decayed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_any_episode_retirement_moves_the_view[lapsed]"
+   ],
+   "def_digest": "d56ef5006418323d70e16cc9c96adb4e007930499b5e3fd5a3d6a5f6bccabbd1",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: an episode's retiring reason retains it (research's E1: W3/W8 read as episode rules)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_unreadable_replacement_is_written_as_before_and_evicts": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-challenged-twin-key-change]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-author_of_evidence]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-derived_from]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-disclosure-quarantined]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-disclosure-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-object]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-relation]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-corrected]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-disputed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-revoked_source]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-superseded]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-subject]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-valid_from]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_recall]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[cached]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_unreadable_replacement_is_written_as_before_and_evicts",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-challenged-twin-key-change]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-author_of_evidence]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-derived_from]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-disclosure-quarantined]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-disclosure-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-object]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-relation]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-corrected]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-disputed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-revoked_source]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-superseded]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-subject]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-valid_from]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_recall]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[cached]"
+   ],
+   "def_digest": "af6cd13e9f03ae5a20bc1cc510dbf9e67ed117f6d98a03455589c4d5b7f2e45b",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10 / INV-R18: the edge writers' eviction dropped from the journal (evict on reply writes only; the reviewer's two witnesses)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0004_wiki_revocation.py::test_absorption_does_not_drop_the_wiki": "assertion",
+    "tests/test_0004_wiki_revocation.py::test_decay_does_not_drop_the_wiki[decayed]": "assertion",
+    "tests/test_0004_wiki_revocation.py::test_decay_does_not_drop_the_wiki[lapsed]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-cached]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_retaining_same_id_write_keeps_the_cached_body[confidence]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_retaining_same_id_write_keeps_the_cached_body[counters]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_retaining_same_id_write_keeps_the_cached_body[needs_confirmation]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_retaining_same_id_write_keeps_the_cached_body[note]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_outcome_append_keeps_the_wiki": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[confirm-edge]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[consolidation-abandon]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[consolidation-claim]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-confidence]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-evidence_ref]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-last_outcome]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-last_outcome_at]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-needs_confirmation]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-note]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-observed_at]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-original_relation]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-outcome_counts]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-source_id]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-times_used]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-volatility]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-absorbed_duplicate]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-decayed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-lapsed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-keep-confidence]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-keep-context_ref]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-decayed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-lapsed]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0004_wiki_revocation.py::test_absorption_does_not_drop_the_wiki",
+    "tests/test_0004_wiki_revocation.py::test_decay_does_not_drop_the_wiki[decayed]",
+    "tests/test_0004_wiki_revocation.py::test_decay_does_not_drop_the_wiki[lapsed]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-cached]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_retaining_same_id_write_keeps_the_cached_body[confidence]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_retaining_same_id_write_keeps_the_cached_body[counters]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_retaining_same_id_write_keeps_the_cached_body[needs_confirmation]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_retaining_same_id_write_keeps_the_cached_body[note]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_outcome_append_keeps_the_wiki",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[confirm-edge]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[consolidation-abandon]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[consolidation-claim]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-confidence]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-evidence_ref]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-last_outcome]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-last_outcome_at]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-needs_confirmation]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-note]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-observed_at]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-original_relation]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-outcome_counts]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-source_id]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-times_used]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-keep-volatility]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-absorbed_duplicate]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-decayed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-lapsed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-keep-confidence]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-keep-context_ref]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-decayed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-lapsed]"
+   ],
+   "def_digest": "9148e165b840d3907cd8bd482c186f1b7d2b045234f8be9b8d40f28dac0ee1b8",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10: any stored change evicts (research's S1: W3/W8 and every record_outcome evict)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0004_wiki_revocation.py::test_absorption_does_not_drop_the_wiki": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[confirm-edge]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-fresh-id]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-fresh-id]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0004_wiki_revocation.py::test_absorption_does_not_drop_the_wiki",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[confirm-edge]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-fresh-id]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-fresh-id]"
+   ],
+   "def_digest": "417314f6bdf95e150da2ce0ce36f945925ddb89279045ef92f5691da07f23ba9",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10: a fresh record evicts (W3's staleness counter overridden)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_recall]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-author_of_evidence]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-date]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-disclosure-quarantined]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-disclosure-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-retired]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-summary]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_recall]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-author_of_evidence]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-date]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-disclosure-quarantined]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-disclosure-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-retired]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-summary]"
+   ],
+   "def_digest": "89f65803e48a7f0b3aafd36eec023ea65c860a1c4c05388f54781f224fcc88f7",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10: add_episode's same-ID replace does not evict (research's S2, episodes)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[delete-episode]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[delete-episode]"
+   ],
+   "def_digest": "59981f88cecadc7d4645bf0fd8bfc2c63214f3845b0ae5c7c6bf82bbb26b6931",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10: delete_episode does not evict a drawn episode",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_every_wiki_evicting_writer_is_classed_against_the_bind": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[consolidation-cutover]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_every_wiki_evicting_writer_is_classed_against_the_bind",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[consolidation-cutover]"
+   ],
+   "def_digest": "f6eb940be50ebd2e04b81dc845f08031614e430b4d106ae18b5dc2256cec6b02",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10: the consolidation cutover does not evict (research's addendum (c), 0010 X9)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction"
+   ],
+   "def_digest": "3ce07c5e34fd59e26a9e6e6fa2dea08cc00f0ca6f24ce437533f216416d63157",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10: the episode retirement's helper call dropped (the E4 sweep only)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction"
+   ],
+   "def_digest": "54bf8e2a6450e006ba334c46415629c11ca174ba3216ce183f63d6e0d92a5f58",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10: the claimed inputs' deletion's helper call dropped (the E4 sweep only)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_episodes_writer_calls_the_eviction"
+   ],
+   "def_digest": "6c3656cea63c359df20223212ea50e2e1980e3a8cd4eec21b381262fc9c8a9ee",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W10: confirm_edge's act-episode helper call dropped (the E4 sweep only)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_snapshot_reads_only_view_fields[twin]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_snapshot_reads_only_view_fields[twin]"
+   ],
+   "def_digest": "27e1a5a9db70495d4f8407ca2c8e7b41c357029ec5d6f1725954184374226564",
+   "file": "src/veracium/challenge.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W12: the snapshot's twin match reads a KEEP field (the bind's premise broken)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[compiled-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[compiled]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[compiled-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[compiled]"
+   ],
+   "def_digest": "afa30d445df1df606137b9baf454200dace25c0d84f3d942ecf0477e18faadec",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice"
+   ],
+   "def_digest": "f03d3b2a06758c937386c10ac768f3cc2106c271ff172e77288df09006e2d451",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W12: the view comparison placed before the redaction check (research's E2)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]"
+   ],
+   "def_digest": "7a569065b31c6c3633f455c4aa813e6b34dc8c508406f356191e0ffabab73d58",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W13 / INV-R18: a withheld compiled body's row not discarded (it re-enters through the cache on the retry)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]"
+   ],
+   "def_digest": "daca6385e18b293f07d007fe37eb6eb6b94e74294987333da4747e63a0e16c98",
+   "file": "src/veracium/compile.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W13: the published row not recorded for the bind",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_discard_never_drops_a_newer_row": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_discard_never_drops_a_newer_row"
+   ],
+   "def_digest": "31273bf0b7e428af56950be2bcc3fba64d8cbe9bbd7e7f8fca369439efe32680",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W13: the discard drops whatever row is cached (a newer compile's included)",
    "outcome": "KILLED"
   },
   {
@@ -7114,7 +7867,23 @@
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[compiled-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[compiled-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[cached]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[compiled]": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice",
@@ -7142,7 +7911,23 @@
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[compiled-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[compiled-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[cached]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[compiled]"
    ],
    "def_digest": "148db016537f30580a11c79002f087429b7489424677e4d4ddbc14baa3a00ef8",
    "file": "src/veracium/compile.py",
@@ -7163,7 +7948,14 @@
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-cached]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-content]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-quarantine]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-use_only]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_snapshot]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[cached]": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_after_the_bound_snapshot_leaves_the_call_coherent[cached]",
@@ -7175,7 +7967,14 @@
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[disputed-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-cached]",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-cached]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-content]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-quarantine]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-use_only]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_episode_demoted_under_its_id[cached-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[cached-before_snapshot]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_the_drawn_edge_becoming_a_twin_of_a_challenged_record[cached]"
    ],
    "def_digest": "c0b490b1810e3a9de7de31022d410832d1c85876a87e97a4d0796d939ff17f86",
    "file": "src/veracium/compile.py",
@@ -7189,12 +7988,14 @@
    "cell_kinds": {
     "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_published]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_unpublished]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_unpublished]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[compiled-before_snapshot]": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_rii01_wiki_bind.py::test_a_body_that_fails_its_bind_twice_is_the_disputed_notice",
     "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_published]",
-    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_unpublished]"
+    "tests/test_0047_rii01_wiki_bind.py::test_a_challenge_before_the_bound_snapshot_is_never_asserted_by_the_body[compiled_unpublished]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_reviewer_twin_a_challenged_record_moving_its_twin_key[compiled-before_snapshot]"
    ],
    "def_digest": "7084ec9766f46deefdb57ae634f30de1ceea5af4bc8f197b7c53f8b84f550016",
    "file": "src/veracium/compile.py",
@@ -7206,12 +8007,10 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
-    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-compiled]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]": "assertion"
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice": "assertion"
    },
    "cells_failed": [
-    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[edge-compiled]",
-    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]"
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice"
    ],
    "def_digest": "ad28868c42cee143b857ff2bea0fc1e2e6b9949803aaa97811095c6e622ffdeb",
    "file": "src/veracium/compile.py",
@@ -7223,10 +8022,10 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
-    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]": "assertion"
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice": "assertion"
    },
    "cells_failed": [
-    "tests/test_0047_rii01_wiki_bind.py::test_a_redaction_before_the_bound_snapshot_is_never_in_the_body[episode-compiled]"
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_redaction_in_both_windows_ends_as_the_redacted_notice"
    ],
    "def_digest": "aba9643e6711f53c541ff6eb95f5b9b33d113896844355c1ff54741b9dc827b0",
    "file": "src/veracium/compile.py",
@@ -7238,16 +8037,12 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]": "assertion"
    },
    "cells_failed": [
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body",
-    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
+    "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_is_never_in_the_body[compiled]"
    ],
-   "def_digest": "7a0ace99e5ddc3463104cfc2ce8b8819aeac84ea9de8136a631585b48c5451d6",
+   "def_digest": "ed02b65dbb480feea739bfb271ed05a3426f6ff93d3fa6956eb92fc52d3b58e8",
    "file": "src/veracium/compile.py",
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
    "kill_kind": "assertion",
@@ -7264,7 +8059,7 @@
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_before_the_bound_snapshot_withholds_an_episodes_only_body",
     "tests/test_0047_rii01_wiki_bind.py::test_an_erasure_followed_by_writes_still_withholds_an_episodes_only_body"
    ],
-   "def_digest": "d2c99bfa5c65f85d96c649a04d6b3d3873d89f4e424a106208ad1d093fb9f570",
+   "def_digest": "a48a8e9f0525d53cfcdcb3adce60c4ce0279f9a854486341a03606cb9786e713",
    "file": "src/veracium/compile.py",
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
    "kill_kind": "assertion",
@@ -7281,7 +8076,20 @@
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-retire]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[corrected-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[disputed-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[redacted-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[revoked_source-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[superseded-True]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-corrected]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-disputed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-revoked_source]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-superseded]": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[corrected-compiled_at_snapshot]",
@@ -7291,10 +8099,23 @@
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_at_snapshot]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[revoked_source-compiled_during_compile]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_at_snapshot]",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[superseded-compiled_during_compile]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_recall-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[cached-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_same_id_replacement_of_a_drawn_edge[compiled-before_snapshot-retire]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[corrected-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[disputed-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[redacted-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[revoked_source-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[superseded-True]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_d2_a_rejected_compile_is_not_served_back_from_its_own_row[with-d2]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-corrected]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-disputed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-revoked_source]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-superseded]"
    ],
-   "def_digest": "cf0351582bbf3180b60b41a1365ee118b95a5cabc569c84158ab60fab85db34a",
-   "file": "src/veracium/compile.py",
+   "def_digest": "a25a2ffab08804a74b6854e56b92e94a756c4198b5a994fc13beea8878cd580b",
+   "file": "src/veracium/schema.py",
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
    "kill_kind": "assertion",
    "mutant": "0004 W9: a compiled body's revokingly invalidated inputs not checked (the owner's D10 ruling)",
@@ -7303,23 +8124,45 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-compiled_at_snapshot]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-compiled_at_snapshot]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-compiled_during_compile]": "assertion",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_at_snapshot]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_during_compile]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_during_compile]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[absorbed_duplicate-False]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[decayed-False]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[lapsed-False]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-absorbed_duplicate]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-decayed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-lapsed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-decayed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-lapsed]": "assertion"
    },
    "cells_failed": [
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-compiled_at_snapshot]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-compiled_at_snapshot]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-compiled_during_compile]",
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_at_snapshot]",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_during_compile]"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-compiled_during_compile]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[absorbed_duplicate-False]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[decayed-False]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_an_edge_retirement_moves_the_view_by_wiki_drops_on[lapsed-False]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-absorbed_duplicate]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-decayed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[edge-same-id-retire-lapsed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-decayed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-lapsed]"
    ],
-   "def_digest": "0661f81c3d727bfb2692f49ad0afe75ee1e7dc7164749a88bff90c1586c42ce2",
-   "file": "src/veracium/compile.py",
+   "def_digest": "3250d68c473da5f4c0c7cca8d444cba4bfc911e6a2935abcad9f59618b848bec",
+   "file": "src/veracium/schema.py",
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
    "kill_kind": "assertion",
    "mutant": "0004 W9: any invalidation drops the in-call body (W3/W8 eroded)",
@@ -7330,12 +8173,16 @@
    "cell_kinds": {
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-cached]": "assertion",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-cached]": "assertion",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]": "assertion"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-decayed]": "assertion",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-lapsed]": "assertion"
    },
    "cells_failed": [
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[absorbed_duplicate-cached]",
     "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[decayed-cached]",
-    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]"
+    "tests/test_0047_rii01_wiki_bind.py::test_w9_a_revoking_invalidation_withholds_the_body_and_a_retaining_one_keeps_it[lapsed-cached]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-decayed]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[invalidate-lapsed]"
    ],
    "def_digest": "c7e2ff1ee1556683a5a50a32f36f0d6f1597b3859779ba61e37f7815caf31c7b",
    "file": "src/veracium/store/sqlite.py",
@@ -11999,13 +12846,13 @@
  ],
  "summary": {
   "controls_green": true,
-  "groups": 116,
+  "groups": 117,
   "kill_kinds": [
    "assertion",
    "assertion+expected-refusal-missing",
    "expected-refusal-missing"
   ],
-  "killed": 502,
-  "mutants": 502
+  "killed": 532,
+  "mutants": 532
  }
 }

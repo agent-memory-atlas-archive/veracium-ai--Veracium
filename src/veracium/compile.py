@@ -25,7 +25,7 @@ from . import budgets as _budgets
 from .graph import collapse_for_render, render_edges
 from .contention import is_live_refusal, retained_refusal_ids
 from .llm.base import Complete
-from .schema import DEFAULT_RELATIONS, Relation, wiki_drops_on
+from .schema import DEFAULT_RELATIONS, Relation, assertion_view
 from .registry import declared_arity
 
 # The contention-policy version. Bump it when the derived-view semantics change in a way a
@@ -298,6 +298,8 @@ def compile_wiki(store, llm: Complete, user_id: str, relations: dict[str, Relati
     digest = _policy_digest(relations, wiki_input_budget=wiki_input_budget,
                             variant_cap=variant_cap, item_cap=item_cap)
     published = store.set_wiki(user_id, f"{_ENVELOPE}{digest}\n{wiki}", version_at_begin)
+    if published and _bind is not None:    # RII-R2-01 (D2): the row this compile published, for bound_wiki to discard
+        _bind["published"] = (f"{_ENVELOPE}{digest}\n{wiki}", version_at_begin)
     if not published:
         # the store moved under the compile: nothing is published (the next read recompiles from the store
         # of record). specs/0041 round 10 (found in sweep A): if what moved is a REDACTION of a record this compile
@@ -379,18 +381,28 @@ def _unbound_by(store, user_id: str, snap, edges, episodes):
     drew on withholds it, published or not; a retaining one (W3's staleness, W8's absorption) keeps it. Presence is read
     through the Store API, so an episode a consolidation cutover hides reads as absent too: a recompute, never a wrong
     body. Research's stage-2 probe: a redaction in this window passed a bind that read only
-    `withheld`, which reads open challenges and nothing else."""
+    `withheld`, which reads open challenges and nothing else.
+
+    R-II round 2's RII-R2-01 (research's stage-1 S2): the bind reads each drawn record's CURRENT row, never the object
+    the compile drew. A same-ID replacement in the window — a demotion to quarantined or use_only, a changed value, a
+    revoking retirement — changes the record's `schema.assertion_view` (the rule the store's eviction applies at the
+    write) and withholds the body, with no notice that would be true — a replacement that makes a drawn record a twin of
+    a challenged one included, since it moves the drawn record's value. The revoking-invalidation rule above is the
+    view's liveness component."""
     if any(snap.withheld(e) for e in edges):
         return _budgets.DISPUTED_DURING_COMPILE_NOTICE
     if ({e.id for e in edges} & store.redacted_targets(user_id, "edge")
             or {e.id for e in episodes} & store.redacted_targets(user_id, "episode")):
         return _budgets.REDACTED_DURING_COMPILE_NOTICE
     now = {e.id: e for e in store.edges(user_id, active_only=False, include_quarantined=True)}
-    present_episodes = {e.id for e in store.episodes(user_id)}
-    if not {e.id for e in edges} <= set(now) or not {e.id for e in episodes} <= present_episodes:
-        return _NO_WIKI
-    if any(not now[e.id].active and wiki_drops_on(now[e.id].invalidation_reason) for e in edges):
-        return _NO_WIKI
+    now_episodes = {e.id: e for e in store.episodes(user_id, include_retired=True)}
+    if (any(assertion_view(now.get(e.id)) != assertion_view(e) for e in edges)
+            or any(assertion_view(now_episodes.get(e.id)) != assertion_view(e) for e in episodes)):
+        return _NO_WIKI                # erased, revoked or replaced since the compile drew it
+    # past this point every drawn record's current view equals its drawn one, and the snapshot's twin match reads
+    # only view fields (the id, the procedural stamp, subject, relation, object), so the first clause above has
+    # already asked the snapshot about the current rows: a challenged record moving onto a drawn value is caught
+    # there (tests/test_rii_r2_01_writer_inventory.py pins the snapshot to the view)
     return None
 
 
@@ -441,4 +453,10 @@ def bound_wiki(store, llm: Complete, user_id: str, recompile_after: int,
             why = _budgets.DISPUTED_DURING_COMPILE_NOTICE
         if not _bind_withholds(why):
             return body, snap
+        if box.get("published") is not None:
+            # RII-R2-01 (D2, defence in depth): a compiled body that failed its bind takes its own published row with
+            # it, so the retry cannot be served that body back from the cache and pass on the row's equality. The
+            # write that unbound it evicts the row already (schema.assertion_view at the store's writers); this
+            # discard is conditional on the row still being the published one, so it never drops a newer compile
+            store.discard_wiki(user_id, *box["published"])
     return (None if why is _NO_WIKI else why), snap

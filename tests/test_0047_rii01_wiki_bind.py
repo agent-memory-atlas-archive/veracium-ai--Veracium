@@ -524,19 +524,32 @@ def test_the_census_flags_an_erasure_loop_without_the_wiki_and_refuses_unresolve
 
 # every function in store/sqlite.py that evicts the wiki, and the bind clause that makes a body served across it honest
 # (compile.bound_wiki): the cached path's row bind covers every one of them; for a COMPILED body, each names what it
-# can change that the body may not carry. A new evicting writer refuses here until it is classed.
+# can change that the body may not carry. A new evicting writer refuses here until it is classed. This census reads
+# SQL; it cannot show that every NECESSARY eviction exists (the reviewer's RII-R2-01) — that is
+# tests/test_rii_r2_01_writer_inventory.py, which runs every store mutator against a cached wiki.
 EVICTING_WRITERS = {
     "add_reply": "a challenge or a resolve: the withheld clause",
     "_redact_in_txn": "a redaction (edge or episode): the redacted clause",
     "forget_user": "an erasure: the presence clause",
     "commit_outcome_import_plan": "admitted acts (withheld clause) and imported notices, applied through "
                                   "_redact_in_txn (redacted clause); imported records are new facts, not in the body",
-    "_invalidate_edge_row": "a plain content change: kept for the call, as a write during the compile is (0041 §4e)",
-    "_reinstate_edge_row": "a plain content change: kept for the call, as a write during the compile is (0041 §4e)",
-    "_recompute_edge_row": "a plain content change: kept for the call, as a write during the compile is (0041 §4e)",
-    "invalidate_edge": "a plain content change: kept for the call, as a write during the compile is (0041 §4e)",
-    "apply_supersession_plan": "a plain content change: kept for the call, as a write during the compile is "
-                               "(0041 §4e)",
+    "_invalidate_edge_row": "a content change: one that changes schema.assertion_view withholds the body by the view clause "
+                            "(RII-R2-01); any other is kept for the call, as a write during the compile is (0041 §4e)",
+    "_reinstate_edge_row": "a content change: one that changes schema.assertion_view withholds the body by the view clause "
+                            "(RII-R2-01); any other is kept for the call, as a write during the compile is (0041 §4e)",
+    "_recompute_edge_row": "a content change: one that changes schema.assertion_view withholds the body by the view clause "
+                            "(RII-R2-01); any other is kept for the call, as a write during the compile is (0041 §4e)",
+    "invalidate_edge": "a content change: one that changes schema.assertion_view withholds the body by the view clause "
+                            "(RII-R2-01); any other is kept for the call, as a write during the compile is (0041 §4e)",
+    "apply_supersession_plan": "a content change: one that changes schema.assertion_view withholds the body by the "
+                               "view clause (RII-R2-01); any other is kept for the call (0041 §4e)",
+    "_evict_wiki_on_view_change": "RII-R2-01: every edge write (via _journal_edge_write) and every episode write that "
+                                  "changes a persisted record's schema.assertion_view: the view clause (the drawn "
+                                  "record's CURRENT view against its drawn one) and snap.withheld on the current row",
+    "transition_consolidation_if_current": "RII-R2-01: the consolidation cutover hides the claimed inputs and reveals "
+                                           "the outputs (0010 X9); the presence clause reads a hidden input as absent",
+    "discard_wiki": "RII-R2-01 (D2): the bind's own discard of the row a withheld compiled body published; no record "
+                    "changes, so no clause is owed",
 }
 
 

@@ -5,7 +5,7 @@
 
 # specs/0021 §3 — combining-site manifest
 
-**32 record-mutating code paths**, enumerated by **parsing the store's SQL**
+**35 record-mutating code paths**, enumerated by **parsing the store's SQL**
 rather than by reading the spec's prose matrix. **11 of them COMBINE**:
 they write a record derived from, or mutate a record because of, MORE THAN
 ONE existing record — the definition §3 gives the registry.
@@ -45,6 +45,7 @@ outside the boundary by construction.
 | `src/veracium/store/sqlite.py` | `_bump` | `INSERT INTO write_counter` · `UPDATE SET` | no | — | the store_version counter — not a record at all |
 | `src/veracium/store/sqlite.py` | `_claim_inputs` | `UPDATE episodes` | **yes** | consolidation | claims ONE POOL's inputs. `lifecycle.partition_cold` selects the set, so a claim never spans two identities (§4b) and each pool holds its own claim, lease and crash-safety |
 | `src/veracium/store/sqlite.py` | `_drop_contributions_for_survivor` | `DELETE FROM contribution_ledger` | no | — | accepted 0014 A10 — a ledger row lives exactly as long as its survivor. Removes attribution, never derives it (and §4c flattening is what makes that harmless) |
+| `src/veracium/store/sqlite.py` | `_evict_wiki_on_view_change` | `DELETE FROM wiki` | no | — | drops the user's cached wiki because ONE record's assertion view moved under a write (RII-R2-01); it writes no record |
 | `src/veracium/store/sqlite.py` | `_invalidate_edge_row` | `DELETE FROM wiki` · `UPDATE edges` | **yes** | absorption · supersession | retires a prior BECAUSE of the incoming — absorbed_duplicate only within one scope (§4c); superseded is scope-blind (§3) |
 | `src/veracium/store/sqlite.py` | `_recompute_edge_row` | `DELETE FROM wiki` · `UPDATE edges` | no | — | 0022's recompute verb: applies the sweep's PRECOMPUTED RECOMPUTED_FIELDS (valid_from, observed_at, confidence) to one edge. The fold over surviving contributor sides happens in the sweep over ledger rows; this writer consults no second record |
 | `src/veracium/store/sqlite.py` | `_redact_in_txn` | `DELETE FROM edge_embedding` · `DELETE FROM wiki` · `INSERT INTO episode_event` · `INSERT INTO redactions` · `UPDATE confirmations` · `UPDATE contribution_ledger` · `UPDATE edge_event` · `UPDATE edges` · `UPDATE episodes` · `UPDATE redactions` · `UPDATE replies` · `UPDATE request_registry` · `UPDATE supersession_refusals` | no | — | specs/0041 §4a (tranche 3; the in-transaction body since 4b, shared with the import's notice application): rewrites ONE record's content carriers in place from the treatment map — the marker, an empty shape, a registry value — and the side rows keyed to it (its confirmations' digest, its ledger digests, its refusal rows' copied relation, its embedding rows, its journal states, the wiki cache); the attestation record it inserts names that same record. No second record contributes and none is derived; a redaction never deletes a record or changes a disposition (§4d, §4h(i)) |
@@ -66,8 +67,10 @@ outside the boundary by construction.
 | `src/veracium/store/sqlite.py` | `confirm_edge` | `INSERT INTO confirmations` · `INSERT INTO request_registry` · `INSERT OR REPLACE INTO episodes` · `UPDATE edges` | no | — | specs/0008 — clears needs_confirmation on ONE edge and records the confirmation; no second record contributes |
 | `src/veracium/store/sqlite.py` | `delete_claimed_inputs_if_current` | `DELETE FROM episodes` | **yes** | consolidation | deletes the N inputs because the M outputs are durable — the combination's other half, and PERMANENT (§7: there is no un-consolidate) |
 | `src/veracium/store/sqlite.py` | `delete_episode` | `DELETE FROM episodes` | no | — | removes one record |
+| `src/veracium/store/sqlite.py` | `discard_wiki` | `DELETE FROM wiki` | no | — | deletes the one wiki row a withheld compile published, conditional on it (RII-R2-01 D2); derives nothing from any record |
 | `src/veracium/store/sqlite.py` | `forget_user` | `DELETE FROM edge_event` · `DELETE FROM {}` | no | — | 0009 erasure — drops the tenant's tables wholesale (ledger included), which moots membership rather than deriving it |
 | `src/veracium/store/sqlite.py` | `invalidate_edge` | `DELETE FROM wiki` | no | — | drops the wiki CACHE for the user (the edge row itself is written by _invalidate_edge_row); a cache invalidation combines nothing |
 | `src/veracium/store/sqlite.py` | `set_wiki` | `INSERT OR REPLACE INTO wiki` | **yes** | wiki-compilation | v1: the store-wide compile is UNCHANGED, and the wiki never reaches a principal-bearing response (0020 §4d excludes it). Per-scope compilation is the recorded widening (Q2), not a silent one |
+| `src/veracium/store/sqlite.py` | `transition_consolidation_if_current` | `DELETE FROM wiki` | no | — | the consolidation cutover drops the user's cached wiki (RII-R2-01: it hides the inputs and reveals the outputs, 0010 X9); the drop writes no record and derives nothing |
 | `src/veracium/store/sqlite.py` | `write_consolidation_output_if_current` | `INSERT INTO episodes` | **yes** | consolidation | the derivative, written from the whole claimed set. Its identity is CLEARED (origin=None/source_id=None — §4a/W8): store-authored means store-identified, and membership travels through the ledger, never through a copied identity |
 | `src/veracium/store/sqlite.py` | `write_policy_receipt` | `INSERT INTO policy_receipt` | no | — | specs/0027 §4g (v14): one receipt row from one recall; it names the ids the recall already computed and derives nothing from any other record — an audit row, not a synthesis |

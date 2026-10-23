@@ -18,6 +18,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
+from pydantic import ValidationError
+
 from ..authority import RULE_VERSION, scope_fingerprint
 from .. import redaction as _redaction
 from ..attestation import declarative_grounding
@@ -28,7 +30,7 @@ from ..schema import (ConsolidationOp, ConsolidationOutputDraft, ConsolidationSt
                       Provenance, RECOVERY_PENDING_STATES,
                       SupersessionPlan, SupersessionRefusal, SupersessionResult,
                       is_historical_id, to_historical_id,
-                      DISPOSITIONED_REASONS, as_utc_required, wiki_drops_on)
+                      DISPOSITIONED_REASONS, as_utc_required, assertion_view, wiki_drops_on)
 from .base import (CutoffDomainError, EdgeEvent, PreEpochQuery, RawEdgeState, REINSTATEMENT_REASONS, ReplyRefused,
                    RequestRedacted, UnknownEdge,
                    DESTINATION_CHANGED, HEAD_MOVED, LEASE_MAX, NON_QUIESCENT,
@@ -371,6 +373,27 @@ class SqliteStore(Store):
 
     _SITE_KINDS = frozenset({"invalidated", "reinstated", "redacted"})   # specs/0041 §4c: the redaction is a write
 
+    def _evict_wiki_on_view_change(self, user_id: str, model, prior_json: Optional[str],
+                                   new_json: Optional[str]) -> None:
+        """specs/0004 W1/W9 and 0047 §4d (R-II round 2's RII-R2-01), inside the caller's write transaction: drop the
+        user's compiled wiki when a write REPLACES (or deletes: `new_json` None) a persisted record whose
+        `schema.assertion_view` the write changes — a challenged record's twin key, a drawn record's value, its
+        quarantine or use_only, its retirement by a revoking reason. A fresh record (no prior) never evicts: that is
+        W3's staleness counter, and a retaining change (a counter, a note, decay, absorption) keeps the wiki by the
+        view's own rule. Edges reach this from `_journal_edge_write`, the choke point every `edges` writer passes;
+        every `episodes` writer calls it itself (tests/test_rii_r2_01_writer_inventory.py runs each one)."""
+        if prior_json is None or prior_json == new_json:
+            return
+        try:
+            new = model.model_validate_json(new_json) if new_json is not None else None
+            moved = assertion_view(model.model_validate_json(prior_json)) != assertion_view(new)
+        except ValidationError:
+            # a row the model cannot read back (specs/0048's out-of-range write is one): its view is unknown, so the
+            # wiki is dropped — and the WRITE is never refused here, so what a writer may store does not change
+            moved = True
+        if moved:
+            self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))
+
     def _journal_edge_write(self, user_id: str, edge_id: str, new_json: str,
                             prior_json: Optional[str], *, kind: Optional[str] = None,
                             reason: Optional[str] = None) -> Optional[str]:
@@ -434,6 +457,11 @@ class SqliteStore(Store):
                         f"refused (specs/0029 v12 §4b-i)"))
         else:
             reason = None
+        # specs/0004 W1/W9, 0047 §4d (RII-R2-01): the WIKI'S eviction, derived here as the lifetime hook's effects are —
+        # from the persisted prior and the new row, so a same-ID replace that changes what the wiki may assert evicts
+        # it on every `edges` writer, whichever method ran. After the kind and reason refusals (a refused write has no
+        # effect to apply); an unchanged row returned above, and could not have evicted (an equal row has an equal view)
+        self._evict_wiki_on_view_change(user_id, Edge, prior_json, new_json)
         alloc = self._txn_alloc
         if alloc["clock"] is None:
             alloc["clock"] = self._now()         # ONE clock read per batch (§4c)
@@ -921,19 +949,21 @@ class SqliteStore(Store):
                 self._conn.execute("UPDATE edges SET json=? WHERE id=?",
                                    (new_json, edge_id))
                 self._journal_edge_write(user_id, edge_id, new_json, row[0])
+                ep_json = Episode(id=ep_id, user_id=user_id,
+                                  date=confirmed_at.date().isoformat(),
+                                  summary=f"({actor_v}) confirmed "
+                                          f"'{edge.relation}: {edge.object}' still holds",
+                                  provenance=Provenance(
+                                      author_of_evidence=EvidenceAuthor.USER,
+                                      evidence_ref=f"confirm:{edge_id}")
+                                  ).model_dump_json()
+                ep_prior = self._conn.execute("SELECT json FROM episodes WHERE id=?", (ep_id,)).fetchone()
                 self._conn.execute(
                     "INSERT OR REPLACE INTO episodes(id,user_id,date,json) "
                     "VALUES(?,?,?,?)",
-                    (ep_id, user_id,
-                     confirmed_at.date().isoformat(),
-                     Episode(id=ep_id, user_id=user_id,
-                             date=confirmed_at.date().isoformat(),
-                             summary=f"({actor_v}) confirmed "
-                                     f"'{edge.relation}: {edge.object}' still holds",
-                             provenance=Provenance(
-                                 author_of_evidence=EvidenceAuthor.USER,
-                                 evidence_ref=f"confirm:{edge_id}")
-                             ).model_dump_json()))
+                    (ep_id, user_id, confirmed_at.date().isoformat(), ep_json))
+                # RII-R2-01: the id is minted above, so no prior row is expected; the rule is applied, not assumed
+                self._evict_wiki_on_view_change(user_id, Episode, ep_prior[0] if ep_prior else None, ep_json)
                 # an act of THIS store: origin 'local', its position from the never-reset counter (§6f), its
                 # portable identity NULL — derived at each export (0008 v7 §6e)
                 self._conn.execute(
@@ -1343,8 +1373,9 @@ class SqliteStore(Store):
         ep.retired_at = as_utc_required(at)      # the same normalization as the edge twin
         self._refuse_redacted_reason(reason, f"episode {episode_id!r}", "episode-retire")
         ep.retired_reason = reason
-        self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
-                           (ep.model_dump_json(), episode_id))
+        new_json = ep.model_dump_json()
+        self._conn.execute("UPDATE episodes SET json=? WHERE id=?", (new_json, episode_id))
+        self._evict_wiki_on_view_change(row[1], Episode, row[0], new_json)      # RII-R2-01
         return row[1]
 
     def _reinstate_edge_row(self, edge_id: str, *, reason: str) -> None:
@@ -1372,15 +1403,16 @@ class SqliteStore(Store):
         self._conn.execute("DELETE FROM wiki WHERE user_id=?", (row[1],))
 
     def _reinstate_episode_row(self, episode_id: str) -> None:
-        row = self._conn.execute("SELECT json FROM episodes WHERE id=?",
+        row = self._conn.execute("SELECT json, user_id FROM episodes WHERE id=?",
                                  (episode_id,)).fetchone()
         if not row:
             return
         ep = Episode.model_validate_json(row[0])
         ep.retired_at = None
         ep.retired_reason = None
-        self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
-                           (ep.model_dump_json(), episode_id))
+        new_json = ep.model_dump_json()
+        self._conn.execute("UPDATE episodes SET json=? WHERE id=?", (new_json, episode_id))
+        self._evict_wiki_on_view_change(row[1], Episode, row[0], new_json)      # RII-R2-01
 
     def _recompute_edge_row(self, edge_id: str, values: dict) -> None:
         """0022's recompute verb: the three RECOMPUTED_FIELDS, nothing else."""
@@ -2263,9 +2295,12 @@ class SqliteStore(Store):
                     raise _SITE_ADD_EPISODE.fire(ValueError(
                         f"add_episode refuses reserved id {episode.id!r} — it is claimed by "
                         f"an in-flight consolidation (specs/0010 X21)"), "reserved-id")
+                prior = self._conn.execute("SELECT json FROM episodes WHERE id=?", (episode.id,)).fetchone()
+                new_json = episode.model_dump_json()
                 self._conn.execute(
                     "INSERT OR REPLACE INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
-                    (episode.id, episode.user_id, episode.date, episode.model_dump_json()))
+                    (episode.id, episode.user_id, episode.date, new_json))
+                self._evict_wiki_on_view_change(episode.user_id, Episode, prior[0] if prior else None, new_json)
                 self._bump(episode.user_id)
 
     def episodes(self, user_id, *, limit=None,
@@ -2333,6 +2368,7 @@ class SqliteStore(Store):
                         f"batch-delete or forget_user (specs/0010 X21)"))
             self._conn.execute("DELETE FROM episodes WHERE id=?", (episode_id,))
             if row:
+                self._evict_wiki_on_view_change(row[0], Episode, row[1], None)      # RII-R2-01: a drawn input erased
                 # specs/0014 A10: rows live while their survivor does — type-keyed
                 self._drop_contributions_for_survivor(row[0], "episode", episode_id)
                 self._bump(row[0])
@@ -3018,6 +3054,7 @@ class SqliteStore(Store):
                                           "operation_id": op.operation_id})
             self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
                                (bound.model_dump_json(), eid))
+            self._evict_wiki_on_view_change(op.user_id, Episode, row[0], bound.model_dump_json())   # RII-R2-01
 
     def _abandon(self, op: ConsolidationOp) -> None:
         """§4b-iii cleanup, under the caller's lock+transaction: delete every
@@ -3026,10 +3063,13 @@ class SqliteStore(Store):
         for eid, ep in self._episodes_for_operation(op.user_id, op.operation_id):
             if ep.lineage:                                   # a provisional output
                 self._conn.execute("DELETE FROM episodes WHERE id=?", (eid,))
+                self._evict_wiki_on_view_change(op.user_id, Episode, ep.model_dump_json(), None)   # RII-R2-01
             else:                                            # a claimed input
                 clean = ep.model_copy(update={"claimed_by": None, "operation_id": None})
                 self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
                                    (clean.model_dump_json(), eid))
+                self._evict_wiki_on_view_change(op.user_id, Episode, ep.model_dump_json(),
+                                                clean.model_dump_json())                         # RII-R2-01
         self._write_op(op.model_copy(update={"state": ConsolidationState.ABANDONED}))
 
     def create_or_takeover_consolidation(self, user_id, ids, owner, lease_duration):
@@ -3213,6 +3253,12 @@ class SqliteStore(Store):
                     # are still readable (they are deleted only after OUTPUTS_DURABLE).
                     self._write_consolidation_contributions(op)
                     self._write_op(op.model_copy(update={"state": S.OUTPUTS_DURABLE}))
+                    # RII-R2-01 (research's stage-1 addendum, (c)): the cutover hides every claimed input from every
+                    # ordinary read and reveals the outputs, writing no episodes row — so no view moves, yet a wiki
+                    # drawn on the inputs would be served beside an episodes block rendering the outputs, both
+                    # representations in one call (0010 X9). It evicts here, in the cutover's own transaction; the
+                    # inputs' deletion, which may be delayed by recovery, evicts again
+                    self._conn.execute("DELETE FROM wiki WHERE user_id=?", (op.user_id,))
                     self._bump(op.user_id)           # X14: the visibility cutover bumps
                 elif to_state is S.FINALIZED:
                     if op.state is not S.OUTPUTS_DURABLE:     # ownerless, recovery-safe
@@ -3238,8 +3284,11 @@ class SqliteStore(Store):
                         or op.state is not ConsolidationState.OUTPUTS_DURABLE):
                     return _SITE_DELETE_NOT_CURRENT.fire(False, "refuse")
             for eid in op.claimed_ids:           # idempotent all-or-nothing re-delete
+                prior = self._conn.execute(
+                    "SELECT json FROM episodes WHERE id=? AND user_id=?", (eid, op.user_id)).fetchone()
                 self._conn.execute(
                     "DELETE FROM episodes WHERE id=? AND user_id=?", (eid, op.user_id))
+                self._evict_wiki_on_view_change(op.user_id, Episode, prior[0] if prior else None, None)  # RII-R2-01
             self._conn.commit()
             return True
 
@@ -4028,6 +4077,15 @@ class SqliteStore(Store):
                 "INSERT OR REPLACE INTO wiki(user_id,text,store_version) "
                 "SELECT ?,?,? WHERE COALESCE((SELECT n FROM write_counter WHERE user_id=?), 0) = ?",
                 (user_id, text, store_version, user_id, store_version)).rowcount
+            self._conn.commit()
+            return n == 1
+
+    def discard_wiki(self, user_id, text, store_version) -> bool:
+        """R-II round 2's RII-R2-01 (D2): delete the wiki row only if it is still `(text, store_version)` — one
+        conditional statement, so a row a later compile published is never dropped."""
+        with self._lock:
+            n = self._conn.execute("DELETE FROM wiki WHERE user_id=? AND text=? AND store_version=?",
+                                   (user_id, text, store_version)).rowcount
             self._conn.commit()
             return n == 1
 

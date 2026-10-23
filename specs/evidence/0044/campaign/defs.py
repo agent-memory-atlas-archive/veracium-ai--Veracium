@@ -2495,7 +2495,7 @@ GROUPS = [('T2 (0019 v7: the non-user refusal)',
     'differs = _without_axis(prior.model_dump()) != _without_axis(edge.model_dump())',
     'differs = prior.model_dump() != edge.model_dump()')]),
  ("R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
-  ['tests/test_0047_rii01_wiki_bind.py'],
+  ['tests/test_0047_rii01_wiki_bind.py', 'tests/test_rii_r2_01_writer_inventory.py'],
   [("INV-R18: the wiki served unbound (07df8f8's recall order)",
     'src/veracium/compile.py',
     '        if body is None or body in _WIKI_NOTICES:\n            return body, snap\n',
@@ -2519,20 +2519,21 @@ GROUPS = [('T2 (0019 v7: the non-user refusal)',
     '            ):\n'),
    ("INV-R18: a compiled body's erased inputs not checked",
     'src/veracium/compile.py',
-    '    if not {e.id for e in edges} <= set(now) or not {e.id for e in episodes} <= present_episodes:\n',
-    '    if False:\n'),
+    '    if (any(assertion_view(now.get(e.id)) != assertion_view(e) for e in edges)\n',
+    '    if (any(e.id in now and assertion_view(now[e.id]) != assertion_view(e) for e in edges)\n'),
    ("INV-R18: a compiled body's erased episodes not checked (research's landing read, L1)",
     'src/veracium/compile.py',
-    '    if not {e.id for e in edges} <= set(now) or not {e.id for e in episodes} <= present_episodes:\n',
-    '    if not {e.id for e in edges} <= set(now):\n'),
+    '            or any(assertion_view(now_episodes.get(e.id)) != assertion_view(e) for e in episodes)):\n',
+    '            or any(e.id in now_episodes and assertion_view(now_episodes[e.id]) != assertion_view(e)\n'
+    '                   for e in episodes)):\n'),
    ("0004 W9: a compiled body's revokingly invalidated inputs not checked (the owner's D10 ruling)",
-    'src/veracium/compile.py',
-    '    if any(not now[e.id].active and wiki_drops_on(now[e.id].invalidation_reason) for e in edges):\n',
-    '    if False:\n'),
+    'src/veracium/schema.py',
+    '    live = record.invalidated_at is None or not wiki_drops_on(record.invalidation_reason)\n',
+    '    live = True\n'),
    ('0004 W9: any invalidation drops the in-call body (W3/W8 eroded)',
-    'src/veracium/compile.py',
-    '    if any(not now[e.id].active and wiki_drops_on(now[e.id].invalidation_reason) for e in edges):\n',
-    '    if any(not now[e.id].active for e in edges):\n'),
+    'src/veracium/schema.py',
+    '    live = record.invalidated_at is None or not wiki_drops_on(record.invalidation_reason)\n',
+    '    live = record.invalidated_at is None\n'),
    ("0004 W1/W9: the store's eviction leaves the shared rule (the two paths diverge)",
     'src/veracium/store/sqlite.py',
     "        if wiki_drops_on(reason):          # specs/0004 W1, the rule W9's bind shares (schema.wiki_drops_on)\n",
@@ -2564,7 +2565,170 @@ GROUPS = [('T2 (0019 v7: the non-user refusal)',
    ('V1 (d): only the outermost exception read',
     'tests/conftest.py',
     '        exc = exc.__cause__ or exc.__context__\n',
-    '        exc = None\n')])]
+    '        exc = None\n')]),
+ ('R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)',
+  ['tests/test_rii_r2_01_writer_inventory.py',
+   'tests/test_0047_rii01_wiki_bind.py',
+   'tests/test_0004_wiki_revocation.py'],
+  [('0004 W11: the view drops subject',
+    'src/veracium/schema.py',
+    '    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from),\n'
+    '            record.ungrounded) + authority + (live,)\n',
+    '    return ("edge", record.relation, record.object, as_utc(record.valid_from), record.ungrounded) + authority + '
+    '(live,)\n'),
+   ('0004 W11: the view drops relation',
+    'src/veracium/schema.py',
+    '    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from),\n'
+    '            record.ungrounded) + authority + (live,)\n',
+    '    return ("edge", record.subject, record.object, as_utc(record.valid_from), record.ungrounded) + authority + '
+    '(live,)\n'),
+   ('0004 W11: the view drops object',
+    'src/veracium/schema.py',
+    '    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from),\n'
+    '            record.ungrounded) + authority + (live,)\n',
+    '    return ("edge", record.subject, record.relation, as_utc(record.valid_from), record.ungrounded) + authority '
+    '+ (live,)\n'),
+   ('0004 W11: the view drops valid_from',
+    'src/veracium/schema.py',
+    '    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from),\n'
+    '            record.ungrounded) + authority + (live,)\n',
+    '    return ("edge", record.subject, record.relation, record.object, record.ungrounded) + authority + (live,)\n'),
+   ('0004 W11: the view drops ungrounded',
+    'src/veracium/schema.py',
+    '    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from),\n'
+    '            record.ungrounded) + authority + (live,)\n',
+    '    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from)) + authority + '
+    '(live,)\n'),
+   ('0004 W11: the view drops provenance disclosure',
+    'src/veracium/schema.py',
+    '    authority = (p.disclosure, p.author_of_evidence, p.derived_from, p.record_kind, p.basis)\n',
+    '    authority = (p.author_of_evidence, p.derived_from, p.record_kind, p.basis,)\n'),
+   ('0004 W11: the view drops provenance author_of_evidence',
+    'src/veracium/schema.py',
+    '    authority = (p.disclosure, p.author_of_evidence, p.derived_from, p.record_kind, p.basis)\n',
+    '    authority = (p.disclosure, p.derived_from, p.record_kind, p.basis,)\n'),
+   ('0004 W11: the view drops provenance derived_from',
+    'src/veracium/schema.py',
+    '    authority = (p.disclosure, p.author_of_evidence, p.derived_from, p.record_kind, p.basis)\n',
+    '    authority = (p.disclosure, p.author_of_evidence, p.record_kind, p.basis,)\n'),
+   ('0004 W11: the view drops provenance record_kind',
+    'src/veracium/schema.py',
+    '    authority = (p.disclosure, p.author_of_evidence, p.derived_from, p.record_kind, p.basis)\n',
+    '    authority = (p.disclosure, p.author_of_evidence, p.derived_from, p.basis,)\n'),
+   ('0004 W11: the view drops provenance basis',
+    'src/veracium/schema.py',
+    '    authority = (p.disclosure, p.author_of_evidence, p.derived_from, p.record_kind, p.basis)\n',
+    '    authority = (p.disclosure, p.author_of_evidence, p.derived_from, p.record_kind,)\n'),
+   ('0004 W11: the edge view drops its liveness',
+    'src/veracium/schema.py',
+    '    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from),\n'
+    '            record.ungrounded) + authority + (live,)\n',
+    '    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from),\n'
+    '            record.ungrounded) + authority\n'),
+   ('0004 W11: the episode view drops its date',
+    'src/veracium/schema.py',
+    '        return ("episode", record.date, record.summary) + authority + (live,)\n',
+    '        return ("episode", record.summary) + authority + (live,)\n'),
+   ('0004 W11: the episode view drops its summary',
+    'src/veracium/schema.py',
+    '        return ("episode", record.date, record.summary) + authority + (live,)\n',
+    '        return ("episode", record.date) + authority + (live,)\n'),
+   ('0004 W11: the episode view drops its liveness',
+    'src/veracium/schema.py',
+    '        return ("episode", record.date, record.summary) + authority + (live,)\n',
+    '        return ("episode", record.date, record.summary) + authority\n'),
+   ("0004 W11: an episode's retiring reason retains it (research's E1: W3/W8 read as episode rules)",
+    'src/veracium/schema.py',
+    "        live = record.retired_reason is None   # ANY retirement removes an episode (W3/W8's retention is an "
+    'edge rule)\n',
+    '        live = record.retired_reason is None or not wiki_drops_on(record.retired_reason)\n'),
+   ("0004 W10 / INV-R18: the edge writers' eviction dropped from the journal (evict on reply writes only; the "
+    "reviewer's two witnesses)",
+    'src/veracium/store/sqlite.py',
+    '        self._evict_wiki_on_view_change(user_id, Edge, prior_json, new_json)\n',
+    ''),
+   ("0004 W10: any stored change evicts (research's S1: W3/W8 and every record_outcome evict)",
+    'src/veracium/store/sqlite.py',
+    '        if moved:\n            self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))\n',
+    '        if True:\n            self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))\n'),
+   ("0004 W10: a fresh record evicts (W3's staleness counter overridden)",
+    'src/veracium/store/sqlite.py',
+    '        if prior_json is None or prior_json == new_json:\n            return\n',
+    '        if prior_json is None:\n'
+    '            self._conn.execute("DELETE FROM wiki WHERE user_id=?", (user_id,))\n'
+    '            return\n'
+    '        if prior_json == new_json:\n'
+    '            return\n'),
+   ("0004 W10: add_episode's same-ID replace does not evict (research's S2, episodes)",
+    'src/veracium/store/sqlite.py',
+    '                self._evict_wiki_on_view_change(episode.user_id, Episode, prior[0] if prior else None, '
+    'new_json)\n',
+    ''),
+   ('0004 W10: delete_episode does not evict a drawn episode',
+    'src/veracium/store/sqlite.py',
+    '                self._evict_wiki_on_view_change(row[0], Episode, row[1], None)      # RII-R2-01: a drawn input '
+    'erased\n',
+    ''),
+   ("0004 W10: the consolidation cutover does not evict (research's addendum (c), 0010 X9)",
+    'src/veracium/store/sqlite.py',
+    '                    self._conn.execute("DELETE FROM wiki WHERE user_id=?", (op.user_id,))\n'
+    '                    self._bump(op.user_id)           # X14: the visibility cutover bumps\n',
+    '                    self._bump(op.user_id)           # X14: the visibility cutover bumps\n'),
+   ("0004 W10: the episode retirement's helper call dropped (the E4 sweep only)",
+    'src/veracium/store/sqlite.py',
+    '        self._evict_wiki_on_view_change(row[1], Episode, row[0], new_json)      # RII-R2-01\n'
+    '        return row[1]',
+    '        return row[1]'),
+   ("0004 W10: the claimed inputs' deletion's helper call dropped (the E4 sweep only)",
+    'src/veracium/store/sqlite.py',
+    '                self._evict_wiki_on_view_change(op.user_id, Episode, prior[0] if prior else None, None)  # '
+    'RII-R2-01\n',
+    ''),
+   ("0004 W10: confirm_edge's act-episode helper call dropped (the E4 sweep only)",
+    'src/veracium/store/sqlite.py',
+    '                self._evict_wiki_on_view_change(user_id, Episode, ep_prior[0] if ep_prior else None, ep_json)\n',
+    ''),
+   ("0004 W12: the snapshot's twin match reads a KEEP field (the bind's premise broken)",
+    'src/veracium/challenge.py',
+    '        if rec.redacted or edge.id == rec.edge.id or edge.subject != rec.edge.subject \\\n',
+    '        if rec.redacted or bool(edge.note) or edge.id == rec.edge.id or edge.subject != rec.edge.subject \\\n'),
+   ("0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views",
+    'src/veracium/compile.py',
+    '    if (any(assertion_view(now.get(e.id)) != assertion_view(e) for e in edges)\n'
+    '            or any(assertion_view(now_episodes.get(e.id)) != assertion_view(e) for e in episodes)):\n',
+    '    if (any(e.id not in now for e in edges)\n'
+    '            or any(e.id not in now_episodes for e in episodes)):\n'),
+   ("0004 W12: the view comparison placed before the redaction check (research's E2)",
+    'src/veracium/compile.py',
+    '    if ({e.id for e in edges} & store.redacted_targets(user_id, "edge")\n'
+    '            or {e.id for e in episodes} & store.redacted_targets(user_id, "episode")):\n'
+    '        return _budgets.REDACTED_DURING_COMPILE_NOTICE\n'
+    '    now = {e.id: e for e in store.edges(user_id, active_only=False, include_quarantined=True)}\n'
+    '    now_episodes = {e.id: e for e in store.episodes(user_id, include_retired=True)}\n'
+    '    if (any(assertion_view(now.get(e.id)) != assertion_view(e) for e in edges)\n'
+    '            or any(assertion_view(now_episodes.get(e.id)) != assertion_view(e) for e in episodes)):\n'
+    '        return _NO_WIKI                # erased, revoked or replaced since the compile drew it\n',
+    '    now = {e.id: e for e in store.edges(user_id, active_only=False, include_quarantined=True)}\n'
+    '    now_episodes = {e.id: e for e in store.episodes(user_id, include_retired=True)}\n'
+    '    if (any(assertion_view(now.get(e.id)) != assertion_view(e) for e in edges)\n'
+    '            or any(assertion_view(now_episodes.get(e.id)) != assertion_view(e) for e in episodes)):\n'
+    '        return _NO_WIKI                # erased, revoked or replaced since the compile drew it\n'
+    '    if ({e.id for e in edges} & store.redacted_targets(user_id, "edge")\n'
+    '            or {e.id for e in episodes} & store.redacted_targets(user_id, "episode")):\n'
+    '        return _budgets.REDACTED_DURING_COMPILE_NOTICE\n'),
+   ("0004 W13 / INV-R18: a withheld compiled body's row not discarded (it re-enters through the cache on the retry)",
+    'src/veracium/compile.py',
+    '            store.discard_wiki(user_id, *box["published"])\n',
+    '            pass\n'),
+   ('0004 W13: the published row not recorded for the bind',
+    'src/veracium/compile.py',
+    '    if published and _bind is not None:    # RII-R2-01 (D2): the row this compile published, for bound_wiki to '
+    'discard\n',
+    '    if False:\n'),
+   ("0004 W13: the discard drops whatever row is cached (a newer compile's included)",
+    'src/veracium/store/sqlite.py',
+    '"DELETE FROM wiki WHERE user_id=? AND text=? AND store_version=?"',
+    '"DELETE FROM wiki WHERE user_id=? AND ? IS NOT NULL AND ? IS NOT NULL"')])]
 
 PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the confirmations of the user) :: C11: forget_user keeps the user's confirmations": {'reanchored': None,
                                                                                                                                                     'source': 't12_rows_mutant_defs.py',
@@ -2748,49 +2912,205 @@ PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the 
                                                                                                                                        'source_sha256': '3964923cd20e00ddd6b68e8ce6ce62edd956e624bc80035a69b99822b2e5ffd6'},
  "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: 0004 W1/W9: the store's eviction leaves the shared rule (the two paths diverge)": {'reanchored': None,
                                                                                                                                                                       'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                                      'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
- "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: 0004 W9: a compiled body's revokingly invalidated inputs not checked (the owner's D10 ruling)": {'reanchored': None,
+                                                                                                                                                                      'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
+ "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: 0004 W9: a compiled body's revokingly invalidated inputs not checked (the owner's D10 ruling)": {'reanchored': 'RII-R2-01: '
+                                                                                                                                                                                                  'a '
+                                                                                                                                                                                                  'revoking '
+                                                                                                                                                                                                  'invalidation '
+                                                                                                                                                                                                  'now '
+                                                                                                                                                                                                  'enters '
+                                                                                                                                                                                                  'the '
+                                                                                                                                                                                                  'bind '
+                                                                                                                                                                                                  '(and '
+                                                                                                                                                                                                  'the '
+                                                                                                                                                                                                  "write's "
+                                                                                                                                                                                                  'eviction) '
+                                                                                                                                                                                                  'as '
+                                                                                                                                                                                                  'the '
+                                                                                                                                                                                                  'edge '
+                                                                                                                                                                                                  "view's "
+                                                                                                                                                                                                  'liveness '
+                                                                                                                                                                                                  'component '
+                                                                                                                                                                                                  '(schema.assertion_view: '
+                                                                                                                                                                                                  'moved '
+                                                                                                                                                                                                  'from '
+                                                                                                                                                                                                  'compile.py); '
+                                                                                                                                                                                                  'the '
+                                                                                                                                                                                                  'mutant '
+                                                                                                                                                                                                  'drops '
+                                                                                                                                                                                                  'it',
                                                                                                                                                                                     'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                                                    'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
- "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: 0004 W9: any invalidation drops the in-call body (W3/W8 eroded)": {'reanchored': None,
+                                                                                                                                                                                    'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
+ "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: 0004 W9: any invalidation drops the in-call body (W3/W8 eroded)": {'reanchored': 'RII-R2-01: '
+                                                                                                                                                                    'the '
+                                                                                                                                                                    'same '
+                                                                                                                                                                    'component; '
+                                                                                                                                                                    'the '
+                                                                                                                                                                    'mutant '
+                                                                                                                                                                    'makes '
+                                                                                                                                                                    'every '
+                                                                                                                                                                    'invalidation '
+                                                                                                                                                                    'move '
+                                                                                                                                                                    'the '
+                                                                                                                                                                    'view '
+                                                                                                                                                                    '(W3/W8 '
+                                                                                                                                                                    'eroded)',
                                                                                                                                                       'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                      'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                                      'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a cached body's row not re-read after the snapshot": {'reanchored': None,
                                                                                                                                                   'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                  'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                                  'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body not bound by the facts it drew on": {'reanchored': None,
                                                                                                                                                  'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                 'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
- "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased episodes not checked (research's landing read, L1)": {'reanchored': None,
+                                                                                                                                                 'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
+ "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased episodes not checked (research's landing read, L1)": {'reanchored': 'RII-R2-01: '
+                                                                                                                                                                                         'the '
+                                                                                                                                                                                         'same, '
+                                                                                                                                                                                         'for '
+                                                                                                                                                                                         'a '
+                                                                                                                                                                                         'drawn '
+                                                                                                                                                                                         'episode',
                                                                                                                                                                            'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                                           'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
- "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked": {'reanchored': None,
+                                                                                                                                                                           'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
+ "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's erased inputs not checked": {'reanchored': 'RII-R2-01 '
+                                                                                                                                                         'folded '
+                                                                                                                                                         'presence '
+                                                                                                                                                         'into '
+                                                                                                                                                         'the '
+                                                                                                                                                         'view '
+                                                                                                                                                         'comparison '
+                                                                                                                                                         '(an '
+                                                                                                                                                         'absent '
+                                                                                                                                                         "record's "
+                                                                                                                                                         'view '
+                                                                                                                                                         'is '
+                                                                                                                                                         'None); '
+                                                                                                                                                         'the '
+                                                                                                                                                         'mutant '
+                                                                                                                                                         'still '
+                                                                                                                                                         'treats '
+                                                                                                                                                         'an '
+                                                                                                                                                         'erased '
+                                                                                                                                                         'drawn '
+                                                                                                                                                         'edge '
+                                                                                                                                                         'as '
+                                                                                                                                                         'unchanged',
                                                                                                                                            'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                           'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                           'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted episodes not checked": {'reanchored': None,
                                                                                                                                                'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                               'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                               'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a compiled body's redacted inputs not checked (research's stage-2 probe)": {'reanchored': None,
                                                                                                                                                                         'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                                        'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                                                        'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: a row evicted after the staleness check is indexed": {'reanchored': None,
                                                                                                                                                   'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                  'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                                  'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the import admits a reply without evicting the wiki": {'reanchored': None,
                                                                                                                                                    'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                   'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                                   'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot) :: INV-R18: the wiki served unbound (07df8f8's recall order)": {'reanchored': None,
                                                                                                                                                 'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                                'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  "R-II r2 RII-02 (0051 INV-S1, S6: a counted h/q makes a weak name a speaker; binding cell deselected) :: INV-S1: ATTEST-5's two-speaker test, counted letters left out": {'reanchored': None,
                                                                                                                                                                            'source': 'rii_r2_mutant_defs.py',
-                                                                                                                                                                           'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                                                                           'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10 / INV-R18: the edge writers' eviction dropped from the journal (evict on reply writes only; the reviewer's two witnesses)": {'reanchored': None,
+                                                                                                                                                                                                                                'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                                                                                'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: a fresh record evicts (W3's staleness counter overridden)": {'reanchored': None,
+                                                                                                                                                                 'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                 'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: add_episode's same-ID replace does not evict (research's S2, episodes)": {'reanchored': None,
+                                                                                                                                                                              'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                              'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: any stored change evicts (research's S1: W3/W8 and every record_outcome evict)": {'reanchored': None,
+                                                                                                                                                                                      'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                                      'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: confirm_edge's act-episode helper call dropped (the E4 sweep only)": {'reanchored': None,
+                                                                                                                                                                          'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                          'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: delete_episode does not evict a drawn episode': {'reanchored': None,
+                                                                                                                                                     'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                     'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: the claimed inputs' deletion's helper call dropped (the E4 sweep only)": {'reanchored': None,
+                                                                                                                                                                              'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                              'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: the consolidation cutover does not evict (research's addendum (c), 0010 X9)": {'reanchored': None,
+                                                                                                                                                                                   'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                                   'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: the episode retirement's helper call dropped (the E4 sweep only)": {'reanchored': None,
+                                                                                                                                                                        'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                        'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: an episode's retiring reason retains it (research's E1: W3/W8 read as episode rules)": {'reanchored': None,
+                                                                                                                                                                                            'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                                            'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the edge view drops its liveness': {'reanchored': None,
+                                                                                                                                        'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                        'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the episode view drops its date': {'reanchored': None,
+                                                                                                                                       'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                       'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the episode view drops its liveness': {'reanchored': None,
+                                                                                                                                           'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                           'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the episode view drops its summary': {'reanchored': None,
+                                                                                                                                          'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                          'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops object': {'reanchored': None,
+                                                                                                                             'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                             'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops provenance author_of_evidence': {'reanchored': None,
+                                                                                                                                                    'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                    'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops provenance basis': {'reanchored': None,
+                                                                                                                                       'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                       'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops provenance derived_from': {'reanchored': None,
+                                                                                                                                              'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                              'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops provenance disclosure': {'reanchored': None,
+                                                                                                                                            'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                            'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops provenance record_kind': {'reanchored': None,
+                                                                                                                                             'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                             'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops relation': {'reanchored': None,
+                                                                                                                               'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                               'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops subject': {'reanchored': None,
+                                                                                                                              'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                              'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops ungrounded': {'reanchored': None,
+                                                                                                                                 'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                 'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W11: the view drops valid_from': {'reanchored': None,
+                                                                                                                                 'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                 'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12 / INV-R18: the bind checks presence only, not the drawn records' views": {'reanchored': None,
+                                                                                                                                                                             'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                             'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12: the snapshot's twin match reads a KEEP field (the bind's premise broken)": {'reanchored': None,
+                                                                                                                                                                                'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                                'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W12: the view comparison placed before the redaction check (research's E2)": {'reanchored': None,
+                                                                                                                                                                             'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                             'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W13 / INV-R18: a withheld compiled body's row not discarded (it re-enters through the cache on the retry)": {'reanchored': None,
+                                                                                                                                                                                                            'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                                                            'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W13: the discard drops whatever row is cached (a newer compile's included)": {'reanchored': None,
+                                                                                                                                                                             'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                                             'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
+ 'R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W13: the published row not recorded for the bind': {'reanchored': None,
+                                                                                                                                                   'source': 'rii_r2_01_mutant_defs.py',
+                                                                                                                                                   'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
  'R-II r2 V1 (c, d: the held basetemp and the sqlite error names) :: V1 (c): an explicit basetemp never held': {'reanchored': None,
                                                                                                                 'source': 'rii_r2_mutant_defs.py',
-                                                                                                                'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  'R-II r2 V1 (c, d: the held basetemp and the sqlite error names) :: V1 (d): only the outermost exception read': {'reanchored': None,
                                                                                                                   'source': 'rii_r2_mutant_defs.py',
-                                                                                                                  'source_sha256': 'd9cc0a008ba9f2bbadd28d91ec7e7068d91683d57b7ec4cd8de539913d027100'},
+                                                                                                                  'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
  'RA-01 (0010 X21 at the treatment body: no caller treats a claimed episode) :: RA-01: drop the reservation guard from _redact_in_txn': {'reanchored': None,
                                                                                                                                          'source': 'ra2_mutant_defs.py',
                                                                                                                                          'source_sha256': 'ce772413f215637b7d15aa0f168f7c762802d65de473cb691b5ff73b1b585ed5'},

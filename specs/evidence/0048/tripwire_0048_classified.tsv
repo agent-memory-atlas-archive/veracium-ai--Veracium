@@ -160,8 +160,8 @@ episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO epis
 episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
 episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT OR REPLACE INTO episodes(id,user_id,date,json) "
 episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	"INSERT OR REPLACE INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
-episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
-episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?", (new_json, episode_id))
+episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?", (new_json, episode_id))
 episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
 episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?",
 episode-json-writer	src/veracium/store/sqlite.py	str:sql-write	self._conn.execute("UPDATE episodes SET json=? WHERE id=?", (new_json, target_id))
@@ -233,6 +233,7 @@ other-object	src/veracium/schema.py	getattr	basis = getattr(self, "basis", None)
 other-object	src/veracium/schema.py	getattr	prov = getattr(record, "provenance", None)
 other-object	src/veracium/schema.py	getattr	return hash((self.kind, self.derived_from, getattr(self, "basis", None)))
 other-object	src/veracium/schema.py	getattr	return r is not None and getattr(r, "relation_kind", "declarative") == "procedural"
+field-name	src/veracium/schema.py	str:confidence	"confidence": "decay's input (W3: decay is staleness)",
 other-object	src/veracium/scope_read.py	getattr	"lineage": bool(getattr(record, "lineage", None))}
 other-object	src/veracium/scope_read.py	getattr	lineage = getattr(record, "lineage", None)
 other-object	src/veracium/semantic.py	getattr	dimf = getattr(embed, "dim", None)

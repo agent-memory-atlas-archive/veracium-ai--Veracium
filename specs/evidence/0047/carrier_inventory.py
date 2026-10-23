@@ -87,6 +87,8 @@ CLASSIFIED = {
     ("__init__.py", "Memory.dispute"): ("INTERNAL", "a WRITE of an act episode naming the value as the act's object, never asserting it (0047 v1.4 ruling); an episode naming a challenged value does not carry the challenge (0047 §8, NOT claimed)"),
     ("__init__.py", "Memory.record_outcome"): ("INTERNAL", "a write of an outcome act episode naming the value, never asserting it (0047 v1.4 ruling)"),
     ("store/sqlite.py", "SqliteStore._upsert_edge_row"): ("INTERNAL", "store write"),
+    # R-II round 2's RII-R2-01: the ONE projection of what a compiled wiki may assert, compared, never rendered
+    ("schema.py", "assertion_view"): ("INTERNAL", "the wiki's assertion view (RII-R2-01): compared by the store's eviction and recall's bind, never rendered"),
     ("store/sqlite.py", "SqliteStore.apply_supersession_plan"): ("INTERNAL", "store write"),
     ("store/sqlite.py", "SqliteStore.confirm_edge"): ("INTERNAL", "store write (0008): its refusal message names the edge, not its content; its act episode names the confirmed value as the act's OBJECT (0047 v1.4's ruling for act episodes; §8 NOT claimed; confirm refuses under an open challenge, so the episode predates any challenge)"),
     ("ingest.py", "ingest_event"): ("INTERNAL", "the write path (0045 §2, T9): it re-validates the built edge with its grounding axis before storing it; no text leaves, and a challenge (0047) can only follow the write"),

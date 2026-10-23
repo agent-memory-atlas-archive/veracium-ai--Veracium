@@ -170,6 +170,15 @@ COMBINING_SITES = {
         "compilation is the recorded widening (Q2), not a silent one"),
 
     # -- everything else: mutating, but not combining -----------------------
+    (_STORE, "_evict_wiki_on_view_change"): SiteSpec(
+        False, why="drops the user's cached wiki because ONE record's assertion view moved under a write "
+                   "(RII-R2-01); it writes no record"),
+    (_STORE, "transition_consolidation_if_current"): SiteSpec(
+        False, why="the consolidation cutover drops the user's cached wiki (RII-R2-01: it hides the inputs and "
+                   "reveals the outputs, 0010 X9); the drop writes no record and derives nothing"),
+    (_STORE, "discard_wiki"): SiteSpec(
+        False, why="deletes the one wiki row a withheld compile published, conditional on it (RII-R2-01 D2); "
+                   "derives nothing from any record"),
     (_STORE, "add_episode"): SiteSpec(
         False, why="one episode from one turn; derives nothing from any "
                    "other record"),

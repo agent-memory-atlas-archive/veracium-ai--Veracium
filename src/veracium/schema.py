@@ -669,6 +669,31 @@ DISPOSITIONED_REASONS: dict = {
 }
 
 
+def assertion_view(record) -> Optional[tuple]:
+    """specs/0004 W1/W9 and 0047 §4d (R-II round 2's RII-R2-01): what a compiled wiki may ASSERT from one record — the
+    fields the compiler's admission (compile._grounded_inputs: activity, quarantine, use_only, the procedural stamp,
+    the extraction flag; the challenge snapshot's twin match) and its asserted content (who, what, which value, since
+    when, on whose authority) read. ONE rule for its three consumers, the `wiki_drops_on` precedent: the store's
+    eviction at every edge and episode write (a same-ID replacement included — the persisted prior's view against the
+    new row's), and recall's bind of a body compiled in the call (compile._unbound_by: a drawn record's CURRENT view
+    against the one it was drawn with). Retirement enters as one component, `wiki_drops_on`'s: a retaining
+    invalidation (W3's staleness, W8's absorption) leaves an EDGE's view unchanged, a revoking one changes it; an
+    episode's view changes on any retirement, since every retired episode is out of the compile. Every field
+    outside the view is classed in ASSERTION_VIEW_KEEPS with why a change to it never changes what the wiki asserts
+    (W3's staleness counter covers it); the classification is total over the model's fields, so a new field fails the
+    build until it is placed. None for an absent record (an erasure, a deletion)."""
+    if record is None:
+        return None
+    p = record.provenance
+    authority = (p.disclosure, p.author_of_evidence, p.derived_from, p.record_kind, p.basis)
+    if isinstance(record, Episode):
+        live = record.retired_reason is None   # ANY retirement removes an episode (W3/W8's retention is an edge rule)
+        return ("episode", record.date, record.summary) + authority + (live,)
+    live = record.invalidated_at is None or not wiki_drops_on(record.invalidation_reason)
+    return ("edge", record.subject, record.relation, record.object, as_utc(record.valid_from),
+            record.ungrounded) + authority + (live,)
+
+
 # specs/0030 §2a — the TOTAL as-of disposition, keyed on the SAME reasons as
 # DISPOSITIONED_REASONS and placed beside it so a new reason is ruled in BOTH
 # registries in one edit. NOT an allow-set: an allow-set cannot distinguish
@@ -1344,6 +1369,79 @@ class ContestedGroup(BaseModel):
     # (highest-effective-authority member + grounded prior, which MAY ALIAS). Additive,
     # defaulted; populated by _build_contested from the refusal records.
     prior_edge_ids: list[str] = Field(default_factory=list)
+
+
+# specs/0004 W1/W9, 0047 §4d (RII-R2-01): every field OUTSIDE assertion_view, each with why changing it never changes
+# what a compiled wiki asserts. A change to one of these keeps the cached wiki and W3's staleness counter
+# (`wiki_recompile_after_writes`) refreshes it. Totality is the build gate below: a field in neither the view nor this
+# table fails the import, so a new field is placed before anything can read it.
+ASSERTION_VIEW_KEEPS: dict = {
+    "edge": {
+        "id": "the row's identity, never asserted; a same-ID write compares the views it carries",
+        "user_id": "immutable on every persistence path (store/base.py's obligations)",
+        "note": "an annotation; W8 retains absorption, which rewrites it",
+        "volatility": "the lifecycle's input, not the compiler's",
+        "invalidated_at": "retirement enters the view through wiki_drops_on(invalidation_reason)",
+        "invalidation_reason": "the same: the view's liveness component",
+        "supersedes": "lineage; the successor's own view is what the wiki reads",
+        "original_relation": "history of a relation rename; the current `relation` is in the view",
+        "needs_confirmation": "the staleness label (RII-R2-01 N1: outside wiki admission today, a question for the owner)",
+        "agreement": "the agreement record, read by the gate, not by the compiler's admission",
+        "att": "0051's attestation, read by the gate, not by the compiler's admission",
+        "src": "0051's attestation source, the same",
+        "attv": "0051's predicate version, the same",
+        "times_used": "a record_outcome counter (W3: use is not a trust event)",
+        "outcome_counts": "a record_outcome counter",
+        "last_outcome": "a record_outcome counter",
+        "last_outcome_at": "a record_outcome counter",
+    },
+    "provenance": {
+        "evidence_ref": "the evidence's identity, never asserted",
+        "observed_at": "when it was observed; `valid_from` is the asserted time",
+        "confidence": "decay's input (W3: decay is staleness)",
+        "source_id": "diagnostic only (specs/0006 I5: it groups, never grants)",
+        "origin": "diagnostic only (specs/0006 I5)",
+        "producer": "the procedural stamp's producer; the stamp itself (record_kind, basis) is in the view",
+    },
+    "episode": {
+        "id": "the row's identity, never asserted",
+        "user_id": "immutable",
+        "kind": "an outcome episode renders by its date and summary, which are in the view",
+        "edge_id": "the judged edge's id on an outcome episode",
+        "outcome": "an outcome episode's status, not rendered",
+        "context_ref": "a comparability key, not rendered",
+        "consolidation_output_index": "consolidation metadata",
+        "retired_at": "retirement enters the view as its liveness component (retired_reason is None)",
+        "retired_reason": "the same: the view's liveness component",
+        "seq": "outcome-chain order",
+        "supersedes_episode": "outcome-chain lineage",
+        "judgment_time_known": "outcome-chain metadata",
+        "claimed_by": "a consolidation reservation; a cutover hides the input, which the bind reads as absence",
+        "operation_id": "consolidation metadata",
+        "lineage": "consolidation metadata",
+        "date_start": "a consolidated span's bounds; `date` is what renders",
+        "date_end": "the same",
+    },
+}
+_ASSERTION_VIEW_READS: dict = {      # what assertion_view reads, per model (the view's side of the partition)
+    "edge": {"subject", "relation", "object", "valid_from", "ungrounded", "provenance"},
+    "provenance": {"disclosure", "author_of_evidence", "derived_from", "record_kind", "basis"},
+    "episode": {"date", "summary", "provenance"},
+}
+def _check_assertion_view_partition() -> None:
+    """The build gate (W5's shape), run at import: assertion_view's reads and ASSERTION_VIEW_KEEPS partition each
+    model's fields totally and disjointly. (Liveness reads the retirement fields, classed as keeps with that reason;
+    the unit tests hold the function to the table.)"""
+    for k, m in (("edge", Edge), ("provenance", Provenance), ("episode", Episode)):
+        keeps, reads = set(ASSERTION_VIEW_KEEPS[k]), _ASSERTION_VIEW_READS[k]
+        if (keeps | reads) != set(m.model_fields) or keeps & reads:
+            raise ImportError(
+                f"assertion_view's partition of {m.__name__} is not total and disjoint: unplaced "
+                f"{sorted(set(m.model_fields) - keeps - reads)}, unknown {sorted((keeps | reads) - set(m.model_fields))}, "
+                f"both {sorted(keeps & reads)} — place every field in the view or in ASSERTION_VIEW_KEEPS (RII-R2-01)")
+
+
+_check_assertion_view_partition()
 
 
 # -- specs/0016 D2: the deletion ------------------------------------------------
