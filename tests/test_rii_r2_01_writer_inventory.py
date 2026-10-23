@@ -251,6 +251,7 @@ CELLS = {
                     ("author_of_evidence", EvidenceAuthor.THIRD_PARTY),
                     ("derived_from", EvidenceAuthor.THIRD_PARTY))},
     "edge-same-id-ungrounded": (_same_id_edge(ungrounded=True), ValueError),        # refused both ways (0019 U4)
+    "edge-same-id-user_id": (_same_id_edge(user_id="v"), ValueError),               # the owner, 0008 §6d
     **{f"edge-same-id-keep-{f}": (_same_id_edge(**{f: v}), "KEEP")
        for f, v in (("note", "a note"), ("volatility", Volatility.TRANSIENT), ("needs_confirmation", True),
                     ("times_used", 4), ("outcome_counts", {"confirmed": 2}), ("last_outcome", Outcome.CONFIRMED),
@@ -281,6 +282,8 @@ CELLS = {
     **{f"episode-same-id-keep-{f}": (_same_id_ep(**{f: v}), "KEEP")
        for f, v in (("context_ref", "rubric-1"),)},
     "episode-same-id-keep-confidence": (_same_id_ep_prov(confidence=0.31), "KEEP"),
+    # the owner (R-II round 3): refused against the PERSISTED row; before, the per-user oracle saw U's episode vanish
+    "episode-same-id-user_id": (_same_id_ep(user_id="v"), ValueError),
     "delete-episode": (lambda s: s.delete_episode("p-1"), "EVICT"),
     # the consolidation primitives: a claim keeps (metadata), the inputs' deletion after the cutover evicts
     "consolidation-claim": (lambda s: _consolidate(s, "claim"), "KEEP"),
@@ -308,6 +311,37 @@ def test_the_eviction_cells_cover_every_view_field():
     view = (_ASSERTION_VIEW_READS["edge"] - {"provenance"}) | _ASSERTION_VIEW_READS["provenance"]
     unreachable = {"record_kind", "basis"}   # the procedural stamp: test below — a same-ID write cannot move it
     assert view - unreachable <= covered, sorted(view - unreachable - covered)
+
+
+def _premises():
+    """The KEEPs whose reason is a write-path PREMISE ("immutable …"), read from the table, never listed by hand."""
+    return sorted((kind, f) for kind, reasons in ASSERTION_VIEW_KEEPS.items() for f, r in reasons.items()
+                  if r.startswith("immutable"))
+
+
+def test_every_write_path_premise_names_its_guard_and_has_a_refusal_cell():
+    """0004 v3.5 W11: the partition proves a field is placed, not that its reason is true (R-II round 3: `Episode.user_id`
+    said immutable and no write made it so). Each premise names its Store protocol obligation and has a same-ID cell
+    that must be REFUSED."""
+    assert _premises(), "no premise found: the census reads nothing"
+    for kind, field in _premises():
+        assert "obligation" in ASSERTION_VIEW_KEEPS[kind][field], (kind, field)
+        assert CELLS.get(f"{kind}-same-id-{field}", (None, None))[1] is ValueError, (kind, field)
+
+
+@pytest.mark.parametrize("kind, field", _premises())
+def test_a_premise_holds_at_the_store_write(cached, kind, field):
+    """The premise's guard at the durable write: the same-ID write that breaks it is refused, the stored row and the
+    version are unchanged, and nothing lands under the value it named."""
+    table = {"edge": (EDGE_MUTATIONS, _edge, "edges", cached.add_edge),
+             "episode": (EPISODE_MUTATIONS, _ep, "episodes", cached.add_episode)}[kind]
+    mutations, make, sql_table, write = table
+    rec = make()
+    row = lambda: cached._conn.execute(f"SELECT user_id, json FROM {sql_table} WHERE id=?", (rec.id,)).fetchone()
+    before, version = row(), cached.store_version(U)
+    with pytest.raises(ValueError):
+        write(rec.model_copy(update={field: mutations[field]}))
+    assert row() == before and cached.store_version(U) == version and cached.get_wiki(U) is not None
 
 
 @pytest.mark.parametrize("upd", [{"record_kind": "procedural", "basis": "stated"}])

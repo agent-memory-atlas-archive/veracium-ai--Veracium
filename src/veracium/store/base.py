@@ -627,7 +627,20 @@ class Store(ABC):
     # -- episodes ----------------------------------------------------------
     @store_mutator
     @abstractmethod
-    def add_episode(self, episode: Episode) -> None: ...
+    def add_episode(self, episode: Episode) -> None:
+        """Persist (or same-ID replace) one episode.
+
+        PERSISTENCE-PATH OBLIGATIONS every backend must enforce, in the write's
+        transaction (R-II round 3's RII-R3-01, add_edge's 0008 §6d guard shape):
+        `user_id` never changes — compared against the PERSISTED prior row, and
+        refused with nothing written, so a cached wiki's per-user premise holds
+        (the assertion view's KEEP reason for `user_id` cites this obligation).
+        The stored state the write consults is keyed by the episode's ID, never
+        by the incoming `user_id`: an id a non-quiescent consolidation op claims
+        is refused whoever owns the op (specs/0010 X21), and so is an id a
+        redaction record attests, whoever redacted it (specs/0041 INV-11) —
+        that state outlives the row it names, where no prior row exists to
+        compare."""
 
     @abstractmethod
     def episodes(self, user_id: str, *, limit: Optional[int] = None) -> list[Episode]: ...

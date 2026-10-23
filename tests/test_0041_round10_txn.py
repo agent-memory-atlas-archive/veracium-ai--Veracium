@@ -167,7 +167,9 @@ def test_X21_blocked_a_claim_waits_for_the_write_and_is_not_overwritten_by_it(tm
     other = _Blocked(b.store, lambda: holder.setdefault(
         "op", b.store.create_or_takeover_consolidation(U, ["ep-1"], "w-b", 60)))
     blocked = []
-    in_txn = _pause_inside(a.store, "_reserved_ids", lambda: blocked.append(other.start_and_observe()))
+    # R-II round 3 (0004 v3.5 §2c (ii)): add_episode decides X21 by the id through `_id_reserved` (it read the incoming
+    # owner's `_reserved_ids` before); the pause sits in the read the write now makes
+    in_txn = _pause_inside(a.store, "_id_reserved", lambda: blocked.append(other.start_and_observe()))
     a.store.add_episode(_ep("v2"))
     other.finish()
     op = holder["op"]

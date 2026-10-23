@@ -641,6 +641,13 @@ _CALLSITE_DISPOSITIONS = {
     ("test_0047_t11b_portability.py", "_refused"): "both",
     # R-II round 2 (RII-01): an imported challenge evicts the cached wiki — both imports are restores of the user's own file
     ("test_0047_rii01_wiki_bind.py", "test_a_challenge_admitted_after_a_cached_wiki_is_never_asserted_by_it"): "restore",
+    # R-II round 3 (RII-R3-01, 0004 v3.5 §2c (ii)/(iii)): the import's episode admission refuses by the id — the helper
+    # forwards `restore=` from each cell; the replay cell restores a finalized op's outputs; the notice cell imports A's
+    # notice-only cut and B's own plain file, both by default
+    ("test_rii_r3_01_episode_owner.py", "_import"): "both",
+    ("test_rii_r3_01_episode_owner.py", "test_a_restore_replaying_finalized_outputs_is_admitted_beside_an_in_flight_op"): "restore",
+    ("test_rii_r3_01_episode_owner.py", "test_one_users_standing_notice_does_not_reach_another_users_import_of_the_id"): "default",
+    ("test_rii_r3_01_episode_owner.py", "test_another_users_standing_notice_never_covers_a_forged_redacted_reason"): "both",
     # R-A round 2 (RA-01, RA-02): the notice boundaries the external reviewer found, both modes where parametrised
     ("test_0041_ra2_notice_boundaries.py", "test_a_restore_that_would_treat_a_claimed_episode_refuses_the_whole_unit"): "restore",
     ("test_0041_ra2_notice_boundaries.py", "test_a_prior_standing_notice_is_judged_on_the_arriving_copy"): "both",

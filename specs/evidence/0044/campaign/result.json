@@ -423,11 +423,11 @@
    ],
    "control_after": {
     "exit": 0,
-    "passed": 238
+    "passed": 243
    },
    "control_before": {
     "exit": 0,
-    "passed": 238
+    "passed": 243
    },
    "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)"
   },
@@ -840,13 +840,28 @@
    ],
    "control_after": {
     "exit": 0,
-    "passed": 228
+    "passed": 233
    },
    "control_before": {
     "exit": 0,
-    "passed": 228
+    "passed": 233
    },
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)"
+  },
+  {
+   "cells": [
+    "tests/test_rii_r3_01_episode_owner.py",
+    "tests/test_rii_r2_01_writer_inventory.py"
+   ],
+   "control_after": {
+    "exit": 0,
+    "passed": 227
+   },
+   "control_before": {
+    "exit": 0,
+    "passed": 227
+   },
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)"
   },
   {
    "cells": [
@@ -1687,7 +1702,7 @@
    "group": "R-II r2 V1 (c, d: the held basetemp and the sqlite error names)"
   }
  ],
- "pin_digest": "8a4eadb3101ec7d6c1c10e79f7338638dbe1eeef8d4b835299083d4b29ec83f3",
+ "pin_digest": "358b352f1e24b93c0f715d4b6b127c962e7fd16b111c8577a63702592f0b208c",
  "rows": [
   {
    "anchor_count": 1,
@@ -4640,7 +4655,7 @@
     "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-retired]",
     "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-summary]"
    ],
-   "def_digest": "89f65803e48a7f0b3aafd36eec023ea65c860a1c4c05388f54781f224fcc88f7",
+   "def_digest": "efc9eef9d3677bb2616d60ff17bc83601719054f269ca9eb174ecf98b1a274a3",
    "file": "src/veracium/store/sqlite.py",
    "group": "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes)",
    "kill_kind": "assertion",
@@ -8225,6 +8240,271 @@
    "group": "R-II r2 RII-01 (INV-R18: the wiki bound to the call's own challenge snapshot)",
    "kill_kind": "assertion",
    "mutant": "INV-R18: a row evicted after the staleness check is indexed",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_premise_holds_at_the_store_write[episode-user_id]": "expected-refusal-missing",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-user_id]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_present_redacted_episode_is_refused_to_another_owner": "assertion",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_refused_owner_change_writes_nothing[different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_refused_owner_change_writes_nothing[same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-cached-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-cached-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-compiled-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-compiled-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-cached-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-cached-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-compiled-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-compiled-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-cached-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-cached-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-compiled-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-compiled-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_the_refusal_holds_against_another_connections_persisted_row": "expected-refusal-missing"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_premise_holds_at_the_store_write[episode-user_id]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-user_id]",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_present_redacted_episode_is_refused_to_another_owner",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_refused_owner_change_writes_nothing[different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_refused_owner_change_writes_nothing[same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-cached-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-cached-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-compiled-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-compiled-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-cached-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-cached-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-compiled-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-compiled-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-cached-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-cached-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-compiled-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-compiled-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_the_refusal_holds_against_another_connections_persisted_row"
+   ],
+   "def_digest": "1232a9c06b1d27a4bdf277492116e66b9b2b1d9059a8da699b6671430f3ef45b",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "assertion+expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (i)): add_episode replaces a row under another owner",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_premise_holds_at_the_store_write[episode-user_id]": "expected-refusal-missing",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-user_id]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_present_redacted_episode_is_refused_to_another_owner": "assertion",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_refused_owner_change_writes_nothing[different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_refused_owner_change_writes_nothing[same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-cached-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-cached-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-compiled-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-compiled-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-cached-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-cached-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-compiled-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-compiled-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-cached-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-cached-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-compiled-different-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-compiled-same-view]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_the_refusal_holds_against_another_connections_persisted_row": "expected-refusal-missing"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_a_premise_holds_at_the_store_write[episode-user_id]",
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_mutation_class_evicts_iff_it_moves_a_view[episode-same-id-user_id]",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_present_redacted_episode_is_refused_to_another_owner",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_refused_owner_change_writes_nothing[different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_refused_owner_change_writes_nothing[same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-cached-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-cached-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-compiled-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[after_snapshot-compiled-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-cached-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-cached-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-compiled-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_recall-compiled-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-cached-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-cached-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-compiled-different-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_owner_change_is_refused_and_the_former_owner_asserts_nothing_it_lost[before_snapshot-compiled-same-view]",
+    "tests/test_rii_r3_01_episode_owner.py::test_the_refusal_holds_against_another_connections_persisted_row"
+   ],
+   "def_digest": "dd2cd8757de116dd0f81ba53eb1947bf884f8f7d01ba5dff35d07143385b0079",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "assertion+expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (i)): the owner compared against the incoming record, not the persisted row",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_01_episode_owner.py::test_a_deleted_but_reserved_id_is_refused_to_every_owner[another-owner]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_every_episode_writer_refuses_by_the_id_or_mints_it": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_01_episode_owner.py::test_a_deleted_but_reserved_id_is_refused_to_every_owner[another-owner]",
+    "tests/test_rii_r3_01_episode_owner.py::test_every_episode_writer_refuses_by_the_id_or_mints_it"
+   ],
+   "def_digest": "4bc33e9a540ea8cf9c9cc137f6c07f7492679bb4255ac895fa4f4bc80d9805c3",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "assertion+expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (ii)): add_episode's reservation read under the incoming owner",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_01_episode_owner.py::test_a_deleted_but_reserved_id_is_refused_to_every_owner[another-owner]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_deleted_but_reserved_id_is_refused_to_every_owner[the-reserving-owner]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[another-owner-import]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[another-owner-restore]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[the-reserving-owner-import]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[the-reserving-owner-restore]": "expected-refusal-missing"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_01_episode_owner.py::test_a_deleted_but_reserved_id_is_refused_to_every_owner[another-owner]",
+    "tests/test_rii_r3_01_episode_owner.py::test_a_deleted_but_reserved_id_is_refused_to_every_owner[the-reserving-owner]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[another-owner-import]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[another-owner-restore]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[the-reserving-owner-import]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[the-reserving-owner-restore]"
+   ],
+   "def_digest": "c91e86e8682bbd0773494a4c44435b0fe522c1223081cdc26b15c88c64f48c91",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (ii)): the store-wide reservation ignores a deleted input's claim",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_01_episode_owner.py::test_a_redacted_then_deleted_id_is_refused_to_every_owner[another-owner]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_every_episode_writer_refuses_by_the_id_or_mints_it": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_01_episode_owner.py::test_a_redacted_then_deleted_id_is_refused_to_every_owner[another-owner]",
+    "tests/test_rii_r3_01_episode_owner.py::test_every_episode_writer_refuses_by_the_id_or_mints_it"
+   ],
+   "def_digest": "43e9d0f338b3f5cad588ea5bbbe46d429b7db6039fb0fca5ffcb1ec08a9820d2",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "assertion+expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (iii)): add_episode's attestation read under the incoming owner",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_01_episode_owner.py::test_another_users_standing_notice_never_covers_a_forged_redacted_reason[A-holds-a-standing-notice-edge]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_another_users_standing_notice_never_covers_a_forged_redacted_reason[A-holds-a-standing-notice-episode]": "expected-refusal-missing"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_01_episode_owner.py::test_another_users_standing_notice_never_covers_a_forged_redacted_reason[A-holds-a-standing-notice-edge]",
+    "tests/test_rii_r3_01_episode_owner.py::test_another_users_standing_notice_never_covers_a_forged_redacted_reason[A-holds-a-standing-notice-episode]"
+   ],
+   "def_digest": "554377354433f7555ecffa0f23ab3c870ec154b791b551df5ee5e08328da3387",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (iii)): every attestation reader keys by the id (another user's standing notice covers a forged redacted reason at the import; research c31b3190)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[another-owner-import]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[another-owner-restore]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[the-reserving-owner-import]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[the-reserving-owner-restore]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_every_episode_writer_refuses_by_the_id_or_mints_it": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[another-owner-import]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[another-owner-restore]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[the-reserving-owner-import]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_a_deleted_but_reserved_id_is_refused[the-reserving-owner-restore]",
+    "tests/test_rii_r3_01_episode_owner.py::test_every_episode_writer_refuses_by_the_id_or_mints_it"
+   ],
+   "def_digest": "4448ac77555142757d4b898770d0a4ae706239a054f0f2b2974a4ce4f6c4573b",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "assertion+expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (ii)): the import admits an id a non-quiescent op reserves",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_another_owners_redacted_id_is_refused[import]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_another_owners_redacted_id_is_refused[restore]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_every_episode_writer_refuses_by_the_id_or_mints_it": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_another_owners_redacted_id_is_refused[import]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_another_owners_redacted_id_is_refused[restore]",
+    "tests/test_rii_r3_01_episode_owner.py::test_every_episode_writer_refuses_by_the_id_or_mints_it"
+   ],
+   "def_digest": "83d2e9bc44a64ec134da2b2a2ee6e7dd0d70ce8fe99298ebe60cc189319eda7f",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "assertion+expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (iii)): the import admits an id another owner's redaction attests",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_another_owners_redacted_id_is_refused[import]": "expected-refusal-missing",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_another_owners_redacted_id_is_refused[restore]": "expected-refusal-missing"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_another_owners_redacted_id_is_refused[import]",
+    "tests/test_rii_r3_01_episode_owner.py::test_an_import_of_another_owners_redacted_id_is_refused[restore]"
+   ],
+   "def_digest": "b82b4fd0adf89cd5ea9ee2038ec36a069c126b6b7ff46d314cce3b0f4f32dcb2",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "expected-refusal-missing",
+   "mutant": "0004 W11 (\u00a72c (iii)): another owner's redaction read as the destination's own",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_write_path_premise_names_its_guard_and_has_a_refusal_cell": "assertion",
+    "tests/test_rii_r3_01_episode_owner.py::test_the_protocol_states_the_obligation_the_backend_enforces": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r2_01_writer_inventory.py::test_every_write_path_premise_names_its_guard_and_has_a_refusal_cell",
+    "tests/test_rii_r3_01_episode_owner.py::test_the_protocol_states_the_obligation_the_backend_enforces"
+   ],
+   "def_digest": "fe6380e37c917369aba03fd5693fac1a4ba047a8d7c698a24bedd20e059f3884",
+   "file": "src/veracium/schema.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the episode owner's KEEP reason names no guard",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_01_episode_owner.py::test_the_protocol_states_the_obligation_the_backend_enforces": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_01_episode_owner.py::test_the_protocol_states_the_obligation_the_backend_enforces"
+   ],
+   "def_digest": "1a1ec325c4234aadc6f1c8ee7b81cea006e909280e445023bd2949b536e1c279",
+   "file": "src/veracium/store/base.py",
+   "group": "R-II r3 RII-R3-01 (0004 v3.5 \u00a72c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id)",
+   "kill_kind": "assertion",
+   "mutant": "0004 W11: the Store protocol states no add_episode obligation",
    "outcome": "KILLED"
   },
   {
@@ -12846,13 +13126,13 @@
  ],
  "summary": {
   "controls_green": true,
-  "groups": 117,
+  "groups": 118,
   "kill_kinds": [
    "assertion",
    "assertion+expected-refusal-missing",
    "expected-refusal-missing"
   ],
-  "killed": 532,
-  "mutants": 532
+  "killed": 543,
+  "mutants": 543
  }
 }

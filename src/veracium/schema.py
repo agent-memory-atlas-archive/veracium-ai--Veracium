@@ -1405,7 +1405,7 @@ ASSERTION_VIEW_KEEPS: dict = {
     },
     "episode": {
         "id": "the row's identity, never asserted",
-        "user_id": "immutable",
+        "user_id": "immutable on every persistence path (0004 §2c (i), store/base.py's add_episode obligation)",
         "kind": "an outcome episode renders by its date and summary, which are in the view",
         "edge_id": "the judged edge's id on an outcome episode",
         "outcome": "an outcome episode's status, not rendered",

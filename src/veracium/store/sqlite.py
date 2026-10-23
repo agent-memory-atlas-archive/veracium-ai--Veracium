@@ -78,6 +78,8 @@ _SITE_IMPORT_NOTICE_UNSHOWN = declare_site("store.import.notice-record-unredacte
 # own total treatment); PENDING and STANDING rows hold a foreign body and attest nothing. Until v16 the state was
 # derived (`event_ref IS NULL AND source_origin IS NOT NULL` read as standing); v16 stores it.
 _APPLIED_SQL = "(state = 'applied')"
+# `_attested_fields`'s by-ID key: add_episode's INV-11 refusal, whoever redacted the record (RII-R3-01, N1).
+_ANY_OWNER = object()
 _SITE_UPSERT_INVALIDATION_REASON = declare_site("store.upsert.invalidation-reason-not-registered")
 _SITE_EPISODE_RETIRED_REASON = declare_site("store.episode.retired-reason-not-registered")
 _SITE_IMPORT_REASON = declare_site("store.import.reason-not-registered")
@@ -95,11 +97,13 @@ _SITE_TXN_LOCKED = declare_site("store.txn.locked")
 _SITE_TXN_LOCKED_RETRY = declare_site("store.txn.locked-retry")
 _SITE_ABANDON_LIVE_LEASE = declare_site("store.consolidation.abandon-live-lease")
 _SITE_ADD_EPISODE = declare_site("store.add-episode")
+_SITE_ADD_EPISODE_OWNER = declare_site("store.add-episode.owner")      # 0004 v3.5 §2c (i): the persisted owner
 _SITE_OUTCOME_CONTEXT_REF = declare_site("store.outcome.context-ref")
 _SITE_SUPERSESSION_INTEGRITY = declare_site("store.supersession.integrity")
 _SITE_CORRECTION_AUTHORISATION = declare_site("store.correction.authorisation")
 _SITE_SUPERSESSION_PLAN = declare_site("store.supersession.plan")
 _SITE_IMPORT_PLAN = declare_site("store.import-plan")
+_SITE_IMPORT_RESERVED = declare_site("store.import.reserved-id")      # 0010 X21 at the import (0004 v3.5 §2c (ii))
 _SITE_CONFIRM_UNKNOWN_EDGE = declare_site("store.confirm.unknown-edge")
 _SITE_CONFIRM_NOT_ASSERTABLE = declare_site("store.confirm.not-assertable")
 _SITE_CONFIRM_REQUEST_DIGEST = declare_site("store.confirm.request-digest")
@@ -2282,25 +2286,41 @@ class SqliteStore(Store):
             # instance lock serialises only this connection), so a second connection's redaction or claim
             # committing in between was overwritten. The checks above read only the argument and stay outside.
             with self._lock, self._write_txn():
+                # RII-R3-01 (the specs/0008 §6d ownership guard, the edge writer's shape): an episode's `user_id`
+                # never changes through a same-ID replacement — the Store protocol's add_episode obligation, which
+                # the assertion view's KEEP reason for `user_id` cites. Compared against the PERSISTED row, inside
+                # the write's transaction: a replacement under another owner left the former owner's cached wiki
+                # asserting an input it no longer held, and the eviction and bump below addressed only the newcomer.
+                prior = self._conn.execute("SELECT user_id, json FROM episodes WHERE id=?", (episode.id,)).fetchone()
+                with _SITE_ADD_EPISODE_OWNER.consult():
+                    if prior is not None and prior[0] != episode.user_id:
+                        raise _SITE_ADD_EPISODE_OWNER.fire(ValueError(
+                            f"cannot change episode {episode.id!r}'s user_id "
+                            f"({prior[0]!r} → {episode.user_id!r}) — ownership is not "
+                            f"transferable through add_episode (specs/0008 §6d's guard)"), "user-id")
+                # The two stored-state refusals below key on the ID, never on the incoming writer's user_id: ids are
+                # unique across the store, and the state they consult can outlive the row it names (an owner's
+                # deleted-but-redacted episode; an op's deleted-but-reserved input), where the guard above has no
+                # row to compare. INV-11's WRITE refusal only — the readers stay per user (N1, RULED 2026-10-23).
                 with _SITE_EPISODE_ATTESTED.consult():
-                    attested = self._attested_fields(episode.user_id, "episode", episode.id, coverage=False)
+                    attested = self._attested_fields(_ANY_OWNER, "episode", episode.id, coverage=False)
                     if attested:
                         raise _SITE_EPISODE_ATTESTED.fire(ValueError(
                             f"refused: episode {episode.id!r} is redacted — a redaction record attests "
                             f"{sorted(attested)}; an ordinary write may not repopulate it (specs/0041 §4b-ii, INV-11)"))
                 # specs/0010 X21: an id RESERVED by a non-quiescent op is refused — the
                 # reservation survives the input's physical deletion until the op finalizes
-                # or cleanly abandons (so a deleted-but-reserved id cannot be recreated).
-                if episode.id in self._reserved_ids(episode.user_id):
+                # or cleanly abandons (so a deleted-but-reserved id cannot be recreated),
+                # by ANY op, whoever owns it (research's B1: per owner, another user took it).
+                if self._id_reserved(episode.id):
                     raise _SITE_ADD_EPISODE.fire(ValueError(
                         f"add_episode refuses reserved id {episode.id!r} — it is claimed by "
                         f"an in-flight consolidation (specs/0010 X21)"), "reserved-id")
-                prior = self._conn.execute("SELECT json FROM episodes WHERE id=?", (episode.id,)).fetchone()
                 new_json = episode.model_dump_json()
                 self._conn.execute(
                     "INSERT OR REPLACE INTO episodes(id,user_id,date,json) VALUES(?,?,?,?)",
                     (episode.id, episode.user_id, episode.date, new_json))
-                self._evict_wiki_on_view_change(episode.user_id, Episode, prior[0] if prior else None, new_json)
+                self._evict_wiki_on_view_change(episode.user_id, Episode, prior[1] if prior else None, new_json)
                 self._bump(episode.user_id)
 
     def episodes(self, user_id, *, limit=None,
@@ -2701,6 +2721,21 @@ class SqliteStore(Store):
                         if prior is None:
                             created.add(("edge", edge.id))
                     for ep in episodes:
+                        # 0004 v3.5 §2c (ii)/(iii) at the import's episode admission (R-II round 3): the id's stored
+                        # state is read by the ID. An id a non-quiescent op reserves is refused whoever owns the op, the
+                        # destination included (0010 X21: its finalize deletes its claimed ids); an id ANOTHER owner's
+                        # applied redaction attests is refused. The destination's own attestation keeps §4g's rule below.
+                        with _SITE_IMPORT_ATTESTED.consult():
+                            if self._attested_by_another_owner("episode", ep.id, user_id):
+                                raise _SITE_IMPORT_ATTESTED.fire(ValueError(
+                                    f"refused: imported episode {ep.id!r} is redacted in this store under another "
+                                    f"owner — the redaction holds the id; nothing imported (specs/0041 INV-11; "
+                                    f"0004 §2c (iii))"), "another-owners-redaction")
+                        with _SITE_IMPORT_RESERVED.consult():
+                            if self._id_reserved(ep.id):
+                                raise _SITE_IMPORT_RESERVED.fire(ValueError(
+                                    f"refused: imported episode {ep.id!r} is reserved by an in-flight consolidation — "
+                                    f"nothing imported (specs/0010 X21; 0004 §2c (ii))"), "reserved-id")
                         arriving[("episode", ep.id)] = ep.model_dump_json()
                         if ("episode", ep.id) not in notice_targets and not self._attested_fields(user_id, "episode", ep.id, coverage=True):
                             self._refuse_redacted_reason(ep.retired_reason, f"imported episode {ep.id!r}", "import-episode")
@@ -3019,6 +3054,16 @@ class SqliteStore(Store):
             if op.state in RECOVERY_PENDING_STATES:
                 reserved.update(op.claimed_ids)
         return reserved
+
+    def _id_reserved(self, episode_id: str) -> bool:
+        """X21 for a WRITER: is `episode_id` claimed by ANY non-quiescent op, whoever owns it? Ids are unique across
+        the store, so the reservation binds the id: read through the incoming writer's `_reserved_ids`, a
+        deleted-but-reserved id was free to every other user (RII-R3-01, research's B1)."""
+        for r in self._conn.execute(f"SELECT {', '.join(self._OP_COLS)} FROM consolidation_ops").fetchall():
+            op = self._op_from_row(r)
+            if op.state in RECOVERY_PENDING_STATES and episode_id in op.claimed_ids:
+                return True
+        return False
 
     def _write_op(self, op: ConsolidationOp) -> None:
         self._conn.execute(
@@ -3346,14 +3391,26 @@ class SqliteStore(Store):
         `coverage=False` — ATTESTATION, APPLIED rows only: what this store has redacted (the local writers' INV-11
         refusal, R10-02's treated arrival); `coverage=True` — COVERAGE, every row whatever its state (0041 §11.6.6:
         "Coverage counts every notice for the target, whatever its state"): what an ARRIVING row may be admitted as,
-        which never writes held content."""
+        which never writes held content.
+        `user_id=_ANY_OWNER` keys the record by its ID alone, whoever redacted it: add_episode's INV-11 refusal
+        (RII-R3-01, N1 RULED 2026-10-23: "the redaction holds the ID"). Never a reader's key: a per-id reader would
+        apply one user's redaction to another's records."""
         out: set = set()
+        owner_sql = "" if user_id is _ANY_OWNER else " AND user_id=?"
+        args = (kind, target_id) if user_id is _ANY_OWNER else (kind, target_id, user_id)
         for (fields,) in self._conn.execute(
-                "SELECT fields FROM redactions WHERE user_id=? AND target_kind=? AND target_id=?"
+                "SELECT fields FROM redactions WHERE target_kind=? AND target_id=?" + owner_sql
                 + ("" if coverage else f" AND {_APPLIED_SQL}"),
-                (user_id, kind, target_id)):
+                args):
             out.update(json.loads(fields))
         return out
+
+    def _attested_by_another_owner(self, kind: str, target_id: str, user_id: str) -> bool:
+        """Does an APPLIED redaction under an owner other than `user_id` attest this id? The import's (iii): the
+        destination's own attestation has §4g's notice rule; another owner's holds the id outright."""
+        return self._conn.execute(
+            f"SELECT 1 FROM redactions WHERE target_kind=? AND target_id=? AND user_id<>? AND {_APPLIED_SQL} LIMIT 1",
+            (kind, target_id, user_id)).fetchone() is not None
 
     def redacted_targets(self, user_id: str, kind: str) -> frozenset:
         """specs/0041 §4b-iii (tranche 4a): the ids of this user's ATTESTED-redacted records of one kind — the

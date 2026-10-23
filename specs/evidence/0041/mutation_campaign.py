@@ -133,9 +133,11 @@ MUTANTS = [
      '            attested = self._attested_fields(edge.user_id, "edge", edge.id, coverage=False)\n',
      '            attested = self._attested_fields(edge.user_id, "edge", edge.id, coverage=True)\n',
      "a standing or pending notice refuses the user's own edge write of its id again"),
+    # re-anchored 2026-10-23 (R-II round 3's RII-R3-01, 0004 v3.5 §2c (iii)): add_episode's attestation is keyed by the
+    # id (_ANY_OWNER), so the key argument moved; the mutation is the same reader swap
     ("PA1-writer-episode", FINDING, "store/sqlite.py",
-     '                    attested = self._attested_fields(episode.user_id, "episode", episode.id, coverage=False)\n',
-     '                    attested = self._attested_fields(episode.user_id, "episode", episode.id, coverage=True)\n',
+     '                    attested = self._attested_fields(_ANY_OWNER, "episode", episode.id, coverage=False)\n',
+     '                    attested = self._attested_fields(_ANY_OWNER, "episode", episode.id, coverage=True)\n',
      "a standing or pending notice refuses the user's own episode write of its id again"),
     ("PA1-readers", FINDING, "store/sqlite.py",
      '            f"SELECT DISTINCT target_id FROM redactions WHERE user_id=? AND target_kind=? AND {_APPLIED_SQL}",\n',

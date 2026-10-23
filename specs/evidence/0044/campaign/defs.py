@@ -2661,7 +2661,7 @@ GROUPS = [('T2 (0019 v7: the non-user refusal)',
     '            return\n'),
    ("0004 W10: add_episode's same-ID replace does not evict (research's S2, episodes)",
     'src/veracium/store/sqlite.py',
-    '                self._evict_wiki_on_view_change(episode.user_id, Episode, prior[0] if prior else None, '
+    '                self._evict_wiki_on_view_change(episode.user_id, Episode, prior[1] if prior else None, '
     'new_json)\n',
     ''),
    ('0004 W10: delete_episode does not evict a drawn episode',
@@ -2728,7 +2728,59 @@ GROUPS = [('T2 (0019 v7: the non-user refusal)',
    ("0004 W13: the discard drops whatever row is cached (a newer compile's included)",
     'src/veracium/store/sqlite.py',
     '"DELETE FROM wiki WHERE user_id=? AND text=? AND store_version=?"',
-    '"DELETE FROM wiki WHERE user_id=? AND ? IS NOT NULL AND ? IS NOT NULL"')])]
+    '"DELETE FROM wiki WHERE user_id=? AND ? IS NOT NULL AND ? IS NOT NULL"')]),
+ ('R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the '
+  'id)',
+  ['tests/test_rii_r3_01_episode_owner.py', 'tests/test_rii_r2_01_writer_inventory.py'],
+  [('0004 W11 (§2c (i)): add_episode replaces a row under another owner',
+    'src/veracium/store/sqlite.py',
+    '                    if prior is not None and prior[0] != episode.user_id:\n',
+    '                    if False:\n'),
+   ('0004 W11 (§2c (i)): the owner compared against the incoming record, not the persisted row',
+    'src/veracium/store/sqlite.py',
+    '                    if prior is not None and prior[0] != episode.user_id:\n',
+    '                    if prior is not None and episode.user_id != episode.user_id:\n'),
+   ("0004 W11 (§2c (ii)): add_episode's reservation read under the incoming owner",
+    'src/veracium/store/sqlite.py',
+    '                if self._id_reserved(episode.id):\n',
+    '                if episode.id in self._reserved_ids(episode.user_id):\n'),
+   ("0004 W11 (§2c (ii)): the store-wide reservation ignores a deleted input's claim",
+    'src/veracium/store/sqlite.py',
+    '            if op.state in RECOVERY_PENDING_STATES and episode_id in op.claimed_ids:\n',
+    '            if op.state in RECOVERY_PENDING_STATES and episode_id in op.claimed_ids and False:\n'),
+   ("0004 W11 (§2c (iii)): add_episode's attestation read under the incoming owner",
+    'src/veracium/store/sqlite.py',
+    '                    attested = self._attested_fields(_ANY_OWNER, "episode", episode.id, coverage=False)\n',
+    '                    attested = self._attested_fields(episode.user_id, "episode", episode.id, coverage=False)\n'),
+   ("0004 W11 (§2c (iii)): every attestation reader keys by the id (another user's standing notice covers a forged "
+    'redacted reason at the import; research c31b3190)',
+    'src/veracium/store/sqlite.py',
+    '        owner_sql = "" if user_id is _ANY_OWNER else " AND user_id=?"\n'
+    '        args = (kind, target_id) if user_id is _ANY_OWNER else (kind, target_id, user_id)\n',
+    '        owner_sql = ""\n        args = (kind, target_id)\n'),
+   ('0004 W11 (§2c (ii)): the import admits an id a non-quiescent op reserves',
+    'src/veracium/store/sqlite.py',
+    '                            if self._id_reserved(ep.id):\n',
+    '                            if False:\n'),
+   ("0004 W11 (§2c (iii)): the import admits an id another owner's redaction attests",
+    'src/veracium/store/sqlite.py',
+    '                            if self._attested_by_another_owner("episode", ep.id, user_id):\n',
+    '                            if False:\n'),
+   ("0004 W11 (§2c (iii)): another owner's redaction read as the destination's own",
+    'src/veracium/store/sqlite.py',
+    '            f"SELECT 1 FROM redactions WHERE target_kind=? AND target_id=? AND user_id<>? AND {_APPLIED_SQL} '
+    'LIMIT 1",\n',
+    '            f"SELECT 1 FROM redactions WHERE target_kind=? AND target_id=? AND user_id=? AND {_APPLIED_SQL} '
+    'LIMIT 1",\n'),
+   ("0004 W11: the episode owner's KEEP reason names no guard",
+    'src/veracium/schema.py',
+    '        "user_id": "immutable on every persistence path (0004 §2c (i), store/base.py\'s add_episode '
+    'obligation)",\n',
+    '        "user_id": "immutable",\n'),
+   ('0004 W11: the Store protocol states no add_episode obligation',
+    'src/veracium/store/base.py',
+    '        `user_id` never changes — compared against the PERSISTED prior row, and\n',
+    "        the owner is a backend's concern, and\n")])]
 
 PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the confirmations of the user) :: C11: forget_user keeps the user's confirmations": {'reanchored': None,
                                                                                                                                                     'source': 't12_rows_mutant_defs.py',
@@ -3021,7 +3073,33 @@ PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the 
  "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: a fresh record evicts (W3's staleness counter overridden)": {'reanchored': None,
                                                                                                                                                                  'source': 'rii_r2_01_mutant_defs.py',
                                                                                                                                                                  'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
- "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: add_episode's same-ID replace does not evict (research's S2, episodes)": {'reanchored': None,
+ "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: add_episode's same-ID replace does not evict (research's S2, episodes)": {'reanchored': 'R-II '
+                                                                                                                                                                                            'round '
+                                                                                                                                                                                            "3's "
+                                                                                                                                                                                            'RII-R3-01: '
+                                                                                                                                                                                            "add_episode's "
+                                                                                                                                                                                            'prior-row '
+                                                                                                                                                                                            'read '
+                                                                                                                                                                                            'now '
+                                                                                                                                                                                            'selects '
+                                                                                                                                                                                            '(user_id, '
+                                                                                                                                                                                            'json) '
+                                                                                                                                                                                            'for '
+                                                                                                                                                                                            'the '
+                                                                                                                                                                                            'persisted-owner '
+                                                                                                                                                                                            'refusal, '
+                                                                                                                                                                                            'so '
+                                                                                                                                                                                            'the '
+                                                                                                                                                                                            'json '
+                                                                                                                                                                                            'is '
+                                                                                                                                                                                            'prior[1]; '
+                                                                                                                                                                                            'the '
+                                                                                                                                                                                            'mutant '
+                                                                                                                                                                                            'deletes '
+                                                                                                                                                                                            'the '
+                                                                                                                                                                                            'same '
+                                                                                                                                                                                            'eviction '
+                                                                                                                                                                                            'call',
                                                                                                                                                                               'source': 'rii_r2_01_mutant_defs.py',
                                                                                                                                                                               'source_sha256': 'b82583e1f91e5c485aa2b0c8692ef5b0936e49df1e679e88289dc89258207e72'},
  "R-II r2 RII-R2-01 (0004 W10-W13, 0047 INV-R18: the wiki bound across same-ID writes) :: 0004 W10: any stored change evicts (research's S1: W3/W8 and every record_outcome evict)": {'reanchored': None,
@@ -3111,6 +3189,39 @@ PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the 
  'R-II r2 V1 (c, d: the held basetemp and the sqlite error names) :: V1 (d): only the outermost exception read': {'reanchored': None,
                                                                                                                   'source': 'rii_r2_mutant_defs.py',
                                                                                                                   'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
+ 'R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (i)): add_episode replaces a row under another owner': {'reanchored': None,
+                                                                                                                                                                                              'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                              'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ 'R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (i)): the owner compared against the incoming record, not the persisted row': {'reanchored': None,
+                                                                                                                                                                                                                     'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                                                     'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ "R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (ii)): add_episode's reservation read under the incoming owner": {'reanchored': None,
+                                                                                                                                                                                                        'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                                        'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ 'R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (ii)): the import admits an id a non-quiescent op reserves': {'reanchored': None,
+                                                                                                                                                                                                    'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                                    'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ "R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (ii)): the store-wide reservation ignores a deleted input's claim": {'reanchored': None,
+                                                                                                                                                                                                           'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                                           'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ "R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (iii)): add_episode's attestation read under the incoming owner": {'reanchored': None,
+                                                                                                                                                                                                         'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                                         'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ "R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (iii)): another owner's redaction read as the destination's own": {'reanchored': None,
+                                                                                                                                                                                                         'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                                         'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ "R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (iii)): every attestation reader keys by the id (another user's standing notice covers a forged redacted reason at the import; research c31b3190)": {'reanchored': None,
+                                                                                                                                                                                                                                                                                           'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                                                                                                                           'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ "R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (iii)): the import admits an id another owner's redaction attests": {'reanchored': None,
+                                                                                                                                                                                                           'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                                           'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ 'R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11: the Store protocol states no add_episode obligation': {'reanchored': None,
+                                                                                                                                                                                         'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                         'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
+ "R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11: the episode owner's KEEP reason names no guard": {'reanchored': None,
+                                                                                                                                                                                    'source': 'rii_r3_01_mutant_defs.py',
+                                                                                                                                                                                    'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},
  'RA-01 (0010 X21 at the treatment body: no caller treats a claimed episode) :: RA-01: drop the reservation guard from _redact_in_txn': {'reanchored': None,
                                                                                                                                          'source': 'ra2_mutant_defs.py',
                                                                                                                                          'source_sha256': 'ce772413f215637b7d15aa0f168f7c762802d65de473cb691b5ff73b1b585ed5'},

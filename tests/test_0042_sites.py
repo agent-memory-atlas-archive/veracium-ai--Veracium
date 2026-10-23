@@ -832,6 +832,30 @@ def _embedding(edge_exists, digest):
     s.close()
 
 
+def _stored_episode():
+    """0004 v3.5 §2c (i)'s setup: one stored episode, so the measured call is the same-ID write under another owner."""
+    s = _store(); s.add_episode(_episode("own")); return s
+
+
+def _import_of_a_reserved_id(tmp_path_factory=None):
+    """0010 X21 at the import (0004 v3.5 §2c (ii)): an archive carrying an id a non-quiescent op reserves after the
+    fenced delete of its inputs (R-II round 3)."""
+    import tempfile
+    from veracium.schema import ConsolidationOutputDraft, ConsolidationState as CS
+    with tempfile.TemporaryDirectory() as d:
+        src = veracium.Memory(llm=lambda p, **k: "", config=MemoryConfig(db_path=f"{d}/src.db"))
+        src.store.add_episode(_episode("res-y")); src.export_memory(U, f"{d}/x.jsonl"); src.close()
+        dst = veracium.Memory(llm=lambda p, **k: "", config=MemoryConfig(db_path=f"{d}/dst.db")); s = dst.store
+        s.add_episode(_episode("res-y")); s.add_episode(_episode("res-z"))
+        op = s.create_or_takeover_consolidation(U, ["res-y", "res-z"], "w1", 60)
+        assert s.transition_consolidation_if_current(op.operation_id, op.fence, "w1", CS.GENERATING)
+        assert s.write_consolidation_output_if_current(op.operation_id, op.fence, "w1", ConsolidationOutputDraft(
+            summary="y and z", date_start=NOW.date().isoformat(), date_end=NOW.date().isoformat()))
+        assert s.transition_consolidation_if_current(op.operation_id, op.fence, "w1", CS.OUTPUTS_DURABLE)
+        assert s.delete_claimed_inputs_if_current(op.operation_id, op.fence)
+        _raises(ValueError, dst.import_memory, f"{d}/x.jsonl", user_id=U); dst.close()
+
+
 def _import_plan_missing_fields():
     s = _store()
     with pytest.raises(ValueError):
@@ -891,6 +915,9 @@ DECLINES.update({
     "store.correction.authorisation": lambda mp: _correction_without_authorisation(),
     "store.supersession.plan": TwoPhase(lambda mp: _absorption_plan_with_duplicate_draft(), lambda st: _raises(SupersessionIntegrityError, st[0].apply_supersession_plan, st[1])),
     "store.import-plan": lambda mp: _import_plan_missing_fields(),
+    "store.add-episode.owner": TwoPhase(lambda mp: _stored_episode(), lambda s: _raises(
+        ValueError, s.add_episode, _episode("own").model_copy(update={"user_id": "someone-else"}))),
+    "store.import.reserved-id": lambda mp: _import_of_a_reserved_id(),
     "store.confirm.unknown-edge": lambda mp: _raises(KeyError, _confirm, _store()),
     "store.confirm.not-assertable": TwoPhase(lambda mp: _quarantined_store(), lambda s: _raises(ValueError, _confirm, s)),
     "store.confirm.request-digest": TwoPhase(lambda mp: _confirmed_once(), lambda s: _raises(ValueError, _confirm, s, request_digest="DIFFERENT")),
