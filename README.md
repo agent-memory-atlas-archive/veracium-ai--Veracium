@@ -57,8 +57,11 @@ in Memory-Architecture Rankings"* ([arXiv:2607.21962](https://arxiv.org/abs/2607
 pip install "veracium[anthropic]"   # core + the reference LLM provider
 ```
 
-> **SQLite requirement.** Veracium currently opens or creates a store only on the one SQLite build it has been
-> qualified on: SQLite 3.45.1 as packaged by Ubuntu 24.04 (its system Python, for example). On every other SQLite
+> **Python and SQLite requirement.** Veracium needs Python 3.14 or newer, and it currently opens or creates a store
+> only on the one SQLite build it has been qualified on: SQLite 3.45.1 as packaged by Ubuntu 24.04. A Python 3.14
+> linked against that system SQLite runs, as GitHub's setup-python builds do; uv's, python.org's and Homebrew's 3.14
+> builds bundle a newer SQLite and refuse, even a fresh store. Ubuntu 24.04's own system Python is 3.12, below the
+> floor: `pip` there installs 0.26.1, the last release that supports it. On every other SQLite
 > build — including other 3.45.1 builds, since the check is on the exact build — it refuses to create a store AND
 > refuses to open an existing one, so moving to a Python whose SQLite differs leaves earlier stores unopenable
 > there until that build is supported. A version check can
