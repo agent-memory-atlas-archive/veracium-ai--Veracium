@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+- **Changed: an import that carries a record id another user holds in this store is refused at once, as an ownership
+  conflict** (research's N2 at R-II round 3; specs/0009 §4c, 0008 §6d, 0004 §2c (i)). Before, the import retried eight
+  times and refused with "import kept losing a race against concurrent writes", though nothing raced: the preflight
+  reads the destination per user and could not see the other user's row. Nothing was imported then either. Now the
+  first attempt refuses with "edge 'x' is held by another user in this store … nothing imported" (or "episode 'x'").
+  The message says another user holds the id and never names which one (the owner's ruling, 2026-10-24). An import
+  of your own records is unchanged. (tests/test_rii_r3_n2_import_owner_conflict.py.)
+- **Fixed: an episode's owner never changes through `add_episode`, and an id held by a redaction or an in-flight
+  consolidation is refused to every user** (R-II round 3's RII-R3-01; specs/0004 v3.5 §2c (i)–(iii)). A same-ID
+  `add_episode` under another `user_id` replaced the episode and dropped only the new owner's cached wiki, so the
+  former owner's wiki could keep asserting an episode they no longer held. Now, inside its write transaction,
+  `add_episode` refuses with `ValueError`, writing nothing: an owner change ("ownership is not transferable through
+  add_episode"); an id an in-flight consolidation reserves, whoever's consolidation it is, including after the episode
+  row is deleted (0010 X21); and an id a redaction record attests, whoever redacted it ("the redaction holds the id",
+  the owner's ruling of 2026-10-23). `import_memory()` refuses the same two ids at its episode admission, in both
+  modes. Reads stay per user: another user's redaction never hides or changes your own records.
+  - **Who should act:** a custom `Store` backend: `Store.add_episode` now states this as an obligation (compare the
+    owner against the persisted row; decide the reservation and the redaction by the id). A host that reused one
+    episode id across users gets a refusal where it used to get a silent transfer.
+    (tests/test_rii_r3_01_episode_owner.py.)
+- **Fixed: a cached wiki stays bound to what it may assert across every write, same-ID replacements included**
+  (R-II round 2's RII-R2-01; specs/0004 v3.4 §4c, 0047 v1.17). A same-ID `add_edge` or `add_episode` replacement could
+  retire a fact, lower its disclosure (`quarantined`, `use_only`), change its content or make it a challenged fact's
+  twin, and leave the cached wiki asserting the old record; so could a consolidation's cutover. Now any write that
+  replaces or deletes a stored edge or episode in a way that changes what a wiki may assert from it (the fields
+  `schema.assertion_view` names) drops the user's cached wiki in the same transaction, and a compiled body is checked
+  against each drawn record's current view before it is served. A body that fails that check is discarded from the
+  cache, so a retry never serves it back.
+  - **Who should act:** a custom `Store` backend must implement the new abstract `discard_wiki(user_id, text,
+    store_version)`: delete the wiki row only if it is still that row, and return whether it did.
+    (tests/test_rii_r2_01_writer_inventory.py.)
 - **Added: the subject's right of reply — `Memory.reply()` (specs/0047 §2–§4b, §4e; INV-R1, R2, R5, R7–R10, R13–R15,
   R17, R19, R22, R24).** A person can answer a remembered fact about them, and the answer is kept with the fact: a
   `challenge` ("that's wrong"), `context`, `withdrawn-consent`, or a `resolve` that withdraws one challenge of the same
