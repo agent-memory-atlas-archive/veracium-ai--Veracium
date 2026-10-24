@@ -372,9 +372,9 @@
   }
  ],
  "campaign": {
-  "defined": 543,
-  "pin_digest": "358b352f1e24b93c0f715d4b6b127c962e7fd16b111c8577a63702592f0b208c",
-  "results": 543,
+  "defined": 546,
+  "pin_digest": "10177700996d6895a86837e443a715b15ee1496c79b6541051701638a3c61063",
+  "results": 546,
   "retired": [
    {
     "commit": "e8e476e",
@@ -387,16 +387,16 @@
   ],
   "summary": {
    "controls_green": true,
-   "groups": 118,
+   "groups": 119,
    "kill_kinds": [
     "assertion",
     "assertion+expected-refusal-missing",
     "expected-refusal-missing"
    ],
-   "killed": 543,
-   "mutants": 543
+   "killed": 546,
+   "mutants": 546
   },
-  "tree_digest": "358b352f1e24b93c0f715d4b6b127c962e7fd16b111c8577a63702592f0b208c"
+  "tree_digest": "10177700996d6895a86837e443a715b15ee1496c79b6541051701638a3c61063"
  },
  "findings_unbound_kills": [],
  "gates": {

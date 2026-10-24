@@ -2587,15 +2587,26 @@ class SqliteStore(Store):
                         "edge_ids", {}).items():
                     row = self._conn.execute(
                         "SELECT user_id FROM edges WHERE id=?", (eid,)).fetchone()
+                    # research's N2 (R-II round 3): an id ANOTHER user holds is never a lost race. The preflight reads
+                    # per user and cannot see that row, so a retry re-plans the same collision; it used to exhaust the
+                    # retries and refuse as "kept losing a race". The owner never changes (0008 §6d), so refuse it here
+                    if row is not None and row[0] != user_id:
+                        raise _SITE_IMPORT_PLAN.fire(ValueError(
+                            f"edge {eid!r} is held by another user in this store — record ids are store-wide and an "
+                            f"import never takes over another user's record; nothing imported (specs/0009 §4c, "
+                            f"0008 §6d)"), "owner-conflict")
                     present = row is not None
                     if present != expect_present:
                         return DESTINATION_CHANGED       # created/removed under us
-                    if present and row[0] != user_id:
-                        return DESTINATION_CHANGED       # ownership changed under us
                 for ep_id, expect_json in expected_destination_state.get(
                         "episode_records", {}).items():
                     row = self._conn.execute(
-                        "SELECT json FROM episodes WHERE id=?", (ep_id,)).fetchone()
+                        "SELECT json, user_id FROM episodes WHERE id=?", (ep_id,)).fetchone()
+                    if row is not None and row[1] != user_id:     # N2, as for edges (0004 v3.5 §2c (i))
+                        raise _SITE_IMPORT_PLAN.fire(ValueError(
+                            f"episode {ep_id!r} is held by another user in this store — record ids are store-wide and "
+                            f"an import never takes over another user's record; nothing imported (specs/0009 §4c, "
+                            f"0004 §2c (i))"), "owner-conflict")
                     current = row[0] if row is not None else None
                     if current != expect_json:           # RECORD equality, not id
                         return DESTINATION_CHANGED

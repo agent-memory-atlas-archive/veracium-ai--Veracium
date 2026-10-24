@@ -799,6 +799,31 @@ def test_review_archives_are_named_and_indexed():
     assert r.returncode == 0, r.stdout + r.stderr
 
 
+def _cited_invariant_tokens(body):
+    """The invariant-shaped tokens a spec body cites. A token followed by a hyphen and a digit is the round segment of
+    a review FINDING id (`R3-1`, `RII-R3-01`, `0042-R1-1`), another vocabulary: R-II round 3's 0004 v3.5 row could
+    not name RII-R3-01, since `R3` read as an undefined invariant, and `RII-R2-01` passed only because 0004 happens
+    to define an `R2`. Measured 2026-10-24 over every spec, counting only the tokens this gate compares (a prefix the
+    spec defines): 21 are so followed, 0004's six `RII-R2-01` and 0022's fifteen `R<round>-<n>`, all finding ids."""
+    import re
+    return re.findall(r"\b([A-Z]\d+[a-z]?)\b(?!-\d)", body)
+
+
+def test_the_invariant_gate_skips_finding_ids_and_reads_everything_else():
+    """The exemption is by the finding-id SHAPE (a hyphen and a digit follow), never by name; every other position of
+    an invariant token is still read: bare, a range's two ends, a prose compound, the INV- form, a trailing hyphen."""
+    cited = _cited_invariant_tokens
+    for finding in ("RII-R3-01", "R3-1", "0042-R1-1", "(R4-3)"):
+        assert cited(finding) == [], finding
+    assert cited("R3") == ["R3"]
+    assert cited("I3-I5") == ["I3", "I5"]
+    assert cited("I3–I5") == ["I3", "I5"]
+    assert cited("N4-decay and M6-import") == ["N4", "M6"]
+    assert cited("INV-R18") == ["R18"]
+    assert cited("see R3-") == ["R3"]
+    assert cited("RII-R3-01 cites R3") == ["R3"]
+
+
 def test_no_spec_cites_an_invariant_it_does_not_define():
     """Four review rounds of 0003 found prose referring to invariants the table
     no longer contained — I9 after it was replaced, I5 with its old meaning,
@@ -837,8 +862,7 @@ def test_no_spec_cites_an_invariant_it_does_not_define():
         for d in defined:
             by_prefix.setdefault(d[0], set()).add(d)
         for prefix, ids in sorted(by_prefix.items()):
-            cited = {c for c in re.findall(r"\b([A-Z]\d+[a-z]?)\b", body)
-                     if c[0] == prefix}
+            cited = {c for c in _cited_invariant_tokens(body) if c[0] == prefix}
             missing = cited - ids
             if missing:
                 problems.append(f"{f.name}: cites {sorted(missing)}, "

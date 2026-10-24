@@ -648,6 +648,18 @@ _CALLSITE_DISPOSITIONS = {
     ("test_rii_r3_01_episode_owner.py", "test_a_restore_replaying_finalized_outputs_is_admitted_beside_an_in_flight_op"): "restore",
     ("test_rii_r3_01_episode_owner.py", "test_one_users_standing_notice_does_not_reach_another_users_import_of_the_id"): "default",
     ("test_rii_r3_01_episode_owner.py", "test_another_users_standing_notice_never_covers_a_forged_redacted_reason"): "both",
+    # R-II round 3 NEXT-ROUND (research N2): an id another user holds is an owner conflict — the helper forwards
+    # `restore=` from each cell
+    ("test_rii_r3_n2_import_owner_conflict.py", "_import"): "both",
+    # the kind closure held on its own: A restores its notice-only cut; B imports its forged arrival by default
+    ("test_rii_r3_kind_closure_by_owner.py", "_a_holds_a_standing_notice_naming_kind"): "restore",
+    ("test_rii_r3_kind_closure_by_owner.py", "test_another_users_standing_notice_never_admits_a_marker_kind"): "default",
+    # R-II round 4: the reviewer's two files, byte-identical — each cell imports in both modes through its inner `run`
+    # (the MARKER file restores its notice-only cut first)
+    ("test_rii_r4_reviewer_import_boundary_atomicity.py", "run"): "both",
+    ("test_rii_r4_reviewer_import_boundary_atomicity.py", "test_import_checks_durable_id_state_and_rolls_back_prefix"): "both",
+    ("test_rii_r4_reviewer_marker_kind_owner.py", "run"): "both",
+    ("test_rii_r4_reviewer_marker_kind_owner.py", "test_marker_kind_coverage_is_owned_by_the_destination"): "both",
     # R-A round 2 (RA-01, RA-02): the notice boundaries the external reviewer found, both modes where parametrised
     ("test_0041_ra2_notice_boundaries.py", "test_a_restore_that_would_treat_a_claimed_episode_refuses_the_whole_unit"): "restore",
     ("test_0041_ra2_notice_boundaries.py", "test_a_prior_standing_notice_is_judged_on_the_arriving_copy"): "both",

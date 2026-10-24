@@ -2780,7 +2780,29 @@ GROUPS = [('T2 (0019 v7: the non-user refusal)',
    ('0004 W11: the Store protocol states no add_episode obligation',
     'src/veracium/store/base.py',
     '        `user_id` never changes — compared against the PERSISTED prior row, and\n',
-    "        the owner is a backend's concern, and\n")])]
+    "        the owner is a backend's concern, and\n")]),
+ ("R-II r3 NEXT-ROUND (research N2 and the kind closure's reader: another user's id and attestation at the import)",
+  ['tests/test_rii_r3_n2_import_owner_conflict.py',
+   'tests/test_rii_r3_kind_closure_by_owner.py',
+   'tests/test_rii_r4_reviewer_marker_kind_owner.py'],
+  [("N2 (0009 §4c, 0008 §6d): another user's edge id answered as a lost race",
+    'src/veracium/store/sqlite.py',
+    '                    if row is not None and row[0] != user_id:\n'
+    '                        raise _SITE_IMPORT_PLAN.fire(ValueError(\n',
+    '                    if row is not None and row[0] != user_id:\n'
+    '                        return DESTINATION_CHANGED\n'
+    '                        raise _SITE_IMPORT_PLAN.fire(ValueError(\n'),
+   ("N2 (0009 §4c, 0004 §2c (i)): another user's episode id answered as a lost race",
+    'src/veracium/store/sqlite.py',
+    '                    if row is not None and row[1] != user_id:     # N2, as for edges (0004 v3.5 §2c (i))\n',
+    '                    if False:     # N2, as for edges (0004 v3.5 §2c (i))\n'),
+   ("0041 §2d-iv (§4h(ii)): the import's kind closure reads another user's attestation (research c31b3190's third "
+    'reader)',
+    'src/veracium/store/sqlite.py',
+    '                                        or "kind" in self._attested_fields(user_id, "episode", ep.id, '
+    'coverage=True))):\n',
+    '                                        or "kind" in self._attested_fields(_ANY_OWNER, "episode", ep.id, '
+    'coverage=True))):\n')])]
 
 PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the confirmations of the user) :: C11: forget_user keeps the user's confirmations": {'reanchored': None,
                                                                                                                                                     'source': 't12_rows_mutant_defs.py',
@@ -3189,6 +3211,15 @@ PROVENANCE = {"0008 C11 (retention, erasure and export: forget_user deletes the 
  'R-II r2 V1 (c, d: the held basetemp and the sqlite error names) :: V1 (d): only the outermost exception read': {'reanchored': None,
                                                                                                                   'source': 'rii_r2_mutant_defs.py',
                                                                                                                   'source_sha256': '62738dc13c52602050235630114ea288d6565194ca7267f9e3c5461f7233a750'},
+ "R-II r3 NEXT-ROUND (research N2 and the kind closure's reader: another user's id and attestation at the import) :: 0041 §2d-iv (§4h(ii)): the import's kind closure reads another user's attestation (research c31b3190's third reader)": {'reanchored': None,
+                                                                                                                                                                                                                                             'source': 'rii_r3_next_mutant_defs.py',
+                                                                                                                                                                                                                                             'source_sha256': 'a475ffa0e8a6c4c571508a354a0e726154a7c4e9f618a25d50413ae5ea468bdf'},
+ "R-II r3 NEXT-ROUND (research N2 and the kind closure's reader: another user's id and attestation at the import) :: N2 (0009 §4c, 0004 §2c (i)): another user's episode id answered as a lost race": {'reanchored': None,
+                                                                                                                                                                                                       'source': 'rii_r3_next_mutant_defs.py',
+                                                                                                                                                                                                       'source_sha256': 'a475ffa0e8a6c4c571508a354a0e726154a7c4e9f618a25d50413ae5ea468bdf'},
+ "R-II r3 NEXT-ROUND (research N2 and the kind closure's reader: another user's id and attestation at the import) :: N2 (0009 §4c, 0008 §6d): another user's edge id answered as a lost race": {'reanchored': None,
+                                                                                                                                                                                                'source': 'rii_r3_next_mutant_defs.py',
+                                                                                                                                                                                                'source_sha256': 'a475ffa0e8a6c4c571508a354a0e726154a7c4e9f618a25d50413ae5ea468bdf'},
  'R-II r3 RII-R3-01 (0004 v3.5 §2c (i)-(iii), W11: the episode owner, the reservation and the redaction hold the id) :: 0004 W11 (§2c (i)): add_episode replaces a row under another owner': {'reanchored': None,
                                                                                                                                                                                               'source': 'rii_r3_01_mutant_defs.py',
                                                                                                                                                                                               'source_sha256': '15b05b521a50a123c253a594f2d1eec6571e3aaac6bd5425495f45d4ed1ce14b'},

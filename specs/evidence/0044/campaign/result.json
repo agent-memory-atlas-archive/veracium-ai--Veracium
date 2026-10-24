@@ -1284,6 +1284,22 @@
   },
   {
    "cells": [
+    "tests/test_rii_r3_n2_import_owner_conflict.py",
+    "tests/test_rii_r3_kind_closure_by_owner.py",
+    "tests/test_rii_r4_reviewer_marker_kind_owner.py"
+   ],
+   "control_after": {
+    "exit": 0,
+    "passed": 17
+   },
+   "control_before": {
+    "exit": 0,
+    "passed": 17
+   },
+   "group": "R-II r3 NEXT-ROUND (research N2 and the kind closure's reader: another user's id and attestation at the import)"
+  },
+  {
+   "cells": [
     "tests/test_0041_notice_state.py",
     "tests/test_0041_notice_binding_hotfix.py"
    ],
@@ -1702,7 +1718,7 @@
    "group": "R-II r2 V1 (c, d: the held basetemp and the sqlite error names)"
   }
  ],
- "pin_digest": "358b352f1e24b93c0f715d4b6b127c962e7fd16b111c8577a63702592f0b208c",
+ "pin_digest": "10177700996d6895a86837e443a715b15ee1496c79b6541051701638a3c61063",
  "rows": [
   {
    "anchor_count": 1,
@@ -11181,6 +11197,65 @@
   {
    "anchor_count": 1,
    "cell_kinds": {
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[both-default]": "assertion",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[both-restore]": "assertion",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[edge-default]": "assertion",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[edge-restore]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[both-default]",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[both-restore]",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[edge-default]",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[edge-restore]"
+   ],
+   "def_digest": "76b11aba837c577d67972f42b320822ae345ae234c0d8a56e1be22fe16c2bd0e",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 NEXT-ROUND (research N2 and the kind closure's reader: another user's id and attestation at the import)",
+   "kill_kind": "assertion",
+   "mutant": "N2 (0009 \u00a74c, 0008 \u00a76d): another user's edge id answered as a lost race",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_a_colliding_episode_refuses_the_files_new_edge_too": "assertion",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[episode-default]": "assertion",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[episode-restore]": "assertion"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_a_colliding_episode_refuses_the_files_new_edge_too",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[episode-default]",
+    "tests/test_rii_r3_n2_import_owner_conflict.py::test_another_users_id_is_refused_as_an_owner_conflict_at_the_first_attempt[episode-restore]"
+   ],
+   "def_digest": "339587e93f333c41ff033f6e617d8ee3f67d63d63b716288deb8b5c273d37b53",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 NEXT-ROUND (research N2 and the kind closure's reader: another user's id and attestation at the import)",
+   "kill_kind": "assertion",
+   "mutant": "N2 (0009 \u00a74c, 0004 \u00a72c (i)): another user's episode id answered as a lost race",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
+    "tests/test_rii_r3_kind_closure_by_owner.py::test_another_users_standing_notice_never_admits_a_marker_kind[A-holds-a-standing-notice]": "expected-refusal-missing",
+    "tests/test_rii_r4_reviewer_marker_kind_owner.py::test_marker_kind_coverage_is_owned_by_the_destination[import-other-owner]": "expected-refusal-missing",
+    "tests/test_rii_r4_reviewer_marker_kind_owner.py::test_marker_kind_coverage_is_owned_by_the_destination[restore-other-owner]": "expected-refusal-missing"
+   },
+   "cells_failed": [
+    "tests/test_rii_r3_kind_closure_by_owner.py::test_another_users_standing_notice_never_admits_a_marker_kind[A-holds-a-standing-notice]",
+    "tests/test_rii_r4_reviewer_marker_kind_owner.py::test_marker_kind_coverage_is_owned_by_the_destination[import-other-owner]",
+    "tests/test_rii_r4_reviewer_marker_kind_owner.py::test_marker_kind_coverage_is_owned_by_the_destination[restore-other-owner]"
+   ],
+   "def_digest": "9869cf2ebd09a8fd3c456b79eed4ce4a1c7da2b66d4f3cf167259e060a64cc1e",
+   "file": "src/veracium/store/sqlite.py",
+   "group": "R-II r3 NEXT-ROUND (research N2 and the kind closure's reader: another user's id and attestation at the import)",
+   "kill_kind": "expected-refusal-missing",
+   "mutant": "0041 \u00a72d-iv (\u00a74h(ii)): the import's kind closure reads another user's attestation (research c31b3190's third reader)",
+   "outcome": "KILLED"
+  },
+  {
+   "anchor_count": 1,
+   "cell_kinds": {
     "tests/test_0041_notice_state.py::test_coverage_counts_a_standing_notice_for_a_treated_arrivals_reason": "assertion"
    },
    "cells_failed": [
@@ -13126,13 +13201,13 @@
  ],
  "summary": {
   "controls_green": true,
-  "groups": 118,
+  "groups": 119,
   "kill_kinds": [
    "assertion",
    "assertion+expected-refusal-missing",
    "expected-refusal-missing"
   ],
-  "killed": 543,
-  "mutants": 543
+  "killed": 546,
+  "mutants": 546
  }
 }

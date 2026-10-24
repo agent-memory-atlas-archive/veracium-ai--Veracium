@@ -80,7 +80,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("agreement.py", 219): "predicate-helper", ("agreement.py", 267): "control-flow", ("agreement.py", 487): "control-flow",
     ("asof/adapter.py", 54): "internal-invariant", ("asof/resolve.py", 117): "internal-invariant", ("asof/resolve.py", 122): "internal-invariant",
     ("asof/resolve.py", 181): "control-flow", ("asof/resolve.py", 206): "predicate-helper",
-    ("compile.py", 204): "predicate-helper", ("schema.py", 659): "predicate-helper", ("compile.py", 406): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
+    ("compile.py", 204): "predicate-helper", ("diagnostics.py", 216): "predicate-helper", ("diagnostics.py", 249): "predicate-helper",
     ("doctor.py", 483): "predicate-helper", ("dryrun.py", 68): "predicate-helper",
     ("graph.py", 60): "predicate-helper", ("graph.py", 75): "predicate-helper", ("graph.py", 234): "internal-invariant",
     ("graph.py", 905): "argument-check", ("grounding.py", 154): "control-flow",
@@ -99,21 +99,23 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("store/sqlite.py", 279): "control-flow", ("store/sqlite.py", 356): "control-flow", ("store/sqlite.py", 436): "control-flow",
     ("store/sqlite.py", 532): "control-flow", ("store/sqlite.py", 615): "control-flow", ("store/sqlite.py", 1000): "control-flow",
     ("store/sqlite.py", 1330): "control-flow", ("store/sqlite.py", 1375): "control-flow", ("store/sqlite.py", 1446): "control-flow",
-    ("store/sqlite.py", 1462): "predicate-helper", ("store/sqlite.py", 1617): "control-flow", ("store/sqlite.py", 3006): "control-flow",
-    ("store/sqlite.py", 3037): "control-flow", ("store/sqlite.py", 3046): "predicate-helper", ("store/sqlite.py", 261): "argument-check",
-    ("store/sqlite.py", 511): "argument-check", ("store/sqlite.py", 3122): "argument-check", ("store/sqlite.py", 4004): "argument-check",
-    ("store/sqlite.py", 4019): "argument-check", ("store/sqlite.py", 506): "control-flow", ("store/sqlite.py", 1323): "control-flow",
+    ("store/sqlite.py", 1462): "predicate-helper", ("store/sqlite.py", 1617): "control-flow", ("store/sqlite.py", 3017): "control-flow",
+    ("store/sqlite.py", 3048): "control-flow", ("store/sqlite.py", 3057): "predicate-helper", ("store/sqlite.py", 261): "argument-check",
+    ("store/sqlite.py", 511): "argument-check", ("store/sqlite.py", 3133): "argument-check", ("store/sqlite.py", 4015): "argument-check",
+    ("store/sqlite.py", 4030): "argument-check", ("store/sqlite.py", 506): "control-flow", ("store/sqlite.py", 1323): "control-flow",
     ("store/sqlite.py", 1908): "control-flow", ("store/sqlite.py", 2184): "control-flow", ("store/sqlite.py", 2198): "control-flow",
-    ("store/sqlite.py", 2213): "control-flow", ("store/sqlite.py", 3355): "control-flow", ("store/sqlite.py", 3377): "control-flow",
-    ("store/sqlite.py", 4022): "control-flow", ("store/sqlite.py", 3095): "argument-check",
+    ("store/sqlite.py", 2213): "control-flow", ("store/sqlite.py", 3366): "control-flow", ("store/sqlite.py", 3388): "control-flow",
+    ("store/sqlite.py", 4033): "control-flow", ("store/sqlite.py", 3106): "argument-check",
     ("store/revocation.py", 56): "predicate-helper", ("store/revocation.py", 110): "control-flow", ("store/revocation.py", 145): "control-flow",
     ("store/revocation_sweep.py", 172): "control-flow", ("store/revocation_sweep.py", 192): "control-flow",
     ("store/schema_version.py", 1935): "argument-check", ("store/schema_version.py", 2109): "control-flow",
     ("telemetry.py", 466): "control-flow", ("telemetry.py", 487): "control-flow", ("telemetry.py", 514): "control-flow",
     ("mcp_server.py", 569): "cli-usage", ("mcp_server.py", 575): "cli-usage", ("mcp_server.py", 579): "cli-usage", ("mcp_server.py", 591): "cli-usage",
     ("source_identity.py", 59): "argument-check", ("_json.py", 43): "control-flow", ("introspect.py", 54): "argument-check",
-    ("schema.py", 1438): "internal-invariant",   # RII-R2-01: schema.py:_check_assertion_view_partition:RAISE:1
+    ("compile.py", 406): "predicate-helper",   # carried: compile.py:_unbound_by:RETURN_NONE:1
+    ("schema.py", 659): "predicate-helper",   # carried: schema.py:wiki_drops_on:BOOL_RETURN:1
     ("schema.py", 686): "predicate-helper",   # RII-R2-01: schema.py:assertion_view:RETURN_NONE:1
+    ("schema.py", 1438): "internal-invariant",   # RII-R2-01: schema.py:_check_assertion_view_partition:RAISE:1
 }
 REASON_TEXT = {
     "argument-check": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
@@ -364,9 +366,9 @@ e("store/sqlite.py", 2273, "store.add-episode", "0009/0010", "X21", "refuse")
 e("store/sqlite.py", 2280, "store.add-episode", "0009/0010", "X21", "refuse")
 e("store/sqlite.py", 2316, "store.add-episode", "0009/0010", "X21", "refuse")
 e("store/sqlite.py", 2297, "store.add-episode.owner", "0004", "v3.5 §2c (i): the persisted owner never changes (0008 §6d's guard)", "refuse")
-e("store/sqlite.py", 3563, "store.confirm-notice.standing", "0041", "§11.6.6 (confirm_notice: a standing row is not pending)", "refuse")
-e("store/sqlite.py", 3570, "store.confirm-notice.target-absent", "0041", "§11.6.6 (confirm_notice: a pending notice whose target is gone is inert)", "refuse")
-e("store/sqlite.py", 3555, "store.confirm-notice.unknown", "0041", "§11.6.6 (confirm_notice: an unknown or another user's id, one refusal)", "refuse")
+e("store/sqlite.py", 3574, "store.confirm-notice.standing", "0041", "§11.6.6 (confirm_notice: a standing row is not pending)", "refuse")
+e("store/sqlite.py", 3581, "store.confirm-notice.target-absent", "0041", "§11.6.6 (confirm_notice: a pending notice whose target is gone is inert)", "refuse")
+e("store/sqlite.py", 3566, "store.confirm-notice.unknown", "0041", "§11.6.6 (confirm_notice: an unknown or another user's id, one refusal)", "refuse")
 e("store/sqlite.py", 917, "store.confirm.active-challenge", "0047", "§4c INV-R13", "refuse")
 e("store/sqlite.py", 992, "store.confirm.correlation", "0008", "C9", "refuse")
 e("store/sqlite.py", 908, "store.confirm.not-assertable", "0008", "§6d", "refuse")
@@ -376,19 +378,19 @@ e("store/sqlite.py", 903, "store.confirm.unknown-edge", "0008", "§6d", "refuse"
 e("store/sqlite.py", 2101, "store.consolidation-contribution", "0014", "§2c", "refuse")
 e("store/sqlite.py", 2109, "store.consolidation-contribution", "0014", "§2c", "refuse")
 e("store/sqlite.py", 2142, "store.consolidation-contribution", "0014", "§2c", "refuse")
-e("store/sqlite.py", 3348, "store.consolidation.abandon-live-lease", "0010", "X7", "refuse")
-e("store/sqlite.py", 3153, "store.consolidation.contended", "0010", "X7/X11", "refuse")
-e("store/sqlite.py", 3330, "store.consolidation.delete-not-current", "0010", "X21", "refuse")
-e("store/sqlite.py", 3137, "store.consolidation.input-redacted", "0041", "§4b-ii INV-11", "refuse")
-e("store/sqlite.py", 3184, "store.consolidation.renew-refused", "0010", "X7", "refuse")
-e("store/sqlite.py", 3279, "store.consolidation.transition", "0010", "§4b", "refuse")
-e("store/sqlite.py", 3284, "store.consolidation.transition", "0010", "§4b", "refuse")
-e("store/sqlite.py", 3289, "store.consolidation.transition", "0010", "§4b", "refuse")
+e("store/sqlite.py", 3359, "store.consolidation.abandon-live-lease", "0010", "X7", "refuse")
+e("store/sqlite.py", 3164, "store.consolidation.contended", "0010", "X7/X11", "refuse")
+e("store/sqlite.py", 3341, "store.consolidation.delete-not-current", "0010", "X21", "refuse")
+e("store/sqlite.py", 3148, "store.consolidation.input-redacted", "0041", "§4b-ii INV-11", "refuse")
+e("store/sqlite.py", 3195, "store.consolidation.renew-refused", "0010", "X7", "refuse")
+e("store/sqlite.py", 3290, "store.consolidation.transition", "0010", "§4b", "refuse")
 e("store/sqlite.py", 3295, "store.consolidation.transition", "0010", "§4b", "refuse")
-e("store/sqlite.py", 3310, "store.consolidation.transition", "0010", "§4b", "refuse")
-e("store/sqlite.py", 3317, "store.consolidation.transition", "0010", "§4b", "refuse")
-e("store/sqlite.py", 3320, "store.consolidation.transition", "0010", "§4b", "refuse")
-e("store/sqlite.py", 3198, "store.consolidation.write-not-current", "0010", "X23", "refuse")
+e("store/sqlite.py", 3300, "store.consolidation.transition", "0010", "§4b", "refuse")
+e("store/sqlite.py", 3306, "store.consolidation.transition", "0010", "§4b", "refuse")
+e("store/sqlite.py", 3321, "store.consolidation.transition", "0010", "§4b", "refuse")
+e("store/sqlite.py", 3328, "store.consolidation.transition", "0010", "§4b", "refuse")
+e("store/sqlite.py", 3331, "store.consolidation.transition", "0010", "§4b", "refuse")
+e("store/sqlite.py", 3209, "store.consolidation.write-not-current", "0010", "X23", "refuse")
 e("store/sqlite.py", 1924, "store.contribution", "0014", "§4b", "refuse")
 e("store/sqlite.py", 1928, "store.contribution", "0014", "§4b", "refuse")
 e("store/sqlite.py", 1934, "store.contribution", "0014", "§4b", "refuse")
@@ -410,14 +412,14 @@ e("store/data_migration.py", 458, "store.data-migration.withheld-revoked", "0044
 e("store/sqlite.py", 2377, "store.delete-episode.outcome", "0009", "§4c", "refuse")
 e("store/sqlite.py", 2385, "store.delete-episode.reserved", "0010", "X21", "refuse")
 e("store/sqlite.py", 1495, "store.edges.read-fence", "0001", "§4", "withhold")
-e("store/sqlite.py", 4070, "store.embedding.delayed-writer", "0027", "§4f", "refuse")
-e("store/sqlite.py", 4077, "store.embedding.stale-content", "0027", "§4f", "refuse")
-e("store/sqlite.py", 4048, "store.embedding.txn-locked", "0041", "§4e (0007 §4c form)", "refuse")
+e("store/sqlite.py", 4081, "store.embedding.delayed-writer", "0027", "§4f", "refuse")
+e("store/sqlite.py", 4088, "store.embedding.stale-content", "0027", "§4f", "refuse")
+e("store/sqlite.py", 4059, "store.embedding.txn-locked", "0041", "§4e (0007 §4c form)", "refuse")
 e("store/sqlite.py", 2308, "store.episode.attested-redaction", "0041", "§4b-ii INV-11", "refuse")
 e("store/sqlite.py", 2244, "store.episode.kind-not-recognised", "0041", "§2d-iv/§4h(ii) write path", "refuse")
 e("store/sqlite.py", 2231, "store.episode.marker-introduced", "0041", "§4b INV-11's mirror", "refuse")
 e("store/sqlite.py", 2239, "store.episode.retired-reason-not-registered", "0041", "§11.2 D1 (write path)", "refuse")
-e("store/sqlite.py", 3366, "store.export.non-quiescent", "0010", "X-quiesce", "refuse")
+e("store/sqlite.py", 3377, "store.export.non-quiescent", "0010", "X-quiesce", "refuse")
 e("store/sqlite.py", 2019, "store.flattening", "0021", "§4a", "refuse")
 e("store/sqlite.py", 2028, "store.flattening", "0021", "§4a", "refuse")
 e("store/sqlite.py", 2037, "store.flattening", "0021", "§4a", "refuse")
@@ -436,21 +438,23 @@ e("store/sqlite.py", 2561, "store.import-plan", "0009", "§4c", "refuse")
 e("store/sqlite.py", 2565, "store.import-plan", "0009", "§4c", "refuse")
 e("store/sqlite.py", 2569, "store.import-plan", "0009", "§4c", "refuse")
 e("store/sqlite.py", 2575, "store.import-plan", "0009", "§4c", "refuse")
-e("store/sqlite.py", 2625, "store.import-plan", "0009", "§4c", "refuse")
-e("store/sqlite.py", 2822, "store.import-plan", "0009", "§4c", "refuse")
-e("store/sqlite.py", 2700, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
-e("store/sqlite.py", 2707, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
-e("store/sqlite.py", 2730, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
-e("store/sqlite.py", 2766, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
-e("store/sqlite.py", 2775, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
-e("store/sqlite.py", 2760, "store.import.episode-kind-not-recognised", "0041", "§2d-iv/§4h(ii) import boundary", "refuse")
-e("store/sqlite.py", 2893, "store.import.notice-body-conflict", "0041", "§4g", "refuse")
-e("store/sqlite.py", 2935, "store.import.notice-record-unredacted", "0041", "§11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it)", "refuse")
-e("store/sqlite.py", 2956, "store.import.notice-record-unredacted", "0041", "§11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it)", "refuse")
-e("store/sqlite.py", 2986, "store.import.notice-record-unredacted", "0041", "§11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it)", "refuse")
-e("store/sqlite.py", 2690, "store.import.reason-not-registered", "0041", "§11.2 D1 (import boundary)", "refuse")
-e("store/sqlite.py", 2744, "store.import.reason-not-registered", "0041", "§11.2 D1 (import boundary)", "refuse")
-e("store/sqlite.py", 2736, "store.import.reserved-id", "0010", "X21 at the import, any owner (0004 v3.5 §2c (ii))", "refuse")
+e("store/sqlite.py", 2594, "store.import-plan", "0009", "§4c", "refuse")
+e("store/sqlite.py", 2606, "store.import-plan", "0009", "§4c", "refuse")
+e("store/sqlite.py", 2636, "store.import-plan", "0009", "§4c", "refuse")
+e("store/sqlite.py", 2833, "store.import-plan", "0009", "§4c", "refuse")
+e("store/sqlite.py", 2711, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
+e("store/sqlite.py", 2718, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
+e("store/sqlite.py", 2741, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
+e("store/sqlite.py", 2777, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
+e("store/sqlite.py", 2786, "store.import.attested-redaction", "0041", "§4b-ii INV-11 at the import boundary (§4g)", "refuse")
+e("store/sqlite.py", 2771, "store.import.episode-kind-not-recognised", "0041", "§2d-iv/§4h(ii) import boundary", "refuse")
+e("store/sqlite.py", 2904, "store.import.notice-body-conflict", "0041", "§4g", "refuse")
+e("store/sqlite.py", 2946, "store.import.notice-record-unredacted", "0041", "§11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it)", "refuse")
+e("store/sqlite.py", 2967, "store.import.notice-record-unredacted", "0041", "§11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it)", "refuse")
+e("store/sqlite.py", 2997, "store.import.notice-record-unredacted", "0041", "§11.6.6 (INV-RR12/RR14: a record an import creates, or a restore's held record, beside its notice must show it)", "refuse")
+e("store/sqlite.py", 2701, "store.import.reason-not-registered", "0041", "§11.2 D1 (import boundary)", "refuse")
+e("store/sqlite.py", 2755, "store.import.reason-not-registered", "0041", "§11.2 D1 (import boundary)", "refuse")
+e("store/sqlite.py", 2747, "store.import.reserved-id", "0010", "X21 at the import, any owner (0004 v3.5 §2c (ii))", "refuse")
 e("store/sqlite.py", 524, "store.journal.pre-epoch", "0029", "§4a", "refuse")
 e("store/sqlite.py", 442, "store.journal.reason-not-dispositioned", "0030", "V-TOTAL", "refuse")
 e("store/sqlite.py", 450, "store.journal.redaction-reason", "0041", "§4c/§11.2 D1", "refuse")
@@ -463,7 +467,7 @@ e("store/migration.py", 376, "store.migration.version", "0013", "§4", "refuse")
 e("store/migration.py", 402, "store.migration.version", "0013", "§4", "refuse")
 e("store/migration.py", 458, "store.migration.version", "0013", "§4", "refuse")
 e("store/migration.py", 491, "store.migration.version", "0013", "§4", "refuse")
-e("store/sqlite.py", 3512, "store.notice.state-domain", "0041", "§11.6.6 (T4: the notice state's one writer)", "refuse")
+e("store/sqlite.py", 3523, "store.notice.state-domain", "0041", "§11.6.6 (T4: the notice state's one writer)", "refuse")
 e("store/schema_version.py", 1968, "store.open.invalid-version", "0007", "§4a", "refuse")
 e("store/schema_version.py", 2040, "store.open.legacy", "0007", "§4h", "refuse")
 e("store/schema_version.py", 2050, "store.open.legacy", "0007", "§4h", "refuse")
@@ -478,12 +482,12 @@ e("store/schema_version.py", 1870, "store.open.unaccepted-shape", "0007", "§4a-
 e("store/sqlite.py", 2436, "store.outcome.context-ref", "0009", "§4c", "refuse")
 e("store/sqlite.py", 2364, "store.read.input-claimed", "0010", "§4b", "withhold")
 e("store/sqlite.py", 2361, "store.read.output-not-visible", "0010", "§4b", "withhold")
-e("store/sqlite.py", 3712, "store.redact.both-or-neither", "0041", "§4a/INV-5", "refuse")
-e("store/sqlite.py", 3785, "store.redact.disposition-changed", "0041", "§4h(i)", "refuse")
-e("store/sqlite.py", 3757, "store.redact.input-claimed", "0041/0010", "X21", "refuse")
-e("store/sqlite.py", 3906, "store.redact.nothing-to-redact", "0041", "§4b-ii (round 11: the owner's ruling, nothing to redact)", "refuse")
-e("store/sqlite.py", 3718, "store.redact.reason-not-registered", "0041", "§11.2", "refuse")
-e("store/sqlite.py", 3731, "store.redact.target", "0041", "§4a/INV-5", "refuse")
+e("store/sqlite.py", 3723, "store.redact.both-or-neither", "0041", "§4a/INV-5", "refuse")
+e("store/sqlite.py", 3796, "store.redact.disposition-changed", "0041", "§4h(i)", "refuse")
+e("store/sqlite.py", 3768, "store.redact.input-claimed", "0041/0010", "X21", "refuse")
+e("store/sqlite.py", 3917, "store.redact.nothing-to-redact", "0041", "§4b-ii (round 11: the owner's ruling, nothing to redact)", "refuse")
+e("store/sqlite.py", 3729, "store.redact.reason-not-registered", "0041", "§11.2", "refuse")
+e("store/sqlite.py", 3742, "store.redact.target", "0041", "§4a/INV-5", "refuse")
 e("store/sqlite.py", 649, "store.redacted-reason.not-a-redaction", "0041", "§11.2 (only a redaction writes `redacted`)", "refuse")
 e("store/sqlite.py", 838, "store.registry.request-redacted", "0008", "§6g (v7: the terminal rule, INV-Q7)", "refuse")
 e("store/sqlite.py", 867, "store.registry.result-missing", "0008", "§6c (v7: replay reconstructs from result_ref; a dangling ref is an integrity conflict)", "refuse")

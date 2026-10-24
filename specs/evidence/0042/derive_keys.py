@@ -85,6 +85,14 @@ ov_src = open(S / "override_at_plan.py").read()
 # plan-time line -> (group, ordinal) -> the statement the last generation recorded -> the one current
 # line in the group carrying that statement. Asserted unique, or refused.
 prev_rp = json.load(open(sys.argv[5]), object_pairs_hook=_strict_pairs) if len(sys.argv) > 5 else None
+# the carry below needs the reviewed points; without them, an input holding entries the plan-time literal lacks REFUSES
+# here, before any re-key (the plan-time hop's own refusal fires first on a moved group, and named the wrong remedy)
+if prev_rp is None:
+    _n_plan = len(next(ast.literal_eval(n.value) for n in ast.parse(ov_src).body
+                       if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "OVERRIDE"))
+    assert len(plan.OVERRIDE) == _n_plan, (len(plan.OVERRIDE), _n_plan, "the input review carries OVERRIDE entries "
+                                           "the plan-time literal lacks; pass the previous reviewed_points.json to "
+                                           "carry them")
 src_lines = {}
 def stmt_at(module, line):
     if module not in src_lines: src_lines[module] = (root / module).read_text().split("\n")
@@ -111,7 +119,41 @@ def sub_ov(m):
     assert len(matches) == 1, (key, prev[0]["statement"][:60], matches)
     return f'("{mod}", {matches[0]})'
 ov_new = re.sub(r'\("([^"]+)",\s*(\d+)\)', sub_ov, ov_src.split("\n", 1)[1])
-s = re.sub(r"^OVERRIDE = \{.*?^\}\n", ov_new, s, flags=re.M | re.S)
+# 2026-10-24 (R-II round 3, NEXT-ROUND): an OVERRIDE entry added AFTER plan time lives only in the input review, so
+# rebuilding from override_at_plan.py alone dropped it — four at RII-R2-01 (schema.py 659 and 686/1438 among them),
+# re-added by hand each generation. Every INPUT entry is now re-keyed to the target through the previous generation's
+# reviewed_points.json (its stable key; its statement text where the group's count moved), and one the plan-time hop
+# does not produce is CARRIED with its comment. A carried key the hop produces under ANOTHER class refuses.
+ov_plan = next(ast.literal_eval(n.value) for n in ast.parse(ov_new).body
+               if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "OVERRIDE")
+if prev_rp is not None:
+    prev_rows = list(prev_rp.values())
+    prev_at = {(r["key"].split(":", 1)[0], r["line"]): r for r in prev_rows}
+    prev_n = collections.Counter(tuple([r["key"].split(":", 1)[0]] + r["key"].split(":", 1)[1].rsplit(":", 2)[:2])
+                                 for r in prev_rows)
+    in_ov = re.search(r"^OVERRIDE = \{.*?^\}\n", s, flags=re.M | re.S).group(0)
+    note = {(m.group(1), int(m.group(2))): m.group(3) for m in
+            re.finditer(r'\("([^"]+)",\s*(\d+)\):\s*"[^"]+",\s*(#[^\n]*)$', in_ov, flags=re.M)}
+    carried = []
+    for (mod, ln), cls in sorted(plan.OVERRIDE.items()):
+        r = prev_at.get((mod, ln))
+        assert r is not None, (mod, ln, "an input OVERRIDE line the previous reviewed_points.json does not record")
+        q, k, o = r["key"].split(":", 1)[1].rsplit(":", 2)
+        nl = N.get((mod, q, k), [])
+        if len(nl) == prev_n[(mod, q, k)]:
+            cur = nl[int(o) - 1]
+        else:
+            hits = [l for l in nl if stmt_at(mod, l) == r["statement"]]
+            assert len(hits) == 1, (r["key"], r["statement"][:60], hits)
+            cur = hits[0]
+        if (mod, cur) in ov_plan:
+            assert ov_plan[(mod, cur)] == cls, (r["key"], ov_plan[(mod, cur)], cls, "the input reclassifies a plan-time entry")
+            continue
+        carried.append(f'    ("{mod}", {cur}): "{cls}",   ' + note.get((mod, ln), f"# carried: {r['key']}"))
+    if carried:
+        ov_new = re.sub(r"^\}\n", "\n".join(carried) + "\n}\n", ov_new, count=1, flags=re.M)
+    print(f"carried {len(carried)} OVERRIDE entr(y/ies) added after plan time")
+s = re.sub(r"^OVERRIDE = \{.*?^\}\n", lambda _m: ov_new, s, flags=re.M | re.S)
 open(plan_out, "w").write(s)
 spec = importlib.util.spec_from_file_location("plan2", plan_out); p2 = importlib.util.module_from_spec(spec); spec.loader.exec_module(p2)
 unres = [k for k in p2.E if k not in inv_key]; ov_unres = [k for k in p2.OVERRIDE if k not in inv_key]
