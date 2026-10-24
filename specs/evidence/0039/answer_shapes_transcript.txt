@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — DEV's instrument (specs/evidence/0039/answer_shapes.py)
-# generated 2026-09-12 against veracium @ c361b23b37b51277f9400d37b9d3cfacbaa32b7c
+# generated 2026-09-12 against veracium @ 537dcd8e2b9dd0413d11b3c9f48f26ea214fa8a9
+# RE-PINNED 2026-10-24 R-II round 3's NEXT-ROUND batch (research's N2: an import owner conflict refused as one; the kind closure's own cells; the reviewer's round-4 cases) landed in 537dcd8e2b9dd0413d11b3c9f48f26ea214fa8a9: bodies byte-identical; the pin moves to it
 # RE-PINNED 2026-10-23 R-II round 3's RII-R3-01 (add_episode's persisted-owner refusal and its id-keyed X21 and INV-11 refusals; the import's two refusals at its episode admission) landed in c361b23b37b51277f9400d37b9d3cfacbaa32b7c: bodies byte-identical; the pin moves to it
 # RE-PINNED 2026-10-23 R-II round 3's RII-R2-01 (schema.assertion_view read at every edge and episode write and by the bind; discard_wiki; the cutover's eviction) landed in 5d78a79564fb03982164016a5e71c57d13e92c0a: bodies byte-identical; the pin moves to the commit that changed src/
 # RE-PINNED 2026-10-22 R-II round 2's D10 (specs/0004 W9: a revoking invalidation withholds the in-call body) landed in 62246918d99f5703f3509e49a2c99b862446fc2b: bodies byte-identical; the pin moves to the commit that changed src/
