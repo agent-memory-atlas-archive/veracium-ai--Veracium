@@ -960,33 +960,40 @@ operation made (a token: 1–128 ASCII characters, no whitespace).
 
 **Two migration paths exist, and they accept different stores.** Measured
 2026-09-18 by running both on a store stamped at each base (the table is in the
-0.26.1 erratum in the changelog):
+0.26.1 erratum in the changelog), and again on 2026-10-24 for this release's
+v14 → v16 step on a store built by the published 0.26.1:
 
 - **`veracium migrate` (the specs/0018 orchestrator, also
   `run_release_migration`) migrates a store at the PREVIOUS schema version
-  only** — on this release, v13 → v14. Any older stamped base (v1–v12)
+  only** — on this release, v15 → v16. Any older stamped base (v1–v14)
   is refused with the closed outcome `unsupported-base` and nothing is
   touched. This is the accepted 0018 contract (the preflight passes only
-  `HEAD-1` to minting). The refusal's diagnostic names the resolved base,
-  the number of one-version rungs a CLI ladder would need and which of
-  them the shipped release record names no release for, and the library
-  route below. (0.26.1's diagnostic reported every base 7–12 as "v6" with
-  advice from head v8; fixed after 0.26.1.)
+  `HEAD-1` to minting). **No release shipped v15** (it existed only on
+  `main` between 0.26.1 and 0.27.0), so on 0.27.0 the CLI refuses EVERY
+  store a released version created, 0.26.1's v14 included — use the library
+  call below. The refusal's diagnostic names the resolved base, the number
+  of one-version rungs a CLI ladder would need and which of them the shipped
+  release record names no release for, and the library route below.
+  (0.26.1's diagnostic reported every base 7–12 as "v6" with advice from
+  head v8; fixed after 0.26.1.)
 - **`veracium.store.migration.migrate_store(path)` walks every stamped base
-  from v1 through v13, and an unstamped legacy v1 store resolved by shape,
+  from v1 through v15, and an unstamped legacy v1 store resolved by shape,
   to the current schema in ONE call** — the additive object diff plus each
   data step the crossed versions declare (v3's outcome-chain roots, v5's
   store identity, v6's ALTER path, v8's ledger, v10's operations column,
-  v13's journal baseline). What it does NOT produce: the orchestrator's
+  v13's journal baseline, v16's request-registry backfill — one `confirm`
+  row per existing confirmation — and its arity inventory). What it does NOT produce: the orchestrator's
   host attestation, its structured result over the 0018 outcome table, and
   its terminal audit record. Pass `audit_sink=` if you want the attempted
   and committed events recorded; with no sink the migration is logged and
   no durability is claimed.
 
-**The path for a consumer more than one release behind** (a store at v1–v12;
-a 0.13.0 host reached 0.26.1 this way on 2026-09-18, 9 → 14, counts
-byte-preserved): quiesce every other process, take a backup, then run the
-library call once, offline —
+**The path for a consumer upgrading from any released version, 0.26.1
+included** (a store at v1–v14; a 0.13.0 host reached 0.26.1 this way on
+2026-09-18, 9 → 14, counts byte-preserved; a store built by the published
+0.26.1 reached v16 this way on 2026-10-24, every pre-existing row byte-equal
+and a confirmation's retry replaying): quiesce every other process, take a
+backup, then run the library call once, offline —
 
 ```python
 from veracium.store.migration import migrate_store
@@ -995,8 +1002,11 @@ str(migrate_store("veracium.db"))      # "migrated" (or "current" if already the
 
 — and reopen normally. The CLI path is for the one-version step a routine
 upgrade makes; it will refuse the far-behind store with `unsupported-base`
-rather than walk the chain, and its diagnostic does not name the library
-path, so this paragraph does. A store already at the head is a no-op
+rather than walk the chain. Its diagnostic names the library path; opening the
+store before migrating does not (it raises `PackageConsistencyError`, "no
+migration hook installed"), and `veracium doctor` still suggests
+`veracium migrate` for every below-head store — both are corrected in a later
+release, so this paragraph names the path. A store already at the head is a no-op
 (`current`) on either path; a store newer than this build refuses
 (`newer`); rebuildable index drift is repaired during opening and reported
 honestly as a committed change.

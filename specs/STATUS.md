@@ -21,7 +21,7 @@ is the number that decides what can be built.
 | **0006** | source identity — `(origin, source_id)` | `accepted` | 2026-09-14 | 1 | 5 | 1 | 0 | 0 | — |
 | **0007** | on-disk store schema versioning | `accepted` | 2026-09-08 | 0 | 14 | 1 | 0 | 0 | — |
 | **0008** | what may clear `needs_confirmation` | `accepted` | 2026-10-20 | 0 | 4 | 0 | 0 | 1 | 1/1 |
-| **0009** | outcome authorship is append-only history | `accepted` | 2026-08-16 | 0 | 5 | 0 | 0 | 1 | 1/1 |
+| **0009** | outcome authorship is append-only history | `accepted` | 2026-10-24 | 0 | 5 | 0 | 0 | 1 | 1/1 |
 | **0010** | crash-safe consolidation | `accepted` | 2026-08-07 | 0 | 7 | 0 | 0 | 2 | 2/2 |
 | **0011** | subject-scoped entitlement | `accepted` | 2026-09-08 | 2 | 19 | 0 | 0 | 1 | 1/1 |
 | **0012** | who may renew a fact's currency | `accepted` | 2026-09-19 | 1 | 14 | 0 | 0 | 1 | 1/1 |

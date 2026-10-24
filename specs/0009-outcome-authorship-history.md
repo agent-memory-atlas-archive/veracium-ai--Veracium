@@ -26,11 +26,12 @@ Spec-Requires: 0007, 0013
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | v6 |
+| **Version** | **v7 (drafted by research 2026-10-24; ADOPTED by dev 2026-10-24 from research dda15112, candidate sha256 4b64abb4…) — THE IMPORT'S OWNER CONFLICT, STATED (R-II round 3's N-a and N-b; the refusal shipped at `537dcd8`).** §4c gains one paragraph: an import whose file carries an id another user holds at the destination is refused at once as an owner conflict, whole-import and never retried; and the refusal may say "another user", never which (the owner's ruling, 2026-10-24: "Keep it, record the rule (Recommended)"). Nothing else changes: no rule, invariant or code; the H1–H14 surface and §16's acceptance boundary stand. v6 was accepted 2026-08-07; v7 ACCEPTED 2026-10-24 on the owner's word ("Accept 0009 v7 (Recommended)"). |
+| **Prior chain** | v6: `a88219c` (round-5 closure), accepted `e531839` 2026-08-07, acceptance-artifact corrections `ef10545` and `4b81ec3`, amended by 0020/0021 at `89dc839` (2026-08-16; the "Amended by 0020/0021" block below; no version bump) ← v5 `3596766` ← v4 `54be2ba` ← v3 `cb27537` ← v2 `33427fa` ← v1 `c2383ba` (split from 0002 §M4/§7a). Commits in this repository. |
 | **Status** | *see `Spec-Status:` — canonical.* Split from `0002` §M4/§7a. |
 | **Internal reviewers** | research — pending |
 | **External review** | complete — 5 rounds, architecture affirmed each time |
-| **Decision + date** | **accepted 2026-08-07** (dev, on the finite §16 acceptance boundary — architecture + Option A + H1–H14 frozen; further edges are implementation obligations) |
+| **Decision + date** | **v7 ACCEPTED 2026-10-24 on the owner's word** ("Accept 0009 v7 (Recommended)"; research's candidate adopted by byte-copy). v6: **accepted 2026-08-07** (dev, on the finite §16 acceptance boundary — architecture + Option A + H1–H14 frozen; further edges are implementation obligations) |
 | **⚠ product call for Quentin** | Option A **deprecates** `Edge.last_outcome`/`last_outcome_at` (reviewer-endorsed; safe per this snapshot). Only open if an external consumer reads either as a cross-chain scalar — then a properly-contracted Option B returns. Does not block implementation of the rest. |
 | **⚠ product call for Quentin** | v4 **deprecates** `Edge.last_outcome`/`last_outcome_at` in place (Option A). **The round-3 reviewer endorsed deprecate-not-remove** as the better migration path. Still open only: **if an external consumer relies on either as a cross-chain scalar**, say so and I'll restore a properly-contracted Option B — otherwise Option A stands. |
 | **Path** | full |
@@ -552,6 +553,12 @@ the head is derived (H-Q2), there is no materialised head pointer to "fix."
 > this validated plan iff these destination heads still hold" — rather than pushing
 > transactional composition onto callers. **H4/H5 race an import against a concurrent
 > `append_outcome_if_head`**: either may win, but no branch and **no partial import**.
+
+> **An id ANOTHER user holds is an owner conflict: refused at once, never retried (v7; R-II round 3, research's N-a; shipped at `537dcd8`).** Record ids are store-wide, and a record's owner never changes on any persistence path (edges: 0008 §6d; episodes: 0004 v3.5 §2c, refusal (i)). The file's ids reach the destination unchanged whenever the import does not remap them: a same-user import (no `user_id=`, or the file's own user) and a trusted restore. A cross-user remap mints fresh ids (below). If such an id is held at the destination by another user, the per-user preflight cannot see that row, so the plan expects the id absent. The primitive's revalidation (1), which reads by id across users, finds it and **refuses the whole import as an owner conflict**, writing nothing, the file's new records included. That is a third result beside `committed` and `DestinationChanged`, and it is never returned as `DestinationChanged`, because it is not a lost race: a re-plan would expect the same absent id, and the owner it collides with can never change, so no retry could succeed. It applies to edge and episode ids, under the default import and the trusted restore alike.
+>
+> **What the refusal may disclose (N-b; the owner's ruling, 2026-10-24: "Keep it, record the rule (Recommended)").** That ANOTHER user holds the id, never which user, and nothing of that user's record beyond the id the file itself carried.
+>
+> Checks: `tests/test_rii_r3_n2_import_owner_conflict.py`. The edge / episode / both × default / restore matrix refuses on ONE commit attempt, writes nothing and never names the other user; a colliding episode refuses the file's new edge too; and the same owner's re-import stays an idempotent skip (the control).
 
 > **Cross-user import remaps `supersedes_episode` (round 1, Correction B).** A
 > cross-user import is a COPY that mints fresh ids and remaps references; today

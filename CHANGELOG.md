@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+**Before you upgrade from 0.26.1 — two things to check first.**
+
+1. **Your Python's SQLite.** This release needs Python 3.14 or newer, and it opens or creates a store only on SQLite
+   3.45.1 (specs/0007's one qualified build; every other build refuses with `unsupported-sqlite`, a NEW store
+   included). Check with `python -c "import sqlite3; print(sqlite3.sqlite_version)"`. A 3.14 linked against Ubuntu
+   24.04's system SQLite runs, as GitHub's setup-python builds do; uv's, python.org's and Homebrew's builds bundle
+   newer SQLite and refuse (measured 2026-10-24: a fresh store refused on uv's CPython 3.14 with SQLite 3.53.1).
+   Allowing other builds is the next design change to specs/0007.
+2. **Your store needs an offline migration, and `veracium migrate` will not do it.** A 0.26.1 store is at schema
+   v14; this release is v16. The `veracium migrate` command migrates only the previous schema version (v15), which
+   no release shipped, so it refuses every store a released version created with `unsupported-base` and changes
+   nothing. Use the library call instead: stop every process using the store, back it up, then run once
+
+   ```python
+   from veracium.store.migration import migrate_store
+   str(migrate_store("veracium.db"))      # "migrated" (or "current" if already there)
+   ```
+
+   and reopen normally (docs/api.md, "Migrating a store"). Measured 2026-10-24 on a store built by the published
+   0.26.1 (Python 3.12, SQLite 3.45.1): v14 → v16, every pre-existing row byte-equal (6 edges, 7 episodes, 2
+   confirmations, 9 journal events), one request-registry row per confirmation, and a confirmation's retry replayed.
+   Opening the store before migrating raises `PackageConsistencyError` ("no migration hook installed"), and
+   `veracium doctor` suggests `veracium migrate` for it; both messages are corrected in a later release.
+
+- **Documentation: specs/0009 v7 states the import's owner conflict** (§4c; research's N-a and N-b at R-II round 3,
+  accepted on the owner's word 2026-10-24). An import whose file carries an id another user holds is refused at
+  once, as a whole and never retried; the refusal may say "another user", never which. It describes the behaviour
+  the next entry records; no rule or code changed. docs/api.md's "Migrating a store" now describes this release's
+  paths (it still described 0.26.1's v13 → v14).
 - **Changed: an import that carries a record id another user holds in this store is refused at once, as an ownership
   conflict** (research's N2 at R-II round 3; specs/0009 §4c, 0008 §6d, 0004 §2c (i)). Before, the import retried eight
   times and refused with "import kept losing a race against concurrent writes", though nothing raced: the preflight
