@@ -1,6 +1,30 @@
 # Changelog
 
-## Unreleased
+## 0.27.0 — 2026-10-24
+
+**Six implementation programmes, each accepted at external review: targeted redaction (specs/0041), the
+exercised-guarantees census (0042), the refusal harness (0043), relation arity (0044), declarative grounding (0045)
+and the subject's right of reply (0047).** BREAKING: Python 3.14 and pydantic 2.12 or newer; store schema 14 → 16,
+an offline migration (below); export format 14 for any file carrying the new records (grounding,
+confirmations, replies, restoration outcomes or plan state), which a 0.26.x reader refuses; a file without them keeps its earlier
+format.
+
+**Who should take this release:** every deployment that meets the runtime requirement below. Four of its fixes are to
+defects 0.26.1 ships, each on the trust surface:
+- historical recall (`recall(as_of=...)`, `facts_valid_at`) rendered a fact the extraction check had flagged without
+  `[possible extraction error]`;
+- in a pasted conversation, the assistant's words could become the user's facts;
+- a number or date the extractor inferred, absent from the event, was stored (flagged) whoever the author; it is now
+  stored flagged only from the user's own direct statement (`EvidenceContext.direct()`) and refused from every
+  other event;
+- the reference Anthropic provider returned `""` when a completion spent its whole budget thinking, which every
+  consumer reads as a negative result; it now raises `EmptyCompletion`.
+
+**Who must act:** check your Python's SQLite and migrate your store with `migrate_store`, both below; a host calling
+`remember()` for the user's own statements should pass `context=EvidenceContext.direct()`; a custom `Store` backend
+must implement one new abstract method, `discard_wiki`, and until it implements the act methods (`act_rows`,
+`act_state`, which refuse by default) EVERY export refuses on it; an export carrying the new records is format 14,
+which a 0.26.x reader refuses.
 
 **Before you upgrade from 0.26.1 — two things to check first.**
 
@@ -31,6 +55,11 @@
   once, as a whole and never retried; the refusal may say "another user", never which. It describes the behaviour
   the next entry records; no rule or code changed. docs/api.md's "Migrating a store" now describes this release's
   paths (it still described 0.26.1's v13 → v14).
+
+*How to read the entries below: each was written when its change landed on `main`, between 0.26.1 and this
+release, and its figures (test counts, census, campaign and transcript totals) are as of that landing unless it
+says otherwise. Where a later entry changed an earlier one before release, the earlier one says so and names the
+later one.*
 - **Changed: an import that carries a record id another user holds in this store is refused at once, as an ownership
   conflict** (research's N2 at R-II round 3; specs/0009 §4c, 0008 §6d, 0004 §2c (i)). Before, the import retried eight
   times and refused with "import kept losing a race against concurrent writes", though nothing raced: the preflight
@@ -77,8 +106,8 @@
   records its own actor. `forget_user()` erases a user's replies and returns their count beside the confirmations;
   `veracium doctor` reports a reply naming a fact that does not exist for its user, and a `resolve` naming no
   challenge of its own fact. A new reply writes one audit line naming its kind only.
-  - **Not yet:** an export does not carry replies; the portable half of the same feature lands before this is
-    released. The read half is the next entry.
+  - **Portable:** replies travel in exports and imports (the entry "Added: confirmations, replies and grounding travel in exports and imports").
+    The read half is the next entry.
   - **Schema:** the unreleased store schema v16 gains a `replies` table. 0008 §2a says `replies` is created "whole by
     0047's own step"; v16 is that step, amended in place because no release has carried it. A store a development
     checkout wrote at an earlier v16 shape is refused as unaccepted, as at the arity tables' addition.
@@ -152,9 +181,10 @@
   On its blind holdout the predicate attested 12 of 53 true statements and 1 of 67 negatives. ATTEST-3 ships
   byte-identical to the measured file (`veracium.attest_v3`). Older facts read `unknown` and are never re-derived;
   procedural records and `correct()`'s successors carry none. `veracium.attestation.declarative_grounding` gives the
-  derived value. The fields appear on `Recall.edges` and in `why`; an export omits them for now, a default import
-  writes `not_attested`/`default-import` on every declarative fact whatever the file says, and `--restore` leaves
-  them unset.
+  derived value. The fields appear on `Recall.edges` and in `why`. They travel in exports (format 14); a default import
+  writes `not_attested`/`default-import` on every declarative fact whatever the file says, and `--restore` keeps
+  the file's grounding for a fact it creates (the entry "Added: confirmations, replies and grounding travel in
+  exports and imports", which gives the rule for a fact you already hold).
   - **Who should act:** nobody. A host that reads `Edge` fields sees three new optional ones.
     (tests/test_0045_t9_write.py.)
 - **Changed: `confirm()` refuses a `not_attested` fact whose source episode was redacted** (specs/0045 §4d, INV-G10),
@@ -183,7 +213,7 @@
   serves every entry that takes a store path: the orchestrator (`invalid-request`), `run_data_migration`
   (`preflight-refused`), and `data_migration_status` and `data_migration_receipt` (`ValueError`). A path must be a
   non-empty string with no NUL that encodes to at most 4096 bytes. The two reads previously had no length check.
-  **Who should act:** nobody. It ships with the next release. (tests/test_0044_t7_stage2_items.py.)
+  **Who should act:** nobody. It ships in this release. (tests/test_0044_t7_stage2_items.py.)
 - `run_data_migration`'s `plan_only` must be exactly `True` or `False`. Any other value raises `ValueError` before
   anything is read, as an `op_id` outside the grammar does. This was already the behaviour and is now documented.
 
@@ -198,8 +228,8 @@
   - A value already undone returns `already_undone=True` and writes nothing. Refusals raise `UndoRefused` (a
     `ValueError`) with one of six closed reasons: `no-outcome`, `not-restored`, `testimony`, `not-applicable`,
     `edge-unavailable`, `ambiguous-outcome`. Undo is not an act: no act row, no act position. The undo's request
-    id is store-local and never exported (§4g). This release exports and imports no outcome rows, so `testimony`
-    and `ambiguous-outcome` do not arise from its own operations.
+    id is store-local and never exported (§4g). Outcome rows travel in exports (the entry "Added: restoration outcomes travel in exports and imports"):
+    an outcome a default import recorded is `imported` testimony, which undo refuses with `testimony`.
   - `doctor`'s `refs` warning for an active edge whose predecessor is still active becomes an `info` when this
     store's own live restoration outcome explains it; an imported outcome keeps the warning and says so.
   - **Who should act:** nobody, unless you ran `run_data_migration` and want to reverse one restored value.
@@ -227,7 +257,7 @@
   - **Who should act:** hosts upgrading a store that held `measures`, `prefers` or `health_state` values from before
     this programme: quiesce, back up, run it once, and keep the receipts. A host whose own registry declares one of
     the three `single` keeps that relation's supersessions.
-  - **Evidence.** tests/test_0044_t6_operation.py holds 55 cells. One is a differential against the specification's reference model on real stores: the model's whole
+  - **Evidence.** tests/test_0044_t6_operation.py held 55 cells when this landed (56 at this release). One is a differential against the specification's reference model on real stores: the model's whole
     domain, 900 schedules, agrees field by field (run with VERACIUM_T6_FULL_DOMAIN=1, about 4 minutes); by default a seeded sample of 60
     schedules, six of each outcome, runs in about 22 seconds. 27 code mutants of the operation's own rules each fail a named cell as an
     assertion or a missing refusal (a scratch campaign, not committed evidence). The 0013 step campaign's figures are unchanged:
@@ -340,13 +370,13 @@
   - **Migration.** The v16 step derives each existing row's state by the rule the readers already applied (no event
     and a source identity is standing; otherwise applied), checked at the step. Store v16 now accepts 11 shapes.
   - **Evidence.**
-    - The notice-state and hotfix test files hold 63 tests.
+    - The notice-state and hotfix test files held 63 tests when this landed (87 at this release).
     - The re-anchored 0041-PA1 mutation table kills 15 of 15 mutants, with honest flows passing. Its origin mutant is
       inverted: it now puts an origin check back, and is killed.
     - 13 more code mutants of T4's own rules each fail their named cell. They ran as a scratch campaign and are not
       committed evidence.
-    - The 0013 step campaign perturbs the new step on every base-15 shape: 949 perturbations, 852 killed, 97 not
-      applicable. The not-applicable cells are the empty-table bases, and an UPDATE with no parameter to alter.
+    - The 0013 step campaign, at this step, perturbed the new step on every base-15 shape: 949 perturbations, 852
+      killed, 97 not applicable. The not-applicable cells are the empty-table bases, and an UPDATE with no parameter to alter.
 - **BREAKING for existing stores — schema 15 → 16: the request registry and act positions (specs/0008 v7 §2a,
   §6c, §6f, §6g; amendment `0047/0008-request-registry`).** The first schema step of the 0044/0045/0047 programme,
   which ships as one release. Three changes:
@@ -366,8 +396,8 @@
       the registry is now read before any read of the fact.
     - **New:** a retry under an id whose fact was since redacted raises `veracium.store.base.RequestRedacted`, for
       any payload. It is a `ValueError`, it is terminal, and it never replays.
-    - An id held by another verb is an integrity conflict that names the verb; replies and undo will share the id
-      space when they land.
+    - An id held by another verb is an integrity conflict that names the verb; replies and undo share the id
+      space (both are in this release).
     - `forget_user` erases registry rows, so a retry after erasure is a new request. The counter is never erased, so
       a recreated user's acts never reuse a position.
     - A store whose counter row is missing refuses to confirm and writes nothing.
@@ -380,8 +410,8 @@
     - Store v16 accepts 11 shapes: the constructor, and ten migrated shapes — each earlier base's `confirmations`
       ALTERed, with `redactions` inline (a base ≤ 14) or ALTERed (a base 15). (Six when this step landed; T4's
       `redactions` ALTER added the rest. The generated list: `specs/generated/v16-carrier-delta.md`.)
-    - The 0013 step campaign now perturbs both new writing steps: 853 perturbations, 847 killed, and 6 that do not
-      apply, all on a base-1 store, which has no confirmation to copy. It had mapped neither step until this change.
+    - The 0013 step campaign, at this step, perturbed both new writing steps: 853 perturbations, 847 killed, and 6
+      that did not apply, all on a base-1 store, which has no confirmation to copy. It had mapped neither step until this change.
     - `tests/test_0008_request_registry.py` (34 tests) fails under each of 14 code mutants of the writer and the
       step.
 - **Changed (trust surface): an inferred number or date that the event does not contain is refused unless the event
@@ -405,7 +435,7 @@
     direct statement. The spec's five named mutants are killed.
 - **Added: a `reinstated` journal event says why the fact came back (specs/0029 v12; INV-J1–J3).**
   - The event's `reason` is one of `REINSTATEMENT_REASONS` (`source_restored`, `arity_reclassified`; the second is
-    reserved for 0044's restoration).
+    written by 0044's restoration, `run_data_migration`).
   - It is validated where every event is emitted, and an invalid reason unwinds the whole write.
   - 0022's revocation lift writes `source_restored`.
   - An event written before this change carries NULL. `why` reads it as `source_restored`, and the stored row is not
@@ -413,6 +443,9 @@
   - The `state` payload, and therefore `edge_state_at`, is unchanged.
 
 - **Fixed (trust surface): an untrusted import file could permanently redact your own data (specs/0041 §4g).**
+  **Superseded before release:** the notice state machine (the entry "Changed (trust surface): imported redaction notices follow a state machine")
+  replaced this fix on `main`; this entry stays as the record of the defect and of what landed. 0.27.0 ships the
+  state machine: the rule below, its `absent-target` reason and its origin check are not in this release.
   **Never in a published release:** the notice import landed on `main` on 2026-09-20 (0041 tranche 4b, `8ea59e7`),
   after v0.26.1, and is fixed here before any release carries it. In that code an imported redaction notice was bound
   to its target by id alone. So a
@@ -636,7 +669,8 @@
   longer reads an annotation, which on 3.14 ran compiler-generated code in census.py's name), a tokenizer that refuses
   an invalid byte even in a comment (the source reader now decodes strictly), and annotation and type-parameter scopes
   in the symbol table (the scope resolver models them, refuses a block kind it does not know, and refuses a census use
-  inside one). Those are changes to accepted evidence and go to external review as 0042 round 24. Two evidence
+  inside one). Those are changes to accepted evidence; they went to external review as 0042 round 24, and 0042's corrections
+  were accepted through round 33. Two evidence
   outputs changed with the interpreter, not the code: 0041's carrier enumeration prints `X | None` where it printed
   `Optional[X]` (34 lines; the counts do not move), and the 0029/0030 seam model reads both spellings and derives its
   deep-nesting probe's depth from the running `json`.
@@ -755,7 +789,7 @@
   function PARAMETER shadowing a site name had its own ordinary method call rewritten. Both now ask one shared
   resolver built on `symtable`, CPython's own scope analysis, which covers the binding grammar by construction;
   the set of nodes that even get a scope is derived from the interpreter, since PEP 709 inlines comprehensions
-  from 3.12 and CI runs 3.10 through 3.13. `nonlocal` on a site now RESOLVES as a shadow instead of being
+  from 3.12 and CI then ran 3.10 through 3.13 (its test matrix runs 3.14 only since the Python 3.14 floor). `nonlocal` on a site now RESOLVES as a shadow instead of being
   refused. The refusal that a site is not REBOUND at module level — the guarantee that makes "this name is the
   module binding" evidence about the site OBJECT — kept an enumeration of its own one layer down, and six
   spellings defeated it because none is an `ast.Name` in a `Store` context: `import os as S`,
@@ -884,10 +918,13 @@
   §4g contract (specs/0041, tranche 4b).** An export from a store holding any redaction record carries one
   `{"record": "redaction", ...}` line per record (the attestation: target, the carriers treated, the marker
   version, the vocabulary reason, the SOURCE identity — origin, source user, source event — never a content
-  digest) and is stamped 13; a store without one still exports 12, byte-identical to before. **Who must act:**
+  digest) and is stamped 13; a store without one then still exported 12, byte-identical to before (at this release a file is format 14 whenever it carries grounding, a confirmation or reply, a restoration outcome or plan state, and
+  every declarative fact `remember` writes carries grounding: the entry
+  "Added: confirmations, replies and grounding travel in exports and imports"). **Who must act:**
   operators whose exports may reach an older Veracium — a 0.26.x reader REFUSES a 13 file outright (the
   refuse-don't-drop rule: a reader that dropped the notice would import the record un-redacted, the exact
-  harm the contract exists to prevent); upgrade the reader, or redact after import. On import: a notice
+  harm the contract exists to prevent); upgrade the reader, or redact after import. On import, as tranche 4b landed it (superseded before release: a
+  default import never changes a record you hold; the entry "Changed (trust surface): imported redaction notices follow a state machine"): a notice
   whose record is in the file or already held is applied IN THE SAME TRANSACTION as the record (the
   destination attests it; its own journal closes the record with a `redacted` event; an ordinary write may
   not repopulate it); a notice whose record the destination does not hold is a STANDING notice (a
@@ -927,8 +964,8 @@
   redaction never changes a derived disposition (a quarantine relation's edge stays quarantined through its
   disclosure; any other change refuses with nothing written), never deletes a row, and is not an
   entitlement operation (`forget` erases). `reason` is a closed vocabulary (`subject_request`,
-  `operator_policy`, `erroneous_capture`, `legal_obligation`, `imported_notice`), refused at the operation
-  and at the journal. The receipt never carries a content digest, reports `receipts_complete=False` with the
+  `operator_policy`, `erroneous_capture`, `legal_obligation`; `imported_notice` is written only by the import
+  path, and `redact` refuses it: the round-11 BREAKING entry), refused at the operation and at the journal. The receipt never carries a content digest, reports `receipts_complete=False` with the
   receipt domains it cannot vouch for, and NAMES the derived records that may still carry the content
   (ledger survivors, consolidation outputs) so the caller can act on them. `why` renders a redacted edge as
   "redacted" and never fails; `veracium.store.base.Store.redact` refuses by default, so a host store that
@@ -946,10 +983,12 @@
   bytes alone confer nothing). No data step — no redaction and no episode event exists before the
   tables do, so every row crosses byte-identical. A store created by ≤ 0.26.1 must be migrated
   offline before this build opens it — `veracium migrate --db X --i-have-quiesced --backup REF`
-  (the orchestrator now migrates v14 → v15; a store further behind takes the one-call library
-  path `veracium.store.migration.migrate_store`). **Who must act:** every operator with an
-  on-disk store. Hosts that implement `veracium.store.base.Store` need nothing yet: no operation
-  writes either table until `redact()` lands (tranche 3). Also: `migration.unattested_marker_report(store)`
+  (at this step the orchestrator migrated v14 → v15; at this release it migrates v15 → v16 only, so a 0.26.1
+  store takes the one-call library path `veracium.store.migration.migrate_store`: "Before you upgrade", at the
+  top). **Who must act:** every operator with an
+  on-disk store. Hosts that implement `veracium.store.base.Store` needed nothing at this step: no
+  operation wrote either table until `redact()` landed (tranche 3, in this release; `Store.redact` refuses by
+  default, the targeted-redaction entry). Also: `migration.unattested_marker_report(store)`
   enumerates every stored row holding the marker byte string in a field with no attesting record —
   admitted, neither refused nor quarantined (§4b, ruled v7) — named per row AND per field; on the
   frozen pre-restriction store it names the two planted rows and nothing else. `forget_user` erases
@@ -989,8 +1028,9 @@
   line splits `UNRESOLVED` on the reference cases into the ambiguity control (expected) and known answers the
   judge could not resolve (an unexpected one refuses the run); the report states that the reference cases
   include shapes learned from the first two runs; run 3 — questions authored after the interpreter was
-  frozen — is the committed run: shipped arm 11/24 refusals (quarantined 8/8, untrusted 3/3, trusted answered
-  13/13) against a baseline of 2/24. Runs 1 and 2 are kept beside it. The spec's limits gain the absent
+  frozen — is the committed run: as scored at this tranche, shipped arm 11/24 refusals (quarantined 8/8, untrusted 3/3,
+  trusted answered 13/13) against a baseline of 2/24. Its PUBLISHED rates, from the later two-seat blind labels,
+  are 12/24 against 1/24 (specs/evidence/0043/run_report.txt; the 0043 acceptance entry). Runs 1 and 2 are kept beside it. The spec's limits gain the absent
   class, unreachable by a blind examiner, and the small-class caveat. No product behaviour changes.
 - **Added: the gate's rendering seam, and the refusal harness's baseline arm captured at its own
   model invocation (specs/0043, tranche 1).** `gate.render_gate_input` now composes the exact (system,
@@ -1011,12 +1051,14 @@
   others only the 0042 runtime leg exercises) — under counters healthy, forced to error, disabled (the
   shipped default, the bypass path) and an UNINSTRUMENTED twin exported from the commit the tranches began
   from, and compares the traces PER TEST after a control pair (the reference arm run twice) has named any
-  test whose own trace is not reproducible. The committed transcript reads IDENTICAL over 859 tests in all
+  test whose own trace is not reproducible. As committed at this tranche, the transcript read IDENTICAL over 859 tests in all
   four arms, one digest, none excluded; the census's fired sequence is a subsequence of the observer's in
   both census arms; the failing arm is UNMEASURED on all 145 ids it reached; the twin registers no site.
   The control pair found a test whose store file was named after an object address (a reused address
   reopened an earlier build's store); it is fixed. An in-process miniature replays the runtime leg's 147
-  declining executions under three arms in the suite. No behaviour changes.
+  declining executions under three arms in the suite. No behaviour changes. (INV-7 changed in later 0042 rounds,
+  including its twin, which is now derived from the tree under test. Its figures at this release are in
+  specs/evidence/0042/inv7_transcript.txt: 867 tests compared, one standing exclusion.)
 - **Changed: every predicate-helper decision in the census review names its consumer (specs/0042,
   tranche 6a-bis).** Research's second read of the review's NOT half found that all 43 `predicate-helper`
   rows shared one reason — "the consumer's site is the enforcement point where one exists" — a sentence
@@ -1108,7 +1150,7 @@
   whose model reasons over contested facts — the model now sees how much of the contested
   surface it was not shown. **What moved with it:** the recall report reserve is 40 tokens (was
   32) to carry the longer line, so the recall floor is 280 tokens (was 272); a host `token_budget`
-  or `query_context_tokens` between 272 and 279 is now rejected at the floor with the derivation
+  or `query_context_budget_tokens` between 272 and 279 is now rejected at the floor with the derivation
   printed. Beside it, the fitter's four within-class admission orders (warnings most-overdue
   first, related and unrelated; commitments nearest-first; episodes newest-first) were found
   reversible with no 0012 test failing; they are pinned now, one mutant per sort. Both report
@@ -1137,8 +1179,9 @@
   lines rendered per question 64 → 32 → 16 of the 103 delivered (highest-priority first; the
   rest dropped), the block's share of rendered characters 99% → 52% → 36%; every context
   was truncated at every share, so the cap trades the tail of an already-cut contested list
-  for detail. **What the cut takes, stated:** the block renders its groups in `(subject,
-  relation)` order and the budget cut takes that order's tail — at every share, `1.0`
+  for detail. **What the cut takes, stated:** the block then rendered its groups in `(subject,
+  relation)` order (preservation-tier order since the later entry "Changed: the contested block and
+  `Recall.contested` list their groups by preservation tier") and the budget cut took that order's tail — at every share, `1.0`
   included, so this release changes how far down that order the block reaches, not what
   decides it (on the rebuilt store the tail was every subject from `person:Gina` on, on every
   question). The block is query-independent by design (0003 §4c-ii: it replaces the broad
@@ -1169,7 +1212,7 @@
   workflow platform's 0.13.0 → 0.26.1 upgrade, store 9 → 14). The diagnostic now
   names the resolved base, the mint base, the number of one-version rungs a CLI
   ladder would need and — from the shipped release record — which rungs the record
-  names no release for (v2, v5, v6, v7, v10, v11 today: stamp-only bumps and releases
+  names no release for (v2, v5, v6, v7, v10, v11 when this landed, and v15 at this release: stamp-only bumps and releases
   probed without a schema version, so the CLI ladder cannot be planned from the record
   alone), and the
   offline library route that applies every step in one call
@@ -1197,7 +1240,7 @@
     ATTEST-5 (`ATTEST-5@0bb7779f`), in "Q: … / Bot: … / A: …" the Bot's line was read as the user's, so its fact was
     attested and mentionable. A fact a development build stored under ATTEST-5 keeps that version and is not judged
     again (0045 INV-G7), so such a fact stays attested and mentionable. ATTEST-6 answers every item of both holdouts
-    below as ATTEST-5 does (0 of 260 change); its own blind holdout, H5, is scored before release.
+    below as ATTEST-5 does (0 of 260 change); its own blind holdout, H5, was scored once before 0051 v0.4's acceptance (2026-10-22).
   - stores `use_only` (not asserted) a fact whose value appears only in a turn labelled for an assistant, and counts
     such facts in `remember()`'s new `speaker_restricted` (present on every path; stripped from the MCP tool result
     like the other operator counters). A non-zero count means the host passed a mixed transcript as one user event.
@@ -1220,7 +1263,8 @@
 - **Added: restoration outcomes travel in exports and imports** (specs/0044 §4l, with the owner's D3 ruling of
   2026-10-19 recorded as an annotation on the spec; INV-A16, A17, A21's import clause, A23). Export format 14 carries a
   store's restoration outcomes for the edges in the file and, when the store has a plan, its plan state; a store with
-  neither exports exactly as before. Import validates the outcomes whole before any write (each outcome's edge in the
+  neither then exported exactly as before (at this release a file is format 14 whenever it carries grounding, a confirmation or reply, a restoration outcome or plan state, and
+  every declarative fact `remember` writes carries grounding: the next entry). Import validates the outcomes whole before any write (each outcome's edge in the
   file, one outcome per edge, times timezone-aware), replays an outcome already held only if it is identical (a
   changed one refuses the whole import, even beside unrelated new records), records a default import's outcomes as
   `imported` testimony (no undo) and a `--restore` of the store's own export as `restored`. A retired value from a
@@ -1235,7 +1279,7 @@
     earlier v16 shape is refused as unaccepted.
   - **Who should act:** an importer of files from a store that was upgraded but never ran `run_data_migration`. A custom
     `Store` backend: `arity_plan_state`, `migration_outcomes` and `migration_outcomes_by_uid` refuse by default, so an
-    import that needs them refuses; an export from such a backend carries no outcome. (tests/test_0044_t11a_portability.py.)
+    import that needs them refuses; and since acts travel too, every export refuses on such a backend (the next entry). (tests/test_0044_t11a_portability.py.)
 - **Added: confirmations, replies and grounding travel in exports and imports** (specs/0008 §6d–§6f, 0047 §4f, 0041
   §11.6.6, 0045 §4e/§4f, with the owner's two rulings of 2026-10-20 recorded as an annotation on 0008; INV-R11, R16,
   R21, R23, Q4′, Q5, Q9, Q10, I1–I7, RR3, RR6, RR8, RR9, G9, G13). Export format 14 now carries every confirmation and
