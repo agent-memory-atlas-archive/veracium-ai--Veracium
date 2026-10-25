@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+**Who should take this: every deployment that runs the MCP server without `VERACIUM_MCP_CAPABILITY` set** (the
+default, `none`). On 0.27.0 a model that follows the `remember` tool's description stores nothing usable about the
+user.
+
+- **Fixed: the MCP `remember` tool's description now asks for the user's statement in the third person.** 0.27.0's
+  description said "Pass the user's message alone", and an agent following it sends the user's own words ("My
+  favorite color is blue."). Under the default capability every MCP event's author is a third party (specs/0031
+  §4a), so "my" is read as that author's claim: the fact is stored as a quarantined `third_party_claim` and nothing
+  is kept about the user. The description now says to write what the user said as a statement about the user ("The
+  user's favorite color is blue."), never in the user's first person, and to store the assistant's own reply in a
+  separate call with `author="assistant"`. `docs/mcp.md`'s `remember` row says the same. Found by the test harness's
+  live roundtrip, red since 2026-10-20 and diagnosed 2026-10-25 on two live captures each side: against 0.27.0's
+  description the agent sent the first-person text and the fact was quarantined; against the description just before
+  that change (commit `1150667`) it sent "User's favorite color is blue." and the fact was stored for the user as
+  use-only. Called directly with each text, both
+  versions store the same outcome, so the product's ingest is unchanged and only the guidance moved. The library's
+  `remember()` and a deployment that attests first-party capture (`VERACIUM_MCP_CAPABILITY=direct`, `author="user"`)
+  are unaffected. No behaviour changes.
+
 ## 0.27.0 — 2026-10-24
 
 **Six implementation programmes, each accepted at external review: targeted redaction (specs/0041), the

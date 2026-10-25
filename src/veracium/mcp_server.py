@@ -421,9 +421,14 @@ def build_server(mem: Memory, *, default_user: str = "default", capability=None,
         capped at the minimum, so quoted material can never become an
         asserted fact. Store ONE speaker per call: never pass a whole
         conversation as one event — your own first-person statements in it
-        would be stored as the user's. Pass the user's message alone, and your
-        own reply, if you store it, in a separate call with author="assistant".
-        `date` is the ISO date the event occurred (defaults to today)."""
+        would be stored as the user's. Write what the user said as a statement
+        ABOUT the user, in the third person ("The user's favorite color is
+        blue."), never in the user's own first-person words: unless the
+        deployment attests first-party capture, the event's author is a third
+        party, and "my" is then read as that author's claim, not the user's.
+        Store your own reply, if you store it, in a separate call with
+        author="assistant". `date` is the ISO date the event occurred
+        (defaults to today)."""
         # specs/0006 I1: the source id is HOST-supplied, never model-supplied —
         # it is the deployment's VERACIUM_MCP_SOURCE_ID binding, read once at
         # start with the other environment, and is not a tool argument.

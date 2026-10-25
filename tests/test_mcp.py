@@ -212,3 +212,26 @@ def test_the_assistant_author_is_accepted_as_a_self_demotion(tmp_path):
             for e in edges)
     finally:
         mem.close()
+
+
+def test_the_mcp_remember_guidance_asks_for_the_third_person():
+    """v0.27.0's description told the agent to "Pass the user's message alone"; a compliant agent then sent the
+    user's own words ("My favorite color is blue."), and under the default `none` capability the author is a third
+    party, so "my" was that author's claim and nothing usable about the user was stored (the test harness's tier1
+    roundtrip, red from 2026-10-20; research's live capture at 1150667 vs 3aa789d, 2026-10-25). Both carriers of
+    the guidance, the served tool description and docs/mcp.md's remember row, must ask for the third person, and
+    neither may carry the withdrawn instruction."""
+    import ast
+    import pathlib
+    import re
+    root = pathlib.Path(__file__).resolve().parent.parent
+    src = (root / "src/veracium/mcp_server.py").read_text(encoding="utf-8")
+    remember = [n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.FunctionDef) and n.name == "remember"]
+    assert len(remember) == 1, "expected exactly one served `remember` tool function"
+    row = [l for l in (root / "docs/mcp.md").read_text(encoding="utf-8").splitlines() if l.startswith("| `remember(")]
+    assert len(row) == 1, "expected exactly one remember row in docs/mcp.md"
+    third_person = re.compile(r"third\s+person[^.]{0,20}\(\s*\"The\s+user's\s+favorite\s+color\s+is\s+blue\.\"\s*\)", re.I)
+    for name, text in (("the served description", ast.get_docstring(remember[0])), ("docs/mcp.md", row[0])):
+        flat = " ".join(text.split())
+        assert third_person.search(flat), f"{name} does not ask for the third person"
+        assert "message alone" not in flat, f"{name} still carries the withdrawn first-person instruction"

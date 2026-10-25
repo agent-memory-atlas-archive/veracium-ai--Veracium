@@ -110,7 +110,7 @@ OVERRIDE = {  # (module, line) -> reason class, where the module default is not 
     ("store/revocation_sweep.py", 172): "control-flow", ("store/revocation_sweep.py", 192): "control-flow",
     ("store/schema_version.py", 1935): "argument-check", ("store/schema_version.py", 2109): "control-flow",
     ("telemetry.py", 466): "control-flow", ("telemetry.py", 487): "control-flow", ("telemetry.py", 514): "control-flow",
-    ("mcp_server.py", 569): "cli-usage", ("mcp_server.py", 575): "cli-usage", ("mcp_server.py", 579): "cli-usage", ("mcp_server.py", 591): "cli-usage",
+    ("mcp_server.py", 574): "cli-usage", ("mcp_server.py", 580): "cli-usage", ("mcp_server.py", 584): "cli-usage", ("mcp_server.py", 596): "cli-usage",
     ("source_identity.py", 59): "argument-check", ("_json.py", 43): "control-flow", ("introspect.py", 54): "argument-check",
     ("compile.py", 406): "predicate-helper",   # carried: compile.py:_unbound_by:RETURN_NONE:1
     ("schema.py", 659): "predicate-helper",   # carried: schema.py:wiki_drops_on:BOOL_RETURN:1
