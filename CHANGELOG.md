@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.27.1 — 2026-10-26
+
+**A patch release: the MCP `remember` tool's guidance.** No behaviour, schema or format changes.
 
 **Who should take this: every deployment that runs the MCP server without `VERACIUM_MCP_CAPABILITY` set** (the
 default, `none`). On 0.27.0 a model that follows the `remember` tool's description stores nothing usable about the
@@ -20,6 +22,10 @@ user.
   versions store the same outcome, so the product's ingest is unchanged and only the guidance moved. The library's
   `remember()` and a deployment that attests first-party capture (`VERACIUM_MCP_CAPABILITY=direct`, `author="user"`)
   are unaffected. No behaviour changes.
+
+- **Also on this release, none of it user-facing:** spec 0007 v18 (its untrusted-input table names each input's
+  hostile form and the tests that plant it, ahead of the SQLite widening's implementation), and two of the test
+  suite's evidence instruments for spec 0042 do less repeated work (one proven equivalent over 46,962 comparisons).
 
 ## 0.27.0 — 2026-10-24
 
