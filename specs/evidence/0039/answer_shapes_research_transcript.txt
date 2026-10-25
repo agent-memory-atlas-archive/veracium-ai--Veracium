@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — RESEARCH's instrument (independent of dev's)
-# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ d944abb
+# generated 2026-09-12 (research's instrument, re-run by dev)  against veracium @ 5a23ed6
+# RE-PINNED 2026-10-25 the MCP remember description's third-person rewording (a docstring; no code), two 0042 instruments' speed-ups and 0007 v18 (spec text) landed in 5a23ed6d6a4a3eaf593dbe10bb205c42248dfe80: bodies byte-identical; the pin moves to it
 # RE-PINNED 2026-10-24 the schema evidence recording the v0.27.0 tag (legacy_stores.json, one row; no code) landed in d944abbd74de0f71894b264e6f5794a93586a50c: bodies byte-identical; the pin moves to it
 # RE-PINNED 2026-10-24 R-II round 3's NEXT-ROUND batch (research's N2: an import owner conflict refused as one; the kind closure's own cells; the reviewer's round-4 cases) landed in 537dcd8e2b9dd0413d11b3c9f48f26ea214fa8a9: bodies byte-identical; the pin moves to it
 # RE-PINNED 2026-10-23 R-II round 3's RII-R3-01 (add_episode's persisted-owner refusal and its id-keyed X21 and INV-11 refusals; the import's two refusals at its episode admission) landed in c361b23b37b51277f9400d37b9d3cfacbaa32b7c: bodies byte-identical; the pin moves to it
