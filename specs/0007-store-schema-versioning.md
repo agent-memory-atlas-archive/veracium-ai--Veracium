@@ -16,7 +16,7 @@ Folds: 0013/0007-sqlite-attestation
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | **v17 — 2026-10-25: the SQLite attestation fold (amendment `0013/0007-sqlite-attestation`, v0.12.1, sha16 `134243c63b05845a`).** Its design was accepted at its external round 2 (2026-10-25; verdict banked at coordination `2b84ab5`) and by the owner (2026-10-25T19:10Z). The new §4g carries the amendment; §4's state table, §4a-viii, §4b, §6 (S36, S47, S56, S58, S64, S66, S69), §7, §8, §10 (S-Q7) and `## Review closure` are edited in place and point to it. Prior: v16. |
+| **Version** | **v18 — 2026-10-25: §4g.3 gains its adversarial column (0022 Q10; the owner's ruling of 2026-10-25, "Fix 0007 first, gate later").** Each of §4g.3's four rows now names its hostile input and at least one vector: a test node in `tests/test_store_versioning.py`, either existing or one the implementation writes under its frozen obligations (every INV-SA mutant is exercised), each forward one declared `owed_at_implementation` in the citation-debt ratchet in this adoption. No rule, invariant or outcome changes. Prior: v17 — **v17 — 2026-10-25: the SQLite attestation fold (amendment `0013/0007-sqlite-attestation`, v0.12.1, sha16 `134243c63b05845a`).** Its design was accepted at its external round 2 (2026-10-25; verdict banked at coordination `2b84ab5`) and by the owner (2026-10-25T19:10Z). The new §4g carries the amendment; §4's state table, §4a-viii, §4b, §6 (S36, S47, S56, S58, S64, S66, S69), §7, §8, §10 (S-Q7) and `## Review closure` are edited in place and point to it. Prior: v16. |
 | **Status** | *see `Spec-Status:` — canonical.* Deliberately small and separable: it is a **prerequisite** of `0013` and of every schema-changing spec, not a part of any of them. |
 | **Internal reviewers** | research — pending |
 | **External review** | required — `store/sqlite.py` is guarded and a wrong adoption makes stores unopenable |
@@ -909,12 +909,12 @@ bear on this amendment:
 
 #### 4g.3 Untrusted inputs (the amendment's §2c)
 
-| input | supplied by | treated as |
-|---|---|---|
-| the SQLite build the interpreter loads | the user's environment | **untrusted**: its behaviour is measured on every open (§4b), never inferred from its version string |
-| a store file on disk | anyone with write access | unchanged from 0007: matched against the accepted evidence, refused if it does not match. 0007 §8's limit stands (not integrity) |
-| `sqlite_runtimes.json` | the package (written by the CI matrix) | **package data, not a capability**: a record can only remove the warning. It cannot widen what is accepted (§4d), so a forged record buys an unrecorded build nothing it would not already get by verifying |
-| **(v0.12)** the attestation key's platform fields (`machine`, `system`, `libc`) | the running interpreter, measured (§4d) | **measured, never taken from a runner's label.** An unreadable field makes the build unattestable (at most `verified`), never a match |
+| input | supplied by | treated as | adversarial |
+|---|---|---|---|
+| the SQLite build the interpreter loads | the user's environment | **untrusted**: its behaviour is measured on every open (§4b), never inferred from its version string | a build that reports an attested build's `sqlite_version` and `source_id` (a patched or forked SQLite) but fails a feature probe, or reads a near-miss as the accepted schema (INV-SA1, INV-SA2, INV-SA4). vector: `tests/test_store_versioning.py::test_inv_sa1_an_attested_identity_does_not_skip_verification`; vector: `tests/test_store_versioning.py::test_inv_sa4_a_build_that_cannot_tell_a_near_miss_apart_is_refused` |
+| a store file on disk | anyone with write access | unchanged from 0007: matched against the accepted evidence, refused if it does not match. 0007 §8's limit stands (not integrity) | a stamped store with the wrong shape, opened on the attested build and on a `verified` build, the route the attested runner never takes (INV-SA3). vector: `tests/test_store_versioning.py::test_s16_a_stamped_store_with_the_wrong_shape_is_refused`; vector: `tests/test_store_versioning.py::test_inv_sa3_a_wrong_shape_store_is_refused_on_a_verified_build` |
+| `sqlite_runtimes.json` | the package (written by the CI matrix) | **package data, not a capability**: a record can only remove the warning. It cannot widen what is accepted (§4d), so a forged record buys an unrecorded build nothing it would not already get by verifying | a forged record that matches the running build and adds a manifestation to the accepted set; two records with one key and different evidence (INV-SA5, INV-SA6). vector: `tests/test_store_versioning.py::test_inv_sa5_a_forged_record_cannot_widen_the_accepted_evidence`; vector: `tests/test_store_versioning.py::test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact` |
+| **(v0.12)** the attestation key's platform fields (`machine`, `system`, `libc`) | the running interpreter, measured (§4d) | **measured, never taken from a runner's label.** An unreadable field makes the build unattestable (at most `verified`), never a match | a record field not in canonical form (`AMD64`, `x86-64`, a `libc` taken from `platform.libc_ver()`); a Linux interpreter whose `PT_INTERP` matches neither loader (INV-SA12). vector: `tests/test_store_versioning.py::test_inv_sa12_a_non_canonical_record_field_poisons_the_artifact`; vector: `tests/test_store_versioning.py::test_inv_sa12_an_unreadable_platform_field_is_at_most_verified` |
 
 #### 4g.4 Assertions about reach (the amendment's §2c-ii)
 

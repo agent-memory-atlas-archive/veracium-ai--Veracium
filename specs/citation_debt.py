@@ -107,6 +107,13 @@ CITATION_DEBT: dict = {
         "test_every_statement_names_its_columns": "unclassified_at_generation",
         "test_first_open_locks_before_reading": "unclassified_at_generation",
         "test_in_memory_store_is_versioned": "unclassified_at_generation",
+        "test_inv_sa12_a_non_canonical_record_field_poisons_the_artifact": "owed_at_implementation",
+        "test_inv_sa12_an_unreadable_platform_field_is_at_most_verified": "owed_at_implementation",
+        "test_inv_sa1_an_attested_identity_does_not_skip_verification": "owed_at_implementation",
+        "test_inv_sa3_a_wrong_shape_store_is_refused_on_a_verified_build": "owed_at_implementation",
+        "test_inv_sa4_a_build_that_cannot_tell_a_near_miss_apart_is_refused": "owed_at_implementation",
+        "test_inv_sa5_a_forged_record_cannot_widen_the_accepted_evidence": "owed_at_implementation",
+        "test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact": "owed_at_implementation",
         "test_legacy_store_is_adopted_losslessly": "stale_version: 0013 \u00a75b replaced adoption-on-open with refuse-then-offline-migrate; the live node is test_s6_a_legacy_store_is_migrated_losslessly, and the S6 row's 'adopted' wording is the superseded contract",
         "test_new_store_is_stamped": "unclassified_at_generation",
         "test_repair_revalidates_before_stamping": "unclassified_at_generation"
