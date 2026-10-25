@@ -1645,7 +1645,15 @@ def _source_text(data: bytes, label: str = "<source>") -> str:
     acceptance is the transform disagreeing with the interpreter, named below.
     THE INTERPRETER IS THE ORACLE, per file (round 22): the text is parsed too, and its syntax tree — positions included
     — must equal the one the interpreter built from the bytes. A wrong decoding changes a literal or a column, so any
-    disagreement between _source_encoding and the interpreter's own tokenizer is a NAMED refusal, never a misreading."""
+    disagreement between _source_encoding and the interpreter's own tokenizer is a NAMED refusal, never a misreading.
+    MEMOIZED on everything the answer depends on: the bytes, the label (it is in every refusal's message) and the three
+    functions that decide it, so a test that substitutes _source_encoding or the parser reaches a fresh reading, not
+    an earlier one. Only an ACCEPTED reading is kept; a refusal is recomputed and raised again every time. Research's
+    profile of test_0042_inv7 (2026-10-25): r6_6 read the same sources 1,246 times, two parses and two dumps each."""
+    key = (data, label, _source_encoding, ast.parse, ast.dump)
+    known = _SOURCE_TEXTS.get(key)
+    if known is not None:
+        return known
     try:
         from_bytes = ast.parse(data, filename=label)
     except (SyntaxError, ValueError) as e:
@@ -1664,7 +1672,11 @@ def _source_text(data: bytes, label: str = "<source>") -> str:
     if ast.dump(from_bytes, include_attributes=True) != ast.dump(from_text, include_attributes=True):
         raise SourceUnreadable(f"{label}: the transform's reading of this source (as {encoding}) disagrees with the "
                                f"interpreter's — this is not drift, and T does not advance")
+    _SOURCE_TEXTS[key] = text
     return text
+
+
+_SOURCE_TEXTS: dict = {}     # (bytes, label, _source_encoding, ast.parse, ast.dump) -> the accepted text (_source_text)
 
 
 def _read_source(path: pathlib.Path) -> str:

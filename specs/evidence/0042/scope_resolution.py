@@ -317,6 +317,7 @@ class Resolver:
         self.tree = ast.parse(src)
         self.table = symtable.symtable(src, filename, "exec")
         self._code = None
+        self._bindings = None                         # (module, nested): name -> its binding ops, read once
         self._blocks: dict[tuple, list] = {}
         self._cursor: dict[tuple, int] = {}
         self._rebindings_checked: set[str] = set()
@@ -872,21 +873,40 @@ class Resolver:
         plus the implicit cleanup deletes) where symtable reported one. Rule A needs a count, because its
         question is "more than the one expected binding?". Rule C's question is "does any nested scope reach
         this name?", which one hit settles, so lines are DEDUPLICATED and no arithmetic reaches the message."""
-        found = []
+        return list(self._binding_ops()[1].get(name, ()))
 
-        def nested(code):
-            for const in code.co_consts:
-                if hasattr(const, "co_code"):
-                    yield const
-                    yield from nested(const)
+    def _binding_ops(self) -> tuple[dict, dict]:
+        """BOTH readings of the compiled module, made ONCE per Resolver and indexed by the name each operation
+        binds: (module, nested), each name -> its [(opcode or code object name, line)] in instruction order.
 
-        for obj in nested(self._compiled()):
-            line = obj.co_firstlineno
-            for instruction in dis.get_instructions(obj):
+        Each reading used to disassemble its code objects once PER NAME ASKED, and a census asks for every declared
+        name: research's profile of test_0042_inv7 (2026-10-25) counted 132,920 `get_instructions` calls and 11.1M
+        instructions in one r16 test, 44-46% of r16's and r18's time. The lines are the same ones the per-name walk
+        produced: `_instruction_line` carries a line across EVERY instruction, whichever name it binds, so one full
+        pass assigns each instruction the line the per-name pass did. Only a `str` argval is indexed; these opcodes
+        bind names, and the name asked is a `str`, so no other argval could have compared equal."""
+        if self._bindings is None:
+            module, nested = {}, {}
+            line = 0
+            for instruction in dis.get_instructions(self._compiled()):
                 line = _instruction_line(instruction, line)
-                if instruction.opname in _NESTED_BINDING_OPS and instruction.argval == name:
-                    found.append((obj.co_name, line))
-        return found
+                if instruction.opname in _MODULE_BINDING_OPS and isinstance(instruction.argval, str):
+                    module.setdefault(instruction.argval, []).append((instruction.opname, line))
+
+            def walk(code):
+                for const in code.co_consts:
+                    if hasattr(const, "co_code"):
+                        yield const
+                        yield from walk(const)
+
+            for obj in walk(self._compiled()):
+                line = obj.co_firstlineno
+                for instruction in dis.get_instructions(obj):
+                    line = _instruction_line(instruction, line)
+                    if instruction.opname in _NESTED_BINDING_OPS and isinstance(instruction.argval, str):
+                        nested.setdefault(instruction.argval, []).append((obj.co_name, line))
+            self._bindings = (module, nested)
+        return self._bindings
 
     def _module_binding_ops(self, name: str) -> list[tuple[str, int]]:
         """Every binding operation the MODULE's OWN code object performs on `name`, as (opcode, line).
@@ -900,12 +920,7 @@ class Resolver:
         Nested code objects (a function, a class body, a comprehension that still gets one) live in `co_consts`
         and are NOT walked: a binding they perform is theirs, except when it targets this scope, which is rule C.
         Compiled with `dont_inherit=True` so the SCANNER's own `__future__` flags cannot change the reading."""
-        found, line = [], 0
-        for instruction in dis.get_instructions(self._compiled()):
-            line = _instruction_line(instruction, line)
-            if instruction.opname in _MODULE_BINDING_OPS and instruction.argval == name:
-                found.append((instruction.opname, line))
-        return found
+        return list(self._binding_ops()[0].get(name, ()))
 
     def nested_global_bindings(self, name: str) -> list[tuple[str, int]]:
         """Every NESTED code object that binds this module's `name`, as (code object, line) — RULE C's
