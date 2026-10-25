@@ -1,0 +1,7 @@
+python 3.14.7 | sqlite 3.45.1 | source_id …4cfefa87ffb5b82257ccalt1
+features: {"generated_columns": true, "preserves_ddl_body": true, "strict_tables": true, "xinfo_exposes_generated": true}
+runtime_supported(): True
+qualified record: sqlite 3.45.1 | features {"generated_columns": true, "preserves_ddl_body": true, "strict_tables": true, "xinfo_exposes_generated": true} | features equal here: True
+schema versions 16: constructor digest in the accepted set on 16; complete manifestation equal to the qualified record on 16
+open EXISTING store made on the qualified build: OPENED
+open NEW store: OPENED

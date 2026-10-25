@@ -1,0 +1,9 @@
+python 3.14.7 | sqlite 3.53.1 | source_id …43a1af0e3785e4e6475127e9
+features: {"generated_columns": true, "preserves_ddl_body": true, "strict_tables": true, "xinfo_exposes_generated": true}
+runtime_supported(): False
+qualified record: sqlite 3.45.1 | features {"generated_columns": true, "preserves_ddl_body": true, "strict_tables": true, "xinfo_exposes_generated": true} | features equal here: True
+schema versions 16: constructor digest in the accepted set on 16; complete manifestation equal to the qualified record on 16
+open EXISTING store made on the qualified build: REFUSED StoreVersionError: unsupported-sqlite | cannot open store '/dev/shm/q7r.gpztL0/pu.rzSR/s.db': unsupported-sqlite (found=None, this build=16)
+sqlite 3.53.1 is not a qualified runtime build identity; re
+open NEW store: REFUSED StoreVersionError: unsupported-sqlite | cannot open store '/dev/shm/q7r.gpztL0/pu.rzSR/new.db': unsupported-sqlite (found=None, this build=16)
+sqlite 3.53.1 is not a qualified runtime build identity; 

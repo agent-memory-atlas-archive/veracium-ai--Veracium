@@ -1,0 +1,16 @@
+  1645  DDL   -- NO STEP --            _apply_forward                 e.g. v1#0
+    40  DDL   -- NO STEP --            _repair_drift                  e.g. HEAD-drift
+     1  --    NO WRITES RECORDED       orchestrator:current           e.g. HEAD-drift@orchestrator
+     5  --    NO WRITES RECORDED       orchestrator:migrated          e.g. v15#0@orchestrator
+    43  --    NO WRITES RECORDED       orchestrator:unsupported-base   e.g. v1#0-unstamped@orchestrator
+    33  DML   store-epoch                                             e.g. v1#0
+     5  DML   store-identity                                          e.g. v1#0
+    99  DML   v13-baseline                                            e.g. v1#0
+    48  DML   v16-act-counter                                         e.g. v1#0
+    48  DML   v16-arity-era                                           e.g. v1#0
+    48  DML   v16-notice-state                                        e.g. v1#0
+    48  DML   v16-refusal-inventory                                   e.g. v1#0
+    48  DML   v16-registry-backfill                                   e.g. v1#0
+     3  DML   v2-v3-outcome-chains                                    e.g. v1#0
+     4  DML   v3-v4-wiki-drop                                         e.g. v1#0
+    48  STAMP stamp                                                   e.g. v1#0

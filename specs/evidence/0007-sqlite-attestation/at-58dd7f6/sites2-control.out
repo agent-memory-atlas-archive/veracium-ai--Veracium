@@ -1,0 +1,49 @@
+record kinds {'TXN': 96, 'READ': 3936, 'DDL': 1645, 'DML': 465, 'STAMP': 48}
+campaign paths 48; observed write sites 40 in 16 functions
+  OBSERVED veracium/store/edge_events.py:next_txn:24 x99           "SELECT COALESCE(MAX(txn), 0) FROM edge_event WHERE user_id=?",         (user_id,
+  OBSERVED veracium/store/edge_events.py:next_seq:32 x99           "SELECT COALESCE(MAX(seq), 0) FROM edge_event WHERE user_id=?",         (user_id,
+  OBSERVED veracium/store/edge_events.py:append_event:53 x132  EVENT_INSERT_SQL,                  (user_id, seq, txn, edge_id, kind, reason, state, recor
+  OBSERVED veracium/store/edge_events.py:journal_baselines:67 x33           "SELECT DISTINCT user_id FROM edges ORDER BY user_id")
+  OBSERVED veracium/store/edge_events.py:journal_baselines:72 x99                   "SELECT id, json FROM edges WHERE user_id=? ORDER BY rowid",             
+  OBSERVED veracium/store/edge_events.py:mint_store_epoch:88 x33           "INSERT OR IGNORE INTO store_epoch(id, started_at, schema_at) VALUES(1, ?, ?)",  
+  OBSERVED veracium/store/migration.py:_check_outcome_chains:172 x3  "SELECT id, json FROM episodes")
+  OBSERVED veracium/store/migration.py:_rows:197 x1378  sql, params)
+  OBSERVED veracium/store/migration.py:_migrate_outcome_chains:234 x3  "UPDATE episodes SET json=? WHERE id=?",                      (converted.model_dump_json()
+  OBSERVED veracium/store/migration.py:_migrate_outcome_chains:212 x3  "SELECT id, json FROM episodes")
+  OBSERVED veracium/store/migration.py:_drop_wiki_cache:245 x4  "DELETE FROM wiki")
+  OBSERVED veracium/store/migration.py:_apply_forward:549 x48  f"PRAGMA user_version = {SCHEMA_VERSION}")
+  OBSERVED veracium/store/migration.py:_apply_forward:468 x48                   "INSERT INTO request_registry(user_id, correlation_id, verb, target_edge_
+  OBSERVED veracium/store/migration.py:_apply_forward:496 x48  "UPDATE redactions SET state='standing' WHERE event_ref IS NULL AND source_origin IS NOT N
+  OBSERVED veracium/store/migration.py:_apply_forward:543 x48  "INSERT INTO refusal_inventory(refusal_id, user_id) "                          "SELECT ref
+  OBSERVED veracium/store/migration.py:_apply_forward:295 x1331  o.ddl)
+  OBSERVED veracium/store/migration.py:_apply_forward:343 x6  stmt)
+  OBSERVED veracium/store/migration.py:_apply_forward:371 x8  stmt)
+  OBSERVED veracium/store/migration.py:_apply_forward:396 x14  stmt)
+  OBSERVED veracium/store/migration.py:_apply_forward:454 x276  stmt)
+  OBSERVED veracium/store/migration.py:_apply_forward:487 x10  stmt)
+  OBSERVED veracium/store/migration.py:_apply_forward:533 x48  "INSERT INTO arity_inventory(edge_id, user_id, pre_invalidated_at, pre_reason) "          
+  OBSERVED veracium/store/migration.py:_apply_forward:550 x48  "PRAGMA user_version")
+  OBSERVED veracium/store/migration.py:_apply_forward:300 x3  "SELECT id, json FROM episodes")
+  OBSERVED veracium/store/migration.py:_apply_forward:312 x4  "SELECT COUNT(*) FROM wiki")
+  OBSERVED veracium/store/migration.py:_apply_forward:344 x2                   "SELECT sql FROM sqlite_master WHERE type='table' "                 "AND 
+  OBSERVED veracium/store/migration.py:_apply_forward:372 x4                   "SELECT sql FROM sqlite_master WHERE type='table' "                 "AND 
+  OBSERVED veracium/store/migration.py:_apply_forward:397 x14                   "SELECT sql FROM sqlite_master WHERE type='table' "                 "AND 
+  OBSERVED veracium/store/migration.py:_apply_forward:455 x46                       "SELECT sql FROM sqlite_master WHERE type='table' AND name='confirmat
+  OBSERVED veracium/store/migration.py:_apply_forward:488 x5                       "SELECT sql FROM sqlite_master WHERE type='table' AND name='redaction
+  OBSERVED veracium/store/schema_version.py:mint_act_counter:856 x48  "INSERT OR IGNORE INTO act_counter(id, next_seq) VALUES(1, 1)")
+  OBSERVED veracium/store/schema_version.py:mint_arity_era:864 x48  "INSERT OR IGNORE INTO arity_era(id, effective_at) VALUES(1, ?)", (effective_at,))
+  OBSERVED veracium/store/schema_version.py:_mint_store_identity:877 x5           "INSERT OR IGNORE INTO store_identity(id, origin) VALUES(1, ?)",         (str(uui
+  OBSERVED veracium/store/schema_version.py:manifest:921 x96  _OBJECTS)
+  OBSERVED veracium/store/schema_version.py:manifest:931 x1904                       "SELECT * FROM pragma_table_xinfo(?)", (name,))
+  OBSERVED veracium/store/schema_version.py:_validated_current:1853 x48  "PRAGMA user_version")
+  OBSERVED veracium/store/schema_version.py:open_versioned:1953 x48  "BEGIN IMMEDIATE")
+  NEVER    veracium/store/schema_version.py:open_versioned:2081 x0  f"PRAGMA user_version = {SCHEMA_VERSION}")
+  NEVER    veracium/store/schema_version.py:open_versioned:2093 x0  "COMMIT")
+  NEVER    veracium/store/schema_version.py:open_versioned:1985 x0  "COMMIT")
+  OBSERVED veracium/store/schema_version.py:open_versioned:2006 x47  "COMMIT")
+  NEVER    veracium/store/schema_version.py:open_versioned:2027 x0  f"PRAGMA user_version = {SCHEMA_VERSION}")
+  NEVER    veracium/store/schema_version.py:open_versioned:2031 x0  "COMMIT")
+  OBSERVED veracium/store/schema_version.py:open_versioned:2061 x1  "COMMIT")
+  NEVER    veracium/store/schema_version.py:open_versioned:2103 x0  "ROLLBACK")
+  OBSERVED veracium/store/schema_version.py:open_versioned:1962 x48  "PRAGMA user_version")
+execute sites in those functions never observed issuing a write: 6

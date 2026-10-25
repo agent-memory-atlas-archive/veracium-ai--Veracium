@@ -1,0 +1,15 @@
+python 3.14.7 | sqlite 3.53.1 | source_id …43a1af0e3785e4e6475127e9
+Traceback (most recent call last):
+  File "<research-scratch>/q7-rerun.OZJBvI/probe_build_reproduces.py", line 22, in <module>
+    s = SqliteStore(str(TMP / "s.db")); s.close()
+  File "<research-scratch>/arc-58dd7f6.oAQaA2/src/veracium/store/sqlite.py", line 275, in __init__
+    open_versioned(self._conn, self._path,
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+                   allow_adopt=allow_adopt, audit_sink=audit_sink)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<research-scratch>/arc-58dd7f6.oAQaA2/src/veracium/store/schema_version.py", line 1940, in open_versioned
+    raise _SITE_OPEN_RUNTIME_UNSUPPORTED.fire(StoreVersionError(
+    ...<4 lines>...
+             f"(schema_evidence.py --runtime --write)"))
+veracium.store.schema_version.StoreVersionError: cannot open store '/dev/shm/q7r.gpztL0/pu.Urs2/s.db': unsupported-sqlite (found=None, this build=16)
+sqlite 3.53.1 is not a qualified runtime build identity; regenerate the evidence there (schema_evidence.py --runtime --write)

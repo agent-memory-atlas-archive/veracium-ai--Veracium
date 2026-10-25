@@ -1,0 +1,20 @@
+# probe_build_reproduces.py on git archive af1e564 src; 2026-10-13T22:45:12Z; dev .venv site-packages on PYTHONPATH (same CPython 3.14 ABI), nothing installed
+## create, on the qualified build (dev .venv python)
+python 3.14.7 | sqlite 3.45.1 | source_id …4cfefa87ffb5b82257ccalt1
+created <scratch>/pg/s.db | runtime_supported: True
+## open, on uv CPython 3.14.7 (python-build-standalone)
+python 3.14.7 | sqlite 3.53.1 | source_id …43a1af0e3785e4e6475127e9
+features: {"generated_columns": true, "preserves_ddl_body": true, "strict_tables": true, "xinfo_exposes_generated": true}
+runtime_supported(): False
+qualified record: sqlite 3.45.1 | features {"generated_columns": true, "preserves_ddl_body": true, "strict_tables": true, "xinfo_exposes_generated": true} | features equal here: True
+schema versions 15: constructor digest in the accepted set on 15; complete manifestation equal to the qualified record on 15
+open EXISTING store made on the qualified build: REFUSED StoreVersionError: unsupported-sqlite | cannot open store '<scratch>/pg/s.db': unsupported-sqli
+open NEW store: REFUSED StoreVersionError: unsupported-sqlite | cannot open store '<scratch>/pg/new.db': unsupported-sq
+## control: open, on the qualified build
+python 3.14.7 | sqlite 3.45.1 | source_id …4cfefa87ffb5b82257ccalt1
+features: {"generated_columns": true, "preserves_ddl_body": true, "strict_tables": true, "xinfo_exposes_generated": true}
+runtime_supported(): True
+qualified record: sqlite 3.45.1 | features {"generated_columns": true, "preserves_ddl_body": true, "strict_tables": true, "xinfo_exposes_generated": true} | features equal here: True
+schema versions 15: constructor digest in the accepted set on 15; complete manifestation equal to the qualified record on 15
+open EXISTING store made on the qualified build: OPENED
+open NEW store: OPENED

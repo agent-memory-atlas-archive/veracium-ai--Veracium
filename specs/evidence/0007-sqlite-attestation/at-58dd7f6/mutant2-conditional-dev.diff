@@ -1,0 +1,11 @@
+--- tree/src/veracium/store/migration.py	2026-10-24 22:58:01.000000000 +0000
++++ mutant2/src/veracium/store/migration.py	2026-10-25 02:06:10.608063887 +0000
+@@ -546,6 +546,8 @@
+                 ref_before, _rows(conn, "SELECT refusal_id, user_id FROM supersession_refusals"),
+                 _rows(conn, "SELECT refusal_id, user_id FROM refusal_inventory")))
+             _edges_unchanged(STEP_REFUSAL_INVENTORY)
++        if conn.execute("SELECT COUNT(*) FROM episodes WHERE json LIKE '%no-fixture-holds-this%'").fetchone()[0]:
++            conn.execute("UPDATE episodes SET json = json_set(json, '$.planted', 1)")   # MUTANT 2: conditional, unwrapped
+         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+         stamped = conn.execute("PRAGMA user_version").fetchone()[0]
+         _refuse_unless(base, STEP_STAMP, [f"user_version reads {stamped}, not {SCHEMA_VERSION}"]

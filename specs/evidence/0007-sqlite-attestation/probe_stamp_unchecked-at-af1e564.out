@@ -1,0 +1,8 @@
+# probe_stamp_unchecked.py, af1e564 src (control) and a scratch copy with the one stamp line mutated to SCHEMA_VERSION - 1 (mutant); qualified build (dev .venv); 2026-10-13T23:30:21Z
+control: migrate_store returned outcome='migrated'
+control: committed user_version = 15 (head 15); shape digest in accepted(15): True
+control: next ordinary open: OPENED
+mutant: migrate_store returned outcome='migrated'
+mutant: committed user_version = 14 (head 15); shape digest in accepted(15): True
+mutant: next ordinary open: REFUSED PackageConsistencyError: 
+unmutated package opening the mutant's committed store: REFUSED PackageConsistencyError: store '<scratch>/pstamp/mutant.db' is stamped v14 and this build is v15 with no migration hook installed; migrating forward is specs/0013's contract

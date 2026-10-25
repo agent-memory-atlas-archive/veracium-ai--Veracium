@@ -1,0 +1,7 @@
+set -u; cd <research-scratch>/drivers.I9jGJ5
+PYTHONPATH=<research-scratch>/mutant2-conditional.5CKmrO/src <leg-cache>/venv-py3.14-0de5a29117f6/bin/python -B gap.py <research-scratch>/mutant2-conditional.5CKmrO /dev/shm/m2.JrSvbL <research-scratch>/drivers.I9jGJ5/cells-mutant2.json > gap-mutant2.out 2>&1; echo G-M2=$?
+PYTHONPATH=<research-scratch>/control-58dd7f6.jFWggN/src <leg-cache>/venv-py3.14-0de5a29117f6/bin/python -B sites2.py <research-scratch>/control-58dd7f6.jFWggN /dev/shm/m2.JrSvbL > sites2-control.out 2>&1; echo S-C=$?
+PYTHONPATH=<research-scratch>/mutant2-conditional.5CKmrO/src <leg-cache>/venv-py3.14-0de5a29117f6/bin/python -B sites2.py <research-scratch>/mutant2-conditional.5CKmrO /dev/shm/m2.JrSvbL > sites2-mutant2.out 2>&1; echo S-M2=$?
+PYTHONPATH=<research-scratch>/control-58dd7f6.jFWggN/src <leg-cache>/venv-py3.14-0de5a29117f6/bin/python -B cov.py <research-scratch>/control-58dd7f6.jFWggN /dev/shm/m2.JrSvbL > cov-control-ladder.out 2>&1; echo CV-CL=$?
+PYTHONPATH=<research-scratch>/mutant2-conditional.5CKmrO/src <leg-cache>/venv-py3.14-0de5a29117f6/bin/python -B cov.py <research-scratch>/mutant2-conditional.5CKmrO /dev/shm/m2.JrSvbL > cov-mutant2-ladder.out 2>&1; echo CV-M2=$?
+PYTHONPATH=<research-scratch>/control-58dd7f6.jFWggN/src <leg-cache>/venv-py3.14-0de5a29117f6/bin/python -B cov.py <research-scratch>/control-58dd7f6.jFWggN /dev/shm/m2.JrSvbL --campaign > cov-control-campaign.out 2>&1; echo CV-CC=$?

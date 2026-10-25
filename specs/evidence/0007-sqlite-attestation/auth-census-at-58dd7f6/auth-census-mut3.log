@@ -1,0 +1,2 @@
+{"paths": 48, "errors": 0, "losing_episodes": 48, "classes": {"a": 314, "b1": 1331, "pragma:table_xinfo": 1904, "pragma:user_version": 144, "read": 1888, "row:UNMAPPED(0)": 48, "row:mapped": 465, "stamp": 48, "txn": 96}, "disagreements": 48, "outside": 0, "unmapped_row_writes": 48, "refusals": 0, "orphans": 0}
+rc=0

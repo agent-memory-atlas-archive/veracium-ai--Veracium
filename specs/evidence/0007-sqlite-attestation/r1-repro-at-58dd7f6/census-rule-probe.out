@@ -1,0 +1,5 @@
+pragma_table_xinfo traces: ["SELECT * FROM pragma_table_xinfo('t')", "-- PRAGMA table_xinfo='t'"]
+execute two statements: ProgrammingError You can only execute one statement at a time.
+executemany two statements: ProgrammingError You can only execute one statement at a time.
+DROP INDEX IF EXISTS on present index: ['DELETE', 'DROP_INDEX', 'READ', 'UPDATE']
+DROP INDEX IF EXISTS on absent index: []

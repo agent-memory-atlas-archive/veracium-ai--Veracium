@@ -1,0 +1,77 @@
+{
+  "python": "3.14.7",
+  "sqlite": "3.45.1",
+  "schema_runtime_supported": true,
+  "migration_artifact_problems": [],
+  "authorizer_probes": {
+    "authorizer_api_available": true,
+    "denies_begin": true,
+    "denies_commit": true,
+    "denies_end": true,
+    "denies_rollback": true,
+    "denies_savepoint": true,
+    "denies_release": true,
+    "denies_pragma": true,
+    "denies_attach": true,
+    "denies_detach": true,
+    "denies_temp_table": true,
+    "denies_temp_index": true,
+    "denies_temp_view": true,
+    "denies_temp_trigger": true,
+    "denies_temp_virtual_table": true,
+    "authorizer_restored": true
+  },
+  "migration_runtime_supported": true,
+  "matching_migration_records": 1,
+  "permissive_authorizer": {
+    "schema_runtime_supported": true,
+    "authorizer_probes": {
+      "authorizer_api_available": true,
+      "denies_begin": false,
+      "denies_commit": false,
+      "denies_end": false,
+      "denies_rollback": false,
+      "denies_savepoint": false,
+      "denies_release": false,
+      "denies_pragma": false,
+      "denies_attach": false,
+      "denies_detach": false,
+      "denies_temp_table": false,
+      "denies_temp_index": false,
+      "denies_temp_view": false,
+      "denies_temp_trigger": false,
+      "denies_temp_virtual_table": false,
+      "authorizer_restored": false
+    },
+    "migration_runtime_supported": false
+  },
+  "architecture_key_model": {
+    "kind": "constructed contract counterexample; not a cross-architecture measurement",
+    "x86_record": {
+      "sqlite_version": "3.45.1",
+      "source_id": "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1",
+      "features": {
+        "generated_columns": true,
+        "strict_tables": true,
+        "preserves_ddl_body": true,
+        "xinfo_exposes_generated": true
+      },
+      "compile_options_sha256": "c455307e9bd2df77b925c8ec9c612d1da80cfa1b246ef0c0559d31905efca077",
+      "machine": "x86_64"
+    },
+    "arm_record": {
+      "sqlite_version": "3.45.1",
+      "source_id": "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1",
+      "features": {
+        "generated_columns": true,
+        "strict_tables": true,
+        "preserves_ddl_body": true,
+        "xinfo_exposes_generated": true
+      },
+      "compile_options_sha256": "c455307e9bd2df77b925c8ec9c612d1da80cfa1b246ef0c0559d31905efca077",
+      "machine": "aarch64"
+    },
+    "same_proposed_key": true
+  },
+  "product_runtime_supported_outside_model": true
+}

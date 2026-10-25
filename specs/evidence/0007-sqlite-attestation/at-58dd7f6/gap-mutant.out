@@ -1,0 +1,5 @@
+tree <research-scratch>/mutant-unwrapped.SOpQfl
+paths 48 outcomes {'None': 48}
+non-DDL writes mapped to NO step: 48 {('DML', "UPDATE episodes SET json = json_set(json, '$.planted', 1)", '_apply_forward'): 48}
+part A cells 1480 not killed 0 per step {'v2-v3-outcome-chains': 6, 'v3-v4-wiki-drop': 4, 'store-identity': 15, 'v13-baseline': 396, 'store-epoch': 99, 'v16-act-counter': 144, 'v16-registry-backfill': 144, 'v16-notice-state': 96, 'v16-arity-era': 144, 'v16-arity-inventory': 144, 'v16-refusal-inventory': 144, 'stamp': 144}
+M-EXIT=0

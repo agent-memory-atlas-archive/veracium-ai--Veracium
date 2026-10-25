@@ -1,0 +1,25 @@
+research's evidence directory (proposals/evidence-sqlite-gate at research 1c950060), as shipped in evidence-sqlite-gate/.
+Every file is research's committed bytes, except those listed below, in which exactly three path prefixes were
+replaced (two machine-local scratch directories and a cached interpreter path; no figure changes):
+  <research-scratch>  replaces research's session scratchpad directory
+  <leg-cache>         replaces research's cached interpreter directory
+  <dev-scratch>       replaces dev's session scratchpad directory (the authorizer census, imported raw)
+Per transformed file: committed sha256, shipped sha256, path.
+  a1197f5bb00341e0fcbb6734e1371458935766494eaa9d4f777df2cafd01eafb  485679c60e362a8c4c305ee6671756392027d6ff691e766d535af37b7652329f  at-58dd7f6/gap-control.out
+  1958d88ec9aaf75422f619728ef0d65e52af6df9e03c6b009f2b351e7d410e2c  0b555bff826b2844c33bd5fca018e188a87c55c29561ebe9d4e1804790eb80e9  at-58dd7f6/gap-mutant.out
+  7c21f7d75cbb40e0612fee7e8d9f78c3850ece9c6023d849b77cf8c85864e294  470512e0c596d212ccc77646e06207ab38cf9ef1f665a6be1792f74bfe4e891e  at-58dd7f6/gap-mutant2.out
+  13efe26f5c3341949b5c1701f368fc3feee4e20ae8b2ae6c4d0139e5d552aa3e  9f6280766ae4b290e578e92e113e1dd4ad7cecb4d039a90ec30b39578531dd67  at-58dd7f6/probe-u-create-at-58dd7f6.out
+  945db521d3cbc5c1a4817dc5e93b9082390934e240f27bae5a116bcf8b4a6ccd  6ced142c9cdcb7238c8b202d628c367f4d742daf7f9f83d5321437cf9bec7a2f  at-58dd7f6/run2.sh
+  90b5f30e97cfe3e476ddc1371d2589beae22fda82dc811fd9f0dae2b82ad17e6  453204e3583c87fa9ff5ad4a7dd52b524424a6ee70bc19e22bd240db00467a0c  at-58dd7f6/steptable-campaign-at-58dd7f6.out
+  46e2b4a01c862fc09057c79c133859fb3d8c30bdbba38ef886014dd67a89b786  b95bbc640db9687da728037b9d51a0b9d43d206752744e8f82aac361b8f0966e  auth-census-at-58dd7f6/auth-census-ctl.json
+  a6934e8b2a9e0dc7396d448a1af92443345b74c33a3d62ef9c4f0d9261782aaf  2c90b4cdb09c94a5c59633f0b25eb8fc83af4b6edd7c0022a60b7acc51ca438c  auth-census-at-58dd7f6/auth-census-mut.json
+  52d8b32c21261c7c648a78c645224165fa53e41a43a4789c9fd307412d3fbfd1  f38516ca656764688de3e84bd2e78eee307727dbba8ea190c0e9fe537f58c1ed  auth-census-at-58dd7f6/auth-census-mut2.json
+  773bae407d1328c11bd7ce9dd9a07ff90b5067cdc2d17a5a7e433bb2f351cb08  4c584dba76dc158c34364567b85dc59a6956cf7d6278c7d473f8a5b3178890da  auth-census-at-58dd7f6/auth-census-mut3.json
+  82834566293cbcd8d4917c618f5a148f18726aa68760aced7fe7db79011f24bf  def0376201df3e0e2ff3d913267c5f22640fc2687ecd72bd57e193ac6df46fa4  auth-census-at-58dd7f6/census-mut2.json
+  117ba891056d4dd511582ccd1df1cf35ca16d1bf0e5d034229a685534280c30b  e7e8e24618ab9297e2e61b77d92b25622174af31450d7ba6fe46238b12b6251e  auth-census-at-58dd7f6/census-mut3.json
+  0882cdd9cbe31b79d3a42c6b9c0272a709373c5359e92bf533b1fea24dd8ef11  037f2454288aa78052dfdbff16fa566e3113d88c5e273e24d1f3bd98fefebea3  auth-census-at-58dd7f6/first-rules-ctl.json
+  75833a35a3ec5f72aeb1908b07c354374d54c4435590510005a3ccd4c1b884e2  6eb52375c01221ae1f9293d9411c3421311143705e5fc062ad2ec22e4b79e854  auth-census-at-58dd7f6/first-rules-mut.json
+  665728a963c65584ec7acf4d756177e2d15acdbca2158c8e9572afdb3746fd48  b44b5df1779660265e8a9621acc894a26f64c2478496d948ac877ff94e205596  auth-census-at-58dd7f6/first-rules-mut2.json
+  31c1168c47e64d9071892c32b9d60e66d0ef98f6a0dccfb1c0e2ea6c533e5097  51c22bac70bd3d0ccf5666be4c7e9534efdf3e7d787f26b70701cf8c8fb02397  auth-census-at-58dd7f6/first-rules-mut3.json
+  ef23f6c60496303b7b720021ad881ce7beebf6fc385b87bdc4a6fd598f830046  422855b7dcf771cfce3fbf440abbddd616896127e47e76eb25d409e6a5b8bfff  auth-census-c2-at-58dd7f6/auth-census-c2-wrong.json
+  93d764873431eb2e47f8d876fa98ce1ef56c0058b42bb1b6a60ab0251f9743c6  3c08958bcacea7a519029a95ed569bc389e969ff6d2b5d79505e19779f0326c1  auth-census-c2-at-58dd7f6/auth-census-c3-missing.json

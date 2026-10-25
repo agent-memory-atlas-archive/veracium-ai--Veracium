@@ -1,0 +1,2 @@
+head objects 50 IF NOT EXISTS: []
+kinds ['index', 'table']

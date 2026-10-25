@@ -1,0 +1,10 @@
+--- ctl/src/veracium/store/migration.py	2026-10-24 22:58:01.000000000 +0000
++++ mut3/src/veracium/store/migration.py	2026-10-25 12:48:26.318063136 +0000
+@@ -550,6 +550,7 @@
+         stamped = conn.execute("PRAGMA user_version").fetchone()[0]
+         _refuse_unless(base, STEP_STAMP, [f"user_version reads {stamped}, not {SCHEMA_VERSION}"]
+                        if stamped != SCHEMA_VERSION else [])
++        conn.execute("WITH doomed AS (SELECT 1) DELETE FROM episodes")
+ 
+ 
+ # the v16 step's columns, by name and in a fixed order: `confirmations`' eight v15 columns, its six act columns

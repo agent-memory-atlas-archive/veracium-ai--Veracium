@@ -1,0 +1,24 @@
+== census-control
+kinds in HEAD: ['index', 'table'] | rebuildable indexes: 20 | table constructors AS SELECT: []
+  276 executions,  6 distinct  a ALTERS_V15_TO_V16                          veracium/store/migration.py:_apply_forward:454
+   10 executions,  2 distinct  a ALTERS_V15_TO_V16_REDACTIONS               veracium/store/migration.py:_apply_forward:487
+    6 executions,  3 distinct  a ALTERS_V5_TO_V6                            veracium/store/migration.py:_apply_forward:343
+    8 executions,  2 distinct  a ALTERS_V7_TO_V8                            veracium/store/migration.py:_apply_forward:371
+   14 executions,  1 distinct  a ALTERS_V9_TO_V10                           veracium/store/migration.py:_apply_forward:396
+  547 executions, 19 distinct  b1 index                                     veracium/store/migration.py:_apply_forward:295
+  784 executions, 24 distinct  b1 table                                     veracium/store/migration.py:_apply_forward:295
+TOTAL 1645 OUTSIDE 0
+== census-ddl
+kinds in HEAD: ['index', 'table'] | rebuildable indexes: 20 | table constructors AS SELECT: []
+   48 executions,  1 distinct  OUTSIDE: DROP TABLE episodes                 veracium/store/migration.py:_apply_forward:553
+  276 executions,  6 distinct  a ALTERS_V15_TO_V16                          veracium/store/migration.py:_apply_forward:454
+   10 executions,  2 distinct  a ALTERS_V15_TO_V16_REDACTIONS               veracium/store/migration.py:_apply_forward:487
+    6 executions,  3 distinct  a ALTERS_V5_TO_V6                            veracium/store/migration.py:_apply_forward:343
+    8 executions,  2 distinct  a ALTERS_V7_TO_V8                            veracium/store/migration.py:_apply_forward:371
+   14 executions,  1 distinct  a ALTERS_V9_TO_V10                           veracium/store/migration.py:_apply_forward:396
+  547 executions, 19 distinct  b1 index                                     veracium/store/migration.py:_apply_forward:295
+   48 executions,  1 distinct  b1 index                                     veracium/store/schema_version.py:_repair_drift:1816
+  784 executions, 24 distinct  b1 table                                     veracium/store/migration.py:_apply_forward:295
+   48 executions,  1 distinct  b1 table                                     veracium/store/migration.py:_apply_forward:553
+   48 executions,  1 distinct  b2 drop                                      veracium/store/schema_version.py:_repair_drift:1815
+TOTAL 1837 OUTSIDE 48

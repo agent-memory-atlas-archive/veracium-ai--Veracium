@@ -1,0 +1,14 @@
+comment-prefixed DROP    _kind=READ  authorizer=['SQLITE_DELETE', 'SQLITE_DROP_TABLE', 'SQLITE_READ', 'SQLITE_UPDATE']  non-read=['SQLITE_DELETE', 'SQLITE_DROP_TABLE', 'SQLITE_UPDATE']
+CTE DELETE               _kind=READ  authorizer=['SQLITE_DELETE']  non-read=['SQLITE_DELETE']
+script led by SELECT     _kind=READ  authorizer=['SQLITE_DELETE', 'SQLITE_DROP_TABLE', 'SQLITE_READ', 'SQLITE_SELECT', 'SQLITE_UPDATE']  non-read=['SQLITE_DELETE', 'SQLITE_DROP_TABLE', 'SQLITE_UPDATE']
+stamp write              _kind=STAMP authorizer=['SQLITE_PRAGMA']  non-read=['SQLITE_PRAGMA']  pragma(arg1,arg2)=[('user_version', '16')]
+stamp read               _kind=READ  authorizer=['SQLITE_PRAGMA']  non-read=['SQLITE_PRAGMA']  pragma(arg1,arg2)=[('user_version', None)]
+table_info read          _kind=READ  authorizer=['SQLITE_PRAGMA']  non-read=['SQLITE_PRAGMA']  pragma(arg1,arg2)=[('table_info', 't')]
+writable_schema          _kind=READ  authorizer=['SQLITE_PRAGMA']  non-read=['SQLITE_PRAGMA']  pragma(arg1,arg2)=[('writable_schema', 'ON')]
+ATTACH                   _kind=READ  authorizer=['SQLITE_ATTACH']  non-read=['SQLITE_ATTACH']
+plain CREATE INDEX       _kind=DDL   authorizer=['SQLITE_CREATE_INDEX', 'SQLITE_INSERT', 'SQLITE_READ', 'SQLITE_REINDEX']  non-read=['SQLITE_CREATE_INDEX', 'SQLITE_INSERT', 'SQLITE_REINDEX']
+cached_statements=128: callbacks on this execution = 2
+cached_statements=128: callbacks on this execution = 0
+cached_statements=0: callbacks on this execution = 2
+cached_statements=0: callbacks on this execution = 2
+sqlite 3.45.1 python 3.14.7

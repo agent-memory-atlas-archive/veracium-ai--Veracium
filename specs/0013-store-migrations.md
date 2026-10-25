@@ -1,7 +1,8 @@
 # Feature spec: on-disk store migrations
 
 Spec-Status: accepted
-Spec-Requires: 0007
+Spec-Requires: 0007[0013/0007-sqlite-attestation]
+Folds: 0013/0007-sqlite-attestation
 
 *<!-- canonical machine-readable state; the header table below carries the narrative. Only `accepted` authorises implementation. -->*
 
@@ -33,11 +34,11 @@ Spec-Requires: 0007
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | **v33 — 2026-10-13: post-acceptance revision (internal finding 0013-PA1; no release changes behaviour; `Spec-Status` stays `accepted`). Every migration step's output is checked AT THE STEP (§4f).** A mutation campaign over the whole migration ladder (dev's instrument, research's identical re-run) found six steps whose output nothing checks, on any SQLite build: the version stamp, the `store_identity` and `store_epoch` mints, the v13 baseline journal, the v2→v3 outcome-chain conversion and the v3→v4 wiki cache drop. A wrong stamp makes `migrate_store` report `migrated` and commit a store the next open refuses. The unmutated ladder is correct; these are assurance gaps, not a wrong output in any release. §4f gives each step a postcondition checked inside the migration's transaction, before the next step; M117–M123 are the invariants, and the closure cells are the campaign's perturbations, each KILLED at its own step. The v2→v3 fill of a missing `observed_at` becomes ONE stated clock read per migration instead of a per-row side effect of loading the model. **Respun 2026-10-14 on dev's review (same version, not yet adopted):** "equal" is defined as equal AS THE DECLARED TYPE, since the dump reformats legitimate `+00:00` datetimes; the added keys are DERIVED from the models' constant defaults, 19 measured; the one released-then-removed field, `provenance.source_type`, is named as the only undeclared key the step may drop, under accepted 0016 D2 (M-Q6, closed by it); and a pre-step snapshot is the postcondition's own read. **Owner rulings, 2026-10-14 (Quentin, first-hand in the dev session):** PATH, “Fold on your word”: like the 0041 notice hotfix, internal finding 0013-PA1 is closed with a mutation table whose cells are the campaign's perturbations, each caught at its own step; it lands after review and suite, and is disclosed to the external reviewer in the next package that touches 0013 (the SQLite amendment's); external review of v33 was declined. M-Q5, “Keep the fill” (M-Q5, closed by it). Prior: v32 |
+| **Version** | **v34 — 2026-10-25: the SQLite attestation fold (amendment `0013/0007-sqlite-attestation`, v0.12.1, sha16 `134243c63b05845a`), its migration side.** Its design was accepted at its external round 2 (2026-10-25; verdict banked at coordination `2b84ab5`) and by the owner (2026-10-25T19:10Z). The new §5f carries it; §4f, §5c, §5e, M11, M12, M15, M18 and §8a item 2 are edited in place and point to it; the store-open side is 0007 §4g. Prior: **v33 — 2026-10-13: post-acceptance revision (internal finding 0013-PA1; no release changes behaviour; `Spec-Status` stays `accepted`). Every migration step's output is checked AT THE STEP (§4f).** A mutation campaign over the whole migration ladder (dev's instrument, research's identical re-run) found six steps whose output nothing checks, on any SQLite build: the version stamp, the `store_identity` and `store_epoch` mints, the v13 baseline journal, the v2→v3 outcome-chain conversion and the v3→v4 wiki cache drop. A wrong stamp makes `migrate_store` report `migrated` and commit a store the next open refuses. The unmutated ladder is correct; these are assurance gaps, not a wrong output in any release. §4f gives each step a postcondition checked inside the migration's transaction, before the next step; M117–M123 are the invariants, and the closure cells are the campaign's perturbations, each KILLED at its own step. The v2→v3 fill of a missing `observed_at` becomes ONE stated clock read per migration instead of a per-row side effect of loading the model. **Respun 2026-10-14 on dev's review (same version, not yet adopted):** "equal" is defined as equal AS THE DECLARED TYPE, since the dump reformats legitimate `+00:00` datetimes; the added keys are DERIVED from the models' constant defaults, 19 measured; the one released-then-removed field, `provenance.source_type`, is named as the only undeclared key the step may drop, under accepted 0016 D2 (M-Q6, closed by it); and a pre-step snapshot is the postcondition's own read. **Owner rulings, 2026-10-14 (Quentin, first-hand in the dev session):** PATH, “Fold on your word”: like the 0041 notice hotfix, internal finding 0013-PA1 is closed with a mutation table whose cells are the campaign's perturbations, each caught at its own step; it lands after review and suite, and is disclosed to the external reviewer in the next package that touches 0013 (the SQLite amendment's); external review of v33 was declined. M-Q5, “Keep the fill” (M-Q5, closed by it). Prior: v32 |
 | **Status** | *see `Spec-Status:` — canonical.* **Prerequisite of every schema-changing spec:** `0006`, `0008`, `0009`, `0010`. |
 | **Internal reviewers** | research — pending |
 | **External review** | required — a bad migration makes stores unopenable |
-| **Decision + date** | **accepted 2026-08-07** (dev, on the finite M-Q4 §8a boundary; see `## Review closure`) |
+| **Decision + date** | **accepted 2026-08-07** (dev, on the finite M-Q4 §8a boundary; see `## Review closure`) · **v34: the amendment's design accepted** (its round 2, 2026-10-25, and the owner's word); implementation acceptance outstanding (0007 `## Review closure`, I1–I7) |
 | **Path** | full |
 
 ---
@@ -292,6 +293,8 @@ include legacy rows in every datetime form an older writer could produce (at lea
 must migrate. *Instrument limit:* the campaign's legacy episodes were built from the accepted DDL with generic rows, not
 written by old releases. Where an archived release can be installed, a store it writes is the better control.
 
+**v34 (amendment `0013/0007-sqlite-attestation`):** the 0013-PA1 closure evidence gains INV-SA10's commit-time gate, which asserts that every ladder write maps to a checked step (§5f.1, §5f.4). The amendment's two annotations to this section are §5f.2.
+
 ---
 
 ## 5. The concrete migration — v1 → v2, the `confirmations` table
@@ -462,6 +465,8 @@ openers are serialised by the lock; **stale** openers are the operational
 contract's problem.)*
 
 ## 5c. Path evidence: recorded, validated, consumed — never re-derived
+
+> **v34 — the runtime seam is replaced by §5f.3 (amendment `0013/0007-sqlite-attestation`, its §4c-iii), carrier by carrier.** Withdrawn from this section (the amendment's §4f, in 0007 §4g.6): the migration-runtime record class, and with it the single-active-runtime policy in `migration_runtime_artifact_problems`; the runtime-identity component of the path-evidence key and of its expected set; and the requirement that a path record's runtime resolve to a schema-runtime record and a migration-runtime record. Everything else here stands, as §5f.3 qualifies it.
 
 **Round 3's central finding: v4 generated its "expected" record from the
 currently loaded migration code, so an altered migration authorised itself.**
@@ -692,6 +697,8 @@ source and output versions with their manifestation digests, the migration
 declaration digest, and the opaque `backup_ref` — all under the frozen
 opaque-token caps (§5b), so audit fields cannot become prose channels.
 
+**v34 (INV-SA11; amendment `0013/0007-sqlite-attestation`):** a migration's `attempted` audit event carries the migrating build's `sqlite_version`, `source_id` and `runtime_status()` (§5f.4): one additive key. 0018's sidecar writer copies it.
+
 **The frozen durable model is TWO tables, not one** (round 7, finding 3: a
 single append-only table whose `operation_id` is globally unique cannot hold
 an attempted AND a terminal event for one operation — the previous freeze
@@ -864,6 +871,444 @@ lifecycle in-process — atomic consumption under concurrency, the typed
 `migration-audit-unavailable` outcome — so the production sink implements a
 frozen contract rather than designing one.
 
+## 5f. The SQLite attestation's migration side (v34, amendment `0013/0007-sqlite-attestation`)
+
+> **What this section adds:** the migration side of the accepted amendment `0013/0007-sqlite-attestation` (v0.12.1, sha256 `134243c63b05845a…`; design accepted at its external round 2, 2026-10-25; the owner's acceptance 2026-10-25T19:10Z), whose store-open side is 0007 §4g: the closed classification of what a `verified` build's migration may write, INV-SA10's commit-time gate over the ladder (amending the 0013-PA1 closure evidence), two annotations to §4f, and the replacement for §5c's runtime seam, carrier by carrier, with INV-SA10 and INV-SA11. The clauses it amends are edited in place and point here: §4f, §5c, §5e's attempted audit record, M11, M12, M15, M18 and §8a item 2. **Within this section, “§4c”, “§4c-ii” and “§4c-iii” mean the subsections labelled so here; every other “§N” of the amendment (§1–§8, §4a–§4f) means the subsection labelled so in 0007 §4g**. A reference to 0013's own sections says “0013”.
+
+### 5f.1 What a `verified` build may do with a store (the amendment's §4c)
+
+**Everything an `attested` build may do**: create, open, adopt an unstamped legacy store (0007 §4a-iv), and migrate
+(0013). Each of these is already checked against the accepted evidence at the moment it happens:
+- **create** writes the constructor that verification just reproduced;
+- **open and adopt** match the store's own manifest against the accepted set, through the same matcher that
+  discrimination (§4b step 3) just exercised on this build;
+- **migrate: along the same ladder, with the same checks, as an `attested` build (v0.11; from v0.2 to v0.10, only the
+  steps shown to be verified).** Three ALTER steps byte-match their reviewed expectations
+  and refuse otherwise (row 5), and `open_versioned` revalidates the migrated schema against the accepted digests
+  inside the migration's transaction. **That covers what those checks see, not the whole ladder.** The ladder also
+  creates tables, builds and repairs indexes, writes the stamp and runs DATA steps (the v13 journal baseline among
+  them; v0.8: the measured table below has no copy-and-swap rebuild step), and revalidating the schema says nothing about the rows a data step wrote.
+
+  **The step table, measured (v0.8).** Dev classified every step by MUTATION, not by reading: each write statement of
+  each path perturbed at its execution (DDL by text, DML by data, the stamp by value), the class decided by where the
+  perturbation is killed. 44 paths (every accepted shape at every base v1–v14, the unstamped legacy store, a HEAD store
+  with its rebuildable indexes dropped), 68 distinct steps, 3,318 perturbations on 3.45.1, and the unperturbed ladder on
+  both 3.45.1 and 3.53.1, with identical end state, data and write sequence. Instrument: specs-side, dev's
+  steptable.py (sha16 `5b81c3ae0d9f1b9f`), output sha16 `a1b9b6732d5ac718`. **Research re-ran it** from its own
+  archive of `af1e564` by its five documented commands: the output is identical except dev's section headers, exit
+  markers and output file names (research `c52b5c3b`).
+
+  | class | meaning | steps |
+  |---|---|---|
+  | **(a) checked at the step** | the step's own output is compared, at the step, to a reviewed expectation | the ALTER sites. At v0.8, three (v6, v8, v10) with six statements. **At `58dd7f6` (v0.12, C1): five** (`_apply_forward` L343, L371, L396, L454, L487), **14 statements**: `ALTERS_V5_TO_V6` 3, `ALTERS_V7_TO_V8` 2, `ALTERS_V9_TO_V10` 1, `ALTERS_V15_TO_V16` 6, `ALTERS_V15_TO_V16_REDACTIONS` 2 (research's classification of the reviewer's PA1 census) |
+  | **(b) revalidated** | schema-only; a perturbation is killed by the end-state check, or absorbed by drift repair and revalidation. **(v0.12) Frozen as a closed list of statement texts (below). Revalidation is not what makes a statement class (b)** | the additive CREATE TABLEs, the unique index, the rebuildable indexes |
+  | **(c) neither** | every perturbation SURVIVED: value altered, row dropped, statement skipped | six steps: the v13 baseline `edge_event` inserts; the `store_epoch` mint; the `store_identity` mint; the outcome-chain UPDATE of `episodes`; the `wiki` cache DELETE; **and the STAMP, `PRAGMA user_version`, on all 43 migrating paths** |
+
+  **The stamp decided the rule's effect until 0013-PA1 landed.** The end-state check never reads `user_version`. Research reproduced
+  it independently (research `62f76f45`): with the one stamp line mutated to write head − 1, `migrate_store` returns
+  `migrated` and commits a head-shaped store stamped 14. The next ordinary open refuses it loudly ("stamped v14 …
+  no migration hook"), so the failure is a false success report and a store that will not open, not a silent misread.
+  **Every path ends with the stamp, so until the postconditions landed, every migration on a `verified` build would
+  have refused under the rule below.**
+
+  **This is a gap on ATTESTED builds too,** independent of SQLite: the six steps' mutants are killed by nothing on any
+  build. (The unperturbed ladder is correct on both builds; these are assurance gaps, not a shipped wrong output.) It
+  is raised as a **separate 0013 finding (dev)**: each class-(c) step gains a POSTCONDITION checked inside the
+  migration's transaction (the end-state check reads `user_version` and requires HEAD; exactly one `store_identity`
+  row, well-formed; exactly one `store_epoch` row; one baseline `edge_event` per pre-existing edge, by identity; zero
+  `wiki` rows after the drop; the outcome-chain step's own invariant re-read after its UPDATE). A postcondition moves a
+  step into class (a). *(v0.9: the v2→v3 step's fill of a missing `observed_at` is now checked against the migration's
+  ONE clock read, which `store_epoch.started_at` records: 0013 §4f, and the owner's M-Q5 ruling.)*
+
+  **Landed, and re-measured by research (v0.9).** The postconditions are 0013 v33 §4f (internal finding 0013-PA1,
+  landed at dev's `0a89696`). Research's stage-2 read found two defects, fixed at `86522c6`: the v2→v3 check took its
+  outcome rows from the step, and an unreadable converted row raised instead of refusing. At `d273f19`, research re-ran
+  both instruments from its own clone:
+  - **The step table** (steptable.py, sha16 `5b81c3ae0d9f1b9f`, unchanged): 3,318 perturbations, **SURVIVED 0** (507
+    at `af1e564`). The 507 that survived are exactly the 507 now killed at the postcondition site (set-equal on path,
+    write and mode). The unperturbed ladder is identical on 3.45.1 and 3.53.1: 88 of 88 paths, end state and write
+    sequence. Outputs, in evidence-sqlite-gate: steptable-rerun-at-d273f19.out (sha16 `b8e45ec23e198e7b`), its table
+    (sha16 `125035f510172c20`) and its comparison (sha16 `dbb97faca3837c87`).
+  - **Instrument limit, stated.** The table's generated class column still prints (c) for those six steps. Its
+    classifier knows only the byte-match sites, and reads a postcondition kill as COLLATERAL: its "(a)" means "own
+    byte-match", while this amendment's class (a) means "checked at the step". The per-step judge is the next
+    instrument.
+  - **The 0013-PA1 campaign** (pa1_campaign.py, run with `--write` on a copy of `d273f19`): 550 cells, the 507
+    survivors plus 43 cells that raise the stamp. **Each is killed at its own step**, with a positional witness and the
+    store unchanged, and 17 of 17 code mutants are killed. Its cells and rows equal dev's committed table cell for
+    cell; only timings and the header's commit differ. Output: specs/evidence/0007-sqlite-attestation/pa1-rerun-at-d273f19.json (sha16
+    `7743b898cad06ec8`).
+
+  So **class (c) was EMPTY at `d273f19`**.
+
+  **At `58dd7f6` (v0.11; schema 16).** Dev re-ran the step table at HEAD, and research re-ran it from its own archive.
+  The two outputs agree line for line (specs/evidence/0007-sqlite-attestation/at-58dd7f6):
+  - **Paths:** 98, each with end state and write sequence identical on 3.45.1 and 3.53.1.
+  - **Perturbations:** 9,636, **SURVIVED 0**. Of these, 3,697 were killed at the end state, 1,663 collaterally and
+    1,623 by byte-match; 2,539 were absorbed and 114 were N/A.
+  - **v16's steps:** every one has its own postcondition. The ladder has 14 named steps. 12 issue a write the
+    campaign perturbs; the other two are the ALTER block (DDL, byte-matched) and the edges-unchanged check.
+  - **Two v16 steps the step table cannot exercise:**
+    - the notice-state backfill: on 48 paths no fixture row qualifies, so a skip is ABSORBED, and `alter` is N/A
+      because the UPDATE takes no parameter;
+    - **the arity-inventory INSERT:** it runs once per qualifying edge, and no step-table fixture holds one, so it is
+      issued on 0 of 98 paths. (Research's census; dev's read named only the first.)
+
+    Both have their cells in the product's 0013-PA1 campaign, whose fixtures add a standing notice and arity rows:
+    144 arity-inventory cells and the 5 base-15 notice-state skips, all killed at the step. The notice-state `alter`
+    class is carried by the TEMP-trigger cells in tests/test_0041_notice_state.py.
+
+  So v0.9's standing rule is **met for v16**: every v16 step is checked at the step, with campaign cells.
+
+  **The rule (v0.11; replaces v0.2's runtime refusal, on dev's stage-1 finding).** v0.2 to v0.10 had a `verified`
+  build refuse, before its first step, any path that held a class-(c) step. At `58dd7f6` that set is **empty by
+  construction**, because every writing step has its own postcondition. Nothing in the package carries the set: the
+  classes come from a specs-side instrument. A runtime branch reading it would never run on any shipped path, and the
+  v0.9 mutant (a data step added with no postcondition while the set stays empty) could not be killed at runtime,
+  because nothing at runtime knows the step exists. **The rule is therefore enforced at COMMIT TIME, as a product
+  test (INV-SA10).** Every write the migration ladder issues must satisfy one of two conditions:
+  - it is DDL in class (a), byte-equal to a frozen `ALTERS_*` member and checked at its step, or in class (b), the closed list below. (v0.11 read "revalidated against the accepted digests"; round 1's reviewer showed that this admits data loss.)
+  - or it maps to **exactly one** named step that is checked at the step by its own postcondition, inside the
+    migration's transaction, and whose campaign cells are each killed at that step.
+
+  A commit that adds a write meeting neither condition fails the suite, so it never reaches any build. **There is no
+  runtime branch:** a `verified` build migrates exactly as an `attested` build does, because the gate makes every
+  data write checked at its step, on whatever build runs it.
+
+  **What the gate must assert that today's suite does not (research, measured at `58dd7f6`).** The 0013-PA1 campaign
+  maps each recorded write to a step through a hand-written table of matchers (by function name and SQL text), and
+  **skips a write that no matcher claims** (`if step is None: continue`). Its `problems()` checks that every `STEP_*`
+  name has cells, not that every write has a step. Research planted one unwrapped
+  `UPDATE episodes SET json = json_set(json, '$.planted', 1)` before the stamp:
+  - all 48 paths migrate, with the planted key committed;
+  - the write maps to no step on every path;
+  - the campaign's 1,480 cells are identical to the unmutated control's.
+
+  So a regenerated table would pass dev's own mutant (specs/evidence/0007-sqlite-attestation/at-58dd7f6, §3). **The gate must assert
+  the complement:** over every campaign path, every write that is not DDL maps to exactly one step. At `58dd7f6` there
+  are two censuses, each with its own fixture scope (v0.12, C1):
+  - **The step table's census** covers its 49 native ladder entries, HEAD drift repair included (its 49 orchestrator
+    entries carry no write arrays). 432 writes match exactly one step, and none matches two. The 1,685 writes that
+    match no step are all DDL: `_apply_forward` 1,645, `_repair_drift` 40.
+  - **0013-PA1's census** covers the 48 fixtures the gate runs over, which add qualifying arity and notice rows. 513
+    non-DDL writes each match exactly one step, and none is unmapped or ambiguous. There are 1,645 DDL writes, all from
+    `_apply_forward`, none from `_repair_drift`.
+  - **Both are counts of statements a leading-keyword label called DDL or DML** (§8). Every DDL statement must be
+    class (a) or class (b), as SQLite classifies it (below).
+
+  **The census must also see every write site (v0.11.1; dev's re-read, reproduced by research).** The complement runs
+  over the writes the campaign RECORDS, so a write no fixture triggers is never recorded. Dev's mutant: the same
+  UPDATE behind `if conn.execute("SELECT COUNT(*) FROM episodes WHERE json LIKE '%no-fixture-holds-this%'")…`.
+  - The complement passes it: 0 unmapped writes, and the 1,480 cells again equal the control's.
+  - **INV-SA10 therefore also requires every `.execute`, `.executemany` and `.executescript` call site, in every
+    function the ladder's connection is used from, to be observed on at least one campaign path.**
+    - Reads count as observations, so the SQL text never has to be classified.
+    - The scope is a property, not a list, with one stated exclusion: `open_versioned`. The ladder enters it only to
+      read and commit, and its six other sites belong to the create and adopt flows and the ROLLBACK (L1985, L2027,
+      L2031, L2081, L2093, L2103).
+    - A narrower scope, "every function in `store/migration.py`", is wrong: `unattested_marker_report` (L836, a
+      read-only 0041 operator report) is never on the ladder, so its 3 sites would refuse a correct tree.
+  - At `58dd7f6` the ladder's connection is used from 16 functions across the store modules, at 40 recorded sites.
+    Outside `open_versioned`, every call site in those functions is observed, migration.py's 24 sites (in 5
+    functions) included. On the mutant the check reports `_apply_forward:550`.
+
+  What it does not close is stated in §8: a write moved into a helper whose only call sits on a branch no fixture
+  reaches. There the unexecuted line is the call, not the execute.
+
+  **Class (b) is a closed list of statement texts (v0.12, SA-R1-01).** Round 1's reviewer showed that a class-(b)
+  declaration admitted data loss. One added site, after the stamp postcondition, ran `DROP TABLE episodes` and then
+  recreated `episodes` from its own constructor. On all 48 PA1 paths the final schema equalled the control's. All 513
+  non-DDL writes still mapped to one step, and no site went unobserved. But every path lost its episodes, and the
+  1,480 PA1 cells equalled the control's (reproduced by dev at `58dd7f6`). Revalidation says whether the schema is
+  right, never whether the rows are there. So class (b) is no longer "DDL that revalidation would catch". It is a
+  closed list of statement texts whose effects are schema-only by construction, **decided per statement, never by the
+  site that issues it**:
+  - **(b1) additive creation.** The text is byte-equal to the head constructor DDL `SCHEMAS[SCHEMA_VERSION][k].ddl` of
+    a typed key `k` whose kind is **table or index**. The gate asserts two properties of every head constructor: each
+    table constructor is a plain `CREATE TABLE … (…)`, never `AS SELECT`; and none carries `IF NOT EXISTS` (at
+    `58dd7f6`, 0 of 50). Such a statement cannot lose or produce a row. SQLite refuses a CREATE for a name that
+    exists, so it can only create an absent, hence empty, table, or an index, which holds no application row. A UNIQUE
+    index that cannot build refuses the migration, which is fail-closed, not data loss. The only way to make an
+    existing name absent is a statement outside this list.
+  - **(b2) rebuildable-index repair.** The text is exactly `DROP INDEX IF EXISTS <name>`, where `<name>` is a head
+    index whose policy is `rebuildable`. The schema validator already limits that policy to `REBUILDABLE_KINDS`,
+    because "repairing a {kind} would destroy data". Its recreate is a (b1) statement.
+
+  **Other kinds are outside (b1), even when additive:** trigger, view and virtual table. A trigger created before a
+  later data step acts on the rows that step writes. A head constructor of a new kind needs its own review before the
+  list grows.
+
+  **Everything else that is DDL is not class (b).** It is either class (a) (unchanged: the freeze does not reopen the
+  reviewed ALTERs), or it owes what any data step owes: a named step, an independent preservation or transformation
+  postcondition at that step inside the transaction, and campaign cells killed there. Otherwise the commit-time gate
+  refuses the commit. "Everything else" includes:
+  - any `DROP TABLE`;
+  - a `DROP INDEX` of an index that is not rebuildable (the `op_key` UNIQUE index decides which writes are accepted);
+  - a table rebuild, even one that keeps the row count;
+  - `CREATE TABLE … AS SELECT`;
+  - `ALTER TABLE … RENAME` or `DROP COLUMN`.
+
+  A row-count postcondition after the stamp would catch the reviewer's instance, but not the class: a
+  recreate-and-refill keeps the count.
+
+  **What a site declaration still does:** it says where the census expects DDL, so "issue DDL from an undeclared site"
+  stays a mutant. It no longer makes a statement class (b): the reviewer's site was declared class (b), and the gate
+  refuses it on the `DROP TABLE`.
+
+  **SQLite decides what is a write, not the statement's first word (v0.12).** Before v0.12 the census took a
+  statement's kind from a leading-keyword label (`specs/evidence/0013/steptable.py`, `_kind`): CREATE, ALTER or DROP
+  meant DDL; INSERT, UPDATE, DELETE or REPLACE meant DML; anything else was READ. So dev's two further mutants
+  walked past it, each losing every path's episodes:
+  - `"/* repair */ DROP TABLE episodes"` gave a census with no `DROP TABLE` at all, and the freeze found nothing
+    outside it;
+  - `WITH doomed AS (SELECT 1) DELETE FROM episodes` after the stamp gave a census identical to the control's (513 /
+    1,645), so the write complement was blind as well.
+
+  The census instrument therefore installs an authorizer on the ladder's connection. It records each statement's set
+  of action codes as SQLite prepares it. The instrument is specs-side and runs at commit time; production installs no
+  authorizer (§4c-iii, carrier (ii)). The authorizer is already 0013's confinement mechanism, so this adds no new
+  primitive. **The classification is a closed table over all 33 authorizer action codes (v0.12.1); a code not in it
+  refuses** (a later SQLite may add one):
+
+  | action codes | class |
+  |---|---|
+  | `CREATE_TABLE`, `CREATE_INDEX`, `DROP_TABLE`, `DROP_INDEX`, `ALTER_TABLE` | **schema write.** It must be class (a) or (b) by its text |
+  | `INSERT`, `UPDATE`, `DELETE` naming a table other than `sqlite_master`, `sqlite_schema` or `sqlite_temp_master` | **row write.** It must map to exactly one named step. DROP TABLE also reports a `DELETE` naming the dropped table, so it is a row write as well |
+  | `INSERT`, `UPDATE`, `DELETE` naming `sqlite_master`, `sqlite_schema` or `sqlite_temp_master` | **schema bookkeeping, legitimate only in a call whose action set also holds a schema-write action** (measured: CREATE INDEX reports `INSERT sqlite_master`; ALTER and DROP INDEX report `UPDATE`/`DELETE sqlite_master`). In any other call it is refused: a direct write to the schema table |
+  | `REINDEX` | legitimate only in a call that also holds `CREATE_INDEX` for the same name (CREATE INDEX reports it, measured); otherwise refused |
+  | `PRAGMA` | **the stamp** is exactly (`user_version`, the head version). Any other pragma must be on a closed read list, enumerated from the ladder at the pin, by name and argument shape; a read can carry an argument too (`table_info`, `t`). `writable_schema`, and any pragma not on the list, is refused |
+  | `TRANSACTION`, `SAVEPOINT` | the planner's own; not steps |
+  | `READ`, `SELECT`, `FUNCTION`, `RECURSIVE` | reads |
+  | `ATTACH`, `DETACH`, `ANALYZE`, `CREATE_VTABLE`, `DROP_VTABLE`, `CREATE_TRIGGER`, `DROP_TRIGGER`, `CREATE_VIEW`, `DROP_VIEW`, and every `CREATE_TEMP_*` and `DROP_TEMP_*` (eight codes) | **refused outright.** ANALYZE also reports `CREATE_TABLE sqlite_stat1`, so it would fall outside (b) anyway (measured) |
+
+  **One channel no SQL statement shows (v0.12.1, dev's measurement).** `Connection.setconfig(SQLITE_DBCONFIG_WRITABLE_SCHEMA,
+  True)` is a C-API call: it fires no authorizer callback and no trace (measured). After it, `DELETE FROM sqlite_master
+  WHERE name='episodes'` reports only `DELETE` and `READ` on `sqlite_master`, which the table above refuses as a direct
+  schema-table write. **The census also asserts, after every proxied call, that `getconfig(SQLITE_DBCONFIG_WRITABLE_SCHEMA)`
+  is False and `SQLITE_DBCONFIG_DEFENSIVE` is unchanged**, since nothing else can see `setconfig`. Scope, as dev
+  measured it: on one connection this route did not lose rows. The recreate was refused ("table episodes already
+  exists", from the stale schema cache), and revalidation would see the row gone from `sqlite_master`. Across a reopen
+  it did lose them. So it is a gap in the rule, closed here, not a demonstrated escape on the ladder's single
+  connection.
+
+  **Each action set belongs to one call, not to a position in the trace.** The census reaches `migrate_store`'s
+  connection through 0013-PA1's existing seam (`specs/evidence/0013/pa1_campaign.py`: `mig.sqlite3 = Shim`, whose
+  `connect` returns the recording proxy), opened with `cached_statements=0`. The rules:
+  1. **Attribution is per proxied call.** The proxy clears an action buffer before each `execute` or `executemany`,
+     and takes the buffer after. Transaction-control actions and their traces go to their own TXN records.
+     Association by sequence is unsafe. Measured on a legacy-isolation connection: the INSERT's action came first,
+     then the implicit BEGIN's action and its trace, then the INSERT's trace.
+  2. **The class-(a)/(b) byte-equality and the step predicates compare the call's TEMPLATE,** never the traced
+     text, which is expanded with the bound values.
+  3. **The trace's job is completeness.** Every trace and every authorizer callback must fall inside a proxied
+     call; an orphan is a refusal (a cursor obtained around the proxy, for example). There is no per-call count. A
+     table-valued pragma runs a nested statement, so `SELECT * FROM pragma_table_xinfo(?)` (`schema_version.py`,
+     `manifest`) traces twice in one call: on the ladder, a per-call count refused the clean control 1,904 times
+     (dev's census). A two-statement string cannot reach `execute` or `executemany` at all, because both raise
+     `ProgrammingError` ("You can only execute one statement at a time"). A nested statement's writes are already in
+     the call's action set, because attribution is per call, not per trace.
+  4. **`executescript` on the ladder's connection is refused outright.** That makes `schema_version.py`'s own rule
+     ("Never `executescript`: it issues an implicit COMMIT") a gate. At `58dd7f6` no `src/veracium/store/` module
+     calls `executescript` or `executemany`, and the instrument depends on neither fact.
+
+  The statement cache is off because the authorizer fires on PREPARE. With Python's default cache, a re-executed
+  statement gives no callback (measured: 2 callbacks, then 0; with `cached_statements=0`, 2 and 2). **The
+  leading-keyword label stays only as a cross-check, and it refuses in ONE direction.** A call whose action set
+  shows a write the label does not call one is refused: that is the escape direction (N6, N7). The reverse, a label
+  of DDL with no schema action, is allowed only for a (b2) text. `DROP INDEX IF EXISTS` of an index already gone
+  (dropped with its table, on a drifted store) reports no action at all (measured), and is a (b2) no-op. Any other
+  DDL text with no schema action is refused. With `IF NOT EXISTS` excluded from constructors, (b2) is the only
+  legitimate no-op.
+
+  **The gate's fixture scope.** The 48 PA1 paths issue no repair statement, so a (b2) control over them alone would be
+  vacuous. The gate's path set adds two drifted HEAD stores: one with a rebuildable index present but wrongly defined,
+  whose repair drop is a real (b2) statement (C2); and one with the index missing, whose repair drop is a (b2) no-op
+  (C3; the step table's drifted-HEAD fixture is this case).
+
+  **The cells.** Each is a product test at implementation, demonstrated red against the gate mutant named beside it:
+
+  | # | cell | expected | gate mutant it kills |
+  |---|---|---|---|
+  | N1 | **the reviewer's mutant**: `DROP TABLE episodes`, then `episodes`' constructor, after the stamp postcondition, at a site declared class (b) | refused, naming `DROP TABLE episodes` and its site (dev's census: 48 outside) | admit every statement at a declared class-(b) site |
+  | N2 | a count-preserving rebuild with no named step: `CREATE TABLE episodes_rebuild AS SELECT * FROM episodes`; `DROP TABLE episodes`; `ALTER TABLE episodes_rebuild RENAME TO episodes` | refused; all three statements are outside | match (b1) by prefix rather than byte-equality; a row-count postcondition in place of the list |
+  | N3 | drop and recreate the `op_key` UNIQUE index | refused on the `DROP INDEX` | widen (b2) to every index |
+  | N4 | N1's two statements as one `executescript` | refused outright (rule 4) | allow `executescript` and classify the script by its first statement |
+  | N5 | a head table constructor written `CREATE TABLE … AS SELECT …` | refused by the plain-constructor assertion | drop the assertion |
+  | N6 | dev's comment-prefixed DROP (`"/* repair */ DROP TABLE episodes"` in N1) | refused: SQLite reports `DROP_TABLE` and a `DELETE` on `episodes` (dev's census: 48 outside, 48 label disagreements) | classify by the leading keyword |
+  | N7 | dev's `WITH doomed AS (SELECT 1) DELETE FROM episodes` after the stamp, at no step | refused: a row write mapped to no step (dev's census: 48 unmapped, 48 label disagreements) | the same; a write complement over labelled DML only |
+  | N8 | `executescript("SELECT 1; DROP TABLE episodes")` on the ladder's connection | refused outright (rule 4) | classify a script by its first statement |
+  | N9 | `PRAGMA writable_schema=ON` at a declared site | refused: not on the pragma read list | treat every pragma other than the stamp as a read |
+  | N10 | a head constructor written `CREATE TABLE IF NOT EXISTS …` | refused by the assertion | drop the assertion (a recreate of an existing name becomes a silent no-op, a second legitimate-looking no-op beside (b2)'s) |
+  | N11 | a statement run through a cursor obtained around the proxy | refused: its trace and callbacks fall outside any proxied call | attribute actions by trace sequence, or skip the orphan check |
+  | N12 | `setconfig(SQLITE_DBCONFIG_WRITABLE_SCHEMA, True)`, then `DELETE FROM sqlite_master WHERE name='episodes'` | refused, twice over: the `getconfig` assertion after the `setconfig`'s call, and a schema-table write in a call with no schema-write action | classify a `sqlite_master`-only write as a read; drop the `getconfig` assertion |
+  | C1 | **control: the 48 PA1 paths at `58dd7f6`** | **dev's authorizer census** (CPython 3.14.7 / SQLite 3.45.1, through the Shim, `cached_statements=0`): 0 errors, 0 paths losing episodes. Schema writes: (a) 314 + (b1) 1,331 = 1,645, equal to the label's census and to research's classification of the reviewer's. Row writes: 465, each mapped to exactly one step, which with the 48 stamps makes the 513 non-DDL writes. 0 outside, 0 unmapped, 0 orphans, 0 label disagreements | — |
+  | C2 | **control: a drifted HEAD store whose rebuildable index is PRESENT with the wrong definition** (a same-named index on another column) | its repair's `DROP INDEX IF EXISTS` reports a `DROP_INDEX` action and is (b2); the recreate is (b1); 0 outside; at least one (b2) statement with a `DROP_INDEX` action. **Measured by dev's census** (fixture `wrong`): the open is `current`, with 1 (b2) carrying `DROP_INDEX` and 1 (b1), and 0 outside, disagreements or refusals | a gate with no such fixture in scope (C2 then fails as "no (b2) observed"). The step table's drifted-HEAD fixture alone does not satisfy C2: it drops every rebuildable index (`steptable.py` L799–L809), so every repair drop there is a no-op (C3) |
+  | C3 | **control: a drifted fixture whose repair finds an index already absent** | `DROP INDEX IF EXISTS` reports no action and is classed a (b2) no-op, not refused. **Measured by dev's census** (fixture `missing`, every rebuildable index dropped): 20 (b2) no-ops and 20 (b1), 0 outside, disagreements or refusals | refuse every label/SQLite disagreement in both directions |
+
+  **The standing rule for later steps (v0.9, now mechanical).** A later schema version may add a data step, or any
+  write that is not class-(a) or class-(b) DDL. Such a step owes three things before it lands: a named step, a
+  postcondition at the step, and campaign cells on 0013-PA1's pattern. The gate refuses the commit otherwise. The
+  step table's classifier still prints (c) for postcondition-killed steps (its stated limit). Read SURVIVED, not that
+  column.
+
+  **Not covered by the step table** (named in its output): `source_revocations` rows on 29 paths (the fixture row
+  failed its CHECK; no step touches the table); adoption of an unstamped HEAD store; real third-party historical stores
+  (every fixture is rebuilt from the accepted DDL); and perturbations on 3.53.1.
+
+**Where a step cannot be verified on this build, it refuses at that step, naming the step**: the owner's "refusal
+only where the schema evidence cannot be verified".
+
+### 5f.2 Two annotations to §4f (the amendment's §4c-ii)
+
+This package touches 0013, so it carries 0013's corrections. Neither edits the landed text.
+
+1. **The finding's counts.** §4f says the six steps' surviving perturbations were "597 data perturbations and 43 stamp
+   perturbations". **Measured, they are 421 data and 86 stamp, 507 in all**: steptable on `af1e564`, with DML 421
+   (outcome chains 6, wiki 4, `store_identity` 15, baseline 297, `store_epoch` 99) and STAMP 86 (43 paths, each
+   lowered and skipped). The 0013-PA1 table's 550 cells are exactly those 507, set-equal on path, write and mode, plus
+   the 43 stamp-raised cells the campaign adds. The closure is complete, and only the paragraph's numbers were wrong.
+   Research wrote them (research `7bbed8e4`), and cannot reconstruct their source.
+2. **A key the dump omits.** §4f's v2→v3 postcondition compares present keys as their declared type, and requires
+   every added key to equal its declared constant default. It does not say how a declared key ABSENT from the
+   converted row reads. The rule it means, and the one implemented at `86522c6`: **a declared key absent from the
+   converted row reads as its declared constant default** (the serializer omits the procedural markers when None,
+   0037 §2), **and a field with no constant default (required, or `default_factory`) absent from the converted row is
+   refused.** Research checked it is sound: a non-default raw value the dump loses is still refused, and an omitted
+   default reads identically on every load.
+
+### 5f.3 The replacement for §5c's runtime seam (the amendment's §4c-iii)
+
+**Which carrier each clause binds.** 0013 §5c's seam has one carrier today (the model) and one to come (0008's
+production artifact). Production's ladder is a third carrier, which does not implement the seam. At `58dd7f6`, no
+`src/` module installs an authorizer or reads a migration-runtime or path-evidence record: `git grep` finds 0 hits
+each for `set_authorizer`, `migration_runtime`, `authorizer_probes` and `migration_0013_evidence` (research, re-run
+by dev). 0013 itself places §5c's production artifact with 0008 (M11, M12: "Production with `0008`").
+
+| carrier | what this amendment requires of it | when |
+|---|---|---|
+| **(i) the 0013 model**, `specs/migrations_0013.py` | **all of this section**: live probes, the identity-free path key, `generated_on`, the cardinality change and the retirements. A1–A15, each red against its mutant | at the model's next revision, as part of implementing this amendment |
+| **(ii) production `migrate_store`**, through `open_versioned` | **only the runtime gate changes:** `runtime_status()` ∈ {`attested`, `verified`} in place of `runtime_supported()`, at `schema_version.py` L1939 and `release_migration.py` L1005. Everything else stays as at `58dd7f6`: each step's own postcondition inside `_apply_forward` (0013 §4f); the stamp (`migration.py` L549); then `_validated_current(…, require_stamp=True)` before COMMIT, which checks that the stamp reads HEAD, accepted-digest membership, typed drift repair and complete revalidation. **No authorizer, no live probe, no path record:** accepted 0013's deferral, carried unchanged, not a new limit. P1–P3 | when this amendment is implemented |
+| **(iii) 0008's production artifact** | inherits (i) | when it lands, as 0013 already says |
+
+**The consequence, stated plainly:** implementing this amendment lets a `verified` build migrate in production with
+exactly the runtime confinement today's attested 3.45.1 has, which is none. Production's ladder executes only its own
+reviewed statements. 0013's authorizer defends against an accidental DECLARED statement in the model's declarative
+migrations ("not a sandbox", 0013 §4b). The stamp is written inside `_apply_forward`, so the revalidation runs after
+it, inside the same transaction and before COMMIT. A refused revalidation rolls the stamp back with everything else.
+
+**Measured, at `58dd7f6`** (the reviewer's runtime-contract probe, re-run by research on CPython 3.14.7, specs/evidence/0007-sqlite-attestation/r1-repro-at-58dd7f6; the
+reviewer's 3.53.1 run was CPython 3.12.14). On 3.53.1, all sixteen confinement probes pass live, no migration-runtime
+record matches, and the model's migration gate is false. Relaxing 0007's gate alone would therefore leave every
+`verified` build unable to migrate in the model. On 3.45.1 the gate is true. A permissive authorizer leaves 1 of 16
+probes true and the gate false on both builds.
+
+**0013 §5c binds three things to one runtime build identity, and each is replaced, never merely dropped:**
+
+| 0013 §5c obligation | replaced by | carriers | why it holds without a per-build record |
+|---|---|---|---|
+| schema-runtime qualification (`runtime_supported()`) | `runtime_status()` is `attested` or `verified` (§4a–§4b) | (i), (ii), (iii) | verification re-derives the accepted evidence on this build at this open, and the record was never trusted for that (S69) |
+| migration-runtime qualification: a record for this identity, re-run live and compared | **the sixteen probes run LIVE on every `migrate_store`, and all sixteen must be True**, before the store is touched; otherwise `unsupported-sqlite`, naming the first failing probe | (i), (iii); not (ii), which installs no authorizer | 0013 already requires all sixteen True ("All SIXTEEN probes are required"), so a record could only say "all True". The live run decides, as it already did ("Consumption does not trust the record"). Once the required values are fixed, comparing against a record adds nothing |
+| a path record keyed by runtime identity | **path records keyed WITHOUT the runtime identity:** source version × source acceptance digest × source full-manifest hash × destination version × migration declaration digest | (i), (iii); not (ii), which reads no path record | a path record's output is the ACCEPTED destination manifestation, and §4d makes that one set for every build, so the record states one fact for every build. Any build's actual output is still checked after execution, before any stamp (kept below). The runtime becomes provenance |
+
+**Kept unchanged, in carriers (i) and (iii):**
+- the sixteen probes and their definitions; denial means `SQLITE_AUTH` (M19); every probe's setup is a valid
+  statement sequence; the permissive-authorizer falsifier;
+- the authorizer is restored in `finally`, on a Veracium-owned connection only; TEMP is empty after every step;
+- the declaration digest and exact-one selection: an altered migration matches nothing and refuses
+  `migration-evidence-missing`, with data and stamp untouched (M14);
+- the record-level consistency rules;
+- the post-execution repair, recompute and compare of the complete output, by manifestation, acceptance digest AND
+  full-manifest hash, before any stamp;
+- one byte snapshot per operation; monotone revision writes under the writer lock; exact scalar typing;
+- **a malformed current-algorithm record poisons its artifact class, and only an explicitly superseded algorithm is
+  ignored** (M18);
+- ordinary opening runs no confinement probe, because it executes no confined statement.
+
+In carrier (ii), what is kept is the per-step postconditions and `_validated_current`, as in the carrier table.
+
+**Cardinality stays exact and artifact-wide; one factor leaves it.** The expected key set is every declared step ×
+every accepted source manifestation; "× every active build identity" is removed. Current-record keys must equal the
+expected set exactly. Missing, extra, duplicate, stale-algorithm and contradictory records each still fail closed.
+"Foreign identity" is no longer a class: an extra record is an extra KEY, and cardinality refuses it, which is what
+0013's round 4 required.
+
+**Provenance: where path evidence comes from.** Each path record carries `generated_on`: the full attestation key
+(§4d) of the build that generated it. It must resolve, by KEY, to exactly one current attestation record; a path
+record whose `generated_on` does not resolve is malformed and poisons the path class. This keeps 0013 round 4's "no
+unattested prospective record" safeguard, at generation time.
+- **Generation:** path records do not depend on the build, so they are generated ONCE per declared step. Each is
+  generated on a build whose attestation record is already committed at the commit that adds the path records, never
+  on one the same CI run is about to emit. A new build's first run therefore produces no path evidence.
+- **Re-derivation:** `--check-evidence` runs in every CI matrix job (§4d) on any build that verifies. It must
+  re-derive every path record byte-equal except `generated_on`. A build that re-derives differently is a failed
+  attestation job, named, never a record. On a user's machine the post-execution compare would refuse it anyway.
+- **Withdrawing the generating record:** because resolution is by key, regenerating the named record at a later
+  commit keeps it resolving. A commit that removes the attestation record some `generated_on` names fails the
+  commit-time gate, unless the same change regenerates those path records on another attested build. Retiring a
+  runner image never silently poisons migration.
+
+**Retired, explicitly:**
+- the single-active-runtime policy in `migration_runtime_artifact_problems` (S66's withdrawal, §4f, applied to 0013);
+- the requirement that the running build have a migration-runtime record;
+- the requirement that a path record's runtime resolve to a schema-runtime record and a migration-runtime record. It
+  is replaced by `generated_on` resolving to an attestation record.
+
+The migration-runtime record class is withdrawn. Its probe results are carried, as provenance, on the attestation
+record (§4d), where the attestation suite measured them; an attestation record with any probe result other than True
+is malformed. **Deferred, unchanged:** M11 and M12's production artifact lands with 0008. This amendment changes the
+key that artifact will use, not when it lands.
+
+**What changes in 0013's invariants** (these are also §4f's "withdrawn from 0013" entries):
+- **M11** "every migration path is keyed individually": kept. The key loses its runtime-identity component.
+  `test_the_committed_evidence_artifact_is_valid_and_reproduces` re-derives on ANY build that is not `refused`, not
+  only "on the recording runtime".
+- **M12** "runtime evidence covers every declared path": kept. The expected set loses "× every active build identity".
+  Its three tests (absent, duplicate, stale-algorithm) keep their meaning over the new key.
+- **M15** "migration confinement is runtime-qualified, independently of 0007's gate": kept, as **live**
+  qualification.
+  - `test_the_migration_runtime_gate_is_independent_of_0007s` is kept; A3 is its new shape.
+  - `test_the_authorizer_probes_all_hold_on_this_runner` is kept.
+  - `test_recorded_confinement_behaviours_must_reproduce_live` is **retired** with the record class, replaced by A1
+    and A12.
+- **M18** "malformed current-algorithm records poison their artifact class; foreign records fail cardinality":
+  - the poisoning rule is kept, with `test_a_missing_algorithm_field_is_malformed_not_superseded`;
+  - `test_a_malformed_current_migration_runtime_record_poisons` is **retired** with the class, replaced by A12;
+  - `test_a_foreign_identity_path_record_fails_the_artifact` is **replaced** by A15 and A10.
+
+**The finite acceptance matrix.** A1–A15 are carrier (i) rows: model tests at the model's next revision, and carrier
+(iii) tests when 0008's artifact lands. P1–P3 are carrier (ii) rows: product tests when this amendment is implemented.
+Each row is demonstrated red against the named mutant.
+
+| # | case | expected | mutant that must fail |
+|---|---|---|---|
+| A1 | an unrecorded build that reproduces the accepted evidence (`verified`), all 16 probes True live, path record present | migrates; the audit event's `runtime.status` is `verified` | require a migration-runtime record for this identity (the model at `58dd7f6`) |
+| A2 | the attested build, same store | migrates; `attested` | — (control) |
+| A3 | `verified`, with a permissive authorizer installed | ordinary open proceeds (`verified`); `migrate_store` refuses `unsupported-sqlite`, naming the first false probe; store bytes unchanged | gate migration on `runtime_status()` alone |
+| A4 | `verified`, with an authorizer allowing only TEMP triggers (0013 round 8's), and one allowing only TEMP virtual tables (round 9's) | migrate refuses, naming `denies_temp_trigger` / `denies_temp_virtual_table` | collapse the per-class TEMP probes |
+| A5 | `refused` (a near-miss not told apart, or `preserves_ddl_body` False) | open and migrate both refuse `unsupported-sqlite`; store unchanged | run confinement first and migrate when it passes |
+| A6 | no path record for this source × declaration | `migration-evidence-missing`; data and stamp untouched | re-derive the record from live code (0013 round 3's hole) |
+| A7 | two identical current path records for one key | artifact-wide refusal (duplicate) | deduplicate silently |
+| A8 | two current path records for one key with different output hashes | artifact-wide refusal (contradictory) | take the first |
+| A9 | a malformed current-algorithm path record beside a valid one | the path class is poisoned; migration refuses | filter the malformed record and select the valid one (0013 round 4's hole) |
+| A10 | a path record whose `generated_on` resolves to no attestation record | the path class is poisoned | ignore `generated_on` |
+| A11 | two or more attested keys (for example 3.45.1 x86_64 and 3.53.1 aarch64) | valid; each attested build migrates as `attested`, an unmatched verifying build as `verified` | keep the single-active-runtime count |
+| A12 | an attestation record carrying a probe result False | the attestation artifact is malformed (§4d); verification still runs; migration still runs the probes live | treat the recorded False as authority (refuse without running) or as a pass |
+| A13 | a stale-algorithm path record | superseded, not consumed; cardinality counts current records only | consume it |
+| A14 | an altered declaration that produces the identical schema (M14) | `migration-evidence-missing`; data and stamp untouched | drop the declaration digest from the key |
+| A15 | an extra current path record for a key outside the expected set | cardinality refusal | count only expected keys |
+| P1 | production: a `verified` build migrates a base store | `migrated`, through the same `_apply_forward` and `_validated_current(require_stamp=True)` as the attested build; the `attempted` event's `runtime.status` is `verified` (INV-SA11) | keep `runtime_supported()` as the gate; skip `_validated_current` on a `verified` build |
+| P2 | production: a `refused` build | `migrate_store` and `run_release_migration` both refuse `unsupported-sqlite` before touching the store | gate only `open_versioned` (the release preflight, L1005, still reads the old predicate) |
+| P3 | production, on a `verified` build: the stamp written as HEAD − 1 (research's v0.8 stamp mutant) | refused by `_validated_current(require_stamp=True)` (M117); the transaction rolls back; the same on the attested build | commit before `_validated_current` on a `verified` build; pass `require_stamp=False` on one |
+
+### 5f.4 Invariants (the amendment's §6: INV-SA10 and INV-SA11)
+
+| | invariant | mutant that must fail |
+|---|---|---|
+| **INV-SA11** | **(v0.2)** a migration's `attempted` audit event carries the migrating build's `sqlite_version`, `source_id` and `runtime_status()` | omit the key; record `attested` on a `verified` build; record the build that created the store |
+| **INV-SA10** | **(v0.11; a COMMIT-TIME product test, replacing v0.2's runtime refusal, §4c)** over every campaign path, every write the migration ladder issues, **(v0.12) as SQLite's authorizer classifies it, attributed per call (§4c), never by its first word,** is either DDL in class (a) (byte-equal to a frozen `ALTERS_*` member, checked at its step) or in class (b) (§4c's closed list, decided per statement by its text, never by its site; every head table constructor plain and without `IF NOT EXISTS`), or maps to EXACTLY ONE named step whose postcondition is checked at the step inside the migration's transaction and whose campaign cells are each killed at that step; **(v0.11.1)** and every `execute`/`executemany`/`executescript` call site in every function the ladder's connection is used from (reads included; `open_versioned` excluded, §4c) is observed on at least one campaign path; `attested` and `verified` builds take the same ladder with the same checks, and a mismatch leaves the store unchanged | add a ladder write that maps to no step (**measured: today's campaign passes it**, §4c); **(v0.11.1)** the same write behind a condition no fixture satisfies (dev's `mutant2-conditional`; the complement passes it, the site check refuses it); narrow the site scope to one module (it then refuses a correct tree: `unattested_marker_report`); a write that two steps' matchers both claim; delete one `_refuse_unless`; make one postcondition vacuous (its problems always empty); add a `STEP_*` name with no matcher; issue DDL from an undeclared site; skip the byte-match on an unattested build; commit before revalidating; let a `verified` build migrate along a different path or with fewer checks than an `attested` one |
+
+The amendment's **Gate** (0007 §4g.8) applies to both: each is a PRODUCT test at implementation, demonstrated red against its mutant.
+
 ## 6. Invariants and executable checks — REQUIRED, blocking
 
 **The store contains no migration code — `0013` authorises nothing.** The
@@ -883,14 +1328,14 @@ tests at implementation.
 | **M8** a partial or wrong-shape result is rejected | `test_a_partial_migration_is_rejected` — **measured today** |
 | **M9** the registry is well-formed | `test_m9_the_draft_registry_is_well_formed` · `test_a_gap_refuses` — **measured today** |
 | **M10** a skipped release still upgrades | **NOT demonstrated, and not claimed** (round 2, finding 7). `0013` today authorises the concrete adjacent v1→v2 only; the multi-step planner is reviewed at the first spec needing two real steps |
-| **M11** every migration path is keyed individually | **draft form measured today**: the committed artifact keys records by runtime × source digest+hash × destination × declaration digest — `test_the_committed_evidence_artifact_is_valid_and_reproduces`. Production artifact lands with `0008` |
-| **M12** runtime evidence covers every declared path | **draft form measured today**: exact cardinality against the live registry — `test_an_absent_path_record_refuses` · `test_a_duplicate_path_record_refuses` · `test_a_stale_algorithm_record_is_superseded_not_consumed`. Production with `0008` |
+| **M11** every migration path is keyed individually | **draft form measured today**: the committed artifact keys records by runtime × source digest+hash × destination × declaration digest — `test_the_committed_evidence_artifact_is_valid_and_reproduces`. Production artifact lands with `0008` · **v34:** kept; the key loses its runtime-identity component, and the reproduction re-derives on ANY build that is not `refused` (§5f.3) |
+| **M12** runtime evidence covers every declared path | **draft form measured today**: exact cardinality against the live registry — `test_an_absent_path_record_refuses` · `test_a_duplicate_path_record_refuses` · `test_a_stale_algorithm_record_is_superseded_not_consumed`. Production with `0008` · **v34:** kept; the expected set loses “× every active build identity”, and its three tests keep their meaning over the new key (§5f.3) |
 | **M13** migration runs exactly once among cooperating openers | `test_mq2_concurrent_migration_runs_exactly_once`, and the reviewer's independent five-**process** run. **The stale-opener hazard is measured, not solved** — §5b's quiescence contract. |
 | **M14** an altered migration cannot authorise itself | `test_a_data_destructive_alteration_cannot_authorize_itself` · `test_a_side_effect_free_alteration_is_still_not_evidenced` — **measured today**: refusal before execution, data and stamp untouched |
-| **M15** migration confinement is runtime-qualified, independently of `0007`'s gate | `test_the_migration_runtime_gate_is_independent_of_0007s` · `test_recorded_confinement_behaviours_must_reproduce_live` · `test_the_authorizer_probes_all_hold_on_this_runner` — **measured today** |
+| **M15** migration confinement is runtime-qualified, independently of `0007`'s gate | `test_the_migration_runtime_gate_is_independent_of_0007s` · `test_recorded_confinement_behaviours_must_reproduce_live` · `test_the_authorizer_probes_all_hold_on_this_runner` — **measured today** · **v34:** kept, as LIVE qualification; `test_recorded_confinement_behaviours_must_reproduce_live` is retired with the record class, replaced by A1 and A12 (§5f.3) |
 | **M16** every outcome is a member of the closed vocabulary | `test_invalid_sql_returns_migration_failed_not_an_exception` · `test_a_wrong_unique_constraint_is_a_result_mismatch` · `test_the_outcome_vocabulary_is_closed` — **measured today** |
 | **M17** the failure boundary covers evidence loading, context entry and the connection | `test_a_malformed_accepted_manifestation_fails_closed` · `test_a_malformed_path_field_fails_closed` · `test_a_non_database_file_is_a_closed_refusal` · `test_an_unopenable_path_is_a_closed_refusal` — **measured today** |
-| **M18** malformed current-algorithm records poison their artifact class; foreign records fail cardinality | `test_a_malformed_current_migration_runtime_record_poisons` · `test_a_foreign_identity_path_record_fails_the_artifact` · `test_a_missing_algorithm_field_is_malformed_not_superseded` — **measured today** |
+| **M18** malformed current-algorithm records poison their artifact class; foreign records fail cardinality | `test_a_malformed_current_migration_runtime_record_poisons` · `test_a_foreign_identity_path_record_fails_the_artifact` · `test_a_missing_algorithm_field_is_malformed_not_superseded` — **measured today** · **v34:** the poisoning rule is kept; `test_a_malformed_current_migration_runtime_record_poisons` is retired (replaced by A12) and `test_a_foreign_identity_path_record_fails_the_artifact` is replaced by A15 and A10 (§5f.3) |
 | **M19** confinement denial means `SQLITE_AUTH`, nothing else | `test_a_permissive_authorizer_fails_every_denial_probe` · `test_the_release_probe_holds_a_real_savepoint` — **measured today** |
 | **M20** an authority authorises exactly one operation, inside its window, on its canonical store | `test_an_authority_is_single_use_and_cannot_migrate_a_replacement` · `test_a_retargeted_symlink_unbinds_the_authority` · `test_an_unparseable_or_expired_authority_is_refused` — **measured today** |
 | **M21** evidence writes are monotone over the `MigrationEvidenceRevision` | `test_a_future_evidence_revision_is_never_overwritten` (three components, byte-unchanged) · `test_an_unreadable_existing_revision_refuses_regeneration` — **measured today** |
@@ -1055,7 +1500,8 @@ pre-send gates):
    source data, reaches the exact v2 constructor manifestation, and stamps only
    after evidence-authorised validation (§5, M1–M12).
 2. **Planner and evidence architecture** — one shared planner, one evidence
-   snapshot, exact path-record selection, runtime qualification, source/release/
+   snapshot, exact path-record selection, runtime qualification (v34: replaced carrier by carrier, §5f.3),
+   source/release/
    declaration binding, no migration through ordinary opening (§5b–§5c).
 3. **Closed public semantics** — every expected failure maps to the frozen
    outcome vocabulary; the two named exceptions and the `TerminalFacts` truth

@@ -1,6 +1,7 @@
 # Feature spec: on-disk store schema versioning
 
 Spec-Status: accepted
+Folds: 0013/0007-sqlite-attestation
 
 *<!-- canonical machine-readable state; the header table below carries the narrative. Only `accepted` authorises implementation. -->*
 
@@ -15,12 +16,12 @@ Spec-Status: accepted
 | | |
 |---|---|
 | **Author / session** | dev (`~/Dev/veracium`) |
-| **Version** | v16 |
+| **Version** | **v17 — 2026-10-25: the SQLite attestation fold (amendment `0013/0007-sqlite-attestation`, v0.12.1, sha16 `134243c63b05845a`).** Its design was accepted at its external round 2 (2026-10-25; verdict banked at coordination `2b84ab5`) and by the owner (2026-10-25T19:10Z). The new §4g carries the amendment; §4's state table, §4a-viii, §4b, §6 (S36, S47, S56, S58, S64, S66, S69), §7, §8, §10 (S-Q7) and `## Review closure` are edited in place and point to it. Prior: v16. |
 | **Status** | *see `Spec-Status:` — canonical.* Deliberately small and separable: it is a **prerequisite** of `0013` and of every schema-changing spec, not a part of any of them. |
 | **Internal reviewers** | research — pending |
 | **External review** | required — `store/sqlite.py` is guarded and a wrong adoption makes stores unopenable |
 | **Review history** | *see `specs/STATUS.md`, generated from `specs/reviews.py`. No counts are stated here; a hand-maintained count drifted in `0008` and was found by the reviewer.* |
-| **Decision + date** | **ACCEPTED** — external round 14, 2026-08-03; status set by dev under §4a |
+| **Decision + date** | **ACCEPTED** — external round 14, 2026-08-03; status set by dev under §4a · **v17: the amendment's DESIGN ACCEPTED** — its external round 2, 2026-10-25, and the owner's word; implementation acceptance is outstanding (I1–I7, `## Review closure`) |
 | **Path** | full |
 | **Measuring instrument** | `specs/schema_model.py` (kernel) · `schema_evidence.py`; every counterexample lives in `tests/test_schema_model.py` and is counted by collection |
 | **Generated evidence** | `legacy_stores.json` (per-release stamp + resolved version) · `schema_versions.json` (immutable manifests per version) · `schema_policy.json` (reviewed policies) · `sqlite_runtimes.json` (qualified runtimes), all gated by `schema_evidence.py --check` |
@@ -172,7 +173,7 @@ On open, exactly one of — **and the table is total over the integers**:
 | **new** | `user_version = 0` **and no non-internal object at all** — no table, view, trigger or index | create schema, validate the result against `MANIFESTS[SCHEMA_VERSION]` (**S25**), stamp |
 | **legacy** | `user_version = 0` **and the manifest matches exactly one version in `LEGACY_BASE_VERSIONS`** (§4a-vii) | **adopt**: repair index drift, stamp. **Today that is always version 1** |
 | **foreign** | `user_version = 0` **and anything else** | **REFUSE** `reason="foreign-shape"` |
-| **unsupported runtime** | this runtime is not qualified by `sqlite_runtimes.json` (§4a-viii) | **REFUSE** `reason="unsupported-sqlite"` — checked **before** any of the rows below |
+| **unsupported runtime** | ~~this runtime is not qualified by `sqlite_runtimes.json` (§4a-viii)~~ **v17: `runtime_status()` is `refused` (§4g.6, 4a)** | **REFUSE** `reason="unsupported-sqlite"` — checked **before** any of the rows below; an `attested` or `verified` build proceeds, a `verified` open with the unattested-build warning (§4g.6, 4e) |
 | **current** | `user_version = SCHEMA_VERSION` **and the manifest is in `MANIFESTS[SCHEMA_VERSION]`** | repair index drift if any (§4a-iii), **revalidate**, open |
 | **stamped-wrong** | `user_version = SCHEMA_VERSION` **and it does not** | **REFUSE** `reason="stamped-shape-mismatch"` |
 | **older** | `0 < user_version < SCHEMA_VERSION` | **cannot arise while `SCHEMA_VERSION = 1`.** When it can, `0013` owns it — see §4f |
@@ -564,6 +565,8 @@ ever declare the same persistent shape, §4-i needs an explicit rule.
 
 #### 4a-viii. The SQLite runtime — qualified by evidence, not by a tuple
 
+> **v17 — amended by §4g (amendment `0013/0007-sqlite-attestation`).** A build is `attested`, `verified` or `refused` by measurement when a store opens (§4g.6, 4a and 4b), and CI writes one attestation record per measured build (§4g.6, 4d). `runtime_supported()` is replaced by `runtime_status()` (§4g.2). The paragraphs marked **WITHDRAWN (v17)** below are withdrawn by §4g.6, 4f; the rest of this subsection stands. **Kept:** the fail-closed totality of the predicate (round 13), the complete-manifestation rule (S69), conflict and duplicate refusal (S64, S65), and “merge, never replace” for records.
+
 **S-Q6's answer stands; v6's implementation of it did not.** Gating rather than
 declaring a range is right. But the WITHDRAWN `TESTED_SQLITE` was a hand-edited tuple: adding
 `"3.99.0"` made an untested runtime supported with **no manifest, no probe and
@@ -586,7 +589,7 @@ declared schema versions:
 | ~~migration-path digests~~ | **`0013`'s**, not `0007`'s. DDL rewriting is why a version can have several accepted manifests, so a runtime agreeing on constructors could still disagree on an `ALTER` path — but at `SCHEMA_VERSION = 1` there are no paths and this build records none |
 | manifest algorithm, schema version | a record generated under a different algorithm or schema version qualifies nothing |
 
-`runtime_supported()` matches version **and** source id **and** probes, then
+**AMENDED (v17; §4g.2, §4g.6 4b):** `runtime_supported()` matches version **and** source id **and** probes, then
 **re-derives the constructor digests here** and compares. Anything else is
 refused with `reason="unsupported-sqlite"`, **before** any version or shape
 decision.
@@ -598,7 +601,7 @@ one path per destination could be recorded, while different bases can produce
 different exact output at the same destination. `0007` records no migration
 paths, so it makes no claim about their coverage.)*
 
-**`0007` supports exactly one active runtime** (round 10, finding 2). v9
+**WITHDRAWN (v17; §4g.6, 4f):** **`0007` supports exactly one active runtime** (round 10, finding 2). v9
 described accepted manifests as a union across qualified runtimes and v12
 narrowed contribution to records this process reproduces — which made the union
 undescribable: on runtime A only A contributes, on B only B, and nothing
@@ -632,14 +635,14 @@ and 3.46.1 had been observed to agree while the shipped artifact recorded only
 environment, on a runtime the document called qualified. **Only 3.45.1 is
 recorded, because only 3.45.1 has been run through the generator.**
 
-**An unqualified runtime is a skip, not a suite failure.** v7 asserted
+**WITHDRAWN (v17; §4g.6, 4f — an unrecorded build is `verified` or `refused` by measurement):** **An unqualified runtime is a skip, not a suite failure.** v7 asserted
 `runtime_supported()` unconditionally, so the entire adversarial schema suite
 failed on an unrecorded SQLite. Those are two different questions and they are
 now two different tests: *is the recorded evidence complete and self-consistent*
 (always runs), and *is this runner one of the recorded runtimes* (skips, with
 the command to fix it in the message). **S56**.
 
-**This remains deliberately narrow**, and narrow in the direction that fails
+**WITHDRAWN (v17; §4g.6, 4f — the CI matrix of §4g.6, 4d discharges S-Q7):** **This remains deliberately narrow**, and narrow in the direction that fails
 loudly. **S-Q7** stays open for the CI matrix that would widen it.
 
 ### 4b. The public contract, frozen
@@ -666,7 +669,7 @@ class SqliteStore(Store):
 
 **`reason` is a closed set** — `"invalid-version"`, `"newer"`,
 `"foreign-shape"`, `"stamped-shape-mismatch"`, `"adoption-refused"`,
-`"locked"`, `"unsupported-sqlite"`. **The three `migration-*` reasons are
+`"locked"`, `"unsupported-sqlite"` (v17: kept; raised only for a `refused` build, its message names the first point of disagreement and only remedies that ship, §4g.6, 4e). **The three `migration-*` reasons are
 withdrawn with the scope cut — `0013` adds what it needs.** Closed because
 hosts will branch on it — and v6 introduced the last one in the state table
 while leaving it out of this list, so a host branching on the *closed* set would
@@ -816,6 +819,426 @@ module logger at `INFO` and **the durability claim is not made**.
 **Not a table inside the store** — that would change the shape being adopted,
 which is circular.
 
+### 4g. The SQLite attestation (v17, amendment `0013/0007-sqlite-attestation`)
+
+> **What this section adds:** the accepted amendment `0013/0007-sqlite-attestation` (v0.12.1, sha256 `134243c63b05845a…`; design accepted at its external round 2, 2026-10-25, verdict banked at coordination `2b84ab5`; the owner's acceptance 2026-10-25T19:10Z): a SQLite build is `attested`, `verified` or `refused` by measurement when a store opens, and attested by CI. 0007's guarantee is unchanged. The clauses it amends are edited in place and point here: §4's state table, §4a-viii, §4b, §6 (S36, S47, S56, S58, S64, S66, S69), §7, §8, §10 and `## Review closure` (which carries the implementation obligations I1–I7). **Within this section, a reference to “§1”–“§8” or “§4a”–“§4f” means the subsection labelled with that number here** (the amendment's own numbering, kept so its references resolve). **“§4c”, “§4c-ii” and “§4c-iii” mean the subsections labelled so in 0013 §5f**, which carries the migration side, with INV-SA10 and INV-SA11. The amendment's §9 (the reviewer's brief) and §10 (its open questions, all answered) are not folded; they stay in the reviewed bytes. A reference to 0007's own sections says “0007”.
+
+**Amends:** 0013's `migration_attempted` event (one additive key, INV-SA11), §4f (two annotations, §4c-ii) and its 0013-PA1 closure evidence (v0.11: INV-SA10's commit-time gate, which asserts that every ladder write maps to a checked step), **(v0.12) 0013 §5c's runtime seam (the schema-runtime and migration-runtime qualification, and the path-evidence key and its cardinality: §4c-iii), M11, M12, M15 and M18 (as §4c-iii lists them) and §8a item 2's "runtime qualification"; and `specs/skip_inventory.py` (an attestation column, §4d)**, and 0018's sidecar writer (it copies the key); 0007 §4a-viii (the SQLite runtime), §4b's `unsupported-sqlite` remedy text, §6 rows S36, S47, S56, S58, S64, S66
+and S69, §7, §8's SQLite limit, and §10's S-Q7 row. **Leaves 0007's guarantee unchanged:** a version-aware build never
+opens a store whose shape it does not recognise. *Who* may run that check is what changes.
+
+**The owner's ruling, verbatim (relayed first-hand by dev):** a NEW store is creatable on any SQLite build, with a
+warning; refusal is kept only where the schema evidence cannot be verified; and as many common builds as possible are
+qualified, each MEASURED, never inferred from its version. Marketing's census
+(its outbox, sqlite-builds-census-2026-10-13) is the target list. The owner, 2026-10-13: *"We need to
+support as many of the most common versions of SQLite as possible."*
+
+#### 4g.1 Why (the amendment's §1)
+
+##### 1a. The gate refuses builds that reproduce the schema exactly — measured
+
+0007 §4a-viii qualifies a SQLite build only if `src/veracium/store/evidence/sqlite_runtimes.json` records its exact
+identity (version, `sqlite_source_id()`, the feature probes). One build is recorded: Ubuntu 24.04's patched 3.45.1. Every
+other build is refused with `unsupported-sqlite`. Released since 0.5.0 (2026-08-07), the requirement went undisclosed
+until `f98a3a0`.
+
+Research measured the gate on uv's CPython 3.14.7 (SQLite 3.53.1, python-build-standalone) at `af1e564`, with the
+qualified build as control (research `99ced3ec`, specs/evidence/0007-sqlite-attestation/probe_build_reproduces.py and its output). At
+`58dd7f6` (schema 16) dev re-ran the probe unchanged, and research re-ran it from its own archive, with the same result
+(v0.11; specs/evidence/0007-sqlite-attestation/at-58dd7f6):
+
+| on SQLite 3.53.1, at `58dd7f6` | result |
+|---|---|
+| the four feature probes | **equal** to the qualified record's |
+| the constructor digest, rebuilt on the fly, for each of the 16 schema versions | **in the accepted set, 16 of 16** (15 of 15 at `af1e564`) |
+| the complete manifestation (rebuildable objects included) for each version | **byte-equal to the qualified record's, 16 of 16** |
+| `runtime_supported()` | **False**: the record's build identity is not this build's |
+| opening a store the qualified build created | **refused**, `unsupported-sqlite` |
+| creating a new store | **refused**, `unsupported-sqlite` |
+
+So the refusal is decided by **identity alone**. The check that would show the build reads and writes the accepted
+schema correctly already exists in `runtime_supported()`, but it runs only after an exact identity match.
+
+##### 1b. It refuses existing stores, not only new ones
+
+The gate runs at every open, before any version decision (§2c-ii row 1), so an unrecorded build opens no store at all.
+The disclosure shipped at `f98a3a0` says other builds are "refused at store creation" (README, docs/index.md, docs/mcp.md;
+row 9), which **understates** it: a user whose Python upgrade brings a different SQLite loses access to their existing
+store. The disclosure correction is outside this amendment and is noted for the owner.
+
+##### 1c. The remedy names a tool the wheel does not ship, and the diagnostic cannot run
+
+The refusal's remedy is "regenerate the evidence there (schema_evidence.py --runtime --write)" (row 2). That script lives
+under `specs/`, not in the wheel. `veracium doctor` has a runtime check (row 7), but it is unreachable on an unrecorded
+build: doctor opens the store first, the open gate refuses, and doctor returns before the check runs.
+
+##### 1d. The census by route: what Python 3.14 users actually load (v0.6)
+
+Marketing re-measured the census by install route (its outbox, sqlite-builds-by-route-2026-10-13, marketing `d76df0a`;
+the probe logs beside it). Most rows were MEASURED: each route's own Python 3.14 run in a container, x86_64 Linux,
+recording `sqlite_version` and `sqlite_source_id()`. macOS and Windows rows were read from build sources. Findings that
+bear on this amendment:
+- **Twelve distinct SQLite versions** across 3.14 routes: 3.34.1 (RHEL 9 AppStream), 3.37.2, 3.40.0 (Amazon Linux
+  2023), 3.40.1, 3.45.1, 3.46.1, 3.50.2 (Fedora 43), 3.50.4 (python.org, every 3.14 patch), 3.51.2 (Fedora 44), 3.53.1
+  (python-build-standalone: uv, mise by default), 3.53.4 (Alpine 3.24, Debian testing, Ubuntu 26.10) and 3.54.0
+  (Homebrew, conda-forge).
+- **Ubuntu 26.04 LTS's DEFAULT `python3` is 3.14** (3.14.4, SQLite 3.46.1). A distro's default Python is a route
+  wherever it meets the floor.
+- **`sqlite_source_id()` does not separate distro builds:** Debian 13, Ubuntu 26.04 and RHEL 10 report one identical
+  3.46.1 id (research checked the three raw probe lines: three library paths, one id). §4d's identity adds compile
+  options.
+- **Two routes load today's attested build exactly** (`setup-python` on ubuntu-24.04, deadsnakes on Ubuntu 24.04), so
+  today's CI job cannot see the refusal, or the `verified` path (§6).
+- **Most routes link SQLite dynamically** (apt, Homebrew, conda), so an operating-system package update can change the
+  build under an existing store. Today that refuses the user's store on the next open. Under this amendment the next
+  open re-verifies the new build (§5). Not measured: whether a distro security update changes the source id.
+- Not covered: arm64, the Windows Store Python, Nix, openSUSE, Arch, usage shares.
+
+#### 4g.2 Field contracts (the amendment's §2)
+
+| site | today (0007 v16) | after |
+|---|---|---|
+| `runtime_supported()` | True iff a recorded build identity equals this build's AND its digests and manifestations reproduce | **replaced by `runtime_status()`**, returning one of `attested`, `verified`, `refused` (§4a), with a reason |
+| the open gate in `open_versioned` | refuses unless `runtime_supported()` | proceeds on `attested` or `verified`; refuses only on `refused`. A `verified` open emits the unattested-build warning (§4e) |
+| `sqlite_runtimes.json` | at most ONE active identity (S66) | **any number** of attestation records, each for one attestation key (§4d: the build identity and, v0.12, the measured `machine`, `system` and `libc`); still refused: a malformed current record, two records with one key and different evidence, and a duplicate |
+| accepted manifests (`schema_versions.json`) | derived from the records this process reproduces (S58) | **unchanged, and no longer widened by any runtime record**: every build is held to the ONE accepted evidence set (§4d) |
+| `StoreVersionError(reason="unsupported-sqlite")` | remedy names `schema_evidence.py` | the reason is kept; the text names the first point of disagreement and only remedies that ship (§4e) |
+| `veracium doctor` | its runtime check is unreachable on an unrecorded build | the SQLite check runs **before** any store is opened, at `info` level for `verified`, `error` for `refused` (§4e) |
+| 0018 `run_release_migration` preflight | outcome `unsupported-sqlite` unless qualified | outcome `unsupported-sqlite` only on `refused` |
+| CI | one job family, Python 3.14 on `ubuntu-latest` | plus a build matrix (§4d) |
+
+#### 4g.3 Untrusted inputs (the amendment's §2c)
+
+| input | supplied by | treated as |
+|---|---|---|
+| the SQLite build the interpreter loads | the user's environment | **untrusted**: its behaviour is measured on every open (§4b), never inferred from its version string |
+| a store file on disk | anyone with write access | unchanged from 0007: matched against the accepted evidence, refused if it does not match. 0007 §8's limit stands (not integrity) |
+| `sqlite_runtimes.json` | the package (written by the CI matrix) | **package data, not a capability**: a record can only remove the warning. It cannot widen what is accepted (§4d), so a forged record buys an unrecorded build nothing it would not already get by verifying |
+| **(v0.12)** the attestation key's platform fields (`machine`, `system`, `libc`) | the running interpreter, measured (§4d) | **measured, never taken from a runner's label.** An unreadable field makes the build unattestable (at most `verified`), never a match |
+
+#### 4g.4 Assertions about reach (the amendment's §2c-ii)
+
+Commands run from the repository root, re-derived at `58dd7f6` (v0.11: dev's read, and research from its own archive,
+equal line for line; earlier at `d273f19` and `af1e564`). **EXECUTED** = run and read; **READ** = the cited lines.
+
+| # | assertion | command | result |
+|---|---|---|---|
+| 1 | the runtime gate runs at every open, before any version decision | `grep -n "if not runtime_supported():" src/veracium/store/schema_version.py` | READ: L1939 (in `open_versioned`) |
+| 2 | the refusal's remedy names a script under specs/ | `grep -n "regenerate the evidence there" src/veracium/store/schema_version.py` | READ: L1944 |
+| 3 | reproduction is checked only after an exact identity match | `grep -n -e "if build_identity(r) != build_identity" -e "if any(_constructor_digest(int(v)) != d" src/veracium/store/schema_version.py` | READ: L1597, L1601 |
+| 4 | a second active build identity is an artifact problem | `grep -n "supports exactly one" src/veracium/store/schema_version.py` | READ: L1132, L1446 (the module defines `artifact_problems` twice, at L1081 and L1395; the later definition is the live one) |
+| 5 | 0013's ALTER steps byte-match reviewed expectations and refuse otherwise | `grep -n -e "the expectation never moves" -e "the expectations never move" src/veracium/store/migration.py` | READ: L352, L380, L406 |
+| 6 | doctor exits 1 on any warning-level finding | `grep -n "return 1 if any(f.level in" src/veracium/doctor.py` | READ: L149 |
+| 7 | doctor's runtime check runs only after a store opens | `grep -n -e "def _check_runtime" -e "_check_runtime(rep)" src/veracium/doctor.py` | READ: L661, L710 (the snapshot refusal returns at L683, before the check) |
+| 8 | CI runs one Python, on one runner image | `grep -n -e "python-version" -e "runs-on" .github/workflows/test.yml` | READ: L14 (the job name), L19, L34, L62, L85 (all 3.14); all four jobs `runs-on: ubuntu-latest` (L15, L55, L80, L95) |
+| 9 | the shipped disclosure says "refused at store creation" | `grep -n "refused at store creation" README.md docs/index.md docs/mcp.md` | READ: no match at `58dd7f6` (nor at `d273f19`), because the disclosure was corrected (Q3). At `af1e564`: README L61, docs/index.md L13, docs/mcp.md L15 |
+| 10 | an unrecorded build that reproduces the schema is refused, at open and at creation | research's build-reproduction probe (research `99ced3ec`) | EXECUTED at `58dd7f6`: on 3.53.1, 16 of 16 digests accepted and manifestations equal; both opens refused. Control on the qualified build: both open |
+
+#### 4g.5 Trust classes, authorization and scope (the amendment's §3 and §3b)
+
+| trust class | touched? | how |
+|---|---|---|
+| user | no | no fact, edge or record changes class; the amendment decides only whether a store opens |
+| third_party | no | untouched |
+| system | no | untouched |
+| assistant | no | untouched |
+| the store file's shape | **yes, unchanged in rule** | it is matched against the same accepted evidence. Only the set of builds allowed to run the match grows |
+
+##### 3b. Authorization and scope
+
+No new capability is granted to any caller. A build gains the ability to open a store only by reproducing, on that open,
+the evidence a recorded build would be held to. The amendment touches `src/veracium/store/schema_version.py`,
+`src/veracium/store/release_migration.py`, `src/veracium/doctor.py`, the evidence generator and CI. **(v0.12)** Specs-side, it also touches the 0013 model (`specs/migrations_0013.py`, §4c-iii), the census instrument behind INV-SA10's commit-time gate (§4c), `specs/skip_inventory.py` (an attestation column) and the two test skips the record rule strands (§4d). It does not touch
+`store/sqlite.py`.
+
+#### 4g.6 Behaviour (the amendment's §4)
+
+##### 4a. Three outcomes, decided by measurement
+
+On every open, before any version or shape decision (where today's gate runs), the store computes `runtime_status()`:
+
+| status | when | the open |
+|---|---|---|
+| **`attested`** | this build's identity has a current attestation record (§4d) **and** verification (§4b) passes | proceeds, silently |
+| **`verified`** | no attestation record matches, **and** verification passes | proceeds, with the unattested-build warning (§4e) |
+| **`refused`** | verification fails at any step | refused, `unsupported-sqlite`, naming the first failing step |
+
+**Verification runs for every build, attested or not.** A record never replaces the measurement; it adds provenance.
+That is today's behaviour for the recorded build (`runtime_supported()` re-derives its digests on every call), extended
+to every build. A record whose identity matches but whose evidence does not reproduce is `refused`, as today (S69).
+
+##### 4b. Verification: the build must read and write the accepted schema, and must still tell a near-miss apart
+
+Three steps, in order, each total and fail-closed (any exception is `refused`):
+
+1. **Feature probes.** The two 0007 requires today: `preserves_ddl_body` and `xinfo_exposes_generated` must be True.
+   (`strict_tables` and `generated_columns` stay recorded, not required, as today.)
+2. **Reproduction.** For every declared schema version, the constructor rebuilt in memory must produce a digest in that
+   version's ACCEPTED set, and a complete manifestation, rebuildable objects included, byte-equal to the accepted one.
+   This is the check `runtime_supported()` already runs, now compared against the accepted evidence, not against one
+   build's record.
+3. **Discrimination.** Reproduction proves the build gives the right answer on the right schema. It does not prove the
+   build still gives a DIFFERENT answer on a wrong one, and that is the failure 0007 §7 exists to prevent ("opening and
+   silently misreading"). A small packaged set of near-misses is built in memory, each the head constructor with ONE
+   change, and each must produce a digest or manifestation different from the accepted one. Required members: an added
+   column; a changed declared type; a dropped rebuildable index; a changed index column; a changed `DEFAULT`; a column
+   reordered within a table. They live in `src/` (package data), not `tests/`, so the check runs on users' machines.
+
+**Cost:** the reproduction step already runs on every open today, on the recorded build. The near-miss set adds a fixed
+number of in-memory builds. The result may be cached per process, keyed by the build identity, because a process cannot
+change its SQLite build.
+
+##### 4d. Attestation: one record per build, written by CI, widening nothing
+
+**One accepted evidence set for every build.** 0007 v9 tried a union of manifests across runtimes and withdrew it:
+nothing persisted which runtime contributed what (§4a-viii, S66). This amendment does not revive the union. **A build is
+supported if and only if it reproduces the ONE accepted evidence set.** A build that writes or reads the schema
+differently (for example, by normalising stored DDL) is `refused`, and supporting it is a separate design, not a record.
+
+**An attestation record** (in `sqlite_runtimes.json`) states that the build passed the FULL schema suite in this
+repository's CI, not only the open-time check. It carries:
+- the build identity: version, `sqlite_source_id()`, the four probes and **(v0.6) a digest of `PRAGMA compile_options`** (v0.7: of its canonical form, sorted and newline-joined, read through the library the store's connections use), because one source id is shared by builds of several distros (§1d), so a record keyed without the options would attest builds CI never ran. **(v0.12, SA-R1-03) With the measured architecture, operating system and C library of the process that loaded the library, this is the ATTESTATION KEY:**
+  - `machine`: `platform.machine()`, lower-cased, then mapped through a CLOSED alias map of exactly two entries, `amd64` → `x86_64` and `arm64` → `aarch64`. Every other value stays as lower-cased, so `i686`, `ppc64le` and `s390x` are each their own key. The result must match `^[a-z0-9_]+$`. The aliases exist because, once lower-cased, Windows reports `amd64` and `arm64`, and macOS reports `arm64`, for the instruction sets Linux reports as `x86_64` and `aarch64`.
+  - `system`: `platform.system()`, exactly as returned, non-empty, matching `^[A-Za-z0-9_]+$`.
+  - `libc`: on Linux, `glibc` or `musl`, read from the running interpreter's ELF `PT_INTERP` (`ld-linux-*` → `glibc`, `ld-musl-*` → `musl`), the method packaging uses for musllinux tags; never from `platform.libc_ver()`, which returns `('', '')` on musl CPython. On every other `system` it is the fixed token `none`. A Linux interpreter with no `PT_INTERP` (a statically linked executable), or with one matching neither pattern, has an unreadable `libc`. Each §4d row whose route can install a static interpreter states that its builds are at most `verified`. Which python-build-standalone build uv resolves on musl is measured before the matrix is written.
+
+  A build with any of the three fields unreadable matches no record, and no job can record it. It is at most `verified`, and `veracium doctor` names the unreadable field. A record's field must be an exact `str` already in canonical form; any other value is malformed and poisons the artifact. **One definition:** the build side (what `runtime_identity()` reports, on a user's machine and in a CI job) and the record side (what `artifact_problems()` accepts) call ONE canonicalisation function, in `store/schema_version.py` beside `runtime_identity()`, which the CI writer imports. A second implementation is a defect.
+
+  *Why `system` and `libc`, beyond the reviewer's `machine`.* Both are constructed counterexamples, not measurements. python-build-standalone bundles one SQLite pin for every platform (the table below), and ships gnu and musl Linux builds of it. Version, source id, probes and options may then be equal between Linux aarch64 and macOS arm64, or between glibc and musl. The key must not rest on their being different;
+- the commit and the CI run and job that produced it;
+- the runner image;
+- the digest of the attestation suite's result (v0.12: defined below), and **(v0.12)** the sixteen confinement probe results, each True (§4c-iii), as provenance.
+`artifact_problems()` drops the single-identity rule (S66) and keeps the rest, **over the full attestation key (v0.12)**: a malformed current
+record poisons the artifact; two current records with one key and different EVIDENCE conflict; and two with one key and equal evidence are a duplicate and are refused. A record's evidence is its result digest and its sixteen confinement results. Its provenance (commit, run, job, runner image) is never compared.
+
+**The CI matrix: one job per ROUTE TO A 3.14, on each OS it serves, each MEASURED (v0.4).** A Veracium user loads the
+SQLite of whatever gave them Python 3.14, so the matrix's axis is the INSTALLER, not the OS (dev's restructuring). A
+distro's SQLite reaches a Veracium user through a route that builds or packages 3.14 against it, so distros appear as
+the images those routes run on. The owner's "as many of the most common versions as possible" is delivered here, read
+as the common ROUTES to a 3.14: **the owner's ruling (Q5, 2026-10-13)**, and the matrix grows by adding a row.
+
+**What the first implementation runs: the owner's ruling (Q4, 2026-10-15, v0.10).** The aim is to cover the SQLite versions most commonly in use.
+- **Every row below that CI can obtain now.** Hosted runners and public container images reach all twelve census versions (§1d), so the first matrix runs each of them.
+- **arm64 Linux for the python-build-standalone and official Docker rows.** The census was measured on x86_64 Linux. A Docker image on an Apple-silicon Mac, and an arm64 cloud host, run arm64 Linux. An arm64 build of one SQLite version is a different build, and an attestation keys on the build (INV-SA12).
+- **The Windows Store Python stays LATER.** The reason is in its row.
+
+**(v0.12)** Each job measures `machine`, `system` and `libc` as part of the attestation key (above), so a row's architecture is measured, not assumed from the runner's label.
+
+**The Python floor comes first.** Veracium requires Python `>=3.14` (pyproject.toml). Each job first records its
+interpreter's version. A row whose route does not reach 3.14 records "not a Veracium route", never a SQLite result,
+because no Veracium user loads that SQLite through that interpreter. Each job then records the build identity it
+measured, and the record attests that identity. The third column is the census's figure where one exists: a version
+to compare against, never the result.
+
+| route to a Python 3.14 | OS images | SQLite it loads (census figure, where known; the job measures it) |
+|---|---|---|
+| `actions/setup-python` (what most users' CI runs) | `ubuntu-24.04`, `ubuntu-22.04`, `macos-latest`, `windows-latest` | ubuntu-24.04: 3.45.1, today's attested build (M); ubuntu-22.04: 3.37.2 (M); macOS and Windows repackage python.org: 3.50.4 (S) |
+| python-build-standalone: uv, mise by default, and Rye, PDM and hatch through it | Linux, macOS, Windows | its own bundled SQLite: 3.53.1, one pin for every platform (S; M on Linux x86_64, research `99ced3ec`) |
+| python.org installers | macOS, Windows | bundled: 3.50.4, every 3.14 patch (S) |
+| Homebrew `python@3.14` | macOS | Homebrew's `sqlite`, linked dynamically: 3.54.0 (S) |
+| conda-forge `python` 3.14 | Linux, macOS, Windows | conda's `libsqlite`, floating: 3.54.0 (M) |
+| pyenv and asdf source builds (and mise with `python.compile=true`) | the distro images below | each image's system `libsqlite3` (S); macOS not measured |
+| the deadsnakes PPA | Ubuntu 22.04, 24.04 | the system library: 3.37.2 and 3.45.1, the latter today's attested build (M) |
+| a distro's own Python 3.14: its DEFAULT `python3` where it reaches 3.14, or its `python3.14` package | Ubuntu 26.04 LTS (default), Fedora 43 and 44 (default), Alpine 3.24 (default), RHEL 9 and 10 (AppStream package), Amazon Linux 2023 (package) | 3.46.1, 3.50.2, 3.51.2, 3.53.4, 3.34.1, 3.46.1, 3.40.0 (M) |
+| official Docker `python:3.14` images | `-bookworm`, `-trixie`, `-alpine` | built against the image's system library: 3.40.1, 3.46.1, 3.53.4 (M) |
+| **arm64 Linux (v0.10, Q4):** python-build-standalone, and the official Docker `python:3.14` images | GitHub's arm64 Ubuntu runner; the `-bookworm`, `-trixie` and `-alpine` images on `linux/arm64` | not in the census, which was measured on x86_64 (the job measures it) |
+| the Windows Store Python | Windows | LATER: not installable non-interactively on a hosted runner (dev to confirm by trying). It probably bundles the same SQLite as python.org's Windows installer, but nobody has checked |
+
+A distro's DEFAULT `python3`, and macOS's `/usr/bin/python3`, are rows only if the floor check shows they reach 3.14.
+
+Each job runs the attestation suite (below), the generator in attestation mode, and `--check-evidence` (§4c-iii),
+then uploads its record. **A job whose build fails verification records that result, it does not fail the matrix**:
+the census row becomes a documented `refused`, with the failing step. The set of attested builds is what CI measured,
+never a version range.
+
+**Aggregation within one CI run is deterministic (v0.12, SA-R1-03).** Several jobs can measure one key: `setup-python`
+and deadsnakes on `ubuntu-24.04` both load the system 3.45.1. The aggregation step:
+1. groups the run's attestation inputs (below) by full attestation key;
+2. emits ONE record per key only if every job in the group has equal evidence. The record's provenance lists the
+   contributing jobs (route, runner image, run id, job id), sorted by route, then image, then job id;
+3. on any disagreement within a group (different result digests, or one job verifying while another of the same key
+   is refused), emits NO record for that key and fails the aggregation step, naming every job in the group.
+   Disagreement means the key does not identify the build: that is a finding, not a record.
+
+Across runs, "merge, never replace" applies over the full key (§4f, kept).
+
+**The attestation suite, by a rule a script computes (v0.12).** It is every `test_*` module under `tests/` whose AST either
+imports one of `sqlite3`, `veracium.store.schema_version`, `veracium.store.migration`,
+`veracium.store.release_migration`, `schema_evidence` or `migrations_0013` (at any depth, `import` or `from … import`),
+or passes `schema_evidence.py` or `migrations_0013.py` as a string inside a call's arguments (loading the file by
+path). A literal anywhere else admits nothing. The node set is pytest's collection of those modules. The rule lives in
+one committed script, and a gate asserts that the suite each CI job runs equals the rule's output at that commit.
+- **At `58dd7f6` it selects 54 of the 250 test modules** (research's suite rule, specs/evidence/0007-sqlite-attestation/r1-repro-at-58dd7f6).
+- **Why `sqlite3` is a root:** without it the rule selects 37 and misses direct SQLite users such as
+  `test_0044_v1_readonly_db.py`.
+- **Why string literals count only inside call arguments:** admitting any literal also took in
+  `tests/test_spec_gate.py`, whose only reference is a skip-reason fixture string, which is repository governance
+  and not a run of the model.
+
+**Conditional skips inside the suite carry an attestation class.** A digest over raw `(node id, outcome)` would split
+one build by environment. The reviewer's run measured this: on one identity (3.45.1), 46 pass→skip and 2 skip→pass
+changes against the author capture, from git absence, root, the missing MCP extra and timezone. 8 of those 48 fall
+inside the 54 modules, all of the `job` class below (`mcp` 2, git checkout 4, root 2), and the two timezone swaps fall
+outside. At `58dd7f6`, 14 of `skip_inventory`'s 54 entries fall inside the suite. Each carries one class in a new
+`skip_inventory` column, and a gate requires the column on every entry whose file is in the suite:
+- **`key` (3):** the condition is a function of the attestation key or of the Python floor, so it fires identically
+  for every job of one key. These are `no fcntl on this platform` (`system`), and two Python-version conditions that
+  never fire at the floor.
+- **`job:runs` (9):** the attestation job fixes the condition so the test RUNS:
+  - both `geteuid` entries: the job runs non-root, and in a container as a created user;
+  - the four git-checkout entries: a full-history checkout;
+  - `mcp`: the job installs the extra;
+  - both selection-conditional entries: the job runs the whole suite.
+
+  The job asserts from its own JUnit, through `skip_inventory.reconcile`, that none of these fired. A job where one
+  fired is **not an attestation input**: it is named and excluded, and it is not a disagreement. (A root job did not
+  run the read-only-database tests, so "must agree" would attest a suite it did not run.) Dev's fresh-clone capture at
+  the pin (full history, non-root, `[dev,mcp]`) shows none of the nine firing.
+- **`rewrite` (2):** the condition presupposes the single-record rule this amendment withdraws (below).
+
+**The result digest** is sha256 over the suite's sorted `(node id, outcome)` pairs from the JUnit, without timings.
+Within one key it is deterministic: `key` skips are equal by construction, and `job` conditions are fixed, or the job
+is excluded.
+
+**Stranded rows.** Two schema-suite skips are conditioned on the record rule itself:
+- `tests/test_migrations_0013.py` L677: "artifact records a different runtime identity" (in M11's
+  reproduces-on-the-recording-runtime test);
+- `tests/test_schema_model.py` L321–L323: `if not ev.sv.runtime_supported(): pytest.skip(… "is not a qualified
+  runtime" …)`.
+
+On every unrecorded build these skip exactly the tests an attestation job exists to run, so no new build could ever
+pass the suite. Under this amendment each skips only when `runtime_status()` is `refused`, and the first re-derives
+on any other build (§4c-iii, M11). A wider `git grep` census at `58dd7f6` finds 26 lines in 4 test files that call
+`runtime_supported(`, `build_identity(`, `runtime_identity(` or `migration_runtime_supported(`:
+`test_schema_model.py` 17, `test_migrations_0013.py` 6, `test_store_versioning.py` 2, `test_0042_sites.py` 1. It
+finds readers, not forgetters. Each is read against the new predicate in the implementing commit.
+
+##### 4e. What the user sees
+
+**The warning (`verified`):** emitted once per process, through Python's `warnings` and the `veracium` logger:
+
+> SQLite {version} ({source id, last 12}, {machine}, {system}, {libc}) is not one of Veracium's attested builds. Veracium verified this build when
+> opening the store: it reproduces all {N} schema versions and tells apart all {M} near-miss checks. Its CI has not run
+> the full schema suite on this build. `veracium doctor` lists the attested builds.
+
+**The refusal (`refused`):** reason `unsupported-sqlite`, unchanged for hosts that branch on it. The text names the
+failing step and only remedies that ship:
+
+> SQLite {version} ({source id}) cannot be verified for Veracium's store: {the first failure — "feature probe
+> preserves_ddl_body is False" | "schema v{N}: {type}:{name} differs from the accepted manifest" | "near-miss
+> {name} was not told apart"}. The store was not opened. Use a Python whose SQLite is an attested build (`veracium
+> doctor` lists them), or report this build to the project.
+
+**`veracium doctor`:** reports the SQLite status **before** opening any store, so it works exactly when a user needs it. **(v0.12)** It lists each attested build with its `machine`, `system` and `libc`, and names any field of the running build's key that was unreadable.
+It reports `attested` and `verified` at `info` level: doctor exits 1 on any warning (row 6), and an unattested but
+verified build is not a store problem. It reports `refused` at `error` level, with the failing step and the list of
+attested builds.
+
+##### 4f. What this withdraws from 0007
+
+- §4a-viii's "`0007` supports exactly one active runtime" and S66's single-identity refusal.
+- S47's and S56's "an unrecorded runtime is not qualified": an unrecorded build is `verified` or `refused` by measurement.
+- §8's limit "SQLite support is the recorded set, and it currently has one member", replaced by §8 below.
+- S-Q7's release gate, which this amendment discharges: release requires the CI matrix to have run, not every census
+  build to pass.
+
+**What this withdraws from 0013 (v0.12, §4c-iii):** the migration-runtime record class, and with it the single-active-runtime policy in `migration_runtime_artifact_problems`; the runtime-identity component of the path-evidence key and of its expected set; and the requirement that a path record's runtime resolve to a schema-runtime record and a migration-runtime record. M15's `test_recorded_confinement_behaviours_must_reproduce_live` and M18's `test_a_malformed_current_migration_runtime_record_poisons` are retired, and M18's `test_a_foreign_identity_path_record_fails_the_artifact` is replaced (§4c-iii lists their replacements).
+
+**Kept:** the fail-closed totality of the predicate (round 13), the complete-manifestation rule (S69), conflict and
+duplicate refusal (S64, S65), and "merge, never replace" for records.
+
+#### 4g.7 Regimes (the amendment's §5)
+
+| regime | behaviour |
+|---|---|
+| the recorded 3.45.1 build | `attested`; unchanged |
+| a build that reproduces the accepted evidence, with no record (measured: uv's 3.53.1) | `verified`: opens, creates, adopts and migrates, with the warning |
+| the same build after CI attests it | `attested`; no warning |
+| a build that stores DDL differently, or fails a required probe | `refused`, naming the step; today's outcome, with a true message |
+| a build that reproduces the schema but fails a near-miss | `refused`: its matcher cannot be trusted to tell stores apart |
+| an operating-system update changes a dynamically linked SQLite under an existing store (apt, Homebrew, conda) | today: refused on the next open. Here: the next open re-verifies the new build; it opens `verified` or `attested`, or is refused naming the step |
+| a forged attestation record for some build | buys nothing: verification still runs, and a record widens no accepted evidence |
+| a store migrated on a build whose ALTER output differs | the step refuses, `unsupported-migration`; the transaction leaves the store unchanged |
+| **(v0.11)** a store migrated on a build where a data step's output differs | that step's postcondition refuses, `unsupported-migration`, naming the step; the transaction leaves the store unchanged. The same on `attested` and `verified` builds |
+| **(v0.12)** a commit adds DDL outside the frozen class-(b) list, or a write SQLite's authorizer reports that no step claims, whatever its first word | the commit-time gate (INV-SA10) fails the suite |
+| **(v0.12)** a `verified` build migrates in production | as an attested build: the same ladder, postconditions and `_validated_current`; neither installs a runtime authorizer (§4c-iii, carrier (ii)) |
+| **(v0.12)** the 0013 model, on a build whose schema verifies but whose authorizer is weak | ordinary open proceeds; migration refuses `unsupported-sqlite`, naming the first failing probe (A3) |
+| **(v0.12)** an x86_64 record, and an aarch64 build otherwise identical | no match: the build is `verified`, with the warning (INV-SA12) |
+| **(v0.12)** two CI jobs measure one key and disagree | no record for that key; the aggregation step fails, naming both jobs (INV-SA6) |
+| **(v0.11)** a commit adds a ladder write that maps to no checked step | the commit-time gate (INV-SA10) fails the suite; the write never ships to any build |
+
+#### 4g.8 Invariants (the amendment's §6)
+
+| | invariant | mutant that must fail |
+|---|---|---|
+| **INV-SA1** | every open computes `runtime_status()` before any version or shape decision, for every build | skip verification when an attestation record matches; decide shape first |
+| **INV-SA2** | `verified` requires all three steps (§4b); any failure or exception is `refused` | accept on reproduction alone (drop discrimination); accept on probes alone; let an exception return `verified` |
+| **INV-SA3** | reproduction compares against the ACCEPTED evidence, digest AND complete manifestation | compare digests only (S69's rebuildable-index hole returns); compare against the build's own record |
+| **INV-SA4** | each required near-miss changes the digest or manifestation on the running build, and a near-miss that does not change it refuses the build | drop a near-miss from the set; treat an equal near-miss as a pass |
+| **INV-SA5** | no attestation record widens the accepted evidence | let a record's manifestations join the accepted set (the withdrawn union) |
+| **INV-SA6** | any number of attestation records with distinct attestation keys is valid; two with one key and different evidence, or a duplicate, poison the artifact; **(v0.12)** within one CI run, aggregation emits one record per key only when every attestation input measuring that key agrees, and a job whose `job`-class skip fired is excluded, not counted as a disagreement | refuse a second key (S66, withdrawn); accept a conflicting pair; **(v0.12)** aggregate by majority or by the first job; compare provenance as evidence (two agreeing jobs become a false conflict); digest the suite result with timings (one build splits); drop the `job`-state assertion (one root job and one non-root job of one key disagree, and aggregation reports a false "key does not identify the build"); run a suite other than the rule's output; leave a `rewrite`-class skip in place (a new build's job skips its schema tests and attests on the rest) |
+| **INV-SA7** | a `verified` open emits the warning exactly once per process; an `attested` open emits none | warn on every open; warn on an attested build; never warn |
+| **INV-SA8** | the refusal text names the first failing step and names no file outside the wheel | keep `schema_evidence.py` in the text; omit the step |
+| **INV-SA9** | `veracium doctor` reports the SQLite status without opening a store, `info` for `attested`/`verified` and `error` for `refused` | report after opening (unreachable on a refused build); report `verified` at `warn` (doctor exits 1 for every uv user) |
+| **INV-SA12** | **(v0.6)** an attestation record matches a build only if version, source id, the four probes AND the compile-options digest are all equal, **and (v0.12) canonical `machine`, `system` and `libc`, each from ONE canonicalisation function** | match on version and source id alone (one 3.46.1 record would cover Debian 13, Ubuntu 26.04 and RHEL 10); omit the compile options from the record; **(v0.7)** digest the options in the order the build returns them (one build becomes two); read them from a SQLite library other than the one the store's connections use; **(v0.12)** drop `machine` while every other field is equal (an x86_64 record attests an aarch64 build: the reviewer's constructed pair); drop `system` (a Linux aarch64 record attests a macOS arm64 build); drop `libc` (a glibc record attests a musl build of one pin); read `libc` from `platform.libc_ver()`; take `machine` from the runner's label; canonicalise one side only (a Windows build never matches its own record); widen the alias map (`i686` → `x86_64` makes a 32-bit build match a 64-bit record); let an unreadable field match a record with the same value |
+
+**Gate:** each row is a PRODUCT test at implementation, demonstrated red against its mutant. **(v0.6) The `verified` and `refused` paths must be exercised on a route other than the attested one:** `setup-python` on ubuntu-24.04 loads the attested build exactly (§1d), so a suite run only there can reach neither path, except by forcing the predicate. The CI matrix (§4d) is its
+own evidence: one attestation record per measured build, and a documented `refused` for each build that fails, with its
+failing step.
+
+INV-SA10 and INV-SA11 check 0013's code and are in 0013 §5f.4; the **Gate** above applies to them as well.
+
+#### 4g.9 Failure modes, claims and limits (the amendment's §7 and §8)
+
+##### 7. Failure modes and reversibility
+
+**The failure 0007 exists to prevent is unchanged:** a build that cannot show it reads the schema correctly does not
+open the store. What changes is that showing it no longer requires being on a list.
+
+**The new residual, stated rather than minimised:** a `verified` build has passed the open-time checks, which are a
+subset of the full schema suite. A defect in that build that the suite would catch, and the open-time near-misses do
+not, would go unseen until CI attests the build or refuses it. The warning names this, and §4b's near-miss set is the
+mitigation. Attestation closes it, per build.
+
+**Reversible:** the amendment changes no stored byte. A store created on a `verified` build is the same accepted shape
+an attested build creates (that is what verification checked), so it opens on every build that verifies.
+
+##### 8. Claims and limits
+
+**Claim:** every version-aware build refuses to open a store it does not recognise (0007 §8, unchanged), and **opens a
+store only on a SQLite build that, on that open, reproduces the accepted schema evidence and tells apart the packaged
+near-misses.**
+
+**Limits:**
+- **Not the full suite at open.** A `verified` build has passed a subset; only attestation runs the whole suite (§7).
+- **INV-SA10 sees the writes the campaign's fixtures reach (v0.11.1).** Its site check finds an `execute` never
+  observed. It does not find a write inside a helper whose only call sits on a branch no fixture reaches; that needs
+  line coverage. Research measured line coverage of the functions the ladder enters, over the 48 paths and all 1,480
+  campaign cells at `58dd7f6` (specs/evidence/0007-sqlite-attestation/at-58dd7f6, §4). In `store/migration.py` 81 lines never execute.
+  31 sit in a block that ends in `raise`. Of the other 50, 40 are problem-report lines in the postcondition functions
+  and 10 are paths: a non-outcome episode on a base-1/2 store (`_migrate_outcome_chains`), an episode json that does
+  not parse, the `migration_committed` audit path (the campaign runs with no `audit_sink`), and one line in `_older`.
+  A line-coverage gate would therefore refuse the correct tree until fixtures reach those paths and a second exemption
+  covers the problem reports. It is not part of INV-SA10, and the class stays in §9's attack points. The 50 is this
+  campaign's scope; the wider suite may run some of those lines, which this document does not measure.
+- **One accepted evidence set.** A build that stores the schema differently is refused, not adapted to.
+- **The census is by install route, mostly measured on x86_64 Linux** (§1d), and it is a list of versions with their
+  source ids. Which builds VERIFY is what the CI matrix measures; this document predicts none of them beyond the one
+  measured `verified` build (3.53.1). The census does not cover arm64, the Windows Store Python, Nix, openSUSE, Arch or
+  usage shares. From v0.10 the matrix runs arm64 Linux (§4d, Q4). The Windows Store Python is LATER. Nix, openSUSE,
+  Arch and usage shares remain uncovered.
+- **(v0.12) Class (b) is a closed list of statement texts** (§4c); a statement outside it owes a step, a
+  postcondition and cells. **0013-PA1's census has been re-measured with SQLite's classification** (C1: equal figures,
+  0 disagreements). **The step table's 432 / 1,685 has not; it is still a count of statements a leading-keyword label
+  called DDL or DML.**
+- **(v0.12) Production runs no confinement at runtime**, on attested and `verified` builds alike (§4c-iii, carrier
+  (ii)): accepted 0013's deferral to 0008, unchanged.
+- **(v0.12) `attested` claims** that CI ran the attestation suite (§4d: a computed set of 54 test modules at
+  `58dd7f6`, not the whole test suite) against a SQLite library with this attestation key, on this architecture,
+  operating system and C library. It does not claim the user's CPython is the binary CI ran. A statically linked
+  interpreter's C library cannot be read, so such a build is at most `verified`.
+- **Not integrity** (0007 §8, unchanged).
+
 ## 5. Regime analysis — where does this behave differently?
 
 **The regime no test naturally reaches:** an *older* build opening a *newer*
@@ -875,7 +1298,7 @@ retired stay with `specs/0013`.
 | **S33** drift repair is followed by **complete revalidation** | `test_repair_revalidates_before_stamping` — digest accepted **and** drift empty |
 | **S34** the evidence supports multiple schema versions | `test_a_v1_store_still_resolves_once_head_is_v2` — **measured today**; the resolver is version-aware even though only one version exists, because `0013` will add the second |
 | **S35** post-commit audit failure has the specified result | `test_committed_sink_failure_leaves_the_store_adopted` — raises `PostCommitAuditError`, not `StoreVersionError` |
-| **S36** the runtime is qualified by recorded evidence | `test_this_runtime_is_qualified_or_explicitly_is_not` — **the full §4a-viii rule**: build identity · structural validity · constructor digest · **complete manifestation byte-for-byte** |
+| **S36** the runtime is qualified by recorded evidence | `test_this_runtime_is_qualified_or_explicitly_is_not` — **the full §4a-viii rule**: build identity · structural validity · constructor digest · **complete manifestation byte-for-byte** · **v17:** the rule now governs an `attested` build's record; a build without one is `verified` or `refused` by measurement (§4g.6, 4a and 4b; INV-SA1–INV-SA3) |
 | **S37** conformance covers rebuildable **DDL** | `test_a_wrong_rebuildable_ddl_fails_conformance` — v5's digest-based S23 passed it |
 | **S39** legacy resolution is candidate-based | `test_resolution_does_not_use_a_default_version_digest` — **measured today** |
 | **S40** only unstamped releases feed the legacy set | `test_resolution_is_restricted_to_legacy_base_versions` |
@@ -884,14 +1307,14 @@ retired stay with `specs/0013`.
 | **S44** flipping only a **policy** fails conformance | `test_flipping_only_a_policy_fails_conformance` — **v6's check was tautological** |
 | **S45** version-zero tries only `LEGACY_BASE_VERSIONS` | `test_resolution_is_restricted_to_legacy_base_versions` |
 | **S46** deleting a historical version is an error | `test_deleting_a_historical_version_is_an_error` |
-| **S47** a runtime is qualified by **evidence** | `test_an_unrecorded_runtime_is_not_qualified` · `test_a_matching_version_with_different_features_is_not_qualified` |
+| **S47** a runtime is qualified by **evidence** | `test_an_unrecorded_runtime_is_not_qualified` · `test_a_matching_version_with_different_features_is_not_qualified` · **v17: WITHDRAWN in part (§4g.6, 4f):** “an unrecorded runtime is not qualified” no longer holds; an unrecorded build is `verified` or `refused` by measurement |
 | **S49** the audit event payload is the frozen type | `test_adoption_event_payload_is_typed` — §4e, both events, paired `adoption_id`. **Not yet written**; needs the store |
 | **S54** missing legacy evidence authorises nothing | `test_missing_legacy_evidence_authorizes_nothing` — **measured today** |
 | **S55** runtime evidence can actually be written | `test_writing_runtime_evidence_actually_writes` — **measured today**; v7's flag was ignored |
-| **S56** recorded runtimes are internally valid | `test_the_recorded_runtimes_are_internally_valid` (always) · `test_this_runtime_is_qualified_or_explicitly_is_not` (skips) · `test_an_empty_digest_map_does_not_qualify_vacuously` — **measured today** |
-| **S58** an **unattested** runtime contributes nothing | `test_an_unattested_foreign_runtime_contributes_nothing` — **measured today**. Internal consistency is not provenance |
+| **S56** recorded runtimes are internally valid | `test_the_recorded_runtimes_are_internally_valid` (always) · `test_this_runtime_is_qualified_or_explicitly_is_not` (skips) · `test_an_empty_digest_map_does_not_qualify_vacuously` — **measured today** · **v17: WITHDRAWN in part (§4g.6, 4f):** the skipping test's premise, “an unrecorded runtime is not qualified”, is withdrawn; an unrecorded build is `verified` or `refused` by measurement |
+| **S58** an **unattested** runtime contributes nothing | `test_an_unattested_foreign_runtime_contributes_nothing` — **measured today**. Internal consistency is not provenance · **v17:** accepted manifests are no longer widened by any runtime record: every build is held to the ONE accepted evidence set (§4g.2; §4g.6, 4d) |
 | **S65** the **production predicate** rejects a conflicting artifact | `test_a_conflicting_artifact_disqualifies_the_runtime` · `test_the_recorded_artifact_has_no_conflicts` — **measured today**; v12 checked this only in the generator |
-| **S66** exactly one active runtime **build identity** | `test_two_active_runtime_identities_are_refused` · `test_one_canonical_identity_is_used_everywhere` · `test_replacement_is_by_build_identity` · `test_a_superseded_revision_of_the_same_build_is_replaceable` — **measured today**. **Build identity** (version · source id · canonical typed probes) governs one-active, matching, replacement, attestation, reporting; **evidence revision** (algorithm · schema version) only versions the record. A superseded revision of the *same* build is replaceable — that carve-out is what clears an algorithm bump without deadlock |
+| **S66** exactly one active runtime **build identity** | `test_two_active_runtime_identities_are_refused` · `test_one_canonical_identity_is_used_everywhere` · `test_replacement_is_by_build_identity` · `test_a_superseded_revision_of_the_same_build_is_replaceable` — **measured today**. **Build identity** (version · source id · canonical typed probes) governs one-active, matching, replacement, attestation, reporting; **evidence revision** (algorithm · schema version) only versions the record. A superseded revision of the *same* build is replaceable — that carve-out is what clears an algorithm bump without deadlock · **v17: WITHDRAWN (§4g.6, 4f):** any number of attestation records, each for one attestation key (§4g.2; §4g.6, 4d) |
 | **S72** feature results are a closed, typed vocabulary | `test_a_mistyped_feature_is_rejected` — **measured today**; `1 == True` in Python |
 | **S73** a manifestation's key set **equals** the declaration | `test_a_missing_declared_object_fails_the_record` — **measured today**; "no extras" was only half of "exact" |
 | **S74** a malformed current-algorithm record poisons the artifact | `test_a_malformed_current_algorithm_record_poisons_the_artifact` — **measured today**; superseded records are ignored, malformed current ones are evidence of breakage |
@@ -899,13 +1322,13 @@ retired stay with `specs/0013`.
 | **S76** the validators are **total** | `test_the_record_validator_is_total` · `test_the_predicate_is_total_over_garbage` — **measured today**; `features=[]` raised `AttributeError` out of the predicate, and `13.0`/`True` revision fields qualified via Python equality |
 | **S77** superseded records cannot disqualify | `test_superseded_duplicates_do_not_disqualify` — **measured today**; two stale leftovers beside a valid record caused a needless startup failure. `--check` reports them for cleanup instead |
 | **S78** manifestation structure is genuinely closed | `test_an_extra_manifestation_field_is_rejected` — exact field sets, typed fields, exact column-row width |
-| **S69** the predicate attests the **complete** manifestation | `test_a_modified_rebuildable_ddl_disqualifies_the_runtime` · `test_a_missing_rebuildable_index_disqualifies_the_runtime` — **measured today**; the acceptance digest excludes rebuildable objects, so digests alone attest nothing about them |
+| **S69** the predicate attests the **complete** manifestation | `test_a_modified_rebuildable_ddl_disqualifies_the_runtime` · `test_a_missing_rebuildable_index_disqualifies_the_runtime` — **measured today**; the acceptance digest excludes rebuildable objects, so digests alone attest nothing about them · **v17: kept** (§4g.6, 4f): every verification compares against the ACCEPTED evidence, digest AND complete manifestation (INV-SA3) |
 | **S70** `SCHEMA_VERSION` is bound to the registry | `test_schema_version_must_match_the_registry` · `test_the_registry_versions_are_contiguous` — **measured today**. *(This invariant existed before the scope cut, regressed when the module holding it was deleted, and the round-6 disposition went on claiming it. The citation gate now catches that class.)* |
 | **S71** a missing versions artifact fails the gate | `test_a_missing_versions_artifact_fails_the_gate` — **measured today** |
 | **S67** a failed publish leaves nothing published | `test_a_staging_failure_publishes_nothing` · `test_a_failed_publish_rolls_the_first_file_back` — **measured today**; v12 claimed rollback with no test |
 | **S68** staged temporaries are cleaned up | `test_staged_temporaries_are_not_left_behind` · `test_the_repository_has_no_stray_staged_artifacts` — **measured today**; v12 shipped a `.tmp` in the review package |
 | **S63** a self-consistent fabrication is rejected | `test_a_self_consistent_fabrication_is_rejected` — **measured today**; a manifestation may hold only declared objects |
-| **S64** conflicting runtime identities reject the artifact | `test_conflicting_runtime_identities_reject_the_artifact` · `test_a_duplicate_runtime_record_is_rejected` — **measured today** |
+| **S64** conflicting runtime identities reject the artifact | `test_conflicting_runtime_identities_reject_the_artifact` · `test_a_duplicate_runtime_record_is_rejected` — **measured today** · **v17: kept** (§4g.6, 4f), over the full attestation key (§4g.6, 4d) |
 | **S59** the policy vocabulary is closed | `test_a_policy_typo_is_a_build_error` · `test_a_rebuildable_non_index_is_a_build_error` — **measured today**; a typo disabled validation entirely |
 | **S61** the release `result` is re-derived | `test_the_release_result_is_rederived` — **measured today**; v8 read the stored value |
 | **S62** feature probes assert their behaviour | `test_the_strict_table_probe_reports_a_real_bool` · `test_the_ddl_probe_asserts_body_preservation` — **measured today**. *(Round 12: STRICT support is identity, not a requirement, so the probe reports rather than demands — and the report must be a real bool, because `1 == True` in Python split the canonical identity from dict equality.)* |
@@ -932,7 +1355,7 @@ opening and silently misreading.**
 opens today refuse to open tomorrow. **The refused population is not claimed to
 be empty** — §4a-iv establishes only that every released *codebase*, probed
 under the qualified runtime, produced the accepted manifestation. A store
-created under a different SQLite runtime may not match, and would be refused.
+created under a different SQLite runtime may not match, and would be refused. **v17:** the RUNTIME refusal narrows to builds that cannot verify (§4g.6, 4a and 4b); the amendment's failure modes are §4g.9.
 The blast radius of that is "the application will not start", which is loud and
 recoverable by installing a matching build.
 
@@ -997,7 +1420,7 @@ all. The claim can only ever cover code that performs the check.
   `adoption_attempted` and `adoption_committed`, and neither is a two-phase
   commit. A sink that raises *after* commit leaves the store adopted, by design
   and by name.
-- **SQLite support is the recorded set, and it currently has one member**
+- **WITHDRAWN (v17; §4g.6, 4f — replaced by §4g.9):** **SQLite support is the recorded set, and it currently has one member**
   (§4a-viii). **`3.45.1` is the only runtime run through the generator**;
   everything else is refused with `unsupported-sqlite`. v7's text named a second
   runtime the artifact did not record, and the package then failed its own test
@@ -1100,11 +1523,27 @@ and, by the round-9 M-Q1 ruling, **must be reviewed against `0008`'s
 - ~~Nothing is implemented~~ — **no longer true**: the versioning layer landed
   2026-08-03 after acceptance, in the commit citing this spec. Kept struck
   because it was true when acceptance was recorded, minutes earlier.
-- **One qualified runtime** (SQLite 3.45.1 by build identity). Release on any
+- **WITHDRAWN (v17; §4g.6, 4f):** **One qualified runtime** (SQLite 3.45.1 by build identity). Release on any
   other identity must refuse with `unsupported-sqlite` until evidence is
   regenerated there — **S-Q7 is a release gate**, per the round-12 and round-14
   rulings.
 - **S-Q3** (non-SQLite backends) remains deferred.
+
+**v17 — the SQLite attestation amendment's implementation obligations** (amendment `0013/0007-sqlite-attestation`; its round-2 verdict and this checklist banked verbatim at coordination `2b84ab5`, body sha16 `b6cf6a9d9f0a3ca6`). The design is accepted; implementation acceptance requires every row:
+
+This checklist accompanies design acceptance. It does not assert that the amendment is implemented at `58dd7f6` and does not request another design round for the same invariant surface.
+
+| Obligation | Required implementation evidence |
+|---|---|
+| **I1 — Complete INV-SA10** | Implement the closed 33-action table, unknown-code refusal, simultaneous schema/row effects, per-call attribution, cache disabling, trace/authorizer completeness, script refusal, direct catalog-write refusal, REINDEX pairing and connection-configuration guards. Freeze the read pragma vocabulary by name and argument shape. Validate every table constructor as plain CREATE without CTAS or IF NOT EXISTS. Keep exact text classification separate from site declarations. |
+| **I2 — Negative cells and controls** | Demonstrate N1–N12 red against their named mutants and C1–C3 green. Keep DROP/CTE/comment/script cases and both real and no-op index repair. The control must not fail on nested table-valued pragma traces. Retain exact-one write ownership, missing-site coverage and postcondition mutation checks. The supplied census alone is not the final gate. |
+| **I3 — Carrier-specific runtime seam** | Implement A1–A15 for the model and P1–P3 for production now; carry A1–A15 into 0008 when its artifact lands. Run all 16 confinement probes live where required, preserve the unchanged-store refusal cases, exact current-key cardinality, malformed-record poisoning, declaration identity, complete output comparison, provenance resolution and monotone writes. Exercise both production gate call sites. |
+| **I4 — Full-key identity and record lifecycle** | Use one canonicalizer for process identity, record validation and the writer. Match and group on the full key. Test malformed/unreadable fields, the exact alias map, architecture/OS/libc separation, equal-evidence aggregation despite different provenance, disagreement refusal and deterministic contributor ordering. Preserve same-build re-recording and monotone evidence revisions while retaining other build keys. Test a later suite revision with changed result digest: do not append two current records for one key or silently lose other keys. This is the integration of §4c-iii's permitted regeneration with the existing replacement rules, not a new build-key dimension. |
+| **I5 — Actual attestation jobs** | Bind collection to the one committed suite-selection rule. Enforce every `job:runs` condition from the same job's JUnit, rewrite the two stranded skips and exclude ineligible jobs as specified. Run `--check-evidence` on each verifying build. Distinguish verification refusal, failed tests, excluded jobs and agreeing successful evidence. Execute the required route matrix and arm64 rows; the reviewer's offline suite is not that matrix. |
+| **I6 — Product experience and provenance** | Exercise all INV-SA1–INV-SA12 mutants, including universal verification before shape decisions, near-miss discrimination, once-per-process warning behavior, doctor status before store access, migration audit identity and unchanged accepted evidence. Demonstrate real `verified` and `refused` routes beyond the attested runner, as §6 requires. |
+| **I7 — C2 tooling follow-up** | Land the separately supplied emitted-reason patch with implementation, or preserve its tested behavior in an equivalent change. Keep its whole-inventory consumer check and leave-one-out tests. Reconcile named environment skips; do not remove tests or modify the reviewed pin to manufacture the author's pass/skip total. |
+
+The package's accepted limits remain limits: the reached-function census does not promise full line coverage, production's current ladder has no runtime confinement, and constructed key checks do not count as execution on other architectures.
 
 ---
 
@@ -1117,7 +1556,7 @@ and, by the round-9 M-Q1 ruling, **must be reviewed against `0008`'s
 | ~~S-Q4~~ | **ANSWERED by round 2, 2026-08-02: known-constructor equality, not semantic equivalence.** It was a list that grew — v3's signature admitted four more counterexamples. §4a. | resolved | external | — |
 | ~~S-Q5~~ | **RESOLVED by round 3, 2026-08-02: a structured schema registry.** `SchemaObject(kind, name, ddl, policy)` generates creation, expectation, typed rebuildable identities, repair and drift from one declaration. §4a-vi. **It was blocking, and it was the cause of the `(type, name)` bypass.** | resolved | external | — |
 | ~~S-Q6~~ | **RESOLVED by round 4, refined by round 5:** gate the runtime, and **derive qualification from evidence** rather than a hand-edited list. §4a-viii. | resolved | external | — |
-| ~~S-Q7~~ | **RULED by round 12, 2026-08-03: one qualified runtime is sufficient to authorise implementation.** The limitation is operational, not architectural: implementation proceeds against the evidenced runtime; **release stays blocked where the packaged SQLite identity is not qualified**; widening needs durable per-runtime attestation and aggregation. Remains a **release gate**, no longer an acceptance question. | resolved | external | — |
+| ~~S-Q7~~ | **RULED by round 12, 2026-08-03: one qualified runtime is sufficient to authorise implementation.** The limitation is operational, not architectural: implementation proceeds against the evidenced runtime; **release stays blocked where the packaged SQLite identity is not qualified**; widening needs durable per-runtime attestation and aggregation. Remains a **release gate**, no longer an acceptance question. **v17: DISCHARGED** (§4g.6, 4f): release requires the CI matrix to have run (§4g.6, 4d), not every census build to pass. | resolved | external | — |
 | **S-Q3** | Does anything other than `SqliteStore` need this? `base.py` is an interface; a Postgres store would need its own mechanism. **Not in scope, recorded so it is not assumed covered.** | `deferred` | dev | — |
 
 ---

@@ -1,0 +1,1125 @@
+{
+  "tree": "<dev-scratch>/r2-repro/mut3",
+  "paths": [
+    {
+      "path": "v1#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "b3360435f57c26006ea7d14fc1393e53f5f2f765e3b06a605de72b5508931a8f"
+    },
+    {
+      "path": "v2#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "aa80bd896b8b4443301d47287b69e5ab8855da2efa55023568f764ea51438acd"
+    },
+    {
+      "path": "v3#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "aa80bd896b8b4443301d47287b69e5ab8855da2efa55023568f764ea51438acd"
+    },
+    {
+      "path": "v4#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v5#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v6#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v6#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v7#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v7#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v8#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "6ea39bdd619ba8ae94d42247cf677f58916d68f73ecbe638c0cc9b59338e41df"
+    },
+    {
+      "path": "v8#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v8#2",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v8#3",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v9#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "6ea39bdd619ba8ae94d42247cf677f58916d68f73ecbe638c0cc9b59338e41df"
+    },
+    {
+      "path": "v9#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v9#2",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v9#3",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v10#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "aa80bd896b8b4443301d47287b69e5ab8855da2efa55023568f764ea51438acd"
+    },
+    {
+      "path": "v10#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "6ea39bdd619ba8ae94d42247cf677f58916d68f73ecbe638c0cc9b59338e41df"
+    },
+    {
+      "path": "v10#2",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v10#3",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v10#4",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v11#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "aa80bd896b8b4443301d47287b69e5ab8855da2efa55023568f764ea51438acd"
+    },
+    {
+      "path": "v11#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "6ea39bdd619ba8ae94d42247cf677f58916d68f73ecbe638c0cc9b59338e41df"
+    },
+    {
+      "path": "v11#2",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v11#3",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v11#4",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v12#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "aa80bd896b8b4443301d47287b69e5ab8855da2efa55023568f764ea51438acd"
+    },
+    {
+      "path": "v12#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "6ea39bdd619ba8ae94d42247cf677f58916d68f73ecbe638c0cc9b59338e41df"
+    },
+    {
+      "path": "v12#2",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v12#3",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v12#4",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v13#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "aa80bd896b8b4443301d47287b69e5ab8855da2efa55023568f764ea51438acd"
+    },
+    {
+      "path": "v13#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "6ea39bdd619ba8ae94d42247cf677f58916d68f73ecbe638c0cc9b59338e41df"
+    },
+    {
+      "path": "v13#2",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v13#3",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v13#4",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v14#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "aa80bd896b8b4443301d47287b69e5ab8855da2efa55023568f764ea51438acd"
+    },
+    {
+      "path": "v14#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "6ea39bdd619ba8ae94d42247cf677f58916d68f73ecbe638c0cc9b59338e41df"
+    },
+    {
+      "path": "v14#2",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "188c1e3ece3c642edb9e234a48200af8e8cde75ae90fae184fcc8d7a070d27fd"
+    },
+    {
+      "path": "v14#3",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "1b6a805498f13fab2a1e79b88b106a2d3e40f226e522e028f3dfd69d81d26d7a"
+    },
+    {
+      "path": "v14#4",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "754c3a90e8571593b8583d349bb9f0a145bc58942461231b7f5a863804c67f93"
+    },
+    {
+      "path": "v15#0",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "26e3b80656738ad03d5e0a68b7f047ac4ab9eaf2075902ccd7dde1a1ad8e1a63"
+    },
+    {
+      "path": "v15#1",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "47ef9ed81c6d4d6634f39b481051fa24434815290b7f4f80323f4e58eba90c66"
+    },
+    {
+      "path": "v15#2",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "6491ff946224c5f27d25780463fa6824bea1786ada79cfba1eceacc53b214fda"
+    },
+    {
+      "path": "v15#3",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "2082c94a9133f3bf3c6a1812168b292bf02b10b98ecb6bbdaf8f96ed0377f4e5"
+    },
+    {
+      "path": "v15#4",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "5d853e4238e87cc8c914a95bd93bc1d1a75efaa960554d77038efe34a559b941"
+    },
+    {
+      "path": "v1#0-unstamped",
+      "result": "migrated",
+      "error": null,
+      "before_episode_rows": 1,
+      "after_episode_rows": 0,
+      "version": 16,
+      "schema_sha": "b3360435f57c26006ea7d14fc1393e53f5f2f765e3b06a605de72b5508931a8f"
+    }
+  ],
+  "counts": {
+    "non_ddl_matches_1": 513
+  },
+  "ddl_records": [
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_arity_inventory_user ON arity_inventory(user_id)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_confirmations_edge ON confirmations(user_id, edge_id)",
+      "count": 2
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_consolidation_ops_user_state ON consolidation_ops(user_id, state)",
+      "count": 3
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_contribution_ledger_source ON contribution_ledger(user_id, identity_digest)",
+      "count": 6
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_contribution_ledger_survivor ON contribution_ledger(user_id, survivor_type, survivor_id)",
+      "count": 6
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_edge_embedding_lookup ON edge_embedding(user_id, embedder_id, dim)",
+      "count": 28
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_edge_event_lookup ON edge_event(user_id, edge_id, seq)",
+      "count": 33
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_edge_event_txn ON edge_event(user_id, txn)",
+      "count": 33
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_episode_event_lookup ON episode_event(user_id, episode_id, seq)",
+      "count": 43
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_migration_outcome_edge ON migration_outcome(user_id, edge_id)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_policy_receipt_time ON policy_receipt(user_id, recorded_at)",
+      "count": 38
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_redactions_target ON redactions(user_id, target_kind, target_id)",
+      "count": 43
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_refusal_inventory_user ON refusal_inventory(user_id)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_replies_edge ON replies(user_id, edge_id)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_request_registry_target ON request_registry(user_id, target_edge_id)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_source_revocations_user_digest ON source_revocations(user_id, identity_digest)",
+      "count": 14
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE INDEX ix_supersession_refusals_user ON supersession_refusals(user_id)",
+      "count": 4
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE act_counter (\n    id       INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),\n    next_seq INTEGER NOT NULL\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE arity_era (\n    id           INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),\n    effective_at TEXT NOT NULL\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE arity_inventory (\n    edge_id            TEXT NOT NULL PRIMARY KEY,\n    user_id            TEXT NOT NULL,\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE confirmations (\n    id TEXT NOT NULL PRIMARY KEY, user_id TEXT NOT NULL, edge_id TEXT NOT NULL,\n    confirmed_at TEXT NOT NULL, actor TEXT NOT NULL, call_path TEXT NOT NULL,\n    correlation_id TEXT NOT NULL, request_digest TEXT NOT NULL,\n    origin TEXT NOT NULL DEFAULT 'local', recorded_correlation_id TEXT,\n    origin_store TEXT, origin_user TEXT, origin_act_id TEXT, act_seq INTEGER,\n    UNIQUE(user_id, correlation_id)\n)",
+      "count": 2
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE consolidation_ops (\n    operation_id TEXT NOT NULL PRIMARY KEY, user_id TEXT NOT NULL,\n    fence INTEGER NOT NULL, state TEXT NOT NULL, owner TEXT NOT NULL,\n    lease_duration INTEGER NOT NULL, lease_expires_at TEXT NOT NULL,\n    claimed_ids TEXT NOT NULL\n)",
+      "count": 3
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE contribution_ledger (\n    id TEXT NOT NULL PRIMARY KEY, user_id TEXT NOT NULL,\n    survivor_type TEXT NOT NULL, survivor_id TEXT NOT NULL,\n    site TEXT NOT NULL,\n    identity_digest TEXT, evidence_ref_digest TEXT,\n    payload TEXT NOT NULL, op_key TEXT,\n    created_at TEXT NOT NULL,\n    contributor_type TEXT, contributor_ref TEXT\n)",
+      "count": 6
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE edge_embedding (\n    edge_id        TEXT    NOT NULL,\n    user_id        TEXT    NOT NULL,\n    embedder_id    TEXT    NOT NULL,\n    content_digest TEXT    NOT NULL,\n    dim            INTEGER NOT NULL,\n    vec            BLOB    NOT NULL,\n    built_at       TEXT    NOT NULL,\n    PRIMARY KEY (edge_id, embedder_id, content_digest)\n)",
+      "count": 28
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE edge_event (\n    user_id     TEXT    NOT NULL,\n    seq         INTEGER NOT NULL,\n    txn         INTEGER NOT NULL,\n    edge_id     TEXT    NOT NULL,\n    kind        TEXT    NOT NULL,\n    reason      TEXT,\n    state       TEXT    NOT NULL,\n    recorded_at TEXT    NOT NULL,\n    PRIMARY KEY (user_id, seq)\n)",
+      "count": 33
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE episode_event (\n    user_id     TEXT    NOT NULL,\n    seq         INTEGER NOT NULL,\n    txn         INTEGER NOT NULL,\n    episode_id  TEXT    NOT NULL,\n    kind        TEXT    NOT NULL,\n    reason      TEXT,\n    state       TEXT    NOT NULL,\n    recorded_at TEXT    NOT NULL,\n    PRIMARY KEY (user_id, seq)\n)",
+      "count": 43
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE migration_op (\n    op_id         TEXT NOT NULL PRIMARY KEY,\n    mode          TEXT NOT NULL CHECK (mode IN ('plan_only', 'restore', 'import-convert')),\n    inputs_digest TEXT NOT NULL,\n    admitted_at   TEXT NOT NULL\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE migration_outcome (\n    plan_id            TEXT NOT NULL,\n    user_id            TEXT NOT NULL,\n    edge_id            TEXT NOT NULL,\n    outcome            TEXT NOT NULL CHECK (outcome IN ('restored', 'withheld_revoked')),\n    pre_invalidated_at TEXT NOT NULL,\n    pre_reason         TEXT NOT NULL,\n    successor_evidence TEXT NOT NULL,\n    applicable         INTEGER NOT NULL CHECK (applicable IN (0, 1)),\n    origin             TEXT NOT NULL CHECK (origin IN ('local', 'restored', 'imported')),\n    outcome_uid        TEXT NOT NULL UNIQUE,\n    undone_at          TEXT,\n    undo_request_ref   TEXT,\n    op_id              TEXT,\n    UNIQUE(plan_id, edge_id)\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE migration_run (\n    plan_id      TEXT NOT NULL,\n    user_id      TEXT NOT NULL,\n    op_id        TEXT NOT NULL,\n    committed_at TEXT NOT NULL,\n    PRIMARY KEY(plan_id, user_id)\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE plan_header (\n    id              INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),\n    plan_id         TEXT NOT NULL UNIQUE,\n    effective_at    TEXT NOT NULL,\n    registry_digest TEXT NOT NULL,\n    op_id           TEXT NOT NULL\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE policy_receipt (\n    user_id        TEXT NOT NULL,\n    recall_id      TEXT NOT NULL,\n    policy_id      TEXT NOT NULL,\n    policy_version TEXT NOT NULL,\n    recorded_at    TEXT NOT NULL,\n    receipt        TEXT NOT NULL,\n    PRIMARY KEY (user_id, recall_id)\n)",
+      "count": 38
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE reclassification_plan (\n    plan_id    TEXT NOT NULL,\n    relation   TEXT NOT NULL,\n    from_arity TEXT NOT NULL CHECK (from_arity = 'single'),\n    to_arity   TEXT NOT NULL CHECK (to_arity = 'multi'),\n    PRIMARY KEY(plan_id, relation)\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE redactions (\n    id                   TEXT NOT NULL PRIMARY KEY,\n    user_id              TEXT NOT NULL,\n    target_kind          TEXT NOT NULL,\n    target_id            TEXT NOT NULL,\n    fields               TEXT NOT NULL,\n    marker_version       INTEGER NOT NULL,\n    reason               TEXT NOT NULL,\n    store_version_before INTEGER NOT NULL,\n    store_version_after  INTEGER NOT NULL,\n    event_ref            TEXT,\n    recorded_at          TEXT NOT NULL,\n    source_body          TEXT,\n    source_origin        TEXT,\n    source_user          TEXT,\n    source_event_ref     TEXT,\n    state                TEXT NOT NULL DEFAULT 'applied',\n    pending_reason       TEXT\n)",
+      "count": 43
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE refusal_inventory (\n    refusal_id TEXT NOT NULL PRIMARY KEY,\n    user_id    TEXT NOT NULL\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE replies (\n    id                      TEXT NOT NULL PRIMARY KEY,\n    user_id                 TEXT NOT NULL,\n    edge_id                 TEXT NOT NULL,\n    kind                    TEXT NOT NULL CHECK (kind IN ('challenge', 'context', 'withdrawn-consent', 'resolve')),\n    target                  TEXT,\n    text                    TEXT,\n    actor                   TEXT NOT NULL,\n    correlation_id          TEXT NOT NULL,\n    request_digest          TEXT NOT NULL,\n    origin                  TEXT NOT NULL CHECK (origin IN ('local', 'imported', 'restored')),\n    recorded_correlation_id TEXT,\n    origin_store            TEXT,\n    origin_user             TEXT,\n    origin_act_id           TEXT,\n    act_seq                 INTEGER,\n    written_at              TEXT NOT NULL,\n    CHECK ((kind = 'resolve') = (target IS NOT NULL)),\n    CHECK ((kind = 'resolve') = (text IS NULL)),\n    UNIQUE(user_id, correlation_id)\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE request_registry (\n    user_id        TEXT NOT NULL,\n    correlation_id TEXT NOT NULL,\n    verb           TEXT NOT NULL,\n    target_edge_id TEXT NOT NULL,\n    request_digest TEXT NOT NULL,\n    result_ref     TEXT NOT NULL,\n    written_at     TEXT NOT NULL,\n    UNIQUE(user_id, correlation_id)\n)",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE source_revocations (\n    user_id TEXT NOT NULL, seq INTEGER NOT NULL,\n    identity_digest TEXT NOT NULL,\n    action TEXT NOT NULL CHECK(action IN ('revoke','lift')),\n    at TEXT NOT NULL, reason TEXT NOT NULL,\n    PRIMARY KEY (user_id, seq)\n)",
+      "count": 14
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE store_epoch (\n    id INTEGER PRIMARY KEY CHECK(id = 1), started_at TEXT NOT NULL, schema_at INTEGER NOT NULL\n)",
+      "count": 33
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE store_identity (\n    id INTEGER PRIMARY KEY CHECK(id = 1), origin TEXT NOT NULL\n)",
+      "count": 5
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE supersession_operations (\n    user_id TEXT NOT NULL, operation_id TEXT NOT NULL,\n    logical_request_digest TEXT NOT NULL, status TEXT NOT NULL,\n    request_digest TEXT, response TEXT,\n    outcome_digest_version INTEGER NOT NULL DEFAULT 1,\n    request_digest_domain TEXT,\n    PRIMARY KEY (user_id, operation_id)\n)",
+      "count": 4
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE TABLE supersession_refusals (\n    refusal_id TEXT NOT NULL PRIMARY KEY, user_id TEXT NOT NULL,\n    prior_edge_id TEXT NOT NULL, incoming_edge_id TEXT NOT NULL, relation TEXT NOT NULL,\n    prior_effective INTEGER NOT NULL, incoming_effective INTEGER NOT NULL,\n    rule_version TEXT NOT NULL, created_at TEXT NOT NULL\n)",
+      "count": 4
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE UNIQUE INDEX ix_contribution_ledger_op_key ON contribution_ledger(op_key) WHERE op_key IS NOT NULL",
+      "count": 6
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:295",
+      "sql": "CREATE UNIQUE INDEX ux_replies_resolve ON replies(user_id, target) WHERE kind = 'resolve'",
+      "count": 48
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:343",
+      "sql": "ALTER TABLE supersession_operations ADD COLUMN outcome_digest_version INTEGER NOT NULL DEFAULT 1",
+      "count": 2
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:343",
+      "sql": "ALTER TABLE supersession_operations ADD COLUMN request_digest TEXT",
+      "count": 2
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:343",
+      "sql": "ALTER TABLE supersession_operations ADD COLUMN response TEXT",
+      "count": 2
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:371",
+      "sql": "ALTER TABLE contribution_ledger ADD COLUMN contributor_ref TEXT",
+      "count": 4
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:371",
+      "sql": "ALTER TABLE contribution_ledger ADD COLUMN contributor_type TEXT",
+      "count": 4
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:396",
+      "sql": "ALTER TABLE supersession_operations ADD COLUMN request_digest_domain TEXT",
+      "count": 14
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:454",
+      "sql": "ALTER TABLE confirmations ADD COLUMN act_seq INTEGER",
+      "count": 46
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:454",
+      "sql": "ALTER TABLE confirmations ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'",
+      "count": 46
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:454",
+      "sql": "ALTER TABLE confirmations ADD COLUMN origin_act_id TEXT",
+      "count": 46
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:454",
+      "sql": "ALTER TABLE confirmations ADD COLUMN origin_store TEXT",
+      "count": 46
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:454",
+      "sql": "ALTER TABLE confirmations ADD COLUMN origin_user TEXT",
+      "count": 46
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:454",
+      "sql": "ALTER TABLE confirmations ADD COLUMN recorded_correlation_id TEXT",
+      "count": 46
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:487",
+      "sql": "ALTER TABLE redactions ADD COLUMN pending_reason TEXT",
+      "count": 5
+    },
+    {
+      "site": "veracium/store/migration.py:_apply_forward:487",
+      "sql": "ALTER TABLE redactions ADD COLUMN state TEXT NOT NULL DEFAULT 'applied'",
+      "count": 5
+    }
+  ],
+  "functions": [
+    [
+      "veracium/store/edge_events.py",
+      "append_event"
+    ],
+    [
+      "veracium/store/edge_events.py",
+      "journal_baselines"
+    ],
+    [
+      "veracium/store/edge_events.py",
+      "mint_store_epoch"
+    ],
+    [
+      "veracium/store/edge_events.py",
+      "next_seq"
+    ],
+    [
+      "veracium/store/edge_events.py",
+      "next_txn"
+    ],
+    [
+      "veracium/store/migration.py",
+      "_apply_forward"
+    ],
+    [
+      "veracium/store/migration.py",
+      "_check_outcome_chains"
+    ],
+    [
+      "veracium/store/migration.py",
+      "_drop_wiki_cache"
+    ],
+    [
+      "veracium/store/migration.py",
+      "_migrate_outcome_chains"
+    ],
+    [
+      "veracium/store/migration.py",
+      "_rows"
+    ],
+    [
+      "veracium/store/schema_version.py",
+      "_mint_store_identity"
+    ],
+    [
+      "veracium/store/schema_version.py",
+      "_validated_current"
+    ],
+    [
+      "veracium/store/schema_version.py",
+      "manifest"
+    ],
+    [
+      "veracium/store/schema_version.py",
+      "mint_act_counter"
+    ],
+    [
+      "veracium/store/schema_version.py",
+      "mint_arity_era"
+    ],
+    [
+      "veracium/store/schema_version.py",
+      "open_versioned"
+    ]
+  ],
+  "sites": [
+    {
+      "file": "veracium/store/edge_events.py",
+      "function": "next_txn",
+      "line": 24,
+      "observations": 99,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/edge_events.py",
+      "function": "next_seq",
+      "line": 32,
+      "observations": 99,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/edge_events.py",
+      "function": "append_event",
+      "line": 53,
+      "observations": 132,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/edge_events.py",
+      "function": "journal_baselines",
+      "line": 67,
+      "observations": 33,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/edge_events.py",
+      "function": "journal_baselines",
+      "line": 72,
+      "observations": 99,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/edge_events.py",
+      "function": "mint_store_epoch",
+      "line": 88,
+      "observations": 33,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_check_outcome_chains",
+      "line": 172,
+      "observations": 3,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_rows",
+      "line": 197,
+      "observations": 1378,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_migrate_outcome_chains",
+      "line": 234,
+      "observations": 3,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_migrate_outcome_chains",
+      "line": 212,
+      "observations": 3,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_drop_wiki_cache",
+      "line": 245,
+      "observations": 4,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 549,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 553,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 468,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 496,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 543,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 295,
+      "observations": 1331,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 343,
+      "observations": 6,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 371,
+      "observations": 8,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 396,
+      "observations": 14,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 454,
+      "observations": 276,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 487,
+      "observations": 10,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 533,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 550,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 300,
+      "observations": 3,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 312,
+      "observations": 4,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 344,
+      "observations": 2,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 372,
+      "observations": 4,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 397,
+      "observations": 14,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 455,
+      "observations": 46,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/migration.py",
+      "function": "_apply_forward",
+      "line": 488,
+      "observations": 5,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "mint_act_counter",
+      "line": 856,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "mint_arity_era",
+      "line": 864,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "_mint_store_identity",
+      "line": 877,
+      "observations": 5,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "manifest",
+      "line": 921,
+      "observations": 96,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "manifest",
+      "line": 931,
+      "observations": 1904,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "_validated_current",
+      "line": 1853,
+      "observations": 48,
+      "excluded": false
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 1953,
+      "observations": 48,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 2081,
+      "observations": 0,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 2093,
+      "observations": 0,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 1985,
+      "observations": 0,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 2006,
+      "observations": 47,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 2027,
+      "observations": 0,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 2031,
+      "observations": 0,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 2061,
+      "observations": 1,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 2103,
+      "observations": 0,
+      "excluded": true
+    },
+    {
+      "file": "veracium/store/schema_version.py",
+      "function": "open_versioned",
+      "line": 1962,
+      "observations": 48,
+      "excluded": true
+    }
+  ],
+  "unobserved_nonexcluded": []
+}

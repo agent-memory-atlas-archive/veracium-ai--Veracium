@@ -1,0 +1,4 @@
+isolation_level=None execute: [('act', 'INSERT', 't'), ('trace', "INSERT INTO t VALUES ('x')")]
+isolation_level=None executemany x3: [('act', 'INSERT', 't'), ('trace', "INSERT INTO t VALUES ('y')"), ('trace', "INSERT INTO t VALUES ('z')"), ('trace', "INSERT INTO t VALUES ('w')")]
+isolation_level='' execute: [('act', 'INSERT', 't'), ('act', 'TRANSACTION', 'BEGIN'), ('trace', 'BEGIN '), ('trace', "INSERT INTO t VALUES ('x')")]
+isolation_level='' executemany x3: [('act', 'INSERT', 't'), ('trace', "INSERT INTO t VALUES ('y')"), ('trace', "INSERT INTO t VALUES ('z')"), ('trace', "INSERT INTO t VALUES ('w')")]

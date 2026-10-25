@@ -1,0 +1,77 @@
+{
+  "python": "3.14.7",
+  "sqlite": "3.53.1",
+  "schema_runtime_supported": false,
+  "migration_artifact_problems": [],
+  "authorizer_probes": {
+    "authorizer_api_available": true,
+    "denies_begin": true,
+    "denies_commit": true,
+    "denies_end": true,
+    "denies_rollback": true,
+    "denies_savepoint": true,
+    "denies_release": true,
+    "denies_pragma": true,
+    "denies_attach": true,
+    "denies_detach": true,
+    "denies_temp_table": true,
+    "denies_temp_index": true,
+    "denies_temp_view": true,
+    "denies_temp_trigger": true,
+    "denies_temp_virtual_table": true,
+    "authorizer_restored": true
+  },
+  "migration_runtime_supported": false,
+  "matching_migration_records": 0,
+  "permissive_authorizer": {
+    "schema_runtime_supported": false,
+    "authorizer_probes": {
+      "authorizer_api_available": true,
+      "denies_begin": false,
+      "denies_commit": false,
+      "denies_end": false,
+      "denies_rollback": false,
+      "denies_savepoint": false,
+      "denies_release": false,
+      "denies_pragma": false,
+      "denies_attach": false,
+      "denies_detach": false,
+      "denies_temp_table": false,
+      "denies_temp_index": false,
+      "denies_temp_view": false,
+      "denies_temp_trigger": false,
+      "denies_temp_virtual_table": false,
+      "authorizer_restored": false
+    },
+    "migration_runtime_supported": false
+  },
+  "architecture_key_model": {
+    "kind": "constructed contract counterexample; not a cross-architecture measurement",
+    "x86_record": {
+      "sqlite_version": "3.53.1",
+      "source_id": "2026-05-05 10:34:17 c88b22011a54b4f6fbd149e9f8e4de77658ce58143a1af0e3785e4e6475127e9",
+      "features": {
+        "generated_columns": true,
+        "strict_tables": true,
+        "preserves_ddl_body": true,
+        "xinfo_exposes_generated": true
+      },
+      "compile_options_sha256": "054a2945f636bf3b8f648d6abe8ed75a02c74ce6d54dbad67d7ad1777b58d606",
+      "machine": "x86_64"
+    },
+    "arm_record": {
+      "sqlite_version": "3.53.1",
+      "source_id": "2026-05-05 10:34:17 c88b22011a54b4f6fbd149e9f8e4de77658ce58143a1af0e3785e4e6475127e9",
+      "features": {
+        "generated_columns": true,
+        "strict_tables": true,
+        "preserves_ddl_body": true,
+        "xinfo_exposes_generated": true
+      },
+      "compile_options_sha256": "054a2945f636bf3b8f648d6abe8ed75a02c74ce6d54dbad67d7ad1777b58d606",
+      "machine": "aarch64"
+    },
+    "same_proposed_key": true
+  },
+  "product_runtime_supported_outside_model": false
+}

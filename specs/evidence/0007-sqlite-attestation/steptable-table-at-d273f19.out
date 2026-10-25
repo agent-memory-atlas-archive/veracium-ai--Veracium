@@ -1,0 +1,81 @@
+THE STEP TABLE (generated). class: (a) every shape perturbation killed by the step's OWN byte-match; (b) every shape perturbation killed by the end-state check or ABSORBED by drift repair + S33 revalidation; (c) some perturbation SURVIVED. 'ok' = paths where the unperturbed step ran and the path completed / paths where the step ran.
+| # | issuing function (file:func:line) | step (target) | kind | writes rows? | paths | class | killing check(s) | 3.45.1 ok | 3.53.1 ok | skipped-object outcome |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | veracium/store/edge_events.py:append_event:53 | INSERT edge_event | DML | yes | 33 | (c) | veracium/store/migration.py:81 | 33/33 | 33/33 | - |
+| 2 | veracium/store/edge_events.py:mint_store_epoch:88 | INSERT store_epoch | DML | yes | 33 | (c) | veracium/store/migration.py:81 | 33/33 | 33/33 | - |
+| 3 | veracium/store/migration.py:_migrate_outcome_chains:230 | UPDATE episodes | DML | yes | 3 | (c) | veracium/store/migration.py:81 | 3/3 | 3/3 | - |
+| 4 | veracium/store/migration.py:_drop_wiki_cache:241 | DELETE wiki | DML | yes | 4 | (c) | veracium/store/migration.py:81 | 4/4 | 4/4 | - |
+| 5 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_confirmations_edge | DDL | no | 2 | (b) repair | absorbed: _repair_drift + S33 revalidation | 2/2 | 2/2 | ABSORBED |
+| 6 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_consolidation_ops_user_state | DDL | no | 3 | (b) repair | absorbed: _repair_drift + S33 revalidation | 3/3 | 3/3 | ABSORBED |
+| 7 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_contribution_ledger_source | DDL | no | 6 | (b) repair | absorbed: _repair_drift + S33 revalidation | 6/6 | 6/6 | ABSORBED |
+| 8 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_contribution_ledger_survivor | DDL | no | 6 | (b) repair | absorbed: _repair_drift + S33 revalidation | 6/6 | 6/6 | ABSORBED |
+| 9 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_edge_embedding_lookup | DDL | no | 28 | (b) repair | absorbed: _repair_drift + S33 revalidation | 28/28 | 28/28 | ABSORBED |
+| 10 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_edge_event_lookup | DDL | no | 33 | (b) repair | absorbed: _repair_drift + S33 revalidation | 33/33 | 33/33 | ABSORBED |
+| 11 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_edge_event_txn | DDL | no | 33 | (b) repair | absorbed: _repair_drift + S33 revalidation | 33/33 | 33/33 | ABSORBED |
+| 12 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_episode_event_lookup | DDL | no | 43 | (b) repair | absorbed: _repair_drift + S33 revalidation | 43/43 | 43/43 | ABSORBED |
+| 13 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_policy_receipt_time | DDL | no | 38 | (b) repair | absorbed: _repair_drift + S33 revalidation | 38/38 | 38/38 | ABSORBED |
+| 14 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_redactions_target | DDL | no | 43 | (b) repair | absorbed: _repair_drift + S33 revalidation | 43/43 | 43/43 | ABSORBED |
+| 15 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_source_revocations_user_digest | DDL | no | 14 | (b) repair | absorbed: _repair_drift + S33 revalidation | 14/14 | 14/14 | ABSORBED |
+| 16 | veracium/store/migration.py:_apply_forward:291 | CREATE INDEX ix_supersession_refusals_user | DDL | no | 4 | (b) repair | absorbed: _repair_drift + S33 revalidation | 4/4 | 4/4 | ABSORBED |
+| 17 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE confirmations | DDL | no | 2 | (b) | veracium/store/schema_version.py:1615 | 2/2 | 2/2 | KILLED COLLATERAL(_apply_forward) |
+| 18 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE consolidation_ops | DDL | no | 3 | (b) | veracium/store/schema_version.py:1615 | 3/3 | 3/3 | KILLED COLLATERAL(_apply_forward) |
+| 19 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE contribution_ledger | DDL | no | 6 | (b) | veracium/store/schema_version.py:1615 | 6/6 | 6/6 | KILLED COLLATERAL(_apply_forward) |
+| 20 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE edge_embedding | DDL | no | 28 | (b) | veracium/store/schema_version.py:1615 | 28/28 | 28/28 | KILLED COLLATERAL(_apply_forward) |
+| 21 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE edge_event | DDL | no | 33 | (b) | veracium/store/schema_version.py:1615 | 33/33 | 33/33 | KILLED COLLATERAL(_apply_forward) |
+| 22 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE episode_event | DDL | no | 43 | (b) | veracium/store/schema_version.py:1615 | 43/43 | 43/43 | KILLED COLLATERAL(_apply_forward) |
+| 23 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE policy_receipt | DDL | no | 38 | (b) | veracium/store/schema_version.py:1615 | 38/38 | 38/38 | KILLED COLLATERAL(_apply_forward) |
+| 24 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE redactions | DDL | no | 43 | (b) | veracium/store/schema_version.py:1615 | 43/43 | 43/43 | KILLED COLLATERAL(_apply_forward) |
+| 25 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE source_revocations | DDL | no | 14 | (b) | veracium/store/schema_version.py:1615 | 14/14 | 14/14 | KILLED COLLATERAL(_apply_forward) |
+| 26 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE store_epoch | DDL | no | 33 | (b) | veracium/store/schema_version.py:1615 | 33/33 | 33/33 | KILLED COLLATERAL(_rows) |
+| 27 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE store_identity | DDL | no | 5 | (b) | veracium/store/schema_version.py:1615 | 5/5 | 5/5 | KILLED COLLATERAL(_rows) |
+| 28 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE supersession_operations | DDL | no | 4 | (b) | veracium/store/schema_version.py:1615 | 4/4 | 4/4 | KILLED END-STATE |
+| 29 | veracium/store/migration.py:_apply_forward:291 | CREATE TABLE supersession_refusals | DDL | no | 4 | (b) | veracium/store/schema_version.py:1615 | 4/4 | 4/4 | KILLED COLLATERAL(_apply_forward) |
+| 30 | veracium/store/migration.py:_apply_forward:291 | CREATE UNIQUE INDEX ix_contribution_ledger_op_key | DDL | no | 6 | (b) | veracium/store/schema_version.py:1615 | 6/6 | 6/6 | KILLED END-STATE |
+| 31 | veracium/store/migration.py:_apply_forward:339 | ALTER supersession_operations ADD outcome_digest_version | DDL | no | 2 | (a) | veracium/store/migration.py:344 | 2/2 | 2/2 | KILLED BYTE-MATCH(supersession_operation |
+| 32 | veracium/store/migration.py:_apply_forward:339 | ALTER supersession_operations ADD request_digest | DDL | no | 2 | (a) | veracium/store/migration.py:344 | 2/2 | 2/2 | KILLED BYTE-MATCH(supersession_operation |
+| 33 | veracium/store/migration.py:_apply_forward:339 | ALTER supersession_operations ADD response | DDL | no | 2 | (a) | veracium/store/migration.py:344 | 2/2 | 2/2 | KILLED BYTE-MATCH(supersession_operation |
+| 34 | veracium/store/migration.py:_apply_forward:367 | ALTER contribution_ledger ADD contributor_ref | DDL | no | 4 | (a) | veracium/store/migration.py:372 | 4/4 | 4/4 | KILLED BYTE-MATCH(contribution_ledger) |
+| 35 | veracium/store/migration.py:_apply_forward:367 | ALTER contribution_ledger ADD contributor_type | DDL | no | 4 | (a) | veracium/store/migration.py:372 | 4/4 | 4/4 | KILLED BYTE-MATCH(contribution_ledger) |
+| 36 | veracium/store/migration.py:_apply_forward:392 | ALTER supersession_operations ADD request_digest_domain | DDL | no | 14 | (a) | veracium/store/migration.py:398 | 14/14 | 14/14 | KILLED BYTE-MATCH(supersession_operation |
+| 37 | veracium/store/migration.py:_apply_forward:429 | PRAGMA user_version | STAMP | no (stamp) | 43 | (c) | veracium/store/migration.py:81 | 43/43 | 43/43 | - |
+| 38 | veracium/store/schema_version.py:_mint_store_identity:636 | INSERT store_identity | DML | yes | 5 | (c) | veracium/store/migration.py:81 | 5/5 | 5/5 | - |
+| 39 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_confirmations_edge | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 40 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_consolidation_ops_user_state | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 41 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_contribution_ledger_source | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 42 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_contribution_ledger_survivor | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 43 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_edge_embedding_lookup | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 44 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_edge_event_lookup | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 45 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_edge_event_txn | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 46 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_edges_subj_rel | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 47 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_edges_user_active | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 48 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_episode_event_lookup | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 49 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_episodes_user | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 50 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_policy_receipt_time | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 51 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_redactions_target | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 52 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_source_revocations_user_digest | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 53 | veracium/store/schema_version.py:_repair_drift:1568 | DROP INDEX ix_supersession_refusals_user | DDL | no | 1 | n/a: no stored output (DROP IF EXISTS; the next statement recreates) | none | 1/1 | 1/1 | ABSORBED |
+| 54 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_confirmations_edge | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 55 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_consolidation_ops_user_state | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 56 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_contribution_ledger_source | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 57 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_contribution_ledger_survivor | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 58 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_edge_embedding_lookup | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 59 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_edge_event_lookup | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 60 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_edge_event_txn | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 61 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_edges_subj_rel | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 62 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_edges_user_active | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 63 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_episode_event_lookup | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 64 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_episodes_user | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 65 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_policy_receipt_time | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 66 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_redactions_target | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 67 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_source_revocations_user_digest | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+| 68 | veracium/store/schema_version.py:_repair_drift:1569 | CREATE INDEX ix_supersession_refusals_user | DDL | no | 1 | (b) | veracium/store/schema_version.py:1623 | 1/1 | 1/1 | KILLED END-STATE |
+
+(c) ROWS — 'neither': each perturbation's verdict set
+  #1 INSERT edge_event [veracium/store/edge_events.py:append_event:53]: ['KILLED COLLATERAL(_refuse_unless)']
+  #2 INSERT store_epoch [veracium/store/edge_events.py:mint_store_epoch:88]: ['KILLED COLLATERAL(_refuse_unless)']
+  #3 UPDATE episodes [veracium/store/migration.py:_migrate_outcome_chains:230]: ['KILLED COLLATERAL(_refuse_unless)']
+  #4 DELETE wiki [veracium/store/migration.py:_drop_wiki_cache:241]: ['KILLED COLLATERAL(_refuse_unless)']
+  #37 PRAGMA user_version [veracium/store/migration.py:_apply_forward:429]: ['KILLED COLLATERAL(_refuse_unless)']
+  #38 INSERT store_identity [veracium/store/schema_version.py:_mint_store_identity:636]: ['KILLED COLLATERAL(_refuse_unless)']
+
+68 distinct steps over 44 paths; 3318 perturbations

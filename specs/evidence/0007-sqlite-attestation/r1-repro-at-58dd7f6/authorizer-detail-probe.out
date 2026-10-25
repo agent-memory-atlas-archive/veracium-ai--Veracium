@@ -1,0 +1,6 @@
+CREATE INDEX ix ON t(a)        [('CREATE_INDEX', 'ix'), ('INSERT', 'sqlite_master'), ('REINDEX', 'ix')]
+DROP TABLE t2                  [('DELETE', 'sqlite_master'), ('DELETE', 't2'), ('DROP_TABLE', 't2'), ('UPDATE', 'sqlite_master')]
+ALTER TABLE t ADD COLUMN b     [('ALTER_TABLE', 'main'), ('UPDATE', 'sqlite_master')]
+DROP INDEX IF EXISTS ix        [('DELETE', 'sqlite_master'), ('DROP_INDEX', 'ix'), ('UPDATE', 'sqlite_master')]
+INSERT INTO t(a) VALUES(2)     [('INSERT', 't')]
+trace inside executescript: ['SELECT 1;', ' CREATE TABLE t3(a);', ' DROP TABLE t3;']

@@ -1,0 +1,7 @@
+getconfig WRITABLE_SCHEMA before: False | DEFENSIVE: False
+setconfig(WRITABLE_SCHEMA, True) events: [] | getconfig after: True
+DELETE FROM sqlite_master: [('DELETE', 'sqlite_master'), ('READ', 'sqlite_master')]
+CREATE INDEX ix ON t(a)  [('CREATE_INDEX', 'ix'), ('INSERT', 'sqlite_master'), ('REINDEX', 'ix')]
+REINDEX ix               [('REINDEX', 'ix')]
+REINDEX                  [('REINDEX', 'ix')]
+ANALYZE                  [('ANALYZE', 'episodes'), ('ANALYZE', 't'), ('CREATE_TABLE', 'sqlite_stat1'), ('INSERT', 'sqlite_master'), ('UPDATE', 'sqlite_master')]

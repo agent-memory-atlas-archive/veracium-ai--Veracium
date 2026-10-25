@@ -1,0 +1,14 @@
+--- ctl/src/veracium/store/migration.py	2026-10-24 22:58:01.000000000 +0000
++++ mut2/src/veracium/store/migration.py	2026-10-25 12:47:48.656784991 +0000
+@@ -550,6 +550,11 @@
+         stamped = conn.execute("PRAGMA user_version").fetchone()[0]
+         _refuse_unless(base, STEP_STAMP, [f"user_version reads {stamped}, not {SCHEMA_VERSION}"]
+                        if stamped != SCHEMA_VERSION else [])
++        # Reviewer mutant: a declared class-(b) DDL site recreates a populated table.
++        # The complete final schema is unchanged; the lost rows have no postcondition.
++        episode_ddl = next(o.ddl for o in SCHEMAS[SCHEMA_VERSION] if o.key == ("table", "episodes"))
++        for ddl_stmt in ("/* repair */ DROP TABLE episodes", episode_ddl):
++            conn.execute(ddl_stmt)
+ 
+ 
+ # the v16 step's columns, by name and in a fixed order: `confirmations`' eight v15 columns, its six act columns

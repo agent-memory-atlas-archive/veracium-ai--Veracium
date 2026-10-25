@@ -1448,6 +1448,9 @@ def test_no_plain_json_load_at_evidence_boundaries():
     HOLDOUT_0051 = ("research's 0051 holdout instrument, byte-identical to its commit; its reads are strict under a "
                     "hook this gate does not name, re-read a corpus already parsed strictly, or read a subagent's "
                     "transcript to copy its final message verbatim")
+    SQLITE_R2 = ("the 0007 SQLite attestation round-2 reviewed evidence, byte-identical to the sealed package; each "
+                 "read is the instrument's own output (q.json, a census file) or a probe reading the product's committed "
+                 "specs/generated artifact, never an input a verdict rests on")
     allow = {
         # file -> (EXACT plain-call count, why). No headroom exists:
         # a count above OR below the pin trips (0026-I11-1).
@@ -1471,6 +1474,13 @@ def test_no_plain_json_load_at_evidence_boundaries():
         # statement's own parameter to alter it. The campaign's own reads are strict.
         "0013/steptable.py": (5, "byte-identical copy of the instrument 0013 v33 §4f cites by sha16; its reads are "
                                  "its own outputs and the statement it perturbs, never an input a verdict rests on"),
+        # 0007 v17 §4g cites this directory as the round-2 REVIEWED evidence: it is the sealed package c3cdd851's
+        # evidence-sqlite-gate/ byte for byte (TRANSFORM.txt beside it), the bytes the reviewer reproduced, so hardening
+        # one would change what was reviewed. steptable.py is the same file as 0013/steptable.py above.
+        "0007-sqlite-attestation/steptable.py": (5, SQLITE_R2),
+        "0007-sqlite-attestation/at-58dd7f6/unmatched.py": (1, SQLITE_R2),
+        "0007-sqlite-attestation/r1-repro-at-58dd7f6/classb_freeze.py": (1, SQLITE_R2),
+        "0007-sqlite-attestation/r1-repro-at-58dd7f6/runtime_contract_probe.py": (1, SQLITE_R2),
         "0051/holdout-h3/score_h3.py": (2, HOLDOUT_0051),
         "0051/holdout-h3/diagnose_h3.py": (1, HOLDOUT_0051),
         "0051/holdout-h4/score_h4.py": (2, HOLDOUT_0051),
