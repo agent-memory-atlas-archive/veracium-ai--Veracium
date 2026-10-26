@@ -2705,6 +2705,10 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # the status index: `--check` refuses a stale STATUS.md, research's blocking-question check imports its row
         # rule, and its first grammar produced a finding (54 question rows unseen, 2026-10-11)
         root / "specs" / "render_index.py",
+        # 0013 §5f.1 INV-SA10 (0007 v17 I1): the commit-time gate over the ladder's writes, and its replay
+        # comparator — both verdict a tree, so both are checkers whatever their names say (R6-1)
+        root / "specs" / "evidence" / "0013" / "sa10_gate.py",
+        root / "specs" / "evidence" / "0013" / "sa10_digest.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"
