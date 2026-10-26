@@ -36,6 +36,7 @@ import pathlib
 import re
 import sqlite3
 import sys
+import contextvars
 import threading
 import types
 import uuid
@@ -683,8 +684,12 @@ _AUDIT_OPERATION_FIELDS = frozenset({
     "operation_id", "release_ref", "backup_ref", "store_path",
     "from_version", "to_version", "source_digest", "output_digest",
     "migration_digest", "evidence_digest", "issued_at", "expires_at",
-    "attempted_at", "state"})
-"""The COMPLETE frozen operation-row schema (round 9, finding 2: v10's row
+    "attempted_at", "state", "runtime"})
+"""(v34 / 0013 INV-SA11, placed by v35's §5e annotation) `runtime` is the amendment's one additive key: the migrating
+build's `sqlite_version`, `source_id` and the status MEASURED for this operation, written with the attested record in
+one transaction. It admits `refused`, because consumption precedes the runtime gate (round 5).
+
+The COMPLETE frozen operation-row schema (round 9, finding 2: v10's row
 omitted `backup_ref`, `issued_at`, `expires_at` and the output acceptance
 digest). Every authority binding plus the resolved destination identity."""
 
@@ -1035,6 +1040,22 @@ def _readonly(mapping) -> "types.MappingProxyType":
     return types.MappingProxyType({k: _freeze(v) for k, v in mapping.items()})
 
 
+def _row_runtime_problems(rt) -> list:
+    """INV-SA11's value on the operation row, by production's grammars IMPORTED (never a second copy): an exact
+    mapping of `sqlite_version`, `source_id` and `status`, the status one of `sv.RUNTIME_STATUSES`."""
+    from veracium.store import migration as _mig
+    if not isinstance(rt, (dict, types.MappingProxyType)) or set(rt) != {"sqlite_version", "source_id", "status"}:
+        return [f"runtime is not exactly sqlite_version/source_id/status: {_safe_repr(rt)}"]
+    out = []
+    if not (type(rt["sqlite_version"]) is str and _mig._SQLITE_VERSION_RE.fullmatch(rt["sqlite_version"])):
+        out.append(f"runtime.sqlite_version is not a SQLite version: {_safe_repr(rt['sqlite_version'])}")
+    if not (type(rt["source_id"]) is str and _mig._SOURCE_ID_RE.fullmatch(rt["source_id"])):
+        out.append(f"runtime.source_id is not a sqlite_source_id(): {_safe_repr(rt['source_id'])}")
+    if rt["status"] not in sv.RUNTIME_STATUSES:
+        out.append(f"runtime.status is not one of {list(sv.RUNTIME_STATUSES)}: {_safe_repr(rt['status'])}")
+    return out
+
+
 def _operation_row_problems(row: dict) -> list:
     """Every operation-row field validated to its TYPE and grammar (round 12,
     correction A). The audit store is the enforcing reference, so its boundary
@@ -1065,6 +1086,7 @@ def _operation_row_problems(row: dict) -> list:
         _digest(f)
     for f in ("issued_at", "expires_at", "attempted_at"):
         problems += _timestamp_problems(row.get(f), f)
+    problems += _row_runtime_problems(row.get("runtime"))
     for f in ("from_version", "to_version"):
         if type(row.get(f)) is not int:      # bool is an int subclass — exclude
             problems.append(f"{f} must be an int, is "
@@ -1131,7 +1153,7 @@ class DraftAuditStore:
                "evidence_digest": a.evidence_digest,
                "issued_at": a.issued_at, "expires_at": a.expires_at,
                "attempted_at": canonical_timestamp(datetime.now(timezone.utc)),
-               "state": "attempted"}
+               "state": "attempted", "runtime": _row_runtime()}
         if set(row) != _AUDIT_OPERATION_FIELDS:          # raise, not assert:
             raise ValueError(                            # survives python -O
                 f"operation row fields {sorted(row)} are not the complete "
@@ -1611,14 +1633,42 @@ def _static_resolution_problems(a, snapshot) -> list:
     return []
 
 
+def _accepted_set_problems(a, snapshot) -> list:
+    """The structure `_authority_path_key` reads, checked FIRST and total (no registry patch needed): the accepted set
+    at the authority's source version must be a list of {digest: str, objects: mapping} entries."""
+    art = snapshot[0] if snapshot is not None else None
+    versions = art.get("schema_versions") if isinstance(art, dict) else None
+    if not isinstance(versions, dict):
+        return ["schema_versions is not a mapping"]
+    vrec = versions.get(str(a.from_version)) if type(a.from_version) is int else None
+    accepted = vrec.get("accepted") if isinstance(vrec, dict) else None
+    if not isinstance(accepted, list):
+        return [f"the v{a.from_version} accepted set is not a list"]
+    for i, x in enumerate(accepted):
+        if not isinstance(x, dict) or type(x.get("digest")) is not str or not isinstance(x.get("objects"), dict):
+            return [f"the v{a.from_version} accepted entry {i} is not a digest/objects mapping"]
+    return []
+
+
+def _authority_path_key(a, art):
+    """The authority's path key: its four bindings plus the source full-manifest hash, LOOKED UP in the accepted set
+    from (from_version, source_digest) — one answer by A16's rule — so the authority and the hook key identically
+    (research's stage-1 item 8(a)). None when the lookup has no single answer."""
+    versions = art.get("schema_versions") if isinstance(art, dict) else None
+    vrec = versions.get(str(a.from_version)) if isinstance(versions, dict) else None
+    accepted = vrec.get("accepted") if isinstance(vrec, dict) else None
+    hashes = {full_manifest_hash(x.get("objects", {})) for x in accepted or []
+              if isinstance(x, dict) and x.get("digest") == a.source_digest and isinstance(x.get("objects"), dict)}
+    if len(hashes) != 1:
+        return None
+    return path_key(a.from_version, a.source_digest, hashes.pop(), a.to_version, a.migration_digest)
+
+
 def _matching_path_records(a, art) -> list:
+    want = _authority_path_key(a, art)
     return [r for r in art.get("paths", [])
-            if _algorithm_class(r) == "current"
-            and _keyable_path_record(r)
-            and r["from_version"] == a.from_version
-            and r["to_version"] == a.to_version
-            and r["source_acceptance_digest"] == a.source_digest
-            and r["migration_declaration_digest"] == a.migration_digest]
+            if want is not None and _algorithm_class(r) == "current"
+            and _keyable_path_record(r) and _path_key(r) == want]
 
 
 def _resolve_path_record(a, art):
@@ -2152,14 +2202,9 @@ def _consume_authority(a: MigrationAuthority, output_digest: str,
 # --------------------------------------------------------------------------
 # migration-runtime qualification (round 3, finding 3)
 
-AUTHORIZER_PROBE_KEYS = frozenset({
-    "authorizer_api_available", "denies_begin", "denies_commit", "denies_end",
-    "denies_rollback", "denies_savepoint", "denies_release", "denies_pragma",
-    "denies_attach", "denies_detach",
-    "denies_temp_table", "denies_temp_index", "denies_temp_view",
-    "denies_temp_trigger", "denies_temp_virtual_table",
-    "authorizer_restored"})
-"""The closed confinement vocabulary — sixteen probes. 0007's runtime identity
+AUTHORIZER_PROBE_KEYS = sv.CONFINEMENT_PROBE_KEYS
+"""The closed confinement vocabulary — sixteen probes, ONE set: production's attestation records carry the same
+sixteen results as provenance (0007 §4g.6 4d), so the model takes production's set rather than restating it. 0007's runtime identity
 deliberately has no authorizer probe — migrations left its scope in v10 — so
 its qualification cannot attest the behaviours `apply_migration` leans on.
 These are ALL required: a runtime failing any of them may execute a migration
@@ -2282,35 +2327,18 @@ def authorizer_probes() -> dict:
     return out
 
 
-def migration_runtime_record_problems(rec) -> list:
-    """Closed structure and required behaviours; total over any input."""
-    if not isinstance(rec, dict):
-        return [f"migration-runtime record is {type(rec).__name__}"]
-    problems = []
-    want = {"sqlite_version", "source_id", "features",
-            "migration_evidence_algorithm", "authorizer_probes"}
-    if set(rec) != want:
-        return [f"record fields {sorted(rec)} are not exactly {sorted(want)}"]
-    for f in ("sqlite_version", "source_id"):
-        if not isinstance(rec[f], str) or not rec[f]:
-            problems.append(f"{f!r} must be a nonempty string")
-    if not isinstance(rec["features"], dict):
-        problems.append("'features' must be a mapping")
-    if type(rec["migration_evidence_algorithm"]) is not int:
-        problems.append("'migration_evidence_algorithm' must be an int")
-    probes = rec["authorizer_probes"]
-    if not isinstance(probes, dict):
-        return problems + ["'authorizer_probes' must be a mapping"]
-    if set(probes) != AUTHORIZER_PROBE_KEYS:
-        problems.append(f"probe keys {sorted(probes)} are not exactly "
-                        f"{sorted(AUTHORIZER_PROBE_KEYS)}")
-    for k, v in probes.items():
-        if type(v) is not bool:
-            problems.append(f"probe {k!r} is {type(v).__name__}, not bool")
-        elif v is not True:
-            problems.append(f"runtime fails required confinement behaviour "
-                            f"{k!r}")
-    return problems
+def probes_problems(p) -> list:
+    """THE confinement rule (0013 §5f.3, research's stage-1 item 7(a)), for a live `authorizer_probes()` result and
+    for production's attestation records alike: the keys are EXACTLY the sixteen (a missing or extra key is named
+    first, sorted, before any value is read), and every value is True BY IDENTITY, never truthiness (`all({})` is
+    True). Failing probes are named in `authorizer_probes()`'s own code order, so "the first failing probe" does not
+    depend on PYTHONHASHSEED (a frozenset's string order does)."""
+    if not isinstance(p, dict):
+        return [f"probe results are a {type(p).__name__}, not a mapping"]
+    missing, extra = sorted(AUTHORIZER_PROBE_KEYS - set(p)), sorted(set(p) - AUTHORIZER_PROBE_KEYS)
+    if missing or extra:
+        return ([f"probe {k!r} is missing" for k in missing] + [f"probe {k!r} is not one of the sixteen" for k in extra])
+    return [f"probe {k} is {v!r}" for k, v in p.items() if v is not True]
 
 
 def _algorithm_class(rec) -> str:
@@ -2323,78 +2351,6 @@ def _algorithm_class(rec) -> str:
     if type(alg) is not int:
         return "malformed"
     return "current" if alg == MIGRATION_EVIDENCE_ALGORITHM else "superseded"
-
-
-def migration_runtime_artifact_problems(art) -> list:
-    """Artifact-level validation (round 4, finding 2): a malformed
-    current-algorithm migration-runtime record is evidence of corruption or
-    generator failure and POISONS the qualification — v5 silently filtered
-    `{"migration_evidence_algorithm": 1}` out and stayed qualified on the
-    valid record beside it. Also enforces build-identity uniqueness and the
-    single-active-runtime policy, and requires each identity to resolve to an
-    active schema-runtime record in the same artifact."""
-    if not isinstance(art, dict) or not isinstance(
-            art.get("migration_runtimes"), list):
-        return ["artifact has no migration-runtime record list"]
-    problems, seen = [], {}
-    active_schema = {sv.build_identity(r)
-                     for r in sv.active_records(_artifact_list(art,
-                                                              "runtimes"))}
-    for rec in art["migration_runtimes"]:
-        cls = _algorithm_class(rec)
-        if cls == "superseded":
-            continue
-        if cls == "malformed":
-            problems.append("migration-runtime record with a missing or "
-                            "mistyped algorithm field — malformed, not "
-                            "superseded; the artifact cannot be trusted")
-            continue
-        rec_problems = migration_runtime_record_problems(rec)
-        if rec_problems:
-            problems += [f"current migration-runtime record: {p}"
-                         for p in rec_problems]
-            continue
-        ident = sv.build_identity(rec)
-        if ident in seen:
-            if seen[ident] != rec["authorizer_probes"]:
-                problems.append("two migration-runtime records share a build "
-                                "identity but declare different probe results "
-                                "— self-contradictory")
-            else:
-                problems.append("duplicate migration-runtime record for one "
-                                "build identity")
-        seen[ident] = rec["authorizer_probes"]
-        if ident not in active_schema:
-            problems.append("migration-runtime record for a build identity "
-                            "with no active schema-runtime record — an "
-                            "unattested qualification")
-    if len(seen) > 1:
-        problems.append(f"{len(seen)} migration-runtime build identities; "
-                        f"the single-active-runtime policy (0007, S-Q7) "
-                        f"allows one")
-    return problems
-
-
-def migration_runtime_supported(art) -> bool:
-    """Both halves of finding 3's correction: a RECORDED qualification for this
-    build identity, and the recorded behaviours REPRODUCED live — mirroring how
-    `_runtime_supported_interim()` re-derives constructor manifestations rather than
-    trusting the record. Artifact-level problems disqualify outright
-    (round 4, finding 2). Total, fail-closed."""
-    try:
-        if not isinstance(art, dict):
-            return False
-        if migration_runtime_artifact_problems(art):
-            return False
-        me = sv.build_identity(sv.runtime_identity())
-        hits = [r for r in art["migration_runtimes"]
-                if _algorithm_class(r) == "current"
-                and sv.build_identity(r) == me]
-        if len(hits) != 1:
-            return False
-        return authorizer_probes() == hits[0]["authorizer_probes"]
-    except Exception:
-        return False
 
 
 # --------------------------------------------------------------------------
@@ -2423,10 +2379,13 @@ def _artifact_snapshot() -> tuple:
 ARTIFACT_FIELDS = frozenset({
     "artifact", "migration_evidence_algorithm", "manifest_algorithm",
     "draft_schema_version", "generated_at", "generator", "schema_versions",
-    "legacy_base_versions", "runtimes", "migration_runtimes", "paths"})
+    "legacy_base_versions", "paths"})
+"""(0007 §4g, 0013 §5f.3) The draft's schema-runtime records (`runtimes`) and the migration-runtime record class
+(`migration_runtimes`) are withdrawn: the model's schema qualification is the measured status (B1 (α′)) and its
+confinement qualification is the sixteen probes run LIVE."""
 
 PATH_RECORD_FIELDS = frozenset({
-    "migration_evidence_algorithm", "manifest_algorithm", "runtime",
+    "migration_evidence_algorithm", "manifest_algorithm", "generated_on",
     "from_version", "to_version", "source_acceptance_digest",
     "source_full_manifest_hash", "output_acceptance_digest",
     "output_full_manifest_hash", "output_manifestation",
@@ -2439,8 +2398,9 @@ def schema_evidence_problems(art) -> list:
     the whole context (0007 round 12's rule: a malformed current record is
     evidence of tampering, and the safe reading is "unqualified").
 
-    Must run under the draft registry patch: the validators it delegates to
-    read the module registry."""
+    Needs NO registry patch (I3(b)): it hands the draft registry to the production helpers it delegates to, so the
+    operation's one measurement can validate its snapshot before any context is installed (research's option (i),
+    condition 1)."""
     if not isinstance(art, dict):
         return [f"artifact is {type(art).__name__}, not a mapping"]
     problems = []
@@ -2508,23 +2468,23 @@ def schema_evidence_problems(art) -> list:
                                     f"provenance must be strings")
                     continue
                 problems += [f"version {v}: {p}" for p in
-                             sv.manifestation_problems(a["objects"], int(v))]
-                if sv._digest_of_identity(a["objects"], int(v)) != a["digest"]:
+                             sv.manifestation_problems(a["objects"], int(v), SCHEMAS_DRAFT)]
+                if sv._digest_of_identity(a["objects"], int(v), SCHEMAS_DRAFT) != a["digest"]:
                     problems.append(f"version {v}: accepted objects do not "
                                     f"hash to their recorded digest")
+            # A16 (0013 v35 §5f.3): (version, acceptance digest) must determine the full manifestation, so the
+            # authority's lookup of the source full-manifest hash has ONE answer.
+            seen_dig = {}
+            for a in rec["accepted"]:
+                if isinstance(a, dict) and isinstance(a.get("digest"), str) and isinstance(a.get("objects"), dict):
+                    fmh = full_manifest_hash(a["objects"])
+                    if seen_dig.setdefault(a["digest"], fmh) != fmh:
+                        problems.append(f"version {v}: two accepted manifestations share the acceptance digest "
+                                        f"{a['digest'][:12]}… and differ in a rebuildable object")
     legacy = art.get("legacy_base_versions")
     if not isinstance(legacy, list) or \
             not all(type(v) is int and v in SCHEMAS_DRAFT for v in legacy):
         problems.append("legacy_base_versions must be declared draft versions")
-    runtimes = art.get("runtimes")
-    if not isinstance(runtimes, list):
-        problems.append("runtimes must be a list")
-    else:
-        problems += sv.artifact_problems(runtimes)
-        if not sv.active_records(runtimes):
-            problems.append("no active runtime record; nothing is qualified")
-    if not isinstance(art.get("migration_runtimes"), list):
-        problems.append("migration_runtimes must be a list")
     if not isinstance(art.get("paths"), list):
         problems.append("paths must be a list")
     return problems
@@ -2561,33 +2521,7 @@ def path_record_problems(rec, art) -> list:
             rec["migration_evidence_algorithm"] != MIGRATION_EVIDENCE_ALGORITHM:
         problems.append("path record algorithms must be exactly the current "
                         "ints")
-    rt = rec["runtime"]
-    if not isinstance(rt, dict) or \
-            set(rt) != {"sqlite_version", "source_id", "features"} or \
-            not isinstance(rt.get("sqlite_version"), str) or \
-            not isinstance(rt.get("source_id"), str) or \
-            not isinstance(rt.get("features"), dict):
-        problems.append("path record runtime identity is malformed")
-    else:
-        # Round 4, finding 3: a path record's runtime must RESOLVE — to
-        # exactly one active schema-runtime record and one valid current
-        # migration-runtime record in this artifact. A foreign identity is an
-        # unattested prospective record, not a spare.
-        ident = sv.build_identity(rt)
-        schema_hits = [r for r in sv.active_records(_artifact_list(art,
-                       "runtimes")) if sv.build_identity(r) == ident]
-        if len(schema_hits) != 1:
-            problems.append(f"path record runtime resolves to "
-                            f"{len(schema_hits)} active schema-runtime "
-                            f"records, not exactly one")
-        mig_hits = [r for r in _artifact_list(art, "migration_runtimes")
-                    if _algorithm_class(r) == "current"
-                    and not migration_runtime_record_problems(r)
-                    and sv.build_identity(r) == ident]
-        if len(mig_hits) != 1:
-            problems.append(f"path record runtime resolves to "
-                            f"{len(mig_hits)} valid migration-runtime "
-                            f"records, not exactly one")
+    problems += generated_on_problems(rec["generated_on"])
     frm, to = rec["from_version"], rec["to_version"]
     if type(frm) is not int or type(to) is not int or to != frm + 1 or \
             frm not in SCHEMAS_DRAFT or to not in SCHEMAS_DRAFT:
@@ -2641,6 +2575,47 @@ def path_record_problems(rec, art) -> list:
     return problems
 
 
+def generated_on_problems(g) -> list:
+    """A path record's `generated_on` (0013 §5f.3): the FULL attestation key of the build that generated it, exactly
+    production's key fields, each canonical through production's one canonicaliser. STRUCTURE only: whether it
+    RESOLVES to an attested record is `path_provenance_problems`' question, which the attestation job's
+    `--check-evidence` does not ask (research's stage-1 read of I3(b), B9: at the branch run no record exists yet)."""
+    if not isinstance(g, dict) or set(g) != set(sv.KEY_FIELDS):
+        return [f"generated_on must carry exactly the attestation key fields {sorted(sv.KEY_FIELDS)}"]
+    if sv.attestation_key(g) is None:
+        return ["generated_on has an unreadable or mistyped key field"]
+    bad = [f for f, ok in (("machine", sv.canonical_machine(g["machine"]) == g["machine"]),
+                           ("system", sv.canonical_system(g["system"]) == g["system"]),
+                           ("libc", g["libc"] in sv.LIBC_TOKENS
+                            and (g["libc"] == "none") == (g["system"] != "Linux"))) if not ok]
+    return [f"generated_on {f} {g[f]!r} is not canonical" for f in bad]
+
+
+def path_provenance_problems(art) -> list:
+    """A10: every current path record's `generated_on` resolves, BY KEY, through production's attested predicate
+    (`sv.attested_key`: an unpoisoned attestation artifact and exactly one current record), else the path class is
+    poisoned. Asked at MIGRATION and by the committed-artifact pin, never by `--check-evidence` (B9)."""
+    out = []
+    for rec in _artifact_list(art, "paths"):
+        if _algorithm_class(rec) != "current" or not isinstance(rec, dict) or generated_on_problems(
+                rec.get("generated_on")):
+            continue                   # malformed ones are path_evidence_problems'
+        if not sv.attested_key(sv.attestation_key(rec["generated_on"]), revision=PRODUCTION_REVISION):
+            out.append(f"path record v{rec.get('from_version')}→v{rec.get('to_version')}: its generated_on resolves "
+                       f"to no attested build (0013 §5f.3)")
+    return out
+
+
+def path_key(from_version, source_acceptance_digest, source_full_manifest_hash, to_version,
+             migration_declaration_digest) -> tuple:
+    """THE path-evidence key (0013 §5f.3; research's stage-1 item 8(b)): source version × source acceptance digest ×
+    source full-manifest hash × destination version × migration declaration digest — NO runtime identity. Every
+    constructor of the key calls this: a record (`_path_key`), an accepted manifestation (`expected_path_problems`),
+    the live source (`_select_path_record`) and the authority (`_authority_path_key`)."""
+    return (from_version, source_acceptance_digest, source_full_manifest_hash, to_version,
+            migration_declaration_digest)
+
+
 def _hashable(v) -> bool:
     """Whether a fully-built key can be used as a set/dict key. Round 12,
     finding 5: testing the CONSTRUCTED key is total over any nested malformed
@@ -2655,10 +2630,9 @@ def _hashable(v) -> bool:
 
 
 def _path_key(rec) -> tuple:
-    return (sv.build_identity(rec.get("runtime", {})), rec.get("from_version"),
-            rec.get("to_version"), rec.get("source_acceptance_digest"),
-            rec.get("source_full_manifest_hash"),
-            rec.get("migration_declaration_digest"))
+    return path_key(rec.get("from_version"), rec.get("source_acceptance_digest"),
+                    rec.get("source_full_manifest_hash"), rec.get("to_version"),
+                    rec.get("migration_declaration_digest"))
 
 
 def _keyable_path_record(rec) -> bool:
@@ -2674,7 +2648,7 @@ def _keyable_path_record(rec) -> bool:
     try:
         return _hashable(_path_key(rec))
     except Exception:
-        return False       # build_identity itself could not form the key
+        return False       # the key itself could not be formed
 
 
 def path_evidence_problems(art) -> list:
@@ -2715,12 +2689,12 @@ def expected_path_problems(art) -> list:
     foreign runtime identity passing — v5 computed expectations only for the
     process's own identity, so foreign, unattested prospective records could
     accumulate. An altered migration digests differently, so its expected
-    pair has zero records — the round-3 self-authorization hole this closes."""
+    pair has zero records — the round-3 self-authorization hole this closes. (0013 §5f.3) "× every active
+    build identity" is removed: a path record states one fact for every build, and an extra record is an extra KEY,
+    which cardinality refuses (A15)."""
     if not isinstance(art, dict):
         return ["artifact is not a mapping"]
     problems = []
-    identities = {sv.build_identity(r)
-                  for r in sv.active_records(_artifact_list(art, "runtimes"))}
     current = [r for r in _artifact_list(art, "paths")
                if _algorithm_class(r) == "current"]
     unsound = [r for r in current if not _keyable_path_record(r)]
@@ -2731,36 +2705,34 @@ def expected_path_problems(art) -> list:
     versions = art.get("schema_versions", {}) \
         if isinstance(art.get("schema_versions"), dict) else {}
     expected = set()
-    for ident in identities:
-        for frm, mig in sorted(MIGRATIONS_DRAFT.items()):
-            src = versions.get(str(frm), {})
-            accepted = src.get("accepted") if isinstance(src, dict) else None
-            for a in accepted if isinstance(accepted, list) else []:
-                if not isinstance(a, dict):
-                    continue
-                key = (ident, frm, mig.to_version, a.get("digest"),
-                       full_manifest_hash(a.get("objects", {})),
-                       migration_declaration_digest(mig))
-                # Round 12, finding 5: an accepted manifestation with a nested
-                # unhashable `digest` (measured `digest={}`) must be REPORTED,
-                # never raised out of the set insertion.
-                if _hashable(key):
-                    expected.add(key)
-                else:
-                    problems.append(f"an accepted v{frm} manifestation has an "
-                                    f"unhashable digest — malformed, reported "
-                                    f"by the evidence validator")
+    for frm, mig in sorted(MIGRATIONS_DRAFT.items()):
+        src = versions.get(str(frm), {})
+        accepted = src.get("accepted") if isinstance(src, dict) else None
+        for a in accepted if isinstance(accepted, list) else []:
+            if not isinstance(a, dict):
+                continue
+            key = path_key(frm, a.get("digest"), full_manifest_hash(a.get("objects", {})), mig.to_version,
+                           migration_declaration_digest(mig))
+            # Round 12, finding 5: an accepted manifestation with a nested
+            # unhashable `digest` (measured `digest={}`) must be REPORTED,
+            # never raised out of the set insertion.
+            if _hashable(key):
+                expected.add(key)
+            else:
+                problems.append(f"an accepted v{frm} manifestation has an "
+                                f"unhashable digest — malformed, reported "
+                                f"by the evidence validator")
     have = {}
     for r in current:
         if _keyable_path_record(r):
             have[_path_key(r)] = have.get(_path_key(r), 0) + 1
     for key in sorted(expected - set(have), key=repr):
         problems.append(f"no path-evidence record for expected combination "
-                        f"(step {key[1]}→{key[2]})")
+                        f"(step {key[0]}→{key[3]})")
     for key in sorted(set(have) - expected, key=repr):
         problems.append(f"path-evidence record outside the expected set — "
-                        f"foreign identity, undeclared step, or unaccepted "
-                        f"source (step {key[1]}→{key[2]})")
+                        f"an undeclared step or an unaccepted source "
+                        f"(step {key[0]}→{key[3]})")
     for key, n in sorted(have.items(), key=repr):
         if n > 1:
             problems.append(f"{n} path-evidence records for one combination")
@@ -2771,7 +2743,7 @@ def expected_path_problems(art) -> list:
 # the draft context: the 0007 kernel, running as the v2 build would ship it
 
 _DRAFT_LOCK = threading.Lock()
-_DRAFT = {"depth": 0, "saved": None, "artifact": None, "digest": None}
+_DRAFT = {"depth": 0, "saved": None, "artifact": None, "digest": None, "status": None}
 
 
 class _DraftContextMismatch(Exception):
@@ -2782,7 +2754,7 @@ class _DraftContextMismatch(Exception):
 
 
 @contextmanager
-def _draft(loaded=None):
+def _draft(loaded=None, status=None):
     """Install the draft registry and evidence into the production kernel.
 
     This is how the instrument runs **the** planner rather than a second one
@@ -2796,40 +2768,43 @@ def _draft(loaded=None):
     with _DRAFT_LOCK:
         if _DRAFT["depth"] == 0:
             art, digest = loaded if loaded is not None else _artifact_snapshot()
-            _DRAFT["digest"] = digest
-            _DRAFT["saved"] = {
+            # 0013 §5f.3 carrier (i), research's stage-1 read of I3(b), B1 (α′): the feature probes and the near-miss
+            # discrimination are properties of the BUILD, measured ONCE, here, BEFORE the draft patch, against
+            # production's own evidence; reproduction is a property of the (build, schema) pair and runs below, UNDER
+            # the patch, on the draft evidence. One measurement per context, deliberately: a context is one
+            # operation, the build cannot change inside it, and nothing inside it calls `verify_build`.
+            measured = status if status is not None else sv.runtime_status()
+            saved = {
                 "SCHEMAS": sv.SCHEMAS,
                 "SCHEMA_VERSION": sv.SCHEMA_VERSION,
                 "version_records": sv.version_records,
                 "legacy_base_versions": sv.legacy_base_versions,
-                "override": list(sv._RUNTIME_OVERRIDE),
                 "runtime_status": sv.runtime_status,
             }
-            sv.SCHEMAS = dict(SCHEMAS_DRAFT)
-            # 0007 §4g's production gate (`runtime_status()`, measured against the ONE accepted set and the head
-            # near-misses) cannot measure the draft schema: its near-misses are the production head's. Until this
-            # model's runtime seam is revised (0013 §5f.3 carrier (i), A1-A15), the gate inside a draft context is the
-            # model's own pre-amendment predicate, read through the draft evidence installed above.
-            sv.runtime_status = _draft_runtime_status
-            sv.SCHEMA_VERSION = DRAFT_SCHEMA_VERSION
-            # Round 4, finding 1: context entry is INSIDE the failure
-            # boundary. The validators are total, and a validator escape is
-            # itself treated as a malformed artifact — either way the context
-            # installs empty evidence and every gate fails closed.
             try:
-                usable = art is not None and not schema_evidence_problems(art)
-            except Exception:
-                usable = False
-            if usable:
-                versions = art["schema_versions"]
-                legacy = frozenset(art["legacy_base_versions"])
-                sv._RUNTIME_OVERRIDE[:] = [art["runtimes"]]
-            else:
-                versions, legacy = {}, frozenset()
-                sv._RUNTIME_OVERRIDE[:] = [[]]
-            sv.version_records = lambda: versions
-            sv.legacy_base_versions = lambda: legacy
-            _DRAFT["artifact"] = art
+                sv.SCHEMAS = dict(SCHEMAS_DRAFT)
+                sv.SCHEMA_VERSION = DRAFT_SCHEMA_VERSION
+                # Round 4, finding 1: context entry is INSIDE the failure
+                # boundary. The validators are total, and a validator escape is
+                # itself treated as a malformed artifact — either way the context
+                # installs empty evidence and every gate fails closed.
+                try:
+                    usable = art is not None and not schema_evidence_problems(art)
+                except Exception:
+                    usable = False
+                if usable:
+                    versions = art["schema_versions"]
+                    legacy = frozenset(art["legacy_base_versions"])
+                else:
+                    versions, legacy = {}, frozenset()
+                sv.version_records = lambda: versions
+                sv.legacy_base_versions = lambda: legacy
+                served = measured if status is not None else _draft_status(measured, versions)
+                sv.runtime_status = _served(served)
+            except BaseException:
+                _restore_draft(saved)          # a failure while INSTALLING leaves nothing patched
+                raise
+            _DRAFT["saved"], _DRAFT["digest"], _DRAFT["artifact"], _DRAFT["status"] = saved, digest, art, served
         else:
             if loaded is not None and loaded[1] != _DRAFT["digest"]:
                 raise _DraftContextMismatch(
@@ -2844,28 +2819,103 @@ def _draft(loaded=None):
         with _DRAFT_LOCK:
             _DRAFT["depth"] -= 1
             if _DRAFT["depth"] == 0:
-                saved = _DRAFT["saved"]
-                sv.SCHEMAS = saved["SCHEMAS"]
-                sv.SCHEMA_VERSION = saved["SCHEMA_VERSION"]
-                sv.version_records = saved["version_records"]
-                sv.legacy_base_versions = saved["legacy_base_versions"]
-                sv._RUNTIME_OVERRIDE[:] = saved["override"]
-                sv.runtime_status = saved["runtime_status"]
-                _DRAFT["saved"] = _DRAFT["artifact"] = None
+                _restore_draft(_DRAFT["saved"])
+                _DRAFT["saved"] = _DRAFT["artifact"] = _DRAFT["status"] = None
                 _DRAFT["digest"] = None
 
 
-def _draft_runtime_status():
-    """The production gate's answer inside a draft context: the interim predicate over the draft evidence (`verified`
-    when it qualifies this build, else `refused`) — never `attested`, since no attestation record exists for any
-    build (research's stage 2 on ce6117f: an INV-SA11 value taken here would otherwise claim one). The model's own
-    gates run first; this only keeps production's `open_versioned` from re-measuring a schema it was not written
-    for. The build's identity is this process's own (`runtime_identity()`), as the production status carries it."""
-    me = sv.runtime_identity()
-    if sv._runtime_supported_interim():
-        return sv.RuntimeStatus("verified", None, None, (), me["sqlite_version"], me["source_id"])
-    return sv.RuntimeStatus("refused", "no qualified schema-runtime record in the draft evidence", None, (),
-                            me["sqlite_version"], me["source_id"])
+class _MeasurementEscape(NamedTuple):
+    """A measurement that RAISED (a library defect): carried forward unchanged and re-raised at the runtime-gates
+    phase, so its outcome (`internal-error`, round 14) is decided after consumption, as before."""
+    exc: BaseException
+
+
+_OPERATION_RUNTIME = contextvars.ContextVar("migrations_0013_operation_runtime", default=None)
+
+PRODUCTION_REVISION = (sv.MANIFEST_ALGORITHM, sv.SCHEMA_VERSION)
+"""Production's (manifest algorithm, schema version), captured at IMPORT, before any draft context can patch
+`sv.SCHEMA_VERSION`: attestation records are production package data and are judged at production's revision, even
+inside a draft context (where an unqualified read would call every record `future`)."""
+
+
+def _operation_status(snapshot):
+    """The ONE measurement of an operation (0013 §5f.3 carrier (i); research's B1 (α′) and its follow-up, option (i)):
+    production's measured status — probes and discrimination are properties of the build — then §4b step 2 on the
+    DRAFT registry and the records parsed from the operation's ONE byte snapshot, BY ARGUMENT (nothing patched,
+    nothing re-read). Taken at the evidence-snapshot phase so the operation row can record it; the DECISION stays at
+    the runtime-gates phase, after consumption. Total: a raise is carried as a `_MeasurementEscape`."""
+    with _DRAFT_LOCK:
+        if _DRAFT["depth"] > 0:
+            # A context is open (a concurrent operation, M-Q2): the module globals are the DRAFT's, so measuring now
+            # would measure the wrong registry. Operations sharing an open context share its one measurement, taken
+            # at its entry on production state; a different snapshot refuses at context entry anyway.
+            return _DRAFT["status"]
+    try:
+        st = sv.runtime_status()
+    except Exception as exc:  # noqa: BLE001 - production's is total; a patched defect is carried, not lost
+        return _MeasurementEscape(exc)
+    if st.status == "refused":
+        return st
+    art = snapshot[0] if snapshot is not None else None
+    try:
+        malformed = art is None or schema_evidence_problems(art)
+    except Exception:  # noqa: BLE001 - a validator escape is a malformed artifact (round 4, finding 1)
+        malformed = ["the schema evidence validator escaped"]
+    if malformed:
+        return st._replace(status="refused", reason="the draft evidence is unusable"
+                           + (f": {malformed[0]}" if isinstance(malformed, list) else ""))
+    try:
+        sv.verify_reproduction(art["schema_versions"], SCHEMAS_DRAFT)
+    except sv.VerificationFailure as exc:
+        return st._replace(status="refused", reason=f"the draft evidence: {exc}")
+    except Exception as exc:  # noqa: BLE001 - malformed draft evidence the walk could not read is refused, named
+        return st._replace(status="refused", reason=f"the draft reproduction raised {type(exc).__name__}")
+    return st
+
+
+def _row_runtime():
+    """The operation row's `runtime`, from the operation's ONE measurement (`_OPERATION_RUNTIME`, set by the run before
+    consumption): never a second measurement. A carried escape records `refused`, the reading production's total
+    `runtime_status()` gives any exception."""
+    st = _OPERATION_RUNTIME.get()
+    status = "refused" if isinstance(st, _MeasurementEscape) or st is None else st.status
+    version = None if isinstance(st, _MeasurementEscape) or st is None else st.sqlite_version
+    source = None if isinstance(st, _MeasurementEscape) or st is None else st.source_id
+    if version is None or source is None:      # the measurement did not reach the identity: this process's own
+        me = sv.runtime_identity()
+        version, source = version or me["sqlite_version"], source or me["source_id"]
+    return {"sqlite_version": version, "source_id": source, "status": status}
+
+
+def _restore_draft(saved) -> None:
+    sv.SCHEMAS = saved["SCHEMAS"]
+    sv.SCHEMA_VERSION = saved["SCHEMA_VERSION"]
+    sv.version_records = saved["version_records"]
+    sv.legacy_base_versions = saved["legacy_base_versions"]
+    sv.runtime_status = saved["runtime_status"]
+
+
+def _served(st):
+    """What `sv.runtime_status` answers inside a context: the operation's measured status by IDENTITY, or, for a
+    carried escape, the escape re-raised (so the runtime-gates phase maps it as round 14 did)."""
+    if isinstance(st, _MeasurementEscape):
+        def escaped():
+            raise st.exc
+        return escaped
+    return lambda: st
+
+
+def _draft_status(measured, versions):
+    """The status inside a draft context (B1 (α′)): the build's measured status, with §4b step 2 re-run UNDER the
+    patch on the draft evidence through production's own `verify_reproduction` (one function for both). A `refused`
+    build stays refused; a build that does not reproduce the DRAFT is refused, naming the draft step."""
+    if isinstance(measured, _MeasurementEscape) or measured.status == "refused":
+        return measured
+    try:
+        sv.verify_reproduction(versions, SCHEMAS_DRAFT)
+    except sv.VerificationFailure as exc:
+        return measured._replace(status="refused", reason=f"the draft evidence: {exc}")
+    return measured
 
 
 # --------------------------------------------------------------------------
@@ -2974,24 +3024,22 @@ def _migrating_hook(art, authority, state):
 
 
 def _select_path_record(art, base, objs, step) -> dict:
-    """Selection over RECORDED evidence, by the full key round 3 froze:
-    runtime build identity × source version × source acceptance digest ×
-    source full-manifest hash × destination version × migration declaration
-    digest. Exactly one record or the migration does not run."""
-    probs = path_evidence_problems(art) + expected_path_problems(art)
+    """Selection over RECORDED evidence, by the key 0013 §5f.3 keeps (the runtime identity removed): source version ×
+    source acceptance digest × source full-manifest hash × destination version × migration declaration digest.
+    Exactly one record, and its generated_on resolving to an attested build, or the migration does not run."""
+    probs = path_evidence_problems(art) + expected_path_problems(art) + path_provenance_problems(art)
     if probs:
         raise MigrationRefused("migration-evidence-missing",
                                "; ".join(probs[:4]))
-    me = sv.build_identity(sv.runtime_identity())
-    want = (me, base, step.to_version, sv.digest(objs, base),
-            full_manifest_hash(objs), migration_declaration_digest(step))
+    want = path_key(base, sv.digest(objs, base), full_manifest_hash(objs), step.to_version,
+                    migration_declaration_digest(step))
     hits = [r for r in art["paths"]
             if _algorithm_class(r) == "current"
             and _keyable_path_record(r) and _path_key(r) == want]
     if len(hits) != 1:
         raise MigrationRefused(
             "migration-evidence-missing",
-            f"{len(hits)} recorded path-evidence records match this runtime, "
+            f"{len(hits)} recorded path-evidence records match this "
             f"source and migration declaration; a migration no recorded "
             f"evidence covers must not run")
     return hits[0]
@@ -3490,6 +3538,8 @@ def _run_inner(path, busy_timeout_ms: int, migrating: bool,
         # context — nothing re-reads the path.
         phase = "evidence-snapshot"
         snapshot = _artifact_snapshot()
+        op_status = _operation_status(snapshot)       # the operation's ONE measurement (option (i))
+        _OPERATION_RUNTIME.set(op_status)
         if migrating:
             phase = "authority-validation"
             probs = authority_static_problems(authority, canonical,
@@ -3497,6 +3547,12 @@ def _run_inner(path, busy_timeout_ms: int, migrating: bool,
             if probs:
                 return Outcome("migration-quiescence-required",
                                diagnostic="; ".join(probs))
+            # The authority's key looks the source full-manifest hash up in the accepted set (A16): it never DECIDES
+            # on an unvalidated set. A malformed one is poisoned evidence, the round-4 reading, never "missing".
+            bad = _accepted_set_problems(authority, snapshot)
+            if bad:
+                return Outcome("unsupported-sqlite",
+                               diagnostic=f"the draft evidence is malformed: {bad[0]}")
             res = _static_resolution_problems(authority, snapshot)
             if res:
                 return Outcome("migration-evidence-missing",
@@ -3533,23 +3589,24 @@ def _run_inner(path, busy_timeout_ms: int, migrating: bool,
                     f"{canonical!r} (the path is not observable): "
                     f"{_safe_repr(exc)}")
         phase = "context-entry"
-        with _draft(loaded=snapshot) as art:
+        with _draft(loaded=snapshot, status=op_status) as art:
             try:
                 phase = "runtime-gates"
-                if not sv._runtime_supported_interim():
+                # 0013 §5f.3 carrier (i), in A5's order: the status first (a refused build refuses before any
+                # confinement probe runs), then, migrating, the sixteen probes LIVE (all True, or the first false one
+                # is named), before the store is touched.
+                status = sv.runtime_status()
+                if status.status == "refused":
                     return Outcome(
                         "unsupported-sqlite",
-                        f"sqlite {sqlite3.sqlite_version} has no qualified "
-                        f"schema-runtime record in the draft evidence; "
-                        f"regenerate it here (migrations_0013.py "
-                        f"--write-evidence)")
-                if migrating and not migration_runtime_supported(art):
-                    return Outcome(
-                        "unsupported-sqlite",
-                        "this runtime has no migration-confinement "
-                        "qualification (or its recorded authorizer "
-                        "behaviours do not reproduce here); migration "
-                        "refuses before touching the store")
+                        f"sqlite {sqlite3.sqlite_version} cannot be verified: {status.reason}")
+                if migrating:
+                    failing = probes_problems(authorizer_probes())
+                    if failing:
+                        return Outcome(
+                            "unsupported-sqlite",
+                            f"migration confinement does not hold on this build ({failing[0]}); migration refuses "
+                            f"before touching the store")
                 raw_hook = (_migrating_hook(art, authority, state) if migrating
                             else _refusing_hook(art))
                 if migrating:
@@ -3767,6 +3824,15 @@ def _generate_artifact() -> tuple:
     refuse generation, they are never written."""
     problems = []
     me = sv.runtime_identity()
+    ident = sv.attestation_identity()
+    generated_on = {k: ident[k] for k in sv.KEY_FIELDS}
+    if sv.attestation_key(generated_on) is None:
+        problems.append(f"this build's attestation key has an unreadable field "
+                        f"({[k for k in sv.KEY_FIELDS if ident[k] is None]}); it cannot generate path evidence")
+    status = sv.runtime_status()
+    if status.status == "refused":
+        problems.append(f"this build is refused ({status.reason}); it cannot generate path evidence")
+    problems += [f"migration confinement: {p}" for p in probes_problems(authorizer_probes())]
     versions, legacy_src = {}, sv.legacy_base_versions
     with _registry():
         reg = validate_registry(current=sv.SCHEMA_VERSION)
@@ -3774,26 +3840,6 @@ def _generate_artifact() -> tuple:
             return None, [f"registry: {p}" for p in reg]
         for v in sorted(SCHEMAS_DRAFT):
             versions[str(v)] = {"accepted": [_constructor_accepted(v)]}
-        runtime_rec = {
-            **me, "manifest_algorithm": sv.MANIFEST_ALGORITHM,
-            "schema_version": DRAFT_SCHEMA_VERSION,
-            "constructor_digests": {
-                str(v): versions[str(v)]["accepted"][0]["digest"]
-                for v in SCHEMAS_DRAFT},
-            "manifestations": {
-                f"constructor v{v}": versions[str(v)]["accepted"][0]["objects"]
-                for v in SCHEMAS_DRAFT},
-        }
-        problems += [f"runtime record: {p}"
-                     for p in sv.runtime_record_problems(runtime_rec)]
-        probes = authorizer_probes()
-        mig_rec = {"sqlite_version": me["sqlite_version"],
-                   "source_id": me["source_id"], "features": me["features"],
-                   "migration_evidence_algorithm":
-                       MIGRATION_EVIDENCE_ALGORITHM,
-                   "authorizer_probes": probes}
-        problems += [f"migration runtime: {p}"
-                     for p in migration_runtime_record_problems(mig_rec)]
         paths = []
         for frm, mig in sorted(MIGRATIONS_DRAFT.items()):
             for a in versions[str(frm)]["accepted"]:
@@ -3818,9 +3864,7 @@ def _generate_artifact() -> tuple:
                     "migration_evidence_algorithm":
                         MIGRATION_EVIDENCE_ALGORITHM,
                     "manifest_algorithm": sv.MANIFEST_ALGORITHM,
-                    "runtime": {"sqlite_version": me["sqlite_version"],
-                                "source_id": me["source_id"],
-                                "features": me["features"]},
+                    "generated_on": generated_on,
                     "from_version": frm, "to_version": mig.to_version,
                     "source_acceptance_digest": a["digest"],
                     "source_full_manifest_hash":
@@ -3844,14 +3888,10 @@ def _generate_artifact() -> tuple:
                       "repository_commit": _repo_commit()},
         "schema_versions": versions,
         "legacy_base_versions": sorted(legacy_src()),
-        "runtimes": [runtime_rec],
-        "migration_runtimes": [mig_rec],
         "paths": paths,
     }
     with _registry():
         problems += [f"artifact: {p}" for p in schema_evidence_problems(art)]
-        problems += [f"migration runtimes: {p}"
-                     for p in migration_runtime_artifact_problems(art)]
         problems += [f"paths: {p}" for p in path_evidence_problems(art)]
         problems += [f"paths: {p}" for p in expected_path_problems(art)]
     return art, problems
@@ -3944,8 +3984,8 @@ def _write_evidence_locked() -> int:
         if tmp.exists():                      # v12's lesson: no stray .tmp
             tmp.unlink()
     print(f"recorded {EVIDENCE_FILE} for sqlite "
-          f"{sqlite3.sqlite_version}: {len(art['paths'])} path record(s), "
-          f"1 runtime, 1 migration-runtime qualification")
+          f"{sqlite3.sqlite_version}: {len(art['paths'])} path record(s), generated on "
+          f"{sv.attestation_key(art['paths'][0]['generated_on']) if art['paths'] else '(none)'}")
     return 0
 
 
@@ -3976,7 +4016,6 @@ def check_evidence() -> int:
         # unforeseen escape becomes a clean nonzero status, never a traceback.
         problems = []
         for validator in (schema_evidence_problems,
-                          migration_runtime_artifact_problems,
                           path_evidence_problems, expected_path_problems):
             try:
                 problems += validator(art)
@@ -3984,16 +4023,18 @@ def check_evidence() -> int:
                 problems.append(          # never raises regardless
                     f"{validator.__name__} escaped on this artifact: "
                     f"{_safe_repr(exc)}")
-        recorded = {sv.build_identity(r) for r in
-                    sv.active_records(_artifact_list(art, "runtimes"))}
     if problems:
         for p in problems:
             print(f"  - {p}")
         return 1
-    if sv.build_identity(sv.runtime_identity()) not in recorded:
-        print(f"artifact records a different runtime identity than this "
-              f"process (sqlite {sqlite3.sqlite_version}); structural checks "
-              f"pass, re-derivation needs the recording runtime")
+    # (0013 §5f.3) re-derivation runs on ANY build that is not refused, not only "the recording runtime": a path
+    # record states one fact for every build. Whether `generated_on` resolves to an attested record is NOT asked
+    # here (research's stage-1 read of I3(b), B9): this is the attestation job's criterion, and at the first branch
+    # run no attestation record exists yet.
+    status = sv.runtime_status()
+    if status.status == "refused":
+        print(f"this build is refused ({status.reason}); structural checks pass, re-derivation needs a build that "
+              f"verifies")
         return 2
     expected, gen_problems = _generate_artifact()
     if gen_problems:
@@ -4001,14 +4042,20 @@ def check_evidence() -> int:
             print(f"  - regeneration: {p}")
         return 1
     drop = {"generated_at", "generator"}      # volatile provenance fields
-    a = {k: v for k, v in art.items() if k not in drop}
-    b = {k: v for k, v in expected.items() if k not in drop}
+
+    def _comparable(x):
+        """The artifact without its volatile provenance, each path record without `generated_on` (B9)."""
+        out = {k: v for k, v in x.items() if k not in drop}
+        out["paths"] = [{f: v for f, v in r.items() if f != "generated_on"} if isinstance(r, dict) else r
+                        for r in x.get("paths", [])]
+        return out
+    a, b = _comparable(art), _comparable(expected)
     if a != b:
         keys = [k for k in a if a.get(k) != b.get(k)]
         print(f"artifact does not reproduce on this runtime; differing "
               f"sections: {keys}")
         return 1
-    print("evidence artifact reproduces exactly on this runtime")
+    print("evidence artifact reproduces exactly on this build (generated_on aside)")
     return 0
 
 
@@ -4022,17 +4069,16 @@ def simulate() -> int:
     (round 3)."""
     import tempfile
     with _draft() as art:
-        if not sv._runtime_supported_interim():
-            print(f"unsupported-sqlite: {sqlite3.sqlite_version} has no "
-                  f"qualified schema-runtime record in the draft evidence.")
+        if sv.runtime_status().status == "refused":
+            print(f"unsupported-sqlite: {sqlite3.sqlite_version} cannot be verified: "
+                  f"{sv.runtime_status().reason}.")
             print("Regenerate in a disposable copy: "
                   "python3 specs/migrations_0013.py --write-evidence")
             return 2
-        if not migration_runtime_supported(art):
-            print(f"unsupported-sqlite: {sqlite3.sqlite_version} has no "
-                  f"migration-confinement qualification.")
-            print("Regenerate in a disposable copy: "
-                  "python3 specs/migrations_0013.py --write-evidence")
+        failing = probes_problems(authorizer_probes())
+        if failing:
+            print(f"unsupported-sqlite: {sqlite3.sqlite_version}'s migration confinement does not hold "
+                  f"({failing[0]}).")
             return 2
 
     p = tempfile.mktemp(suffix=".db")

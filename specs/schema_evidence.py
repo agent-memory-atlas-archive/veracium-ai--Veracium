@@ -637,6 +637,26 @@ def releases(write: bool) -> int:
     return 1 if (unknown or broken or bad_stamp) else 0
 
 
+def acceptance_digest_problems(versions: dict) -> list:
+    """A16 (0013 v35 §5f.3), production's evidence check: at each version, two accepted manifestations that share an
+    acceptance digest must not differ, since the authority side derives the source full-manifest hash by LOOKUP from
+    (version, acceptance digest). Measured at a187209: 58 accepted manifestations, 58 distinct pairs. Total."""
+    out = []
+    if not isinstance(versions, dict):
+        return ["the accepted sets are not a mapping"]
+    for v, rec in sorted(versions.items()):
+        accepted = rec.get("accepted") if isinstance(rec, dict) else None
+        seen = {}
+        for a in accepted if isinstance(accepted, list) else []:
+            if not isinstance(a, dict) or type(a.get("digest")) is not str or not isinstance(a.get("objects"), dict):
+                continue
+            body = json.dumps(a["objects"], sort_keys=True)
+            if seen.setdefault(a["digest"], body) != body:
+                out.append(f"v{v}: two accepted manifestations share the acceptance digest {a['digest'][:12]}… and "
+                           f"differ (a rebuildable object): the authority's lookup would have two answers")
+    return out
+
+
 def check() -> int:
     if subprocess.run(["git", "rev-parse", "--git-dir"], cwd=ROOT,
                       capture_output=True).returncode:
@@ -660,6 +680,8 @@ def check() -> int:
                    f"its absence must fail, not pass silently (round 11)")
     elif json.loads(sv.VERSIONS.read_text()) != generated:
         bad.append("schema_versions.json does not match what this build generates")
+    else:
+        bad += acceptance_digest_problems(json.loads(sv.VERSIONS.read_text()).get("versions"))
     if POLICY_ARTIFACT.exists():
         want = {str(v): declared_policies(v) for v in sorted(SCHEMAS)}
         if json.loads(POLICY_ARTIFACT.read_text()) != want:

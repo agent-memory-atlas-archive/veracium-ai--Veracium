@@ -82,10 +82,7 @@ def test_each_verification_step_refuses_and_names_itself(monkeypatch, step):
         monkeypatch.setattr(sv, "_feature_probes", lambda: {**real(), "preserves_ddl_body": False})
         want = "feature probe preserves_ddl_body is False"
     elif step == "reproduction":
-        real = sv._constructor_objects
-        monkeypatch.setattr(sv, "_constructor_objects",
-                            lambda v: {k: (dict(e, sql=e["sql"] + " ") if k == "table:episodes" else e)
-                                       for k, e in real(v).items()})
+        _tamper_v1_constructor(monkeypatch, "table:episodes")
         want = "schema v1: table:episodes differs from the accepted manifest"
     elif step == "discrimination":
         monkeypatch.setattr(sv, "_near_miss_objects",
@@ -101,19 +98,23 @@ def test_each_verification_step_refuses_and_names_itself(monkeypatch, step):
 def test_reproduction_compares_the_complete_manifestation_not_the_digest_alone(monkeypatch):
     """INV-SA3 / S69: a rebuildable index's text is outside the digest, so a digest-only comparison passes a build
     that writes it differently; the complete manifestation refuses it."""
-    real = sv._constructor_objects
-
-    def wrong_index(v):
-        objs = real(v)
-        if "index:ix_episodes_user" in objs:
-            objs["index:ix_episodes_user"] = dict(objs["index:ix_episodes_user"],
-                                                  sql="CREATE INDEX ix_episodes_user ON episodes(user_id)")
-        return objs
-    monkeypatch.setattr(sv, "_constructor_objects", wrong_index)
-    assert sv._digest_of_identity(wrong_index(1), 1) in sv.accepted_digests(1)        # the digest alone passes
+    tampered = _tamper_v1_constructor(monkeypatch, "index:ix_episodes_user",
+                                      "CREATE INDEX ix_episodes_user ON episodes(user_id)")
+    assert sv._digest_of_identity(tampered, 1) in sv.accepted_digests(1)          # the digest alone passes
     st = sv.runtime_status()
     assert st.status == "refused" and st.reason == "schema v1: index:ix_episodes_user differs from the accepted " \
                                                     "manifest", st
+
+
+def _tamper_v1_constructor(monkeypatch, key, sql=None):
+    """The ACCEPTED side made wrong (the build stays real): v1's constructor entry with `key`'s SQL changed. Returns
+    the tampered objects."""
+    import copy
+    real = copy.deepcopy(sv.version_records())
+    entry = next(a for a in real["1"]["accepted"] if a.get("provenance") == "constructor v1")
+    entry["objects"][key] = dict(entry["objects"][key], sql=sql if sql is not None else entry["objects"][key]["sql"] + " ")
+    monkeypatch.setattr(sv, "version_records", lambda: real)
+    return entry["objects"]
 
 
 # ---- the near-miss set (§4b step 3, INV-SA4) --------------------------------------------------------------------------
@@ -575,8 +576,7 @@ def test_the_release_sidecar_copies_the_runtime(monkeypatch, tmp_path):
 
 # ---- the interim predicate's readers: a committed list (research's item 14 D9) ---------------------------------------
 INTERIM_READERS = {
-    # the 0013 model and its tests, until scope (b) rewrites the model's runtime seam (A1–A15)
-    "specs/migrations_0013.py", "tests/test_migrations_0013.py", "tests/test_0013_presend_gates.py",
+    # (the 0013 model and its tests left this list with I3(b): the model's gate is the measured status, 0013 §5f.3)
     # the evidence generator and the legacy-record tests, until the generator writes attestation records (I4/I5)
     "specs/schema_evidence.py", "tests/test_schema_model.py",
     # the offline launcher's runtime check and its selftest
@@ -644,6 +644,15 @@ def test_every_record_field_as_a_container_leaves_the_build_verified_naming_it(m
     with_records(monkeypatch, record_for_this_build(), record_for_this_build(**{field: bad}))
     st = sv.runtime_status()
     assert st.status == "verified" and st.reason and st.reason.startswith("attestation artifact: "), st
+    assert f"'{field}'" in st.reason or "fields " in st.reason, st      # it NAMES the field (research's M24)
+
+
+def test_a_validator_escape_poisons_that_record_and_the_build_stays_verified(monkeypatch):
+    """Research's M23: with the per-record try/except removed, an escaping validator would refuse every build."""
+    with_records(monkeypatch, record_for_this_build())
+    monkeypatch.setattr(sv, "attestation_record_problems", lambda r: (_ for _ in ()).throw(TypeError("boom")))
+    st = sv.runtime_status()
+    assert st.status == "verified" and "its validation raised TypeError" in st.reason, st
 
 
 def test_a_failing_identity_read_refuses_at_the_gate_and_never_raises_through_it(monkeypatch, tmp_path):
@@ -720,3 +729,22 @@ def test_the_release_preflight_warns_on_a_verified_build(monkeypatch, tmp_path):
         warnings.simplefilter("always")
         rm._preflight_classify(p)
     assert [x for x in w if issubclass(x.category, sv.UnattestedBuildWarning)]
+
+
+# ---- A16 (0013 v35): production's evidence check -------------------------------------------------------------------
+def test_a16_production_evidence_refuses_two_accepted_manifestations_sharing_an_acceptance_digest():
+    import copy
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("veracium_schema_evidence", ROOT / "specs" / "schema_evidence.py")
+    se = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(se)
+    versions = copy.deepcopy(sv.version_records())
+    assert se.acceptance_digest_problems(versions) == []                    # the shipped sets hold the rule
+    entry = versions["1"]["accepted"][0]
+    twin = copy.deepcopy(entry)
+    idx = next(k for k in twin["objects"] if k.startswith("index:"))
+    twin["objects"][idx] = dict(twin["objects"][idx], sql=twin["objects"][idx]["sql"] + " ")
+    assert sv._digest_of_identity(twin["objects"], 1) == entry["digest"]   # a rebuildable-only difference
+    versions["1"]["accepted"].append(twin)
+    probs = se.acceptance_digest_problems(versions)
+    assert len(probs) == 1 and probs[0].startswith("v1: two accepted manifestations share"), probs

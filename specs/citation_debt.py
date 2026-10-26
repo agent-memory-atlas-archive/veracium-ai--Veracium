@@ -96,7 +96,9 @@ CITATION_DEBT: dict = {
         "test_v4_file_into_v3_build_is_rejected": "unclassified_at_generation"
     },
     "0007": {
+        "test_a_foreign_identity_path_record_fails_the_artifact": "stale_version: M18's, replaced (0013 §5f.3): a path record has no runtime identity, so a foreign one is an extra KEY (A15) and an unresolved generated_on (A10)",
         "test_a_hostile_table_name_is_passed_as_a_value": "unclassified_at_generation",
+        "test_a_malformed_current_migration_runtime_record_poisons": "stale_version: M18's, retired with the migration-runtime record class (0007 §4g.6 4f; 0013 §5f.3): replaced by A12; the poisoning rule itself stays, test_a_missing_algorithm_field_is_malformed_not_superseded",
         "test_a_non_identical_schema_is_refused": "unclassified_at_generation",
         "test_adoption_audit_sink_failure_aborts": "unclassified_at_generation",
         "test_adoption_event_payload_is_typed": "unclassified_at_generation",
@@ -109,6 +111,7 @@ CITATION_DEBT: dict = {
         "test_in_memory_store_is_versioned": "unclassified_at_generation",
         "test_legacy_store_is_adopted_losslessly": "stale_version: 0013 \u00a75b replaced adoption-on-open with refuse-then-offline-migrate; the live node is test_s6_a_legacy_store_is_migrated_losslessly, and the S6 row's 'adopted' wording is the superseded contract",
         "test_new_store_is_stamped": "unclassified_at_generation",
+        "test_recorded_confinement_behaviours_must_reproduce_live": "stale_version: M15's, retired with the migration-runtime record class (0007 §4g.6 4f; 0013 §5f.3): replaced by A1 and A12, the sixteen probes run LIVE",
         "test_repair_revalidates_before_stamping": "unclassified_at_generation"
     },
     "0008": {
@@ -124,6 +127,11 @@ CITATION_DEBT: dict = {
     "0012": {
         "test_reinforcement_plan_inserts_no_duplicate": "unclassified_at_generation",
         "test_reinforcement_still_advances_observed_at": "renamed: a HISTORY mention \u2014 the \u00a77b row records that this test was inverted AND renamed at implementation to test_reinforcement_no_longer_advances_observed_at; the old name is the row's subject, not a live claim"
+    },
+    "0013": {
+        "test_a_foreign_identity_path_record_fails_the_artifact": "stale_version: M18's, replaced (0013 §5f.3): a path record has no runtime identity, so a foreign one is an extra KEY (A15) and an unresolved generated_on (A10)",
+        "test_a_malformed_current_migration_runtime_record_poisons": "stale_version: M18's, retired with the migration-runtime record class (0007 §4g.6 4f; 0013 §5f.3): replaced by A12; the poisoning rule itself stays, test_a_missing_algorithm_field_is_malformed_not_superseded",
+        "test_recorded_confinement_behaviours_must_reproduce_live": "stale_version: M15's, retired with the migration-runtime record class (0007 §4g.6 4f; 0013 §5f.3): replaced by A1 and A12, the sixteen probes run LIVE"
     },
     "0014": {
         "test_0010_consolidation_primitives": "unclassified_at_generation",

@@ -1313,7 +1313,7 @@ def artifact_problems(records=None) -> list:
     return problems
 
 
-def manifestation_problems(objs: dict, version: int) -> list:
+def manifestation_problems(objs: dict, version: int, schemas=None) -> list:
     """A recorded manifestation must be EXACTLY the declared object set.
 
     Round 9, finding 1a: a self-consistent fabrication was accepted — hashing
@@ -1325,7 +1325,8 @@ def manifestation_problems(objs: dict, version: int) -> list:
     validator once its digest was updated to match, and only the production
     predicate's separate full-comparison recovered safety. The key set must
     equal the declaration, and every entry must have the closed field shape."""
-    declared = {f"{o.kind}:{o.name}" for o in SCHEMAS[version]}
+    registry = SCHEMAS if schemas is None else schemas     # an explicit registry: the 0013 model's draft, unpatched
+    declared = {f"{o.kind}:{o.name}" for o in registry[version]}
     problems = [f"manifestation for v{version} contains undeclared object {k!r}"
                 for k in sorted(set(objs) - declared)]
     problems += [f"manifestation for v{version} is missing declared object {k!r}"
@@ -1356,7 +1357,7 @@ def manifestation_problems(objs: dict, version: int) -> list:
             if entry["type"] != kind:
                 problems.append(f"object {k!r} declares type {entry['type']!r}, "
                                 f"disagreeing with its key")
-            declared = {o.key: o for o in SCHEMAS.get(version, ())}
+            declared = {o.key: o for o in registry.get(version, ())}
             own = declared.get((kind, name))
             if own is not None:
                 want_tbl = name if kind == "table" else own.ddl.split(" ON ")[-1].split("(")[0].strip() if kind == "index" else entry["table"]
@@ -1453,6 +1454,9 @@ _MACHINE_RE = re.compile(r"[a-z0-9_]+")
 _SYSTEM_RE = re.compile(r"[A-Za-z0-9_]+")
 LIBC_TOKENS = frozenset({"glibc", "musl", "none"})
 KEY_FIELDS = ("sqlite_version", "source_id", "features", "compile_options_digest", "machine", "system", "libc")
+RUNTIME_STATUSES = ("attested", "verified", "refused")
+"""THE status vocabulary (§4a), one source: production's INV-SA11 grammar is it minus `refused` (a refused build never
+migrates), and the 0013 model's operation row admits all three (its authority is consumed before the gate refuses)."""
 
 CONFINEMENT_PROBE_KEYS = frozenset({
     "authorizer_api_available", "denies_begin", "denies_commit", "denies_end", "denies_rollback", "denies_savepoint",
@@ -1598,6 +1602,23 @@ def _near_miss_objects(nm, head_version: int) -> dict:
     return _built_objects(lambda c: [c.execute(ddl) for ddl in variant])
 
 
+def verify_reproduction(records, schemas) -> None:
+    """§4b step 2 alone, over EXPLICIT arguments: for every version `schemas` declares, its constructor DDL rebuilt in
+    memory must equal the ONE accepted constructor entry of `records`, complete manifestation and digest. Reproduction
+    is a property of the (build, schema) pair, so this is the step the 0013 model runs on its draft registry and its
+    one byte snapshot, by argument, with nothing patched or re-read (research's stage-1 read of I3(b), B1 (α′) and its
+    follow-up, condition 1); `verify_build` runs it on the production registry and evidence."""
+    for v in sorted(schemas):
+        entry = _accepted_constructor_entry(v, records)
+        objs = _built_objects(lambda c, ddls=[o.ddl for o in schemas[v]]: [c.execute(d) for d in ddls])
+        if objs != entry["objects"]:
+            raise VerificationFailure(f"schema v{v}: {_first_difference(objs, entry['objects'])} differs from the "
+                                      f"accepted manifest")
+        accepted = {a.get("digest") for a in records[str(v)]["accepted"] if isinstance(a, dict)}
+        if _digest_of_identity(objs, v, schemas) not in accepted:
+            raise VerificationFailure(f"schema v{v}: its constructor digest is not in the accepted set")
+
+
 def verify_build() -> None:
     """§4b's three steps, in order; raises VerificationFailure naming the FIRST failing step. Never consults a
     record: a record adds provenance, never replaces the measurement (INV-SA1), and the comparison is against the
@@ -1608,15 +1629,7 @@ def verify_build() -> None:
     for name in ("preserves_ddl_body", "xinfo_exposes_generated"):
         if probes.get(name) is not True:
             raise VerificationFailure(f"feature probe {name} is {probes.get(name)!r}")
-    for v in sorted(SCHEMAS):
-        entry = _accepted_constructor_entry(v, records)
-        objs = _constructor_objects(v)
-        if objs != entry["objects"]:
-            raise VerificationFailure(f"schema v{v}: {_first_difference(objs, entry['objects'])} differs from the "
-                                      f"accepted manifest")
-        accepted = {a.get("digest") for a in records[str(v)]["accepted"] if isinstance(a, dict)}
-        if _digest_of_identity(objs, v) not in accepted:
-            raise VerificationFailure(f"schema v{v}: its constructor digest is not in the accepted set")
+    verify_reproduction(records, SCHEMAS)
     accepted_head = [a.get("objects") for a in records[str(SCHEMA_VERSION)]["accepted"] if isinstance(a, dict)]
     kinds = {nm.kind for nm in near_misses.NEAR_MISSES}
     if kinds != set(near_misses.REQUIRED_KINDS):
@@ -1706,8 +1719,12 @@ def attestation_record_problems(r) -> list:
     return p
 
 
-def attestation_revision(r) -> str:
-    """`malformed` (not a mapping, or either revision field not an EXACT int: `True`, `"2"` and `2.0` are garbage,
+def attestation_revision(r, revision=None) -> str:
+    """`revision` (default: this module's own (manifest algorithm, schema version)) is passed EXPLICITLY by a caller
+    whose module globals may be patched (the 0013 model's draft context patches `SCHEMA_VERSION`): attestation records
+    are production package data, judged at production's revision.
+
+    `malformed` (not a mapping, or either revision field not an EXACT int: `True`, `"2"` and `2.0` are garbage,
     never a high revision — round 5's `True == 1` class, which S74 closed), else `current` (manifest algorithm AND
     schema version equal this build's), `future` (either is higher: a format this build cannot read) or `superseded`.
     A malformed or current record is validated and can poison; only a current one can attest; superseded and future
@@ -1717,12 +1734,13 @@ def attestation_revision(r) -> str:
     a, v = r.get("manifest_algorithm"), r.get("schema_version")
     if type(a) is not int or type(v) is not int:
         return "malformed"
-    if a > MANIFEST_ALGORITHM or v > SCHEMA_VERSION:
+    mine = (MANIFEST_ALGORITHM, SCHEMA_VERSION) if revision is None else revision
+    if a > mine[0] or v > mine[1]:
         return "future"
-    return "current" if (a, v) == (MANIFEST_ALGORITHM, SCHEMA_VERSION) else "superseded"
+    return "current" if (a, v) == mine else "superseded"
 
 
-def attestation_artifact_problems(records=None) -> list:
+def attestation_artifact_problems(records=None, revision=None) -> list:
     """Across the artifact (§4d, INV-SA6): any number of keys; a malformed CURRENT record poisons; one key with
     different EVIDENCE (result digest, confinement) conflicts; equal evidence is a duplicate. Provenance is never
     compared. Total."""
@@ -1734,9 +1752,12 @@ def attestation_artifact_problems(records=None) -> list:
         return [f"'attestations' is {type(records).__name__}, not a list"]
     problems, seen = [], {}
     for i, r in enumerate(records):
-        rev = attestation_revision(r)
+        rev = attestation_revision(r, revision)
         if rev == "malformed":
-            problems.append(f"attestation {i} is not a record with exact-int manifest_algorithm and schema_version")
+            bad = ([f"'{f}'" for f in ("manifest_algorithm", "schema_version") if type(r.get(f)) is not int]
+                   if isinstance(r, dict) else [])
+            problems.append(f"attestation {i}: " + (f"{' and '.join(bad)} must be an exact int" if bad
+                                                    else f"is a {type(r).__name__}, not a record"))
             continue
         if rev != "current":
             continue
@@ -1756,6 +1777,22 @@ def attestation_artifact_problems(records=None) -> list:
         else:
             seen[key] = (i, evidence)
     return problems
+
+
+def attested_key(key, records=None, revision=None) -> bool:
+    """THE attested predicate (§4a): an UNPOISONED attestation artifact AND exactly one current record whose full
+    key is `key`. `runtime_status()`'s `attested` and the 0013 model's `generated_on` resolution both decide through
+    this one function (research's stage-1 read of I3(b), B5: a record in a poisoned artifact attests nothing, for
+    either). Total: an unreadable artifact or a None key attests nothing."""
+    if key is None:
+        return False
+    try:
+        records = attestations() if records is None else records
+    except (OSError, ValueError):
+        return False
+    if attestation_artifact_problems(records, revision):
+        return False
+    return sum(1 for r in records if attestation_revision(r, revision) == "current" and attestation_key(r) == key) == 1
 
 
 # -- the status (§4a) ---------------------------------------------------------------------------------------------
@@ -1798,8 +1835,7 @@ def runtime_status() -> RuntimeStatus:
         poison = attestation_artifact_problems()
         if poison:
             return RuntimeStatus("verified", f"attestation artifact: {poison[0]}", key, unreadable, *build)
-        if key is not None and any(attestation_revision(r) == "current" and attestation_key(r) == key
-                                   for r in attestations()):
+        if attested_key(key, attestations()):
             return RuntimeStatus("attested", None, key, unreadable, *build)
         return RuntimeStatus("verified", None, key, unreadable, *build)
     except Exception as exc:  # noqa: BLE001 - fail closed, naming the escape
@@ -1852,8 +1888,10 @@ class UnattestedBuildWarning(UserWarning):
     """A `verified` build: it passed the open-time checks, but CI has not run the full schema suite on it (§4e)."""
 
 
-def _digest_of_identity(objs: dict, version: int) -> str:
-    """Digest a recorded identity mapping without rebuilding the database."""
+def _digest_of_identity(objs: dict, version: int, schemas=None) -> str:
+    """Digest a recorded identity mapping without rebuilding the database. `schemas` (default: the module registry)
+    names the declaration whose rebuildable keys are excluded, so a caller holding another registry (the 0013
+    model's draft) never needs the module patched."""
     # This lazily imported `schema_model` from specs/ until 0013's first
     # review package build: in the repo, specs/ was always on sys.path (tests
     # and spec scripts put it there) so everything passed — while a wheel, or a
@@ -1861,7 +1899,8 @@ def _digest_of_identity(objs: dict, version: int) -> str:
     # that the fail-closed predicate swallowed into "unsupported-sqlite".
     # A total predicate must not be where packaging bugs go to hide.
     import hashlib as _h
-    skip = rebuildable_keys(version)
+    skip = (rebuildable_keys(version) if schemas is None
+            else {o.key for o in schemas[version] if o.policy == REBUILDABLE})
     scoped = {k: v for k, v in objs.items() if tuple(k.split(":", 1)) not in skip}
     return _h.sha256(
         json.dumps(scoped, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

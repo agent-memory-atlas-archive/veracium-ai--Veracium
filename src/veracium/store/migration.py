@@ -27,7 +27,7 @@ from typing import Callable, NamedTuple, Optional
 from pydantic import BaseModel, TypeAdapter
 
 from ..schema import Episode
-from .schema_version import (SCHEMA_VERSION, SCHEMAS, OpenResult,
+from .schema_version import (RUNTIME_STATUSES, SCHEMA_VERSION, SCHEMAS, OpenResult,
                              PostCommitAuditError, StoreVersionError,
                              _AUDIT_STRING_CAP, _mint_store_identity, open_versioned)
 
@@ -275,7 +275,7 @@ class MigrationAuditEvent(NamedTuple):
 # 84 characters, a 64-character tail that is 60 hex plus a distribution's `altN`).
 _SQLITE_VERSION_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?")
 _SOURCE_ID_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9a-z]{64}")
-_MIGRATING_STATUSES = frozenset({"attested", "verified"})
+_MIGRATING_STATUSES = frozenset(RUNTIME_STATUSES) - {"refused"}
 
 
 def migration_runtime(status) -> MigrationRuntime:

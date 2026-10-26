@@ -313,8 +313,6 @@ INVENTORY = [
      "git-checkout", "a run's manifest resolves git state by design"),
     ("tests/longmemeval/test_manifest.py", "skip", "not a git checkout",
      "git-checkout", "git_state() resolves rather than remembers"),
-    ("tests/test_migrations_0013.py", "skip", "different runtime identity",
-     "host-conditional", "artifact records a different runtime identity"),
     ("tests/test_migrations_0013.py", "skipif", "geteuid",
      "host-conditional", "root euid defeats the read-only-store fixture"),
     ("tests/test_schema_model.py", "skip", "not a qualified runtime",

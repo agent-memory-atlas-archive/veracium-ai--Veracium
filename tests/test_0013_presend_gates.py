@@ -37,6 +37,24 @@ import migrations_0013 as m  # noqa: E402
 from veracium.store import schema_version as sv  # noqa: E402
 
 
+def fixture_attestation():
+    """A TESTS-ONLY attestation record for this build (research's stage-1 read of I3(b), B12): recognisable as a
+    fixture by its all-zeros provenance commit AND its `fixture-` run id, so a cell can prove none reaches package
+    data. Until the branch CI run writes the first real record (Quentin's sequencing ruling, 2026-10-26), the model's
+    path evidence resolves its `generated_on` through this."""
+    ident = sv.attestation_identity()
+    return {**{k: ident[k] for k in sv.KEY_FIELDS}, "manifest_algorithm": m.PRODUCTION_REVISION[0],
+            "schema_version": m.PRODUCTION_REVISION[1], "result_digest": "f" * 64,
+            "confinement": {k: True for k in sv.CONFINEMENT_PROBE_KEYS},
+            "provenance": [{"route": "fixture", "runner_image": "fixture", "run_id": "fixture-tests", "job_id": 0,
+                            "commit": "0" * 40}]}
+
+
+@pytest.fixture(autouse=True)
+def _a_fixture_attestation_for_this_build(monkeypatch):
+    monkeypatch.setattr(sv, "attestations", lambda: [fixture_attestation()])
+
+
 @pytest.fixture(autouse=True)
 def _mktemp_under_tmp_path(tmp_path):
     """Every `tempfile` name this module mints lands under the test's own
@@ -1167,11 +1185,11 @@ _INJECTIONS = [
      _connect_iso_fails,
      _outcome_is("internal-error")),
     ("runtime-gate-DatabaseError",
-     lambda: _install_attr(m.sv, "_runtime_supported_interim",
+     lambda: _install_attr(m.sv, "runtime_status",
                            _raiser(sqlite3.DatabaseError("probe defect"))),
      _outcome_is("internal-error")),
     ("migration-runtime-DatabaseError",
-     lambda: _install_attr(m, "migration_runtime_supported",
+     lambda: _install_attr(m, "authorizer_probes",
                            _raiser(sqlite3.DatabaseError("probe defect"))),
      _outcome_is("internal-error")),
     ("open_versioned-read-DatabaseError",

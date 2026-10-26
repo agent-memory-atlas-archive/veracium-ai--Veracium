@@ -37,6 +37,27 @@ from veracium.store.schema_version import identity, manifest  # noqa: E402
 pytestmark = pytest.mark.filterwarnings("ignore::veracium.store.schema_version.UnattestedBuildWarning")
 
 
+_REAL_ATTESTATIONS = sv.attestations
+
+
+def fixture_attestation():
+    """A TESTS-ONLY attestation record for this build (research's stage-1 read of I3(b), B12): recognisable as a
+    fixture by its all-zeros provenance commit AND its `fixture-` run id, so a cell can prove none reaches package
+    data. Until the branch CI run writes the first real record (Quentin's sequencing ruling, 2026-10-26), the model's
+    path evidence resolves its `generated_on` through this."""
+    ident = sv.attestation_identity()
+    return {**{k: ident[k] for k in sv.KEY_FIELDS}, "manifest_algorithm": m13.PRODUCTION_REVISION[0],
+            "schema_version": m13.PRODUCTION_REVISION[1], "result_digest": "f" * 64,
+            "confinement": {k: True for k in sv.CONFINEMENT_PROBE_KEYS},
+            "provenance": [{"route": "fixture", "runner_image": "fixture", "run_id": "fixture-tests", "job_id": 0,
+                            "commit": "0" * 40}]}
+
+
+@pytest.fixture(autouse=True)
+def _a_fixture_attestation_for_this_build(monkeypatch):
+    monkeypatch.setattr(sv, "attestations", lambda: [fixture_attestation()])
+
+
 @pytest.fixture(autouse=True)
 def _mktemp_under_tmp_path(tmp_path):
     """Every `tempfile` name this module mints lands under the test's own
@@ -529,33 +550,20 @@ def test_a_tampered_accepted_manifest_poisons_the_whole_context(monkeypatch):
 # --- round 3, finding 3: migration-runtime qualification ------------------
 
 def test_the_migration_runtime_gate_is_independent_of_0007s(monkeypatch):
-    """A runtime qualified for schema construction is NOT thereby qualified
-    for migration confinement. Removing the migration-runtime record refuses
-    the migration operation while ordinary opening is untouched."""
-    art = json.loads(m13.EVIDENCE_FILE.read_text())
-    art["migration_runtimes"] = []
-    _patch_artifact(monkeypatch, art)
+    """M15, kept, in A3's shape (0013 §5f.3): a build `verified` for the schema is NOT thereby qualified for
+    migration confinement. With a permissive authorizer the sixteen probes fail LIVE: ordinary opening proceeds,
+    `migrate_store` refuses `unsupported-sqlite` naming the first false probe, and the store's bytes are unchanged.
+    Mutant: gate migration on `runtime_status()` alone."""
+    monkeypatch.setattr(m13, "_authorizer", lambda *a: sqlite3.SQLITE_OK)
     p = _v1_store()
-    assert m13.migrate_store(p, m13.make_authority(p)) == "unsupported-sqlite"
+    before = Path(p).read_bytes()
+    with m13._draft():
+        assert sv.runtime_status().status in ("attested", "verified")
+    out = m13.migrate_store(p, m13.make_authority(p))
+    assert out == "unsupported-sqlite"
+    assert m13.probes_problems(m13.authorizer_probes())[0] in out.diagnostic
+    assert Path(p).read_bytes() == before
     assert m13.open_or_migrate(p) == "migration-required"
-
-
-def test_recorded_confinement_behaviours_must_reproduce_live(monkeypatch):
-    """The record is not trusted: consumption re-runs the probes and compares,
-    mirroring how _runtime_supported_interim() re-derives constructor manifestations."""
-    real = m13.authorizer_probes()
-    lying = dict(real, denies_pragma=False)
-    monkeypatch.setattr(m13, "authorizer_probes", lambda: lying)
-    p = _v1_store()
-    assert m13.migrate_store(p, m13.make_authority(p)) == "unsupported-sqlite"
-
-
-def test_a_record_with_a_failed_probe_never_qualifies():
-    art = json.loads(m13.EVIDENCE_FILE.read_text())
-    rec = copy.deepcopy(art["migration_runtimes"][0])
-    rec["authorizer_probes"]["denies_attach"] = False
-    assert any("required confinement" in p
-               for p in m13.migration_runtime_record_problems(rec))
 
 
 def test_the_authorizer_probes_all_hold_on_this_runner():
@@ -616,7 +624,8 @@ def test_a_missing_rebuildable_index_is_repaired_before_stamping(monkeypatch):
 
 
 def test_an_unqualified_runtime_cannot_open_or_migrate(monkeypatch):
-    monkeypatch.setattr(sv, "_runtime_supported_interim", lambda: False)
+    monkeypatch.setattr(sv, "runtime_status",
+                        lambda: sv.RuntimeStatus("refused", "feature probe preserves_ddl_body is False", None, ()))
     p = _v1_store()
     assert m13.open_or_migrate(p) == "unsupported-sqlite"
     assert m13.migrate_store(p, m13.make_authority(p)) == "unsupported-sqlite"
@@ -625,7 +634,8 @@ def test_an_unqualified_runtime_cannot_open_or_migrate(monkeypatch):
 def test_the_simulator_stops_cleanly_after_a_runtime_refusal(monkeypatch, capsys):
     """Round 3: the simulator printed three refusals, then continued into
     confirmation-table operations and crashed."""
-    monkeypatch.setattr(sv, "_runtime_supported_interim", lambda: False)
+    monkeypatch.setattr(sv, "runtime_status",
+                        lambda: sv.RuntimeStatus("refused", "feature probe preserves_ddl_body is False", None, ()))
     rc = m13.simulate()
     assert rc == 2
     assert "unsupported-sqlite" in capsys.readouterr().out
@@ -668,24 +678,34 @@ def test_ordinary_open_has_no_authority_parameter():
 # --- the evidence artifact reproduces -------------------------------------
 
 def test_the_committed_evidence_artifact_is_valid_and_reproduces():
-    """`--check-evidence`'s core, as a regression: the committed artifact
-    passes every validator, and on the recording runtime it reproduces
-    exactly (modulo the generation timestamp)."""
+    """M11, kept (0013 §5f.3): `--check-evidence`'s core. The committed artifact passes every structural validator,
+    and on ANY build that is not refused it re-derives exactly, modulo the generation provenance and each path
+    record's `generated_on` (research's stage-1 read of I3(b), B9). Whether `generated_on` resolves is the pin below."""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
     with m13._registry():
         assert m13.schema_evidence_problems(art) == []
         assert m13.path_evidence_problems(art) == []
-        recorded = {sv.build_identity(r)
-                    for r in sv.active_records(art["runtimes"])}
-        mine = sv.build_identity(sv.runtime_identity())
-    if mine not in recorded:
-        pytest.skip("artifact records a different runtime identity; "
-                    "regenerate with --write-evidence to verify here")
+        assert m13.expected_path_problems(art) == []
+    assert sv.runtime_status().status != "refused"
     expected, problems = m13._generate_artifact()
     assert problems == []
-    drop = {"generated_at", "generator"}      # volatile provenance fields
-    assert {k: v for k, v in art.items() if k not in drop} \
-        == {k: v for k, v in expected.items() if k not in drop}
+
+    def comparable(x):
+        out = {k: v for k, v in x.items() if k not in ("generated_at", "generator")}
+        out["paths"] = [{f: v for f, v in r.items() if f != "generated_on"} for r in x["paths"]]
+        return out
+    assert comparable(art) == comparable(expected)
+    assert m13.check_evidence() == 0
+
+
+def test_the_committed_path_evidence_was_generated_on_an_attested_build(monkeypatch):
+    """A10 against the REAL package data, not the tests' fixture record: every committed path record's
+    `generated_on` resolves to an attested build. EXPECTED RED until the branch CI run writes the first attestation
+    record (Quentin's sequencing ruling, 2026-10-26); the batch's last gate asserts this node is ABSENT from the
+    expected-red set (research's B13), so it cannot ride past the main push."""
+    monkeypatch.setattr(sv, "attestations", _REAL_ATTESTATIONS)
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    assert m13.path_provenance_problems(art) == []
 
 
 def test_full_manifest_hash_sees_what_the_acceptance_digest_excludes():
@@ -705,13 +725,17 @@ def test_full_manifest_hash_sees_what_the_acceptance_digest_excludes():
 def test_a_malformed_accepted_manifestation_fails_closed(monkeypatch):
     """Round 4 measured `objects: 1` raising TypeError out of context entry.
     Any malformed nested field in the schema evidence poisons the context and
-    every operation reads `unsupported-sqlite` — no exception escapes."""
+    every operation reads `unsupported-sqlite` — no exception escapes. (I3(b): the authority's key now LOOKS UP the
+    source full-manifest hash in the accepted set (A16), so the migration checks that set's structure FIRST and reads
+    a malformed one as poisoned evidence, never as missing evidence; research's stage-1 follow-up.)"""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
     art["schema_versions"]["1"]["accepted"][0]["objects"] = 1
     _patch_artifact(monkeypatch, art)
     p = _v1_store()
+    before = Path(p).read_bytes()
     assert m13.open_or_migrate(p) == "unsupported-sqlite"
     assert m13.migrate_store(p, m13.make_authority(p)) == "unsupported-sqlite"
+    assert Path(p).read_bytes() == before
 
 
 def test_a_malformed_path_field_fails_closed(monkeypatch):
@@ -768,70 +792,19 @@ def test_registry_validation_is_total_over_malformed_keys():
 
 # --- round 4, finding 2: malformed current migration-runtime records poison -
 
-def test_a_malformed_current_migration_runtime_record_poisons(monkeypatch):
-    """Round 4 measured `{"migration_evidence_algorithm": 1}` beside the
-    valid record being silently filtered while qualification held."""
-    art = json.loads(m13.EVIDENCE_FILE.read_text())
-    art["migration_runtimes"].append({"migration_evidence_algorithm": 1})
-    _patch_artifact(monkeypatch, art)
-    assert m13.migration_runtime_supported(art) is False
-    p = _v1_store()
-    assert m13.migrate_store(p, m13.make_authority(p)) == "unsupported-sqlite"
-    assert m13.open_or_migrate(p) == "migration-required"   # ordinary open unaffected
-
-
-def test_a_duplicate_migration_runtime_identity_poisons(monkeypatch):
-    art = json.loads(m13.EVIDENCE_FILE.read_text())
-    art["migration_runtimes"].append(
-        copy.deepcopy(art["migration_runtimes"][0]))
-    _patch_artifact(monkeypatch, art)
-    p = _v1_store()
-    assert m13.migrate_store(p, m13.make_authority(p)) == "unsupported-sqlite"
-
 
 def test_a_missing_algorithm_field_is_malformed_not_superseded():
+    """M18's poisoning rule, kept (the migration-runtime class it was written over is withdrawn; the rule now governs
+    the path records): a missing algorithm field is malformed, never superseded."""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
-    rec = copy.deepcopy(art["migration_runtimes"][0])
+    rec = copy.deepcopy(art["paths"][0])
     del rec["migration_evidence_algorithm"]
-    art["migration_runtimes"] = [art["migration_runtimes"][0], rec]
+    art["paths"] = [art["paths"][0], rec]
     with m13._registry():
-        assert any("malformed, not" in p
-                   for p in m13.migration_runtime_artifact_problems(art))
+        assert any("malformed, not" in p for p in m13.path_evidence_problems(art))
 
 
 # --- round 4, finding 3: path cardinality is exact across the artifact -----
-
-def test_a_foreign_identity_path_record_fails_the_artifact(monkeypatch):
-    """Round 4 measured a duplicated path with a foreign runtime identity
-    passing both validators and the migration proceeding."""
-    art = json.loads(m13.EVIDENCE_FILE.read_text())
-    foreign = copy.deepcopy(art["paths"][0])
-    foreign["runtime"]["sqlite_version"] = "99"
-    foreign["runtime"]["source_id"] = "foreign"
-    art["paths"].append(foreign)
-    _patch_artifact(monkeypatch, art)
-    with m13._registry():
-        assert m13.path_evidence_problems(art)
-        assert m13.expected_path_problems(art)
-    p = _v1_store()
-    assert m13.migrate_store(p, m13.make_authority(p)) \
-        == "migration-evidence-missing"
-
-
-def test_a_path_runtime_must_resolve_to_both_qualifications():
-    """Every current path record's identity must resolve to exactly one
-    active schema-runtime record AND one valid migration-runtime record."""
-    art = json.loads(m13.EVIDENCE_FILE.read_text())
-    rec = copy.deepcopy(art["paths"][0])
-    rec["runtime"]["features"] = ["not", "a", "mapping"]
-    with m13._registry():
-        probs = m13.path_record_problems(rec, art)
-    assert any("malformed" in p for p in probs)
-    art2 = json.loads(m13.EVIDENCE_FILE.read_text())
-    art2["migration_runtimes"] = []
-    with m13._registry():
-        probs = m13.path_record_problems(art2["paths"][0], art2)
-    assert any("migration-runtime" in p for p in probs)
 
 
 # --- round 4, finding 4: confinement probes require SQLITE_AUTH ------------
@@ -1502,7 +1475,7 @@ def test_an_internal_defect_is_not_a_store_outcome(monkeypatch):
     known rollback state."""
     def boom():
         raise RuntimeError("internal validator bug")
-    monkeypatch.setattr(sv, "_runtime_supported_interim", boom)
+    monkeypatch.setattr(sv, "runtime_status", boom)
     p = _v1_store()
     out = m13.open_or_migrate(p)
     assert out == "internal-error"
@@ -1518,7 +1491,7 @@ def test_check_evidence_is_total_over_non_mapping_runtime_members(monkeypatch,
     """`[42]` in the runtimes list raised AttributeError out of
     check_evidence; the delegated accessor is now total."""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
-    art["runtimes"] = [42]
+    art["paths"] = [42]
     seeded = tmp_path / "evidence.json"
     seeded.write_text(json.dumps(art, indent=1, sort_keys=True))
     monkeypatch.setattr(m13, "EVIDENCE_FILE", seeded)
@@ -1558,9 +1531,11 @@ def test_an_authorizer_allowing_temp_triggers_fails_qualification(monkeypatch):
     probes = m13.authorizer_probes()
     assert probes["denies_temp_trigger"] is False            # allowed → not denied
     assert probes["denies_temp_table"] is True               # still denied
-    # ...and a runtime whose live probes don't reproduce the record refuses.
-    art = json.loads(m13.EVIDENCE_FILE.read_text())
-    assert m13.migration_runtime_supported(art) is False
+    # A4 (0013 §5f.3): the live probes refuse the migration, naming denies_temp_trigger first.
+    assert m13.probes_problems(probes)[0] == "probe denies_temp_trigger is False"
+    p = _v1_store()
+    out = m13.migrate_store(p, m13.make_authority(p))
+    assert out == "unsupported-sqlite" and "denies_temp_trigger" in out.diagnostic
 
 
 # --- round 8, finding 2: audit schema and state machine enforced -----------
@@ -1898,8 +1873,10 @@ def test_an_authorizer_allowing_temp_vtables_fails_qualification(monkeypatch):
     probes = m13.authorizer_probes()
     assert probes["denies_temp_virtual_table"] is False
     assert probes["denies_temp_table"] is True
-    art = json.loads(m13.EVIDENCE_FILE.read_text())
-    assert m13.migration_runtime_supported(art) is False
+    assert m13.probes_problems(probes)[0] == "probe denies_temp_virtual_table is False"      # A4
+    p = _v1_store()
+    out = m13.migrate_store(p, m13.make_authority(p))
+    assert out == "unsupported-sqlite" and "denies_temp_virtual_table" in out.diagnostic
 
 
 # --- round 9, finding 5: generated_at is canonical -------------------------
@@ -2045,7 +2022,7 @@ def test_a_typed_storage_outage_is_retryable():
 
 # --- round 10, finding 5: check_evidence is total over malformed containers -
 
-@pytest.mark.parametrize("field", ["runtimes", "migration_runtimes", "paths"])
+@pytest.mark.parametrize("field", ["schema_versions", "legacy_base_versions", "paths"])
 @pytest.mark.parametrize("value", [None, False, 0, {}, "string"])
 def test_check_evidence_is_total_over_malformed_list_fields(field, value,
                                                             monkeypatch,
@@ -2063,16 +2040,16 @@ def test_check_evidence_is_total_over_malformed_list_fields(field, value,
     assert rc == 1
 
 
-@pytest.mark.parametrize("field", ["runtimes", "migration_runtimes"])
+@pytest.mark.parametrize("field", ["schema_versions", "legacy_base_versions", "paths"])
 def test_the_artifact_validators_are_total_over_non_lists(field):
     art = json.loads(m13.EVIDENCE_FILE.read_text())
     art[field] = False
     with m13._registry():
         # None of these raise; each reports the malformed container.
         assert m13.schema_evidence_problems(art)
-        m13.migration_runtime_artifact_problems(art)
         m13.path_evidence_problems(art)
         m13.expected_path_problems(art)
+        m13.path_provenance_problems(art)
 
 
 # --- round 10 corrections: event_id grammar, -O-safe schema ----------------
@@ -2304,10 +2281,10 @@ _NESTED_MUTATIONS = {
         lambda a: a["schema_versions"]["1"]["accepted"].__setitem__(0, None),
     "accepted-objects=false":
         lambda a: a["schema_versions"]["1"]["accepted"][0].update(objects=False),
-    "runtime-schema_version={}":
-        lambda a: a["runtimes"][0].update(schema_version={}),
-    "runtime-sqlite_version=[]":
-        lambda a: a["runtimes"][0].update(sqlite_version=[]),
+    "generated_on-features={}":
+        lambda a: a["paths"][0]["generated_on"].update(features={}),
+    "generated_on-sqlite_version=[]":
+        lambda a: a["paths"][0]["generated_on"].update(sqlite_version=[]),
 }
 
 
@@ -2323,9 +2300,9 @@ def test_every_validator_is_total_over_nested_malformed_json(label):
     _NESTED_MUTATIONS[label](art)
     with m13._registry():
         reports = [fn(art) for fn in (m13.schema_evidence_problems,
-                                      m13.migration_runtime_artifact_problems,
                                       m13.path_evidence_problems,
-                                      m13.expected_path_problems)]
+                                      m13.expected_path_problems,
+                                      m13.path_provenance_problems)]
     assert all(isinstance(r, list) for r in reports)      # total: never raises
     assert any(r for r in reports)                        # and the art is refused
 
@@ -2464,9 +2441,8 @@ def test_every_validator_is_total_under_recursive_nested_mutation():
             cur = cur[p]
         cur[path[-1]] = val
 
-    validators = [m13.schema_evidence_problems,
-                  m13.migration_runtime_artifact_problems,
-                  m13.path_evidence_problems, m13.expected_path_problems]
+    validators = [m13.schema_evidence_problems, m13.path_evidence_problems, m13.expected_path_problems,
+                  m13.path_provenance_problems]
     combos = 0
     for path in node_paths(base):
         if not path:
@@ -2486,8 +2462,8 @@ def test_every_validator_is_total_under_recursive_nested_mutation():
 
 
 @pytest.mark.parametrize("path,val,fn", [
-    (("paths", 0, "runtime", "source_id"), {}, "path_evidence_problems"),
-    (("paths", 0, "runtime", "sqlite_version"), [], "expected_path_problems"),
+    (("paths", 0, "generated_on", "source_id"), {}, "path_evidence_problems"),
+    (("paths", 0, "generated_on", "sqlite_version"), [], "path_provenance_problems"),
     (("schema_versions", "1", "accepted", 0, "digest"), {}, "expected_path_problems"),
 ])
 def test_the_specific_nested_key_escapes_are_closed(path, val, fn):
@@ -2841,7 +2817,7 @@ def test_a_runtime_probe_defect_is_internal_error_not_invalid_store(monkeypatch)
 
     def boom():
         raise sqlite3.DatabaseError("runtime probe library defect")
-    monkeypatch.setattr(m13.sv, "_runtime_supported_interim", boom)
+    monkeypatch.setattr(m13.sv, "runtime_status", boom)
     out = m13.migrate_store(p, auth)
     assert out == "internal-error"             # NOT invalid-store
     assert sqlite3.connect(p).execute("PRAGMA user_version").fetchone()[0] == 1
@@ -4212,6 +4188,7 @@ def test_an_activated_receipt_lie_without_a_row_stays_not_consumed(monkeypatch):
     assert m13.migrate_store(p, auth) == "internal-error"
     # never consumed: a retry with the real sink migrates.
     monkeypatch.undo()
+    monkeypatch.setattr(sv, "attestations", lambda: [fixture_attestation()])      # undo() took the fixture too
     assert m13.migrate_store(p, auth) == "migrated"
 
 
@@ -4307,7 +4284,7 @@ def test_the_fallback_preserves_known_unchanged(monkeypatch):
     monkeypatch.setattr(m13, "_store_facts_from_state",
                         lambda *a, **k: (_ for _ in ()).throw(
                             RuntimeError("derivation boom")))
-    monkeypatch.setattr(m13.sv, "_runtime_supported_interim",
+    monkeypatch.setattr(m13.sv, "runtime_status",
                         lambda *a, **k: (_ for _ in ()).throw(
                             sqlite3.DatabaseError("gate boom")))
     m13.migrate_store(p, auth)
@@ -4662,3 +4639,214 @@ def test_a_total_absence_of_any_terminal_write_stays_false(monkeypatch):
     with pytest.raises(m13.MigrationAuditWriteError) as exc:
         m13.migrate_store(p, auth)
     assert exc.value.audit_committed is False
+
+
+# ---- 0013 §5f.3 carrier (i): the finite acceptance matrix A1–A16 (0007 I3(b)) -----------------------------------------
+def _with_attestations(monkeypatch, *records):
+    monkeypatch.setattr(sv, "attestations", lambda: list(records))
+
+
+def _generated_on_elsewhere(monkeypatch, machine="aarch64"):
+    """The world of A1: the path evidence was generated on ANOTHER attested build (an `aarch64` key), and the
+    running build has no record, so it is `verified`, not `attested`."""
+    other = dict(fixture_attestation(), machine=machine)
+    _with_attestations(monkeypatch, other)
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    for r in art["paths"]:
+        r["generated_on"] = dict(r["generated_on"], machine=machine)
+    _patch_artifact(monkeypatch, art)
+    return art
+
+
+def _row(auth):
+    return m13._AUDIT._ops[auth.operation_id]
+
+
+def test_a1_a_verified_build_migrates_and_its_row_says_verified(monkeypatch):
+    """A1. Mutant: write `attested` unconditionally (INV-SA11's), or require a record for this build (the model at
+    58dd7f6)."""
+    _generated_on_elsewhere(monkeypatch)
+    assert sv.runtime_status().status == "verified"
+    p = _v1_store()
+    auth = m13.make_authority(p)
+    assert m13.migrate_store(p, auth) == "migrated"
+    me = sv.runtime_identity()
+    assert dict(_row(auth)["runtime"]) == {"sqlite_version": me["sqlite_version"], "source_id": me["source_id"],
+                                           "status": "verified"}
+
+
+def test_a2_the_attested_build_migrates_and_its_row_says_attested():
+    """A2 (control): the fixture record attests this build."""
+    assert sv.runtime_status().status == "attested"
+    p = _v1_store()
+    auth = m13.make_authority(p)
+    assert m13.migrate_store(p, auth) == "migrated"
+    assert _row(auth)["runtime"]["status"] == "attested"
+
+
+def test_a5_a_refused_build_is_refused_after_consumption_and_the_store_is_unchanged(monkeypatch):
+    """A5, and research's option (i) condition 2: a near-miss not told apart refuses the build. The MEASUREMENT moved
+    to the snapshot phase, the DECISION did not: the authority is consumed, the row records `refused`, the outcome is
+    `unsupported-sqlite`, and the store bytes are unchanged. Mutant: run confinement first and migrate when it passes."""
+    head = None
+
+    def same_as_head(m, v):
+        nonlocal head
+        head = head or sv._accepted_constructor_entry(v)["objects"]
+        return head
+    monkeypatch.setattr(sv, "_near_miss_objects", same_as_head)
+    calls = []
+    monkeypatch.setattr(m13, "authorizer_probes", lambda: calls.append(1) or {})
+    p = _v1_store()
+    before = Path(p).read_bytes()
+    auth = m13.make_authority(p)
+    assert m13.open_or_migrate(p) == "unsupported-sqlite"
+    out = m13.migrate_store(p, auth)
+    assert out == "unsupported-sqlite" and "was not told apart" in out.diagnostic
+    assert _row(auth)["runtime"]["status"] == "refused"
+    assert calls == []                                    # confinement never ran for a refused build
+    assert Path(p).read_bytes() == before
+
+
+def test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths(monkeypatch):
+    """A10, and research's B5: no record at all; and a matching valid record beside an unrelated MALFORMED one (a
+    poisoned attestation artifact attests nothing, for production and for the model alike)."""
+    for records in ([], [fixture_attestation(), dict(fixture_attestation(), machine="AMD64")]):
+        _with_attestations(monkeypatch, *records)
+        art = json.loads(m13.EVIDENCE_FILE.read_text())
+        assert m13.path_provenance_problems(art), records
+        p = _v1_store()
+        assert m13.migrate_store(p, m13.make_authority(p)) == "migration-evidence-missing"
+
+
+def test_a11_two_attested_keys_are_valid_and_each_resolves_separately(monkeypatch):
+    """A11, research's item 8(c): records differing ONLY in `machine` are two keys; this build is attested by its own,
+    and path evidence generated on the other resolves to exactly that one."""
+    mine, other = fixture_attestation(), dict(fixture_attestation(), machine="aarch64")
+    _with_attestations(monkeypatch, mine, other)
+    assert sv.attestation_artifact_problems([mine, other]) == []
+    assert sv.runtime_status().status == "attested"
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    for r in art["paths"]:
+        r["generated_on"] = dict(r["generated_on"], machine="aarch64")
+    assert m13.path_provenance_problems(art) == []
+
+
+def test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probes_still_run_live(monkeypatch):
+    """A12: the recorded False is neither authority (refuse without running) nor a pass; verification still runs,
+    and the migration still runs the sixteen probes live."""
+    bad = fixture_attestation()
+    bad["confinement"] = dict(bad["confinement"], denies_attach=False)
+    _with_attestations(monkeypatch, bad)
+    assert sv.attestation_artifact_problems([bad])
+    st = sv.runtime_status()
+    assert st.status == "verified" and "attestation artifact" in st.reason
+    calls = []
+    real = m13.authorizer_probes
+    monkeypatch.setattr(m13, "authorizer_probes", lambda: calls.append(1) or real())
+    _generated_on_elsewhere(monkeypatch)                  # the path evidence resolves elsewhere; this record poisons
+    _with_attestations(monkeypatch, dict(fixture_attestation(), machine="aarch64"), bad)
+    p = _v1_store()
+    m13.migrate_store(p, m13.make_authority(p))
+    assert calls, "the probes did not run live"
+
+
+def test_a15_an_extra_current_path_record_outside_the_expected_set_is_a_cardinality_refusal(monkeypatch):
+    """A15 (it replaces M18's foreign-identity test): a path record has no runtime identity, so a foreign build's is
+    an extra KEY. Mutant: count only expected keys."""
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    extra = copy.deepcopy(art["paths"][0])
+    extra["source_acceptance_digest"] = "0" * 64
+    art["paths"].append(extra)
+    with m13._registry():
+        assert any("outside the expected set" in p for p in m13.expected_path_problems(art))
+    _patch_artifact(monkeypatch, art)
+    p = _v1_store()
+    assert m13.migrate_store(p, m13.make_authority(p)) in ("migration-evidence-missing",)
+
+
+def test_a16_two_accepted_manifestations_sharing_an_acceptance_digest_are_refused():
+    """A16 (0013 v35), the model's validator: (version, acceptance digest) must determine the full manifestation."""
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    a = art["schema_versions"]["1"]["accepted"][0]
+    twin = copy.deepcopy(a)
+    idx = next(k for k in twin["objects"] if k.startswith("index:"))
+    twin["objects"][idx] = dict(twin["objects"][idx], sql=twin["objects"][idx]["sql"] + " ")
+    twin["provenance"] = "a rebuildable-index variant"
+    assert m13.sv._digest_of_identity(twin["objects"], 1, m13.SCHEMAS_DRAFT) == a["digest"]   # same acceptance digest
+    art["schema_versions"]["1"]["accepted"].append(twin)
+    assert any("share the acceptance digest" in p for p in m13.schema_evidence_problems(art))
+
+
+def test_one_measurement_per_operation_by_identity(monkeypatch):
+    """Research's option (i) conditions 1 and 4: the operation measures ONCE (one `verify_build`, one byte snapshot),
+    the reproduction reads the snapshot's own parsed records, and the row records that measurement."""
+    vb, snaps, repro = [], [], []
+    real_vb, real_snap, real_repro = sv.verify_build, m13._artifact_snapshot, sv.verify_reproduction
+    monkeypatch.setattr(sv, "verify_build", lambda: vb.append(1) or real_vb())
+    monkeypatch.setattr(m13, "_artifact_snapshot", lambda: snaps.append(real_snap()) or snaps[-1])
+    monkeypatch.setattr(sv, "verify_reproduction", lambda records, schemas: repro.append(records)
+                        or real_repro(records, schemas))
+    p = _v1_store()
+    auth = m13.make_authority(p)
+    vb.clear(); snaps.clear(); repro.clear()
+    assert m13.migrate_store(p, auth) == "migrated"
+    assert len(vb) == 1 and len(snaps) == 1, (vb, len(snaps))
+    assert [r for r in repro if r is snaps[0][0]["schema_versions"]], "the reproduction did not read the snapshot"
+    assert _row(auth)["runtime"]["status"] == "attested"
+
+
+def test_the_authority_lookup_never_decides_on_an_unvalidated_accepted_set(monkeypatch):
+    """Research's follow-up: the A16 lookup runs only after the accepted set's structure is checked, so a malformed
+    set is poisoned evidence (`unsupported-sqlite`), never "missing"."""
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    art["schema_versions"]["1"]["accepted"][0]["objects"] = 1
+    _patch_artifact(monkeypatch, art)
+    monkeypatch.setattr(m13, "_authority_path_key", lambda a, art: pytest.fail("the lookup ran on a malformed set"))
+    p = _v1_store()
+    assert m13.migrate_store(p, m13.make_authority(p)) == "unsupported-sqlite"
+
+
+def test_no_fixture_attestation_reaches_package_data(tmp_path, monkeypatch):
+    """Research's B12: a fixture record (all-zeros provenance commit, `fixture-` run id) attests a build on users'
+    machines if it ever reaches package data. The packaged artifact holds none; a planted one is caught."""
+    def fixtures(records):
+        return [r for r in records if isinstance(r, dict) and any(
+            isinstance(j, dict) and (j.get("commit") == "0" * 40 or str(j.get("run_id", "")).startswith("fixture-"))
+            for j in r.get("provenance", []) if isinstance(r.get("provenance"), list))]
+    assert fixtures(_REAL_ATTESTATIONS()) == []
+    planted = tmp_path / "sqlite_runtimes.json"
+    planted.write_text(json.dumps({"attestations": [fixture_attestation()], "runtimes": []}))
+    monkeypatch.setattr(sv, "RUNTIMES", planted)
+    assert fixtures(_REAL_ATTESTATIONS()) != []              # the control: a planted fixture is seen
+
+
+def test_check_evidence_ignores_generated_on_resolution_but_not_a_rederivation_difference(monkeypatch, tmp_path):
+    """Research's B9: `--check-evidence` is the attestation job's criterion, so at the first branch run (no attestation
+    record anywhere) it must pass an artifact whose only defect is an unresolved `generated_on`, and still fail one
+    whose path evidence does not re-derive."""
+    _with_attestations(monkeypatch)                                # no record at all: generated_on resolves nowhere
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    assert m13.path_provenance_problems(art)
+    assert m13.check_evidence() == 0
+    other = copy.deepcopy(art)
+    for r in other["paths"]:
+        r["generated_on"] = dict(r["generated_on"], machine="ppc64le")         # another build's key: still passes
+    seeded = tmp_path / "evidence.json"
+    seeded.write_text(json.dumps(other, indent=1, sort_keys=True))
+    monkeypatch.setattr(m13, "EVIDENCE_FILE", seeded)
+    assert m13.check_evidence() == 0
+    other["paths"][0]["provenance"] = "a different generator line"           # a re-derivation difference
+    seeded.write_text(json.dumps(other, indent=1, sort_keys=True))
+    assert m13.check_evidence() == 1
+
+
+def test_the_first_failing_probe_does_not_depend_on_the_hash_seed():
+    """B3 / research's item 7(a): "first" is authorizer_probes()' code order, not a frozenset's string order."""
+    import os
+    import subprocess
+    code = ("import sys; sys.path.insert(0, 'specs'); import sqlite3; import migrations_0013 as m; "
+            "m._authorizer = lambda *a: sqlite3.SQLITE_OK; print(m.probes_problems(m.authorizer_probes())[0])")
+    outs = {subprocess.run([sys.executable, "-c", code], cwd=str(ROOT), capture_output=True, text=True,
+                           env={**os.environ, "PYTHONHASHSEED": seed}).stdout.strip() for seed in ("0", "12345")}
+    assert len(outs) == 1 and next(iter(outs)).startswith("probe "), outs
