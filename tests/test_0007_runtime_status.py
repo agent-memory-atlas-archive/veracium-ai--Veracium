@@ -748,3 +748,13 @@ def test_a16_production_evidence_refuses_two_accepted_manifestations_sharing_an_
     versions["1"]["accepted"].append(twin)
     probs = se.acceptance_digest_problems(versions)
     assert len(probs) == 1 and probs[0].startswith("v1: two accepted manifestations share"), probs
+
+
+def test_verify_build_reproduces_through_the_generators_constructor(monkeypatch):
+    """Research's Y5 / F1: production's reproduction calls `_constructor_objects` (create()) once per declared
+    version, the constructor the evidence generator records, never a second DDL-only builder."""
+    calls = []
+    real = sv._constructor_objects
+    monkeypatch.setattr(sv, "_constructor_objects", lambda v: calls.append(v) or real(v))
+    sv.verify_build()
+    assert sorted(calls) == sorted(sv.SCHEMAS), calls

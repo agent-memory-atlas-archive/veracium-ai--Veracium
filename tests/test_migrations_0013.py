@@ -4953,3 +4953,13 @@ def test_the_reproduction_digest_uses_the_registry_it_is_given():
     flipped = {v: tuple(o._replace(policy=sv.REQUIRED) if o.policy == sv.REBUILDABLE else o for o in objs_)
                for v, objs_ in m13.SCHEMAS_DRAFT.items()}
     assert sv._digest_of_identity(objs, 1, flipped) != sv._digest_of_identity(objs, 1, m13.SCHEMAS_DRAFT)
+
+
+def test_a_concurrent_operation_takes_the_build_measurement_never_the_open_contexts_refusal():
+    """Research's Y1/Y2 on be069a9: op1's context serves REFUSED for its own (tampered) snapshot; op2, measured inside
+    it on a GOOD snapshot, takes only the build's measurement and reproduces its own snapshot, so it is not refused.
+    Mutants: take op1's served status; store the served status as the build measurement."""
+    with m13._draft(loaded=_tampered_v2_snapshot()):
+        assert sv.runtime_status().status == "refused"
+        build, op2 = m13._operation_status(m13._artifact_snapshot())
+    assert build.status != "refused" and op2.status != "refused", (build, op2)
