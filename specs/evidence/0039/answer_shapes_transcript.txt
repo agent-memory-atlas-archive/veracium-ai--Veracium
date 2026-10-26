@@ -1,5 +1,6 @@
 # 0039 answer-shape transcript — DEV's instrument (specs/evidence/0039/answer_shapes.py)
-# generated 2026-09-12 against veracium @ 5a23ed6d6a4a3eaf593dbe10bb205c42248dfe80
+# generated 2026-09-12 against veracium @ 4d8e0f4c446e2bdec7531915a54c15d52fb51ba7
+# RE-PINNED 2026-10-26 the schema evidence recording the v0.27.1 tag (legacy_stores.json, one row; no code) landed in 4d8e0f4c446e2bdec7531915a54c15d52fb51ba7: bodies byte-identical; the pin moves to it
 # RE-PINNED 2026-10-25 the MCP remember description's third-person rewording (a docstring; no code), two 0042 instruments' speed-ups and 0007 v18 (spec text) landed in 5a23ed6d6a4a3eaf593dbe10bb205c42248dfe80: bodies byte-identical; the pin moves to it
 # RE-PINNED 2026-10-24 the schema evidence recording the v0.27.0 tag (legacy_stores.json, one row; no code) landed in d944abbd74de0f71894b264e6f5794a93586a50c: bodies byte-identical; the pin moves to it
 # RE-PINNED 2026-10-24 R-II round 3's NEXT-ROUND batch (research's N2: an import owner conflict refused as one; the kind closure's own cells; the reviewer's round-4 cases) landed in 537dcd8e2b9dd0413d11b3c9f48f26ea214fa8a9: bodies byte-identical; the pin moves to it
