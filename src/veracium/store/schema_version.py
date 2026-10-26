@@ -13,10 +13,12 @@ The evidence artifacts ship as package data in `evidence/`:
     schema_versions.json   the accepted manifests per schema version
     legacy_stores.json     release probing evidence; source of the legacy bases
 
-**Missing or malformed evidence fails closed**: `runtime_status()` is
-`refused` (and the interim predicate `_runtime_supported_interim()` returns
-False), and the store refuses with `unsupported-sqlite` before any version or
-shape decision.
+**Missing or malformed ACCEPTED evidence (`schema_versions.json`) fails closed**:
+`runtime_status()` is `refused` (and the interim predicate
+`_runtime_supported_interim()` returns False), and the store refuses with
+`unsupported-sqlite` before any version or shape decision. A missing or
+malformed `sqlite_runtimes.json` only blocks attestation: the build is
+`verified` (0007 §4g.3, a record can only remove the warning).
 """
 from __future__ import annotations
 
@@ -46,6 +48,7 @@ _SITE_OPEN_INVALID_VERSION = declare_site("store.open.invalid-version")
 _SITE_OPEN_NEWER = declare_site("store.open.newer")
 _SITE_OPEN_LEGACY = declare_site("store.open.legacy")
 _SITE_RUNTIME_SUPPORTED = declare_site("store.runtime-supported")
+_SITE_RUNTIME_REFUSED = declare_site("store.runtime-refused", declines=True)   # 0007 §4g.6 4a: both gates' ONE decision
 
 log = logging.getLogger(__name__)
 
@@ -1689,7 +1692,7 @@ def attestation_record_problems(r) -> list:
         p.append(f"'machine' {r['machine']!r} is not in canonical form")
     if type(r["system"]) is not str or canonical_system(r["system"]) != r["system"]:
         p.append(f"'system' {r['system']!r} is not in canonical form")
-    if r["libc"] not in LIBC_TOKENS or (r["libc"] == "none") != (r["system"] != "Linux"):
+    if type(r["libc"]) is not str or r["libc"] not in LIBC_TOKENS or (r["libc"] == "none") != (r["system"] != "Linux"):
         p.append(f"'libc' {r['libc']!r} is not canonical for system {r['system']!r}")
     for f in ("manifest_algorithm", "schema_version"):
         if type(r[f]) is not int:
@@ -1737,7 +1740,10 @@ def attestation_artifact_problems(records=None) -> list:
             continue
         if rev != "current":
             continue
-        own = attestation_record_problems(r)
+        try:
+            own = attestation_record_problems(r)
+        except Exception as exc:  # noqa: BLE001 - a validator escape poisons THAT record, never the build's status
+            own = [f"its validation raised {type(exc).__name__}"]
         problems += [f"attestation {i}: {x}" for x in own]
         key = None if own else attestation_key(r)
         if key is None:
@@ -1759,6 +1765,12 @@ class RuntimeStatus(NamedTuple):
     reason: Optional[str]          # refused: the first failing step; verified: a poisoned artifact, named; else None
     key: Optional[tuple]           # the full attestation key, or None when a field is unreadable
     unreadable: tuple              # the key fields that could not be read
+    # the build as measured by the SAME read (research's stage 2, F2): the refusal text, the warning and INV-SA11's
+    # audit value use these, never a second measurement — when that measurement is what failed, re-reading it would
+    # raise out of the gate instead of refusing. None where the one read did not get that far.
+    sqlite_version: Optional[str] = None
+    source_id: Optional[str] = None
+    platform: tuple = (None, None, None)      # (machine, system, libc), canonical; None = unreadable
 
 
 def runtime_status() -> RuntimeStatus:
@@ -1773,29 +1785,42 @@ def runtime_status() -> RuntimeStatus:
 
     A MEASUREMENT, not an enforcement point (0042): the refusing decisions are the gates that read it, the open gate
     (`store.open.runtime-unsupported`) and the release preflight's `unsupported-sqlite` intercept."""
+    ident = {}
     try:
         ident = attestation_identity()
         unreadable = tuple(k for k in ("machine", "system", "libc") if ident[k] is None)
         key = attestation_key(ident)
+        build = (ident["sqlite_version"], ident["source_id"], (ident["machine"], ident["system"], ident["libc"]))
         try:
             verify_build()
         except VerificationFailure as exc:
-            return RuntimeStatus("refused", str(exc), key, unreadable)
+            return RuntimeStatus("refused", str(exc), key, unreadable, *build)
         poison = attestation_artifact_problems()
         if poison:
-            return RuntimeStatus("verified", f"attestation artifact: {poison[0]}", key, unreadable)
+            return RuntimeStatus("verified", f"attestation artifact: {poison[0]}", key, unreadable, *build)
         if key is not None and any(attestation_revision(r) == "current" and attestation_key(r) == key
                                    for r in attestations()):
-            return RuntimeStatus("attested", None, key, unreadable)
-        return RuntimeStatus("verified", None, key, unreadable)
+            return RuntimeStatus("attested", None, key, unreadable, *build)
+        return RuntimeStatus("verified", None, key, unreadable, *build)
     except Exception as exc:  # noqa: BLE001 - fail closed, naming the escape
-        return RuntimeStatus("refused", f"verification raised {type(exc).__name__}", None, ())
+        return RuntimeStatus("refused", f"verification raised {type(exc).__name__}", None, (),
+                             ident.get("sqlite_version"), ident.get("source_id"))
+
+
+def runtime_refused(st: RuntimeStatus) -> bool:
+    """THE decision both production gates take on the measured status (0042: a declared predicate, so the release
+    preflight's `unsupported-sqlite` is as census-visible as the open gate's; research's stage 2 on ce6117f). True
+    refuses."""
+    with _SITE_RUNTIME_REFUSED.consult():
+        return _SITE_RUNTIME_REFUSED.fire(not isinstance(st, RuntimeStatus) or st.status == "refused", "refused")
 
 
 def refusal_text(st: RuntimeStatus) -> str:
-    """§4e's refusal: the first failure and only remedies that ship (INV-SA8)."""
-    me = runtime_identity()
-    return (f"SQLite {me['sqlite_version']} ({me['source_id']}) cannot be verified for Veracium's store: {st.reason}. "
+    """§4e's refusal: the first failure and only remedies that ship (INV-SA8). From the status's own read: never a
+    second measurement, so a failing measurement refuses rather than raising out of the gate."""
+    version = st.sqlite_version or "(version unreadable)"
+    source = st.source_id or "source id unreadable"
+    return (f"SQLite {version} ({source}) cannot be verified for Veracium's store: {st.reason}. "
             f"The store was not opened. Use a Python whose SQLite is an attested build (`veracium doctor` lists "
             f"them), or report this build to the project.")
 
@@ -1808,10 +1833,9 @@ def warn_unattested(st: RuntimeStatus) -> None:
     if st.status != "verified" or _WARNED:
         return
     _WARNED.append(True)
-    me = runtime_identity()
-    ident = dict(zip(("machine", "system", "libc"), (st.key[4:] if st.key else (None, None, None))))
-    text = (f"SQLite {me['sqlite_version']} ({me['source_id'][-12:]}, {ident['machine']}, {ident['system']}, "
-            f"{ident['libc']}) is not one of Veracium's attested builds. Veracium verified this build when opening "
+    machine, system, libc = st.platform
+    text = (f"SQLite {st.sqlite_version} ({(st.source_id or '')[-12:]}, {machine}, {system}, "
+            f"{libc}) is not one of Veracium's attested builds. Veracium verified this build when opening "
             f"the store: it reproduces all {len(SCHEMAS)} schema versions and tells apart all {_near_miss_count()} "
             f"near-miss checks. Its CI has not run the full schema suite on this build. `veracium doctor` lists the "
             f"attested builds.")
@@ -2164,7 +2188,7 @@ def open_versioned(conn: sqlite3.Connection, path: str, *,
     # status is MEASURED here, once, and nothing later in the open branches on it (0013 §5f.3 carrier (ii)).
     with _SITE_OPEN_RUNTIME_UNSUPPORTED.consult():
         status = runtime_status()
-        if status.status == "refused":
+        if runtime_refused(status):
             raise _SITE_OPEN_RUNTIME_UNSUPPORTED.fire(StoreVersionError(
                 spath, found=None, expected=SCHEMA_VERSION,
                 reason="unsupported-sqlite", diff=refusal_text(status)))

@@ -669,7 +669,8 @@ def _check_runtime(rep: Report) -> None:
         rep.add("runtime", "error", f"this interpreter's SQLite cannot be verified for the store: {st.reason}")
     elif st.status == "verified":
         rep.add("runtime", "info", "this interpreter's SQLite is not an attested build; it was verified on this run "
-                "(it reproduces every schema version and tells apart every near-miss)")
+                "(it reproduces every schema version and tells apart every near-miss)"
+                + (f"; the attestation records were not used: {st.reason}" if st.reason else ""))
 
 
 # ------------------------------------------------------------------- driver --

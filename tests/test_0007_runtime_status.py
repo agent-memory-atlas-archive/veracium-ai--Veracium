@@ -525,11 +525,9 @@ DISTRO_ID = "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa8
     (UPSTREAM_ID, True), (DISTRO_ID, True), (DISTRO_ID + "\0", False), (DISTRO_ID + " ", False),
     (DISTRO_ID[:-4] + "alt1x", False), (DISTRO_ID[:-4] + "ALT1", False), (DISTRO_ID[:-1] + "\ud800", False),
     ("", False)])
-def test_the_audit_source_id_has_its_own_closed_grammar(monkeypatch, source_id, ok):
+def test_the_audit_source_id_has_its_own_closed_grammar(source_id, ok):
     import veracium.store.migration as mig
-    monkeypatch.setattr(sv, "runtime_identity", lambda: {"sqlite_version": "3.45.1", "source_id": source_id,
-                                                         "features": {}})
-    attested = sv.RuntimeStatus("attested", None, None, ())
+    attested = sv.RuntimeStatus("attested", None, None, (), "3.45.1", source_id)
     if ok:
         assert mig.migration_runtime(attested) == mig.MigrationRuntime("3.45.1", source_id, "attested")
     else:
@@ -539,13 +537,12 @@ def test_the_audit_source_id_has_its_own_closed_grammar(monkeypatch, source_id, 
 
 @pytest.mark.parametrize("version,status,field", [("3.45", "verified", "sqlite_version"),
                                                   ("3.45.1 ", "verified", "sqlite_version"),
+                                                  (None, "verified", "sqlite_version"),
                                                   ("3.45.1", "refused", "status"), ("3.45.1", None, "status")])
-def test_the_audit_version_and_status_have_closed_grammars(monkeypatch, version, status, field):
+def test_the_audit_version_and_status_have_closed_grammars(version, status, field):
     import veracium.store.migration as mig
-    monkeypatch.setattr(sv, "runtime_identity", lambda: {"sqlite_version": version, "source_id": DISTRO_ID,
-                                                         "features": {}})
     with pytest.raises(ValueError, match=f"runtime.{field}"):
-        mig.migration_runtime(sv.RuntimeStatus(status, None, None, ()) if status else None)
+        mig.migration_runtime(sv.RuntimeStatus(status, None, None, (), version, DISTRO_ID) if status else None)
 
 
 @pytest.mark.parametrize("status", ["verified", "attested"])
@@ -636,3 +633,90 @@ def test_the_interim_predicate_is_read_only_by_a_committed_list_and_the_old_name
     assert found_old == set(), sorted(found_old)
     for rel in FROZEN_EVIDENCE:
         assert (ROOT / rel).is_file(), rel
+
+
+# ---- research's stage 2 on ce6117f (§15): each finding's cell, and the five surviving mutants' ----------------------
+@pytest.mark.parametrize("field", sorted(sv._RECORD_FIELDS))
+@pytest.mark.parametrize("bad", [[], {}])
+def test_every_record_field_as_a_container_leaves_the_build_verified_naming_it(monkeypatch, field, bad):
+    """F1: a current record whose field is `[]` or `{}` poisons THAT record; it never escapes the validator, so the
+    build is `verified` (it was `refused`, "verification raised TypeError", for `libc` at ce6117f)."""
+    with_records(monkeypatch, record_for_this_build(), record_for_this_build(**{field: bad}))
+    st = sv.runtime_status()
+    assert st.status == "verified" and st.reason and st.reason.startswith("attestation artifact: "), st
+
+
+def test_a_failing_identity_read_refuses_at_the_gate_and_never_raises_through_it(monkeypatch, tmp_path):
+    """F2: the refusal text, the warning and the audit value come from the status's ONE read. With the build's own
+    identity read failing, the open refuses `unsupported-sqlite`; it does not re-raise the read's error."""
+    from veracium.store.sqlite import SqliteStore
+    monkeypatch.setattr(sv, "_probe_build", lambda: (_ for _ in ()).throw(sqlite3.OperationalError("probe")))
+    st = sv.runtime_status()
+    assert st.status == "refused" and st.reason == "verification raised OperationalError", st
+    with pytest.raises(sv.StoreVersionError) as e:
+        SqliteStore(str(tmp_path / "s.db"))
+    assert e.value.reason == "unsupported-sqlite"
+    assert "verification raised OperationalError" in str(e.value) and "source id unreadable" in str(e.value)
+
+
+def test_the_status_carries_the_build_it_measured(monkeypatch):
+    st = sv.runtime_status()
+    me = sv.runtime_identity()
+    assert (st.sqlite_version, st.source_id) == (me["sqlite_version"], me["source_id"])
+    assert st.platform == tuple(sv.canonical_platform()[k] for k in ("machine", "system", "libc"))
+
+
+def test_doctor_names_a_poisoned_artifact(monkeypatch):
+    """F3: the poison reason reaches a reader: doctor's verified line carries it."""
+    from veracium import doctor
+    with_records(monkeypatch, record_for_this_build(), record_for_this_build(machine="AMD64"))
+    rep = doctor.Report(db="x", readable=False)
+    doctor._check_runtime(rep)
+    msgs = [f.message for f in rep.findings if f.check == "runtime"]
+    assert msgs and "attestation artifact" in msgs[0] and "'machine'" in msgs[0], msgs
+
+
+def test_a_probe_that_is_not_exactly_true_refuses(monkeypatch):
+    """M1: `None` (or `1`) is not True; a required probe must be exactly True."""
+    real = sv._feature_probes
+    for bad in (None, 1):
+        monkeypatch.setattr(sv, "_feature_probes", lambda bad=bad: {**real(), "preserves_ddl_body": bad})
+        st = sv.runtime_status()
+        assert st.status == "refused" and st.reason == f"feature probe preserves_ddl_body is {bad!r}", st
+
+
+def test_a_build_whose_probe_reads_as_an_int_matches_no_record(monkeypatch):
+    """M15: the key's features must be EXACT bools. A build whose non-required probes return 1 (not True) has no key,
+    so even a record with True there does not attest it (`isinstance(v, int)` would)."""
+    with_records(monkeypatch, record_for_this_build())
+    real = sv._feature_probes
+    monkeypatch.setattr(sv, "_feature_probes", lambda: {**real(), "generated_columns": 1, "strict_tables": 1})
+    st = sv.runtime_status()
+    assert st.status == "verified" and st.key is None, st
+
+
+def test_a_near_miss_set_missing_a_required_kind_refuses(monkeypatch):
+    """M16: the kinds arm, isolated: the set without its reordered-column member."""
+    monkeypatch.setattr(nm, "NEAR_MISSES", tuple(m for m in nm.NEAR_MISSES if m.kind != "reordered-column"))
+    st = sv.runtime_status()
+    assert st.status == "refused" and st.reason.startswith("the near-miss set covers "), st
+
+
+def test_equal_evidence_with_different_provenance_is_a_duplicate_not_a_conflict():
+    """M17: provenance is never compared as evidence."""
+    a = record_for_this_build()
+    b = record_for_this_build(provenance=[{"route": "deadsnakes", "runner_image": "ubuntu-24.04", "run_id": "2",
+                                           "job_id": 7, "commit": "1" * 40}])
+    probs = sv.attestation_artifact_problems([a, b])
+    assert len(probs) == 1 and probs[0].endswith("with equal evidence: a duplicate"), probs
+
+
+def test_the_release_preflight_warns_on_a_verified_build(monkeypatch, tmp_path):
+    """M18: `_preflight_classify` is a gate too; a verified build reading a store there warns (once per process)."""
+    import veracium.store.release_migration as rm
+    with_records(monkeypatch)
+    p = store_at(tmp_path / "s.db", HEAD)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        rm._preflight_classify(p)
+    assert [x for x in w if issubclass(x.category, sv.UnattestedBuildWarning)]

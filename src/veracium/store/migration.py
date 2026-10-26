@@ -281,10 +281,10 @@ _MIGRATING_STATUSES = frozenset({"attested", "verified"})
 def migration_runtime(status) -> MigrationRuntime:
     """INV-SA11's value from the gate's ONE `runtime_status()` reading, each subfield checked against its grammar at
     the write: a value that fails refuses the audit record rather than carrying prose."""
-    from .schema_version import RuntimeStatus, runtime_identity
-    me = runtime_identity()
-    rt = MigrationRuntime(me["sqlite_version"], me["source_id"],
-                          status.status if isinstance(status, RuntimeStatus) else None)
+    from .schema_version import RuntimeStatus
+    if not isinstance(status, RuntimeStatus):
+        raise ValueError(f"audit field runtime.status: {type(status).__name__} is not a measured RuntimeStatus")
+    rt = MigrationRuntime(status.sqlite_version, status.source_id, status.status)  # the gate's ONE read, not a second
     if type(rt.sqlite_version) is not str or not _SQLITE_VERSION_RE.fullmatch(rt.sqlite_version):
         raise ValueError(f"audit field runtime.sqlite_version {rt.sqlite_version!r} is not a SQLite version")
     if type(rt.source_id) is not str or not _SOURCE_ID_RE.fullmatch(rt.source_id):

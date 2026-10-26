@@ -3239,114 +3239,114 @@
   "line": 3523,
   "statement": "raise _SITE_NOTICE_STATE.fire(ValueError("
  },
- "store/schema_version.py:open_versioned:2194:RAISE": {
+ "store/schema_version.py:open_versioned:2218:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a (refuse) through site store.open.invalid-version",
   "reviewer": "dev",
   "site": "store.open.invalid-version",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:4",
-  "line": 2194,
+  "line": 2218,
   "statement": "raise _SITE_OPEN_INVALID_VERSION.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
  },
- "store/schema_version.py:open_versioned:2266:RAISE": {
+ "store/schema_version.py:open_versioned:2290:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4h (refuse) through site store.open.legacy",
   "reviewer": "dev",
   "site": "store.open.legacy",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:9",
-  "line": 2266,
+  "line": 2290,
   "statement": "raise _SITE_OPEN_LEGACY.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:2276:RAISE": {
+ "store/schema_version.py:open_versioned:2300:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4h (refuse) through site store.open.legacy",
   "reviewer": "dev",
   "site": "store.open.legacy",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:10",
-  "line": 2276,
+  "line": 2300,
   "statement": "raise _SITE_OPEN_LEGACY.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:2292:RAISE": {
+ "store/schema_version.py:open_versioned:2316:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4h (refuse) through site store.open.legacy",
   "reviewer": "dev",
   "site": "store.open.legacy",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:11",
-  "line": 2292,
+  "line": 2316,
   "statement": "raise _SITE_OPEN_LEGACY.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:2302:RAISE": {
+ "store/schema_version.py:open_versioned:2326:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4h (refuse) through site store.open.legacy",
   "reviewer": "dev",
   "site": "store.open.legacy",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:12",
-  "line": 2302,
+  "line": 2326,
   "statement": "raise _SITE_OPEN_LEGACY.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:2181:RAISE": {
+ "store/schema_version.py:open_versioned:2205:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a (refuse) through site store.open.locked",
   "reviewer": "dev",
   "site": "store.open.locked",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:3",
-  "line": 2181,
+  "line": 2205,
   "statement": "raise _SITE_OPEN_LOCKED.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:2198:RAISE": {
+ "store/schema_version.py:open_versioned:2222:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a (refuse) through site store.open.newer",
   "reviewer": "dev",
   "site": "store.open.newer",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:5",
-  "line": 2198,
+  "line": 2222,
   "statement": "raise _SITE_OPEN_NEWER.fire(StoreVersionError("
  },
- "store/schema_version.py:open_versioned:2168:RAISE": {
+ "store/schema_version.py:open_versioned:2192:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-viii (refuse) through site store.open.runtime-unsupported",
   "reviewer": "dev",
   "site": "store.open.runtime-unsupported",
   "class": "enforcement",
   "key": "store/schema_version.py:open_versioned:RAISE:2",
-  "line": 2168,
+  "line": 2192,
   "statement": "raise _SITE_OPEN_RUNTIME_UNSUPPORTED.fire(StoreVersionError("
  },
- "store/schema_version.py:_validated_current:2080:RAISE": {
+ "store/schema_version.py:_validated_current:2104:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-v (refuse) through site store.open.unaccepted-shape",
   "reviewer": "dev",
   "site": "store.open.unaccepted-shape",
   "class": "enforcement",
   "key": "store/schema_version.py:_validated_current:RAISE:1",
-  "line": 2080,
+  "line": 2104,
   "statement": "raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
  },
- "store/schema_version.py:_validated_current:2087:RAISE": {
+ "store/schema_version.py:_validated_current:2111:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-v (refuse) through site store.open.unaccepted-shape",
   "reviewer": "dev",
   "site": "store.open.unaccepted-shape",
   "class": "enforcement",
   "key": "store/schema_version.py:_validated_current:RAISE:2",
-  "line": 2087,
+  "line": 2111,
   "statement": "raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
  },
- "store/schema_version.py:_validated_current:2095:RAISE": {
+ "store/schema_version.py:_validated_current:2119:RAISE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-v (refuse) through site store.open.unaccepted-shape",
   "reviewer": "dev",
   "site": "store.open.unaccepted-shape",
   "class": "enforcement",
   "key": "store/schema_version.py:_validated_current:RAISE:3",
-  "line": 2095,
+  "line": 2119,
   "statement": "raise _SITE_OPEN_UNACCEPTED_SHAPE.fire(StoreVersionError(spath, found, SCHEMA_VERSION,"
  },
  "store/sqlite.py:SqliteStore.append_outcome_if_head:2436:RAISE": {
@@ -3659,44 +3659,54 @@
   "line": 73,
   "statement": "raise _SITE_REVOCATION_UNKNOWN_STATE.fire(RevocationUnknownState("
  },
- "store/schema_version.py:_runtime_supported_interim:1416:RETURN_FALSE": {
+ "store/schema_version.py:runtime_refused:1815:BOOL_RETURN": {
+  "decision": "enforcement",
+  "reason": "enforces 0007 §4g.6 4a (attested / verified / refused, by measurement; both gates' one decision) (refuse) through site store.runtime-refused",
+  "reviewer": "dev",
+  "site": "store.runtime-refused",
+  "class": "enforcement",
+  "key": "store/schema_version.py:runtime_refused:BOOL_RETURN:1",
+  "line": 1815,
+  "statement": "return _SITE_RUNTIME_REFUSED.fire(not isinstance(st, RuntimeStatus) or st.status == \"refused\", \"refused\")"
+ },
+ "store/schema_version.py:_runtime_supported_interim:1419:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-viii (refuse) through site store.runtime-supported",
   "reviewer": "dev",
   "site": "store.runtime-supported",
   "class": "enforcement",
   "key": "store/schema_version.py:_runtime_supported_interim:RETURN_FALSE:1",
-  "line": 1416,
+  "line": 1419,
   "statement": "return _SITE_RUNTIME_SUPPORTED.fire(False, \"artifact-problems\")"
  },
- "store/schema_version.py:_runtime_supported_interim:1432:RETURN_FALSE": {
+ "store/schema_version.py:_runtime_supported_interim:1435:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-viii (refuse) through site store.runtime-supported",
   "reviewer": "dev",
   "site": "store.runtime-supported",
   "class": "enforcement",
   "key": "store/schema_version.py:_runtime_supported_interim:RETURN_FALSE:2",
-  "line": 1432,
+  "line": 1435,
   "statement": "return _SITE_RUNTIME_SUPPORTED.fire(False, \"constructor-digests\")"
  },
- "store/schema_version.py:_runtime_supported_interim:1436:RETURN_FALSE": {
+ "store/schema_version.py:_runtime_supported_interim:1439:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-viii (refuse) through site store.runtime-supported",
   "reviewer": "dev",
   "site": "store.runtime-supported",
   "class": "enforcement",
   "key": "store/schema_version.py:_runtime_supported_interim:RETURN_FALSE:3",
-  "line": 1436,
+  "line": 1439,
   "statement": "return _SITE_RUNTIME_SUPPORTED.fire(False, \"no-manifestation\")"
  },
- "store/schema_version.py:_runtime_supported_interim:1438:RETURN_FALSE": {
+ "store/schema_version.py:_runtime_supported_interim:1441:RETURN_FALSE": {
   "decision": "enforcement",
   "reason": "enforces 0007 §4a-viii (refuse) through site store.runtime-supported",
   "reviewer": "dev",
   "site": "store.runtime-supported",
   "class": "enforcement",
   "key": "store/schema_version.py:_runtime_supported_interim:RETURN_FALSE:4",
-  "line": 1438,
+  "line": 1441,
   "statement": "return _SITE_RUNTIME_SUPPORTED.fire(False, \"raised\")"
  },
  "store/sqlite.py:SqliteStore._absorbs_an_act:1300:BOOL_RETURN": {
@@ -4962,13 +4972,13 @@
   "line": 59,
   "statement": "raise ValueError("
  },
- "store/schema_version.py:open_versioned:2161:RAISE": {
+ "store/schema_version.py:open_versioned:2185:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: the caller's input is malformed (type, shape, range or closed parameter vocabulary); the request is refused as ill-formed, not declined on trust or policy",
   "reviewer": "dev",
   "class": "argument-check",
   "key": "store/schema_version.py:open_versioned:RAISE:1",
-  "line": 2161,
+  "line": 2185,
   "statement": "raise ValueError(f\"store path exceeds {_AUDIT_STRING_CAP} bytes\")"
  },
  "store/sqlite.py:SqliteStore.__init__:261:RAISE": {
@@ -5772,13 +5782,13 @@
   "line": 192,
   "statement": "return None"
  },
- "store/schema_version.py:open_versioned:2335:RAISE": {
+ "store/schema_version.py:open_versioned:2359:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a lookup returning None for an absent row, an early return, a re-raise after logging, a filter by a non-policy criterion or budget/shape plumbing",
   "reviewer": "dev",
   "class": "control-flow",
   "key": "store/schema_version.py:open_versioned:RAISE:13",
-  "line": 2335,
+  "line": 2359,
   "statement": "raise"
  },
  "store/sqlite.py:SqliteStore.__init__:279:RAISE": {
@@ -7437,12 +7447,21 @@
   "line": 844,
   "statement": "raise PostCommitAuditError(str(path), mid, exc) from exc"
  },
- "store/migration.py:migration_runtime:289:RAISE": {
+ "store/migration.py:migration_runtime:286:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/migration.py:migration_runtime:RAISE:1",
+  "line": 286,
+  "statement": "raise ValueError(f\"audit field runtime.status: {type(status).__name__} is not a measured RuntimeStatus\")"
+ },
+ "store/migration.py:migration_runtime:289:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/migration.py:migration_runtime:RAISE:2",
   "line": 289,
   "statement": "raise ValueError(f\"audit field runtime.sqlite_version {rt.sqlite_version!r} is not a SQLite version\")"
  },
@@ -7451,7 +7470,7 @@
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
-  "key": "store/migration.py:migration_runtime:RAISE:2",
+  "key": "store/migration.py:migration_runtime:RAISE:3",
   "line": 291,
   "statement": "raise ValueError(f\"audit field runtime.source_id {rt.source_id!r} is not a sqlite_source_id()\")"
  },
@@ -7460,7 +7479,7 @@
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
-  "key": "store/migration.py:migration_runtime:RAISE:3",
+  "key": "store/migration.py:migration_runtime:RAISE:4",
   "line": 293,
   "statement": "raise ValueError(f\"audit field runtime.status {rt.status!r} is not one a migrating build can have\")"
  },
@@ -8355,301 +8374,301 @@
   "line": 311,
   "statement": "raise RevocationError("
  },
- "store/schema_version.py:_accepted_constructor_entry:1576:RAISE": {
-  "decision": "not",
-  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
-  "reviewer": "dev",
-  "class": "internal-invariant",
-  "key": "store/schema_version.py:_accepted_constructor_entry:RAISE:1",
-  "line": 1576,
-  "statement": "raise VerificationFailure(f\"schema v{version}: no accepted evidence\")"
- },
  "store/schema_version.py:_accepted_constructor_entry:1579:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
-  "key": "store/schema_version.py:_accepted_constructor_entry:RAISE:2",
+  "key": "store/schema_version.py:_accepted_constructor_entry:RAISE:1",
   "line": 1579,
+  "statement": "raise VerificationFailure(f\"schema v{version}: no accepted evidence\")"
+ },
+ "store/schema_version.py:_accepted_constructor_entry:1582:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/schema_version.py:_accepted_constructor_entry:RAISE:2",
+  "line": 1582,
   "statement": "raise VerificationFailure(f\"schema v{version}: {len(hits)} accepted constructor manifestations, not one\""
  },
- "store/schema_version.py:_event:2000:RAISE": {
+ "store/schema_version.py:_event:2024:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:_event:RAISE:1",
-  "line": 2000,
+  "line": 2024,
   "statement": "raise ValueError(f\"audit field {name!r} exceeds \""
  },
- "store/schema_version.py:_keyable_runtime:1203:BOOL_RETURN": {
+ "store/schema_version.py:_keyable_runtime:1206:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:_keyable_runtime:BOOL_RETURN:1",
-  "line": 1203,
+  "line": 1206,
   "statement": "return (isinstance(r, dict)"
  },
- "store/schema_version.py:_probe_build:1055:FILTER_RETURN": {
+ "store/schema_version.py:_probe_build:1058:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:_probe_build:FILTER_RETURN:1",
-  "line": 1055,
+  "line": 1058,
   "statement": "return source_id, options"
  },
- "store/schema_version.py:_pt_interp:1493:RETURN_NONE": {
+ "store/schema_version.py:_pt_interp:1496:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:_pt_interp:RETURN_NONE:1",
-  "line": 1493,
+  "line": 1496,
   "statement": "return None"
  },
- "store/schema_version.py:_pt_interp:1512:RETURN_NONE": {
+ "store/schema_version.py:_pt_interp:1515:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:_pt_interp:RETURN_NONE:2",
-  "line": 1512,
+  "line": 1515,
   "statement": "return None"
  },
- "store/schema_version.py:_pt_interp:1514:RETURN_NONE": {
+ "store/schema_version.py:_pt_interp:1517:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:_pt_interp:RETURN_NONE:3",
-  "line": 1514,
+  "line": 1517,
   "statement": "return None"
  },
- "store/schema_version.py:_validated_current:2099:RETURN_FALSE": {
+ "store/schema_version.py:_validated_current:2123:RETURN_FALSE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:_validated_current:RETURN_FALSE:1",
-  "line": 2099,
+  "line": 2123,
   "statement": "return False"
  },
- "store/schema_version.py:accepted_digests:1901:FILTER_RETURN": {
+ "store/schema_version.py:accepted_digests:1925:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:accepted_digests:FILTER_RETURN:1",
-  "line": 1901,
+  "line": 1925,
   "statement": "return {a.get(\"digest\") for a in rec[\"accepted\"] if isinstance(a, dict)}"
  },
- "store/schema_version.py:accepted_provenance:1911:RETURN_NONE": {
+ "store/schema_version.py:accepted_provenance:1935:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:accepted_provenance:RETURN_NONE:1",
-  "line": 1911,
+  "line": 1935,
   "statement": "return None"
  },
- "store/schema_version.py:active_records:1218:FILTER_RETURN": {
+ "store/schema_version.py:active_records:1221:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:active_records:FILTER_RETURN:1",
-  "line": 1218,
+  "line": 1221,
   "statement": "return [r for r in records"
  },
- "store/schema_version.py:artifact_problems._current:1244:BOOL_RETURN": {
+ "store/schema_version.py:artifact_problems._current:1247:BOOL_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:artifact_problems._current:BOOL_RETURN:1",
-  "line": 1244,
+  "line": 1247,
   "statement": "return isinstance(r, dict) and r.get(\"manifest_algorithm\") == MANIFEST_ALGORITHM"
- },
- "store/schema_version.py:attestation_key:1556:RETURN_NONE": {
-  "decision": "not",
-  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
-  "reviewer": "dev",
-  "class": "internal-invariant",
-  "key": "store/schema_version.py:attestation_key:RETURN_NONE:1",
-  "line": 1556,
-  "statement": "return None                                     # an unreadable field matches nothing, before any comparison"
  },
  "store/schema_version.py:attestation_key:1559:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
-  "key": "store/schema_version.py:attestation_key:RETURN_NONE:2",
+  "key": "store/schema_version.py:attestation_key:RETURN_NONE:1",
   "line": 1559,
+  "statement": "return None                                     # an unreadable field matches nothing, before any comparison"
+ },
+ "store/schema_version.py:attestation_key:1562:RETURN_NONE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/schema_version.py:attestation_key:RETURN_NONE:2",
+  "line": 1562,
   "statement": "return None"
  },
- "store/schema_version.py:attestation_key:1561:RETURN_NONE": {
+ "store/schema_version.py:attestation_key:1564:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:attestation_key:RETURN_NONE:3",
-  "line": 1561,
+  "line": 1564,
   "statement": "return None"
- },
- "store/schema_version.py:attestations:1647:RAISE": {
-  "decision": "not",
-  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
-  "reviewer": "dev",
-  "class": "internal-invariant",
-  "key": "store/schema_version.py:attestations:RAISE:1",
-  "line": 1647,
-  "statement": "raise ValueError(f\"the runtime artifact's top level is not within {sorted(ARTIFACT_KEYS)}\")"
  },
  "store/schema_version.py:attestations:1650:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
-  "key": "store/schema_version.py:attestations:RAISE:2",
+  "key": "store/schema_version.py:attestations:RAISE:1",
   "line": 1650,
+  "statement": "raise ValueError(f\"the runtime artifact's top level is not within {sorted(ARTIFACT_KEYS)}\")"
+ },
+ "store/schema_version.py:attestations:1653:RAISE": {
+  "decision": "not",
+  "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
+  "reviewer": "dev",
+  "class": "internal-invariant",
+  "key": "store/schema_version.py:attestations:RAISE:2",
+  "line": 1653,
   "statement": "raise ValueError(\"'attestations' is not a list\")"
  },
- "store/schema_version.py:canonical_libc:1482:RETURN_NONE": {
+ "store/schema_version.py:canonical_libc:1485:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:canonical_libc:RETURN_NONE:1",
-  "line": 1482,
+  "line": 1485,
   "statement": "return None"
  },
- "store/schema_version.py:canonical_machine:1465:RETURN_NONE": {
+ "store/schema_version.py:canonical_machine:1468:RETURN_NONE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:canonical_machine:RETURN_NONE:1",
-  "line": 1465,
+  "line": 1468,
   "statement": "return None"
  },
- "store/schema_version.py:drift:968:FILTER_RETURN": {
+ "store/schema_version.py:drift:971:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:drift:FILTER_RETURN:1",
-  "line": 968,
+  "line": 971,
   "statement": "return sorted(o.key for o in SCHEMAS[version]"
  },
- "store/schema_version.py:identity:949:FILTER_RETURN": {
+ "store/schema_version.py:identity:952:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:identity:FILTER_RETURN:1",
-  "line": 949,
+  "line": 952,
   "statement": "return {f\"{k[0]}:{k[1]}\": v for k, v in sorted(objs.items())}"
  },
- "store/schema_version.py:manifestation_problems:1389:FILTER_RETURN": {
+ "store/schema_version.py:manifestation_problems:1392:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:manifestation_problems:FILTER_RETURN:1",
-  "line": 1389,
+  "line": 1392,
   "statement": "return problems"
  },
- "store/schema_version.py:open_versioned:2222:RAISE": {
+ "store/schema_version.py:open_versioned:2246:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:open_versioned:RAISE:6",
-  "line": 2222,
+  "line": 2246,
   "statement": "raise PackageConsistencyError("
  },
- "store/schema_version.py:open_versioned:2241:RAISE": {
+ "store/schema_version.py:open_versioned:2265:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:open_versioned:RAISE:7",
-  "line": 2241,
+  "line": 2265,
   "statement": "raise PackageConsistencyError("
  },
- "store/schema_version.py:open_versioned:2249:RAISE": {
+ "store/schema_version.py:open_versioned:2273:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:open_versioned:RAISE:8",
-  "line": 2249,
+  "line": 2273,
   "statement": "raise PackageConsistencyError("
  },
- "store/schema_version.py:open_versioned:2344:RAISE": {
+ "store/schema_version.py:open_versioned:2368:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:open_versioned:RAISE:14",
-  "line": 2344,
+  "line": 2368,
   "statement": "raise PostCommitAuditError(spath, committed_event.adoption_id,"
  },
- "store/schema_version.py:rebuildable_keys:854:FILTER_RETURN": {
+ "store/schema_version.py:rebuildable_keys:857:FILTER_RETURN": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:rebuildable_keys:FILTER_RETURN:1",
-  "line": 854,
+  "line": 857,
   "statement": "return {o.key for o in SCHEMAS[version] if o.policy == REBUILDABLE}"
  },
- "store/schema_version.py:verify_build:1607:RAISE": {
+ "store/schema_version.py:verify_build:1610:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:verify_build:RAISE:1",
-  "line": 1607,
+  "line": 1610,
   "statement": "raise VerificationFailure(f\"feature probe {name} is {probes.get(name)!r}\")"
  },
- "store/schema_version.py:verify_build:1612:RAISE": {
+ "store/schema_version.py:verify_build:1615:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:verify_build:RAISE:2",
-  "line": 1612,
+  "line": 1615,
   "statement": "raise VerificationFailure(f\"schema v{v}: {_first_difference(objs, entry['objects'])} differs from the \""
  },
- "store/schema_version.py:verify_build:1616:RAISE": {
+ "store/schema_version.py:verify_build:1619:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:verify_build:RAISE:3",
-  "line": 1616,
+  "line": 1619,
   "statement": "raise VerificationFailure(f\"schema v{v}: its constructor digest is not in the accepted set\")"
  },
- "store/schema_version.py:verify_build:1620:RAISE": {
+ "store/schema_version.py:verify_build:1623:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:verify_build:RAISE:4",
-  "line": 1620,
+  "line": 1623,
   "statement": "raise VerificationFailure(f\"the near-miss set covers {sorted(kinds)}, not every required kind\")"
  },
- "store/schema_version.py:verify_build:1624:RAISE": {
+ "store/schema_version.py:verify_build:1627:RAISE": {
   "decision": "not",
   "reason": "not an enforcement point: a validator of the product's own contract (a carrier, ledger, registry, audit record or package consistency), never a decision about a caller's request",
   "reviewer": "dev",
   "class": "internal-invariant",
   "key": "store/schema_version.py:verify_build:RAISE:5",
-  "line": 1624,
+  "line": 1627,
   "statement": "raise VerificationFailure(f\"near-miss {nm.name} was not told apart\")"
  },
  "store/sqlite.py:SqliteStore._attested_by_another_owner:3422:BOOL_RETURN": {

@@ -217,7 +217,7 @@ if STATUS.status != "refused":
     sv.runtime_status = lambda: STATUS
     out(f"runtime gate MEMOIZED for this run (computed once above: {STATUS.status})")
 else:
-    sv.runtime_status = lambda: sv.RuntimeStatus("verified", None, None, ())
+    sv.runtime_status = lambda: STATUS._replace(status="verified", reason=None)
     out("RUNTIME GATE BYPASSED for this run: sv.runtime_status -> verified. The instrument measures "
         "the migration ladder on this build, not the 0007 gate (which refuses this build).")
 out(f"HEAD = {HEAD}; release orchestrator _MINT_BASE = {rm._MINT_BASE}")

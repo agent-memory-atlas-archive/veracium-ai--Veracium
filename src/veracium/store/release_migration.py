@@ -1004,7 +1004,7 @@ def _preflight_classify(path: str):
         return _intercept("migration-source-missing", False, False, "missing",
                           None, f"nothing at {canonical!r}")
     status = sv.runtime_status()                 # measured once, here (0007 §4g.6 4a; 0013 §5f.3)
-    if status.status == "refused":
+    if sv.runtime_refused(status):
         return _intercept("unsupported-sqlite", False, False, "unknown", None,
                           sv.refusal_text(status))
     sv.warn_unattested(status)                   # a verified build reading a store warns here too (once per process)

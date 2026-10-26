@@ -31,6 +31,11 @@ import migrations_0013 as m13  # noqa: E402
 from veracium.store import schema_version as sv  # noqa: E402
 from veracium.store.schema_version import identity, manifest  # noqa: E402
 
+# The model's draft context answers the production gate `verified` (0007 §4g, until 0013 §5f.3 carrier (i) is
+# revised), so every draft open warns once per test: the warning is the production carrier's, asserted in
+# tests/test_0007_runtime_status.py, and noise here.
+pytestmark = pytest.mark.filterwarnings("ignore::veracium.store.schema_version.UnattestedBuildWarning")
+
 
 @pytest.fixture(autouse=True)
 def _mktemp_under_tmp_path(tmp_path):

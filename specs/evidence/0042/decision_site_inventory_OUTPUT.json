@@ -4159,6 +4159,13 @@
   {
    "bare": false,
    "kind": "RAISE",
+   "line": 286,
+   "module": "store/migration.py",
+   "qualname": "migration_runtime"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
    "line": 289,
    "module": "store/migration.py",
    "qualname": "migration_runtime"
@@ -5017,111 +5024,105 @@
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 854,
+   "line": 857,
    "module": "store/schema_version.py",
    "qualname": "rebuildable_keys"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 949,
+   "line": 952,
    "module": "store/schema_version.py",
    "qualname": "identity"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 968,
+   "line": 971,
    "module": "store/schema_version.py",
    "qualname": "drift"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1055,
+   "line": 1058,
    "module": "store/schema_version.py",
    "qualname": "_probe_build"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1203,
+   "line": 1206,
    "module": "store/schema_version.py",
    "qualname": "_keyable_runtime"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1218,
+   "line": 1221,
    "module": "store/schema_version.py",
    "qualname": "active_records"
   },
   {
    "kind": "BOOL_RETURN",
-   "line": 1244,
+   "line": 1247,
    "module": "store/schema_version.py",
    "qualname": "artifact_problems._current"
   },
   {
    "kind": "FILTER_RETURN",
-   "line": 1389,
+   "line": 1392,
    "module": "store/schema_version.py",
    "qualname": "manifestation_problems"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1416,
+   "line": 1419,
    "module": "store/schema_version.py",
    "qualname": "_runtime_supported_interim"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1432,
+   "line": 1435,
    "module": "store/schema_version.py",
    "qualname": "_runtime_supported_interim"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1436,
+   "line": 1439,
    "module": "store/schema_version.py",
    "qualname": "_runtime_supported_interim"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 1438,
+   "line": 1441,
    "module": "store/schema_version.py",
    "qualname": "_runtime_supported_interim"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1465,
+   "line": 1468,
    "module": "store/schema_version.py",
    "qualname": "canonical_machine"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1482,
+   "line": 1485,
    "module": "store/schema_version.py",
    "qualname": "canonical_libc"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1493,
+   "line": 1496,
    "module": "store/schema_version.py",
    "qualname": "_pt_interp"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1512,
+   "line": 1515,
    "module": "store/schema_version.py",
    "qualname": "_pt_interp"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1514,
+   "line": 1517,
    "module": "store/schema_version.py",
    "qualname": "_pt_interp"
-  },
-  {
-   "kind": "RETURN_NONE",
-   "line": 1556,
-   "module": "store/schema_version.py",
-   "qualname": "attestation_key"
   },
   {
    "kind": "RETURN_NONE",
@@ -5131,16 +5132,15 @@
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1561,
+   "line": 1562,
    "module": "store/schema_version.py",
    "qualname": "attestation_key"
   },
   {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1576,
+   "kind": "RETURN_NONE",
+   "line": 1564,
    "module": "store/schema_version.py",
-   "qualname": "_accepted_constructor_entry"
+   "qualname": "attestation_key"
   },
   {
    "bare": false,
@@ -5152,44 +5152,44 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1607,
+   "line": 1582,
+   "module": "store/schema_version.py",
+   "qualname": "_accepted_constructor_entry"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1610,
    "module": "store/schema_version.py",
    "qualname": "verify_build"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1612,
+   "line": 1615,
    "module": "store/schema_version.py",
    "qualname": "verify_build"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1616,
+   "line": 1619,
    "module": "store/schema_version.py",
    "qualname": "verify_build"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1620,
+   "line": 1623,
    "module": "store/schema_version.py",
    "qualname": "verify_build"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 1624,
+   "line": 1627,
    "module": "store/schema_version.py",
    "qualname": "verify_build"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 1647,
-   "module": "store/schema_version.py",
-   "qualname": "attestations"
   },
   {
    "bare": false,
@@ -5199,83 +5199,89 @@
    "qualname": "attestations"
   },
   {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 1653,
+   "module": "store/schema_version.py",
+   "qualname": "attestations"
+  },
+  {
+   "kind": "BOOL_RETURN",
+   "line": 1815,
+   "module": "store/schema_version.py",
+   "qualname": "runtime_refused"
+  },
+  {
    "kind": "FILTER_RETURN",
-   "line": 1901,
+   "line": 1925,
    "module": "store/schema_version.py",
    "qualname": "accepted_digests"
   },
   {
    "kind": "RETURN_NONE",
-   "line": 1911,
+   "line": 1935,
    "module": "store/schema_version.py",
    "qualname": "accepted_provenance"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2000,
+   "line": 2024,
    "module": "store/schema_version.py",
    "qualname": "_event"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2080,
+   "line": 2104,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2087,
+   "line": 2111,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2095,
+   "line": 2119,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "kind": "RETURN_FALSE",
-   "line": 2099,
+   "line": 2123,
    "module": "store/schema_version.py",
    "qualname": "_validated_current"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2161,
+   "line": 2185,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2168,
+   "line": 2192,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2181,
+   "line": 2205,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2194,
-   "module": "store/schema_version.py",
-   "qualname": "open_versioned"
-  },
-  {
-   "bare": false,
-   "kind": "RAISE",
-   "line": 2198,
+   "line": 2218,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
@@ -5289,56 +5295,63 @@
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2241,
+   "line": 2246,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2249,
+   "line": 2265,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2266,
+   "line": 2273,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2276,
+   "line": 2290,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2292,
+   "line": 2300,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2302,
+   "line": 2316,
+   "module": "store/schema_version.py",
+   "qualname": "open_versioned"
+  },
+  {
+   "bare": false,
+   "kind": "RAISE",
+   "line": 2326,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": true,
    "kind": "RAISE",
-   "line": 2335,
+   "line": 2359,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
   {
    "bare": false,
    "kind": "RAISE",
-   "line": 2344,
+   "line": 2368,
    "module": "store/schema_version.py",
    "qualname": "open_versioned"
   },
@@ -6823,9 +6836,9 @@
  ],
  "summary": {
   "by_kind": {
-   "BOOL_RETURN": 98,
+   "BOOL_RETURN": 99,
    "FILTER_RETURN": 58,
-   "RAISE": 664,
+   "RAISE": 665,
    "RETURN_FALSE": 110,
    "RETURN_NONE": 96
   },
@@ -7178,7 +7191,7 @@
    "store/migration.py": {
     "BOOL_RETURN": 1,
     "FILTER_RETURN": 3,
-    "RAISE": 14,
+    "RAISE": 15,
     "RETURN_FALSE": 1,
     "RETURN_NONE": 1
    },
@@ -7211,7 +7224,7 @@
     "RETURN_NONE": 2
    },
    "store/schema_version.py": {
-    "BOOL_RETURN": 2,
+    "BOOL_RETURN": 3,
     "FILTER_RETURN": 7,
     "RAISE": 27,
     "RETURN_FALSE": 5,
@@ -7232,7 +7245,7 @@
     "RETURN_NONE": 6
    }
   },
-  "total": 1026,
+  "total": 1028,
   "unit": "one AST node of a listed decision kind; identity (module, qualname, line)"
  }
 }

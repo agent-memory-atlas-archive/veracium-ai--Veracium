@@ -2856,12 +2856,16 @@ def _draft(loaded=None):
 
 
 def _draft_runtime_status():
-    """The production gate's answer inside a draft context: the interim predicate over the draft evidence (`attested`
-    when it qualifies this build, else `refused`). The model's own gates run first; this only keeps production's
-    `open_versioned` from re-measuring a schema it was not written for."""
+    """The production gate's answer inside a draft context: the interim predicate over the draft evidence (`verified`
+    when it qualifies this build, else `refused`) — never `attested`, since no attestation record exists for any
+    build (research's stage 2 on ce6117f: an INV-SA11 value taken here would otherwise claim one). The model's own
+    gates run first; this only keeps production's `open_versioned` from re-measuring a schema it was not written
+    for. The build's identity is this process's own (`runtime_identity()`), as the production status carries it."""
+    me = sv.runtime_identity()
     if sv._runtime_supported_interim():
-        return sv.RuntimeStatus("attested", None, None, ())
-    return sv.RuntimeStatus("refused", "no qualified schema-runtime record in the draft evidence", None, ())
+        return sv.RuntimeStatus("verified", None, None, (), me["sqlite_version"], me["source_id"])
+    return sv.RuntimeStatus("refused", "no qualified schema-runtime record in the draft evidence", None, (),
+                            me["sqlite_version"], me["source_id"])
 
 
 # --------------------------------------------------------------------------
