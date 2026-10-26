@@ -1,0 +1,1479 @@
+{
+ "body_sha256": "aa1ef5d77de974851e25d91f4d65c7d7acf02bb7494e06397c4e63dd3b6908e8",
+ "controls": [
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused": "other: TypeError",
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]": "other: TypeError"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused",
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "definition_sha256": "0f24898c8e6fa5c5dc15ab1345e97221888f49a8bcf6510939b41c1ee59e8ed3",
+   "expected": "UNCLASSIFIED",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "good": true,
+   "id": "CTRL-unrelated-TypeError",
+   "import": "ok",
+   "kill_kind": null,
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused",
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "outcome": "UNCLASSIFIED",
+   "what": "an UNRELATED TypeError in the gate's text classes: every path raises for no reason a cell names"
+  }
+ ],
+ "header": {
+  "cells": {
+   "INV-SA10": [
+    "tests/test_0013_sa10_gate.py::test_a_narrowed_path_set_refuses_loudly",
+    "tests/test_0013_sa10_gate.py::test_a_row_write_two_steps_both_claim_is_refused",
+    "tests/test_0013_sa10_gate.py::test_an_orphan_callback_and_a_cross_connection_callback_are_refusals",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[13]",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[2]",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[6]",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[8]",
+    "tests/test_0013_sa10_gate.py::test_execute_hands_back_the_cursor_wrapper_never_the_real_cursor",
+    "tests/test_0013_sa10_gate.py::test_n11_a_statement_around_the_proxy_is_an_orphan",
+    "tests/test_0013_sa10_gate.py::test_n12_setconfig_writable_schema_then_a_schema_table_delete_is_refused_twice_over",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N13 blobopen]",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N14 backup into the connection]",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N15 set_authorizer(None), then DELETE]",
+    "tests/test_0013_sa10_gate.py::test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused",
+    "tests/test_0013_sa10_gate.py::test_n2_a_count_preserving_rebuild_is_refused_statement_by_statement",
+    "tests/test_0013_sa10_gate.py::test_n3_dropping_and_recreating_the_op_key_unique_index_is_refused_on_the_drop",
+    "tests/test_0013_sa10_gate.py::test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright[N4]",
+    "tests/test_0013_sa10_gate.py::test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright[N8]",
+    "tests/test_0013_sa10_gate.py::test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate[N10]",
+    "tests/test_0013_sa10_gate.py::test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate[N5]",
+    "tests/test_0013_sa10_gate.py::test_n6_a_comment_prefixed_drop_is_classified_by_its_actions",
+    "tests/test_0013_sa10_gate.py::test_n7_a_cte_prefixed_delete_at_no_step_is_refused",
+    "tests/test_0013_sa10_gate.py::test_n9_writable_schema_at_a_declared_site_is_off_the_pragma_vocabulary",
+    "tests/test_0013_sa10_gate.py::test_no_allowed_name_hands_back_a_real_connection_cursor_or_blob",
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome",
+    "tests/test_0013_sa10_gate.py::test_release_migration_opens_its_connections_through_the_seam",
+    "tests/test_0013_sa10_gate.py::test_replay_equivalence_catches_each_unrecorded_route_with_the_allowlist_removed[raw file I/O corrupting only an index page]",
+    "tests/test_0013_sa10_gate.py::test_replay_equivalence_catches_each_unrecorded_route_with_the_allowlist_removed[set_authorizer(None), then a DELETE through execute]",
+    "tests/test_0013_sa10_gate.py::test_site_coverage_reports_an_unobserved_site_in_a_function_the_census_entered",
+    "tests/test_0013_sa10_gate.py::test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses",
+    "tests/test_0013_sa10_gate.py::test_the_allowlist_refuses_each_connection_route_and_replay_still_sees_the_file_routes[raw file I/O corrupting only an index page]",
+    "tests/test_0013_sa10_gate.py::test_the_clean_control_admits_a_call_whose_nested_pragma_traces_twice",
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section",
+    "tests/test_0013_sa10_gate.py::test_the_configuration_guard_sees_setconfig_which_no_statement_shows",
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]",
+    "tests/test_0013_sa10_gate.py::test_the_gate_passes_the_clean_ladder_on_every_path_and_entry",
+    "tests/test_0013_sa10_gate.py::test_the_heartbeat_refuses_a_call_that_ran_with_the_instrument_removed",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.backup]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen (through with)]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.executescript]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.set_authorizer]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[cursor.connection (through iter)]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[cursor.connection]"
+   ]
+  },
+  "clean": {
+   "first": {
+    "of": 44,
+    "ok": true,
+    "passed": 44
+   },
+   "last": {
+    "of": 44,
+    "ok": true,
+    "passed": 44
+   }
+  },
+  "commit": "5a1bafd1315442643e608614fd71a89077de0fb0",
+  "control_definitions": {
+   "CTRL-unrelated-TypeError": "0f24898c8e6fa5c5dc15ab1345e97221888f49a8bcf6510939b41c1ee59e8ed3"
+  },
+  "definitions": {
+   "N1-site-admits-schema-writes": "d767478b922c3ac696ecdbc3c6d8a7682f094e080e2cee7931bcfe46aec18250",
+   "N11-orphans-skipped": "2226b778c3d5d4e24558961406d2a1f043daedef25e466f4511fa5e8020c664e",
+   "N12-getconfig-dropped": "7a9ec2af7a0abec8e9d977f4aef4c8ac8a4a11cdf985463e48f11fadb16d47fc",
+   "N12-schema-table-write-reads": "8a6e537a9fc57d81e71342df822ab43bcb72d82f72633bd3d8f38fa2c89adddd",
+   "N13-N15-forward-unknown-attributes": "f758fedd14c138f41493f089835d384edce8f11e35ccde60b7791d843899eb93",
+   "N2-b1-by-prefix": "d7fc00d5c88fab0087a0fffb4ebc4b702d63ff25ccb54383501f2f78537aeda3",
+   "N3-b2-every-index": "b119ec762d9a609b506556d715294373d70c855b79ded3ef8a077838cb7d70fb",
+   "N4-N8-executescript-by-first-statement": "90c535e21e38e3ebbae9284bb330d7ccf6e27722ee4699dbbad623e2418b410b",
+   "N5-N10-constructor-assertion-dropped": "38b9a962991dd5a16f411d7efb917ab7d1923d4b0a023c82aeaabe51d4e9702d",
+   "N6-N7-leading-keyword": "82010d36c3fcc96024b4da95d1805a91f78b152683f4225548d9a4f133e271ea",
+   "N7-complement-over-labelled-DML": "71e660e987b405466c2585de61b6d1806beb11219ccdd8d45bd5e5dfd1e9e288",
+   "N9-every-pragma-reads": "a63579349e8eb50f6bccf2fd5ae400ce3320c99c9c3b79c167763eef83d9042b",
+   "c2-c3-not-required": "dfa9af4facff81055eb4cfb80b67dc0a5ad044bd49ee2753a67051b8a7befd71",
+   "cross-connection-callbacks-admitted": "6ad999e337a11fabf178068c720bf24b4eabc3bcf37d8b771f1b6a3b0f6fdedd",
+   "cursor-iter-returns-real": "03ed6a4c1e797fd1c67235037f01fd212f4813ac4e5c0d4652f0a6a1b7fb074c",
+   "ddl-site-ignored": "397ad3d916fb93c0809c1d4bd9dabc9bda8001c568a046431d165a2abea0a2ca",
+   "digest-build-unasserted": "1082f494fe2144425a98c557e9b668ce9cf41c91051ee80ab7b5bc9a6b029d15",
+   "digest-no-typeof": "143048414e2baedcabe0122f41452a6b5ff5727d22903404d4d524ad1700fc60",
+   "digest-rootpage": "079f488ff4d3864d73649e47ad9a35b8270e829881da0cf6d963a1251bc58be6",
+   "digest-rowid-only": "79eac506e19d0ad1b31d8fc69dc641abd30ae3b9d704b6a18ad9b6c1f63f9458",
+   "enter-returns-real": "e1a6c6d9135493e3d1c5fe534589d1cee369d88e744e930d93d1f6f00eeb6bb2",
+   "exact-one-relaxed": "c9b9d93eadd715d9326fcbce52565677f3aee11c5cbba176e254623fff3b3f69",
+   "execute-returns-real-cursor": "f53cd649d730293c1fa58492c177d7ba329dee8132996f9cc0f88c5b8edb5723",
+   "heartbeat-off": "9d960a0cfabe38dacc84cead0c68b1d78a781b6089b99bc5aa282081d60418aa",
+   "integrity-unasserted": "2709eb27327f73a54fe00e39146d793c8a39dd3df08d994c2b8dc5b8a2752d66",
+   "params-by-reference": "ff71c4e4e1e3bc6232fc33a0f003bc3132791e830315926ecdc87d79cfe998b6",
+   "per-call-trace-count": "50ffdb6de72ddf5398f5bb758011097fdd4565f1ec93cd7f7e429e0cbb5ab332",
+   "replay-ignores-outcomes": "e28e0085cd324bf1a1d1856efb04b3bb9e8d4060ddd586720e0b2797c9ef80b1",
+   "replay-replays-nothing": "ac8ad9b9a1f49d2c9e32f6c97eaebfe2e3ca0b4567cadebb46879dff53419df9",
+   "seam-skips-release-migration": "ddbc2321166576b6311c1b221a9cf74e15deb55f9c3ee2d5582fab13461fefee",
+   "site-coverage-blind": "8105b2bb46b6ed06c0743ead1c8606040f108b0a8f1107d3135fe00c6013ddfc",
+   "stamp-value-unchecked": "d84fda751acadd164e384b6198e8bd19edf6224fe3053cd178fed79139e621cf",
+   "tree-release-migration-write": "9837507d1e9c8d653f2740fe8435443d770e8cd880c451391b1da3741ae52bef",
+   "tree-undeclared-ddl": "74c5a91aa0aab807ab870609ac8f3f8b1654256eb6e323a85cf3111c3af1c604",
+   "tree-unmapped-write": "f8016b9048d21ad366e68ea984c8041d1aa23185d545f3c20aedd8708823edfa",
+   "tree-unreached-write": "372f45eb6c2bc2ab04e5fd2644531b2dff624560c24cf78f04327a3793b68787",
+   "type-check-off": "bf445ce26dd0b4ac80abc3284ac878b908557a8279f7c35d2488a22a19e5df55",
+   "unknown-code-reads": "a535b5ef7b6e6ea861e0881c8fc940559c619069b34ce1573a03a4baf6e6fd8a"
+  },
+  "digests": {
+   "specs/evidence/0013/pa1_campaign.py": "1f381ba1f29979a598ef5cc666aa9b2a32b727402d8ce598e8a01e32854781c3",
+   "specs/evidence/0013/sa10_digest.py": "b3267bc12cf0b45b2c407747f01c0b1d51381edb549bf0a0e798b4e42ecf5f3e",
+   "specs/evidence/0013/sa10_gate.py": "3d255cdfb8b2883bca3b7a34a9a31357cf830386a3532fb523ae27e7a0ff5146",
+   "specs/evidence/0013/sa10_mutants.py": "0856da6a3927e9c5a30693bde33c423f779012ae4359dead0396854da8130b6f",
+   "specs/evidence/0013/steptable.py": "5b81c3ae0d9f1b9f8e893ea820cef9b6b02952ca0e5f5b84fba56374db7e4536",
+   "specs/evidence/mutation_kinds.py": "46d4802f8ef82e797fa285dab7afde3581db230761c5377c826ce6cdc275c8ad",
+   "src/veracium/store/migration.py": "0c127cb01d89688441ca01db2572d9e3237a8716fb5ed2f877d22e9df4078ec1",
+   "src/veracium/store/release_migration.py": "0fd147e67277c93cf98fbc6762929e5a289d082e16606bebe3f565586b57d2d5",
+   "src/veracium/store/schema_version.py": "b4edc4bec9a41c8f5a1a74655cab69431b3c3ab345b58a5f7b149576a569e6f7",
+   "tests/test_0013_sa10_gate.py": "9fafb88045f4b632e69ea407761ff081a3988ac2a08a06a1b48dab967cf9c5c6"
+  },
+  "finding": "INV-SA10",
+  "honest_nodes": [
+   "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]",
+   "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]"
+  ],
+  "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
+  "python": "3.14.7",
+  "spec": "0013",
+  "sqlite": "3.45.1",
+  "tracked_changes": [
+   "tests/test_0013_sa10_gate.py",
+   "tests/test_spec_gate.py"
+  ]
+ },
+ "rows": [
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused": "assertion",
+    "tests/test_0013_sa10_gate.py::test_n3_dropping_and_recreating_the_op_key_unique_index_is_refused_on_the_drop": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused",
+    "tests/test_0013_sa10_gate.py::test_n3_dropping_and_recreating_the_op_key_unique_index_is_refused_on_the_drop"
+   ],
+   "definition_sha256": "d767478b922c3ac696ecdbc3c6d8a7682f094e080e2cee7931bcfe46aec18250",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N1-site-admits-schema-writes",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused",
+    "tests/test_0013_sa10_gate.py::test_n3_dropping_and_recreating_the_op_key_unique_index_is_refused_on_the_drop"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.64s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N1: class (b) decided by the site: every schema write at a declared site is admitted"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n2_a_count_preserving_rebuild_is_refused_statement_by_statement": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n2_a_count_preserving_rebuild_is_refused_statement_by_statement"
+   ],
+   "definition_sha256": "d7fc00d5c88fab0087a0fffb4ebc4b702d63ff25ccb54383501f2f78537aeda3",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N2-b1-by-prefix",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n2_a_count_preserving_rebuild_is_refused_statement_by_statement"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.29s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N2: (b1) matched by its prefix, not byte-equality to a head constructor"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n3_dropping_and_recreating_the_op_key_unique_index_is_refused_on_the_drop": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n3_dropping_and_recreating_the_op_key_unique_index_is_refused_on_the_drop"
+   ],
+   "definition_sha256": "b119ec762d9a609b506556d715294373d70c855b79ded3ef8a077838cb7d70fb",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N3-b2-every-index",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n3_dropping_and_recreating_the_op_key_unique_index_is_refused_on_the_drop"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.33s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N3: (b2) widened from the rebuildable indexes to every index"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright[N4]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright[N8]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.executescript]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright[N4]",
+    "tests/test_0013_sa10_gate.py::test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright[N8]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.executescript]"
+   ],
+   "definition_sha256": "90c535e21e38e3ebbae9284bb330d7ccf6e27722ee4699dbbad623e2418b410b",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N4-N8-executescript-by-first-statement",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright[N4]",
+    "tests/test_0013_sa10_gate.py::test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright[N8]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.executescript]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "3 failed in 1.75s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N4/N8: executescript allowed, the script classified by its first statement"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate[N10]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate[N5]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate[N10]",
+    "tests/test_0013_sa10_gate.py::test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate[N5]"
+   ],
+   "definition_sha256": "38b9a962991dd5a16f411d7efb917ab7d1923d4b0a023c82aeaabe51d4e9702d",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N5-N10-constructor-assertion-dropped",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate[N5]",
+    "tests/test_0013_sa10_gate.py::test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate[N10]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 0.90s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N5/N10: the gate no longer asserts its head constructors are plain creates"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n6_a_comment_prefixed_drop_is_classified_by_its_actions": "assertion",
+    "tests/test_0013_sa10_gate.py::test_n7_a_cte_prefixed_delete_at_no_step_is_refused": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n6_a_comment_prefixed_drop_is_classified_by_its_actions",
+    "tests/test_0013_sa10_gate.py::test_n7_a_cte_prefixed_delete_at_no_step_is_refused"
+   ],
+   "definition_sha256": "82010d36c3fcc96024b4da95d1805a91f78b152683f4225548d9a4f133e271ea",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N6-N7-leading-keyword",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n6_a_comment_prefixed_drop_is_classified_by_its_actions",
+    "tests/test_0013_sa10_gate.py::test_n7_a_cte_prefixed_delete_at_no_step_is_refused"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.68s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N6/N7: a statement the prefix label calls a read is classified as a read"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n7_a_cte_prefixed_delete_at_no_step_is_refused": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n7_a_cte_prefixed_delete_at_no_step_is_refused"
+   ],
+   "definition_sha256": "71e660e987b405466c2585de61b6d1806beb11219ccdd8d45bd5e5dfd1e9e288",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N7-complement-over-labelled-DML",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n7_a_cte_prefixed_delete_at_no_step_is_refused"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.28s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N7: the write complement runs over labelled DML only"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[8]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_n9_writable_schema_at_a_declared_site_is_off_the_pragma_vocabulary": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[8]",
+    "tests/test_0013_sa10_gate.py::test_n9_writable_schema_at_a_declared_site_is_off_the_pragma_vocabulary"
+   ],
+   "definition_sha256": "a63579349e8eb50f6bccf2fd5ae400ce3320c99c9c3b79c167763eef83d9042b",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N9-every-pragma-reads",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n9_writable_schema_at_a_declared_site_is_off_the_pragma_vocabulary",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[8]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.35s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N9: every pragma other than the stamp is a read"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n11_a_statement_around_the_proxy_is_an_orphan": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n11_a_statement_around_the_proxy_is_an_orphan"
+   ],
+   "definition_sha256": "2226b778c3d5d4e24558961406d2a1f043daedef25e466f4511fa5e8020c664e",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N11-orphans-skipped",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n11_a_statement_around_the_proxy_is_an_orphan"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.25s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N11: the orphan check skipped"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[6]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_n12_setconfig_writable_schema_then_a_schema_table_delete_is_refused_twice_over": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[6]",
+    "tests/test_0013_sa10_gate.py::test_n12_setconfig_writable_schema_then_a_schema_table_delete_is_refused_twice_over"
+   ],
+   "definition_sha256": "8a6e537a9fc57d81e71342df822ab43bcb72d82f72633bd3d8f38fa2c89adddd",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N12-schema-table-write-reads",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n12_setconfig_writable_schema_then_a_schema_table_delete_is_refused_twice_over",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[6]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.06s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N12: a write to sqlite_master alone is classified as a read"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n12_setconfig_writable_schema_then_a_schema_table_delete_is_refused_twice_over": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_configuration_guard_sees_setconfig_which_no_statement_shows": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n12_setconfig_writable_schema_then_a_schema_table_delete_is_refused_twice_over",
+    "tests/test_0013_sa10_gate.py::test_the_configuration_guard_sees_setconfig_which_no_statement_shows"
+   ],
+   "definition_sha256": "7a9ec2af7a0abec8e9d977f4aef4c8ac8a4a11cdf985463e48f11fadb16d47fc",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N12-getconfig-dropped",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n12_setconfig_writable_schema_then_a_schema_table_delete_is_refused_twice_over",
+    "tests/test_0013_sa10_gate.py::test_the_configuration_guard_sees_setconfig_which_no_statement_shows"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.62s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N12: the getconfig assertion after every call dropped"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N13 blobopen]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N14 backup into the connection]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N15 set_authorizer(None), then DELETE]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.backup]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.set_authorizer]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N13 blobopen]",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N14 backup into the connection]",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N15 set_authorizer(None), then DELETE]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.backup]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.set_authorizer]"
+   ],
+   "definition_sha256": "f758fedd14c138f41493f089835d384edce8f11e35ccde60b7791d843899eb93",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "N13-N15-forward-unknown-attributes",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N13 blobopen]",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N14 backup into the connection]",
+    "tests/test_0013_sa10_gate.py::test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused[N15 set_authorizer(None), then DELETE]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.backup]",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.set_authorizer]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "6 failed in 2.22s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "N13\u2013N15: the connection proxy forwards every name it does not list to the real connection"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen (through with)]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen (through with)]"
+   ],
+   "definition_sha256": "e1a6c6d9135493e3d1c5fe534589d1cee369d88e744e930d93d1f6f00eeb6bb2",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "enter-returns-real",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen (through with)]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.79s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "stage-1 4(f): `with conn as c` binds the real connection"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_execute_hands_back_the_cursor_wrapper_never_the_real_cursor": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[cursor.connection]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_execute_hands_back_the_cursor_wrapper_never_the_real_cursor",
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[cursor.connection]"
+   ],
+   "definition_sha256": "f53cd649d730293c1fa58492c177d7ba329dee8132996f9cc0f88c5b8edb5723",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "execute-returns-real-cursor",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[cursor.connection]",
+    "tests/test_0013_sa10_gate.py::test_execute_hands_back_the_cursor_wrapper_never_the_real_cursor"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 0.81s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "stage-1 4(f): execute returns the real cursor, whose .connection is the real connection"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[cursor.connection (through iter)]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[cursor.connection (through iter)]"
+   ],
+   "definition_sha256": "03ed6a4c1e797fd1c67235037f01fd212f4813ac4e5c0d4652f0a6a1b7fb074c",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "cursor-iter-returns-real",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[cursor.connection (through iter)]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.55s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "stage-1 4(f) note: iter() of the cursor wrapper is the real cursor"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section"
+   ],
+   "definition_sha256": "79eac506e19d0ad1b31d8fc69dc641abd30ae3b9d704b6a18ad9b6c1f63f9458",
+   "file": "specs/evidence/0013/sa10_digest.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "digest-rowid-only",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.78s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the comparator's column lookup misses every table: rows digest as rowids"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section"
+   ],
+   "definition_sha256": "143048414e2baedcabe0122f41452a6b5ff5727d22903404d4d524ad1700fc60",
+   "file": "specs/evidence/0013/sa10_digest.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "digest-no-typeof",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.85s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the comparator digests values without their storage class"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section"
+   ],
+   "definition_sha256": "079f488ff4d3864d73649e47ad9a35b8270e829881da0cf6d963a1251bc58be6",
+   "file": "specs/evidence/0013/sa10_digest.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "digest-rootpage",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.64s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the comparator digests physical placement (rootpage) with the schema rows"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section"
+   ],
+   "definition_sha256": "1082f494fe2144425a98c557e9b668ce9cf41c91051ee80ab7b5bc9a6b029d15",
+   "file": "specs/evidence/0013/sa10_digest.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "digest-build-unasserted",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.33s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the comparator does not assert the census's SQLite build"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_replay_equivalence_catches_each_unrecorded_route_with_the_allowlist_removed[raw file I/O corrupting only an index page]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_allowlist_refuses_each_connection_route_and_replay_still_sees_the_file_routes[raw file I/O corrupting only an index page]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_replay_equivalence_catches_each_unrecorded_route_with_the_allowlist_removed[raw file I/O corrupting only an index page]",
+    "tests/test_0013_sa10_gate.py::test_the_allowlist_refuses_each_connection_route_and_replay_still_sees_the_file_routes[raw file I/O corrupting only an index page]"
+   ],
+   "definition_sha256": "2709eb27327f73a54fe00e39146d793c8a39dd3df08d994c2b8dc5b8a2752d66",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "integrity-unasserted",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_replay_equivalence_catches_each_unrecorded_route_with_the_allowlist_removed[raw file I/O corrupting only an index page]",
+    "tests/test_0013_sa10_gate.py::test_the_allowlist_refuses_each_connection_route_and_replay_still_sees_the_file_routes[raw file I/O corrupting only an index page]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.70s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "integrity_check on the census file is not asserted"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome"
+   ],
+   "definition_sha256": "ac8ad9b9a1f49d2c9e32f6c97eaebfe2e3ca0b4567cadebb46879dff53419df9",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]"
+   ],
+   "id": "replay-replays-nothing",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.73s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "replay re-runs nothing"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome"
+   ],
+   "definition_sha256": "e28e0085cd324bf1a1d1856efb04b3bb9e8d4060ddd586720e0b2797c9ef80b1",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "replay-ignores-outcomes",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.84s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "replay does not compare each call's outcome"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome"
+   ],
+   "definition_sha256": "ff71c4e4e1e3bc6232fc33a0f003bc3132791e830315926ecdc87d79cfe998b6",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "params-by-reference",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_parameters_are_recorded_by_value_and_replay_compares_every_outcome"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.63s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "parameters recorded by reference: a later mutation reaches the replay"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_replay_equivalence_catches_each_unrecorded_route_with_the_allowlist_removed[set_authorizer(None), then a DELETE through execute]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_heartbeat_refuses_a_call_that_ran_with_the_instrument_removed": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_replay_equivalence_catches_each_unrecorded_route_with_the_allowlist_removed[set_authorizer(None), then a DELETE through execute]",
+    "tests/test_0013_sa10_gate.py::test_the_heartbeat_refuses_a_call_that_ran_with_the_instrument_removed"
+   ],
+   "definition_sha256": "9d960a0cfabe38dacc84cead0c68b1d78a781b6089b99bc5aa282081d60418aa",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "heartbeat-off",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_heartbeat_refuses_a_call_that_ran_with_the_instrument_removed",
+    "tests/test_0013_sa10_gate.py::test_replay_equivalence_catches_each_unrecorded_route_with_the_allowlist_removed[set_authorizer(None), then a DELETE through execute]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.29s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a call that ran untraced and unauthorized is not refused"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_no_allowed_name_hands_back_a_real_connection_cursor_or_blob": "expected-refusal-missing"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_no_allowed_name_hands_back_a_real_connection_cursor_or_blob"
+   ],
+   "definition_sha256": "bf445ce26dd0b4ac80abc3284ac878b908557a8279f7c35d2488a22a19e5df55",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "type-check-off",
+   "import": "ok",
+   "kill_kind": "expected-refusal-missing",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_no_allowed_name_hands_back_a_real_connection_cursor_or_blob"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.89s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "an allowed name may hand back a real Connection, Cursor or Blob"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_site_coverage_reports_an_unobserved_site_in_a_function_the_census_entered": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_site_coverage_reports_an_unobserved_site_in_a_function_the_census_entered"
+   ],
+   "definition_sha256": "8105b2bb46b6ed06c0743ead1c8606040f108b0a8f1107d3135fe00c6013ddfc",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "site-coverage-blind",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_site_coverage_reports_an_unobserved_site_in_a_function_the_census_entered"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.91s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "site coverage reports no unobserved site"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_an_orphan_callback_and_a_cross_connection_callback_are_refusals": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_an_orphan_callback_and_a_cross_connection_callback_are_refusals"
+   ],
+   "definition_sha256": "6ad999e337a11fabf178068c720bf24b4eabc3bcf37d8b771f1b6a3b0f6fdedd",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "cross-connection-callbacks-admitted",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_an_orphan_callback_and_a_cross_connection_callback_are_refusals"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.66s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "an authorizer callback from another connection is attributed to the current call"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses"
+   ],
+   "definition_sha256": "a535b5ef7b6e6ea861e0881c8fc940559c619069b34ce1573a03a4baf6e6fd8a",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "unknown-code-reads",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.86s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "an action code outside the closed table reads as a read"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_a_narrowed_path_set_refuses_loudly": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_a_narrowed_path_set_refuses_loudly"
+   ],
+   "definition_sha256": "dfa9af4facff81055eb4cfb80b67dc0a5ad044bd49ee2753a67051b8a7befd71",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "c2-c3-not-required",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_a_narrowed_path_set_refuses_loudly"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.55s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a gate run with no real (b2) observed passes"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[13]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[13]"
+   ],
+   "definition_sha256": "d84fda751acadd164e384b6198e8bd19edf6224fe3053cd178fed79139e621cf",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "stamp-value-unchecked",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[13]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.68s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a stamp below the head is admitted"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[2]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[2]"
+   ],
+   "definition_sha256": "397ad3d916fb93c0809c1d4bd9dabc9bda8001c568a046431d165a2abea0a2ca",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "ddl-site-ignored",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[2]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.85s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a schema write from an undeclared site is admitted"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_release_migration_opens_its_connections_through_the_seam": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_release_migration_opens_its_connections_through_the_seam"
+   ],
+   "definition_sha256": "ddbc2321166576b6311c1b221a9cf74e15deb55f9c3ee2d5582fab13461fefee",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "seam-skips-release-migration",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_release_migration_opens_its_connections_through_the_seam"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.14s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "release_migration's own connections bypass the seam"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_a_row_write_two_steps_both_claim_is_refused": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_a_row_write_two_steps_both_claim_is_refused"
+   ],
+   "definition_sha256": "c9b9d93eadd715d9326fcbce52565677f3aee11c5cbba176e254623fff3b3f69",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "exact-one-relaxed",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_a_row_write_two_steps_both_claim_is_refused"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.78s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a row write two steps' matchers both claim is admitted (exact-one ownership)"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_clean_control_admits_a_call_whose_nested_pragma_traces_twice": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_clean_control_admits_a_call_whose_nested_pragma_traces_twice"
+   ],
+   "definition_sha256": "50ffdb6de72ddf5398f5bb758011097fdd4565f1ec93cd7f7e429e0cbb5ab332",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]"
+   ],
+   "id": "per-call-trace-count",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_clean_control_admits_a_call_whose_nested_pragma_traces_twice"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.26s",
+   "reason": "the call traced more than once",
+   "reason_seen": true,
+   "what": "\u00a75f.1 rule 3: a per-call trace count refuses the nested table-valued pragma"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "definition_sha256": "f8016b9048d21ad366e68ea984c8041d1aa23185d545f3c20aedd8708823edfa",
+   "file": "src/veracium/store/migration.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]"
+   ],
+   "id": "tree-unmapped-write",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "tree",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.29s",
+   "reason": "a row write on ['episodes'] maps to 0 steps",
+   "reason_seen": true,
+   "what": "a ladder write that maps to no step, after the stamp postcondition"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_gate_passes_the_clean_ladder_on_every_path_and_entry": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_gate_passes_the_clean_ladder_on_every_path_and_entry"
+   ],
+   "definition_sha256": "372f45eb6c2bc2ab04e5fd2644531b2dff624560c24cf78f04327a3793b68787",
+   "file": "src/veracium/store/migration.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "tree-unreached-write",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "tree",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_gate_passes_the_clean_ladder_on_every_path_and_entry"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 19.31s",
+   "reason": "site never observed on any path: veracium/store/migration.py:_apply_forward:",
+   "reason_seen": true,
+   "what": "the same write behind a condition no fixture satisfies (dev's mutant2-conditional): the site check alone"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "definition_sha256": "74c5a91aa0aab807ab870609ac8f3f8b1654256eb6e323a85cf3111c3af1c604",
+   "file": "src/veracium/store/migration.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_proxy_refuses_each_route_and_records_the_refusal[connection.blobopen]"
+   ],
+   "id": "tree-undeclared-ddl",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "tree",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.36s",
+   "reason": "a schema write from a site not declared to issue DDL",
+   "reason_seen": true,
+   "what": "(b2) and (b1) texts issued from _drop_wiki_cache, a site not declared to issue DDL"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_release_migration_opens_its_connections_through_the_seam": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_release_migration_opens_its_connections_through_the_seam"
+   ],
+   "definition_sha256": "9837507d1e9c8d653f2740fe8435443d770e8cd880c451391b1da3741ae52bef",
+   "file": "src/veracium/store/release_migration.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "tree-release-migration-write",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "tree",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_release_migration_opens_its_connections_through_the_seam"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.42s",
+   "reason": "veracium/store/release_migration.py:_observe:",
+   "reason_seen": true,
+   "what": "a write added to release_migration's _observe, inside its BEGIN IMMEDIATE ... ROLLBACK"
+  }
+ ],
+ "summary": {
+  "by_kind": {
+   "gate": 34,
+   "tree": 4
+  },
+  "controls": 1,
+  "controls_good": 1,
+  "good": 38,
+  "killed": 38,
+  "rows": 38,
+  "seconds": 233
+ }
+}

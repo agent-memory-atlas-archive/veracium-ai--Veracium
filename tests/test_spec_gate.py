@@ -2709,6 +2709,8 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # comparator — both verdict a tree, so both are checkers whatever their names say (R6-1)
         root / "specs" / "evidence" / "0013" / "sa10_gate.py",
         root / "specs" / "evidence" / "0013" / "sa10_digest.py",
+        # ...and its mutation table's runner (0007 I2), whose --check verdicts the table
+        root / "specs" / "evidence" / "0013" / "sa10_mutants.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

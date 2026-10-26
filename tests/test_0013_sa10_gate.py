@@ -7,6 +7,10 @@ legitimate one; the proxy is a closed allowlist that records every refusal, in b
 statement cache is off; and replay equivalence catches each unrecorded route (stage-1 read item 5's six controls),
 each run against the SUPERSEDED proxy shape (every unknown name forwarded to the real connection, as the census
 instruments at 58dd7f6 did), so the allowlist is not what catches them, and again against the gate's own proxy.
+§5f.1's negative cells N1–N12 and stage-1's N13–N15 run END TO END (0007 I2): each statement is issued by the ladder's
+own connection inside `_apply_forward`, after the stamp postcondition, and the gate refuses it for its named reason;
+the clean control admits a nested table-valued pragma's two traces; a write two steps claim is refused. Each cell's
+demonstration against the gate mutant §5f.1 names beside it is specs/evidence/0013/sa10_mutants.py's table.
 """
 from __future__ import annotations
 
@@ -496,6 +500,230 @@ def test_the_allowlist_refuses_each_connection_route_and_replay_still_sees_the_f
         assert any(must in p for p in r["problems"]), (name, r["problems"])
     else:
         assert any(p.startswith(f"refused {refusal} at ") for p in r["problems"]), (name, r["problems"])
+
+
+# ---- the negative cells N1–N15, end to end (0013 §5f.1's table; 0007 I2) --------------------------------------------
+# Each statement is issued by the ladder's own connection INSIDE `_apply_forward`, after the stamp postcondition: what
+# a statement added after migration.py's `_refuse_unless(base, STEP_STAMP, ...)` would issue, at that declared site.
+# The census attributes it to `_apply_forward` because the issuer is the nearest src frame. Each cell is demonstrated
+# red against the gate mutant §5f.1 names beside it by specs/evidence/0013/sa10_mutants.py.
+_AF = "veracium/store/migration.py:_apply_forward:"
+
+
+def _after_stamp(monkeypatch, act):
+    import veracium.store.migration as mig
+    real = mig._refuse_unless
+
+    def hooked(base, step, problems):
+        real(base, step, problems)
+        if step == mig.STEP_STAMP:
+            act(sys._getframe(1).f_locals["conn"])
+    monkeypatch.setattr(mig, "_refuse_unless", hooked)
+
+
+def _n_run(tmp_path, monkeypatch, act, reals=None):
+    """PA1 path v1#0 through migrate_store with `act` after the stamp; `reals`, if given, collects the real
+    connections the seam opens (the test's own handle for N11/N12, which go around the proxy by construction)."""
+    _after_stamp(monkeypatch, act)
+
+    def factory(real, census, cid):
+        reals[cid] = real
+        return g.connection_proxy(real, census, cid)
+
+    builders = {lab: b for lab, e, b in g.gate_paths() if e == "migrate_store"}
+    return g.run_path("v1#0", "migrate_store", builders["v1#0"], str(tmp_path / "n"),
+                      proxy_factory=factory if reals is not None else None)
+
+
+def _outside(sql):
+    return f"execute {sql!r:.90} at {_AF}"
+
+
+def _episodes_ddl():
+    from veracium.store import schema_version as sv
+    return next(o.ddl for o in sv.SCHEMAS[sv.SCHEMA_VERSION] if o.key == ("table", "episodes"))
+
+
+def _op_key_index():
+    from veracium.store import schema_version as sv
+    return next(o for o in sv.SCHEMAS[sv.SCHEMA_VERSION] if o.key == ("index", "ix_contribution_ledger_op_key"))
+
+
+def _run_all(*stmts):
+    return lambda conn: [conn.execute(s) for s in stmts]
+
+
+def test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused(tmp_path, monkeypatch):
+    """N1 (SA-R1-01's mutant): DROP TABLE episodes, then episodes' own constructor, after the stamp postcondition, at
+    a site declared to issue DDL. Gate mutant: admit every schema write at a declared site."""
+    r = _n_run(tmp_path, monkeypatch, _run_all("DROP TABLE episodes", _episodes_ddl()))
+    want = _outside("DROP TABLE episodes")
+    assert any(p.startswith(want) and p.endswith("a schema write that is not class (a) or (b) by its text")
+               for p in r["problems"]), r["problems"]
+    assert not any(p.startswith(_outside(_episodes_ddl())) for p in r["problems"]), r["problems"]   # (b1) by its text
+
+
+def test_n2_a_count_preserving_rebuild_is_refused_statement_by_statement(tmp_path, monkeypatch):
+    """N2: CREATE ... AS SELECT, DROP, ALTER ... RENAME: all three outside. Gate mutant: match (b1) by prefix."""
+    stmts = ("CREATE TABLE episodes_rebuild AS SELECT * FROM episodes", "DROP TABLE episodes",
+             "ALTER TABLE episodes_rebuild RENAME TO episodes")
+    r = _n_run(tmp_path, monkeypatch, _run_all(*stmts))
+    for s in stmts:
+        assert any(p.startswith(_outside(s)) and p.endswith("not class (a) or (b) by its text")
+                   for p in r["problems"]), (s, r["problems"])
+
+
+def test_n3_dropping_and_recreating_the_op_key_unique_index_is_refused_on_the_drop(tmp_path, monkeypatch):
+    """N3: the op_key UNIQUE index is REQUIRED, not rebuildable, so its `DROP INDEX IF EXISTS` is not (b2); the
+    recreate is (b1). Gate mutant: widen (b2) to every index."""
+    ix = _op_key_index()
+    drop = f"DROP INDEX IF EXISTS {ix.key[1]}"
+    r = _n_run(tmp_path, monkeypatch, _run_all(drop, ix.ddl))
+    assert any(p.startswith(_outside(drop)) and p.endswith("not class (a) or (b) by its text")
+               for p in r["problems"]), r["problems"]
+    assert not any(p.startswith(_outside(ix.ddl)) for p in r["problems"]), r["problems"]
+
+
+@pytest.mark.parametrize("cell,script", [("N4", "DROP TABLE episodes; {ddl}"), ("N8", "SELECT 1; DROP TABLE episodes")],
+                         ids=["N4", "N8"])
+def test_n4_n8_a_script_on_the_ladders_connection_is_refused_outright(tmp_path, monkeypatch, cell, script):
+    """N4 (N1's two statements as one script) and N8 (a script whose FIRST statement is a read): rule 4 refuses
+    `executescript` itself. Gate mutant: allow executescript and classify a script by its first statement."""
+    text = script.format(ddl=_episodes_ddl())
+    r = _n_run(tmp_path, monkeypatch, lambda conn: conn.executescript(text))
+    assert any(p.startswith(f"refused connection.executescript at {_AF}") for p in r["problems"]), r["problems"]
+    assert r["outcome"].startswith("raised "), r["outcome"]
+
+
+def _head_variant(monkeypatch, ddl_of):
+    from veracium.store import schema_version as sv
+    head = sv.SCHEMA_VERSION
+    monkeypatch.setitem(sv.SCHEMAS, head, tuple(o._replace(ddl=ddl_of(o)) if o.key == ("table", "episodes") else o
+                                                for o in sv.SCHEMAS[head]))
+
+
+@pytest.mark.parametrize("cell", ["N5", "N10"])
+def test_n5_n10_a_head_constructor_that_is_not_a_plain_create_fails_the_gate(tmp_path, monkeypatch, cell):
+    """N5 (CREATE TABLE ... AS SELECT) and N10 (IF NOT EXISTS, which would make a recreate a SECOND silent no-op beside
+    (b2)'s): run_gate's constructor assertion refuses. Gate mutant: drop the assertion from the gate."""
+    variant = {"N5": lambda o: "CREATE TABLE episodes AS SELECT * FROM sqlite_master",
+               "N10": lambda o: o.ddl.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS", 1)}[cell]
+    _head_variant(monkeypatch, variant)
+    report = g.run_gate(str(tmp_path), paths=[])                # no path: the assertion runs on the gate's own
+    assert any(p.startswith("head constructor: table episodes: ") for p in report["problems"]), report["problems"]
+
+
+def test_n6_a_comment_prefixed_drop_is_classified_by_its_actions(tmp_path, monkeypatch):
+    """N6: SQLite reports DROP_TABLE and a DELETE on episodes; the prefix label says READ. Gate mutant: classify by
+    the leading keyword."""
+    sql = "/* repair */ DROP TABLE episodes"
+    r = _n_run(tmp_path, monkeypatch, _run_all(sql, _episodes_ddl()))
+    mine = [p for p in r["problems"] if p.startswith(_outside(sql))]
+    assert any(p.endswith("not class (a) or (b) by its text") for p in mine), r["problems"]
+    assert any(p.endswith("the prefix label says READ, SQLite's actions say DDL") for p in mine), r["problems"]
+
+
+def test_n7_a_cte_prefixed_delete_at_no_step_is_refused(tmp_path, monkeypatch):
+    """N7: a row write mapped to no step, which the prefix label calls a read. Gate mutants: classify by the leading
+    keyword; a write complement over labelled DML only."""
+    sql = "WITH doomed AS (SELECT 1) DELETE FROM episodes"
+    r = _n_run(tmp_path, monkeypatch, _run_all(sql))
+    mine = [p for p in r["problems"] if p.startswith(_outside(sql))]
+    assert any("a row write on ['episodes'] maps to 0 steps" in p for p in mine), r["problems"]
+    assert any(p.endswith("the prefix label says READ, SQLite's actions say DML") for p in mine), r["problems"]
+
+
+def test_n9_writable_schema_at_a_declared_site_is_off_the_pragma_vocabulary(tmp_path, monkeypatch):
+    """N9. Gate mutant: treat every pragma other than the stamp as a read."""
+    r = _n_run(tmp_path, monkeypatch, _run_all("PRAGMA writable_schema=ON", "PRAGMA writable_schema=OFF"))
+    assert any(p.startswith(_outside("PRAGMA writable_schema=ON"))
+               and p.endswith("PRAGMA writable_schema('ON') is not on the read vocabulary") for p in r["problems"]), \
+        r["problems"]
+
+
+def test_n11_a_statement_around_the_proxy_is_an_orphan(tmp_path, monkeypatch):
+    """N11: a READ on the real connection inside the path, so replay cannot see it and only the orphan check can.
+    Gate mutant: skip the orphan check."""
+    reals = {}
+
+    def around(conn):
+        assert len(reals) == 1
+        next(iter(reals.values())).execute("SELECT count(*) FROM episodes").fetchall()
+    r = _n_run(tmp_path, monkeypatch, around, reals)
+    assert any(p.startswith("orphan auth on connection 0: ") for p in r["problems"]), r["problems"]
+    assert any(p.startswith("orphan trace on connection 0: ") for p in r["problems"]), r["problems"]
+
+
+def test_n12_setconfig_writable_schema_then_a_schema_table_delete_is_refused_twice_over(tmp_path, monkeypatch):
+    """N12: setconfig (no callback, no trace) on the real connection, then `DELETE FROM sqlite_master` through the
+    proxy. Gate mutants: a schema-table-only write read as a read; the getconfig assertion dropped."""
+    reals = {}
+    sql = "DELETE FROM sqlite_master WHERE name='episodes'"
+
+    def n12(conn):
+        next(iter(reals.values())).setconfig(sqlite3.SQLITE_DBCONFIG_WRITABLE_SCHEMA, True)
+        conn.execute(sql)
+    r = _n_run(tmp_path, monkeypatch, n12, reals)
+    mine = [p for p in r["problems"] if p.startswith(_outside(sql))]
+    assert any(p.endswith("a direct write to the schema table (['SQLITE_DELETE'])") for p in mine), r["problems"]
+    assert any(p.endswith("SQLITE_DBCONFIG_WRITABLE_SCHEMA is on after the call") for p in r["problems"]), \
+        r["problems"]
+
+
+_N13_15 = {
+    "N13 blobopen": ("connection.blobopen",
+                     lambda conn: conn.blobopen("episodes", "json", conn.execute(
+                         "SELECT rowid FROM episodes ORDER BY rowid LIMIT 1").fetchone()[0]).write(b"Q")),
+    "N14 backup into the connection": ("connection.cursor",
+                                       lambda conn: sqlite3.connect(":memory:").backup(conn.cursor().connection)),
+    "N15 set_authorizer(None), then DELETE": ("connection.set_authorizer",
+                                              lambda conn: (conn.set_authorizer(None),
+                                                            conn.execute("DELETE FROM episodes"))),
+}
+
+
+@pytest.mark.parametrize("cell", sorted(_N13_15))
+def test_n13_n15_a_zero_callback_channel_at_a_declared_site_is_refused(tmp_path, monkeypatch, cell):
+    """N13–N15 (stage-1 item 4): channels that write with no authorizer callback, at the declared site. N14's handle
+    on the real connection is the one a forwarding proxy lends (`conn.cursor().connection`). Gate mutant: forward
+    unknown attributes to the real connection."""
+    refusal, act = _N13_15[cell]
+    r = _n_run(tmp_path, monkeypatch, act)
+    assert any(p.startswith(f"refused {refusal} at {_AF}") for p in r["problems"]), r["problems"]
+
+
+def test_the_clean_control_admits_a_call_whose_nested_pragma_traces_twice(tmp_path, monkeypatch):
+    """§5f.1 rule 3: `SELECT * FROM pragma_table_xinfo(?)` traces twice in one call, and the clean control must not
+    fail on it (a per-call trace count refused it 1,904 times at 58dd7f6)."""
+    r = _control_run(tmp_path, monkeypatch, None, None)
+    nested = [c for c in r["calls"] if len(c.traces) >= 2]
+    assert nested and {c.sql for c in nested} >= {"SELECT * FROM pragma_table_xinfo(?)"}, {c.sql for c in nested}
+    assert r["problems"] == [], r["problems"]
+
+
+def test_a_row_write_two_steps_both_claim_is_refused():
+    """Exact-one write ownership (INV-SA10's 'a write that two steps' matchers both claim')."""
+    from veracium.store import schema_version as sv
+    pa1 = g._pa1()
+    steps = dict(pa1._steps())
+    chains = ("veracium/store/migration.py", "_migrate_outcome_chains", 1, 2)
+    rec = g.Call(0, "execute", "UPDATE episodes SET json = ? WHERE id = ?", (), g.Site(chains))
+    rec.acts, rec.traces, rec.outcome = [(sqlite3.SQLITE_UPDATE, "episodes", "json", "main", None)], ["t"], ("ok",)
+    args = (g.text_classes(), steps, pa1.lib()["_kind"], sv.SCHEMA_VERSION)
+    owner = [n for n, pred in steps.items() if pred({"kind": "DML", "sql": rec.sql, "by": rec.site.by})]
+    assert len(owner) == 1 and g.classify(rec, *args)[1] == []
+    steps["a second matcher"] = steps[owner[0]]
+    cls, probs = g.classify(rec, *args)
+    assert cls == "row" and any("maps to 2 steps" in p for p in probs), probs
+
+
+def test_execute_hands_back_the_cursor_wrapper_never_the_real_cursor(tmp_path):
+    census, conn = _census(tmp_path)
+    cur = conn.execute("SELECT 1")
+    assert not isinstance(cur, sqlite3.Cursor) and type(cur).__name__ == "CursorProxy"
+    cur = conn.executemany("INSERT INTO episodes(json) VALUES(?)", [("x",)])
+    assert not isinstance(cur, sqlite3.Cursor) and type(cur).__name__ == "CursorProxy"
+    conn.close()
 
 
 # ---- the comparator --------------------------------------------------------------------------------------------------
