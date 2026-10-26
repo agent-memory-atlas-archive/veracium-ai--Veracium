@@ -9,13 +9,12 @@ store executes, which closes the divergence rounds 6 and 8 prohibited.
 
 The evidence artifacts ship as package data in `evidence/`:
 
-    sqlite_runtimes.json   the qualified runtime build identities
+    sqlite_runtimes.json   the attestation records (0007 §4g.6 4d): CI-measured builds; a record only removes the warning
     schema_versions.json   the accepted manifests per schema version
     legacy_stores.json     release probing evidence; source of the legacy bases
 
 **Missing or malformed ACCEPTED evidence (`schema_versions.json`) fails closed**:
-`runtime_status()` is `refused` (and the interim predicate
-`_runtime_supported_interim()` returns False), and the store refuses with
+`runtime_status()` is `refused`, and the store refuses with
 `unsupported-sqlite` before any version or shape decision. A missing or
 malformed `sqlite_runtimes.json` only blocks attestation: the build is
 `verified` (0007 §4g.3, a record can only remove the warning).
@@ -47,7 +46,6 @@ _SITE_OPEN_LOCKED = declare_site("store.open.locked")
 _SITE_OPEN_INVALID_VERSION = declare_site("store.open.invalid-version")
 _SITE_OPEN_NEWER = declare_site("store.open.newer")
 _SITE_OPEN_LEGACY = declare_site("store.open.legacy")
-_SITE_RUNTIME_SUPPORTED = declare_site("store.runtime-supported")
 _SITE_RUNTIME_REFUSED = declare_site("store.runtime-refused", declines=True)   # 0007 §4g.6 4a: both gates' ONE decision
 
 log = logging.getLogger(__name__)
@@ -1065,252 +1063,12 @@ def runtime_identity() -> dict:
             "features": _feature_probes()}
 
 
-_RUNTIME_OVERRIDE: list = []
-"""While `write_runtime()` validates a prospective artifact it has not
-published, it parks the candidate records here so every validator sees the
-future state through the one canonical accessor below."""
-
-
-def qualified_runtimes() -> list:
-    """Recorded runtimes — or the prospective set during a qualification."""
-    if _RUNTIME_OVERRIDE:
-        return _RUNTIME_OVERRIDE[0]
-    return json.loads(RUNTIMES.read_text())["runtimes"] if RUNTIMES.exists() else []
-
-
-def _structure_problems(r) -> list:
-    """Type errors in a record, found before any field is USED.
-
-    **Round 13, finding 2: the validator was not total.** `features = []` raised
-    `AttributeError`, `constructor_digests = 1` raised `TypeError` — measured —
-    so a malformed record beside a valid one made `runtime_supported()` escape
-    with an implementation exception instead of returning False, and the caller
-    never saw the closed `unsupported-sqlite` outcome.
-
-    And the evidence-revision fields were untyped: `manifest_algorithm = 13.0`
-    with `schema_version = True` passed and qualified, the same Python-equality
-    class (`True == 1`, `13.0 == 13`) that round 12 fixed for features.
-    **`type(v) is int`, never `isinstance`** — bool is an int subclass."""
-    if not isinstance(r, dict):
-        return [f"runtime record is {type(r).__name__}, not a mapping"]
-    problems = []
-    for field in ("sqlite_version", "source_id"):
-        v = r.get(field)
-        if not isinstance(v, str) or not v:
-            problems.append(f"{field!r} must be a nonempty string")
-    for field in ("manifest_algorithm", "schema_version"):
-        if type(r.get(field)) is not int:
-            problems.append(f"{field!r} must be an int, is "
-                            f"{type(r.get(field)).__name__}")
-    if not isinstance(r.get("features"), dict):
-        problems.append(f"'features' must be a mapping, is "
-                        f"{type(r.get('features')).__name__}")
-    if not isinstance(r.get("constructor_digests"), dict) or not all(
-            isinstance(k, str) and isinstance(v, str)
-            for k, v in (r.get("constructor_digests") or {}).items()
-            if isinstance(r.get("constructor_digests"), dict)):
-        problems.append("'constructor_digests' must map str to str")
-    m = r.get("manifestations")
-    if not isinstance(m, dict) or not all(
-            isinstance(k, str) and isinstance(v, dict) for k, v in (m or {}).items()
-            if isinstance(m, dict)):
-        problems.append("'manifestations' must map str to mappings")
-    return problems
-
-
-def runtime_record_problems(r) -> list:
-    """Whether a recorded runtime is complete enough to qualify anything.
-
-    **Total**: returns problems for any input, never raises (round 13). The
-    empty-mapping vacuity (round 6), exact key sets (rounds 9/11/12) and typed
-    features (round 12) all live behind the structural gate."""
-    problems = _structure_problems(r)
-    if problems:
-        return problems
-    if r["manifest_algorithm"] != MANIFEST_ALGORITHM:
-        problems.append(f"runtime record uses manifest algorithm "
-                        f"{r['manifest_algorithm']}, build uses {MANIFEST_ALGORITHM}")
-    if r["schema_version"] != SCHEMA_VERSION:
-        problems.append(f"runtime record is for schema version {r['schema_version']}, "
-                        f"build declares {SCHEMA_VERSION}")
-    want = {str(v) for v in SCHEMAS}
-    if set(r["constructor_digests"]) != want:
-        problems.append(f"runtime record covers versions "
-                        f"{sorted(r['constructor_digests'])}, build declares "
-                        f"{sorted(want)}")
-    if not r["constructor_digests"]:
-        problems.append("runtime record has no constructor digests")
-    if set(r["features"]) != FEATURE_KEYS:
-        problems.append(f"feature keys {sorted(r['features'])} are not exactly "
-                        f"{sorted(FEATURE_KEYS)}")
-    for k, v in r["features"].items():
-        if type(v) is not bool:
-            problems.append(f"feature {k!r} is {type(v).__name__}, not bool")
-    for name in ("preserves_ddl_body", "xinfo_exposes_generated"):
-        if r["features"].get(name) is not True:
-            problems.append(f"runtime fails a required behaviour: {name}")
-    want_prov = {f"constructor v{v}" for v in SCHEMAS}
-    if set(r["manifestations"]) != want_prov:
-        problems.append(f"runtime manifestations {sorted(r['manifestations'])} "
-                        f"are not exactly {sorted(want_prov)}")
-    else:
-        for v in SCHEMAS:
-            objs = r["manifestations"][f"constructor v{v}"]
-            recorded = r["constructor_digests"].get(str(v))
-            if _digest_of_identity(objs, v) != recorded:
-                problems.append(f"manifestation 'constructor v{v}' does not hash "
-                                f"to its recorded digest — the object records and "
-                                f"the digest disagree")
-            problems.extend(manifestation_problems(objs, v))
-    return problems
-
-
 FEATURE_KEYS = frozenset({"generated_columns", "strict_tables",
                           "preserves_ddl_body", "xinfo_exposes_generated"})
 """The closed feature vocabulary. Every probe result is a real bool -- round 12
 measured `strict_tables: 1` passing dict equality because Python's `1 == True`,
 while the canonical JSON identity correctly distinguished them, so the
 production predicate and the declared identity disagreed."""
-
-
-def build_identity(r: dict) -> tuple:
-    """**RuntimeBuildIdentity: which SQLite build this is.**
-
-    Round 12, finding 1: v14 declared one canonical five-field key and then used
-    `(version, source_id)` for replacement anyway — so a record with the same
-    version and source id but *different feature results* was silently replaced,
-    though the spec itself says a source id does not identify compile options.
-    The reviewer's split is adopted: **build identity** (version, source id,
-    canonical typed features) is what one-active enforcement, matching,
-    replacement, attestation and reporting key on; **evidence revision**
-    (manifest algorithm, schema version) is merely which revision of the record
-    format described it."""
-    return (r.get("sqlite_version"), r.get("source_id"),
-            json.dumps(r.get("features"), sort_keys=True))
-
-
-def _identity_key(r: dict) -> tuple:
-    """Build identity plus the evidence revision — for exact-duplicate checks."""
-    return build_identity(r) + (r.get("manifest_algorithm"), r.get("schema_version"))
-
-
-def _keyable_runtime(r) -> bool:
-    """Whether a record's identity fields can be hashed — round 4's totality
-    rule (mirrored from 0013's `_keyable_path_record`): type-check before set
-    membership or dict keying. A record failing this is ALREADY reported by
-    `runtime_record_problems`; it must not ALSO crash the by-build and
-    duplicate checks by placing a dict/list — e.g. a measured
-    `schema_version={}` — into a `set`/`dict` key. Kept strictly narrower than
-    full validity, so hashable-but-invalid records still get duplicate-checked
-    exactly as before."""
-    return (isinstance(r, dict)
-            and isinstance(r.get("sqlite_version"), str)
-            and isinstance(r.get("source_id"), str)
-            and type(r.get("manifest_algorithm")) is int
-            and type(r.get("schema_version")) is int)
-
-
-def active_records(records=None) -> list:
-    """Records that are current-algorithm and internally valid. Total over
-    any list content (0013 round 7: a non-mapping member raised
-    AttributeError out of a validator that promises problems, not
-    exceptions)."""
-    records = qualified_runtimes() if records is None else records
-    if not isinstance(records, list):          # round 10: total over any input
-        return []
-    return [r for r in records
-            if isinstance(r, dict)
-            and r.get("manifest_algorithm") == MANIFEST_ALGORITHM
-            and not runtime_record_problems(r)]
-
-
-def artifact_problems(records=None) -> list:
-    """Problems visible only across the whole runtime artifact.
-
-    **Round 9, finding 1b: two individually valid records with the SAME runtime
-    identity and DIFFERENT constructor output both passed.** Measured. One
-    SQLite build cannot legitimately produce two different constructor outputs,
-    so the artifact is self-contradictory — and a per-record validator cannot
-    see it, because each record is internally consistent.
-
-    Duplicate identity is rejected outright rather than resolved: picking one
-    would be guessing which record is the forgery."""
-    records = qualified_runtimes() if records is None else records
-    if not isinstance(records, list):
-        return [f"runtime artifact is {type(records).__name__}, not a list"]
-    problems, seen = [], {}
-
-    def _current(r):
-        """Round 13, finding 3: every production check is scoped to
-        current-algorithm records. Superseded ones contribute nothing and
-        cannot disqualify; `--check` reports them for repository cleanup."""
-        return isinstance(r, dict) and r.get("manifest_algorithm") == MANIFEST_ALGORITHM
-
-    for r in records:
-        if not isinstance(r, dict):
-            problems.append(f"runtime artifact contains a {type(r).__name__}, "
-                            f"not a record")
-    records = [r for r in records if isinstance(r, dict)]
-    # **Round 10, finding 2: `0007` supports exactly ONE active runtime.**
-    # v12 described a cross-runtime union and could not construct it: on runtime
-    # A only A contributes, on B only B, and nothing persists an attestation
-    # that A was reproduced by its own job. `write_runtime()` then refused a
-    # second differing runtime outright, because it required every valid
-    # prospective manifestation to be in an accepted set that excluded it.
-    # **A half-built union is worse than an honest single-runtime contract**, so
-    # the union claim is withdrawn and S-Q7 owns widening it with durable
-    # per-runtime attestation.
-    # **Round 12, finding 3: a malformed CURRENT-algorithm record must poison
-    # the artifact, not be skipped.** A record at an older algorithm is
-    # superseded and ignored; a current-algorithm record that fails validation
-    # is evidence of tampering or generator breakage, and the safe reading of
-    # such an artifact is "unqualified".
-    for r in records:
-        if not _current(r):
-            continue
-        for p in runtime_record_problems(r):
-            problems.append(f"current-algorithm record for "
-                            f"{r.get('sqlite_version')!r}: {p}")
-    identities = {build_identity(r) for r in active_records(records)}
-    if len(identities) > 1:
-        problems.append(
-            f"{len(identities)} active runtime build identities recorded "
-            f"({sorted(i[0] for i in identities)}); `0007` supports exactly one. "
-            f"Durable cross-runtime attestation is S-Q7.")
-    # Two current-algorithm records agreeing on version+source_id but differing
-    # on probes are one build described inconsistently -- one build cannot have
-    # two probe results under the same probe definitions.
-    by_build = {}
-    for r in records:
-        if not _current(r):
-            continue
-        if not _keyable_runtime(r):
-            continue                       # already reported; cannot be keyed
-        by_build.setdefault((r.get("sqlite_version"), r.get("source_id")),
-                            set()).add(build_identity(r))
-    for build, keys in sorted(by_build.items()):
-        if len(keys) > 1:
-            problems.append(
-                f"runtime {build[0]!r} has {len(keys)} current-algorithm records "
-                f"that disagree on probes — one build cannot have two")
-    # Scoped to current-algorithm records (round 13, finding 3): a stale
-    # duplicate is a cleanup item for --check, not a startup failure.
-    for r in records:
-        if not _current(r):
-            continue
-        if not _keyable_runtime(r):
-            continue                       # already reported; cannot be keyed
-        key = _identity_key(r)
-        if key in seen:
-            if seen[key] != r.get("constructor_digests"):
-                problems.append(
-                    f"two runtime records share identity {key[0]!r}/{key[1][:20]!r} "
-                    f"but declare different constructor output — the artifact is "
-                    f"self-contradictory and neither can be trusted")
-            else:
-                problems.append(f"duplicate runtime record for {key[0]!r}")
-        seen[key] = r.get("constructor_digests")
-    return problems
 
 
 def manifestation_problems(objs: dict, version: int, schemas=None) -> list:
@@ -1391,55 +1149,6 @@ def manifestation_problems(objs: dict, version: int, schemas=None) -> list:
                 if len(names) != len(set(names)):
                     problems.append(f"table {k!r} has duplicate column names")
     return problems
-
-
-def _runtime_supported_interim() -> bool:
-    """**Derived from the evidence artifact, never from a hand-edited tuple.**
-
-    Qualification means: a *complete* recorded runtime whose identity matches
-    this process, and whose recorded **complete constructor manifestations**
-    reproduce here.
-
-    **Round 11, finding 2: comparing digests was not enough.** The acceptance
-    digest deliberately excludes rebuildable indexes, so a record claiming
-    `CREATE UNIQUE INDEX ix_edges_subj_rel ON edges(user_id)` reproduced its
-    digest exactly while describing an index that changes which writes succeed.
-    Measured: the generator caught it, this predicate did not — the same
-    wrong-place class round 10's finding 1 was about."""
-    # **Total, fail-closed** (round 13, finding 2). Malformed JSON, a missing
-    # `runtimes` member, wrong containers, or any validator escape must yield
-    # False — the caller's closed outcome is `unsupported-sqlite`, never an
-    # implementation exception escaping into the open path. The release check
-    # is where diagnostics belong; this predicate only answers the question.
-    with _SITE_RUNTIME_SUPPORTED.consult():
-        try:
-            records = qualified_runtimes()
-            # Round 10, finding 1: the production-facing predicate must see
-            # artifact-level conflicts, not only the generator.
-            if artifact_problems(records):
-                return _SITE_RUNTIME_SUPPORTED.fire(False, "artifact-problems")
-            me = runtime_identity()
-            for r in records:
-                # Superseded records contribute nothing and cannot disqualify
-                # (round 13, finding 3); malformed CURRENT records already poisoned
-                # the artifact above.
-                if not isinstance(r, dict) or runtime_record_problems(r):
-                    continue
-                # Canonical build identity, never raw dict equality: `1 == True` in
-                # Python, so a mistyped probe made the two disagree (round 12).
-                if build_identity(r) != build_identity({**me,
-                        "manifest_algorithm": MANIFEST_ALGORITHM,
-                        "schema_version": SCHEMA_VERSION}):
-                    continue
-                if any(_constructor_digest(int(v)) != d
-                       for v, d in r["constructor_digests"].items()):
-                    return _SITE_RUNTIME_SUPPORTED.fire(False, "constructor-digests")
-                # The complete manifestation, including rebuildable objects.
-                return all(r["manifestations"].get(f"constructor v{v}")
-                           == _constructor_objects(v) for v in SCHEMAS)
-            return _SITE_RUNTIME_SUPPORTED.fire(False, "no-manifestation")
-        except Exception:
-            return _SITE_RUNTIME_SUPPORTED.fire(False, "raised")
 
 
 # --------------------------------------------------------------------------
@@ -1649,10 +1358,9 @@ def verify_build() -> None:
 _RECORD_FIELDS = frozenset(KEY_FIELDS) | {"manifest_algorithm", "schema_version", "result_digest", "confinement",
                                           "provenance"}
 _PROVENANCE_FIELDS = frozenset({"route", "runner_image", "run_id", "job_id", "commit"})
-ARTIFACT_KEYS = frozenset({"attestations", "runtimes"})
-"""The runtime artifact's CLOSED top level. `runtimes` (0007 v16's record class) stays only until the specs-side
-readers of `_runtime_supported_interim()` move (the 0013 model, the generator); the commit that retires it removes
-it here."""
+ARTIFACT_KEYS = frozenset({"attestations"})
+"""The runtime artifact's CLOSED top level. 0007 v16's `runtimes` record class is retired (0007 §4g.6 4f): a build
+is supported by MEASUREMENT, and an attestation record only removes the warning."""
 _HEX64 = re.compile(r"[0-9a-f]{64}")
 _COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 

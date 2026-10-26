@@ -44,11 +44,11 @@ def _runtime_qualified():
     """Round-8 archive ask, HARDENED per round 9 (R9-5 — the reviewer
     injected an internal defect and watched it become a success-with-skip:
     a broken qualification implementation is NOT evidence that SQLite is
-    merely unsupported). ONLY a successfully evaluated
-    `_runtime_supported_interim() == False` is a skip; import errors, malformed
-    evidence, or predicate exceptions return ("error", detail) and FAIL
-    package verification. Returns (state, detail) with state in
-    {"qualified", "unqualified", "error"}."""
+    merely unsupported). ONLY a successfully evaluated `runtime_status()` of
+    `refused` is a skip (0007 §4g: a `verified` build runs the store-backed
+    harnesses like an `attested` one); import errors or a status that is not a
+    real RuntimeStatus return ("error", detail) and FAIL package verification.
+    Returns (state, detail) with state in {"qualified", "unqualified", "error"}."""
     sys.path.insert(0, str(ROOT / "src"))
     try:
         import veracium.store.schema_version as _sv
@@ -67,31 +67,27 @@ def _runtime_qualified():
                     f"package tree ({_sv.__file__}) — wrong cwd, missing "
                     f"src, a shadowing install, or a preloaded module "
                     f"(R9-5/R10-5)")
-        from veracium.store.schema_version import (runtime_identity,
-                                                   _runtime_supported_interim,
-                                                   qualified_runtimes)
+        from veracium.store.schema_version import (RUNTIME_STATUSES, RuntimeStatus, runtime_identity,
+                                                   runtime_status)
         me = runtime_identity()
-        supported = _runtime_supported_interim()
+        st = runtime_status()
         # R10-5: the reviewer injected `lambda: None` and truthiness made
-        # it a successful skip. STRICT: only a real bool is a result;
-        # only the literal False is a skip; True is qualified; anything
+        # it a successful skip. STRICT: only a real RuntimeStatus with a
+        # closed status is a result; only `refused` is a skip; anything
         # else is a package defect.
-        if type(supported) is not bool:
+        if type(st) is not RuntimeStatus or st.status not in RUNTIME_STATUSES:
             return ("error",
-                    f"_runtime_supported_interim() returned {supported!r} "
-                    f"({type(supported).__name__}) — its contract is a "
-                    f"total bool; a non-boolean is a package defect, "
+                    f"runtime_status() returned {st!r} "
+                    f"({type(st).__name__}) — its contract is a total "
+                    f"RuntimeStatus; anything else is a package defect, "
                     f"never an environment skip (R10-5)")
-        if supported is True:
+        if st.status != "refused":
             return ("qualified",
-                    f"SQLite {me.get('sqlite_version')} (qualified)")
-        recs = sorted({r.get("sqlite_version") for r in qualified_runtimes()
-                       if isinstance(r, dict)} - {None})
+                    f"SQLite {me.get('sqlite_version')} ({st.status})")
         return ("unqualified",
-                f"SQLite {me.get('sqlite_version')} is NOT a qualified "
-                f"runtime (package qualifies: "
-                f"{', '.join(recs) or 'none recorded'}) — run under the "
-                f"qualified runtime to execute the store-backed harnesses")
+                f"SQLite {me.get('sqlite_version')} is refused: {st.reason} — "
+                f"run under a build that verifies to execute the store-backed "
+                f"harnesses")
     except Exception as e:
         return ("error",
                 f"runtime qualification COULD NOT BE EVALUATED ({e!r}) — "

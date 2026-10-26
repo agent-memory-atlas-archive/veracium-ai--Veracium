@@ -315,8 +315,6 @@ INVENTORY = [
      "git-checkout", "git_state() resolves rather than remembers"),
     ("tests/test_migrations_0013.py", "skipif", "geteuid",
      "host-conditional", "root euid defeats the read-only-store fixture"),
-    ("tests/test_schema_model.py", "skip", "not a qualified runtime",
-     "host-conditional", "unqualified SQLite runtime (the gate working)"),
     ("tests/test_schema_model.py", "skip", "no git checkout",
      "git-checkout", "check() returns 2 before reaching the assertion"),
     ("tests/test_0044_t12_fixes.py", "skip", "no git checkout",

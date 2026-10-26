@@ -295,73 +295,6 @@ def test_deleting_a_historical_version_is_an_error(simulated_v2, tmp_path, monke
 
 # --- runtime qualification ------------------------------------------------
 
-def test_the_recorded_runtimes_are_internally_valid():
-    """**This is the check that must run everywhere.**
-
-    Round 6, finding 3: v7 asserted `runtime_supported()` unconditionally, so the
-    whole adversarial suite failed on the reviewer's SQLite 3.46.1 — a runtime
-    the document *claimed* was observed but the shipped artifact did not record.
-    The package made a false claim and then failed its own test proving it.
-
-    Two questions, separated: is the recorded evidence complete and
-    self-consistent (always), and is *this* runner one of the recorded runtimes
-    (environment-dependent, below)."""
-    import schema_evidence as ev
-    records = ev.sv.qualified_runtimes()
-    assert records, "no runtime evidence recorded"
-    for r in records:
-        assert ev.sv.runtime_record_problems(r) == [], (r["sqlite_version"],
-                                                     ev.sv.runtime_record_problems(r))
-
-
-def test_this_runtime_is_qualified_or_explicitly_is_not():
-    """Environment-dependent by design, and **skipping is the correct outcome**
-    on an unqualified runtime — not a failure of the schema model."""
-    import schema_evidence as ev
-    if not ev.sv._runtime_supported_interim():
-        pytest.skip(
-            f"sqlite {sqlite3.sqlite_version} is not a qualified runtime. That is "
-            f"the gate working: record it with "
-            f"`python3 specs/schema_evidence.py --runtime --write`.")
-    assert ev.sv._runtime_supported_interim()
-
-
-def test_an_unrecorded_runtime_is_not_qualified(monkeypatch):
-    import schema_evidence as ev
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [])
-    assert not ev.sv._runtime_supported_interim()
-
-
-def test_a_matching_version_with_different_features_is_not_qualified(monkeypatch):
-    """A version number names a release, not a build."""
-    import schema_evidence as ev
-    rec = ev.build_runtime_record()
-    rec["features"] = dict(rec["features"],
-                           strict_tables=not rec["features"]["strict_tables"])
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert not ev.sv._runtime_supported_interim()
-
-
-def test_an_empty_digest_map_does_not_qualify_vacuously(monkeypatch):
-    """Round 6, finding 4: `all(...)` over an empty mapping is True, so a record
-    with no constructor digests qualified."""
-    import schema_evidence as ev
-    rec = ev.build_runtime_record()
-    rec["constructor_digests"] = {}
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert ev.sv.runtime_record_problems(rec)
-    assert not ev.sv._runtime_supported_interim()
-
-
-def test_writing_runtime_evidence_actually_writes(tmp_path, monkeypatch):
-    """Round 6, finding 5: `--runtime --write` was documented and ignored."""
-    import schema_evidence as ev
-    art = tmp_path / "sqlite_runtimes.json"
-    monkeypatch.setattr(ev.sv, "RUNTIMES", art)
-
-    assert ev.write_runtime() == 0
-    assert art.exists() and json.loads(art.read_text())["runtimes"]
-
 
 def test_missing_legacy_evidence_authorizes_nothing(monkeypatch, tmp_path):
     """Round 6, finding 7: v7 returned {SCHEMA_VERSION}, authorising adoption
@@ -394,63 +327,6 @@ def test_a_rebuildable_non_index_is_a_build_error():
         del SCHEMAS[99]
 
 
-def test_an_unattested_foreign_runtime_contributes_nothing(monkeypatch):
-    """Round 9, finding 1: a record's objects agreeing with its own digest
-    proves internal consistency, **not provenance**. Until a job on that runtime
-    regenerates it, a foreign record contributes no accepted manifest.
-
-    This replaces an earlier test that asserted the opposite — the union was
-    unconditional, which is what let a self-consistent fabrication in."""
-    import schema_evidence as ev
-    foreign = dict(ev.build_runtime_record())
-    foreign["sqlite_version"] = "9.9.9"
-    objs = dict(ev.sv._constructor_objects(1))
-    key = next(k for k in objs if k.startswith("table:wiki"))
-    objs[key] = dict(objs[key], sql=objs[key]["sql"] + " -- other runtime")
-    foreign["manifestations"] = {"constructor v1": objs}
-    foreign["constructor_digests"] = {"1": ev.sv._digest_of_identity(objs, 1)}
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [foreign])
-    records = ev.build_version_artifact(strict=False)["versions"]
-    assert not any("9.9.9" in a["provenance"] for a in records["1"]["accepted"])
-
-
-def test_a_self_consistent_fabrication_is_rejected():
-    """Round 9, finding 1a: v11 checked only that a manifestation hashed to its
-    recorded digest, so updating both together passed."""
-    import copy
-
-    import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
-    objs = dict(rec["manifestations"]["constructor v1"])
-    objs["trigger:evil"] = {
-        "type": "trigger", "table": "edges",
-        "sql": "CREATE TRIGGER evil AFTER INSERT ON edges BEGIN DELETE FROM edges; END"}
-    rec["manifestations"]["constructor v1"] = objs
-    rec["constructor_digests"]["1"] = ev.sv._digest_of_identity(objs, 1)
-    problems = ev.sv.runtime_record_problems(rec)
-    assert any("undeclared object" in p for p in problems), problems
-
-
-def test_conflicting_runtime_identities_reject_the_artifact():
-    """Round 9, finding 1b: two individually valid records with the same
-    identity and different output both passed. One build cannot produce two."""
-    import copy
-
-    import schema_evidence as ev
-    good = copy.deepcopy(ev.build_runtime_record())
-    other = copy.deepcopy(good)
-    other["constructor_digests"] = {"1": "0" * 64}
-    assert ev.sv.artifact_problems([good, other])
-
-
-def test_a_duplicate_runtime_record_is_rejected():
-    import copy
-
-    import schema_evidence as ev
-    rec = ev.build_runtime_record()
-    assert ev.sv.artifact_problems([copy.deepcopy(rec), copy.deepcopy(rec)])
-
-
 def test_the_release_result_is_rederived():
     """Round 7, finding 7: the gate inspected the stored value."""
     import schema_evidence as ev
@@ -479,61 +355,20 @@ def test_the_ddl_probe_asserts_body_preservation():
 
 # --- round 8: runtime-record validation ----------------------------------
 
-def _valid_record():
-    import schema_evidence as ev
-    return ev.build_runtime_record()
-
 
 def test_a_fabricated_manifestation_is_rejected():
     """Round 8, finding 2 — a demonstrated bypass. An added trigger became an
-    accepted version-1 shape while the validator returned no problems."""
+    accepted version-1 shape while the validator returned no problems. (0007 §4g: the legacy runtime record that
+    carried manifestations is retired; the rule lives on in manifestation_problems, which the 0013 model's evidence
+    validator applies.)"""
     import copy
 
     import schema_evidence as ev
-    rec = copy.deepcopy(_valid_record())
-    objs = dict(rec["manifestations"]["constructor v1"])
+    objs = copy.deepcopy(ev.sv._constructor_objects(1))
     objs["trigger:evil"] = {
         "type": "trigger", "table": "edges",
         "sql": "CREATE TRIGGER evil AFTER INSERT ON edges BEGIN DELETE FROM edges; END"}
-    rec["manifestations"]["constructor v1"] = objs
-    assert ev.sv.runtime_record_problems(rec)
-
-
-def test_a_record_without_manifestations_is_rejected():
-    import copy
-
-    import schema_evidence as ev
-    rec = copy.deepcopy(_valid_record())
-    del rec["manifestations"]
-    assert ev.sv.runtime_record_problems(rec)
-
-
-def test_an_extra_manifestation_is_rejected():
-    import copy
-
-    import schema_evidence as ev
-    rec = copy.deepcopy(_valid_record())
-    rec["manifestations"]["constructor v9"] = {}
-    assert ev.sv.runtime_record_problems(rec)
-
-
-def test_an_invalid_record_beside_a_valid_one_contributes_nothing(monkeypatch):
-    """`build_version_artifact()` imported manifestations from every record
-    without first validating it."""
-    import copy
-
-    import schema_evidence as ev
-    good = copy.deepcopy(_valid_record())
-    bad = copy.deepcopy(good)
-    bad["sqlite_version"] = "9.9.9"
-    objs = dict(bad["manifestations"]["constructor v1"])
-    objs["table:sneaky"] = {"type": "table", "table": "sneaky",
-                            "sql": "CREATE TABLE sneaky (x)", "columns": []}
-    bad["manifestations"]["constructor v1"] = objs
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [good, bad])
-    sneaky = ev.sv._digest_of_identity(objs, 1)
-    records = ev.build_version_artifact(strict=False)["versions"]
-    assert not any(a["digest"] == sneaky for a in records["1"]["accepted"])
+    assert ev.sv.manifestation_problems(objs, 1)
 
 
 def test_the_capability_validator_is_not_in_the_0007_kernel():
@@ -554,131 +389,11 @@ def _isolate(monkeypatch, tmp_path):
     return ev
 
 
-def test_a_conflicting_artifact_disqualifies_the_runtime(monkeypatch):
-    """Round 10, finding 1: `build_version_artifact()` caught the conflict but
-    the production-facing predicate did not — and that is where it matters."""
-    import copy
-
-    import schema_evidence as ev
-    good = ev.build_runtime_record()
-    other = copy.deepcopy(good)
-    other["constructor_digests"] = {"1": "0" * 64}
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [good, other])
-    assert not ev.sv._runtime_supported_interim()
-
-
-def test_the_recorded_artifact_has_no_conflicts():
-    """The always-running check, asserted at artifact level rather than
-    record by record."""
-    import schema_evidence as ev
-    assert ev.sv.artifact_problems(ev.sv.qualified_runtimes()) == []
-
-
-def test_two_active_runtime_identities_are_refused():
-    """Round 10, finding 2: `0007` supports exactly one active runtime. The
-    cross-runtime union was described but could not be constructed."""
-    import copy
-
-    import schema_evidence as ev
-    a = ev.build_runtime_record()
-    b = copy.deepcopy(a)
-    b["sqlite_version"] = "9.9.9"
-    assert any("exactly one" in p for p in ev.sv.artifact_problems([a, b]))
-
-
-def test_a_staging_failure_publishes_nothing(monkeypatch, tmp_path):
-    """Round 10: the rollback path had no test at all."""
-    import json
-
-    ev = _isolate(monkeypatch, tmp_path)
-    ev.sv.RUNTIMES.write_text(json.dumps({"runtimes": []}, indent=2) + "\n")
-    real = Path.write_text
-
-    def boom(self, *a, **k):
-        if self.name.startswith("schema_versions"):
-            raise OSError("simulated disk failure")
-        return real(self, *a, **k)
-
-    monkeypatch.setattr(Path, "write_text", boom)
-    assert ev.write_runtime() == 1
-    assert json.loads(ev.sv.RUNTIMES.read_text())["runtimes"] == []
-
-
-def test_a_failed_publish_rolls_the_first_file_back(monkeypatch, tmp_path):
-    import json
-
-    ev = _isolate(monkeypatch, tmp_path)
-    ev.sv.RUNTIMES.write_text(json.dumps({"runtimes": []}, indent=2) + "\n")
-    real = Path.replace
-
-    def boom(self, target):
-        if Path(target).name.startswith("schema_versions"):
-            raise OSError("simulated rename failure")
-        return real(self, target)
-
-    monkeypatch.setattr(Path, "replace", boom)
-    assert ev.write_runtime() == 1
-    assert json.loads(ev.sv.RUNTIMES.read_text())["runtimes"] == []
-
-
-def test_staged_temporaries_are_not_left_behind(monkeypatch, tmp_path):
-    """v12 left `sqlite_runtimes.json.tmp` behind and it shipped in the review
-    package."""
-    ev = _isolate(monkeypatch, tmp_path)
-    assert ev.write_runtime() == 0
-    assert not list(tmp_path.glob("*.tmp")), list(tmp_path.glob("*.tmp"))
-
-
 def test_the_repository_has_no_stray_staged_artifacts():
     assert not list((ROOT / "specs" / "generated").glob("*.tmp"))
 
 
 # --- round 11 ------------------------------------------------------------
-
-def test_one_canonical_identity_is_used_everywhere(monkeypatch):
-    """Round 11, finding 1: three keys were in use — five fields for
-    attestation, `version + source_id` for the one-active check and for
-    replacement. Two records agreeing on version and source id but disagreeing
-    on probes passed everything."""
-    import copy
-
-    import schema_evidence as ev
-    a = ev.build_runtime_record()
-    b = copy.deepcopy(a)
-    b["features"] = dict(b["features"],
-                         strict_tables=not b["features"]["strict_tables"])
-    assert ev.sv._identity_key(a) != ev.sv._identity_key(b)
-    assert any("one build cannot have two" in p for p in ev.sv.artifact_problems([a, b]))
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [a, b])
-    assert not ev.sv._runtime_supported_interim()
-
-
-def test_a_modified_rebuildable_ddl_disqualifies_the_runtime(monkeypatch):
-    """Round 11, finding 2: the acceptance digest excludes rebuildable indexes,
-    so a record claiming a UNIQUE index on the same name reproduced its digest
-    exactly — while describing an index that changes which writes succeed."""
-    import copy
-
-    import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
-    objs = dict(rec["manifestations"]["constructor v1"])
-    key = "index:ix_edges_subj_rel"
-    objs[key] = dict(objs[key],
-                     sql="CREATE UNIQUE INDEX ix_edges_subj_rel ON edges(user_id)")
-    rec["manifestations"]["constructor v1"] = objs
-    assert ev.sv._digest_of_identity(objs, 1) == rec["constructor_digests"]["1"]
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert not ev.sv._runtime_supported_interim()
-
-
-def test_a_missing_rebuildable_index_disqualifies_the_runtime(monkeypatch):
-    import copy
-
-    import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
-    del rec["manifestations"]["constructor v1"]["index:ix_edges_subj_rel"]
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert not ev.sv._runtime_supported_interim()
 
 
 def test_schema_version_must_match_the_registry():
@@ -741,170 +456,38 @@ def test_a_missing_versions_artifact_fails_the_gate(monkeypatch, tmp_path):
 
 # --- round 12 ------------------------------------------------------------
 
-def test_replacement_is_by_build_identity(monkeypatch, tmp_path):
-    """Round 12, finding 1a: replacement used (version, source_id), silently
-    replacing a record whose probes — and therefore build identity — differed."""
-    import copy
-    import json
-
-    import schema_evidence as ev
-    art = tmp_path / "sqlite_runtimes.json"
-    monkeypatch.setattr(ev.sv, "RUNTIMES", art)
-    monkeypatch.setattr(ev.sv, "VERSIONS", tmp_path / "schema_versions.json")
-
-    other = copy.deepcopy(ev.build_runtime_record())
-    other["features"] = dict(other["features"],
-                             strict_tables=not other["features"]["strict_tables"])
-    art.write_text(json.dumps({"runtimes": [other]}, indent=2) + "\n")
-    assert ev.write_runtime() == 1          # refused, not silently replaced
-    assert json.loads(art.read_text())["runtimes"] == [other]
-
-
-def test_a_superseded_revision_of_the_same_build_is_replaceable(monkeypatch, tmp_path):
-    """The carve-out that clears an algorithm bump without deadlocking."""
-    import copy
-    import json
-
-    import schema_evidence as ev
-    art = tmp_path / "sqlite_runtimes.json"
-    monkeypatch.setattr(ev.sv, "RUNTIMES", art)
-    monkeypatch.setattr(ev.sv, "VERSIONS", tmp_path / "schema_versions.json")
-
-    stale = copy.deepcopy(ev.build_runtime_record())
-    stale["manifest_algorithm"] = ev.sv.MANIFEST_ALGORITHM - 1
-    art.write_text(json.dumps({"runtimes": [stale]}, indent=2) + "\n")
-    assert ev.write_runtime() == 0
-    records = json.loads(art.read_text())["runtimes"]
-    assert len(records) == 1
-    assert records[0]["manifest_algorithm"] == ev.sv.MANIFEST_ALGORITHM
-
-
-def test_a_mistyped_feature_is_rejected(monkeypatch):
-    """Round 12, finding 1b: `1 == True` in Python, so an int-typed probe passed
-    dict equality while splitting from the canonical identity."""
-    import copy
-
-    import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
-    rec["features"] = dict(rec["features"], strict_tables=1)
-    assert any("not bool" in p for p in ev.sv.runtime_record_problems(rec))
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert not ev.sv._runtime_supported_interim()
-
 
 @pytest.mark.parametrize("victim", ["index:ix_edges_subj_rel", "table:wiki"])
 def test_a_missing_declared_object_fails_the_record(victim):
     """Round 12, finding 2: "no extras" was only half of "exact" — a missing
-    object with an updated digest passed the validator."""
+    object with an updated digest passed the validator. (Now exercised on the manifestation itself, through
+    sv.manifestation_problems: 0007 §4g withdrew the legacy runtime record that carried it; 0007 v20 re-states S73's
+    citation.)"""
     import copy
 
     import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
-    del rec["manifestations"]["constructor v1"][victim]
-    rec["constructor_digests"]["1"] = ev.sv._digest_of_identity(
-        rec["manifestations"]["constructor v1"], 1)
-    assert any("missing declared object" in p
-               for p in ev.sv.runtime_record_problems(rec))
-
-
-def test_a_malformed_current_algorithm_record_poisons_the_artifact(monkeypatch):
-    """Round 12, finding 3: the predicate skipped a malformed current-algorithm
-    record and qualified on the good one beside it."""
-    import copy
-
-    import schema_evidence as ev
-    good = ev.build_runtime_record()
-    broken = copy.deepcopy(good)
-    broken["sqlite_version"] = "9.9.9"
-    del broken["manifestations"]
-    assert ev.sv.artifact_problems([good, broken])
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [good, broken])
-    assert not ev.sv._runtime_supported_interim()
+    objs = copy.deepcopy(ev.sv._constructor_objects(1))
+    del objs[victim]
+    assert any("missing declared object" in p for p in ev.sv.manifestation_problems(objs, 1))
 
 
 # --- round 13 ------------------------------------------------------------
 
-@pytest.mark.parametrize("field,value", [
-    ("manifest_algorithm", None), ("schema_version", None)])
-def test_future_evidence_is_not_overwritten(monkeypatch, tmp_path, field, value):
-    """Round 13, finding 1: an older checkout silently overwrote evidence from
-    a newer algorithm or schema version — an evidence downgrade, rc 0."""
-    import copy
-    import json
-
-    import schema_evidence as ev
-    art = tmp_path / "sqlite_runtimes.json"
-    monkeypatch.setattr(ev.sv, "RUNTIMES", art)
-    monkeypatch.setattr(ev.sv, "VERSIONS", tmp_path / "schema_versions.json")
-
-    fut = copy.deepcopy(ev.build_runtime_record())
-    fut[field] = fut[field] + 1
-    art.write_text(json.dumps({"runtimes": [fut]}, indent=2) + "\n")
-    saved = art.read_text()
-    assert ev.write_runtime() == 1
-    assert art.read_text() == saved
-
-
-@pytest.mark.parametrize("mut", [
-    {"features": []}, {"constructor_digests": 1}, {"manifestations": 1},
-    {"sqlite_version": ""}, {"manifest_algorithm": 13.0},
-    {"schema_version": True}])
-def test_the_record_validator_is_total(mut):
-    """Round 13, finding 2: malformed containers raised implementation
-    exceptions, and float/bool revision fields passed via Python equality."""
-    import copy
-
-    import schema_evidence as ev
-    rec = dict(copy.deepcopy(ev.build_runtime_record()), **mut)
-    assert ev.sv.runtime_record_problems(rec)          # returns, never raises
-
-
-def test_the_predicate_is_total_over_garbage(monkeypatch):
-    import schema_evidence as ev
-    for artifact in ("junk", [42], [{"features": []}], None):
-        monkeypatch.setattr(ev.sv, "qualified_runtimes",
-                            lambda a=artifact: a if isinstance(a, list) else
-                            (_ for _ in ()).throw(ValueError("bad")))
-        assert ev.sv._runtime_supported_interim() is False
-
-
-def test_superseded_duplicates_do_not_disqualify(monkeypatch):
-    """Round 13, finding 3: two identical older-algorithm leftovers beside one
-    valid record disqualified the runtime — safe, but a needless startup
-    failure contradicting the stated policy."""
-    import copy
-
-    import schema_evidence as ev
-    good = ev.build_runtime_record()
-    stale = copy.deepcopy(good)
-    stale["manifest_algorithm"] = ev.sv.MANIFEST_ALGORITHM - 1
-    monkeypatch.setattr(ev.sv, "qualified_runtimes",
-                        lambda: [good, copy.deepcopy(stale), copy.deepcopy(stale)])
-    assert ev.sv.artifact_problems() == []
-    assert ev.sv._runtime_supported_interim() is True
-
 
 def test_an_extra_manifestation_field_is_rejected():
-    """Round 13 correction: "closed" had meant only "these fields present"."""
+    """Round 13 correction: "closed" had meant only "these fields present". (Now exercised on the manifestation
+    itself, through sv.manifestation_problems: 0007 §4g withdrew the legacy runtime record that carried it; 0007 v20
+    re-states S78's citation.)"""
     import copy
 
     import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
-    key = next(iter(rec["manifestations"]["constructor v1"]))
-    rec["manifestations"]["constructor v1"][key] = dict(
-        rec["manifestations"]["constructor v1"][key], extra="field")
-    assert any("not exactly" in p for p in ev.sv.runtime_record_problems(rec))
+    objs = copy.deepcopy(ev.sv._constructor_objects(1))
+    key = next(iter(objs))
+    objs[key] = dict(objs[key], extra="field")
+    assert any("not exactly" in p for p in ev.sv.manifestation_problems(objs, 1))
 
 
 # --- round 14 (non-blocking corrections at acceptance) --------------------
-
-def test_the_generator_is_total_over_malformed_members(monkeypatch):
-    """Round 14: the predicate was total and the generator was not — `[42]`
-    raised AttributeError out of build_version_artifact."""
-    import schema_evidence as ev
-    monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [42])
-    art = ev.build_version_artifact(strict=False)
-    assert "1" in art["versions"]
 
 
 def test_a_type_key_mismatch_is_reported():
@@ -912,37 +495,47 @@ def test_a_type_key_mismatch_is_reported():
     import copy
 
     import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
+    objs = copy.deepcopy(ev.sv._constructor_objects(1))
     key = "index:ix_edges_subj_rel"
-    entry = rec["manifestations"]["constructor v1"][key]
-    rec["manifestations"]["constructor v1"][key] = dict(entry, type="trigger")
-    rec["constructor_digests"]["1"] = ev.sv._digest_of_identity(
-        rec["manifestations"]["constructor v1"], 1)
-    assert any("disagreeing with its key" in p
-               for p in ev.sv.runtime_record_problems(rec))
+    objs[key] = dict(objs[key], type="trigger")
+    assert any("disagreeing with its key" in p for p in ev.sv.manifestation_problems(objs, 1))
 
 
 def test_a_null_sql_declared_object_is_reported():
     import copy
 
     import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
-    entry = rec["manifestations"]["constructor v1"]["table:wiki"]
-    rec["manifestations"]["constructor v1"]["table:wiki"] = dict(entry, sql=None)
-    rec["constructor_digests"]["1"] = ev.sv._digest_of_identity(
-        rec["manifestations"]["constructor v1"], 1)
-    assert any("null SQL" in p for p in ev.sv.runtime_record_problems(rec))
+    objs = copy.deepcopy(ev.sv._constructor_objects(1))
+    objs["table:wiki"] = dict(objs["table:wiki"], sql=None)
+    assert any("null SQL" in p for p in ev.sv.manifestation_problems(objs, 1))
 
 
 def test_duplicate_column_names_are_reported():
     import copy
 
     import schema_evidence as ev
-    rec = copy.deepcopy(ev.build_runtime_record())
-    entry = copy.deepcopy(rec["manifestations"]["constructor v1"]["table:wiki"])
+    objs = copy.deepcopy(ev.sv._constructor_objects(1))
+    entry = copy.deepcopy(objs["table:wiki"])
     entry["columns"] = entry["columns"] + [entry["columns"][0]]
-    rec["manifestations"]["constructor v1"]["table:wiki"] = entry
-    rec["constructor_digests"]["1"] = ev.sv._digest_of_identity(
-        rec["manifestations"]["constructor v1"], 1)
-    assert any("duplicate column names" in p
-               for p in ev.sv.runtime_record_problems(rec))
+    objs["table:wiki"] = entry
+    assert any("duplicate column names" in p for p in ev.sv.manifestation_problems(objs, 1))
+
+
+_ACCEPTED_SOURCE = __import__("re").compile(
+    r"constructor v\d+|migrated->v\d+ \(.+|v\d+:constructor(?:->v\d+)+ \(.+")
+"""The closed set of sources an accepted manifestation may come from (0007 §4g.6 4d, INV-SA5): a version's own
+constructor, a reviewed migration onto it, or a reviewed legacy ALTER chain. The withdrawn union's form, a runtime
+record's manifestation (`<provenance> @ sqlite <version>`), is none of them."""
+
+
+def test_every_accepted_manifestation_comes_from_a_closed_set_of_sources():
+    """S58 / INV-SA5: no attestation record widens the accepted evidence. An attestation record carries no
+    manifestation (its field set is closed: test_inv_sa5_a_forged_record_cannot_widen_the_accepted_evidence), and
+    every entry the accepted-set generator PRODUCES comes from the closed set above. The control is the withdrawn
+    union's own entry form, which the grammar refuses."""
+    import schema_evidence as ev
+    generated = ev.build_version_artifact(strict=False)["versions"]
+    sources = [a["provenance"] for rec in generated.values() for a in rec["accepted"]]
+    assert sources and all(_ACCEPTED_SOURCE.fullmatch(s) for s in sources), \
+        [s for s in sources if not _ACCEPTED_SOURCE.fullmatch(s)]
+    assert not _ACCEPTED_SOURCE.fullmatch("constructor v1 @ sqlite 3.45.1")     # the withdrawn union's form

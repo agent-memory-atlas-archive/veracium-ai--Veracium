@@ -100,12 +100,13 @@ cd "$ROOT"
 QUAL_OUT="$(PYTHONPATH=src "$VENV/bin/python" - <<'PYQ' 2>&1 || true
 import sqlite3, sys
 try:
-    from veracium.store.schema_version import _runtime_supported_interim
-    ok = _runtime_supported_interim()
+    from veracium.store.schema_version import runtime_status
+    st = runtime_status()                   # 0007 §4g: attested or verified runs; refused does not
 except Exception as e:                      # never silenced: the REASON matters
     print(f"UNAVAILABLE\t{sqlite3.sqlite_version}\t{type(e).__name__}: {e}")
     sys.exit(0)
-print(f"{'YES' if ok is True else 'NO'}\t{sqlite3.sqlite_version}\t{ok!r}")
+print(f"{'YES' if st.status in ('attested', 'verified') else 'NO'}\t{sqlite3.sqlite_version}\t{st.status}"
+      f"{': ' + st.reason if st.reason else ''}")
 PYQ
 )"
 QUAL="$(printf '%s' "$QUAL_OUT" | cut -f1)"
@@ -120,7 +121,7 @@ if [ "$QUAL" != "YES" ]; then
 REFUSING TO RUN: this runtime is NOT qualified.
 
   SQLite               : ${SQLITE_V:-unknown}
-  _runtime_supported_interim()  : $DETAIL
+  runtime_status()     : $DETAIL
 
 This is a refusal, not a warning. Running the suite on an unqualified SQLite
 build produces a number that LOOKS like a result and is not one — on the build

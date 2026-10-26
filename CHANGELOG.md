@@ -16,6 +16,10 @@
   spec 0013 INV-SA11), on both `migration_attempted` and `migration_committed`. A host whose `audit_sink` reads the
   fields by name, or the first six by position, is unaffected; one that unpacks exactly six must change. The 0018
   sidecar's `attempted` entry copies it as `runtime`.
+- **Removed: 0007 v16's single-runtime record class** (`sqlite_runtimes.json`'s `runtimes`, and the predicate and
+  validators that read it). A build is supported by measurement alone; the artifact now holds attestation records
+  only. The offline launcher (`specs/evidence/offline/run_offline.sh`) and the package verifier accept a `verified`
+  build, so the offline suite runs on any SQLite build that passes the measured check, not only the recorded one.
 
 ## 0.27.1 — 2026-10-26
 

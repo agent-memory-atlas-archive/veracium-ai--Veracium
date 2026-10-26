@@ -1512,7 +1512,6 @@ def test_check_evidence_is_total_over_non_mapping_runtime_members(monkeypatch,
     seeded.write_text(json.dumps(art, indent=1, sort_keys=True))
     monkeypatch.setattr(m13, "EVIDENCE_FILE", seeded)
     assert m13.check_evidence() == 1
-    assert sv.active_records([42]) == []
 
 
 # --- round 8, finding 1: each TEMP object class is probed independently -----
@@ -4828,14 +4827,16 @@ def test_the_authority_lookup_never_decides_on_an_unvalidated_accepted_set(monke
 
 def test_no_fixture_attestation_reaches_package_data(tmp_path, monkeypatch):
     """Research's B12: a fixture record (all-zeros provenance commit, `fixture-` run id) attests a build on users'
-    machines if it ever reaches package data. The packaged artifact holds none; a planted one is caught."""
+    machines if it ever reaches package data. The packaged artifact holds none; a planted one is caught. Fixture
+    records are READER-SIDE constructions only, never written through the attestation writer, which refuses both
+    marks (I4 W4): a refactor that routes them through the writer must fail loudly, not quietly unmark them."""
     def fixtures(records):
         return [r for r in records if isinstance(r, dict) and any(
             isinstance(j, dict) and (j.get("commit") == "0" * 40 or str(j.get("run_id", "")).startswith("fixture-"))
             for j in r.get("provenance", []) if isinstance(r.get("provenance"), list))]
     assert fixtures(_REAL_ATTESTATIONS()) == []
     planted = tmp_path / "sqlite_runtimes.json"
-    planted.write_text(json.dumps({"attestations": [fixture_attestation()], "runtimes": []}))
+    planted.write_text(json.dumps({"attestations": [fixture_attestation()]}))
     monkeypatch.setattr(sv, "RUNTIMES", planted)
     assert fixtures(_REAL_ATTESTATIONS()) != []              # the control: a planted fixture is seen
 

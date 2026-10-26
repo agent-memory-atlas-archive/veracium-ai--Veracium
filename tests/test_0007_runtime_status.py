@@ -375,7 +375,7 @@ def test_the_status_is_read_once_at_each_gate_and_nothing_after_branches_on_it()
                  and (getattr(n.func, "attr", None) == "runtime_supported"
                       or getattr(n.func, "id", None) == "runtime_supported")]
         if f.name == "schema_version.py":
-            assert "_runtime_supported_interim" in own and "runtime_supported" not in own
+            assert "_runtime_supported_interim" not in own and "runtime_supported" not in own   # retired (I4 (A))
         assert calls == [], f"{f.relative_to(SRC)} calls runtime_supported()"
         interim = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
                    and (getattr(n.func, "attr", None) == "_runtime_supported_interim"
@@ -575,16 +575,9 @@ def test_the_release_sidecar_copies_the_runtime(monkeypatch, tmp_path):
 
 
 # ---- the interim predicate's readers: a committed list (research's item 14 D9) ---------------------------------------
-INTERIM_READERS = {
-    # (the 0013 model and its tests left this list with I3(b): the model's gate is the measured status, 0013 §5f.3)
-    # the evidence generator and the legacy-record tests, until the generator writes attestation records (I4/I5)
-    "specs/schema_evidence.py", "tests/test_schema_model.py",
-    # the offline launcher's runtime check and its selftest
-    "specs/evidence/0020/verify_package.py", "specs/evidence/0020/verify_package_selftest.py",
-    "specs/evidence/offline/run_offline.sh",
-    # the 0042 site driver for `store.runtime-supported`, which lives in the interim predicate
-    "tests/test_0042_sites.py",
-}
+INTERIM_READERS = set()
+"""Empty since I4 (A): the legacy runtime record class and its interim predicate are retired (0007 §4g.6 4f), so no
+live file may read `_runtime_supported_interim` at all."""
 FROZEN_EVIDENCE = {
     # round-2 accepted evidence, run only at its recorded pin (research 69bba264): excluded BY EXACT PATH, never by a
     # pattern a live reader could hide under

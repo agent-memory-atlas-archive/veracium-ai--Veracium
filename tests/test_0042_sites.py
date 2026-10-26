@@ -895,7 +895,6 @@ DECLINES.update({
     "store.open.invalid-version": TwoPhase(lambda mp: _stamped(-1), lambda p: _raises(StoreVersionError, SqliteStore, p)),
     "store.open.newer": TwoPhase(lambda mp: _stamped(_sv.SCHEMA_VERSION + 1), lambda p: _raises(StoreVersionError, SqliteStore, p)),
     "store.open.legacy": lambda mp: _raises(StoreVersionError, SqliteStore, _legacy_v1_file()),
-    "store.runtime-supported": lambda mp: (mp.setattr(_sv, "artifact_problems", lambda records: ["bad"]), _sv._runtime_supported_interim()),
     "store.runtime-refused": lambda mp: _sv.runtime_refused(_sv.RuntimeStatus("refused", "feature probe x is False",
                                                                               None, ())),
     "store.journal.reason-not-dispositioned": lambda mp: _journal_bad_reason(),

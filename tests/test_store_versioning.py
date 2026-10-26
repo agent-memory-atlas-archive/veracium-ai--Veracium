@@ -484,10 +484,11 @@ def test_artifact_problems_is_total_over_an_unhashable_identity_field():
     a dict into the duplicate-check key and `artifact_problems` raised
     `TypeError` at context entry, outside every exception mapping. The record
     is malformed and already reported; the keyability guard means it can no
-    longer ALSO crash the by-build and duplicate checks."""
-    good = sv.qualified_runtimes()[0]
+    longer ALSO crash the by-build and duplicate checks. (0007 §4g retired the legacy runtime record; the rule MOVES
+    to the attestation artifact's validator, over the same unhashable field.)"""
+    good = _attestation_for_this_build()
     poisoned = {**good, "schema_version": {}}
-    problems = sv.artifact_problems([good, poisoned])
+    problems = sv.attestation_artifact_problems([good, poisoned])
     assert isinstance(problems, list)
     assert any("schema_version" in p for p in problems)
 

@@ -43,7 +43,7 @@ def main() -> int:
     import veracium.store.schema_version as sv
     checks = []
 
-    real_supported = sv._runtime_supported_interim
+    real_status = sv.runtime_status
     real_file = sv.__file__
 
     def expect(state, label):
@@ -60,24 +60,30 @@ def main() -> int:
 
         def boom():
             raise RuntimeError("injected qualification defect")
-        sv._runtime_supported_interim = boom
+        sv.runtime_status = boom
         expect("error", "exception fault")
 
-        sv._runtime_supported_interim = lambda: None
-        expect("error", "non-boolean result (None)")
+        sv.runtime_status = lambda: None
+        expect("error", "non-status result (None)")
 
-        sv._runtime_supported_interim = lambda: 1
-        expect("error", "non-boolean result (1 == True)")
+        sv.runtime_status = lambda: 1
+        expect("error", "non-status result (1)")
 
-        sv._runtime_supported_interim = lambda: False
-        expect("unqualified", "evaluated False (the ONLY skip)")
+        sv.runtime_status = lambda: sv.RuntimeStatus("bogus", None, None, ())
+        expect("error", "a status outside the closed set")
 
-        sv._runtime_supported_interim = lambda: True
-        expect("qualified", "evaluated True")
+        sv.runtime_status = lambda: sv.RuntimeStatus("refused", "feature probe x is False", None, ())
+        expect("unqualified", "refused (the ONLY skip)")
+
+        sv.runtime_status = lambda: sv.RuntimeStatus("verified", None, None, ())
+        expect("qualified", "verified (0007 §4g: a verified build runs the harnesses)")
+
+        sv.runtime_status = lambda: sv.RuntimeStatus("attested", None, None, ())
+        expect("qualified", "attested")
 
         # sibling-prefix shadow: '<ROOT>-shadow/...' passed the old
         # string-startswith containment; Path.is_relative_to refuses it
-        sv._runtime_supported_interim = real_supported
+        sv.runtime_status = real_status
         sv.__file__ = str(ROOT.resolve()) + "-shadow/src/veracium/x.py"
         expect("error", "sibling-prefix shadow path")
 
@@ -85,7 +91,7 @@ def main() -> int:
         sv.__file__ = "/usr/lib/python3/dist-packages/veracium/x.py"
         expect("error", "preloaded foreign module")
     finally:
-        sv._runtime_supported_interim = real_supported
+        sv.runtime_status = real_status
         sv.__file__ = real_file
 
     # ---- R12-3: MUTATION CELLS against the shipped consistency gates —
