@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import json
 import pathlib
 import sqlite3
 import sys
@@ -751,3 +752,29 @@ def test_verify_build_reproduces_through_the_generators_constructor(monkeypatch)
     monkeypatch.setattr(sv, "_constructor_objects", lambda v: calls.append(v) or real(v))
     sv.verify_build()
     assert sorted(calls) == sorted(sv.SCHEMAS), calls
+
+
+def test_the_packaged_attestation_artifact_is_valid(tmp_path, monkeypatch):
+    """S56 / S65 (0007 v20, research): a claim about the SHIPPED artifact, not a fabricated one. From the first CI
+    attestation on, package data carries real records, and a poisoned artifact silently downgrades every build to
+    `verified`; so the packaged file, read where production reads it, has no problem at all (malformed, conflicting
+    or duplicate). Control: the same reader over a copy of it carrying a planted conflicting pair (one key, two
+    result digests) reports the conflict."""
+    packaged = pathlib.Path(sv.__file__).resolve().parent / "evidence" / "sqlite_runtimes.json"
+    assert pathlib.Path(sv.RUNTIMES).resolve() == packaged and packaged.exists()
+    assert sv.attestation_artifact_problems() == []
+
+    ident = sv.attestation_identity()
+    planted_record = {**{k: ident[k] for k in sv.KEY_FIELDS}, "manifest_algorithm": sv.MANIFEST_ALGORITHM,
+                      "schema_version": sv.SCHEMA_VERSION, "result_digest": "a" * 64,
+                      "confinement": {k: True for k in sv.CONFINEMENT_PROBE_KEYS},
+                      "provenance": [{"route": "setup-python", "runner_image": "ubuntu-24.04", "run_id": "1",
+                                      "job_id": 1, "commit": "a" * 40}]}
+    assert sv.attestation_record_problems(planted_record) == []            # the pair is valid record by record
+    planted = tmp_path / "sqlite_runtimes.json"
+    planted.write_text(json.dumps({"attestations": sv.attestations()
+                                   + [planted_record, dict(planted_record, result_digest="b" * 64)]}))
+    monkeypatch.setattr(sv, "RUNTIMES", planted)
+    problems = sv.attestation_artifact_problems()
+    assert any("with different evidence" in p for p in problems), problems
+

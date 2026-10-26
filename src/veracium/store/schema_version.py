@@ -1393,7 +1393,18 @@ def _provenance_problems(prov) -> list:
             return ["provenance commit must be a full hex commit id"]
     if prov != sorted(prov, key=lambda j: (j["route"], j["runner_image"], j["job_id"])):
         return ["'provenance' is not sorted by route, then image, then job id"]
+    if len({j["commit"] for j in prov}) != 1:
+        # (I4 W1; 0007 v19 "the full commit id that wrote it") ONE CI run aggregates jobs of ONE commit, and that
+        # commit is what v19's cross-run order compares: a record merging several has no defined "older".
+        return ["every provenance entry must name the same commit: the record's commit"]
     return []
+
+
+def record_commit(r) -> str | None:
+    """The record's ONE commit (I4 W1), or None when the record is malformed."""
+    if not isinstance(r, dict) or _provenance_problems(r.get("provenance")):
+        return None
+    return r["provenance"][0]["commit"]
 
 
 def attestation_record_problems(r) -> list:

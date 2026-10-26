@@ -2711,6 +2711,9 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         root / "specs" / "evidence" / "0013" / "sa10_digest.py",
         # ...and its mutation table's runner (0007 I2), whose --check verdicts the table
         root / "specs" / "evidence" / "0013" / "sa10_mutants.py",
+        # 0007 §4g.6 4d (I4): the attestation-record writer REFUSES on v19's order, the HEAD binding, fixture marks
+        # and the reader's own validators — a checker whatever its name says; its matrix kills each refusal's mutant
+        root / "specs" / "attestation_writer.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

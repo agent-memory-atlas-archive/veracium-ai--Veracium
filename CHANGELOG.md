@@ -16,6 +16,11 @@
   spec 0013 INV-SA11), on both `migration_attempted` and `migration_committed`. A host whose `audit_sink` reads the
   fields by name, or the first six by position, is unaffected; one that unpacks exactly six must change. The 0018
   sidecar's `attempted` entry copies it as `runtime`.
+- **Attestation records name one commit.** Every provenance entry of a record must carry the same commit (the commit
+  the attestation suite ran at). A record mixing commits is malformed, and like any malformed record it poisons the
+  artifact. `specs/attestation_writer.py` is the one way a record is written: it binds the record to the checkout's
+  `HEAD`, refuses fixture records, and orders a replacement by git ancestry, refusing whenever the order cannot be
+  answered (a shallow clone, an unknown commit).
 - **Removed: 0007 v16's single-runtime record class** (`sqlite_runtimes.json`'s `runtimes`, and the predicate and
   validators that read it). A build is supported by measurement alone; the artifact now holds attestation records
   only. The offline launcher (`specs/evidence/offline/run_offline.sh`) and the package verifier accept a `verified`

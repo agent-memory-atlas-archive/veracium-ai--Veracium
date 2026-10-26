@@ -317,6 +317,8 @@ INVENTORY = [
      "host-conditional", "root euid defeats the read-only-store fixture"),
     ("tests/test_schema_model.py", "skip", "no git checkout",
      "git-checkout", "check() returns 2 before reaching the assertion"),
+    ("tests/test_0007_attestation_writer.py", "skip", "no git checkout",
+     "git-checkout", "check() returns 2 before reaching the stale-record report (S77)"),
     ("tests/test_0044_t12_fixes.py", "skip", "no git checkout",
      "git-checkout", "the keep-every-value sweep reads the tracked tree (git ls-files)"),
     ("tests/test_printed_verification_instructions.py", "skip",

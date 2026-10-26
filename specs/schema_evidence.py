@@ -452,6 +452,34 @@ def acceptance_digest_problems(versions: dict) -> list:
     return out
 
 
+def stale_attestation_problems(records=None) -> list:
+    """S77 (round 13, finding 3), on attestation records: a record of another revision (superseded, or newer than this
+    checkout) never disqualifies a build at open time, since the reader reads current records only. But the
+    repository is cleaned before release, so the release check reports each one. (I4 (A) retired the legacy loop that
+    carried this and, with it, the diagnostic; restored here on the attestation class.) Malformed records are
+    attestation_artifact_problems' to report."""
+    try:
+        records = sv.attestations() if records is None else records
+    except (OSError, ValueError):
+        return []                                  # unreadable: attestation_artifact_problems reports it
+    out = []
+    for i, r in enumerate(records if isinstance(records, list) else []):
+        rev = sv.attestation_revision(r)
+        if rev not in ("superseded", "future"):    # current, or malformed (a non-mapping among them): not ours
+            continue
+        what = (f"attestation {i} ({r.get('sqlite_version')!r}, {r.get('machine')!r}) is a {rev} revision (manifest "
+                f"algorithm {r.get('manifest_algorithm')}, schema {r.get('schema_version')}; this checkout "
+                f"{sv.MANIFEST_ALGORITHM}, {sv.SCHEMA_VERSION})")
+        if rev == "superseded":
+            out.append(f"{what}: re-attest or remove it before release")
+        elif rev == "future":
+            # S75: dropping a newer revision's evidence is the downgrade S75 forbids, and the writer refuses to
+            # re-attest over it, so neither remedy applies; a release does not ship evidence it cannot read.
+            out.append(f"{what}, which this checkout cannot read: release from a checkout at that revision, "
+                       f"never by deleting the record")
+    return out
+
+
 def check() -> int:
     if subprocess.run(["git", "rev-parse", "--git-dir"], cwd=ROOT,
                       capture_output=True).returncode:
@@ -487,6 +515,7 @@ def check() -> int:
     if status.status == "refused":
         bad.append(f"sqlite {sqlite3.sqlite_version} is refused ({status.reason}); 0007 §4g refuses it")
     bad += [f"attestation artifact: {p}" for p in sv.attestation_artifact_problems()]
+    bad += stale_attestation_problems()
     with tempfile.TemporaryDirectory() as tmp:
         work = pathlib.Path(tmp)
         head = _resolved(_probe_at("HEAD", work), records)
