@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -245,27 +246,64 @@ def _drop_wiki_cache(conn: sqlite3.Connection) -> None:
     conn.execute("DELETE FROM wiki")
 
 
+class MigrationRuntime(NamedTuple):
+    """The migrating build (0013 INV-SA11; 0007 §4g): its SQLite version, `sqlite_source_id()` and the status the
+    open gate MEASURED — `attested` or `verified` (a `refused` build never migrates)."""
+    sqlite_version: str
+    source_id: str
+    status: str
+
+
 class MigrationAuditEvent(NamedTuple):
     """The audit payload of one offline migration. `migration_committed` repeats
     `migration_attempted` bar `event`/`occurred_at`, so a sink can process either
     in isolation. `path` is capped at 4096 bytes — a limit, not a truncation: a
-    shortened path in an audit record is a falsified audit record."""
+    shortened path in an audit record is a falsified audit record. `runtime` (0013
+    INV-SA11) is the LAST field, so a host that reads the first six by position is
+    unaffected; it rides both events, so either is still processable alone."""
     event: str                 # "migration_attempted" | "migration_committed"
     migration_id: str
     path: str
     from_version: int
     to_version: int
     occurred_at: str           # RFC 3339, UTC
+    runtime: MigrationRuntime
+
+
+# INV-SA11's subfields each have their OWN closed grammar, by fullmatch (research's stage-1 read, item 1(c)): the audit
+# token grammar `_TOKEN_RE` admits no space, and a real `sqlite_source_id()` has two (`2024-01-30 16:01:20 e876…alt1`,
+# 84 characters, a 64-character tail that is 60 hex plus a distribution's `altN`).
+_SQLITE_VERSION_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?")
+_SOURCE_ID_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9a-z]{64}")
+_MIGRATING_STATUSES = frozenset({"attested", "verified"})
+
+
+def migration_runtime(status) -> MigrationRuntime:
+    """INV-SA11's value from the gate's ONE `runtime_status()` reading, each subfield checked against its grammar at
+    the write: a value that fails refuses the audit record rather than carrying prose."""
+    from .schema_version import RuntimeStatus, runtime_identity
+    me = runtime_identity()
+    rt = MigrationRuntime(me["sqlite_version"], me["source_id"],
+                          status.status if isinstance(status, RuntimeStatus) else None)
+    if type(rt.sqlite_version) is not str or not _SQLITE_VERSION_RE.fullmatch(rt.sqlite_version):
+        raise ValueError(f"audit field runtime.sqlite_version {rt.sqlite_version!r} is not a SQLite version")
+    if type(rt.source_id) is not str or not _SOURCE_ID_RE.fullmatch(rt.source_id):
+        raise ValueError(f"audit field runtime.source_id {rt.source_id!r} is not a sqlite_source_id()")
+    if rt.status not in _MIGRATING_STATUSES:
+        raise ValueError(f"audit field runtime.status {rt.status!r} is not one a migrating build can have")
+    return rt
 
 
 def _mig_event(kind: str, mid: str, path: str, from_v: int,
-               to_v: int) -> MigrationAuditEvent:
+               to_v: int, runtime: MigrationRuntime) -> MigrationAuditEvent:
     if len(str(path).encode("utf-8", "surrogateescape")) > _AUDIT_STRING_CAP:
         raise ValueError(f"audit field 'path' exceeds {_AUDIT_STRING_CAP} bytes; "
                          f"refusing rather than truncating an audit record")
+    if type(runtime) is not MigrationRuntime:
+        raise TypeError("the audit runtime must be exactly a MigrationRuntime (0013 INV-SA11)")
     return MigrationAuditEvent(
         event=kind, migration_id=mid, path=str(path), from_version=from_v,
-        to_version=to_v, occurred_at=datetime.now(timezone.utc).isoformat())
+        to_version=to_v, occurred_at=datetime.now(timezone.utc).isoformat(), runtime=runtime)
 
 
 def _apply_forward(conn: sqlite3.Connection, base: int) -> None:
@@ -776,11 +814,12 @@ def migrate_store(path: str, *,
         mid = str(uuid.uuid4())
         pending: dict = {}
 
-        def _older(c, spath, found, objs, base):
+        def _older(c, spath, found, objs, base, *, runtime):
             _apply_forward(c, base)
             pending["from_v"] = base
+            pending["runtime"] = migration_runtime(runtime)
             attempted = _mig_event("migration_attempted", mid, spath, base,
-                                   SCHEMA_VERSION)
+                                   SCHEMA_VERSION, pending["runtime"])
             if audit_sink is not None:
                 audit_sink(attempted)                  # inside txn: raising aborts
             else:
@@ -796,7 +835,7 @@ def migrate_store(path: str, *,
         # re-migrate.
         if str(result) == "migrated" and audit_sink is not None:
             committed = _mig_event("migration_committed", mid, str(path),
-                                   pending.get("from_v", 0), SCHEMA_VERSION)
+                                   pending.get("from_v", 0), SCHEMA_VERSION, pending["runtime"])
             try:
                 audit_sink(committed)
             except BaseException as exc:

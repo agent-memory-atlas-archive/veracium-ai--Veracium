@@ -45,7 +45,7 @@ def _runtime_qualified():
     injected an internal defect and watched it become a success-with-skip:
     a broken qualification implementation is NOT evidence that SQLite is
     merely unsupported). ONLY a successfully evaluated
-    `runtime_supported() == False` is a skip; import errors, malformed
+    `_runtime_supported_interim() == False` is a skip; import errors, malformed
     evidence, or predicate exceptions return ("error", detail) and FAIL
     package verification. Returns (state, detail) with state in
     {"qualified", "unqualified", "error"}."""
@@ -68,17 +68,17 @@ def _runtime_qualified():
                     f"src, a shadowing install, or a preloaded module "
                     f"(R9-5/R10-5)")
         from veracium.store.schema_version import (runtime_identity,
-                                                   runtime_supported,
+                                                   _runtime_supported_interim,
                                                    qualified_runtimes)
         me = runtime_identity()
-        supported = runtime_supported()
+        supported = _runtime_supported_interim()
         # R10-5: the reviewer injected `lambda: None` and truthiness made
         # it a successful skip. STRICT: only a real bool is a result;
         # only the literal False is a skip; True is qualified; anything
         # else is a package defect.
         if type(supported) is not bool:
             return ("error",
-                    f"runtime_supported() returned {supported!r} "
+                    f"_runtime_supported_interim() returned {supported!r} "
                     f"({type(supported).__name__}) — its contract is a "
                     f"total bool; a non-boolean is a package defect, "
                     f"never an environment skip (R10-5)")

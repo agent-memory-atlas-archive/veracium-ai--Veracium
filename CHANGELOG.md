@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+**The SQLite widening (spec 0007 §4g; in progress, not yet released).**
+
+- **Changed: the store opens on a SQLite build by MEASUREMENT, not by a list.** On every open the build is
+  `attested`, `verified` or `refused` (`veracium.store.schema_version.runtime_status()`). It must pass the feature
+  probes, reproduce every accepted schema version exactly, and tell apart six packaged near-miss schemas; a record
+  from the project's CI only removes the warning. `refused` keeps the reason `unsupported-sqlite`, and its message
+  now names the first failing check and no file outside the package. `veracium doctor` reports the build before it
+  opens any store.
+- **Added: `UnattestedBuildWarning`** (a `UserWarning`), once per process, when a `verified` build opens a store.
+- **BREAKING for hosts that unpack a migration audit event by position: `MigrationAuditEvent` gains a seventh, LAST
+  field, `runtime`** (`MigrationRuntime`: the migrating build's `sqlite_version`, `source_id` and measured status;
+  spec 0013 INV-SA11), on both `migration_attempted` and `migration_committed`. A host whose `audit_sink` reads the
+  fields by name, or the first six by position, is unaffected; one that unpacks exactly six must change. The 0018
+  sidecar's `attempted` entry copies it as `runtime`.
+
 ## 0.27.1 — 2026-10-26
 
 **A patch release: the MCP `remember` tool's guidance.** No behaviour, schema or format changes.

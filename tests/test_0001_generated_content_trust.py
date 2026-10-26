@@ -263,7 +263,7 @@ def test_i13_pre_assistant_reader_refuses_a_v11_store(tmp_path,
     # head (a real pre-ASSISTANT tree does); only the version boundary is
     # under test here — the reviewer's two-tree probe measured the same
     # refusal with no simulation at all
-    monkeypatch.setattr(sv, "runtime_supported", lambda: True)
+    monkeypatch.setattr(sv, "runtime_status", lambda: sv.RuntimeStatus("attested", None, None, ()))
     with pytest.raises(sv.StoreVersionError) as ei:
         SqliteStore(db)
     assert ei.value.reason == "newer"

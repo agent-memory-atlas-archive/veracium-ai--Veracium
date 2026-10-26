@@ -158,3 +158,15 @@ def pytest_runtest_makereport(item, call):
         for name, errname, msg in sqlite_error_names(call.excinfo.value):
             rep.user_properties.append(("sqlite_error", f"{name} {errname} {msg}"))
             rep.sections.append(("sqlite error", f"{name}: sqlite_errorname={errname}: {msg}"))
+
+
+@pytest.fixture(autouse=True)
+def _unattested_warning_once_per_test():
+    """0007 §4e emits the unattested-build warning once per PROCESS (INV-SA7). Under pytest-randomly whichever test
+    opened the first store in a worker would see it and no other, so each test starts with the once-flag clear: a
+    test's warnings depend on what it does, never on the order it ran in (research's stage-1 read, item 14 D2)."""
+    import sys
+    sv = sys.modules.get("veracium.store.schema_version")
+    if sv is not None:
+        sv._WARNED.clear()
+    yield

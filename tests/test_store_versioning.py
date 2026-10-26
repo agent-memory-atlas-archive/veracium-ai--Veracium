@@ -193,7 +193,7 @@ def test_s8_a_store_with_extra_tables_is_refused():
 
 
 def test_the_runtime_gate_runs_before_any_shape_decision(monkeypatch):
-    monkeypatch.setattr(sv, "runtime_supported", lambda: False)
+    monkeypatch.setattr(sv, "runtime_status", lambda: sv.RuntimeStatus("refused", "feature probe x is False", None, ()))
     with pytest.raises(StoreVersionError) as e:
         SqliteStore(_tmp())
     assert e.value.reason == "unsupported-sqlite"
@@ -603,3 +603,114 @@ def test_a_raising_feature_probe_still_closes_its_connection(monkeypatch):
         gc.collect()
     leaked = [str(w.message) for w in caught if issubclass(w.category, ResourceWarning) and "database" in str(w.message)]
     assert leaked == [], leaked
+
+
+# --- 0007 §4g.3: the adversarial vectors of the SQLite attestation (v18) ------------------------------------------
+def _attestation_for_this_build(**over):
+    """A well-formed current attestation record whose full key is this build's (a tests-only fixture: never package
+    data, which carries only what CI measured)."""
+    ident = sv.attestation_identity()
+    r = {**{k: ident[k] for k in sv.KEY_FIELDS}, "manifest_algorithm": sv.MANIFEST_ALGORITHM,
+         "schema_version": sv.SCHEMA_VERSION, "result_digest": "a" * 64,
+         "confinement": {k: True for k in sv.CONFINEMENT_PROBE_KEYS},
+         "provenance": [{"route": "setup-python", "runner_image": "ubuntu-24.04", "run_id": "1", "job_id": 1,
+                         "commit": "0" * 40}]}
+    r.update(over)
+    return r
+
+
+def test_inv_sa1_an_attested_identity_does_not_skip_verification(monkeypatch):
+    """A build reporting an attested build's identity but failing a probe is refused: the record never replaces the
+    measurement."""
+    monkeypatch.setattr(sv, "attestations", lambda: [_attestation_for_this_build()])
+    assert sv.runtime_status().status == "attested"
+    real = sv._feature_probes
+    monkeypatch.setattr(sv, "_feature_probes", lambda: {**real(), "xinfo_exposes_generated": False})
+    st = sv.runtime_status()
+    assert st.status == "refused" and st.reason == "feature probe xinfo_exposes_generated is False", st
+    with pytest.raises(StoreVersionError) as e:
+        SqliteStore(_tmp())
+    assert e.value.reason == "unsupported-sqlite"
+
+
+def test_inv_sa3_a_wrong_shape_store_is_refused_on_a_verified_build(monkeypatch):
+    """The route the attested runner never takes: a stamped store with the wrong shape, on a `verified` build."""
+    monkeypatch.setattr(sv, "attestations", lambda: [])
+    assert sv.runtime_status().status == "verified"
+    p = _tmp()
+    c = sqlite3.connect(p)
+    c.execute("CREATE TABLE not_ours (x)")
+    c.execute(f"PRAGMA user_version = {sv.SCHEMA_VERSION}")
+    c.commit()
+    c.close()
+    with pytest.raises(StoreVersionError) as e:
+        SqliteStore(p)
+    assert e.value.reason == "stamped-shape-mismatch" and e.value.diff
+
+
+def test_inv_sa4_a_build_that_cannot_tell_a_near_miss_apart_is_refused(monkeypatch):
+    """A build whose near-miss reads as the accepted head schema would silently misread a wrong store: refused,
+    naming the near-miss, attested record or not."""
+    from veracium.store import near_misses
+    monkeypatch.setattr(sv, "attestations", lambda: [_attestation_for_this_build()])
+    target = near_misses.NEAR_MISSES[2]
+    real = sv._near_miss_objects
+    head = sv._accepted_constructor_entry(sv.SCHEMA_VERSION)["objects"]
+    monkeypatch.setattr(sv, "_near_miss_objects", lambda m, v: head if m == target else real(m, v))
+    st = sv.runtime_status()
+    assert st.status == "refused" and st.reason == f"near-miss {target.name} was not told apart", st
+
+
+def test_inv_sa5_a_forged_record_cannot_widen_the_accepted_evidence(monkeypatch):
+    """A record that matches the running build and carries a manifestation of its own is MALFORMED (a record's field
+    set is closed and holds no manifestations), so it attests nothing, and a store of that shape is still refused."""
+    forged = _attestation_for_this_build()
+    forged["manifestations"] = {"constructor v1": {"table:not_ours": {"type": "table", "table": "not_ours",
+                                                                      "sql": "CREATE TABLE not_ours (x)",
+                                                                      "columns": []}}}
+    monkeypatch.setattr(sv, "attestations", lambda: [forged])
+    st = sv.runtime_status()
+    assert st.status == "verified" and "fields" in st.reason, st
+    p = _tmp()
+    c = sqlite3.connect(p)
+    c.execute("CREATE TABLE not_ours (x)")
+    c.execute(f"PRAGMA user_version = {sv.SCHEMA_VERSION}")
+    c.commit()
+    c.close()
+    with pytest.raises(StoreVersionError) as e:
+        SqliteStore(p)
+    assert e.value.reason == "stamped-shape-mismatch"
+
+
+def test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact(monkeypatch):
+    """One key, two evidences: the key does not identify the build. The artifact is poisoned, which blocks
+    ATTESTATION, never verification (research's stage-1 read, item 14 D1(a)): the build is `verified`, the reason
+    naming the conflict. Equal evidence is a duplicate; distinct keys are any number."""
+    a, b = _attestation_for_this_build(), _attestation_for_this_build(result_digest="b" * 64)
+    assert any("with different evidence: the key does not identify the build" in p
+               for p in sv.attestation_artifact_problems([a, b]))
+    assert any("with equal evidence: a duplicate" in p for p in sv.attestation_artifact_problems([a, dict(a)]))
+    assert sv.attestation_artifact_problems([a, _attestation_for_this_build(machine="aarch64")]) == []
+    monkeypatch.setattr(sv, "attestations", lambda: [a, b])
+    st = sv.runtime_status()
+    assert st.status == "verified" and "different evidence" in st.reason, st
+
+
+def test_inv_sa12_a_non_canonical_record_field_poisons_the_artifact():
+    """The record side calls the same canonicaliser as the build side, so a record written with a raw platform
+    value (`AMD64`, `x86-64`, a libc from `platform.libc_ver()`) is malformed, never a match."""
+    for field, value in (("machine", "AMD64"), ("machine", "x86-64"), ("system", "linux "), ("libc", "glibc2.39"),
+                         ("libc", "none")):
+        r = _attestation_for_this_build(**{field: value})
+        assert any(f"'{field}'" in p for p in sv.attestation_record_problems(r)), (field, value)
+        assert sv.attestation_artifact_problems([r]) != []
+
+
+def test_inv_sa12_an_unreadable_platform_field_is_at_most_verified(monkeypatch):
+    """A build whose libc cannot be read matches no record, even one whose other fields are all equal."""
+    record = _attestation_for_this_build()
+    monkeypatch.setattr(sv, "attestations", lambda: [record])
+    real = sv.canonical_platform
+    monkeypatch.setattr(sv, "canonical_platform", lambda: {**real(), "libc": None})
+    st = sv.runtime_status()
+    assert st.status == "verified" and st.unreadable == ("libc",) and st.key is None, st

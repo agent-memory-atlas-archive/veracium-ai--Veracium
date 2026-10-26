@@ -98,8 +98,9 @@ The checks, each named in the output:
                 judged by relation NAME only and stated as such — never a
                 claim of eligibility, which is the plan's. The planned phases
                 are the data-migration operation's (not yet implemented)
-  runtime       this interpreter's SQLite is a qualified runtime for the
-                store (specs/0007's predicate); informational
+  runtime       this interpreter's SQLite build, measured before any store
+                is opened (specs/0007 §4g): attested or verified (info), or
+                refused (error, naming the failing step)
 
 Exit codes: 0 clean, 1 findings, 2 the file could not be read at all.
 """
@@ -659,21 +660,22 @@ def _check_data_migration(rep: Report, conn, user: Optional[str], edges: dict) -
 
 
 def _check_runtime(rep: Report) -> None:
+    """0007 §4g.6 4e (INV-SA9): the SQLite status, measured BEFORE any store is opened, so it runs exactly when a
+    refused build needs it. `attested` and `verified` are `info` (doctor exits 1 on any warning, and an unattested
+    but verified build is not a store problem); `refused` is `error`, with the failing step."""
     rep.checks_run.append("runtime")
-    try:
-        ok = sv.runtime_supported()
-    except Exception as ex:                                   # noqa: BLE001
-        ok, why = False, type(ex).__name__
-    else:
-        why = None
-    if not ok:
-        rep.add("runtime", "info", "this interpreter's SQLite is not a qualified runtime for the store "
-                "(specs/0007's recorded-runtime predicate)" + (f": {why}" if why else ""))
+    st = sv.runtime_status()                                  # total: never raises
+    if st.status == "refused":
+        rep.add("runtime", "error", f"this interpreter's SQLite cannot be verified for the store: {st.reason}")
+    elif st.status == "verified":
+        rep.add("runtime", "info", "this interpreter's SQLite is not an attested build; it was verified on this run "
+                "(it reproduces every schema version and tells apart every near-miss)")
 
 
 # ------------------------------------------------------------------- driver --
 def diagnose(path: str, *, user: Optional[str] = None) -> Report:
     rep = Report(db=path, readable=False)
+    _check_runtime(rep)                                       # before any store is opened (INV-SA9)
     tmpdir = tempfile.mkdtemp(prefix="veracium-doctor-")
     try:
         store = _open_snapshot(rep, path, tmpdir)
@@ -707,7 +709,6 @@ def diagnose(path: str, *, user: Optional[str] = None) -> Report:
             store.close()
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
-    _check_runtime(rep)
     return rep
 
 

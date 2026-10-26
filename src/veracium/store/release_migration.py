@@ -496,7 +496,8 @@ def _write_attempted(apath: str, operation_id: str, event) -> None:
     entry["attempted"] = {
         "event": event.event, "migration_id": event.migration_id,
         "path": event.path, "from_version": event.from_version,
-        "to_version": event.to_version, "occurred_at": event.occurred_at}
+        "to_version": event.to_version, "occurred_at": event.occurred_at,
+        "runtime": event.runtime._asdict()}            # 0013 INV-SA11: the sidecar copies the key
     _store_audit(apath, data)
 
 
@@ -1002,10 +1003,11 @@ def _preflight_classify(path: str):
     if not os.path.exists(canonical):
         return _intercept("migration-source-missing", False, False, "missing",
                           None, f"nothing at {canonical!r}")
-    if not sv.runtime_supported():
+    status = sv.runtime_status()                 # measured once, here (0007 §4g.6 4a; 0013 §5f.3)
+    if status.status == "refused":
         return _intercept("unsupported-sqlite", False, False, "unknown", None,
-                          f"sqlite {sqlite3.sqlite_version} is not a "
-                          f"qualified runtime build identity")
+                          sv.refusal_text(status))
+    sv.warn_unattested(status)                   # a verified build reading a store warns here too (once per process)
     try:
         found, objs = _observe(canonical)
     except _Unobservable as exc:

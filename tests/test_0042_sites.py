@@ -888,13 +888,14 @@ DECLINES.update({
         _rvs.RevocationError, _rvs.validate_revocation_row,
         {"user_id": U, "identity_digest": "not-a-digest", "action": "revoke", "at": "2026-01-01T00:00:00Z", "seq": 1, "reason": "r"}),
     "store.open.unaccepted-shape": lambda mp: _raises(StoreVersionError, SqliteStore, _stamped_foreign_file()),
-    "store.open.runtime-unsupported": lambda mp: (mp.setattr(_sv, "runtime_supported", lambda: False),
+    "store.open.runtime-unsupported": lambda mp: (mp.setattr(_sv, "runtime_status", lambda: _sv.RuntimeStatus(
+        "refused", "feature probe preserves_ddl_body is False", None, ())),
                                                   _raises(StoreVersionError, SqliteStore, _dbpath())),
     "store.open.locked": TwoPhase(lambda mp: _lock_holder(), lambda st: _open_while_held(st)),
     "store.open.invalid-version": TwoPhase(lambda mp: _stamped(-1), lambda p: _raises(StoreVersionError, SqliteStore, p)),
     "store.open.newer": TwoPhase(lambda mp: _stamped(_sv.SCHEMA_VERSION + 1), lambda p: _raises(StoreVersionError, SqliteStore, p)),
     "store.open.legacy": lambda mp: _raises(StoreVersionError, SqliteStore, _legacy_v1_file()),
-    "store.runtime-supported": lambda mp: (mp.setattr(_sv, "artifact_problems", lambda records: ["bad"]), _sv.runtime_supported()),
+    "store.runtime-supported": lambda mp: (mp.setattr(_sv, "artifact_problems", lambda records: ["bad"]), _sv._runtime_supported_interim()),
     "store.journal.reason-not-dispositioned": lambda mp: _journal_bad_reason(),
     "store.read.output-not-visible": lambda mp: SqliteStore._ordinary_read_visible(
         _visible(lineage=["e1"], operation_id="op"), {"op": ConsolidationState.CLAIMED}),

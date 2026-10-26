@@ -537,7 +537,7 @@ def test_the_migration_runtime_gate_is_independent_of_0007s(monkeypatch):
 
 def test_recorded_confinement_behaviours_must_reproduce_live(monkeypatch):
     """The record is not trusted: consumption re-runs the probes and compares,
-    mirroring how runtime_supported() re-derives constructor manifestations."""
+    mirroring how _runtime_supported_interim() re-derives constructor manifestations."""
     real = m13.authorizer_probes()
     lying = dict(real, denies_pragma=False)
     monkeypatch.setattr(m13, "authorizer_probes", lambda: lying)
@@ -611,7 +611,7 @@ def test_a_missing_rebuildable_index_is_repaired_before_stamping(monkeypatch):
 
 
 def test_an_unqualified_runtime_cannot_open_or_migrate(monkeypatch):
-    monkeypatch.setattr(sv, "runtime_supported", lambda: False)
+    monkeypatch.setattr(sv, "_runtime_supported_interim", lambda: False)
     p = _v1_store()
     assert m13.open_or_migrate(p) == "unsupported-sqlite"
     assert m13.migrate_store(p, m13.make_authority(p)) == "unsupported-sqlite"
@@ -620,7 +620,7 @@ def test_an_unqualified_runtime_cannot_open_or_migrate(monkeypatch):
 def test_the_simulator_stops_cleanly_after_a_runtime_refusal(monkeypatch, capsys):
     """Round 3: the simulator printed three refusals, then continued into
     confirmation-table operations and crashed."""
-    monkeypatch.setattr(sv, "runtime_supported", lambda: False)
+    monkeypatch.setattr(sv, "_runtime_supported_interim", lambda: False)
     rc = m13.simulate()
     assert rc == 2
     assert "unsupported-sqlite" in capsys.readouterr().out
@@ -1497,7 +1497,7 @@ def test_an_internal_defect_is_not_a_store_outcome(monkeypatch):
     known rollback state."""
     def boom():
         raise RuntimeError("internal validator bug")
-    monkeypatch.setattr(sv, "runtime_supported", boom)
+    monkeypatch.setattr(sv, "_runtime_supported_interim", boom)
     p = _v1_store()
     out = m13.open_or_migrate(p)
     assert out == "internal-error"
@@ -2836,7 +2836,7 @@ def test_a_runtime_probe_defect_is_internal_error_not_invalid_store(monkeypatch)
 
     def boom():
         raise sqlite3.DatabaseError("runtime probe library defect")
-    monkeypatch.setattr(m13.sv, "runtime_supported", boom)
+    monkeypatch.setattr(m13.sv, "_runtime_supported_interim", boom)
     out = m13.migrate_store(p, auth)
     assert out == "internal-error"             # NOT invalid-store
     assert sqlite3.connect(p).execute("PRAGMA user_version").fetchone()[0] == 1
@@ -4302,7 +4302,7 @@ def test_the_fallback_preserves_known_unchanged(monkeypatch):
     monkeypatch.setattr(m13, "_store_facts_from_state",
                         lambda *a, **k: (_ for _ in ()).throw(
                             RuntimeError("derivation boom")))
-    monkeypatch.setattr(m13.sv, "runtime_supported",
+    monkeypatch.setattr(m13.sv, "_runtime_supported_interim",
                         lambda *a, **k: (_ for _ in ()).throw(
                             sqlite3.DatabaseError("gate boom")))
     m13.migrate_store(p, auth)

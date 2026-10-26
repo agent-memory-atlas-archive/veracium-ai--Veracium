@@ -310,12 +310,12 @@ def test_preflight_matrix_total():
     assert _bytes(p) == before and _no_audit(p)
 
     # unsupported-sqlite: the runtime gate fires before any version decision
-    real = sv.runtime_supported
-    sv.runtime_supported = lambda: False
+    real = sv.runtime_status
+    sv.runtime_status = lambda: sv.RuntimeStatus("refused", "feature probe preserves_ddl_body is False", None, ())
     try:
         r = rm.run_release_migration(p, host_attestation=ATT)
     finally:
-        sv.runtime_supported = real
+        sv.runtime_status = real
     assert tuple(r)[:5] == ("unsupported-sqlite", False, False, "unknown",
                             None)
     assert _no_audit(p)

@@ -2378,7 +2378,7 @@ def migration_runtime_artifact_problems(art) -> list:
 def migration_runtime_supported(art) -> bool:
     """Both halves of finding 3's correction: a RECORDED qualification for this
     build identity, and the recorded behaviours REPRODUCED live — mirroring how
-    `runtime_supported()` re-derives constructor manifestations rather than
+    `_runtime_supported_interim()` re-derives constructor manifestations rather than
     trusting the record. Artifact-level problems disqualify outright
     (round 4, finding 2). Total, fail-closed."""
     try:
@@ -2803,8 +2803,14 @@ def _draft(loaded=None):
                 "version_records": sv.version_records,
                 "legacy_base_versions": sv.legacy_base_versions,
                 "override": list(sv._RUNTIME_OVERRIDE),
+                "runtime_status": sv.runtime_status,
             }
             sv.SCHEMAS = dict(SCHEMAS_DRAFT)
+            # 0007 §4g's production gate (`runtime_status()`, measured against the ONE accepted set and the head
+            # near-misses) cannot measure the draft schema: its near-misses are the production head's. Until this
+            # model's runtime seam is revised (0013 §5f.3 carrier (i), A1-A15), the gate inside a draft context is the
+            # model's own pre-amendment predicate, read through the draft evidence installed above.
+            sv.runtime_status = _draft_runtime_status
             sv.SCHEMA_VERSION = DRAFT_SCHEMA_VERSION
             # Round 4, finding 1: context entry is INSIDE the failure
             # boundary. The validators are total, and a validator escape is
@@ -2844,8 +2850,18 @@ def _draft(loaded=None):
                 sv.version_records = saved["version_records"]
                 sv.legacy_base_versions = saved["legacy_base_versions"]
                 sv._RUNTIME_OVERRIDE[:] = saved["override"]
+                sv.runtime_status = saved["runtime_status"]
                 _DRAFT["saved"] = _DRAFT["artifact"] = None
                 _DRAFT["digest"] = None
+
+
+def _draft_runtime_status():
+    """The production gate's answer inside a draft context: the interim predicate over the draft evidence (`attested`
+    when it qualifies this build, else `refused`). The model's own gates run first; this only keeps production's
+    `open_versioned` from re-measuring a schema it was not written for."""
+    if sv._runtime_supported_interim():
+        return sv.RuntimeStatus("attested", None, None, ())
+    return sv.RuntimeStatus("refused", "no qualified schema-runtime record in the draft evidence", None, ())
 
 
 # --------------------------------------------------------------------------
@@ -2872,7 +2888,7 @@ def _refusing_hook(art):
     """Ordinary opening's older row: classify the source, then refuse.
     Ordinary opening cannot initiate migration — that is the offline boundary,
     stated as a mechanism."""
-    def hook(conn, spath, found, objs, base):
+    def hook(conn, spath, found, objs, base, runtime=None):
         _classify_source(art, conn, spath, found, objs, base)
         raise MigrationRefused(
             "migration-required",
@@ -2891,7 +2907,7 @@ def _migrating_hook(art, authority, state):
     source is CLASSIFIED under the lock, so a later rollback (`migration-failed`,
     `migration-result-mismatch`) can honestly report the source version rather
     than the wrapper guessing (round 11, finding 1)."""
-    def hook(conn, spath, found, objs, base):
+    def hook(conn, spath, found, objs, base, runtime=None):
         _classify_source(art, conn, spath, found, objs, base)
         state["observed_version"] = base    # the source, established under lock
         step = MIGRATIONS_DRAFT.get(base)
@@ -3516,7 +3532,7 @@ def _run_inner(path, busy_timeout_ms: int, migrating: bool,
         with _draft(loaded=snapshot) as art:
             try:
                 phase = "runtime-gates"
-                if not sv.runtime_supported():
+                if not sv._runtime_supported_interim():
                     return Outcome(
                         "unsupported-sqlite",
                         f"sqlite {sqlite3.sqlite_version} has no qualified "
@@ -4002,7 +4018,7 @@ def simulate() -> int:
     (round 3)."""
     import tempfile
     with _draft() as art:
-        if not sv.runtime_supported():
+        if not sv._runtime_supported_interim():
             print(f"unsupported-sqlite: {sqlite3.sqlite_version} has no "
                   f"qualified schema-runtime record in the draft evidence.")
             print("Regenerate in a disposable copy: "

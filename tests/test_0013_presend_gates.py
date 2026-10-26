@@ -1167,7 +1167,7 @@ _INJECTIONS = [
      _connect_iso_fails,
      _outcome_is("internal-error")),
     ("runtime-gate-DatabaseError",
-     lambda: _install_attr(m.sv, "runtime_supported",
+     lambda: _install_attr(m.sv, "_runtime_supported_interim",
                            _raiser(sqlite3.DatabaseError("probe defect"))),
      _outcome_is("internal-error")),
     ("migration-runtime-DatabaseError",

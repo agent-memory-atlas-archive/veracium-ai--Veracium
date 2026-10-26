@@ -13,8 +13,9 @@ The evidence artifacts ship as package data in `evidence/`:
     schema_versions.json   the accepted manifests per schema version
     legacy_stores.json     release probing evidence; source of the legacy bases
 
-**Missing or malformed evidence fails closed**: `runtime_supported()` returns
-False and the store refuses with `unsupported-sqlite` before any version or
+**Missing or malformed evidence fails closed**: `runtime_status()` is
+`refused` (and the interim predicate `_runtime_supported_interim()` returns
+False), and the store refuses with `unsupported-sqlite` before any version or
 shape decision.
 """
 from __future__ import annotations
@@ -25,10 +26,15 @@ import json
 import logging
 import os
 import pathlib
+import platform
+import re
 import sqlite3
+import struct
+import sys
 import uuid
+import warnings
 from datetime import datetime, timezone
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 from ..census import declare_site
 
 # specs/0042 (tranche 5): the enforcement points of this module, each a declared site the
@@ -1040,9 +1046,17 @@ def _feature_probes() -> dict:
     return out
 
 
-def runtime_identity() -> dict:
+def _probe_build() -> tuple:
+    """(`sqlite_source_id()`, the sorted `PRAGMA compile_options`), read on ONE scratch connection of this module's own
+    `sqlite3`, the library the store's connections use (§4d v0.7)."""
     with contextlib.closing(sqlite3.connect(":memory:")) as c:
         source_id = c.execute("SELECT sqlite_source_id()").fetchone()[0]
+        options = sorted(str(r[0]) for r in c.execute("PRAGMA compile_options"))
+    return source_id, options
+
+
+def runtime_identity() -> dict:
+    source_id, _options = _probe_build()
     return {"sqlite_version": sqlite3.sqlite_version,
             "source_id": source_id,
             "features": _feature_probes()}
@@ -1375,7 +1389,7 @@ def manifestation_problems(objs: dict, version: int) -> list:
     return problems
 
 
-def runtime_supported() -> bool:
+def _runtime_supported_interim() -> bool:
     """**Derived from the evidence artifact, never from a hand-edited tuple.**
 
     Qualification means: a *complete* recorded runtime whose identity matches
@@ -1424,6 +1438,396 @@ def runtime_supported() -> bool:
             return _SITE_RUNTIME_SUPPORTED.fire(False, "raised")
 
 
+# --------------------------------------------------------------------------
+# the SQLite attestation (0007 §4g, v17): a build is `attested`, `verified` or
+# `refused` BY MEASUREMENT on every open; ONE canonicaliser for the attestation
+# key; records that can only remove the warning, never widen what is accepted
+
+MACHINE_ALIASES = {"amd64": "x86_64", "arm64": "aarch64"}
+"""CLOSED (§4d): once lower-cased, Windows reports `amd64`/`arm64` and macOS `arm64` for the instruction sets Linux
+reports as `x86_64`/`aarch64`. Every other value is its own key: `i686` is NOT `x86_64`."""
+_MACHINE_RE = re.compile(r"[a-z0-9_]+")
+_SYSTEM_RE = re.compile(r"[A-Za-z0-9_]+")
+LIBC_TOKENS = frozenset({"glibc", "musl", "none"})
+KEY_FIELDS = ("sqlite_version", "source_id", "features", "compile_options_digest", "machine", "system", "libc")
+
+CONFINEMENT_PROBE_KEYS = frozenset({
+    "authorizer_api_available", "denies_begin", "denies_commit", "denies_end", "denies_rollback", "denies_savepoint",
+    "denies_release", "denies_pragma", "denies_attach", "denies_detach", "denies_temp_table", "denies_temp_index",
+    "denies_temp_view", "denies_temp_trigger", "denies_temp_virtual_table", "authorizer_restored"})
+"""The sixteen confinement probes an attestation record carries as provenance, each True (§4d, 0013 §5f.3)."""
+
+
+def canonical_machine(raw) -> str | None:
+    """THE machine canonicaliser, for the running build and for a record alike: lower-cased, the closed alias map,
+    by fullmatch over `[a-z0-9_]+` (a trailing newline is not admitted); anything else is unreadable (None)."""
+    if not isinstance(raw, str):
+        return None
+    m = raw.lower()
+    m = MACHINE_ALIASES.get(m, m)
+    return m if _MACHINE_RE.fullmatch(m) else None
+
+
+def canonical_system(raw) -> str | None:
+    """`platform.system()` exactly as returned, by fullmatch over `[A-Za-z0-9_]+`; anything else is unreadable."""
+    return raw if isinstance(raw, str) and _SYSTEM_RE.fullmatch(raw) else None
+
+
+def canonical_libc(system, interp) -> str | None:
+    """Linux: `glibc` or `musl` from the interpreter's ELF `PT_INTERP` basename (`ld-linux-*`, `ld-musl-*`), never
+    `platform.libc_ver()`; no interpreter or another pattern is unreadable. Every other system: `none`."""
+    if system != "Linux":
+        return "none" if canonical_system(system) is not None else None
+    if not isinstance(interp, str) or not interp:
+        return None
+    base = os.path.basename(interp)
+    return "glibc" if base.startswith("ld-linux-") else "musl" if base.startswith("ld-musl-") else None
+
+
+def _pt_interp(path: str) -> str | None:
+    """The `PT_INTERP` path of the ELF file at `path`, or None (not ELF, static, unreadable). Total."""
+    try:
+        with open(path, "rb") as f:
+            data = f.read(1 << 20)
+        if data[:4] != b"\x7fELF" or data[4] not in (1, 2) or data[5] not in (1, 2):
+            return None
+        wide, end = data[4] == 2, "<" if data[5] == 1 else ">"
+        if wide:
+            phoff, = struct.unpack_from(end + "Q", data, 0x20)
+            phentsize, phnum = struct.unpack_from(end + "HH", data, 0x36)
+        else:
+            phoff, = struct.unpack_from(end + "I", data, 0x1C)
+            phentsize, phnum = struct.unpack_from(end + "HH", data, 0x2A)
+        for i in range(phnum):
+            o = phoff + i * phentsize
+            if struct.unpack_from(end + "I", data, o)[0] != 3:          # PT_INTERP
+                continue
+            if wide:
+                off, = struct.unpack_from(end + "Q", data, o + 8)
+                size, = struct.unpack_from(end + "Q", data, o + 32)
+            else:
+                off, = struct.unpack_from(end + "I", data, o + 4)
+                size, = struct.unpack_from(end + "I", data, o + 16)
+            return data[off:off + size].rstrip(b"\0").decode("ascii")
+        return None
+    except (OSError, struct.error, UnicodeDecodeError, IndexError):
+        return None
+
+
+PROCESS_IMAGE = "/proc/self/exe"
+"""Whose `PT_INTERP` names `libc` (stage-1 item 10(c), measured): the PROCESS IMAGE, never `sys.executable`. Started
+through the loader (`/lib64/ld-linux-x86-64.so.2 python3`) `sys.executable` still reads glibc while the image is the
+loader itself, which has no `PT_INTERP`: unreadable, so at most `verified`. The image fails closed wherever the file
+`sys.executable` names is not what runs (a loader launch, an embedding host, a wrapper)."""
+
+
+def canonical_platform() -> dict:
+    """The running process's `machine`, `system` and `libc`, each through the one canonicaliser (None = unreadable;
+    an empty `platform.machine()` fails the pattern and is unreadable too)."""
+    system = canonical_system(platform.system())
+    interp = _pt_interp(PROCESS_IMAGE) if system == "Linux" else None
+    return {"machine": canonical_machine(platform.machine()), "system": system,
+            "libc": canonical_libc(system, interp)}
+
+
+def options_digest(options) -> str:
+    """THE compile-options digest (§4d v0.7), the one function the CI writer imports: sha256 of the options sorted and
+    newline-joined, UTF-8, no trailing newline. The order a build returns them in is not identity."""
+    return hashlib.sha256("\n".join(sorted(str(o) for o in options)).encode("utf-8")).hexdigest()
+
+
+def compile_options_digest() -> str:
+    return options_digest(_probe_build()[1])
+
+
+def attestation_identity() -> dict:
+    """This build's attestation key fields (§4d): `runtime_identity()`'s three, the compile-options digest, and the
+    canonical platform. A None field is unreadable: the build matches no record and is at most `verified`."""
+    me = runtime_identity()
+    return {"sqlite_version": me["sqlite_version"], "source_id": me["source_id"], "features": me["features"],
+            "compile_options_digest": compile_options_digest(), **canonical_platform()}
+
+
+def attestation_key(r) -> tuple | None:
+    """The full attestation key of an identity or a record, or None when any field is missing, unreadable or
+    mistyped. The features compare as a fixed-order tuple of exact bools, never by dict equality (`1 == True`,
+    round 12)."""
+    if not isinstance(r, dict) or any(r.get(k) is None for k in KEY_FIELDS):
+        return None                                     # an unreadable field matches nothing, before any comparison
+    f = r["features"]
+    if not isinstance(f, dict) or set(f) != FEATURE_KEYS or any(type(v) is not bool for v in f.values()):
+        return None
+    if not all(isinstance(r[k], str) for k in KEY_FIELDS if k != "features"):
+        return None
+    return (r["sqlite_version"], r["source_id"], tuple(f[k] for k in sorted(FEATURE_KEYS)),
+            r["compile_options_digest"], r["machine"], r["system"], r["libc"])
+
+
+# -- verification (§4b): probes, reproduction against the ONE accepted set, discrimination --------------------------
+
+class VerificationFailure(Exception):
+    """The first failing step of §4b, worded as §4e's refusal names it."""
+
+
+def _accepted_constructor_entry(version: int, records=None) -> dict:
+    """The ONE accepted entry whose provenance is `constructor v{version}`; zero or several refuse (D3)."""
+    rec = (version_records() if records is None else records).get(str(version))
+    if not isinstance(rec, dict) or not isinstance(rec.get("accepted"), list):
+        raise VerificationFailure(f"schema v{version}: no accepted evidence")
+    hits = [a for a in rec["accepted"] if isinstance(a, dict) and a.get("provenance") == f"constructor v{version}"]
+    if len(hits) != 1 or not isinstance(hits[0].get("objects"), dict):
+        raise VerificationFailure(f"schema v{version}: {len(hits)} accepted constructor manifestations, not one"
+                                  if len(hits) != 1 else f"schema v{version}: its accepted constructor entry has no "
+                                                         f"objects")
+    return hits[0]
+
+
+def _first_difference(got: dict, want: dict) -> str:
+    for k in sorted(set(got) | set(want)):
+        if got.get(k) != want.get(k):
+            return k
+    return "(none)"
+
+
+def _near_miss_objects(nm, head_version: int) -> dict:
+    from . import near_misses
+    variant = near_misses.head_variant(nm, SCHEMAS[head_version])
+    return _built_objects(lambda c: [c.execute(ddl) for ddl in variant])
+
+
+def verify_build() -> None:
+    """§4b's three steps, in order; raises VerificationFailure naming the FIRST failing step. Never consults a
+    record: a record adds provenance, never replaces the measurement (INV-SA1), and the comparison is against the
+    ACCEPTED evidence, digest AND complete manifestation (INV-SA3)."""
+    from . import near_misses
+    records = version_records()                         # read ONCE per verification: package data, parsed once
+    probes = _feature_probes()
+    for name in ("preserves_ddl_body", "xinfo_exposes_generated"):
+        if probes.get(name) is not True:
+            raise VerificationFailure(f"feature probe {name} is {probes.get(name)!r}")
+    for v in sorted(SCHEMAS):
+        entry = _accepted_constructor_entry(v, records)
+        objs = _constructor_objects(v)
+        if objs != entry["objects"]:
+            raise VerificationFailure(f"schema v{v}: {_first_difference(objs, entry['objects'])} differs from the "
+                                      f"accepted manifest")
+        accepted = {a.get("digest") for a in records[str(v)]["accepted"] if isinstance(a, dict)}
+        if _digest_of_identity(objs, v) not in accepted:
+            raise VerificationFailure(f"schema v{v}: its constructor digest is not in the accepted set")
+    accepted_head = [a.get("objects") for a in records[str(SCHEMA_VERSION)]["accepted"] if isinstance(a, dict)]
+    kinds = {nm.kind for nm in near_misses.NEAR_MISSES}
+    if kinds != set(near_misses.REQUIRED_KINDS):
+        raise VerificationFailure(f"the near-miss set covers {sorted(kinds)}, not every required kind")
+    for nm in near_misses.NEAR_MISSES:
+        objs = _near_miss_objects(nm, SCHEMA_VERSION)
+        if objs in accepted_head:                       # not only != the constructor: outside EVERY accepted head shape
+            raise VerificationFailure(f"near-miss {nm.name} was not told apart")
+
+
+# -- attestation records (§4d; 0007 I4): the full key, any number of keys, conflicts and duplicates poison ----------
+
+_RECORD_FIELDS = frozenset(KEY_FIELDS) | {"manifest_algorithm", "schema_version", "result_digest", "confinement",
+                                          "provenance"}
+_PROVENANCE_FIELDS = frozenset({"route", "runner_image", "run_id", "job_id", "commit"})
+ARTIFACT_KEYS = frozenset({"attestations", "runtimes"})
+"""The runtime artifact's CLOSED top level. `runtimes` (0007 v16's record class) stays only until the specs-side
+readers of `_runtime_supported_interim()` move (the 0013 model, the generator); the commit that retires it removes
+it here."""
+_HEX64 = re.compile(r"[0-9a-f]{64}")
+_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
+
+def attestations() -> list:
+    """The attestation records, read fresh (package data). Raises ValueError on an artifact whose top level is not
+    exactly ARTIFACT_KEYS' members: the caller reads that as a poisoned artifact."""
+    if not RUNTIMES.exists():
+        return []
+    data = json.loads(RUNTIMES.read_text())
+    if not isinstance(data, dict) or not set(data) <= ARTIFACT_KEYS:
+        raise ValueError(f"the runtime artifact's top level is not within {sorted(ARTIFACT_KEYS)}")
+    out = data.get("attestations", [])
+    if not isinstance(out, list):
+        raise ValueError("'attestations' is not a list")
+    return out
+
+
+def _provenance_problems(prov) -> list:
+    if not isinstance(prov, list) or not prov:
+        return ["'provenance' must be a nonempty list"]
+    for j in prov:
+        if not isinstance(j, dict) or set(j) != _PROVENANCE_FIELDS:
+            return [f"each provenance entry must have exactly {sorted(_PROVENANCE_FIELDS)}"]
+        if any(not isinstance(j[k], str) or not j[k] for k in ("route", "runner_image", "run_id")):
+            return ["provenance route, runner_image and run_id must be nonempty strings"]
+        if type(j["job_id"]) is not int or j["job_id"] < 0:
+            return ["provenance job_id must be a non-negative int (\"9\" sorts after \"10\" as a string)"]
+        if not isinstance(j["commit"], str) or not _COMMIT.fullmatch(j["commit"]):
+            return ["provenance commit must be a full hex commit id"]
+    if prov != sorted(prov, key=lambda j: (j["route"], j["runner_image"], j["job_id"])):
+        return ["'provenance' is not sorted by route, then image, then job id"]
+    return []
+
+
+def attestation_record_problems(r) -> list:
+    """A record's own problems, TOTAL over any input. The field set is CLOSED, and each key field must already be in
+    canonical form through the canonicaliser the running build uses (INV-SA12): `AMD64` is malformed, not
+    `x86_64`."""
+    if not isinstance(r, dict):
+        return [f"attestation record is {type(r).__name__}, not a mapping"]
+    if set(r) != _RECORD_FIELDS:
+        return [f"fields {sorted(r)} are not exactly {sorted(_RECORD_FIELDS)}"]
+    p = []
+    for f in ("sqlite_version", "source_id"):
+        if not isinstance(r[f], str) or not r[f]:
+            p.append(f"{f!r} must be a nonempty string")
+    if not isinstance(r["features"], dict) or set(r["features"]) != FEATURE_KEYS or any(
+            type(v) is not bool for v in r["features"].values()):
+        p.append(f"'features' must map exactly {sorted(FEATURE_KEYS)} to bools")
+    if not isinstance(r["compile_options_digest"], str) or not _HEX64.fullmatch(r["compile_options_digest"]):
+        p.append("'compile_options_digest' must be 64 lower-case hex")
+    if type(r["machine"]) is not str or canonical_machine(r["machine"]) != r["machine"]:
+        p.append(f"'machine' {r['machine']!r} is not in canonical form")
+    if type(r["system"]) is not str or canonical_system(r["system"]) != r["system"]:
+        p.append(f"'system' {r['system']!r} is not in canonical form")
+    if r["libc"] not in LIBC_TOKENS or (r["libc"] == "none") != (r["system"] != "Linux"):
+        p.append(f"'libc' {r['libc']!r} is not canonical for system {r['system']!r}")
+    for f in ("manifest_algorithm", "schema_version"):
+        if type(r[f]) is not int:
+            p.append(f"{f!r} must be an int")
+    if not isinstance(r["result_digest"], str) or not _HEX64.fullmatch(r["result_digest"]):
+        p.append("'result_digest' must be 64 lower-case hex")
+    c = r["confinement"]
+    if not isinstance(c, dict) or set(c) != CONFINEMENT_PROBE_KEYS or any(v is not True for v in c.values()):
+        p.append(f"'confinement' must map exactly the {len(CONFINEMENT_PROBE_KEYS)} probes to True")
+    p += _provenance_problems(r["provenance"])
+    return p
+
+
+def attestation_revision(r) -> str:
+    """`malformed` (not a mapping, or either revision field not an EXACT int: `True`, `"2"` and `2.0` are garbage,
+    never a high revision — round 5's `True == 1` class, which S74 closed), else `current` (manifest algorithm AND
+    schema version equal this build's), `future` (either is higher: a format this build cannot read) or `superseded`.
+    A malformed or current record is validated and can poison; only a current one can attest; superseded and future
+    records contribute nothing (S74's scoping)."""
+    if not isinstance(r, dict):
+        return "malformed"
+    a, v = r.get("manifest_algorithm"), r.get("schema_version")
+    if type(a) is not int or type(v) is not int:
+        return "malformed"
+    if a > MANIFEST_ALGORITHM or v > SCHEMA_VERSION:
+        return "future"
+    return "current" if (a, v) == (MANIFEST_ALGORITHM, SCHEMA_VERSION) else "superseded"
+
+
+def attestation_artifact_problems(records=None) -> list:
+    """Across the artifact (§4d, INV-SA6): any number of keys; a malformed CURRENT record poisons; one key with
+    different EVIDENCE (result digest, confinement) conflicts; equal evidence is a duplicate. Provenance is never
+    compared. Total."""
+    try:
+        records = attestations() if records is None else records
+    except (OSError, ValueError) as exc:
+        return [f"the runtime artifact cannot be read: {exc}"]
+    if not isinstance(records, list):
+        return [f"'attestations' is {type(records).__name__}, not a list"]
+    problems, seen = [], {}
+    for i, r in enumerate(records):
+        rev = attestation_revision(r)
+        if rev == "malformed":
+            problems.append(f"attestation {i} is not a record with exact-int manifest_algorithm and schema_version")
+            continue
+        if rev != "current":
+            continue
+        own = attestation_record_problems(r)
+        problems += [f"attestation {i}: {x}" for x in own]
+        key = None if own else attestation_key(r)
+        if key is None:
+            continue
+        evidence = (r["result_digest"], tuple(sorted(r["confinement"].items())))
+        if key in seen:
+            problems.append(f"attestation {i} repeats the key of attestation {seen[key][0]} "
+                            + ("with equal evidence: a duplicate" if seen[key][1] == evidence
+                               else "with different evidence: the key does not identify the build"))
+        else:
+            seen[key] = (i, evidence)
+    return problems
+
+
+# -- the status (§4a) ---------------------------------------------------------------------------------------------
+
+class RuntimeStatus(NamedTuple):
+    status: str                    # "attested" | "verified" | "refused"
+    reason: Optional[str]          # refused: the first failing step; verified: a poisoned artifact, named; else None
+    key: Optional[tuple]           # the full attestation key, or None when a field is unreadable
+    unreadable: tuple              # the key fields that could not be read
+
+
+def runtime_status() -> RuntimeStatus:
+    """`attested`, `verified` or `refused`, decided by MEASUREMENT on every call (§4a). Verification (§4b) runs for
+    every build, attested or not, on EVERY call: §4b allows a per-process cache, and none is kept, because measured
+    at 2026-10-26 the three steps cost 0.074 s against 0.084 s for the reproduction the withdrawn predicate already
+    ran on every open (one evidence read per verification), and a cache is state a patched measurement can leak
+    through. A record only removes the warning: `attested` needs verification AND a current record whose full key
+    equals this build's. **A poisoned artifact blocks ATTESTATION, never verification** (§4g.3 "a record can only
+    remove the warning"; S74): the build is `verified`, the reason naming the first problem. Total and fail-closed:
+    any exception is `refused`, naming it.
+
+    A MEASUREMENT, not an enforcement point (0042): the refusing decisions are the gates that read it, the open gate
+    (`store.open.runtime-unsupported`) and the release preflight's `unsupported-sqlite` intercept."""
+    try:
+        ident = attestation_identity()
+        unreadable = tuple(k for k in ("machine", "system", "libc") if ident[k] is None)
+        key = attestation_key(ident)
+        try:
+            verify_build()
+        except VerificationFailure as exc:
+            return RuntimeStatus("refused", str(exc), key, unreadable)
+        poison = attestation_artifact_problems()
+        if poison:
+            return RuntimeStatus("verified", f"attestation artifact: {poison[0]}", key, unreadable)
+        if key is not None and any(attestation_revision(r) == "current" and attestation_key(r) == key
+                                   for r in attestations()):
+            return RuntimeStatus("attested", None, key, unreadable)
+        return RuntimeStatus("verified", None, key, unreadable)
+    except Exception as exc:  # noqa: BLE001 - fail closed, naming the escape
+        return RuntimeStatus("refused", f"verification raised {type(exc).__name__}", None, ())
+
+
+def refusal_text(st: RuntimeStatus) -> str:
+    """§4e's refusal: the first failure and only remedies that ship (INV-SA8)."""
+    me = runtime_identity()
+    return (f"SQLite {me['sqlite_version']} ({me['source_id']}) cannot be verified for Veracium's store: {st.reason}. "
+            f"The store was not opened. Use a Python whose SQLite is an attested build (`veracium doctor` lists "
+            f"them), or report this build to the project.")
+
+
+_WARNED: list = []
+
+
+def warn_unattested(st: RuntimeStatus) -> None:
+    """§4e's warning for a `verified` open, exactly ONCE per process (INV-SA7), through `warnings` and the logger."""
+    if st.status != "verified" or _WARNED:
+        return
+    _WARNED.append(True)
+    me = runtime_identity()
+    ident = dict(zip(("machine", "system", "libc"), (st.key[4:] if st.key else (None, None, None))))
+    text = (f"SQLite {me['sqlite_version']} ({me['source_id'][-12:]}, {ident['machine']}, {ident['system']}, "
+            f"{ident['libc']}) is not one of Veracium's attested builds. Veracium verified this build when opening "
+            f"the store: it reproduces all {len(SCHEMAS)} schema versions and tells apart all {_near_miss_count()} "
+            f"near-miss checks. Its CI has not run the full schema suite on this build. `veracium doctor` lists the "
+            f"attested builds.")
+    warnings.warn(text, UnattestedBuildWarning, stacklevel=3)
+    log.warning(text)
+
+
+def _near_miss_count() -> int:
+    from . import near_misses
+    return len(near_misses.NEAR_MISSES)
+
+
+class UnattestedBuildWarning(UserWarning):
+    """A `verified` build: it passed the open-time checks, but CI has not run the full schema suite on it (§4e)."""
+
+
 def _digest_of_identity(objs: dict, version: int) -> str:
     """Digest a recorded identity mapping without rebuilding the database."""
     # This lazily imported `schema_model` from specs/ until 0013's first
@@ -1439,10 +1843,16 @@ def _digest_of_identity(objs: dict, version: int) -> str:
         json.dumps(scoped, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def _constructor_objects(version: int) -> dict:
+def _built_objects(build) -> dict:
+    """The identity of a scratch database `build(conn)` creates: the one in-memory builder behind the constructor
+    reproduction and the near-misses (§4b steps 2 and 3)."""
     with contextlib.closing(sqlite3.connect(":memory:")) as c:
-        create(c, version)
+        build(c)
         return identity(manifest(c))
+
+
+def _constructor_objects(version: int) -> dict:
+    return _built_objects(lambda c: create(c, version))
 
 
 def _constructor_digest(version: int) -> str:
@@ -1730,7 +2140,8 @@ def open_versioned(conn: sqlite3.Connection, path: str, *,
     ONE planner (round 3 of `0013`'s review: the instrument's hand-written
     second state machine omitted the new, legacy and foreign rows entirely).
     The hook runs inside the open transaction as `older(conn, path, found,
-    objs, base)` and must either raise or bring the store to the current
+    objs, base, runtime=status)`, `status` being the gate's ONE measurement
+    (0013 INV-SA11's audit identity, passed on and never re-read), and must either raise or bring the store to the current
     version; the store it returns is then revalidated by the same `current`
     validator and committed here. With no hook the row refuses exactly as
     before: both sites are unreachable while `SCHEMA_VERSION == 1`, and
@@ -1749,15 +2160,15 @@ def open_versioned(conn: sqlite3.Connection, path: str, *,
     if len(os.fsencode(spath)) > _AUDIT_STRING_CAP:
         raise ValueError(f"store path exceeds {_AUDIT_STRING_CAP} bytes")
 
-    # The runtime gate runs before ANY version or shape decision (§4a-viii).
+    # The runtime gate runs before ANY version or shape decision (§4a-viii; 0007 §4g.6 4a, INV-SA1): the build's
+    # status is MEASURED here, once, and nothing later in the open branches on it (0013 §5f.3 carrier (ii)).
     with _SITE_OPEN_RUNTIME_UNSUPPORTED.consult():
-        if not runtime_supported():
+        status = runtime_status()
+        if status.status == "refused":
             raise _SITE_OPEN_RUNTIME_UNSUPPORTED.fire(StoreVersionError(
                 spath, found=None, expected=SCHEMA_VERSION,
-                reason="unsupported-sqlite",
-                diff=f"sqlite {sqlite3.sqlite_version} is not a qualified runtime "
-                     f"build identity; regenerate the evidence there "
-                     f"(schema_evidence.py --runtime --write)"))
+                reason="unsupported-sqlite", diff=refusal_text(status)))
+    warn_unattested(status)
 
     prev_isolation = conn.isolation_level
     conn.isolation_level = None              # explicit transaction control
@@ -1813,7 +2224,7 @@ def open_versioned(conn: sqlite3.Connection, path: str, *,
                             f"is v{SCHEMA_VERSION} with no migration hook "
                             f"installed; migrating forward is specs/0013's "
                             f"contract")
-                    older(conn, spath, found, objs, found)
+                    older(conn, spath, found, objs, found, runtime=status)
                     _validated_current(conn, spath, found, require_stamp=True)
                     result = OpenResult("migrated", store_changed=True,
                                         transaction_committed=True,
@@ -1868,7 +2279,7 @@ def open_versioned(conn: sqlite3.Connection, path: str, *,
                                  f"head version {SCHEMA_VERSION}; migration is OFFLINE "
                                  f"(specs/0013 §5b) — quiesce access and run "
                                  f"veracium.store.migration.migrate_store(path)"), "migration-required")
-                    older(conn, spath, found, objs, base)
+                    older(conn, spath, found, objs, base, runtime=status)
                     _validated_current(conn, spath, found, require_stamp=True)
                     result = OpenResult("migrated", store_changed=True,
                                         transaction_committed=True,

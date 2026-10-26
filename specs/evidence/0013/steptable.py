@@ -208,17 +208,17 @@ def out(s=""):
 ident = sv.runtime_identity()
 out(f"BUILD: python {sys.version.split()[0]} sqlite {sqlite3.sqlite_version} source_id {ident['source_id']}")
 out(f"veracium imported from {veracium.__file__} (asserted under the export {TREE})")
-QUALIFIED = sv.runtime_supported()
-out(f"runtime_supported() = {QUALIFIED}")
-if QUALIFIED:
-    # The gate rebuilds every version's constructor on each call, drawing uuids (the v5+ mint):
-    # memoized to the answer computed above so it neither costs each run nor shifts the
-    # deterministic uuid sequence the cross-build comparison relies on. The answer is unchanged.
-    sv.runtime_supported = lambda: True
-    out("runtime gate MEMOIZED for this run (computed once above: True)")
+STATUS = sv.runtime_status()
+out(f"runtime_status() = {STATUS.status}" + (f" ({STATUS.reason})" if STATUS.reason else ""))
+# The gate (0007 §4g.6 4a) rebuilds every version's constructor and the near-misses on each call, drawing uuids (the
+# v5+ mint): memoized to the status computed above so it neither costs each run nor shifts the deterministic uuid
+# sequence the cross-build comparison relies on. open_versioned and release_migration read sv's global.
+if STATUS.status != "refused":
+    sv.runtime_status = lambda: STATUS
+    out(f"runtime gate MEMOIZED for this run (computed once above: {STATUS.status})")
 else:
-    sv.runtime_supported = lambda: True       # open_versioned and release_migration read sv's global
-    out("RUNTIME GATE BYPASSED for this run: sv.runtime_supported -> True. The instrument measures "
+    sv.runtime_status = lambda: sv.RuntimeStatus("verified", None, None, ())
+    out("RUNTIME GATE BYPASSED for this run: sv.runtime_status -> verified. The instrument measures "
         "the migration ladder on this build, not the 0007 gate (which refuses this build).")
 out(f"HEAD = {HEAD}; release orchestrator _MINT_BASE = {rm._MINT_BASE}")
 

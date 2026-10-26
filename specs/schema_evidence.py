@@ -666,7 +666,7 @@ def check() -> int:
             bad.append("schema_policy.json disagrees with the registry's policies")
     else:
         bad.append(f"{POLICY_ARTIFACT.name} missing")
-    if not sv.runtime_supported():
+    if not sv._runtime_supported_interim():
         bad.append(f"sqlite {sqlite3.sqlite_version} is not a qualified runtime "
                    f"(see {sv.RUNTIMES.name}); 0007 §4a-viii refuses it")
     # Every stored record, not merely the one this process matches: an invalid
@@ -750,7 +750,7 @@ def main() -> int:
         if a.write:
             return write_runtime()
         print(json.dumps(build_runtime_record(), indent=2))
-        print("qualified:", sv.runtime_supported())
+        print("qualified:", sv._runtime_supported_interim())
         return 0
     if a.check:
         return check()

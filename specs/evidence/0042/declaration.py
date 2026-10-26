@@ -207,7 +207,7 @@ DECLARATION = (
     ("store.revocation.self-linkage", "0022", "§4c", "store/revocation_sweep.py:validate_contribution_row", "refuse"),
     ("store.revocation.source-not-revocable", "0022", "I13", "store/revocation_sweep.py:validate_revocation_row", "refuse"),
     ("store.revocation.unknown-state", "0022", "R5-1", "store/revocation.py:_rollback_or_poison", "refuse"),
-    ("store.runtime-supported", "0007", "§4a-viii", "store/schema_version.py:runtime_supported", "refuse"),
+    ("store.runtime-supported", "0007", "§4a-viii", "store/schema_version.py:_runtime_supported_interim", "refuse"),
     ("store.supersession.absorb-acted", "0047", "§4e INV-R17 (a plan absorbing an acted prior is stale)", "store/sqlite.py:SqliteStore._absorbs_an_act", "refuse"),
     ("store.supersession.integrity", "0014", "§4b", "store/sqlite.py:SqliteStore.apply_supersession_plan", "refuse"),
     ("store.supersession.plan", "0014/0019", "§4b", "store/sqlite.py:SqliteStore.apply_supersession_plan", "refuse"),

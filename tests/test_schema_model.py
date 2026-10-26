@@ -318,18 +318,18 @@ def test_this_runtime_is_qualified_or_explicitly_is_not():
     """Environment-dependent by design, and **skipping is the correct outcome**
     on an unqualified runtime — not a failure of the schema model."""
     import schema_evidence as ev
-    if not ev.sv.runtime_supported():
+    if not ev.sv._runtime_supported_interim():
         pytest.skip(
             f"sqlite {sqlite3.sqlite_version} is not a qualified runtime. That is "
             f"the gate working: record it with "
             f"`python3 specs/schema_evidence.py --runtime --write`.")
-    assert ev.sv.runtime_supported()
+    assert ev.sv._runtime_supported_interim()
 
 
 def test_an_unrecorded_runtime_is_not_qualified(monkeypatch):
     import schema_evidence as ev
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [])
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 def test_a_matching_version_with_different_features_is_not_qualified(monkeypatch):
@@ -339,7 +339,7 @@ def test_a_matching_version_with_different_features_is_not_qualified(monkeypatch
     rec["features"] = dict(rec["features"],
                            strict_tables=not rec["features"]["strict_tables"])
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 def test_an_empty_digest_map_does_not_qualify_vacuously(monkeypatch):
@@ -350,7 +350,7 @@ def test_an_empty_digest_map_does_not_qualify_vacuously(monkeypatch):
     rec["constructor_digests"] = {}
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
     assert ev.sv.runtime_record_problems(rec)
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 def test_writing_runtime_evidence_actually_writes(tmp_path, monkeypatch):
@@ -564,7 +564,7 @@ def test_a_conflicting_artifact_disqualifies_the_runtime(monkeypatch):
     other = copy.deepcopy(good)
     other["constructor_digests"] = {"1": "0" * 64}
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [good, other])
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 def test_the_recorded_artifact_has_no_conflicts():
@@ -650,7 +650,7 @@ def test_one_canonical_identity_is_used_everywhere(monkeypatch):
     assert ev.sv._identity_key(a) != ev.sv._identity_key(b)
     assert any("one build cannot have two" in p for p in ev.sv.artifact_problems([a, b]))
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [a, b])
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 def test_a_modified_rebuildable_ddl_disqualifies_the_runtime(monkeypatch):
@@ -668,7 +668,7 @@ def test_a_modified_rebuildable_ddl_disqualifies_the_runtime(monkeypatch):
     rec["manifestations"]["constructor v1"] = objs
     assert ev.sv._digest_of_identity(objs, 1) == rec["constructor_digests"]["1"]
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 def test_a_missing_rebuildable_index_disqualifies_the_runtime(monkeypatch):
@@ -678,7 +678,7 @@ def test_a_missing_rebuildable_index_disqualifies_the_runtime(monkeypatch):
     rec = copy.deepcopy(ev.build_runtime_record())
     del rec["manifestations"]["constructor v1"]["index:ix_edges_subj_rel"]
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 def test_schema_version_must_match_the_registry():
@@ -789,7 +789,7 @@ def test_a_mistyped_feature_is_rejected(monkeypatch):
     rec["features"] = dict(rec["features"], strict_tables=1)
     assert any("not bool" in p for p in ev.sv.runtime_record_problems(rec))
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [rec])
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 @pytest.mark.parametrize("victim", ["index:ix_edges_subj_rel", "table:wiki"])
@@ -819,7 +819,7 @@ def test_a_malformed_current_algorithm_record_poisons_the_artifact(monkeypatch):
     del broken["manifestations"]
     assert ev.sv.artifact_problems([good, broken])
     monkeypatch.setattr(ev.sv, "qualified_runtimes", lambda: [good, broken])
-    assert not ev.sv.runtime_supported()
+    assert not ev.sv._runtime_supported_interim()
 
 
 # --- round 13 ------------------------------------------------------------
@@ -865,7 +865,7 @@ def test_the_predicate_is_total_over_garbage(monkeypatch):
         monkeypatch.setattr(ev.sv, "qualified_runtimes",
                             lambda a=artifact: a if isinstance(a, list) else
                             (_ for _ in ()).throw(ValueError("bad")))
-        assert ev.sv.runtime_supported() is False
+        assert ev.sv._runtime_supported_interim() is False
 
 
 def test_superseded_duplicates_do_not_disqualify(monkeypatch):
@@ -881,7 +881,7 @@ def test_superseded_duplicates_do_not_disqualify(monkeypatch):
     monkeypatch.setattr(ev.sv, "qualified_runtimes",
                         lambda: [good, copy.deepcopy(stale), copy.deepcopy(stale)])
     assert ev.sv.artifact_problems() == []
-    assert ev.sv.runtime_supported() is True
+    assert ev.sv._runtime_supported_interim() is True
 
 
 def test_an_extra_manifestation_field_is_rejected():
