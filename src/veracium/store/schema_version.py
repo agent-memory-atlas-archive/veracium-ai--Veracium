@@ -1602,15 +1602,19 @@ def _near_miss_objects(nm, head_version: int) -> dict:
     return _built_objects(lambda c: [c.execute(ddl) for ddl in variant])
 
 
-def verify_reproduction(records, schemas) -> None:
+def verify_reproduction(records, schemas, build=None) -> None:
     """§4b step 2 alone, over EXPLICIT arguments: for every version `schemas` declares, its constructor DDL rebuilt in
     memory must equal the ONE accepted constructor entry of `records`, complete manifestation and digest. Reproduction
     is a property of the (build, schema) pair, so this is the step the 0013 model runs on its draft registry and its
     one byte snapshot, by argument, with nothing patched or re-read (research's stage-1 read of I3(b), B1 (α′) and its
-    follow-up, condition 1); `verify_build` runs it on the production registry and evidence."""
+    follow-up, condition 1); `verify_build` runs it on the production registry and evidence, through `create()`
+    (`build`, research's stage 2 on 8ed96ff, F1: one constructor for the gate and the generator). `build(v)`
+    returns version v's constructor objects; the default rebuilds `schemas[v]`'s DDL alone, for a registry this
+    module's `create()` does not serve."""
     for v in sorted(schemas):
         entry = _accepted_constructor_entry(v, records)
-        objs = _built_objects(lambda c, ddls=[o.ddl for o in schemas[v]]: [c.execute(d) for d in ddls])
+        objs = (build(v) if build is not None
+                else _built_objects(lambda c, ddls=[o.ddl for o in schemas[v]]: [c.execute(d) for d in ddls]))
         if objs != entry["objects"]:
             raise VerificationFailure(f"schema v{v}: {_first_difference(objs, entry['objects'])} differs from the "
                                       f"accepted manifest")
@@ -1629,7 +1633,7 @@ def verify_build() -> None:
     for name in ("preserves_ddl_body", "xinfo_exposes_generated"):
         if probes.get(name) is not True:
             raise VerificationFailure(f"feature probe {name} is {probes.get(name)!r}")
-    verify_reproduction(records, SCHEMAS)
+    verify_reproduction(records, SCHEMAS, _constructor_objects)
     accepted_head = [a.get("objects") for a in records[str(SCHEMA_VERSION)]["accepted"] if isinstance(a, dict)]
     kinds = {nm.kind for nm in near_misses.NEAR_MISSES}
     if kinds != set(near_misses.REQUIRED_KINDS):

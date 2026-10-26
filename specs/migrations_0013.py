@@ -2743,7 +2743,7 @@ def expected_path_problems(art) -> list:
 # the draft context: the 0007 kernel, running as the v2 build would ship it
 
 _DRAFT_LOCK = threading.Lock()
-_DRAFT = {"depth": 0, "saved": None, "artifact": None, "digest": None, "status": None}
+_DRAFT = {"depth": 0, "saved": None, "artifact": None, "digest": None, "status": None, "measured": None}
 
 
 class _DraftContextMismatch(Exception):
@@ -2754,7 +2754,7 @@ class _DraftContextMismatch(Exception):
 
 
 @contextmanager
-def _draft(loaded=None, status=None):
+def _draft(loaded=None, status=None, build=None):
     """Install the draft registry and evidence into the production kernel.
 
     This is how the instrument runs **the** planner rather than a second one
@@ -2805,6 +2805,8 @@ def _draft(loaded=None, status=None):
                 _restore_draft(saved)          # a failure while INSTALLING leaves nothing patched
                 raise
             _DRAFT["saved"], _DRAFT["digest"], _DRAFT["artifact"], _DRAFT["status"] = saved, digest, art, served
+            # the BUILD's pre-draft measurement, for an operation that starts while this context is open
+            _DRAFT["measured"] = build if build is not None else measured
         else:
             if loaded is not None and loaded[1] != _DRAFT["digest"]:
                 raise _DraftContextMismatch(
@@ -2820,7 +2822,7 @@ def _draft(loaded=None, status=None):
             _DRAFT["depth"] -= 1
             if _DRAFT["depth"] == 0:
                 _restore_draft(_DRAFT["saved"])
-                _DRAFT["saved"] = _DRAFT["artifact"] = _DRAFT["status"] = None
+                _DRAFT["saved"] = _DRAFT["artifact"] = _DRAFT["status"] = _DRAFT["measured"] = None
                 _DRAFT["digest"] = None
 
 
@@ -2839,21 +2841,35 @@ inside a draft context (where an unqualified read would call every record `futur
 
 
 def _operation_status(snapshot):
+    """(the BUILD's measurement, this OPERATION's status): see `_operation_measurement`."""
+    build = _build_measurement()
+    return build, _operation_measurement(build, snapshot)
+
+
+def _build_measurement():
+    with _DRAFT_LOCK:
+        # A context is open (a concurrent operation, M-Q2): the module globals are the DRAFT's, so measuring the
+        # BUILD now would measure the wrong registry. Take the open context's PRE-draft measurement (the build's
+        # status, taken on production state at its entry) and never its SERVED status, which carries ITS snapshot's
+        # draft verdict (research's stage 2 on 8ed96ff, BLOCKING: a different snapshot entered after the first
+        # context exited was served the first one's verdict, unreproduced).
+        pre = _DRAFT["measured"] if _DRAFT["depth"] > 0 else None
+    if pre is not None:
+        return pre
+    try:
+        return sv.runtime_status()
+    except Exception as exc:  # noqa: BLE001 - production's is total; a patched defect is carried, not lost
+        return _MeasurementEscape(exc)
+
+
+def _operation_measurement(st, snapshot):
     """The ONE measurement of an operation (0013 §5f.3 carrier (i); research's B1 (α′) and its follow-up, option (i)):
     production's measured status — probes and discrimination are properties of the build — then §4b step 2 on the
     DRAFT registry and the records parsed from the operation's ONE byte snapshot, BY ARGUMENT (nothing patched,
     nothing re-read). Taken at the evidence-snapshot phase so the operation row can record it; the DECISION stays at
     the runtime-gates phase, after consumption. Total: a raise is carried as a `_MeasurementEscape`."""
-    with _DRAFT_LOCK:
-        if _DRAFT["depth"] > 0:
-            # A context is open (a concurrent operation, M-Q2): the module globals are the DRAFT's, so measuring now
-            # would measure the wrong registry. Operations sharing an open context share its one measurement, taken
-            # at its entry on production state; a different snapshot refuses at context entry anyway.
-            return _DRAFT["status"]
-    try:
-        st = sv.runtime_status()
-    except Exception as exc:  # noqa: BLE001 - production's is total; a patched defect is carried, not lost
-        return _MeasurementEscape(exc)
+    if isinstance(st, _MeasurementEscape):
+        return st
     if st.status == "refused":
         return st
     art = snapshot[0] if snapshot is not None else None
@@ -2878,9 +2894,12 @@ def _row_runtime():
     consumption): never a second measurement. A carried escape records `refused`, the reading production's total
     `runtime_status()` gives any exception."""
     st = _OPERATION_RUNTIME.get()
-    status = "refused" if isinstance(st, _MeasurementEscape) or st is None else st.status
-    version = None if isinstance(st, _MeasurementEscape) or st is None else st.sqlite_version
-    source = None if isinstance(st, _MeasurementEscape) or st is None else st.source_id
+    if st is None:                  # no operation is running: never fabricate a value (research's F2)
+        raise LookupError("no measured runtime for this activation: an operation row is written only inside an "
+                          "operation, which measures the build first")
+    status = "refused" if isinstance(st, _MeasurementEscape) else st.status
+    version = None if isinstance(st, _MeasurementEscape) else st.sqlite_version
+    source = None if isinstance(st, _MeasurementEscape) else st.source_id
     if version is None or source is None:      # the measurement did not reach the identity: this process's own
         me = sv.runtime_identity()
         version, source = version or me["sqlite_version"], source or me["source_id"]
@@ -3471,7 +3490,19 @@ def _write_terminal(out, outcome, state, authority) -> "Outcome":
     return out
 
 
-def _run(path, busy_timeout_ms: int, migrating: bool,
+def _run(path, busy_timeout_ms: int, migrating: bool, authority=None):
+    """One operation, and the lifetime of its measured runtime (research's stage 2 on 8ed96ff, F2): the context
+    variable that carries the operation's ONE measurement to its operation row is set inside the operation and reset
+    when it ends, so an activation outside an operation finds none and refuses rather than recording another
+    operation's status."""
+    token = _OPERATION_RUNTIME.set(None)
+    try:
+        return _run_operation(path, busy_timeout_ms, migrating, authority)
+    finally:
+        _OPERATION_RUNTIME.reset(token)
+
+
+def _run_operation(path, busy_timeout_ms: int, migrating: bool,
          authority=None) -> Outcome:
     """The terminal-audit wrapper. Once an operation is consumed EVERY ending
     writes its terminal event — a normal closed outcome, and (round 11,
@@ -3538,8 +3569,8 @@ def _run_inner(path, busy_timeout_ms: int, migrating: bool,
         # context — nothing re-reads the path.
         phase = "evidence-snapshot"
         snapshot = _artifact_snapshot()
-        op_status = _operation_status(snapshot)       # the operation's ONE measurement (option (i))
-        _OPERATION_RUNTIME.set(op_status)
+        build_status, op_status = _operation_status(snapshot)    # the operation's ONE measurement (option (i))
+        _OPERATION_RUNTIME.set(op_status)                        # reset by `_run` when the operation ends
         if migrating:
             phase = "authority-validation"
             probs = authority_static_problems(authority, canonical,
@@ -3589,7 +3620,7 @@ def _run_inner(path, busy_timeout_ms: int, migrating: bool,
                     f"{canonical!r} (the path is not observable): "
                     f"{_safe_repr(exc)}")
         phase = "context-entry"
-        with _draft(loaded=snapshot, status=op_status) as art:
+        with _draft(loaded=snapshot, status=op_status, build=build_status) as art:
             try:
                 phase = "runtime-gates"
                 # 0013 §5f.3 carrier (i), in A5's order: the status first (a refused build refuses before any

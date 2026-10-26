@@ -22,6 +22,7 @@ import threading
 from pathlib import Path
 
 import pytest
+from contextlib import contextmanager
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "specs"))
@@ -1422,8 +1423,23 @@ def _activate(auth):
     row needs from the committed artifact, exactly as _run does."""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
     rec = m13._resolve_path_record(auth, art)
-    return m13._AUDIT.activate(auth, rec["output_acceptance_digest"])
+    token = m13._OPERATION_RUNTIME.set(sv.runtime_status())     # an activation records a MEASURED runtime (F2)
+    try:
+        return m13._AUDIT.activate(auth, rec["output_acceptance_digest"])
+    finally:
+        m13._OPERATION_RUNTIME.reset(token)
 
+
+
+@contextmanager
+def _measured():
+    """An audit-store unit test writes an operation row outside any operation: give it a MEASURED runtime, as the
+    operation would (research's stage 2 on 8ed96ff, F2: without one the row is refused)."""
+    token = m13._OPERATION_RUNTIME.set(sv.runtime_status())
+    try:
+        yield
+    finally:
+        m13._OPERATION_RUNTIME.reset(token)
 
 def _terminal_payload(**over):
     base = {"outcome": "migrated", "store_changed": True,
@@ -2483,15 +2499,16 @@ def test_the_operation_row_validates_field_types():
     """Round 12, correction A: the audit store is the enforcing reference, so
     `_operation_row` validates every field's type and grammar — v13 accepted
     `backup_ref=[]` on the strength of the field-name set alone."""
-    p = _v1_store()
-    auth = m13.make_authority(p)
-    store = m13.DraftAuditStore()
-    with pytest.raises(ValueError, match="backup_ref"):
-        store._operation_row(auth._replace(backup_ref=[]), "d" * 64)
-    with pytest.raises(ValueError, match="digest"):
-        store._operation_row(auth, "not-a-digest")
-    # a well-formed row still passes
-    store._operation_row(auth, "d" * 64)
+    with _measured():
+        p = _v1_store()
+        auth = m13.make_authority(p)
+        store = m13.DraftAuditStore()
+        with pytest.raises(ValueError, match="backup_ref"):
+            store._operation_row(auth._replace(backup_ref=[]), "d" * 64)
+        with pytest.raises(ValueError, match="digest"):
+            store._operation_row(auth, "not-a-digest")
+        # a well-formed row still passes
+        store._operation_row(auth, "d" * 64)
 
 
 def test_a_published_row_does_not_alias_caller_mutable_state():
@@ -2515,14 +2532,15 @@ def test_a_malformed_event_id_grammar_is_rejected(monkeypatch):
     """Round 12, correction B: v13 checked event-id UNIQUENESS but never the
     frozen `ev-<uuid4>` grammar, so a faulty generator's `ev-not-a-uuid` was
     accepted. Both grammar and uniqueness are now enforced before publication."""
-    class FakeUUID:
-        def __str__(self):
-            return "not-a-uuid"
-    auth = m13.make_authority(_v1_store())
-    store = m13.DraftAuditStore()
-    monkeypatch.setattr(m13.uuid, "uuid4", lambda: FakeUUID())
-    with pytest.raises(ValueError, match="ev-<uuid4> grammar"):
-        store.activate(auth, "d" * 64)
+    with _measured():
+        class FakeUUID:
+            def __str__(self):
+                return "not-a-uuid"
+        auth = m13.make_authority(_v1_store())
+        store = m13.DraftAuditStore()
+        monkeypatch.setattr(m13.uuid, "uuid4", lambda: FakeUUID())
+        with pytest.raises(ValueError, match="ev-<uuid4> grammar"):
+            store.activate(auth, "d" * 64)
 
 
 # ==========================================================================
@@ -2705,10 +2723,11 @@ def test_the_operation_row_rejects_embedded_nul_paths(badpath):
     """Round 13, correction A: a canonical filesystem path cannot contain an
     embedded NUL; the audit boundary rejects it rather than storing an unusable
     path."""
-    auth = m13.make_authority(_v1_store())
-    store = m13.DraftAuditStore()
-    with pytest.raises(ValueError, match="NUL"):
-        store._operation_row(auth._replace(store_path=badpath), "d" * 64)
+    with _measured():
+        auth = m13.make_authority(_v1_store())
+        store = m13.DraftAuditStore()
+        with pytest.raises(ValueError, match="NUL"):
+            store._operation_row(auth._replace(store_path=badpath), "d" * 64)
 
 
 # ==========================================================================
@@ -4785,8 +4804,8 @@ def test_one_measurement_per_operation_by_identity(monkeypatch):
     real_vb, real_snap, real_repro = sv.verify_build, m13._artifact_snapshot, sv.verify_reproduction
     monkeypatch.setattr(sv, "verify_build", lambda: vb.append(1) or real_vb())
     monkeypatch.setattr(m13, "_artifact_snapshot", lambda: snaps.append(real_snap()) or snaps[-1])
-    monkeypatch.setattr(sv, "verify_reproduction", lambda records, schemas: repro.append(records)
-                        or real_repro(records, schemas))
+    monkeypatch.setattr(sv, "verify_reproduction", lambda records, schemas, *a: repro.append(records)
+                        or real_repro(records, schemas, *a))
     p = _v1_store()
     auth = m13.make_authority(p)
     vb.clear(); snaps.clear(); repro.clear()
@@ -4850,3 +4869,87 @@ def test_the_first_failing_probe_does_not_depend_on_the_hash_seed():
     outs = {subprocess.run([sys.executable, "-c", code], cwd=str(ROOT), capture_output=True, text=True,
                            env={**os.environ, "PYTHONHASHSEED": seed}).stdout.strip() for seed in ("0", "12345")}
     assert len(outs) == 1 and next(iter(outs)).startswith("probe "), outs
+
+
+# ---- research's stage 2 on 8ed96ff (§17) ---------------------------------------------------------------------------
+def _tampered_v2_snapshot():
+    """The draft artifact with table:confirmations' recorded v2 type changed and its digest recomputed, so the
+    structural validator passes and only the reproduction can refuse it (research's mq2_probe)."""
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    entry = next(a for a in art["schema_versions"]["2"]["accepted"] if a["provenance"] == "constructor v2")
+    cols = entry["objects"]["table:confirmations"]["columns"]
+    cols[0] = [cols[0][0], "BLOB", *cols[0][2:]]
+    entry["digest"] = m13.sv._digest_of_identity(entry["objects"], 2, m13.SCHEMAS_DRAFT)
+    with m13._registry():
+        assert m13.schema_evidence_problems(art) == []
+    return (art, "tampered-digest")
+
+
+def test_a_concurrent_operation_reproduces_its_own_snapshot_never_the_open_contexts_verdict():
+    """BLOCKING on 8ed96ff: op2 measured while op1's context is open, then entered after op1 exits, was served op1's
+    verdict with its own snapshot never reproduced. op2 takes only op1's PRE-draft BUILD measurement and reproduces
+    its own snapshot: refused. Mutant: return the open context's served status."""
+    snap2 = _tampered_v2_snapshot()
+    with m13._draft():                                            # op1, open
+        build, op2 = m13._operation_status(snap2)
+    assert build.status != "refused"
+    assert op2.status == "refused" and "table:confirmations" in op2.reason, op2
+    with m13._draft(loaded=snap2, status=op2, build=build):          # op1 has exited: op2 installs its own
+        assert sv.runtime_status().status == "refused"
+
+
+def test_an_activation_outside_an_operation_refuses_rather_than_record_another_operations_runtime():
+    """F2: the measured runtime lives exactly as long as its operation; with none, the row is refused, never written
+    with a stale or fabricated status."""
+    p = _v1_store()
+    auth = m13.make_authority(p)
+    assert m13.migrate_store(p, auth) == "migrated"               # an operation ran, and ended
+    assert m13._OPERATION_RUNTIME.get() is None
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    other = m13.make_authority(_v1_store())
+    with pytest.raises(LookupError, match="no measured runtime"):
+        m13._AUDIT.activate(other, m13._resolve_path_record(other, art)["output_acceptance_digest"])
+
+
+def test_entering_the_draft_context_directly_on_a_tampered_artifact_serves_refused():
+    """X7: simulate and --check-evidence enter `_draft()` themselves (no operation); the context measures and
+    reproduces its own artifact."""
+    with m13._draft(loaded=_tampered_v2_snapshot()):
+        st = sv.runtime_status()
+    assert st.status == "refused" and "table:confirmations" in st.reason, st
+
+
+@pytest.mark.parametrize("bad", [1, "yes", None, False])
+def test_a_probe_that_is_not_exactly_true_is_named(bad):
+    """X12: True by IDENTITY, never truthiness."""
+    p = dict.fromkeys(m13.AUTHORIZER_PROBE_KEYS, True)
+    p["denies_begin"] = bad
+    assert m13.probes_problems(p) == [f"probe denies_begin is {bad!r}"]
+
+
+def test_a_missing_or_extra_probe_key_is_named_sorted_before_any_value():
+    """X13: `p.items()` never sees a MISSING key, so the key set is checked first, both directions, sorted."""
+    p = dict.fromkeys(m13.AUTHORIZER_PROBE_KEYS, False)          # every value wrong too: never reached
+    del p["denies_pragma"], p["authorizer_restored"]
+    p["denies_zzz"], p["denies_aaa"] = True, True
+    assert m13.probes_problems(p) == ["probe 'authorizer_restored' is missing", "probe 'denies_pragma' is missing",
+                                      "probe 'denies_aaa' is not one of the sixteen",
+                                      "probe 'denies_zzz' is not one of the sixteen"]
+
+
+def test_an_accepted_entry_whose_objects_match_but_whose_digest_does_not_refuses():
+    """X5: the digest check is not redundant when an entry's recorded digest is not its objects' digest."""
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    entry = next(a for a in art["schema_versions"]["1"]["accepted"] if a["provenance"] == "constructor v1")
+    entry["digest"] = "0" * 64
+    with pytest.raises(sv.VerificationFailure, match="its constructor digest is not in the accepted set"):
+        sv.verify_reproduction(art["schema_versions"], m13.SCHEMAS_DRAFT)
+
+
+def test_the_reproduction_digest_uses_the_registry_it_is_given():
+    """X6: equivalent today only because the draft's rebuildable sets equal production's; a registry differing ONLY
+    in rebuildable policy digests differently, so the explicit registry is load-bearing."""
+    objs = m13.sv._built_objects(lambda c: [c.execute(o.ddl) for o in m13.SCHEMAS_DRAFT[1]])
+    flipped = {v: tuple(o._replace(policy=sv.REQUIRED) if o.policy == sv.REBUILDABLE else o for o in objs_)
+               for v, objs_ in m13.SCHEMAS_DRAFT.items()}
+    assert sv._digest_of_identity(objs, 1, flipped) != sv._digest_of_identity(objs, 1, m13.SCHEMAS_DRAFT)
