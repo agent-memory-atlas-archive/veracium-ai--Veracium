@@ -39,14 +39,18 @@ def _edge(i):
                 provenance=Provenance(author_of_evidence=EvidenceAuthor.USER, evidence_ref=f"lock:{i}"))
 
 
-def _hold_window(store, seconds, out):
-    """current_state's window shape: BEGIN under the lock, a read, hold, COMMIT."""
+def _hold_window(store, seconds, out, opened_evt, release_evt):
+    """current_state's window shape: BEGIN under the lock, a read, hold, COMMIT. It signals `opened_evt` once the read
+    lock is HELD (the deferred BEGIN takes it at the read), then holds until the writer has finished (`release_evt`,
+    capped at max(30 s, `seconds`) and recorded), so "while the window is still open" holds by construction. Ordered
+    by events, never by sleeping (research's census of 0068e3d: 0028's flake class)."""
     conn = store._conn
     with store._lock:
         conn.execute("BEGIN")
         out["opened"] = time.perf_counter()
         conn.execute("SELECT count(*) FROM edges WHERE user_id=?", (U,)).fetchone()
-        time.sleep(seconds)
+        opened_evt.set()
+        out["capped"] = not release_evt.wait(max(30.0, seconds))
         conn.execute("COMMIT")
         out["closed"] = time.perf_counter()
 
@@ -59,16 +63,18 @@ def _commit_time_failure(tmp_path, *, writer_timeout_ms=500, window_s=2.0, write
     reader = SqliteStore(path); writer = SqliteStore(path, busy_timeout_ms=writer_timeout_ms)
     assert reader._conn.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
     writer.add_edge(_edge("seed"))
-    res = {}
-    th = threading.Thread(target=_hold_window, args=(reader, window_s, res)); th.start()
-    time.sleep(0.2)
+    res, opened, written = {}, threading.Event(), threading.Event()
+    th = threading.Thread(target=_hold_window, args=(reader, window_s, res, opened, written)); th.start()
+    assert opened.wait(30), "the reader's window never opened"
     err = None
     try:
         (write or (lambda w: w.add_edge(_edge("during"))))(writer)
     except Exception as e:  # noqa: BLE001 — the exception IS the observation
         err = e
     finished = time.perf_counter()
+    written.set()
     th.join(); reader.close()
+    assert not res.get("capped"), "the window hit its cap: the writer never returned"
     return writer, err, res, finished
 
 

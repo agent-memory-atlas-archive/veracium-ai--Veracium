@@ -901,3 +901,82 @@ def test_the_context_manager_replays_commit_and_rollback_and_a_foreign_connect_i
     other = str(tmp_path / "other.db")
     census.connect(other, (), {}).close()
     assert any(p.startswith(f"connect to {other!r}") and p.endswith("not the store") for p in census.problems)
+
+
+# ---- 0013 v37 §5f.1: the pre-3.41 declare_vtab sequence, attributed only under all three conditions ---------------------
+_SEL = (sqlite3.SQLITE_SELECT, None, None, None, None)
+_XINFO = "SELECT * FROM pragma_table_xinfo(?)"
+
+
+def _vtab_call(census, cid=0, seq=None, sql=_XINFO, phase=0):
+    """A recorded call whose actions are SELECT then `seq` (default: the measured six), each at trace phase `phase`."""
+    seq = list(g.DECLARE_VTAB_SEQ if seq is None else seq)
+    rec = g.Call(cid, "execute", sql, ("t",), g.Site(_DECLARED))
+    rec.acts = [_SEL] + seq + [(sqlite3.SQLITE_READ, "t", "a", "main", None)]
+    rec.act_phase = [0] + [phase] * len(seq) + [0]
+    census._attribute_declare_vtab(cid, rec)
+    return rec
+
+
+def test_the_declare_vtab_probe_needs_the_exact_sequence_and_no_change():
+    """v37 condition (3)'s decision: the measured six callbacks right after a SELECT AND schema_version, data_version,
+    total_changes() and the sqlite_master rows unchanged. Mutant: the no-change check dropped (phrase 16)."""
+    state = (7, 1, 1, [("table", "t", "t", 2, "CREATE TABLE t(a)")])
+    acts = [_SEL, *g.DECLARE_VTAB_SEQ]
+    assert g.declare_vtab_probe_result(acts, state, state) is True
+    assert g.declare_vtab_probe_result([_SEL], state, state) is False                      # a 3.41+ build
+    changed = (8, *state[1:])
+    assert g.declare_vtab_probe_result(acts, state, changed) is False                       # something changed
+
+
+def test_the_declare_vtab_sequence_is_attributed_on_a_reproducing_build_and_classifies_as_a_read(monkeypatch):
+    """v37: on a build whose probe reproduces, a first use's exact sequence in the prepare is bookkeeping: removed from
+    the call's actions and named, so the read classifies clean; unattributed, the same call is a direct write."""
+    monkeypatch.setattr(g, "_DECLARE_VTAB_PROBE", True)
+    rec = _vtab_call(g.Census(":memory:"))
+    assert rec.bookkeeping == ["declare_vtab"] and g.DECLARE_VTAB_SEQ[0] not in rec.acts
+    from veracium.store import schema_version as sv
+    pa1 = g._pa1()
+    _cls, problems = g.classify(rec, g.text_classes(), pa1._steps(), pa1.lib()["_kind"], sv.SCHEMA_VERSION)
+    assert not [p for p in problems if "direct write to the schema table" in p], problems
+    raw = _classify(_XINFO, [_SEL, *g.DECLARE_VTAB_SEQ])
+    assert any("direct write to the schema table" in p for p in raw[1]), raw
+
+
+def test_the_declare_vtab_sequence_is_a_write_on_a_build_whose_probe_does_not_reproduce(monkeypatch):
+    """v37 condition (3) (phrase 12): a build whose own probe does not reproduce the sequence attributes nothing."""
+    monkeypatch.setattr(g, "_DECLARE_VTAB_PROBE", False)
+    rec = _vtab_call(g.Census(":memory:"))
+    assert rec.bookkeeping == [] and rec.acts[1] == g.DECLARE_VTAB_SEQ[0]
+
+
+@pytest.mark.parametrize("variant", ["sixth-column", "another-table", "another-database", "trigger-argument"])
+def test_a_variant_of_the_declare_vtab_sequence_stays_a_write(monkeypatch, variant):
+    """v37 condition (1) (phrase 13): only the EXACT six callbacks."""
+    monkeypatch.setattr(g, "_DECLARE_VTAB_PROBE", True)
+    seq = list(g.DECLARE_VTAB_SEQ)
+    if variant == "sixth-column":
+        seq.insert(5, (sqlite3.SQLITE_UPDATE, "sqlite_master", "extra", "main", None))
+    elif variant == "another-table":
+        seq = [(a[0], "t", a[2], a[3], a[4]) for a in seq]
+    elif variant == "another-database":
+        seq = [(a[0], a[1], a[2], "temp", a[4]) for a in seq]
+    else:
+        seq = [(a[0], a[1], a[2], a[3], "a_trigger") for a in seq]
+    rec = _vtab_call(g.Census(":memory:"), seq=seq)
+    assert rec.bookkeeping == [], variant
+
+
+def test_the_declare_vtab_sequence_is_bookkeeping_only_on_a_connections_first_use(monkeypatch):
+    """v37 condition (2) (phrase 14): a second use of the same pragma module on one connection attributes nothing."""
+    monkeypatch.setattr(g, "_DECLARE_VTAB_PROBE", True)
+    census = g.Census(":memory:")
+    assert _vtab_call(census).bookkeeping == ["declare_vtab"]
+    assert _vtab_call(census).bookkeeping == []                  # the same connection, the same module, again
+    assert _vtab_call(census, cid=1).bookkeeping == ["declare_vtab"]                  # another connection: its first
+
+
+def test_the_declare_vtab_sequence_outside_a_prepare_stays_a_write(monkeypatch):
+    """v37 condition (2) (phrase 15): only in the PREPARE, before the call's first trace."""
+    monkeypatch.setattr(g, "_DECLARE_VTAB_PROBE", True)
+    assert _vtab_call(g.Census(":memory:"), phase=1).bookkeeping == []

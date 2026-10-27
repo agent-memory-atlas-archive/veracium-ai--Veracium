@@ -188,6 +188,8 @@ class Call:
     def __init__(self, cid, how, sql=None, params=None, site=None):
         self.kind, self.cid, self.how, self.sql, self.params, self.site = "call", cid, how, sql, params, site
         self.acts, self.traces, self.problems = [], [], []
+        self.act_phase = []                       # per act: the traces seen before it (0: inside the first prepare)
+        self.bookkeeping = []                     # (v37) callback sequences attributed as bookkeeping, named
         self.outcome = None
         self.ok = None                            # __exit__ only: whether it was given no exception
 
@@ -227,6 +229,7 @@ class Census:
         self.closed = set()
         self.defensive = {}
         self.proxy_factory = proxy_factory or connection_proxy
+        self.vtab_used = collections.defaultdict(set)   # (v37) cid -> eponymous pragma modules used on that connection
 
     # -- callbacks
     def _auth(self, cid):
@@ -236,6 +239,7 @@ class Census:
                 self.orphans.append(("auth", cid, (code, a1, a2, db, trig)))
             else:
                 cur.acts.append((code, a1, a2, db, trig))
+                cur.act_phase.append(len(cur.traces))
             return sqlite3.SQLITE_OK
         return auth
 
@@ -286,11 +290,38 @@ class Census:
             raise
         finally:
             self.cur = prev
+            self._attribute_declare_vtab(cid, rec)
             self.events.append(rec)
             if how == "close":
                 self.closed.add(cid)
             self._guards(cid, rec)
         return r
+
+    def _attribute_declare_vtab(self, cid, rec):
+        """0013 v37 §5f.1: on a pre-3.41 build, a connection's FIRST use of a table-valued pragma asks the authorizer
+        about sqlite3_declare_vtab's nested, never-executed `UPDATE sqlite_master`. Those six callbacks are attributed
+        as bookkeeping, and removed from the call's actions, ONLY when all three hold: (1) exactly DECLARE_VTAB_SEQ,
+        immediately after the call's SELECT; (2) in the PREPARE (before the call's first trace) of a call that
+        references an eponymous pragma module not yet used on this connection; (3) THIS build's probe reproduces it
+        with nothing changed. Anything else stays a write. At most one sequence per first-used module."""
+        if rec.how not in ("execute", "executemany"):
+            return
+        mods = {m.lower() for m in _EPONYMOUS.findall(rec.sql or "")}
+        first = mods - self.vtab_used[cid]
+        self.vtab_used[cid] |= mods
+        if not first or not declare_vtab_probe():
+            return
+        n = len(DECLARE_VTAB_SEQ)
+        for _ in range(len(first)):
+            for i, a in enumerate(rec.acts):
+                if (a[0] == sqlite3.SQLITE_SELECT and tuple(rec.acts[i + 1:i + 1 + n]) == DECLARE_VTAB_SEQ
+                        and all(p == 0 for p in rec.act_phase[i + 1:i + 1 + n])):
+                    del rec.acts[i + 1:i + 1 + n]
+                    del rec.act_phase[i + 1:i + 1 + n]
+                    rec.bookkeeping.append("declare_vtab")
+                    break
+            else:
+                return
 
     def _guards(self, cid, rec):
         real = self.reals[cid]
@@ -472,6 +503,56 @@ def _text_class(sql, classes):
 def _write_db(code, a1, a2, db):
     """The database a write action names: ALTER_TABLE reports it first, the others fourth."""
     return a1 if code == sqlite3.SQLITE_ALTER_TABLE else db
+
+
+# ---- (v37) the pre-3.41 declare_vtab sequence ----------------------------------------------------------------------
+DECLARE_VTAB_SEQ = tuple((sqlite3.SQLITE_UPDATE, "sqlite_master", col, "main", None)
+                         for col in ("type", "name", "tbl_name", "rootpage", "sql")) + (
+    (sqlite3.SQLITE_READ, "sqlite_master", "ROWID", "main", None),)
+"""Exactly the six callbacks research measured on 3.40.1 (0013 v37 §5f.1, research 46869de1): UPDATE main.sqlite_master
+for five columns in that order, each with no trigger or view argument, then READ main.sqlite_master.ROWID."""
+_EPONYMOUS = re.compile(r"(?<![A-Za-z0-9_])pragma_([A-Za-z_]+)\s*\(")
+_DECLARE_VTAB_PROBE = None
+
+
+def declare_vtab_probe_result(acts, before, after) -> bool:
+    """Condition (3)'s decision, pure: the probe's recorded callbacks hold DECLARE_VTAB_SEQ immediately after a SELECT,
+    AND schema_version, data_version, total_changes() and the sqlite_master rows are unchanged."""
+    n = len(DECLARE_VTAB_SEQ)
+    reproduces = any(a[0] == sqlite3.SQLITE_SELECT and tuple(acts[i + 1:i + 1 + n]) == DECLARE_VTAB_SEQ
+                     for i, a in enumerate(acts))
+    return reproduces and before == after
+
+
+def _measure_declare_vtab() -> bool:
+    """THIS build's probe, on a scratch database: a connection's first table-valued pragma read, recorded."""
+    with tempfile.TemporaryDirectory() as d:
+        c = sqlite3.connect(os.path.join(d, "probe.db"))
+        try:
+            c.execute("CREATE TABLE t(a)")
+            c.commit()
+
+            def state():
+                return (c.execute("PRAGMA schema_version").fetchone()[0], c.execute("PRAGMA data_version").fetchone()[0],
+                        c.total_changes, c.execute("SELECT type, name, tbl_name, rootpage, sql FROM sqlite_master")
+                        .fetchall())
+            before, acts = state(), []
+            c.set_authorizer(lambda *a: acts.append(tuple(a)) or sqlite3.SQLITE_OK)
+            try:
+                c.execute("SELECT * FROM pragma_table_xinfo('t')").fetchall()
+            finally:
+                c.set_authorizer(lambda *_a: sqlite3.SQLITE_OK)
+            return declare_vtab_probe_result(acts, before, state())
+        finally:
+            c.close()
+
+
+def declare_vtab_probe() -> bool:
+    """Condition (3), measured once per process, at the gate's first need (run_gate also asks at its start)."""
+    global _DECLARE_VTAB_PROBE
+    if _DECLARE_VTAB_PROBE is None:
+        _DECLARE_VTAB_PROBE = _measure_declare_vtab()
+    return _DECLARE_VTAB_PROBE
 
 
 def classify(rec: Call, classes, steps, label, head: int) -> tuple:
@@ -862,6 +943,7 @@ def site_coverage(all_calls) -> dict:
 # ---- the gate ----------------------------------------------------------------------------------------------------------
 def run_gate(work: str, paths=None) -> dict:
     build = build_identity()
+    declare_vtab_probe()                      # (v37) condition (3), measured when the gate starts
     results = []
     for label, entry, builder in (paths if paths is not None else gate_paths()):
         d = tempfile.mkdtemp(dir=work)

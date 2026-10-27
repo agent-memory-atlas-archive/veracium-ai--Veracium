@@ -278,6 +278,34 @@ MUTANTS = [
      "a write added to release_migration's _observe, inside its BEGIN IMMEDIATE ... ROLLBACK"),
 ]
 
+MUTANTS += [
+    # ---- 0013 v37 §5f.1: the pre-3.41 declare_vtab sequence (Quentin, 2026-10-27: "Yes, build v37") -----------------
+    ("v37-filter-without-the-probe", "gate", GATE,
+     [("        if not first or not declare_vtab_probe():\n", "        if not first:\n")],
+     [C("test_the_declare_vtab_sequence_is_a_write_on_a_build_whose_probe_does_not_reproduce")], [], None,
+     "v37: the sequence attributed on a build whose own probe does not reproduce it"),
+    ("v37-a-loose-sequence", "gate", GATE,
+     [("                if (a[0] == sqlite3.SQLITE_SELECT and tuple(rec.acts[i + 1:i + 1 + n]) == DECLARE_VTAB_SEQ\n",
+       "                if (a[0] == sqlite3.SQLITE_SELECT and tuple(x[0] for x in rec.acts[i + 1:i + 1 + n])\n"
+       "                        == tuple(x[0] for x in DECLARE_VTAB_SEQ)\n")],
+     [C("test_a_variant_of_the_declare_vtab_sequence_stays_a_write[another-table]"),
+      C("test_a_variant_of_the_declare_vtab_sequence_stays_a_write[another-database]"),
+      C("test_a_variant_of_the_declare_vtab_sequence_stays_a_write[trigger-argument]")], [], None,
+     "v37: a sequence with another table, database or a trigger argument accepted"),
+    ("v37-a-second-use", "gate", GATE,
+     [("        first = mods - self.vtab_used[cid]\n", "        first = mods\n")],
+     [C("test_the_declare_vtab_sequence_is_bookkeeping_only_on_a_connections_first_use")], [], None,
+     "v37: the sequence accepted on a second use on one connection"),
+    ("v37-outside-a-prepare", "gate", GATE,
+     [("\n                        and all(p == 0 for p in rec.act_phase[i + 1:i + 1 + n])):", "):")],
+     [C("test_the_declare_vtab_sequence_outside_a_prepare_stays_a_write")], [], None,
+     "v37: the sequence accepted outside a prepare"),
+    ("v37-no-change-dropped", "gate", GATE,
+     [("    return reproduces and before == after\n", "    return reproduces\n")],
+     [C("test_the_declare_vtab_probe_needs_the_exact_sequence_and_no_change")], [], None,
+     "v37: the probe's no-change check dropped"),
+]
+
 # (id, file, [(anchor, replacement)], named cells, what, the outcome the classifier must give)
 CONTROLS = [
     ("CTRL-unrelated-TypeError", GATE,

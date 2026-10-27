@@ -55,25 +55,36 @@ def _stores(tmp_path, mode, *, writer_timeout_ms):
     return reader, writer
 
 
-def _hold_window(store, seconds, out):
-    """current_state's window shape, held open for `seconds`."""
+def _hold_window(store, seconds, out, opened_evt, release_evt=None):
+    """current_state's window shape. It signals `opened_evt` once its read lock is HELD (the deferred BEGIN takes it at
+    the first read), then holds for `seconds`, or, given `release_evt`, until the writer has finished (capped at 30 s,
+    recorded). Ordered by events, never by sleeping (0007 CI run 2: on a loaded macOS runner the 0.2 s settle and a
+    timed window raced the writer, and the "fails" cell saw its write succeed)."""
     conn = store._conn
     with store._lock:
         assert not conn.in_transaction
         conn.execute("BEGIN")
         out["opened"] = time.perf_counter()
         out["count_at_open"] = conn.execute("SELECT count(*) FROM edges WHERE user_id=?", (U,)).fetchone()[0]
-        time.sleep(seconds)
+        opened_evt.set()
+        if release_evt is None:
+            time.sleep(seconds)
+        else:
+            out["capped"] = not release_evt.wait(30)
         out["count_before_commit"] = conn.execute("SELECT count(*) FROM edges WHERE user_id=?", (U,)).fetchone()[0]
         conn.execute("COMMIT")
         out["closed"] = time.perf_counter()
 
 
-def _write_during_window(reader, writer, window_s, *, settle=0.2):
-    res = {}
-    th = threading.Thread(target=_hold_window, args=(reader, window_s, res))
+def _write_during_window(reader, writer, window_s, *, hold_until_written=False):
+    """The write starts only once the reader's lock is HELD (an event, not a settle sleep). With `hold_until_written`,
+    the window stays open until the write has finished, so "inside the window" holds by construction and the only
+    timing left is SQLite's own busy_timeout, the fact under test."""
+    res, opened, written = {}, threading.Event(), threading.Event()
+    th = threading.Thread(target=_hold_window,
+                          args=(reader, window_s, res, opened, written if hold_until_written else None))
     th.start()
-    time.sleep(settle)                      # the window is open before the write starts
+    assert opened.wait(30), "the reader's window never opened"
     started = time.perf_counter()
     err = None
     try:
@@ -81,8 +92,10 @@ def _write_during_window(reader, writer, window_s, *, settle=0.2):
     except Exception as e:                  # noqa: BLE001 — the exception IS the observation
         err = e
     finished = time.perf_counter()
+    written.set()
     th.join()
     assert started > res["opened"], "the write must start inside the window"
+    assert not res.get("capped"), "the window hit its 30 s cap: the writer never finished"
     return res, started, finished, err
 
 
@@ -95,7 +108,9 @@ def test_default_mode_writer_waits_and_commits_after_a_window_shorter_than_its_t
     """DELETE journal, window < busy_timeout: the writer WAITS and commits
     AFTER the window closes; the store holds both rows; the reader saw one
     snapshot (both its counts equal)."""
-    reader, writer = _stores(tmp_path, "delete", writer_timeout_ms=3000)
+    # the timeout is NOT this cell's subject (the writer waiting until the window closes is), so it is generous: only a
+    # pathological 30 s stall fails it (research, run 2's flake review)
+    reader, writer = _stores(tmp_path, "delete", writer_timeout_ms=30000)
     writer.add_edge(_edge("seed"))
     res, started, finished, err = _write_during_window(reader, writer, window_s=0.8)
     assert err is None, err
@@ -114,7 +129,7 @@ def test_default_mode_writer_fails_and_loses_the_write_when_the_window_outlasts_
     called the bare form a recorded product defect now reads as history."""
     reader, writer = _stores(tmp_path, "delete", writer_timeout_ms=500)
     writer.add_edge(_edge("seed"))
-    res, started, finished, err = _write_during_window(reader, writer, window_s=2.0)
+    res, started, finished, err = _write_during_window(reader, writer, window_s=2.0, hold_until_written=True)
     assert isinstance(err, sqlite3.OperationalError), err
     assert "COMMIT" in str(err) and "V-LOCK-REFUSAL-FORM" in str(err), str(err)
     assert isinstance(err.__cause__, sqlite3.OperationalError) and "database is locked" in str(err.__cause__)
@@ -135,7 +150,7 @@ def test_wal_writer_commits_during_the_window_and_the_reader_keeps_its_snapshot(
     (its snapshot held); the store holds both rows afterwards."""
     reader, writer = _stores(tmp_path, "wal", writer_timeout_ms=500)
     writer.add_edge(_edge("seed"))
-    res, started, finished, err = _write_during_window(reader, writer, window_s=window_s)
+    res, started, finished, err = _write_during_window(reader, writer, window_s=window_s, hold_until_written=True)
     assert err is None, err
     assert finished < res["closed"], "the commit landed while the window was open"
     assert res["count_at_open"] == res["count_before_commit"] == 1, "the reader's snapshot held"
@@ -152,19 +167,22 @@ def test_mirror_a_reserved_writer_never_refuses_the_reader_and_its_update_persis
     proceeds (wal). Persistence is checked on the SQL COLUMN the UPDATE wrote
     — the supplemental verdict's point: `edges()` rebuilds from the json
     payload, so the public read could not show this update."""
-    reader, writer = _stores(tmp_path, mode, writer_timeout_ms=3000)
+    reader, writer = _stores(tmp_path, mode, writer_timeout_ms=30000)     # not the subject: generous (run 2's review)
     writer.add_edge(_edge("seed"))
     wc = writer._conn
     wc.execute("BEGIN IMMEDIATE")
     wc.execute("UPDATE edges SET object='tool-uncommitted' WHERE id=?", ("e-seed",))
-    res = {}
-    th = threading.Thread(target=_hold_window, args=(reader, 0.8, res))
+    res, opened, committed = {}, threading.Event(), threading.Event()
+    # delete: a TIMED window, whose close the commit must wait for (the subject); wal: held until the commit has landed,
+    # so "during the window" holds by construction. Ordered by events, never by sleeping (0007 CI run 2's flake class).
+    th = threading.Thread(target=_hold_window, args=(reader, 0.8, res, opened, committed if mode == "wal" else None))
     th.start()
-    time.sleep(0.2)
-    assert "opened" in res, "the reader's window opened while the writer held RESERVED"
+    assert opened.wait(30), "the reader's window never opened while the writer held RESERVED"
     wc.execute("COMMIT")
     c1 = time.perf_counter()
+    committed.set()
     th.join()
+    assert not res.get("capped"), "the window hit its 30 s cap"
     if mode == "delete":
         assert c1 >= res["closed"], "delete: the commit waited for the window"
     else:

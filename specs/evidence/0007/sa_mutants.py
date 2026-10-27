@@ -412,6 +412,12 @@ CARRIERS = {
     ("INV-SA10", 9): ("mutant", "sa10-commit-before-revalidating"),
     ("INV-SA10", 10): ("mutant", "sa10-verified-takes-fewer-checks"),
     ("INV-SA10", 11): ("cite", f"{SA10_TABLE}::N13-N15-forward-unknown-attributes"),
+    # ---- 0013 v37 §5f.1: the pre-3.41 declare_vtab sequence -----------------------------------------------------------
+    ("INV-SA10", 12): ("cite", f"{SA10_TABLE}::v37-filter-without-the-probe"),
+    ("INV-SA10", 13): ("cite", f"{SA10_TABLE}::v37-a-loose-sequence"),
+    ("INV-SA10", 14): ("cite", f"{SA10_TABLE}::v37-a-second-use"),
+    ("INV-SA10", 15): ("cite", f"{SA10_TABLE}::v37-outside-a-prepare"),
+    ("INV-SA10", 16): ("cite", f"{SA10_TABLE}::v37-no-change-dropped"),
 }
 """Every phrase's ONE carrier (an INV-SA1 phrase spans both gate sites, so it names two mutants)."""
 
@@ -468,11 +474,20 @@ def cited_rows(root: pathlib.Path = ROOT, ref: str = "") -> set:
     if path.endswith(".json"):
         return {r["id"] for r in json.loads(text, object_pairs_hook=_strict_pairs)[matrix]}
     tree = ast.parse(text)
-    for n in ast.walk(tree):
-        if matrix == "MUTANTS" and isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "MUTANTS":
+    if matrix == "MUTANTS":
+        # EVERY `MUTANTS = …` and `MUTANTS += […]` at module level (sa10_mutants extends its list for v37): a reader that
+        # saw only the first assignment would read later rows as missing, or worse, miss a removed one
+        names = set()
+        for n in tree.body:
+            target = n.targets[0] if isinstance(n, ast.Assign) else n.target if isinstance(n, ast.AugAssign) else None
+            if getattr(target, "id", "") != "MUTANTS":
+                continue
             if isinstance(n.value, ast.Dict):
-                return {k.value for k in n.value.keys}
-            return {e.elts[0].value for e in n.value.elts}
+                names |= {k.value for k in n.value.keys}
+            else:
+                names |= {e.elts[0].value for e in n.value.elts}
+        return names
+    for n in ast.walk(tree):
         if isinstance(n, ast.FunctionDef) and n.name == matrix:
             for c in ast.walk(n):
                 if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "_matrix":
