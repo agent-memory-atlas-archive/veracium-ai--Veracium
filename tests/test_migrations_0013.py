@@ -1225,6 +1225,11 @@ def test_a_non_utf8_bytes_path_works_end_to_end():
     import os
     raw = os.fsencode(tempfile.mktemp(suffix="-\udcff.db"))
     p = os.fsdecode(raw)
+    try:                        # 0007 CI run 1: macOS's APFS refuses a non-UTF-8 name outright (EILSEQ)
+        open(raw, "wb").close()
+        os.unlink(raw)
+    except OSError:
+        pytest.skip("this filesystem cannot hold a non-UTF-8 file name")
     c = sqlite3.connect(p)
     for o in m13.SCHEMA_V1:
         c.execute(o.ddl)

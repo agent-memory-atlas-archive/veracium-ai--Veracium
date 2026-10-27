@@ -24,6 +24,12 @@ aw = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(aw)
 sv = aw.sv
 
+OTHER_MACHINE = "ppc64le" if sv.canonical_platform()["machine"] == "riscv64" else "riscv64"
+"""A canonical machine that is NOT this build's (0007 CI run 1, 2026-10-27): "another key" made with a fixed
+`aarch64` was this build's own key on arm64 runners, and `libc="musl"` was non-canonical beside Darwin, so cells meant
+to hold two keys held one, or a malformed record, off x86_64 Linux."""
+
+
 A = "a" * 40
 B = "b" * 40
 
@@ -142,7 +148,7 @@ def test_a_same_commit_re_record_from_another_job_is_idempotent():
 def test_an_ancestor_replaces_and_every_other_key_is_kept():
     """10(d)'s replacement-by-key, inverted from the legacy writer: an ancestor's record of THIS key is replaced; a
     record of another key (here another machine) is kept byte for byte."""
-    other = record(commit=B, machine="aarch64")
+    other = record(commit=B, machine=OTHER_MACHINE)
     out, outcome = aw.merged([record(commit=B), other], record(), git=fake_git(ancestor={(B, A): 0}))
     assert outcome == "replaced" and out[0] == other and len(out) == 2
     assert sv.record_commit(out[1]) == A
@@ -152,7 +158,7 @@ def test_a_superseded_revision_is_replaced_only_on_the_full_key():
     """W7 / 10(a): an OLDER-revision record of the same full key is superseded; one sharing (version, source_id) on
     ANOTHER key is kept."""
     old_mine = record(manifest_algorithm=sv.MANIFEST_ALGORITHM - 1)
-    old_other = record(manifest_algorithm=sv.MANIFEST_ALGORITHM - 1, libc="musl")
+    old_other = record(manifest_algorithm=sv.MANIFEST_ALGORITHM - 1, machine=OTHER_MACHINE)
     assert (old_other["sqlite_version"], old_other["source_id"]) == (old_mine["sqlite_version"], old_mine["source_id"])
     out, _ = aw.merged([old_mine, old_other], record(), git=fake_git())
     assert old_mine not in out and old_other in out
@@ -162,7 +168,7 @@ def test_a_future_revision_of_this_key_is_never_overwritten_and_another_keys_doe
     """S75 / 10(d): a NEWER revision of this key refuses; a newer revision of ANOTHER key blocks nothing."""
     with pytest.raises(aw.AttestationRefused, match="NEWER revision"):
         aw.merged([record(commit=B, schema_version=sv.SCHEMA_VERSION + 1)], record(), git=fake_git())
-    out, outcome = aw.merged([record(commit=B, schema_version=sv.SCHEMA_VERSION + 1, machine="aarch64")], record(),
+    out, outcome = aw.merged([record(commit=B, schema_version=sv.SCHEMA_VERSION + 1, machine=OTHER_MACHINE)], record(),
                              git=fake_git())
     assert outcome == "written" and len(out) == 2
 
@@ -200,7 +206,7 @@ def test_git_env_scrubs_inherited_repository_variables_and_pins_config():
 def test_an_idempotent_re_record_into_a_poisoned_artifact_is_refused():
     """Stage 2's should-fix: the artifact checks run on the unchanged list too. Another key's conflicting pair already
     poisons the artifact; re-recording this key's equal evidence must not answer idempotent, rc 0."""
-    other = record(machine="aarch64")
+    other = record(machine=OTHER_MACHINE)
     poisoned = [record(), other, dict(other, result_digest="b" * 64)]
     with pytest.raises(aw.AttestationRefused, match="would be poisoned"):
         aw.merged(poisoned, record(), git=fake_git())
@@ -283,7 +289,7 @@ def test_the_release_check_reports_every_stale_attestation_record():
     import schema_evidence as ev
     current = record()
     superseded = record(manifest_algorithm=sv.MANIFEST_ALGORITHM - 1)
-    future = record(commit=B, schema_version=sv.SCHEMA_VERSION + 1, machine="aarch64")
+    future = record(commit=B, schema_version=sv.SCHEMA_VERSION + 1, machine=OTHER_MACHINE)
     malformed = {"manifest_algorithm": True}
     found = ev.stale_attestation_problems([current, superseded, future, malformed, 42])          # total
     assert len(found) == 2 and "superseded revision" in found[0] and "re-attest or remove" in found[0], found
@@ -442,10 +448,10 @@ def test_real_a_fresh_write_drops_bootstrap_records_and_refuses_a_non_bootstrap_
     """v21 (3), the derived mark on a REAL history. A record whose commit's artifact held no current record (A1: no
     artifact at all) is a bootstrap record, and a fresh write drops it. A record whose commit's artifact held a current
     one is not, and a fresh write over it refuses (no W6 bypass)."""
-    boot = record(commit=repo["A1"], machine="aarch64")
+    boot = record(commit=repo["A1"], machine=OTHER_MACHINE)
     assert aw.is_bootstrap_record(boot, repo=repo["path"]) is True
     held = _commit_artifact(repo, [boot])                    # an artifact holding a current record, committed
-    attested = record(commit=held, machine="aarch64")
+    attested = record(commit=held, machine=OTHER_MACHINE)
     assert aw.is_bootstrap_record(attested, repo=repo["path"]) is False
     head = _commit_artifact(repo, [boot, attested])
     path = tmp_path / "out.json"
@@ -464,7 +470,7 @@ def test_real_the_bootstrap_derivation_and_the_exemption_are_one_predicate(repo)
     spec = _ilu.spec_from_file_location("veracium_attestation_job_n1", ROOT / "specs" / "attestation_job.py")
     jobmod = _ilu.module_from_spec(spec)
     spec.loader.exec_module(jobmod)
-    base = record(commit=repo["A1"], machine="aarch64")
+    base = record(commit=repo["A1"], machine=OTHER_MACHINE)
     states = {"empty": [], "superseded": [dict(base, manifest_algorithm=sv.MANIFEST_ALGORITHM - 1)], "current": [base],
               "future": [dict(base, schema_version=sv.SCHEMA_VERSION + 1)], "malformed": [{"manifest_algorithm": True}]}
     for name, artifact in states.items():
@@ -526,11 +532,11 @@ def test_real_the_release_check_refuses_a_bootstrap_record_by_derivation(repo):
     names a record whose commit's artifact held no current record, and passes one whose commit's artifact held one."""
     sys.path.insert(0, str(ROOT / "specs"))
     import schema_evidence as ev
-    boot = record(commit=repo["A1"], machine="aarch64")
+    boot = record(commit=repo["A1"], machine=OTHER_MACHINE)
     held = _commit_artifact(repo, [boot])
     found = ev.bootstrap_release_problems([boot], repo=repo["path"])
     assert len(found) == 1 and "BOOTSTRAP record" in found[0], found
-    assert ev.bootstrap_release_problems([record(commit=held, machine="aarch64")], repo=repo["path"]) == []
+    assert ev.bootstrap_release_problems([record(commit=held, machine=OTHER_MACHINE)], repo=repo["path"]) == []
 
 
 def test_real_an_inherited_git_dir_cannot_answer_for_another_repository(repo, tmp_path, monkeypatch):

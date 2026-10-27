@@ -20,6 +20,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "specs"))
 
 from veracium.store import schema_version as sv  # noqa: E402
+
+OTHER_MACHINE = "ppc64le" if sv.canonical_platform()["machine"] == "riscv64" else "riscv64"
+"""A canonical machine that is NOT this build's (0007 CI run 1, 2026-10-27): "another key" made with a fixed
+`aarch64` was this build's own key on arm64 runners, and `libc="musl"` was non-canonical beside Darwin, so cells meant
+to hold two keys held one, or a malformed record, off x86_64 Linux."""
+
 from veracium.store.schema_version import (  # noqa: E402
     AdoptionAuditEvent, PostCommitAuditError, StoreVersionError)
 from veracium.store.migration import (  # noqa: E402
@@ -691,7 +697,7 @@ def test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact(monkeypatch):
     assert any("with different evidence: the key does not identify the build" in p
                for p in sv.attestation_artifact_problems([a, b]))
     assert any("with equal evidence: a duplicate" in p for p in sv.attestation_artifact_problems([a, dict(a)]))
-    assert sv.attestation_artifact_problems([a, _attestation_for_this_build(machine="aarch64")]) == []
+    assert sv.attestation_artifact_problems([a, _attestation_for_this_build(machine=OTHER_MACHINE)]) == []
     monkeypatch.setattr(sv, "attestations", lambda: [a, b])
     st = sv.runtime_status()
     assert st.status == "verified" and "different evidence" in st.reason, st
@@ -700,8 +706,11 @@ def test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact(monkeypatch):
 def test_inv_sa12_a_non_canonical_record_field_poisons_the_artifact():
     """The record side calls the same canonicaliser as the build side, so a record written with a raw platform
     value (`AMD64`, `x86-64`, a libc from `platform.libc_ver()`) is malformed, never a match."""
+    # the non-canonical libc depends on the system (0007 CI run 1: `none` IS canonical beside Darwin): `none` on Linux,
+    # `glibc` anywhere else
+    wrong_libc = "none" if sv.canonical_platform()["system"] == "Linux" else "glibc"
     for field, value in (("machine", "AMD64"), ("machine", "x86-64"), ("system", "linux "), ("libc", "glibc2.39"),
-                         ("libc", "none")):
+                         ("libc", wrong_libc)):
         r = _attestation_for_this_build(**{field: value})
         assert any(f"'{field}'" in p for p in sv.attestation_record_problems(r)), (field, value)
         assert sv.attestation_artifact_problems([r]) != []

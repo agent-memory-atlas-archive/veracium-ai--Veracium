@@ -108,10 +108,12 @@ def test_ungrounded_grants_nothing():
     """Every `ungrounded` reader in src/ is an enumerated consumer, and each
     is a marker/withholding/immutability/verification surface — none keys
     trust, authority, assertability, or staleness ON the flag."""
-    hits = subprocess.run(
-        ["grep", "-rlw", "ungrounded", "--include=*.py",
-         str(ROOT / "src" / "veracium")],
-        capture_output=True, text=True).stdout.split()
+    # `grep -rlw ungrounded --include=*.py`, in Python: busybox grep (Alpine) has no --include and printed nothing,
+    # so the set came back EMPTY there (0007 CI run 1, 2026-10-27). -w's word boundary is [A-Za-z0-9_].
+    import re
+    word = re.compile(r"(?<![A-Za-z0-9_])ungrounded(?![A-Za-z0-9_])")
+    hits = [p for p in (ROOT / "src" / "veracium").rglob("*.py")
+            if word.search(p.read_text(encoding="utf-8", errors="replace"))]
     readers = {pathlib.Path(h).name for h in hits}
     assert readers == {"schema.py", "grounding.py", "ingest.py", "graph.py",
                        "contribution.py", "compile.py", "proactive.py",

@@ -23,6 +23,12 @@ import pytest
 from veracium.store import near_misses as nm
 from veracium.store import schema_version as sv
 
+OTHER_MACHINE = "ppc64le" if sv.canonical_platform()["machine"] == "riscv64" else "riscv64"
+"""A canonical machine that is NOT this build's (0007 CI run 1, 2026-10-27): "another key" made with a fixed
+`aarch64` was this build's own key on arm64 runners, and `libc="musl"` was non-canonical beside Darwin, so cells meant
+to hold two keys held one, or a malformed record, off x86_64 Linux."""
+
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "veracium"
 HEAD = sv.SCHEMA_VERSION
@@ -68,7 +74,7 @@ def test_no_matching_record_is_verified_and_a_matching_one_is_attested(monkeypat
 
 
 def test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing(monkeypatch):
-    other = record_for_this_build(machine="aarch64")
+    other = record_for_this_build(machine=OTHER_MACHINE)
     assert sv.attestation_artifact_problems([other, record_for_this_build()]) == []
     with_records(monkeypatch, other)
     assert sv.runtime_status().status == "verified"
@@ -168,7 +174,10 @@ def test_libc_comes_from_pt_interp_never_from_libc_ver(monkeypatch):
 def test_each_key_field_separates_two_records_that_agree_on_every_other(monkeypatch):
     """INV-SA12's mutants: drop machine, system, libc or the options digest, and two builds collapse into one key."""
     base = record_for_this_build()
-    for field, other in (("machine", "aarch64"), ("system", "Darwin"), ("libc", "musl"),
+    me = sv.canonical_platform()             # each "other" differs from THIS build (0007 CI run 1: arm64 and macOS)
+    other_system = "Windows" if me["system"] == "Darwin" else "Darwin"
+    other_libc = "glibc" if me["libc"] == "musl" else "musl"
+    for field, other in (("machine", OTHER_MACHINE), ("system", other_system), ("libc", other_libc),
                          ("compile_options_digest", "b" * 64), ("source_id", "x"), ("sqlite_version", "3.0.0")):
         r = record_for_this_build(**{field: other})
         if field == "system":

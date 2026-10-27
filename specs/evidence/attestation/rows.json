@@ -189,7 +189,7 @@
    "route": "distro",
    "runner_image": "alpine-3.24",
    "runs_on": "ubuntu-24.04",
-   "install": "apk add --no-cache git python3",
+   "install": "apk add --no-cache git python3 bash",
    "python": "/usr/bin/python3",
    "expect_prefix": "/usr",
    "image": "alpine:3.24",
@@ -255,11 +255,11 @@
    "route": "docker",
    "runner_image": "python:3.14-alpine",
    "runs_on": "ubuntu-24.04",
-   "install": "apk add --no-cache git",
+   "install": "apk add --no-cache git bash",
    "python": "/usr/local/bin/python3.14",
    "expect_prefix": "/usr/local",
    "image": "python:3.14-alpine",
-   "user_add": "apk add --no-cache git && adduser -D attest"
+   "user_add": "apk add --no-cache git bash && adduser -D attest"
   },
   {
    "spec_row": "**arm64 Linux (v0.10, Q4):** python-build-standalone, and the official Docker `python:3.14` images",
@@ -297,11 +297,11 @@
    "route": "docker",
    "runner_image": "python:3.14-alpine (linux/arm64)",
    "runs_on": "ubuntu-24.04-arm",
-   "install": "apk add --no-cache git",
+   "install": "apk add --no-cache git bash",
    "python": "/usr/local/bin/python3.14",
    "expect_prefix": "/usr/local",
    "image": "python:3.14-alpine",
-   "user_add": "apk add --no-cache git && adduser -D attest"
+   "user_add": "apk add --no-cache git bash && adduser -D attest"
   }
  ]
 }

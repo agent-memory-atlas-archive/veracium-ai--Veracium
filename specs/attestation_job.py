@@ -185,6 +185,7 @@ def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_sui
     import attestation_writer as aw
     st = (sv.runtime_status if runtime_status is None else runtime_status)()
     result = {"outcome": None, "reason": "", "route": args.route, "runner_image": args.runner_image,
+              "job_id": int(args.job_id),          # the aggregate names jobs by it (run 1 printed "job ?")
               "sqlite_version": st.sqlite_version, "source_id": st.source_id, "status": st.status,
               "key": None, "result_digest": None, "excluded_entries": [], "record": None}
     try:

@@ -38,6 +38,12 @@ import skip_inventory  # noqa: E402
 
 sv = agg.sv
 
+OTHER_MACHINE = "ppc64le" if sv.canonical_platform()["machine"] == "riscv64" else "riscv64"
+"""A canonical machine that is NOT this build's (0007 CI run 1, 2026-10-27): "another key" made with a fixed
+`aarch64` was this build's own key on arm64 runners, and `libc="musl"` was non-canonical beside Darwin, so cells meant
+to hold two keys held one, or a malformed record, off x86_64 Linux."""
+
+
 
 # ---- Q1: the suite rule ----------------------------------------------------------------------------------------------
 @pytest.mark.parametrize("source", [
@@ -458,11 +464,15 @@ def test_equal_evidence_aggregates_to_one_record_with_sorted_union_provenance():
 
 
 def test_different_evidence_is_a_disagreement_naming_every_job_and_other_keys_still_emit():
-    other = _result(route="docker", image="python:3.14-alpine", job_id=9, libc="musl")
-    out = agg.aggregate([_result(job_id=1), _result(route="deadsnakes", job_id=2, digest="d" * 64), other])
+    """Other keys still emit whether they sort BEFORE or AFTER the disagreeing key (0007 CI run 1: with one other key,
+    the kill of "one disagreement stops every key" depended on which machine name the runner had)."""
+    before = _result(route="docker", image="python:3.14-alpine", job_id=8, machine="aa_sorts_first")
+    after = _result(route="docker", image="python:3.14-trixie", job_id=9, machine="zz_sorts_last")
+    out = agg.aggregate([_result(job_id=1), _result(route="deadsnakes", job_id=2, digest="d" * 64), before, after])
     assert agg.failed(out) and out["disagreements"][0]["why"] == "different evidence"
     assert len(out["disagreements"][0]["jobs"]) == 2
-    assert [sv.attestation_key(r) for r in out["records"]] == [sv.attestation_key(other["record"])]
+    assert sorted(sv.attestation_key(r) for r in out["records"]) == sorted(
+        sv.attestation_key(x["record"]) for x in (before, after))
 
 
 def test_bootstrap_jobs_aggregate_to_records_named_as_bootstrap_and_a_mixed_key_disagrees():

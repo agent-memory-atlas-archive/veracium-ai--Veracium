@@ -75,7 +75,7 @@ def joint_groups(doc=None, tree=None) -> list:
 def suite(tree=ROOT) -> list:
     """The suite's modules, as tree-relative paths, sorted: the rule's selection, closed under the joint test groups."""
     tree = pathlib.Path(tree)
-    picked = {str(p.relative_to(tree)) for p in sorted((tree / "tests").rglob("test_*.py"))
+    picked = {p.relative_to(tree).as_posix() for p in sorted((tree / "tests").rglob("test_*.py"))   # "/" on Windows too
               if reasons(p.read_text(encoding="utf-8"))}
     for members in joint_groups(tree / GROUPS_DOC.relative_to(ROOT), tree):
         if picked & set(members):
