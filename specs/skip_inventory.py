@@ -587,6 +587,21 @@ def reconcile(pytest_rs_output: str) -> list:
 EMITTED = {
     ("tests/test_migrations_0013.py", "geteuid"):
         ("root traverses any directory", "running as root"),
+    # 0007 SQLite round 1, C2: R5-4 aliased ONE geteuid entry and not the
+    # second, and the three checkout-only campaign rows never had one — a
+    # git-less tree and a root host each reported a listed skip as unlisted.
+    # emitted_reason_problems() below now renders every site's reason and
+    # runs reconcile() on it, so a missing alias fails on any host.
+    ("tests/test_0044_v1_readonly_db.py", "geteuid"):
+        ("root writes a read-only file",),
+    ("tests/test_0013_pa1_campaign.py", "not _is_checkout()"):
+        ("a git-less copy has none",),
+    ("tests/test_0041_mutation_campaign.py", "not _is_checkout()"):
+        ("a git-less copy has none",),
+    ("tests/test_0043_mutation_campaign.py", "not _is_checkout()"):
+        ("a git-less copy has none",),
+    ("tests/test_0042_scope_resolution.py", "sys.version_info < (3, 11)"):
+        ("which 3.10 does not record",),
 }
 
 
@@ -629,3 +644,77 @@ rule). `rewrite` stays in the vocabulary for a future stranded skip, and the gat
 def attestation_class(entry):
     """The entry's sixth column: its attestation class, or None for an entry outside the suite."""
     return entry[5] if len(entry) > 5 else None
+
+
+# 0007 SQLite round 1, C2 — the class, not the four. The completeness gate
+# (test_conditional_skip_inventory_is_complete) matches SOURCE tokens, so it
+# passed while reconcile(), which matches EMITTED reasons, refused five listed
+# skips; each hand-added alias closed one host's instance. This renders the
+# reason every skip site in tests/ would print and hands the lot to reconcile()
+# itself — the consumer, not a second implementation of it.
+_SITE_FUNCS = {"pytest.skip", "pytest.mark.skip", "pytest.mark.skipif", "pytest.importorskip"}
+
+
+def _rendered(expr):
+    """The text a reason expression prints, or None if it cannot be known
+    statically. An f-string's fields become `X`, which can never complete a
+    token, so a field cannot make a reason match."""
+    import ast
+    if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
+        return expr.value
+    if isinstance(expr, ast.JoinedStr):
+        parts = []
+        for v in expr.values:
+            if isinstance(v, ast.Constant) and isinstance(v.value, str):
+                parts.append(v.value)
+            elif isinstance(v, ast.FormattedValue):
+                parts.append("X")
+            else:
+                return None
+        return "".join(parts)
+    return None
+
+
+def _emitted_reason(call):
+    """What pytest prints for this site, or None (refused by the caller)."""
+    import ast
+    name = ast.unparse(call.func)
+    kw = {k.arg: k.value for k in call.keywords}
+    if "reason" in kw:
+        return _rendered(kw["reason"])
+    if name == "pytest.importorskip":
+        if not (call.args and isinstance(call.args[0], ast.Constant)):
+            return None
+        mod = call.args[0].value
+        return f"could not import {mod!r}: No module named {mod!r}"
+    if name in ("pytest.skip", "pytest.mark.skip"):
+        return _rendered(call.args[0]) if call.args else "unconditional skip"
+    # skipif with no reason: pytest prints the condition's source
+    return "condition: " + ast.unparse(call.args[0]) if call.args else None
+
+
+def emitted_reason_problems(root) -> list:
+    """Every skip site under `root`/tests, rendered as the `-rs` line pytest
+    would print, must reconcile. Returns problems; empty means it does. A
+    reason that cannot be rendered statically is itself a problem: a site this
+    cannot read is not a site it has checked."""
+    import ast
+    import pathlib
+    root = pathlib.Path(root)
+    lines, problems = [], []
+    for f in sorted((root / "tests").rglob("*.py")):
+        rel = f.relative_to(root).as_posix()
+        for node in ast.walk(ast.parse(f.read_text())):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr in ("skip", "skipif", "importorskip")
+                    and ast.unparse(node.func) in _SITE_FUNCS):
+                continue
+            reason = _emitted_reason(node)
+            if reason is None:
+                problems.append(f"{rel}:{node.lineno}: the emitted reason cannot be rendered statically "
+                                f"({ast.unparse(node)[:80]})")
+            else:
+                lines.append(f"SKIPPED [1] {rel}:{node.lineno}: {' '.join(reason.split())}")
+    n = len(lines)
+    lines.append(f"0 passed, {n} skipped in 0.0s")
+    return problems + reconcile("\n".join(lines))

@@ -1385,6 +1385,97 @@ def test_reconcile_handles_an_emitted_reason_that_differs_from_its_source_token(
     assert not reconcile(non_root), reconcile(non_root)
 
 
+def test_every_skip_site_reconciles_as_pytest_emits_it():
+    """0007 SQLite round 1, C2. R5-4 aliased one geteuid entry's emitted reason
+    and not the second; the three checkout-only campaign rows had none. The
+    reviewer's git-less, root-host run reported four LISTED skips as unlisted
+    (a fifth, the 3.10 oracle skip, cannot fire at the floor). Every site's
+    reason is now rendered as pytest prints it and handed to reconcile()."""
+    import sys, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    from skip_inventory import emitted_reason_problems
+
+    problems = emitted_reason_problems(root)
+    assert not problems, problems
+
+
+def test_the_emitted_reason_gate_bites_on_each_missing_alias():
+    """Leave-one-out: every EMITTED alias is load-bearing, and removing it
+    reports exactly its own file — so the gate above is not passing by a
+    vocabulary broad enough to match anything."""
+    import sys, pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / "specs"))
+    import skip_inventory as S
+
+    full = dict(S.EMITTED)
+    try:
+        for key in full:
+            S.EMITTED.clear()
+            S.EMITTED.update({k: v for k, v in full.items() if k != key})
+            problems = S.emitted_reason_problems(root)
+            assert len(problems) == 1 and f"NOT IN THE INVENTORY: {key[0]}:" in problems[0], (key, problems)
+    finally:
+        S.EMITTED.clear()
+        S.EMITTED.update(full)
+
+
+def test_reconcile_accepts_the_reviewers_git_less_and_root_logs():
+    """The reviewer's four emitted lines, verbatim (0007 round 1 C2), from a
+    checkout-free tree and a root host, reconcile; a near-miss reason in the
+    same files is still refused."""
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "specs"))
+    from skip_inventory import reconcile
+
+    git_less = (
+        "SKIPPED [1] tests/test_0013_pa1_campaign.py:129: the campaign snapshots the tree through git ls-files; "
+        "a git-less copy has none\n"
+        "SKIPPED [1] tests/test_0041_mutation_campaign.py:117: the campaign snapshots the TRACKED tree "
+        "(git ls-files); a git-less copy has none\n"
+        "SKIPPED [1] tests/test_0043_mutation_campaign.py:102: the campaign snapshots the TRACKED tree "
+        "(git ls-files); a git-less copy has none\n"
+        "1 passed, 3 skipped in 0.1s")
+    assert not reconcile(git_less), reconcile(git_less)
+    root_host = ("SKIPPED [1] tests/test_0044_v1_readonly_db.py:101: root writes a read-only file\n"
+                 "1 passed, 1 skipped in 0.1s")
+    assert not reconcile(root_host), reconcile(root_host)
+
+    for near in ("SKIPPED [1] tests/test_0044_v1_readonly_db.py:101: root may write anything",
+                 "SKIPPED [1] tests/test_0013_pa1_campaign.py:129: the campaign has no snapshot"):
+        problems = reconcile(near + "\n1 passed, 1 skipped in 0.1s")
+        assert any("NOT IN THE INVENTORY" in p for p in problems), (near, problems)
+
+
+def test_the_emitted_reason_gate_refuses_a_reason_it_cannot_render(tmp_path):
+    """A site whose reason is computed cannot be checked statically, so it is
+    reported, never skipped over; an f-string's fields render as `X`, which
+    cannot complete a token."""
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "specs"))
+    import skip_inventory as S
+
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_x.py").write_text(
+        "import pytest\nMSG = 'm'\n\ndef test_a():\n    pytest.skip(MSG)\n")
+    problems = S.emitted_reason_problems(tmp_path)
+    assert any("cannot be rendered statically" in p for p in problems), problems
+
+    original = list(S.INVENTORY)
+    try:
+        S.INVENTORY[:] = [("tests/test_x.py", "skip", "is not retrievable here", "c", "n")]
+        (tmp_path / "tests" / "test_x.py").write_text(
+            "import pytest\n\ndef test_a():\n    pytest.skip(f'the {1} is not retrievable here')\n")
+        assert not S.emitted_reason_problems(tmp_path)
+        S.INVENTORY[:] = [("tests/test_x.py", "skip", "is not retrievable", "c", "n")]
+        (tmp_path / "tests" / "test_x.py").write_text(
+            "import pytest\n\ndef test_a():\n    pytest.skip(f'is not {1}retrievable')\n")
+        assert S.emitted_reason_problems(tmp_path), "a field must not complete a token"
+    finally:
+        S.INVENTORY[:] = original
+
+
 def test_r19_binds_the_product_store_the_moment_a_revocation_writer_appears():
     """0022 R19's PRODUCT-STORE binding test.
 
