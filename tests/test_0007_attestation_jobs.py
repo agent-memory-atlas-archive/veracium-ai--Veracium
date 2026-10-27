@@ -250,6 +250,15 @@ def test_a_fired_job_runs_condition_excludes_the_job_naming_its_entry(tmp_path):
     assert r["excluded_entries"] and e[0] in r["excluded_entries"][0] and e[2] in r["excluded_entries"][0]
 
 
+def test_a_fired_condition_never_hides_a_failure(tmp_path):
+    """Research's stage 2 on 84c512b: a fired job:runs skip AND a failure give failed-tests, exit 1, still naming the
+    fired entry (exclusion means "not an input", never "not a failure")."""
+    e = _job_runs_entry()
+    r = _decide(tmp_path, cases=[(e[0], "test_s", "skip", e[2]), (e[0], "test_f", "failed", None)])
+    assert r["outcome"] == "failed-tests" and job.OUTCOME_EXIT[r["outcome"]] == 1
+    assert r["excluded_entries"] and e[2] in r["excluded_entries"][0] and "job:runs condition" in r["reason"]
+
+
 def test_a_key_class_skip_is_evidence_not_exclusion(tmp_path, monkeypatch):
     """A `key` skip fires identically for every job of one key, so it is part of the evidence. The entry is PLANTED, so
     the cell never depends on which key-class entries this tree happens to carry."""
@@ -538,6 +547,10 @@ def test_the_attestation_job_mutation_matrix(tmp_path_factory):
                                                  [("test_a_fired_job_runs_condition_excludes_the_job_naming_its_entry", {})]),
         "every inventoried skip excludes": ([('        elif skip_inventory.attestation_class(entry) == "job:runs":', "        else:")],
                                             [("test_a_key_class_skip_is_evidence_not_exclusion", {})]),
+        "exclusion before failures (stage 2)": ([('        if fired:\n            raise Decided("excluded"', '        if False:\n            raise Decided("excluded"'),
+                                                  ("        failing = [n for n, o, _ in cases if o in (\"failed\", \"error\")]\n",
+                                                   "        failing = [n for n, o, _ in cases if o in (\"failed\", \"error\")]\n        if fired:\n            raise Decided(\"excluded\", \"fired\")\n")],
+                                                 [("test_a_fired_condition_never_hides_a_failure", {})]),
         "failures tolerated": ([("        if failing:\n", "        if False:\n")],
                                [("test_failing_tests_are_red_and_still_carry_their_digest", {})]),
         "a failing probe recorded": ([("        if problems:                                       # a failing", "        if False:                                       # a failing")],

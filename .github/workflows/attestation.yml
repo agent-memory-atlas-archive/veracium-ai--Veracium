@@ -4,6 +4,7 @@
 # the records are downloaded and committed by the repo owner (0007 I5, Quentin's sequencing, 2026-10-26).
 #
 # The rows are specs/evidence/attestation/rows.json, the ONE carrier the matrix and the aggregator share.
+# A record's provenance `job_id` is `strategy.job-index` (the row's matrix index in this run), NOT GitHub's job id.
 # Only the INSTALL step may fail (research's stage-1 Q6a): a row whose interpreter cannot be installed is
 # `unavailable`, named in the summary, and never reads as attested.
 name: attestation

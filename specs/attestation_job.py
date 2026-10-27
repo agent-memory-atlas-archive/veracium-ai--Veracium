@@ -16,14 +16,19 @@ In order, stopping at the first step that decides (research's stage-1 read of I5
   3. the suite, by the one committed rule (`attestation_suite.py`), run ONCE in pytest's own order with
      pytest-randomly disabled, into a JUnit file; the JUnit must have run exactly the rule's modules, else
      **suite-mismatch** (red);
-  4. skips, FROM THE SAME JUNIT: an xfail is never a skip; a skip mapping to a `job:runs` inventory entry is
-     **excluded**, naming the entry (not an input and not a disagreement, so exit 0); one mapping to no entry is
-     **unmapped-skip** (red);
-  5. any failure or error is **failed-tests** (red). Its digest is still written, as a member of its key's group;
+  4. skips, FROM THE SAME JUNIT: an xfail is never a skip; one mapping to no inventory entry is **unmapped-skip**
+     (red);
+  5. any failure or error is **failed-tests** (red), whether or not a job:runs condition also fired (exclusion means
+     "not an input", never "not a failure"). Its digest is still written, as a member of its key's group;
+  5b. a skip mapping to a `job:runs` entry is **excluded**, naming the entry: not an input and not a disagreement, so
+     exit 0;
   6. otherwise **evidence**, unless the record would be malformed (a confinement probe failing on this build is
      **confinement-failed**, red, and never a record): the result digest over the sorted (node id, outcome) pairs, the sixteen confinement
      probes run live, and the record built HERE, in this process, by `attestation_writer.build_record` (the key is
      this build's own, W3).
+
+Provenance `job_id` is the row's MATRIX INDEX within its run (`strategy.job-index`), not GitHub's numeric job id: unique
+within one run, which is all §4d's ordering needs. Look a job up by run id and matrix index, never as a GitHub job id.
 """
 from __future__ import annotations
 
@@ -173,12 +178,15 @@ def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_sui
         fired, unmapped = classify_skips(cases)
         if unmapped:
             raise Decided("unmapped-skip", f"{len(unmapped)} skip(s) match no inventory entry: " + "; ".join(unmapped))
-        if fired:
-            result["excluded_entries"] = fired
-            raise Decided("excluded", f"{len(fired)} job:runs condition(s) fired: " + "; ".join(fired))
+        result["excluded_entries"] = fired
+        # Failures FIRST (research's stage 2 on 84c512b): exclusion means "not an input", never "not a failure". A
+        # job whose job:runs condition fired AND whose suite fails is red, and still names the fired entries.
         failing = [n for n, o, _ in cases if o in ("failed", "error")]
         if failing:
-            raise Decided("failed-tests", f"{len(failing)} failing: " + ", ".join(failing[:20]))
+            raise Decided("failed-tests", f"{len(failing)} failing: " + ", ".join(failing[:20])
+                          + (f" (and {len(fired)} job:runs condition(s) fired)" if fired else ""))
+        if fired:
+            raise Decided("excluded", f"{len(fired)} job:runs condition(s) fired: " + "; ".join(fired))
         live = (_live_probes if probes is None else probes)()
         commit = head()
         record = aw.build_record(result["result_digest"], live,
