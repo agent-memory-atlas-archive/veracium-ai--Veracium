@@ -19,10 +19,14 @@ Writing, in order (research's stage-1 read of the writer, f5aaa289 ยง18, and W1โ
   4. records of other keys are kept unchanged (merge, never replace, W6); the prospective artifact must pass
      `attestation_artifact_problems`, and must read back attested for the written key (W2's round trip);
   5. published atomically: a temporary in the same directory, then `os.replace`; the top level stays closed.
-Git runs with its environment PINNED (BLOCKING 2): the variables that point git at another repository or object store
-are scrubbed, and system and global configuration are off.
+Git runs with its environment PINNED (BLOCKING 2; widened at stage 2): every inherited GIT_* variable is dropped,
+system and global configuration are off, and replace objects are ignored.
 
-    $PY specs/attestation_writer.py <job-input.json>     # {"result_digest", "confinement", "provenance"}
+The CLI merges records ALREADY BUILT, each in the CI job that measured its build (I5: attestation_job.py builds it,
+attestation_aggregate.py groups it). It never builds one: a record built here would wrap THIS process's key around
+another build's evidence (research's stage 2, BLOCKING 2).
+
+    $PY specs/attestation_writer.py <records.json>       # a JSON list of records, or an aggregate summary
 """
 from __future__ import annotations
 
@@ -39,8 +43,12 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from veracium.store import schema_version as sv  # noqa: E402
 
-GIT_SCRUBBED = ("GIT_DIR", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-                "GIT_INDEX_FILE", "GIT_CEILING_DIRECTORIES")
+GIT_PINNED = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull, "GIT_NO_REPLACE_OBJECTS": "1"}
+"""Git's environment is built by DROPPING every inherited GIT_* variable, then pinning these (research's stage 2 on
+5c01ec7, BLOCKING 1: a named scrub list was one short. GIT_SHALLOW_FILE=/nonexistent made a shallow clone answer
+--is-shallow-repository "false", and a refs/replace object dropping a parent turned a true ancestor into exit 1;
+GIT_NO_REPLACE_OBJECTS=1 restores it). A missing variable is an ABSENT name, which no list can be mutation-tested
+for, so the rule is by prefix."""
 FIXTURE_COMMIT = "0" * 40
 _HEX = {"sha1": re.compile(r"[0-9a-f]{40}"), "sha256": re.compile(r"[0-9a-f]{64}")}
 
@@ -52,9 +60,8 @@ class AttestationRefused(Exception):
 def git_env(base=None) -> dict:
     """Git's environment, PINNED (BLOCKING 2): no inherited variable can answer "shallow?" or "ancestor?" for another
     repository or object store, and no developer's configuration changes an answer."""
-    env = {k: v for k, v in (os.environ if base is None else base).items() if k not in GIT_SCRUBBED}
-    env["GIT_CONFIG_NOSYSTEM"] = "1"
-    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env = {k: v for k, v in (os.environ if base is None else base).items() if not k.startswith("GIT_")}
+    env.update(GIT_PINNED)
     return env
 
 
@@ -161,9 +168,13 @@ def merged(records, new, *, repo=ROOT, git=run_git) -> tuple:
             continue
         decision = _ordered(r, new, commit, repo, git, fmt)
         if decision == "idempotent":
-            return list(records), "idempotent"
+            out, outcome = list(records), "idempotent"
+            break
         outcome = "replaced"                          # this current record is replaced by the new one
-    out.append(new)
+    else:
+        out.append(new)
+    # Both checks run on the idempotent list too (stage 2, should-fix): a re-record into an artifact ALREADY poisoned
+    # by another key must not report idempotent, rc 0, while the reader attests nothing from it.
     problems = sv.attestation_artifact_problems(out)
     if problems:
         raise AttestationRefused(f"the prospective artifact would be poisoned: {problems[0]}")
@@ -174,13 +185,24 @@ def merged(records, new, *, repo=ROOT, git=run_git) -> tuple:
 
 def write(new, *, path=None, repo=ROOT, git=run_git) -> str:
     """Merge `new` into the artifact at `path` (default: the package's) and publish it atomically."""
+    return next(iter(write_records([new], path=path, repo=repo, git=git).values()))
+
+
+def write_records(news, *, path=None, repo=ROOT, git=run_git) -> dict:
+    """I5 (research's stage-1 Q4): records ALREADY BUILT, each in its own job's process. The aggregator cannot
+    recompute another runner's key, so the key is taken ONLY from each record, never from this process. Each record
+    still passes everything `merged` asks (production's validator, fixture marks, the HEAD binding, v19's order), and
+    they publish together, atomically: {key-tuple-as-list-string: outcome}."""
     path = pathlib.Path(sv.RUNTIMES if path is None else path)
     data = json.loads(path.read_text()) if path.exists() else {"attestations": []}
     if not isinstance(data, dict) or set(data) - sv.ARTIFACT_KEYS or not isinstance(data.get("attestations"), list):
         raise AttestationRefused(f"the existing artifact's top level is not within {sorted(sv.ARTIFACT_KEYS)}")
-    records, outcome = merged(data["attestations"], new, repo=repo, git=git)
-    if outcome == "idempotent":
-        return outcome
+    records, outcomes = data["attestations"], {}
+    for new in news:
+        records, outcome = merged(records, new, repo=repo, git=git)
+        outcomes[repr(sv.attestation_key(new))] = outcome
+    if set(outcomes.values()) <= {"idempotent"}:
+        return outcomes
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=path.name + ".", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -189,17 +211,21 @@ def write(new, *, path=None, repo=ROOT, git=run_git) -> str:
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
-    return outcome
+    return outcomes
 
 
 def main(argv) -> int:
     if len(argv) != 2:
         print(__doc__.strip().splitlines()[-1], file=sys.stderr)
         return 2
-    job = json.loads(pathlib.Path(argv[1]).read_text())
+    data = json.loads(pathlib.Path(argv[1]).read_text())
+    records = data.get("records") if isinstance(data, dict) else data
+    if not isinstance(records, list) or not all(isinstance(r, dict) and "provenance" in r for r in records):
+        print("refused: the input is not a list of built records (the writer never builds one: a job input belongs to "
+              "attestation_job.py, in the job that measured the build)", file=sys.stderr)
+        return 1
     try:
-        rec = build_record(job.get("result_digest"), job.get("confinement"), job.get("provenance"))
-        print(write(rec))
+        print(write_records(records))
     except AttestationRefused as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 1

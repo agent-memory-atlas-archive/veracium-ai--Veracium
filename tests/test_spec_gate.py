@@ -1201,14 +1201,14 @@ def test_conditional_skip_inventory_is_complete():
     uninventoried = []
     for rel, ln, window in sites:
         if not any(f == rel and token in window
-                   for f, _, token, _, _ in INVENTORY):
+                   for f, _, token, *_ in INVENTORY):
             uninventoried.append(f"{rel}:{ln}")
     assert not uninventoried, (
         "conditional-skip sites missing from specs/skip_inventory.py "
         f"(the R13-3 gap, mechanically): {uninventoried}")
 
     dead = []
-    for f, kind, token, _, _ in INVENTORY:
+    for f, kind, token, *_ in INVENTORY:
         if not any(rel == f and token in window for rel, _, window in sites):
             dead.append(f"{f} [{kind}: {token!r}]")
     assert not dead, (
@@ -2714,6 +2714,14 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         # 0007 §4g.6 4d (I4): the attestation-record writer REFUSES on v19's order, the HEAD binding, fixture marks
         # and the reader's own validators — a checker whatever its name says; its matrix kills each refusal's mutant
         root / "specs" / "attestation_writer.py",
+        # ...and I5's attestation jobs: the suite rule REFUSES a job that ran another module set, the job DECIDES a
+        # closed outcome, the aggregator refuses a disagreeing key, the constraints check refuses an unpinned or
+        # out-of-bound set, and the row generator's --check refuses a stale rows.json — checkers by what they do
+        root / "specs" / "attestation_suite.py",
+        root / "specs" / "attestation_job.py",
+        root / "specs" / "attestation_aggregate.py",
+        root / "specs" / "attestation_constraints.py",
+        root / "specs" / "evidence" / "attestation" / "gen_rows.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

@@ -38,7 +38,7 @@ INVENTORY = [
                               "control-invoking test at all, so there is "
                               "nothing to compare — the full suite, both "
                               "drivers, and CI always record and always "
-                              "enforce"),
+                              "enforce", "job:runs"),
     ("tests/test_0042_sites.py", "skip",
      "selection narrowed (a deselection in this module, or a node id on the command line)",
      "selection-conditional", "the runtime leg's EXECUTION-SIDE completeness guard "
@@ -51,7 +51,7 @@ INVENTORY = [
                               "pytest_deselected hook — or a node id on the command "
                               "line), where the collection is "
                               "narrow by request — the full suite and CI always "
-                              "collect the whole module and always enforce"),
+                              "collect the whole module and always enforce", "job:runs"),
     ("tests/test_seam_model_0029_0030.py", "skip",
      "0030 spec not reachable from this tree",
      "host-conditional", "the seam model's propagation check reads the 0030 "
@@ -66,7 +66,7 @@ INVENTORY = [
                          "census can see it — availability is a parser fact "
                          "(the 0029/0030 round-13 lesson). 1 test; the 3.12 "
                          "CI lane executes it, 3.10/3.11 skip with this "
-                         "reason"),
+                         "reason", "key"),
     ("tests/test_0042_scope_resolution.py", "skipif", "sys.version_info < (3, 11)",
      "host-conditional", "specs/0042 round 13: the scope resolver's PAIRING ORACLE judges "
                          "each read against the instruction POSITIONS CPython "
@@ -131,7 +131,7 @@ INVENTORY = [
                             "the file's other 5 tests run without the SDK (found "
                             "by the pydantic-floor CI lane at b3a405c, which "
                             "installs without the extra). Author line: all 7 "
-                            "PASS; an mcp-absent environment sees 5 PASS + 2 SKIP"),
+                            "PASS; an mcp-absent environment sees 5 PASS + 2 SKIP", "job:runs"),
     # ---- FOUR ENTRIES MISSING SINCE 0021 SHIPPED (external round 3, R3-5).
     # These skip UNCONDITIONALLY on every host and were in no category, so the
     # generated inventory decomposed a measured line it could not account for
@@ -265,12 +265,12 @@ INVENTORY = [
     ("tests/test_0013_pa1_campaign.py", "skipif", "not _is_checkout()",
      "git-checkout", "specs/0013 v33 0013-PA1 (the migration postconditions' mutation table): the first code mutant's "
      "reproduction snapshots the TRACKED tree (git ls-files); a git-less copy (an sdist, a reviewer's tree/) has none, "
-     "so the row cannot be re-run there — CI is a checkout, where it always runs"),
+     "so the row cannot be re-run there — CI is a checkout, where it always runs", "job:runs"),
     ("tests/test_0013_pa1_retired_keys.py", "skip",
      "no repository here (a packaged tree)",
      "git-checkout", "specs/0013 v33 §4f / M-Q6 (ruled by 0016 D2): RETIRED_EPISODE_KEYS is bound to a derivation over "
      "every release tag's schema.py, which needs the repository's tags; with no .git it skips, while a .git without "
-     "tags FAILS (a tagless clone would read as nothing retired) — CI checks out with fetch-depth 0"),
+     "tags FAILS (a tagless clone would read as nothing retired) — CI checks out with fetch-depth 0", "job:runs"),
     ("tests/test_0041_mutation_campaign.py", "skipif", "not _is_checkout()",
      "git-checkout", "specs/0041 0041-PA1 (the notice-binding hotfix's mutation table): the one-row reproduction "
      "snapshots the TRACKED tree (git ls-files); a git-less copy (an sdist, a reviewer's tree/) has none, so the row "
@@ -314,13 +314,13 @@ INVENTORY = [
     ("tests/longmemeval/test_manifest.py", "skip", "not a git checkout",
      "git-checkout", "git_state() resolves rather than remembers"),
     ("tests/test_migrations_0013.py", "skipif", "geteuid",
-     "host-conditional", "root euid defeats the read-only-store fixture"),
+     "host-conditional", "root euid defeats the read-only-store fixture", "job:runs"),
     ("tests/test_schema_model.py", "skip", "no git checkout",
-     "git-checkout", "check() returns 2 before reaching the assertion"),
+     "git-checkout", "check() returns 2 before reaching the assertion", "job:runs"),
     ("tests/test_0007_attestation_writer.py", "skip", "no git checkout",
-     "git-checkout", "check() returns 2 before reaching the stale-record report (S77)"),
+     "git-checkout", "check() returns 2 before reaching the stale-record report (S77)", "job:runs"),
     ("tests/test_0044_t12_fixes.py", "skip", "no git checkout",
-     "git-checkout", "the keep-every-value sweep reads the tracked tree (git ls-files)"),
+     "git-checkout", "the keep-every-value sweep reads the tracked tree (git ls-files)", "job:runs"),
     ("tests/test_printed_verification_instructions.py", "skip",
      "the tracked-file enumeration cannot run",
      "git-checkout", "the printed-instruction gate asserts that no TERMINAL RECORD "
@@ -329,11 +329,11 @@ INVENTORY = [
      "is a named not-run there (the records inside the set are still executed)"),
     # R-I/R-II round 2, V1: the mechanism cells (tests/test_0044_v1_readonly_db.py)
     ("tests/test_0044_v1_readonly_db.py", "skip", "sqlite_errorname exists from Python 3.11",
-     "host-conditional", "Python 3.10 has no sqlite_errorname: the message is asserted, the extended code is not"),
+     "host-conditional", "Python 3.10 has no sqlite_errorname: the message is asserted, the extended code is not", "key"),
     ("tests/test_0044_v1_readonly_db.py", "skipif", "geteuid",
-     "host-conditional", "root euid writes a read-only file, so the shared-message limit cannot be shown"),
+     "host-conditional", "root euid writes a read-only file, so the shared-message limit cannot be shown", "job:runs"),
     ("tests/test_0044_v1_readonly_db.py", "skip", "no fcntl on this platform",
-     "host-conditional", "without fcntl (Windows) no basetemp is held, and the lock cell claims nothing"),
+     "host-conditional", "without fcntl (Windows) no basetemp is held, and the lock cell claims nothing", "key"),
 ]
 
 
@@ -344,7 +344,7 @@ def render(rs_output: str = "") -> str:
     reconciliation block OBSERVED rather than remembered (R4-4).
     """
     classes = {}
-    for f, kind, token, cls, reason in INVENTORY:
+    for f, kind, token, cls, reason, *_ in INVENTORY:
         classes.setdefault(cls, []).append(f"{f} ({kind}: {reason})")
     # EXTERNAL ROUND 4, R4-4. This list was HARD-CODED and omitted
     # "future-obligation", so the four entries added at round 3 went into
@@ -428,7 +428,7 @@ def _observed_block(rs_output) -> str:
     import re as _re
     from collections import Counter
     cat_of = {}
-    for f, _kind, token, cls, _reason in INVENTORY:
+    for f, _kind, token, cls, _reason, *_ in INVENTORY:
         cat_of.setdefault(f, []).append((token, cls))
     counts, unmatched, total = Counter(), [], 0
     for m in _re.finditer(r"^SKIPPED \[(\d+)\] ([^:]+):\d+: (.*)$", rs_output, _re.M):
@@ -559,11 +559,7 @@ def reconcile(pytest_rs_output: str) -> list:
         observed.append((n, path, reason))
     for n, path, reason in observed:
         # the harness may report a path relative to a different root
-        tail = path.split("tests/")[-1]
-        hit = any(entry_file.endswith(tail) or tail.endswith(entry_file.split("tests/")[-1])
-                  for entry_file, _, _, _, _ in INVENTORY
-                  if _token_matches(reason, entry_file))
-        if not hit:
+        if entry_for(path, reason) is None:
             problems.append(f"OBSERVED SKIP NOT IN THE INVENTORY: {path}: {reason[:90]}")
     summary = _re.search(r"(\d+) passed, (\d+) skipped", pytest_rs_output)
     if summary:
@@ -596,7 +592,7 @@ EMITTED = {
 
 def _token_matches(reason: str, entry_file: str) -> bool:
     r = reason.lower()
-    for f, _kind, token, _cat, _note in INVENTORY:
+    for f, _kind, token, _cat, _note, *_ in INVENTORY:
         if f != entry_file:
             continue
         if token.lower() in r:
@@ -605,3 +601,31 @@ def _token_matches(reason: str, entry_file: str) -> bool:
             if emitted.lower() in r:
                 return True
     return False
+
+
+def _entry_matches(entry, path: str, reason: str) -> bool:
+    f, token = entry[0], entry[2]
+    tail = path.split("tests/")[-1]
+    if not (f.endswith(tail) or tail.endswith(f.split("tests/")[-1])):
+        return False
+    r = reason.lower()
+    return token.lower() in r or any(e.lower() in r for e in EMITTED.get((f, token), ()))
+
+
+def entry_for(path: str, reason: str):
+    """THE match of an observed skip to its inventory entry (0007 I5): by the file (a path relative to any root) and
+    by the entry's source token or one of its EMITTED reasons. `reconcile` and the attestation job both ask this, so
+    the rule lives once. None when no entry matches."""
+    return next((e for e in INVENTORY if _entry_matches(e, path, reason)), None)
+
+
+ATTESTATION_CLASSES = ("key", "job:runs", "rewrite")
+"""0007 §4d's closed vocabulary for an entry whose file is in the attestation suite: `key` (a function of the
+attestation key or the Python floor, identical across one key's jobs), `job:runs` (the attestation job fixes the
+condition so the test RUNS; if it fires, the job is excluded), `rewrite` (presupposes the withdrawn single-record
+rule). `rewrite` stays in the vocabulary for a future stranded skip, and the gate asserts no entry carries it."""
+
+
+def attestation_class(entry):
+    """The entry's sixth column: its attestation class, or None for an entry outside the suite."""
+    return entry[5] if len(entry) > 5 else None

@@ -1,0 +1,107 @@
+# 0007 §4d (I5): the attestation matrix. Each row installs one route's Python 3.14, runs the attestation job in that
+# interpreter (non-root; full history; [dev,mcp] from the committed constraints), and uploads its closed result.
+# The aggregate job groups the results by full attestation key and runs the writer at this commit. Nothing here commits:
+# the records are downloaded and committed by the repo owner (0007 I5, Quentin's sequencing, 2026-10-26).
+#
+# The rows are specs/evidence/attestation/rows.json, the ONE carrier the matrix and the aggregator share.
+# Only the INSTALL step may fail (research's stage-1 Q6a): a row whose interpreter cannot be installed is
+# `unavailable`, named in the summary, and never reads as attested.
+name: attestation
+
+on:
+  push:
+    branches: ["attest/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rows:
+    runs-on: ubuntu-24.04
+    outputs:
+      rows: ${{ steps.rows.outputs.rows }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: rows
+        run: echo "rows=$(python3 -c 'import json; print(json.dumps(json.load(open("specs/evidence/attestation/rows.json"))["rows"]))')" >> "$GITHUB_OUTPUT"
+
+  attest:
+    needs: rows
+    name: ${{ matrix.route }} / ${{ matrix.runner_image }}
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.rows.outputs.rows) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ---- a hosted-runner row: install on the runner, run as the runner's (non-root) user -------------------------
+      - if: ${{ !matrix.image && matrix.install == 'setup-python' }}
+        id: setup
+        continue-on-error: true
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - if: ${{ !matrix.image && matrix.install != 'setup-python' }}
+        id: install
+        continue-on-error: true
+        run: ${{ matrix.install }}
+      - if: ${{ !matrix.image && (steps.setup.outcome == 'success' || steps.install.outcome == 'success') }}
+        run: |
+          PY="${{ matrix.python }}"
+          sh specs/evidence/attestation/run_row.sh "$PY" "${{ matrix.route }}" "${{ matrix.runner_image }}" \
+            "${{ matrix.expect_prefix }}" "${{ github.run_id }}" "${{ strategy.job-index }}" "result-${{ strategy.job-index }}.json"
+
+      # ---- a container row: `docker run`, since GitHub's JavaScript actions cannot run inside an Alpine container --
+      - if: ${{ matrix.image }}
+        run: docker run -d --name row -v "$PWD:/w" -w /w "${{ matrix.image }}" sleep 36000
+      - if: ${{ matrix.image }}
+        id: cinstall
+        continue-on-error: true
+        run: docker exec row sh -c '${{ matrix.install }}'
+      - if: ${{ matrix.image && steps.cinstall.outcome == 'success' }}
+        run: |
+          docker exec row sh -c '${{ matrix.user_add }} && chown -R attest /w'
+          docker exec -u attest row sh specs/evidence/attestation/run_row.sh "${{ matrix.python }}" "${{ matrix.route }}" \
+            "${{ matrix.runner_image }}" "${{ matrix.expect_prefix }}" "${{ github.run_id }}" "${{ strategy.job-index }}" \
+            "result-${{ strategy.job-index }}.json"
+
+      - if: ${{ always() && hashFiles(format('result-{0}.json', strategy.job-index)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-${{ strategy.job-index }}
+          path: result-${{ strategy.job-index }}.json
+
+  aggregate:
+    needs: attest
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: result-*
+          path: results
+          merge-multiple: true
+      - run: python -m pip install --disable-pip-version-check -q -c specs/evidence/attestation/constraints.txt -e .
+      - run: python specs/attestation_aggregate.py results --rows specs/evidence/attestation/rows.json --out aggregate.json --write
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: attestation-aggregate
+          path: |
+            aggregate.json
+            src/veracium/store/evidence/sqlite_runtimes.json
+            results/

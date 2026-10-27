@@ -173,13 +173,42 @@ def test_a_record_that_would_not_read_back_attested_is_refused(monkeypatch):
 
 
 def test_git_env_scrubs_inherited_repository_variables_and_pins_config():
-    """BLOCKING 2, on the environment itself: every scrubbed variable is gone, system config is off and the global
-    config is the null device, whatever the caller inherited."""
-    base = {k: "/elsewhere" for k in aw.GIT_SCRUBBED}
-    base.update(PATH="/usr/bin", GIT_CONFIG_GLOBAL="/home/dev/.gitconfig", GIT_CONFIG_NOSYSTEM="0")
+    """BLOCKING 2 (widened at stage 2), on the environment itself: EVERY inherited GIT_* variable is gone, including
+    ones no list named, and exactly the pins are set, whatever the caller inherited."""
+    base = {k: "/elsewhere" for k in ("GIT_DIR", "GIT_WORK_TREE", "GIT_SHALLOW_FILE", "GIT_REPLACE_REF_BASE",
+                                      "GIT_CONFIG_COUNT", "GIT_CONFIG_KEY_0", "GIT_A_NAME_NO_LIST_HAS")}
+    base.update(PATH="/usr/bin", GIT_CONFIG_GLOBAL="/home/dev/.gitconfig", GIT_CONFIG_NOSYSTEM="0",
+                GIT_NO_REPLACE_OBJECTS="0")
     env = aw.git_env(base)
-    assert not set(aw.GIT_SCRUBBED) & set(env)
-    assert env["GIT_CONFIG_NOSYSTEM"] == "1" and env["GIT_CONFIG_GLOBAL"] == os.devnull and env["PATH"] == "/usr/bin"
+    assert {k: v for k, v in env.items() if k.startswith("GIT_")} == {
+        "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull, "GIT_NO_REPLACE_OBJECTS": "1"}
+    assert env["PATH"] == "/usr/bin"
+
+
+def test_an_idempotent_re_record_into_a_poisoned_artifact_is_refused():
+    """Stage 2's should-fix: the artifact checks run on the unchanged list too. Another key's conflicting pair already
+    poisons the artifact; re-recording this key's equal evidence must not answer idempotent, rc 0."""
+    other = record(machine="aarch64")
+    poisoned = [record(), other, dict(other, result_digest="b" * 64)]
+    with pytest.raises(aw.AttestationRefused, match="would be poisoned"):
+        aw.merged(poisoned, record(), git=fake_git())
+
+
+def test_the_cli_never_builds_a_record(tmp_path, monkeypatch):
+    """Stage 2, BLOCKING 2: a job input (evidence plus provenance, no key) is refused. A record built here would wrap
+    THIS process's key around another build's evidence. Already-built records are what the CLI merges. (The artifact
+    path is redirected, so no mutant of this arm can reach package data.)"""
+    import contextlib
+    import io
+    monkeypatch.setattr(sv, "RUNTIMES", tmp_path / "sqlite_runtimes.json")
+    d, c = evidence()
+    job_input = tmp_path / "job.json"
+    job_input.write_text(json.dumps({"result_digest": d, "confinement": c, "provenance": record()["provenance"]}))
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+        rc = aw.main(["attestation_writer.py", str(job_input)])
+    assert rc == 1 and "never builds one" in err.getvalue(), err.getvalue()
+    assert not (tmp_path / "sqlite_runtimes.json").exists()
 
 
 def test_a_record_the_reader_would_poison_is_never_written():
@@ -341,6 +370,38 @@ def test_real_the_records_commit_must_be_head(repo):
     assert repo["A0"] in str(e.value) and repo["A1"] in str(e.value) and "not this checkout's HEAD" in str(e.value)
 
 
+def test_real_a_planted_shallow_file_cannot_make_a_shallow_clone_answerable(repo, tmp_path, monkeypatch):
+    """Stage 2, BLOCKING 1, measured by research: GIT_SHALLOW_FILE=/nonexistent made a shallow clone answer
+    --is-shallow-repository "false". The writer's git never inherits it."""
+    shallow = tmp_path / "shallow"
+    subprocess.run(["git", "clone", "-q", "--depth", "1", f"file://{repo['path']}", str(shallow)], env=aw.git_env(),
+                   check=True, capture_output=True)
+    monkeypatch.setenv("GIT_SHALLOW_FILE", str(tmp_path / "nonexistent"))
+    leak = subprocess.run(["git", "rev-parse", "--is-shallow-repository"], cwd=str(shallow), capture_output=True,
+                          text=True, env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1"}).stdout.strip()
+    assert leak == "false"                                    # precondition: the variable DOES defeat the question
+    with pytest.raises(aw.AttestationRefused, match="unanswerable: the repository is shallow"):
+        aw.merged([record(commit=repo["A0"])], record(commit=repo["A1"]), repo=shallow)
+
+
+def test_real_a_replace_ref_cannot_turn_a_true_ancestor_into_not_an_ancestor(repo):
+    """Stage 2, BLOCKING 1: a refs/replace object that drops A1's parent made `--is-ancestor A0 A1` exit 1. The writer
+    pins GIT_NO_REPLACE_OBJECTS=1, so the true ancestor still replaces."""
+    g = repo["git"]
+    tree = g("rev-parse", f"{repo['A1']}^{{tree}}")
+    orphan = subprocess.run(["git", "commit-tree", tree, "-m", "no parent"], cwd=str(repo["path"]), env=aw.git_env(),
+                            capture_output=True, text=True, check=True).stdout.strip()
+    g("replace", repo["A1"], orphan)
+    honoured = subprocess.run(["git", "merge-base", "--is-ancestor", repo["A0"], repo["A1"]], cwd=str(repo["path"]),
+                              env={k: v for k, v in aw.git_env().items() if k != "GIT_NO_REPLACE_OBJECTS"}).returncode
+    assert honoured == 1                                      # precondition: the replace ref DOES move the answer
+    try:
+        out, outcome = aw.merged([record(commit=repo["A0"])], record(commit=repo["A1"]), repo=repo["path"])
+    except aw.AttestationRefused as exc:                      # the defect itself: a TRUE ancestor refused
+        pytest.fail(f"a replace ref moved the writer's ancestry answer: {exc}")
+    assert outcome == "replaced"
+
+
 def test_real_an_inherited_git_dir_cannot_answer_for_another_repository(repo, tmp_path, monkeypatch):
     """BLOCKING 2: GIT_DIR pointing at ANOTHER repository is scrubbed, so HEAD is read from the repository the writer
     stands in."""
@@ -367,8 +428,9 @@ MUTANTS = {
     "shallow check dropped": ([('    if rc != 0 or out != "false":\n', "    if False:\n")],
                               [(ARM, {"arm": "shallow"}), ("test_real_a_shallow_clone_is_unanswerable_before_any_ancestry", {})]),
     "shallow check after the ancestry": (
-        [(SHALLOW, ""), ("    out.append(new)\n    problems", SHALLOW.replace("rc, out", "s_rc, s_out")
-                         .replace("rc != 0 or out", "s_rc != 0 or s_out") + "    out.append(new)\n    problems")],
+        [(SHALLOW, ""), ("        out.append(new)\n    # Both checks", "        out.append(new)\n"
+                         + SHALLOW.replace("rc, out", "s_rc, s_out").replace("rc != 0 or out", "s_rc != 0 or s_out")
+                         + "    # Both checks")],
         [("test_real_a_shallow_clone_is_unanswerable_before_any_ancestry", {})]),
     "same-commit step dropped": ([("    if old_commit == new_commit:", "    if False:")],
                                  [(ARM, {"arm": "the same commit, different evidence"}),
@@ -403,14 +465,23 @@ MUTANTS = {
                                              [("test_a_record_the_reader_would_poison_is_never_written", {})]),
     "the round trip dropped": ([("    if not sv.attested_key(key, out):\n", "    if False:\n")],
                                [("test_a_record_that_would_not_read_back_attested_is_refused", {})]),
-    "git's environment unscrubbed": ([("if k not in GIT_SCRUBBED}", "if True}")],
+    "git's environment unscrubbed": ([('if not k.startswith("GIT_")}', "if True}")],
         [("test_real_an_inherited_git_dir_cannot_answer_for_another_repository", {}),
          ("test_git_env_scrubs_inherited_repository_variables_and_pins_config", {})]),
-    "global config not pinned": ([('    env["GIT_CONFIG_GLOBAL"] = os.devnull\n', "")],
+    "global config not pinned": ([('"GIT_CONFIG_GLOBAL": os.devnull, ', "")],
                                  [("test_git_env_scrubs_inherited_repository_variables_and_pins_config", {})]),
+    "a named scrub list (stage 2)": ([('if not k.startswith("GIT_")}', 'if k not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_INDEX_FILE", "GIT_CEILING_DIRECTORIES")}')],
+                                     [("test_real_a_planted_shallow_file_cannot_make_a_shallow_clone_answerable", {}),
+                                      ("test_git_env_scrubs_inherited_repository_variables_and_pins_config", {})]),
+    "replace objects honoured (stage 2)": ([(', "GIT_NO_REPLACE_OBJECTS": "1"}', "}")],
+                                           [("test_real_a_replace_ref_cannot_turn_a_true_ancestor_into_not_an_ancestor", {})]),
+    "idempotent skips the artifact checks (stage 2)": ([('            out, outcome = list(records), "idempotent"\n            break', '            return list(records), "idempotent"')],
+                                                       [("test_an_idempotent_re_record_into_a_poisoned_artifact_is_refused", {})]),
+    "the CLI builds from a job input (stage 2)": ([('    records = data.get("records") if isinstance(data, dict) else data\n', '    records = ([build_record(data["result_digest"], data["confinement"], data["provenance"])]\n               if isinstance(data, dict) and "result_digest" in data else data)\n')],
+                                                  [("test_the_cli_never_builds_a_record", {})]),
     "publication not atomic": ([("        os.replace(tmp, path)\n", "        path.write_text(pathlib.Path(tmp).read_text())\n")],
                                [("test_a_failed_publish_leaves_the_artifact_unchanged_and_no_temporary", {})]),
-    "an idempotent write rewrites the file": ([('    if outcome == "idempotent":\n        return outcome\n', "")],
+    "an idempotent write rewrites the file": ([('    if set(outcomes.values()) <= {"idempotent"}:\n        return outcomes\n', "")],
                                               [("test_the_same_commit_with_equal_evidence_is_idempotent", {})]),
     "the top level left open": ([("    if not isinstance(data, dict) or set(data) - sv.ARTIFACT_KEYS or ", "    if not isinstance(data, dict) or ")],
                                 [("test_an_artifact_with_a_foreign_top_level_key_is_refused", {})]),
