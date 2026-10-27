@@ -223,6 +223,20 @@ def test_the_cli_never_builds_a_record(tmp_path, monkeypatch):
     assert not (tmp_path / "sqlite_runtimes.json").exists()
 
 
+def test_a_fresh_write_refuses_an_aggregate_with_a_bootstrap_job(tmp_path, monkeypatch):
+    """v21 (3): --fresh takes run 2's records; an aggregate with any bootstrap-pending job is refused, writing nothing."""
+    import contextlib
+    import io
+    path = tmp_path / "sqlite_runtimes.json"
+    monkeypatch.setattr(sv, "RUNTIMES", path)
+    agg_in = tmp_path / "agg.json"
+    agg_in.write_text(json.dumps({"records": [record()], "bootstrap_jobs": ["setup-python on ubuntu-24.04 (job 1)"]}))
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+        rc = aw.main(["w", "--fresh", str(agg_in)])
+    assert rc == 1 and "bootstrap-pending jobs" in err.getvalue() and not path.exists(), err.getvalue()
+
+
 def test_a_record_the_reader_would_poison_is_never_written():
     """W2: one validator both directions — the prospective artifact must pass the reader's checks."""
     with pytest.raises(aw.AttestationRefused, match="would be poisoned"):
@@ -414,6 +428,85 @@ def test_real_a_replace_ref_cannot_turn_a_true_ancestor_into_not_an_ancestor(rep
     assert outcome == "replaced"
 
 
+def _commit_artifact(repo, records):
+    """Commit `records` as the repo's attestation artifact; returns the new HEAD."""
+    p = repo["path"] / aw.ARTIFACT_REL
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps({"attestations": records}))
+    repo["git"]("add", aw.ARTIFACT_REL)
+    repo["git"]("commit", "-q", "-m", "artifact")
+    return repo["git"]("rev-parse", "HEAD")
+
+
+def test_real_a_fresh_write_drops_bootstrap_records_and_refuses_a_non_bootstrap_one(repo, tmp_path):
+    """v21 (3), the derived mark on a REAL history. A record whose commit's artifact held no current record (A1: no
+    artifact at all) is a bootstrap record, and a fresh write drops it. A record whose commit's artifact held a current
+    one is not, and a fresh write over it refuses (no W6 bypass)."""
+    boot = record(commit=repo["A1"], machine="aarch64")
+    assert aw.is_bootstrap_record(boot, repo=repo["path"]) is True
+    held = _commit_artifact(repo, [boot])                    # an artifact holding a current record, committed
+    attested = record(commit=held, machine="aarch64")
+    assert aw.is_bootstrap_record(attested, repo=repo["path"]) is False
+    head = _commit_artifact(repo, [boot, attested])
+    path = tmp_path / "out.json"
+    path.write_text(json.dumps({"attestations": [boot]}))
+    aw.write_records([record(commit=head)], path=path, repo=repo["path"], fresh=True)
+    assert [sv.record_commit(r) for r in json.loads(path.read_text())["attestations"]] == [head]   # boot dropped
+    path.write_text(json.dumps({"attestations": [attested]}))
+    with pytest.raises(aw.AttestationRefused, match="non-bootstrap current record"):
+        aw.write_records([record(commit=head)], path=path, repo=repo["path"], fresh=True)
+
+
+def test_real_an_unanswerable_bootstrap_derivation_refuses(repo, tmp_path):
+    """v21 (3): an unknown commit, or a shallow clone, is "unanswerable", never "not a bootstrap record"."""
+    with pytest.raises(aw.AttestationRefused, match="unanswerable: the record's commit"):
+        aw.is_bootstrap_record(record(commit="c" * 40), repo=repo["path"])
+    shallow = tmp_path / "shallow"
+    subprocess.run(["git", "clone", "-q", "--depth", "1", f"file://{repo['path']}", str(shallow)], env=aw.git_env(),
+                   check=True, capture_output=True)
+    with pytest.raises(aw.AttestationRefused, match="unanswerable: the repository is shallow"):
+        aw.is_bootstrap_record(record(commit=repo["A1"]), repo=shallow)
+
+
+def test_the_release_check_refuses_a_bootstrap_record_and_passes_a_non_bootstrap_one(monkeypatch, capsys):
+    """v21 (4), driven through check() itself: a current record whose commit is a REAL commit of this repository at
+    which no current record existed (its root commit) is a bootstrap record, refused at release, naming it. The control, the same
+    record judged non-bootstrap, carries no refusal. Release probing is stubbed as in S77's cell; skips outside a git
+    checkout, where check() returns 2 first."""
+    sys.path.insert(0, str(ROOT / "specs"))
+    import schema_evidence as ev
+    if subprocess.run(["git", "rev-parse", "--git-dir"], cwd=ROOT, capture_output=True).returncode:
+        pytest.skip("no git checkout: check() returns 2 before reaching this")
+    monkeypatch.setattr(ev, "_tags", lambda: [])
+    monkeypatch.setattr(ev, "_probe_at", lambda ref, work: {"tag": ref, "commit": "x", "on_disk_user_version": 0,
+                                                            "store_schema_version": 1, "digest": None, "result": "ok",
+                                                            "_objects": {}})
+    import attestation_writer as used                         # the module schema_evidence itself imports
+    # the repository's ROOT commit predates the artifact, so on any full history it is a real bootstrap commit, whatever
+    # records later commits carry (no skip: at C1 and after, HEAD's artifact holds records)
+    root_commit = subprocess.run(["git", "rev-list", "--max-parents=0", "HEAD"], cwd=ROOT, capture_output=True,
+                                 text=True).stdout.split()[0]
+    boot = record(commit=root_commit)
+    monkeypatch.setattr(sv, "attestations", lambda: [boot])
+    assert ev.check() == 1                                    # the REAL derivation, on this repository's history
+    assert "BOOTSTRAP record" in capsys.readouterr().err
+    monkeypatch.setattr(used, "is_bootstrap_record", lambda r, **k: False)          # control: judged non-bootstrap
+    ev.check()
+    assert "BOOTSTRAP record" not in capsys.readouterr().err
+
+
+def test_real_the_release_check_refuses_a_bootstrap_record_by_derivation(repo):
+    """v21 (4), on a REAL history and with no git checkout of this tree needed: the release check's own function
+    names a record whose commit's artifact held no current record, and passes one whose commit's artifact held one."""
+    sys.path.insert(0, str(ROOT / "specs"))
+    import schema_evidence as ev
+    boot = record(commit=repo["A1"], machine="aarch64")
+    held = _commit_artifact(repo, [boot])
+    found = ev.bootstrap_release_problems([boot], repo=repo["path"])
+    assert len(found) == 1 and "BOOTSTRAP record" in found[0], found
+    assert ev.bootstrap_release_problems([record(commit=held, machine="aarch64")], repo=repo["path"]) == []
+
+
 def test_real_an_inherited_git_dir_cannot_answer_for_another_repository(repo, tmp_path, monkeypatch):
     """BLOCKING 2: GIT_DIR pointing at ANOTHER repository is scrubbed, so HEAD is read from the repository the writer
     stands in."""
@@ -463,6 +556,17 @@ MUTANTS = {
         [('    evidence = lambda r: (r["result_digest"], json.dumps(r["confinement"], sort_keys=True))   # noqa: E731',
           '    evidence = lambda r: (r["result_digest"], json.dumps(r["confinement"], sort_keys=True), json.dumps(r["provenance"]))   # noqa: E731')],
         [("test_a_same_commit_re_record_from_another_job_is_idempotent", {})]),
+    "a fresh write drops a non-bootstrap record (v21)": (
+        [("            if sv.attestation_revision(r) == \"current\" and not is_bootstrap_record(r, repo=repo, git=git):",
+          "            if False:")],
+        [("test_real_a_fresh_write_drops_bootstrap_records_and_refuses_a_non_bootstrap_one", {})]),
+    "a fresh write accepts a bootstrap-pending job (v21)": (
+        [('    if fresh and isinstance(data, dict) and data.get("bootstrap_jobs"):', "    if False:")],
+        [("test_a_fresh_write_refuses_an_aggregate_with_a_bootstrap_job", {})]),
+    "an unanswerable bootstrap derivation read as not bootstrap (v21)": (
+        [('        raise AttestationRefused(f"unanswerable: the record\'s commit {commit} is not in this repository")',
+          "        return False")],
+        [("test_real_an_unanswerable_bootstrap_derivation_refuses", {})]),
     "a claimed commit accepted": ([("    if rc != 0 or head != commit:\n", "    if rc != 0:\n")],
                                   [(ARM, {"arm": "the record's commit is not HEAD"}), ("test_real_the_records_commit_must_be_head", {})]),
     "fixture commit mark dropped": ([('j["commit"] == FIXTURE_COMMIT or ', "")],

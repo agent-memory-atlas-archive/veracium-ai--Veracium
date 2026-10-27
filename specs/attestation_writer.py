@@ -188,7 +188,49 @@ def write(new, *, path=None, repo=ROOT, git=run_git) -> str:
     return next(iter(write_records([new], path=path, repo=repo, git=git).values()))
 
 
-def write_records(news, *, path=None, repo=ROOT, git=run_git) -> dict:
+ARTIFACT_REL = "src/veracium/store/evidence/sqlite_runtimes.json"
+
+
+def is_bootstrap_record(r, *, repo=ROOT, git=run_git) -> bool:
+    """v21 (3): the bootstrap mark is DERIVED, never stored. A current record is a bootstrap record iff the committed
+    artifact AT ITS OWN COMMIT held no current record: any run at a zero-current state is a bootstrap run. Needs full
+    history: a shallow repository, an unknown commit or an unreadable artifact at that commit is "unanswerable"
+    (AttestationRefused), never "not bootstrap"."""
+    commit = sv.record_commit(r)
+    if commit is None:
+        raise AttestationRefused("unanswerable: the record has no single commit")
+    if git(["rev-parse", "--is-shallow-repository"], repo) != (0, "false"):
+        raise AttestationRefused("unanswerable: the repository is shallow, so a record's commit may be absent")
+    rc, _ = git(["cat-file", "-e", f"{commit}^{{commit}}"], repo)
+    if rc != 0:
+        raise AttestationRefused(f"unanswerable: the record's commit {commit} is not in this repository")
+    rc, listed = git(["ls-tree", "--name-only", commit, "--", ARTIFACT_REL], repo)
+    if rc != 0:
+        raise AttestationRefused(f"unanswerable: git ls-tree at {commit} exited {rc}")
+    if not listed:
+        return True                                    # no artifact at that commit: it held no current record
+    rc, text = git(["show", f"{commit}:{ARTIFACT_REL}"], repo)
+    try:
+        if rc != 0:
+            raise ValueError(f"git show exited {rc}")
+        then = json.loads(text, object_pairs_hook=_strict_pairs)["attestations"]
+        if not isinstance(then, list):
+            raise ValueError("'attestations' is not a list")
+    except (ValueError, KeyError, TypeError) as exc:
+        raise AttestationRefused(f"unanswerable: the artifact at {commit} cannot be read ({exc})")
+    return not any(sv.attestation_revision(x) == "current" for x in then)
+
+
+def _strict_pairs(pairs):
+    out = {}
+    for k, v in pairs:
+        if k in out:
+            raise ValueError(f"duplicate key {k!r}")
+        out[k] = v
+    return out
+
+
+def write_records(news, *, path=None, repo=ROOT, git=run_git, fresh=False) -> dict:
     """I5 (research's stage-1 Q4): records ALREADY BUILT, each in its own job's process. The aggregator cannot
     recompute another runner's key, so the key is taken ONLY from each record, never from this process. Each record
     still passes everything `merged` asks (production's validator, fixture marks, the HEAD binding, v19's order), and
@@ -198,6 +240,15 @@ def write_records(news, *, path=None, repo=ROOT, git=run_git) -> dict:
     if not isinstance(data, dict) or set(data) - sv.ARTIFACT_KEYS or not isinstance(data.get("attestations"), list):
         raise AttestationRefused(f"the existing artifact's top level is not within {sorted(sv.ARTIFACT_KEYS)}")
     records, outcomes = data["attestations"], {}
+    if fresh:
+        # v21 (3): fresh mode is NOT a W6 bypass. It drops prior records only when every CURRENT one is a bootstrap
+        # record by derivation, so an attested key whose route was unavailable on the day is never silently lost.
+        for r in records:
+            if sv.attestation_revision(r) == "current" and not is_bootstrap_record(r, repo=repo, git=git):
+                raise AttestationRefused(f"a fresh write would drop a non-bootstrap current record "
+                                         f"({r.get('sqlite_version')!r}, {r.get('machine')!r}): fresh mode replaces "
+                                         f"only a bootstrap run's records")
+        records = []
     for new in news:
         records, outcome = merged(records, new, repo=repo, git=git)
         outcomes[repr(sv.attestation_key(new))] = outcome
@@ -215,17 +266,29 @@ def write_records(news, *, path=None, repo=ROOT, git=run_git) -> dict:
 
 
 def main(argv) -> int:
-    if len(argv) != 2:
-        print(__doc__.strip().splitlines()[-1], file=sys.stderr)
+    """`attestation_writer.py [--fresh] <records.json | aggregate.json>`.
+
+    `--fresh` (v21) writes the given records ALONE, dropping the existing artifact's, and only over bootstrap records
+    (derived; see is_bootstrap_record): it is how run 2's records replace run 1's. It refuses an aggregate that has any
+    bootstrap-pending job, since a bootstrap run's records are never the shipped set."""
+    flags = {a for a in argv[1:] if a.startswith("--")}
+    args = [a for a in argv[1:] if not a.startswith("--")]
+    if len(args) != 1 or flags - {"--fresh"}:
+        print(main.__doc__.strip().splitlines()[0], file=sys.stderr)
         return 2
-    data = json.loads(pathlib.Path(argv[1]).read_text())
+    data = json.loads(pathlib.Path(args[0]).read_text(), object_pairs_hook=_strict_pairs)
+    fresh = "--fresh" in flags
+    if fresh and isinstance(data, dict) and data.get("bootstrap_jobs"):
+        print("refused: a fresh write takes run 2's records, and this aggregate has bootstrap-pending jobs "
+              f"({len(data['bootstrap_jobs'])}): a bootstrap run's records are never the shipped set", file=sys.stderr)
+        return 1
     records = data.get("records") if isinstance(data, dict) else data
     if not isinstance(records, list) or not all(isinstance(r, dict) and "provenance" in r for r in records):
         print("refused: the input is not a list of built records (the writer never builds one: a job input belongs to "
               "attestation_job.py, in the job that measured the build)", file=sys.stderr)
         return 1
     try:
-        print(write_records(records))
+        print(write_records(records, fresh=fresh))
     except AttestationRefused as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 1

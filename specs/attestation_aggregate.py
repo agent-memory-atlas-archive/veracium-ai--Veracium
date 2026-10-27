@@ -44,8 +44,8 @@ def _evidence(rec) -> tuple:
 
 def aggregate(results, rows=()) -> dict:
     """{records, disagreements, failed_keys, refused, excluded, unavailable, other_failures}."""
-    groups, out = {}, {"records": [], "disagreements": [], "failed_keys": [], "refused": [], "excluded": [],
-                       "unavailable": [], "other_failures": []}
+    groups, out = {}, {"records": [], "bootstrap_jobs": [], "disagreements": [], "failed_keys": [], "refused": [],
+                       "excluded": [], "unavailable": [], "other_failures": []}
     seen_rows = set()
     for r in results:
         seen_rows.add((r.get("route"), r.get("runner_image")))
@@ -53,7 +53,7 @@ def aggregate(results, rows=()) -> dict:
         if outcome == "excluded":
             out["excluded"].append(_job(r) + ": " + "; ".join(r.get("excluded_entries") or []))
             continue
-        if outcome == "evidence":
+        if outcome in ("evidence", "bootstrap-pending"):
             rec = r.get("record")
             key = sv.attestation_key(rec) if isinstance(rec, dict) else None
             if key is None or sv.attestation_record_problems(rec):
@@ -77,10 +77,14 @@ def aggregate(results, rows=()) -> dict:
         if kinds == {"refused"}:
             out["refused"] += names
             continue
-        if "evidence" not in kinds:
+        if not kinds & {"evidence", "bootstrap-pending"}:
             out["failed_keys"].append({"key": repr(key), "jobs": names})
             continue
-        if kinds != {"evidence"}:
+        if "bootstrap-pending" in kinds and kinds != {"bootstrap-pending"}:
+            out["disagreements"].append({"key": repr(key), "why": "a bootstrap job beside a non-bootstrap one",
+                                         "jobs": names})
+            continue
+        if kinds - {"evidence", "bootstrap-pending"}:
             out["disagreements"].append({"key": repr(key), "why": "a verifying job beside a "
                                          + "/".join(sorted(kinds - {"evidence"})) + " one", "jobs": names})
             continue
@@ -94,6 +98,8 @@ def aggregate(results, rows=()) -> dict:
         prov = sorted((j for rec in recs for j in rec["provenance"]),
                       key=lambda j: (j["route"], j["runner_image"], j["job_id"]))
         out["records"].append({**base, "provenance": prov})
+        if kinds == {"bootstrap-pending"}:
+            out["bootstrap_jobs"] += names            # named: the writer's --fresh refuses an aggregate that has any
     return out
 
 

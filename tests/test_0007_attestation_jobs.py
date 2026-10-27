@@ -178,14 +178,14 @@ def _status(status="verified"):
     return lambda: sv.runtime_status()._replace(status=status, reason="" if status != "refused" else "probe x is False")
 
 
-def _decide(tmp_path, cases=(), modules=None, status="verified", evidence_rc=0, probes=None, **over):
+def _decide(tmp_path, cases=(), modules=None, status="verified", evidence_rc=0, probes=None, records=None, **over):
     junit = _junit(tmp_path, cases, modules)
 
     def run_suite(target):
         pathlib.Path(target).write_bytes(junit.read_bytes())
         return 0
     return job.decide(_args(**over), runtime_status=_status(status), check_evidence=lambda: (evidence_rc, "tail"),
-                      run_suite=run_suite, head=lambda: "a" * 40,
+                      run_suite=run_suite, head=lambda: "a" * 40, records=records,
                       probes=probes or (lambda: {k: True for k in sv.CONFINEMENT_PROBE_KEYS}))
 
 
@@ -278,6 +278,53 @@ def test_a_key_class_skip_is_evidence_not_exclusion(tmp_path, monkeypatch):
     assert r["outcome"] == "evidence", r["reason"]
 
 
+A10_MOD, A10_NAME = "tests/test_migrations_0013.py", "test_the_committed_path_evidence_was_generated_on_an_attested_build"
+
+
+def test_the_bootstrap_node_failing_at_a_zero_current_state_is_bootstrap_pending(tmp_path):
+    """v21 (1): iff every record is superseded (none counts), the declared node's FAILURE alone gives bootstrap-pending
+    (exit 0), and the record is built. Both zero-current states: the first run's empty artifact, and a bump's artifact
+    of superseded records (phrase 15: "only when empty" would re-create the deadlock at the next bump)."""
+    assert job.BOOTSTRAP == (f"{A10_MOD}::{A10_NAME}",)
+    superseded = dict(_result()["record"], manifest_algorithm=sv.MANIFEST_ALGORITHM - 1)
+    for records in ([], [superseded]):
+        r = _decide(tmp_path, cases=[(A10_MOD, A10_NAME, "failed", None)], records=records)
+        assert r["outcome"] == "bootstrap-pending" and job.OUTCOME_EXIT["bootstrap-pending"] == 0, (records, r["reason"])
+        assert r["record"] is not None and A10_NAME in r["reason"]
+
+
+@pytest.mark.parametrize("kind", ["current", "malformed", "future"])
+def test_the_bootstrap_exemption_is_void_at_a_non_zero_current_state(tmp_path, kind):
+    """v21 (1): a current, malformed or future record voids it (poisoning the artifact cannot re-open it)."""
+    base = _result()["record"]
+    rec = {"current": base, "malformed": {"manifest_algorithm": True},
+           "future": dict(base, schema_version=sv.SCHEMA_VERSION + 1)}[kind]
+    r = _decide(tmp_path, cases=[(A10_MOD, A10_NAME, "failed", None)], records=[rec])
+    assert r["outcome"] == "failed-tests" and r["record"] is None and "exemption is void" in r["reason"]
+    assert job.bootstrap_open([rec]) is False
+
+
+def test_an_error_on_the_bootstrap_node_is_failed_tests(tmp_path):
+    """v21 (1): only a JUnit <failure> of the node is exempt; an <error> (a broken fixture, an import) is red."""
+    r = _decide(tmp_path, cases=[(A10_MOD, A10_NAME, "error", None)], records=[])
+    assert r["outcome"] == "failed-tests" and r["record"] is None
+
+
+def test_the_bootstrap_node_is_one_pytest_collects():
+    """v21 (1): a renamed node would leave the exemption covering nothing, silently."""
+    import os
+    p = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:randomly", "-p",
+                        "no:cacheprovider", *job.BOOTSTRAP], cwd=str(ROOT), capture_output=True, text=True,
+                       env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
+    assert p.returncode == 0 and [l for l in p.stdout.splitlines() if "::" in l] == list(job.BOOTSTRAP), p.stdout[-800:]
+
+
+def test_the_bootstrap_exemption_never_covers_a_second_node(tmp_path):
+    other = suite_rule.suite(ROOT)[0]
+    r = _decide(tmp_path, cases=[(A10_MOD, A10_NAME, "failed", None), (other, "test_f", "failed", None)], records=[])
+    assert r["outcome"] == "failed-tests" and r["record"] is None
+
+
 def test_failing_tests_are_red_and_still_carry_their_digest(tmp_path):
     mod = suite_rule.suite(ROOT)[0]
     r = _decide(tmp_path, cases=[(mod, "test_f", "failed", None)])
@@ -356,6 +403,19 @@ def test_different_evidence_is_a_disagreement_naming_every_job_and_other_keys_st
     assert agg.failed(out) and out["disagreements"][0]["why"] == "different evidence"
     assert len(out["disagreements"][0]["jobs"]) == 2
     assert [sv.attestation_key(r) for r in out["records"]] == [sv.attestation_key(other["record"])]
+
+
+def test_bootstrap_jobs_aggregate_to_records_named_as_bootstrap_and_a_mixed_key_disagrees():
+    """v21 (2): a bootstrap run's agreeing jobs emit records through the NORMAL path, and are named in bootstrap_jobs
+    (the writer's --fresh refuses such an aggregate); a key mixing bootstrap-pending and evidence jobs disagrees."""
+    a = _result(job_id=1)
+    a["outcome"] = "bootstrap-pending"
+    b = _result(route="deadsnakes", job_id=2)
+    b["outcome"] = "bootstrap-pending"
+    out = agg.aggregate([a, b])
+    assert not agg.failed(out) and len(out["records"]) == 1 and len(out["bootstrap_jobs"]) == 2
+    mixed = agg.aggregate([a, _result(route="deadsnakes", job_id=2)])
+    assert agg.failed(mixed) and "bootstrap" in mixed["disagreements"][0]["why"]
 
 
 def test_a_refused_job_beside_a_verifying_one_of_the_same_key_is_a_disagreement():
@@ -560,7 +620,7 @@ def test_the_attestation_job_mutation_matrix(tmp_path_factory):
                                                   ("        failing = [n for n, o, _ in cases if o in (\"failed\", \"error\")]\n",
                                                    "        failing = [n for n, o, _ in cases if o in (\"failed\", \"error\")]\n        if fired:\n            raise Decided(\"excluded\", \"fired\")\n")],
                                                  [("test_a_fired_condition_never_hides_a_failure", {})]),
-        "failures tolerated": ([("        if failing:\n", "        if False:\n")],
+        "failures tolerated": ([("        if failing and (set(failing) - set(pending) or not open_):\n", "        if False:\n")],
                                [("test_failing_tests_are_red_and_still_carry_their_digest", {})]),
         "a failing probe recorded": ([("        if problems:                                       # a failing", "        if False:                                       # a failing")],
                                      [("test_a_failing_confinement_probe_is_never_a_record", {})]),
@@ -570,7 +630,17 @@ def test_the_attestation_job_mutation_matrix(tmp_path_factory):
                                   [("test_the_result_digest_ignores_timing_and_order_and_sees_one_outcome", {})]),
         "drop the job-state assertion (INV-SA6)": ([("        bad = job_state_problem(euid)\n        if bad:\n            raise Decided(\"wrong-job-state\", bad)", "        pass")],
                                                    [("test_a_root_job_is_a_named_failure_before_anything_runs", {})]),
-        "refused fails the matrix": ([('OUTCOME_EXIT = {"evidence": 0, "refused": 0,', 'OUTCOME_EXIT = {"evidence": 0, "refused": 1,')],
+        "the bootstrap exemption covers a second node (v21)": ([('        pending = sorted(n for n, o, _ in cases if o == "failed" and n in BOOTSTRAP)', '        pending = sorted(n for n, o, _ in cases if o == "failed")')],
+                                                               [("test_the_bootstrap_exemption_never_covers_a_second_node", {})]),
+        "the bootstrap exemption at a non-zero-current state (v21)": ([("        open_ = bootstrap_open(records)", "        open_ = True")],
+                                                                      [("test_the_bootstrap_exemption_is_void_at_a_non_zero_current_state", {"kind": "current"})]),
+        "the bootstrap exemption only when the artifact is empty (v21)": ([('    return isinstance(records, list) and all(sv.attestation_revision(r) == "superseded" for r in records)', "    return records == []")],
+                                                                          [("test_the_bootstrap_node_failing_at_a_zero_current_state_is_bootstrap_pending", {})]),
+        "the bootstrap exemption covers an <error> (v21)": ([('o == "failed" and n in BOOTSTRAP', 'o in ("failed", "error") and n in BOOTSTRAP')],
+                                                            [("test_an_error_on_the_bootstrap_node_is_failed_tests", {})]),
+        "a bootstrap record reported as evidence": ([('            result.update(outcome="bootstrap-pending", record=record,', '            result.update(outcome="evidence", record=record,')],
+                                                    [("test_the_bootstrap_node_failing_at_a_zero_current_state_is_bootstrap_pending", {})]),
+        "refused fails the matrix": ([('"bootstrap-pending": 0, "refused": 0,', '"bootstrap-pending": 0, "refused": 1,')],
                                      [("test_a_refused_build_is_a_census_row_and_runs_nothing", {})]),
     }, tmp_path_factory)
 
@@ -596,6 +666,10 @@ def test_the_attestation_aggregate_mutation_matrix(tmp_path_factory):
             [('        base = {k: v for k, v in recs[0].items() if k != "provenance"}\n        if any({k: v for k, v in rec.items() if k != "provenance"} != base for rec in recs[1:]):',
               '        base = dict(recs[0])\n        if any(dict(rec) != base for rec in recs[1:]):')],
             [("test_equal_evidence_aggregates_to_one_record_with_sorted_union_provenance", {})]),
+        "bootstrap jobs unnamed (v21)": ([('            out["bootstrap_jobs"] += names', "            pass")],
+                                         [("test_bootstrap_jobs_aggregate_to_records_named_as_bootstrap_and_a_mixed_key_disagrees", {})]),
+        "a mixed bootstrap key aggregates (v21)": ([('        if "bootstrap-pending" in kinds and kinds != {"bootstrap-pending"}:', "        if False:")],
+                                                   [("test_bootstrap_jobs_aggregate_to_records_named_as_bootstrap_and_a_mixed_key_disagrees", {})]),
         "excluded counted as a failure": ([('    return bool(summary["disagreements"] or summary["failed_keys"])', '    return bool(summary["disagreements"] or summary["failed_keys"] or summary["excluded"])')],
                                           [("test_excluded_and_refused_only_keys_are_listed_not_failures_and_a_missing_row_is_unavailable", {})]),
         "the key from this runner (Q4)": ([("            key = sv.attestation_key(rec) if isinstance(rec, dict) else None", "            key = sv.attestation_key(sv.attestation_identity()) if isinstance(rec, dict) else None"),

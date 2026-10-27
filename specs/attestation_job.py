@@ -51,13 +51,22 @@ sys.path.insert(0, str(SPECS))
 import attestation_suite  # noqa: E402
 import skip_inventory  # noqa: E402
 
-OUTCOME_EXIT = {"evidence": 0, "refused": 0, "excluded": 0,
+OUTCOME_EXIT = {"evidence": 0, "bootstrap-pending": 0, "refused": 0, "excluded": 0,
                 "wrong-interpreter": 1, "wrong-job-state": 1, "evidence-mismatch": 1, "suite-mismatch": 1, "unmapped-skip": 1,
                 "failed-tests": 1, "confinement-failed": 1}
 """The CLOSED outcome set, and each one's exit code. (`unavailable`, an interpreter that could not be installed, is
 the workflow's: no job script ran, so the aggregator names the row from the workflow's matrix.)"""
 
 PYTEST_ARGS = ("-p", "no:randomly", "-p", "no:cacheprovider", "-q")
+
+BOOTSTRAP = ("tests/test_migrations_0013.py::test_the_committed_path_evidence_was_generated_on_an_attested_build",)
+"""0007 v21 (Quentin, 2026-10-27: "Two runs, bootstrap"): the ONE node exempt at a zero-current state. A10 asserts the
+committed path evidence was generated on an ATTESTED build, which cannot hold while no current record exists, and the run
+that would write one runs A10. So iff every record in the committed artifact is superseded (none at all counts), a JUnit
+FAILURE of this node alone gives `bootstrap-pending`; an <error> on it, any other failing node, or any current, malformed
+or future record gives `failed-tests`. This holds at EVERY zero-current state: the first run, and every manifest-algorithm
+or schema-version bump. Such a run's records mean "the suite passed except the declared node, at a zero-current state";
+they seed the path-evidence regeneration and never ship (the release check refuses them, by derivation)."""
 """BLOCKING 1: ONE ordering source. pytest-randomly is in the dev extra and reorders and reseeds per test, so two jobs
 of one key could disagree on an order-dependent outcome."""
 
@@ -156,8 +165,20 @@ def job_state_problem(euid=None) -> str | None:
     return "the attestation job is running as root (uid 0): it must run as a non-root user" if euid == 0 else None
 
 
+def bootstrap_open(records=None) -> bool:
+    """True iff EVERY record of the committed artifact is superseded (an empty artifact counts): a zero-current state,
+    the only one the bootstrap exemption applies in. A current, malformed or future record closes it, so poisoning the
+    artifact cannot re-open it, and an unreadable artifact is not "empty"."""
+    from veracium.store import schema_version as sv
+    try:
+        records = sv.attestations() if records is None else records
+    except (OSError, ValueError):
+        return False
+    return isinstance(records, list) and all(sv.attestation_revision(r) == "superseded" for r in records)
+
+
 def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_suite=_run_suite, probes=None,
-           head=_head, euid=None) -> dict:
+           head=_head, euid=None, records=None) -> dict:
     """The job's closed result. Every seam is injectable, so each outcome is a cell."""
     from veracium.store import schema_version as sv
     import attestation_writer as aw
@@ -195,9 +216,13 @@ def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_sui
         # Failures FIRST (research's stage 2 on 84c512b): exclusion means "not an input", never "not a failure". A
         # job whose job:runs condition fired AND whose suite fails is red, and still names the fired entries.
         failing = [n for n, o, _ in cases if o in ("failed", "error")]
-        if failing:
+        pending = sorted(n for n, o, _ in cases if o == "failed" and n in BOOTSTRAP)       # a FAILURE, never an error
+        open_ = bootstrap_open(records)
+        if failing and (set(failing) - set(pending) or not open_):
             raise Decided("failed-tests", f"{len(failing)} failing: " + ", ".join(failing[:20])
-                          + (f" (and {len(fired)} job:runs condition(s) fired)" if fired else ""))
+                          + (f" (and {len(fired)} job:runs condition(s) fired)" if fired else "")
+                          + (" (the bootstrap exemption is void: the artifact already holds a current record)"
+                             if pending and not open_ else ""))
         if fired:
             raise Decided("excluded", f"{len(fired)} job:runs condition(s) fired: " + "; ".join(fired))
         live = (_live_probes if probes is None else probes)()
@@ -208,7 +233,12 @@ def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_sui
         problems = sv.attestation_record_problems(record)
         if problems:                                       # a failing confinement probe: never a record, and not a
             raise Decided("confinement-failed", f"the record would be malformed: {problems[0]}")   # failed TEST
-        result.update(outcome="evidence", reason="", record=record)
+        if pending:
+            result.update(outcome="bootstrap-pending", record=record,
+                          reason=f"bootstrap run: {', '.join(pending)} pending (no attestation record exists yet); this "
+                                 f"record seeds the evidence regeneration and is never shipped")
+        else:
+            result.update(outcome="evidence", reason="", record=record)
     except Decided as d:
         result.update(outcome=d.outcome, reason=d.reason)
     return result

@@ -452,6 +452,33 @@ def acceptance_digest_problems(versions: dict) -> list:
     return out
 
 
+def bootstrap_release_problems(records=None, *, repo=ROOT, git=None) -> list:
+    """0007 v21 (4): a release never ships a bootstrap record, the first attestation run's (or any zero-current-state
+    run's), whose suite passed except the declared node. The mark is DERIVED by the writer's one rule
+    (attestation_writer.is_bootstrap_record: the artifact at the record's own commit held no current record). Runs at
+    RELEASE, never as an attestation-suite node: as a node it would fail run 2 at the commit still holding run 1's
+    records, and re-create the deadlock the two runs exist to break. Unanswerable is a problem, never a pass."""
+    import attestation_writer as aw
+    try:
+        records = sv.attestations() if records is None else records
+    except (OSError, ValueError):
+        return []                                  # unreadable: attestation_artifact_problems reports it
+    out = []
+    for i, r in enumerate(records if isinstance(records, list) else []):
+        if sv.attestation_revision(r) != "current":
+            continue
+        try:
+            boot = aw.is_bootstrap_record(r, repo=repo, **({} if git is None else {"git": git}))
+        except aw.AttestationRefused as exc:
+            out.append(f"attestation {i}: whether it is a bootstrap record is {exc}")
+            continue
+        if boot:
+            out.append(f"attestation {i} ({r.get('sqlite_version')!r}, {r.get('machine')!r}) is a BOOTSTRAP record (the "
+                       f"artifact at its commit held no current record): it never ships; replace the bootstrap run's "
+                       f"records with the next run's (attestation_writer.py --fresh)")
+    return out
+
+
 def stale_attestation_problems(records=None) -> list:
     """S77 (round 13, finding 3), on attestation records: a record of another revision (superseded, or newer than this
     checkout) never disqualifies a build at open time, since the reader reads current records only. But the
@@ -516,6 +543,7 @@ def check() -> int:
         bad.append(f"sqlite {sqlite3.sqlite_version} is refused ({status.reason}); 0007 §4g refuses it")
     bad += [f"attestation artifact: {p}" for p in sv.attestation_artifact_problems()]
     bad += stale_attestation_problems()
+    bad += bootstrap_release_problems()
     with tempfile.TemporaryDirectory() as tmp:
         work = pathlib.Path(tmp)
         head = _resolved(_probe_at("HEAD", work), records)

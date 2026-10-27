@@ -172,6 +172,10 @@ MUTANTS = [
      [('claims nothing", "key")', 'claims nothing", "rewrite")')],
      [f"{JOBS}::test_no_inventory_entry_carries_the_rewrite_class"], [], None,
      "an in-suite skip left in the rewrite class"),
+    ("sa6-ship-a-bootstrap-record", "product", SE,
+     [("        if boot:\n", "        if False:\n")],
+     [f"{WRITER}::test_real_the_release_check_refuses_a_bootstrap_record_by_derivation"], [], None,
+     "the release check passes a bootstrap record (v21)"),
     # ---- INV-SA7 ----------------------------------------------------------------------------------------------------
     ("sa7-warn-on-every-open", "product", SV,
      [('    if st.status != "verified" or _WARNED:', '    if st.status != "verified":')],
@@ -340,6 +344,15 @@ CARRIERS = {
     ("INV-SA6", 10): ("cite", f"{WRITER_MATRIX}::shallow check after the ancestry"),
     ("INV-SA6", 11): ("cite", f"{WRITER_MATRIX}::same-commit step after --is-ancestor"),
     ("INV-SA6", 12): ("cite", f"{WRITER_MATRIX}::compare provenance as evidence when ordering writes (INV-SA6)"),
+    # ---- v21, the attestation bootstrap (Quentin, 2026-10-27: "Two runs, bootstrap") --------------------------------
+    ("INV-SA6", 13): ("cite", f"{JOB_MATRIX}::the bootstrap exemption covers a second node (v21)"),
+    ("INV-SA6", 14): ("cite", f"{JOB_MATRIX}::the bootstrap exemption at a non-zero-current state (v21)"),
+    ("INV-SA6", 15): ("cite", f"{JOB_MATRIX}::the bootstrap exemption only when the artifact is empty (v21)"),
+    ("INV-SA6", 16): ("cite", f"{JOB_MATRIX}::the bootstrap exemption covers an <error> (v21)"),
+    ("INV-SA6", 17): ("cite", f"{WRITER_MATRIX}::a fresh write drops a non-bootstrap record (v21)"),
+    ("INV-SA6", 18): ("cite", f"{WRITER_MATRIX}::a fresh write accepts a bootstrap-pending job (v21)"),
+    ("INV-SA6", 19): ("cite", f"{WRITER_MATRIX}::an unanswerable bootstrap derivation read as not bootstrap (v21)"),
+    ("INV-SA6", 20): ("mutant", "sa6-ship-a-bootstrap-record"),
     ("INV-SA7", 0): ("mutant", "sa7-warn-on-every-open"),
     ("INV-SA7", 1): ("mutant", "sa7-warn-on-an-attested-build"),
     ("INV-SA7", 2): ("mutant", "sa7-never-warn"),
@@ -477,7 +490,8 @@ SUBJECT_P = _protocol.Subject(
     spec="0007", finding=SUBJECT, table=TABLE, digested=DIGESTED, mutants=MUTANTS, controls=CONTROLS,
     import_modules=("veracium.store.schema_version", "veracium.store.migration", "veracium.store.release_migration",
                     "veracium.doctor", "veracium.store.near_misses"),
-    import_specs=(SE, GATE_FILE), cells_files=(RS, SVT, SM, JOBS, PA1_CELLS, SA10_CELLS), kinds=("product",))
+    import_specs=(SE, GATE_FILE), cells_files=(RS, SVT, SM, JOBS, WRITER, PA1_CELLS, SA10_CELLS),
+    kinds=("product",))
 
 
 def problems(path: pathlib.Path = TABLE, root: pathlib.Path = ROOT) -> list:
