@@ -208,6 +208,15 @@ def test_a_wrong_interpreter_is_a_named_failure_naming_both_locations(tmp_path):
     assert job.interpreter_problem(str(pathlib.Path(sys.base_prefix).parent)) is None      # under a declared prefix
 
 
+def test_a_root_job_is_a_named_failure_before_anything_runs(tmp_path):
+    """INV-SA6's job-state assertion: a root job is red, named, and runs nothing; a non-root uid passes it."""
+    ran = []
+    r = job.decide(_args(), runtime_status=_status(), check_evidence=lambda: ran.append("ce") or (0, ""),
+                   run_suite=lambda t: ran.append("suite"), head=lambda: "a" * 40, euid=0)
+    assert (r["outcome"], ran) == ("wrong-job-state", []) and job.OUTCOME_EXIT["wrong-job-state"] == 1
+    assert "root" in r["reason"] and job.job_state_problem(1000) is None
+
+
 def test_a_refused_build_is_a_census_row_and_runs_nothing(tmp_path):
     ran = []
     r = job.decide(_args(), runtime_status=_status("refused"), check_evidence=lambda: ran.append("ce") or (0, ""),
@@ -559,6 +568,8 @@ def test_the_attestation_job_mutation_matrix(tmp_path_factory):
                                           [("test_the_suite_runs_once_in_pytests_own_order", {})]),
         "timings in the digest": ([("    pairs = sorted((n, o) for n, o, _ in cases)", "    pairs = [(n, o) for n, o, _ in cases]")],
                                   [("test_the_result_digest_ignores_timing_and_order_and_sees_one_outcome", {})]),
+        "drop the job-state assertion (INV-SA6)": ([("        bad = job_state_problem(euid)\n        if bad:\n            raise Decided(\"wrong-job-state\", bad)", "        pass")],
+                                                   [("test_a_root_job_is_a_named_failure_before_anything_runs", {})]),
         "refused fails the matrix": ([('OUTCOME_EXIT = {"evidence": 0, "refused": 0,', 'OUTCOME_EXIT = {"evidence": 0, "refused": 1,')],
                                      [("test_a_refused_build_is_a_census_row_and_runs_nothing", {})]),
     }, tmp_path_factory)
@@ -573,7 +584,7 @@ def test_the_attestation_aggregate_mutation_matrix(tmp_path_factory):
                                             [("test_a_refused_job_beside_a_verifying_one_of_the_same_key_is_a_disagreement", {})]),
         "a failing-only key silent (Q5a)": ([('            out["failed_keys"].append({"key": repr(key), "jobs": names})', "            pass")],
                                             [("test_a_key_with_only_failing_jobs_fails_aggregation", {"red": "failed-tests"})]),
-        "confinement-failed not failing": ([('FAILING = ("failed-tests", "evidence-mismatch", "confinement-failed")', 'FAILING = ("failed-tests", "evidence-mismatch")')],
+        "confinement-failed not failing": ([('"evidence-mismatch", "confinement-failed", "wrong-job-state")', '"evidence-mismatch", "wrong-job-state")')],
                                            [("test_a_key_with_only_failing_jobs_fails_aggregation", {"red": "confinement-failed"})]),
         "provenance unsorted": ([('        prov = sorted((j for rec in recs for j in rec["provenance"]),\n                      key=lambda j: (j["route"], j["runner_image"], j["job_id"]))', '        prov = [j for rec in recs for j in rec["provenance"]]')],
                                 [("test_equal_evidence_aggregates_to_one_record_with_sorted_union_provenance", {})]),
@@ -581,6 +592,10 @@ def test_the_attestation_aggregate_mutation_matrix(tmp_path_factory):
                                              [("test_different_evidence_is_a_disagreement_naming_every_job_and_other_keys_still_emit", {})]),
         "unavailable rows unnamed (Q6a)": ([("            out[\"unavailable\"].append(f\"{row['route']} on {row['runner_image']}\")", "            pass")],
                                            [("test_excluded_and_refused_only_keys_are_listed_not_failures_and_a_missing_row_is_unavailable", {})]),
+        "compare provenance as evidence (INV-SA6: two agreeing jobs become a false conflict)": (
+            [('        base = {k: v for k, v in recs[0].items() if k != "provenance"}\n        if any({k: v for k, v in rec.items() if k != "provenance"} != base for rec in recs[1:]):',
+              '        base = dict(recs[0])\n        if any(dict(rec) != base for rec in recs[1:]):')],
+            [("test_equal_evidence_aggregates_to_one_record_with_sorted_union_provenance", {})]),
         "excluded counted as a failure": ([('    return bool(summary["disagreements"] or summary["failed_keys"])', '    return bool(summary["disagreements"] or summary["failed_keys"] or summary["excluded"])')],
                                           [("test_excluded_and_refused_only_keys_are_listed_not_failures_and_a_missing_row_is_unavailable", {})]),
         "the key from this runner (Q4)": ([("            key = sv.attestation_key(rec) if isinstance(rec, dict) else None", "            key = sv.attestation_key(sv.attestation_identity()) if isinstance(rec, dict) else None"),

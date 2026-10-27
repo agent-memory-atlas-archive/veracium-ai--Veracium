@@ -176,12 +176,20 @@ def test_each_key_field_separates_two_records_that_agree_on_every_other(monkeypa
         assert sv.attestation_key(r) != sv.attestation_key(base), field
         with_records(monkeypatch, r)
         assert sv.runtime_status().status == "verified", field
+    # `system` ALONE (I6's campaign: the pair above also changes libc, which separates it by itself): two non-Linux
+    # builds on one machine share libc `none` and differ only in system (§4g.8: a record of one attests the other).
+    darwin, windows = (record_for_this_build(system=s_, libc="none", machine="aarch64") for s_ in ("Darwin", "Windows"))
+    assert sv.attestation_key(darwin) != sv.attestation_key(windows)
 
 
 def test_a_record_canonicalised_on_one_side_only_matches_nothing(monkeypatch):
     """A record written with the raw `AMD64` is malformed (the record side canonicalises too), never a match."""
     r = record_for_this_build(machine="AMD64")
     assert any("'machine'" in p for p in sv.attestation_record_problems(r))
+    # ...and the BUILD side canonicalises too (I6's campaign: on an x86_64 box the raw name is already canonical, so
+    # the build side was unexercised): a Windows build reporting `AMD64` keys as `x86_64`, as its record does.
+    monkeypatch.setattr(sv.platform, "machine", lambda: "AMD64")
+    assert sv.canonical_platform()["machine"] == "x86_64"
 
 
 def test_the_compile_options_digest_ignores_the_order_the_build_returns_them_in():
@@ -778,3 +786,86 @@ def test_the_packaged_attestation_artifact_is_valid(tmp_path, monkeypatch):
     problems = sv.attestation_artifact_problems()
     assert any("with different evidence" in p for p in problems), problems
 
+
+
+# ---- I6: the cells INV-SA1–SA12's mutation table needed and the suite lacked (specs/evidence/0007/sa_mutants.py) ----
+@pytest.mark.parametrize("site", sorted(GATE_CELLS), ids=lambda s: f"{s[0]}:{s[1]}")
+def test_a_refused_build_is_refused_before_any_version_decision(monkeypatch, tmp_path, site):
+    """INV-SA1 "decide shape first": a store stamped NEWER than this build would be refused as `newer` by a version
+    decision. On a refused build it must be refused as `unsupported-sqlite`, so the gate ran first, at every gate
+    call site."""
+    import sqlite3 as _sqlite3
+    monkeypatch.setattr(sv, "runtime_status", lambda: REFUSED)
+    p = store_at(tmp_path / "s.db", HEAD)
+    with _sqlite3.connect(p) as c:
+        c.execute(f"PRAGMA user_version = {HEAD + 1}")
+    assert GATE_CELLS[site](p) == "unsupported-sqlite"
+
+
+def test_doctor_checks_the_sqlite_build_before_opening_any_store(monkeypatch, tmp_path):
+    """INV-SA9 "report after opening": the runtime check runs BEFORE doctor opens any store (it is exactly what a
+    refused build's user needs, and a refused build cannot open one)."""
+    from veracium import doctor
+    order = []
+    real_check = doctor._check_runtime
+    monkeypatch.setattr(doctor, "_check_runtime", lambda rep: (order.append("runtime"), real_check(rep))[1])
+    monkeypatch.setattr(doctor, "_open_snapshot", lambda rep, path, tmpdir: order.append("open"))
+    monkeypatch.setattr(sv, "runtime_status", lambda: REFUSED)
+    rep = doctor.diagnose(str(tmp_path / "absent.db"))
+    assert order[:2] == ["runtime", "open"], order
+    assert [f.level for f in rep.findings if f.check == "runtime"] == ["error"]
+
+
+@pytest.mark.parametrize("status, level", [("verified", "info"), ("refused", "error")])
+def test_doctor_reports_verified_at_info_and_refused_at_error(monkeypatch, status, level):
+    """INV-SA9 "report `verified` at `warn`": doctor exits 1 on any warning, so a verified build (every uv user's)
+    must be `info`; a refused build is `error`."""
+    from veracium import doctor
+    st = sv.runtime_status()._replace(status=status, reason="probe x is False" if status == "refused" else None)
+    monkeypatch.setattr(sv, "runtime_status", lambda: st)
+    rep = doctor.Report(db="x", readable=False)
+    doctor._check_runtime(rep)
+    assert [f.level for f in rep.findings if f.check == "runtime"] == [level]
+
+
+def test_the_compile_options_come_from_the_probe_connection(monkeypatch):
+    """INV-SA12 "read them from a SQLite library other than the one the store's connections use": the digest is of
+    `_probe_build()`'s options, the one scratch connection of this module's own `sqlite3`. A digest read anywhere
+    else does not follow a changed probe."""
+    real = sv._probe_build()
+    monkeypatch.setattr(sv, "_probe_build", lambda: (real[0], ["PLANTED_OPTION_A", "PLANTED_OPTION_B"]))
+    assert sv.compile_options_digest() == sv.options_digest(["PLANTED_OPTION_A", "PLANTED_OPTION_B"])
+
+
+def test_machine_is_read_from_the_process_never_a_runner_label(monkeypatch):
+    """INV-SA12 "take `machine` from the runner's label": a CI runner's architecture label is not the build's machine.
+    With every label a runner sets planted, the key's machine is still the process's."""
+    import platform as _platform
+    for var, val in (("RUNNER_ARCH", "ARM64"), ("PROCESSOR_ARCHITECTURE", "ARM64"), ("HOSTTYPE", "aarch64")):
+        monkeypatch.setenv(var, val)
+    assert sv.canonical_platform()["machine"] == sv.canonical_machine(_platform.machine())
+    assert sv.attestation_identity()["machine"] == sv.canonical_machine(_platform.machine())
+
+
+def test_the_store_records_no_sqlite_build_so_the_audit_can_only_measure():
+    """INV-SA11 "record the build that created the store": no schema version stores a SQLite build identity, so the
+    audit has no store-side value to read in place of its measurement. This mutant has no carrier on today's code,
+    and this cell fails the day one appears, which is when the mutant becomes writable."""
+    names = ("sqlite_version", "sqlite_source", "compile_options", "sqlite_build")
+    hits = [(v, o.ddl[:60]) for v, objs in sv.SCHEMAS.items() for o in objs if any(n in o.ddl.lower() for n in names)]
+    assert hits == [], hits
+
+
+def test_every_migration_step_has_a_campaign_matcher_or_a_named_reason():
+    """INV-SA10 "add a `STEP_*` name with no matcher": every STEP_* the migration declares is either a step 0013-PA1's
+    campaign can attribute a write to (a matcher in pa1_campaign._steps()) or a WRITELESS step named with its reason,
+    so a new step can never ship with no write the campaign checks."""
+    import importlib.util as _ilu
+    import veracium.store.migration as mig
+    spec = _ilu.spec_from_file_location("veracium_pa1_campaign_for_i6", ROOT / "specs" / "evidence" / "0013" /
+                                        "pa1_campaign.py")
+    camp = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(camp)
+    declared = {v for k, v in vars(mig).items() if k.startswith("STEP_") and isinstance(v, str)}
+    covered = set(camp._steps()) | set(camp.WRITELESS_STEPS)
+    assert declared and declared <= covered, sorted(declared - covered)

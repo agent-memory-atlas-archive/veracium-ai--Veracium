@@ -52,28 +52,16 @@ MIGRATION = "src/veracium/store/migration.py"
 RELEASE = "src/veracium/store/release_migration.py"
 CELLS_FILE = "tests/test_0013_sa10_gate.py"
 KINDS = "specs/evidence/mutation_kinds.py"
-DIGESTED = (GATE, DIGEST, MIGRATION, RELEASE, "src/veracium/store/schema_version.py",
+DIGESTED = (GATE, DIGEST, MIGRATION, RELEASE, "src/veracium/store/schema_version.py", "specs/evidence/mutation_protocol.py",
             "specs/evidence/0013/pa1_campaign.py", "specs/evidence/0013/steptable.py", CELLS_FILE, KINDS, SELF)
 SUBJECT = "INV-SA10"
 
 
-def _load_kinds():
-    spec = importlib.util.spec_from_file_location("veracium_mutation_kinds", HERE.parent / "mutation_kinds.py")
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    return m
+sys.path.insert(0, str(HERE.parent))
+import mutation_protocol as _protocol  # noqa: E402  (THE protocol; 0007 I6 factored it out of this file)
 
-
-MK = _load_kinds()
-
-
-def _strict_pairs(pairs):
-    out = {}
-    for k, v in pairs:
-        if k in out:
-            raise ValueError(f"duplicate key {k!r}")
-        out[k] = v
-    return out
+MK = _protocol.MK
+_strict_pairs = _protocol._strict_pairs
 
 
 C = lambda name: f"{CELLS_FILE}::{name}"                                     # noqa: E731
@@ -301,289 +289,29 @@ CONTROLS = [
 ]
 
 
-def named_cells() -> list:
-    return sorted({n for m in MUTANTS for n in m[4]} | {n for k in CONTROLS for n in k[3]})
+SUBJECT_P = _protocol.Subject(
+    spec="0013", finding=SUBJECT, table=TABLE, digested=DIGESTED, mutants=MUTANTS, controls=CONTROLS,
+    import_modules=("veracium.store.migration", "veracium.store.release_migration"),
+    import_specs=("specs/evidence/0013/sa10_gate.py",), cells_files=(CELLS_FILE,), kinds=("gate", "tree"))
+"""INV-SA10's subject: its data, run by the shared protocol (specs/evidence/mutation_protocol.py)."""
 
-
-def honest_nodes() -> list:
-    return sorted({n for m in MUTANTS for n in m[5]})
-
-
-def definition_sha(m) -> str:
-    return hashlib.sha256(json.dumps(list(m), ensure_ascii=True).encode()).hexdigest()
-
-
-def canonical(obj) -> bytes:
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
-
-
-def _sha(p: pathlib.Path) -> str:
-    return hashlib.sha256(p.read_bytes()).hexdigest()
-
-
-def _digests(root: pathlib.Path) -> dict:
-    return {f: _sha(root / f) for f in DIGESTED}
-
-
-def _snapshot(dst: pathlib.Path):
-    r = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-                       capture_output=True, check=True)
-    for f in filter(None, r.stdout.decode().split("\0")):
-        src = ROOT / f
-        if src.is_file():
-            (dst / f).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst / f)
-
-
-def _env(root):
-    return {**os.environ, "PYTHONPATH": str(root / "src"), "PYTHONDONTWRITEBYTECODE": "1"}
-
-
-def _imports(root) -> str:
-    code = ("import importlib, importlib.util, pathlib, sys\nroot = pathlib.Path(sys.argv[1]).resolve()\n"
-            "for name in ('veracium.store.migration', 'veracium.store.release_migration'):\n"
-            "    m = importlib.import_module(name)\n"
-            "    assert pathlib.Path(m.__file__).resolve().is_relative_to(root / 'src'), m.__file__\n"
-            "for stem in ('sa10_gate',):\n"
-            "    s = importlib.util.spec_from_file_location(stem, root / 'specs/evidence/0013' / (stem + '.py'))\n"
-            "    s.loader.exec_module(importlib.util.module_from_spec(s))\n")
-    r = subprocess.run([sys.executable, "-B", "-c", code, str(root)], cwd=root, env=_env(root),
-                       capture_output=True, text=True)
-    return "ok" if r.returncode == 0 else "error: " + (r.stderr.strip().splitlines() or ["?"])[-1][:200]
-
-
-def _pytest(root, nodes) -> dict:
-    with tempfile.TemporaryDirectory() as d:
-        xml = pathlib.Path(d) / "j.xml"
-        r = subprocess.run([sys.executable, "-B", "-m", "pytest", "-q", "-p", "no:randomly", "-p", "no:cacheprovider",
-                            f"--junitxml={xml}", *nodes], cwd=root, env=_env(root), capture_output=True, text=True)
-        failed, errored, passed, kinds, texts = [], [], [], {}, {}
-        if xml.exists():
-            for tc in ET.parse(xml).iter("testcase"):
-                node = f"{CELLS_FILE}::{tc.get('name')}"
-                f = tc.find("failure")
-                if f is not None:
-                    failed.append(node)
-                    kinds[node] = MK.failure_kind(f.get("message") or "")
-                    texts[node] = (f.get("message") or "") + "\n" + (f.text or "")
-                elif tc.find("error") is not None:
-                    errored.append(node)
-                elif tc.find("skipped") is None:
-                    passed.append(node)
-        summary = (r.stdout.strip().splitlines() or [""])[-1][:160]
-    return {"exit": r.returncode, "passed": sorted(passed), "failed": sorted(failed), "errored": sorted(errored),
-            "kinds": dict(sorted(kinds.items())), "texts": texts, "summary": summary}
-
-
-def _apply(root, rel, edits) -> tuple:
-    target = root / rel
-    original = target.read_bytes()
-    text = original.decode()
-    counts = [text.count(a) for a, _ in edits]
-    if counts != [1] * len(edits):
-        return original, counts, False
-    for a, r in edits:
-        text = text.replace(a, r)
-    if text.encode() == original:
-        return original, counts, False
-    target.write_text(text)
-    return original, counts, True
-
-
-def _clean(root, nodes) -> dict:
-    imp = _imports(root)
-    run = _pytest(root, nodes)
-    ok = imp == "ok" and run["exit"] == 0 and not run["failed"] and not run["errored"] and run["passed"] == sorted(nodes)
-    return {"import": imp, "passed": len(run["passed"]), "of": len(nodes), "ok": ok,
-            "failed": run["failed"], "errored": run["errored"], "summary": run["summary"]}
-
-
-def run_one(root: pathlib.Path, m) -> dict:
-    mid, kind, rel, edits, cells, honest, reason, what = m
-    row = {"id": mid, "finding": SUBJECT, "kind": kind, "file": rel, "what": what, "named_cells": list(cells),
-           "honest_nodes": list(honest), "reason": reason, "definition_sha256": definition_sha(m)}
-    original, counts, ok = _apply(root, rel, edits)
-    row["anchor_counts"] = counts
-    if not ok:
-        return {**row, "outcome": "ANCHOR", "good": False}
-    try:
-        row["import"] = _imports(root)
-        h = _pytest(root, list(honest)) if honest else None
-        row["honest"] = ("n/a" if h is None else "pass" if h["exit"] == 0 and h["passed"] == sorted(honest)
-                         else f"fail: {len(h['failed'])} failed, {len(h['errored'])} errored of {len(honest)}")
-        c = _pytest(root, list(cells))
-    finally:
-        (root / rel).write_bytes(original)
-    assert _sha(root / rel) == hashlib.sha256(original).hexdigest()
-    row.update(MK.classify(c["kinds"], c["failed"], c["errored"]))
-    row["named_failed"] = all(n in c["failed"] for n in cells)
-    row["reason_seen"] = None if reason is None else any(reason in c["texts"].get(n, "") for n in cells)
-    row["pytest"] = c["summary"]
-    row["good"] = (row["import"] == "ok" and row["honest"] in ("pass", "n/a") and row["outcome"] == "KILLED"
-                   and row["named_failed"] and row["reason_seen"] in (None, True))
-    return row
-
-
-def run_control(root: pathlib.Path, ctl) -> dict:
-    cid, rel, edits, cells, what, expected = ctl
-    row = {"id": cid, "file": rel, "what": what, "expected": expected, "named_cells": list(cells),
-           "definition_sha256": definition_sha(ctl)}
-    original, counts, ok = _apply(root, rel, edits)
-    row["anchor_counts"] = counts
-    if not ok:
-        return {**row, "outcome": "ANCHOR", "good": False}
-    try:
-        row["import"] = _imports(root)
-        c = _pytest(root, list(cells))
-    finally:
-        (root / rel).write_bytes(original)
-    row.update(MK.classify(c["kinds"], c["failed"], c["errored"]))
-    row["good"] = row["import"] == "ok" and row["outcome"] == expected and bool(row["cells_failed"])
-    return row
-
-
-def campaign() -> dict:
-    t0 = time.time()
-    nodes = sorted(set(named_cells()) | set(honest_nodes()))
-    with tempfile.TemporaryDirectory() as d:
-        root = pathlib.Path(d)
-        _snapshot(root)
-        digests = _digests(root)               # the bytes measured, never the live tree's at write time
-        first = _clean(root, nodes)
-        if not first["ok"]:
-            raise SystemExit(f"CLEAN (first) failed — no mutant is meaningful on a tree whose cells fail: {first}")
-        rows = []
-        for m in MUTANTS:
-            rows.append(run_one(root, m))
-            r = rows[-1]
-            print(f"  {r['id']:42s} {r.get('outcome', ''):12s} good={r['good']} import={r.get('import')} "
-                  f"honest={r.get('honest')} named_failed={r.get('named_failed')} reason={r.get('reason_seen')} "
-                  f"kinds={sorted(set(r.get('cell_kinds', {}).values()))}", flush=True)
-        controls = [run_control(root, k) for k in CONTROLS]
-        last = _clean(root, nodes)
-        if not last["ok"]:
-            raise SystemExit(f"CLEAN (last) failed — the copy changed under the campaign: {last}")
-    head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-    dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=no"],
-                           capture_output=True, text=True).stdout.split("\n")
-    body = {
-        "header": {"spec": "0013", "finding": SUBJECT, "commit": head,
-                   "tracked_changes": sorted(ln[3:] for ln in dirty if ln.strip()),
-                   "python": platform.python_version(), "platform": platform.platform(),
-                   "sqlite": sqlite3.sqlite_version, "digests": digests,
-                   "definitions": {m[0]: definition_sha(m) for m in MUTANTS},
-                   "control_definitions": {k[0]: definition_sha(k) for k in CONTROLS},
-                   "cells": {SUBJECT: named_cells()}, "honest_nodes": honest_nodes(),
-                   "clean": {"first": {k: v for k, v in first.items() if k in ("passed", "of", "ok")},
-                             "last": {k: v for k, v in last.items() if k in ("passed", "of", "ok")}}},
-        "rows": rows,
-        "controls": controls,
-        "summary": {"rows": len(rows), "by_kind": {k: sum(r["kind"] == k for r in rows) for k in ("gate", "tree")},
-                    "killed": sum(r.get("outcome") == "KILLED" for r in rows), "good": sum(r["good"] for r in rows),
-                    "controls": len(controls), "controls_good": sum(k["good"] for k in controls),
-                    "seconds": round(time.time() - t0)},
-    }
-    return {**body, "body_sha256": hashlib.sha256(canonical(body)).hexdigest()}
-
-
-def render(table: dict) -> str:
-    return json.dumps(table, indent=1, sort_keys=True, ensure_ascii=True) + "\n"
+definition_sha = _protocol.definition_sha
+canonical = _protocol.canonical
+render = _protocol.render
+named_cells = SUBJECT_P.named_cells
+honest_nodes = SUBJECT_P.honest_nodes
+_digests = SUBJECT_P.digests
+campaign = SUBJECT_P.campaign
+problems = SUBJECT_P.problems
 
 
 def defined_tests(root: pathlib.Path = ROOT) -> set:
-    tree = ast.parse((root / CELLS_FILE).read_text(encoding="utf-8"))
-    return {n.name for n in tree.body if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")}
-
-
-def problems(path: pathlib.Path = TABLE, root: pathlib.Path = ROOT) -> list:
-    if not path.exists():
-        return [f"{path.name} does not exist — run --write"]
-    try:
-        t = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_strict_pairs)
-    except ValueError as e:
-        return [f"{path.name} is not JSON, or carries a duplicate key: {e}"]
-    out = []
-    body = {k: v for k, v in t.items() if k != "body_sha256"}
-    if hashlib.sha256(canonical(body)).hexdigest() != t.get("body_sha256"):
-        out.append("the table does not match its own body digest (edited after writing)")
-    h = t.get("header", {})
-    if h.get("spec") != "0013" or h.get("finding") != SUBJECT:
-        out.append(f"the table declares {h.get('spec')!r}/{h.get('finding')!r}, not 0013/{SUBJECT}")
-    if h.get("definitions") != {m[0]: definition_sha(m) for m in MUTANTS}:
-        out.append("the mutant definitions differ from the runner's — run --write")
-    if h.get("control_definitions") != {k[0]: definition_sha(k) for k in CONTROLS}:
-        out.append("the control definitions differ from the runner's — run --write")
-    if h.get("cells") != {SUBJECT: named_cells()} or h.get("honest_nodes") != honest_nodes():
-        out.append("the named cells or honest probes differ from the runner's — run --write")
-    clean = h.get("clean", {})
-    if not (clean.get("first", {}).get("ok") is True and clean.get("last", {}).get("ok") is True):
-        out.append(f"the clean runs are not both green: {clean}")
-    live = _digests(root)
-    stale = sorted(f for f in set(live) | set(h.get("digests", {})) if live.get(f) != h.get("digests", {}).get(f))
-    if stale:
-        out.append(f"stale: {stale} — run --write")
-    for m in list(MUTANTS) + [(k[0], None, k[1], k[2]) for k in CONTROLS]:
-        text = (root / m[2]).read_text(encoding="utf-8")
-        for a, _r in m[3]:
-            if text.count(a) != 1:
-                out.append(f"{m[0]}: an anchor occurs {text.count(a)} time(s) in {m[2]}")
-    tests = defined_tests(root)
-    for n in sorted(set(named_cells()) | set(honest_nodes())):
-        if n.split("::")[1].split("[")[0] not in tests:
-            out.append(f"{n} is not a test in {CELLS_FILE}")
-    rows = t.get("rows", [])
-    if [r.get("id") for r in rows] != [m[0] for m in MUTANTS]:
-        out.append("the rows are not one per mutant, in order")
-    for r in rows:
-        recount = MK.classify(r.get("cell_kinds") or {}, r.get("cells_failed") or [], r.get("cells_errored") or [])
-        named = all(n in (r.get("cells_failed") or []) for n in r.get("named_cells") or ["<none>"])
-        if not (r.get("outcome") == "KILLED" == recount["outcome"] and r.get("kill_kind") == recount["kill_kind"]
-                and r.get("import") == "ok" and r.get("honest") in ("pass", "n/a") and r.get("good") is True
-                and named and r.get("named_failed") is True and r.get("reason_seen") in (None, True)
-                and (r.get("reason") is None) == (r.get("reason_seen") is None) and not r.get("cells_errored")):
-            out.append(f"{r.get('id')}: not a good row (outcome {r.get('outcome')}, recounted {recount['outcome']}, "
-                       f"import {r.get('import')}, honest {r.get('honest')}, every named cell failed {named}, "
-                       f"reason seen {r.get('reason_seen')})")
-    ctls = t.get("controls", [])
-    if [k.get("id") for k in ctls] != [k[0] for k in CONTROLS]:
-        out.append("the controls are not one per CONTROLS entry, in order")
-    for k in ctls:
-        recount = MK.classify(k.get("cell_kinds") or {}, k.get("cells_failed") or [], k.get("cells_errored") or [])
-        if not (k.get("good") is True and k.get("outcome") == k.get("expected") == recount["outcome"] != "KILLED"):
-            out.append(f"{k.get('id')}: the classifier's negative control is not good (outcome {k.get('outcome')}, "
-                       f"recounted {recount['outcome']}, expected {k.get('expected')})")
-    return out
+    """The bare test names in CELLS_FILE (this module's callers read names, not `file::name`)."""
+    return {n.split("::")[1] for n in SUBJECT_P.defined_tests(root)}
 
 
 def main() -> int:
-    if "--try" in sys.argv:                     # a development aid: the named mutants on a copy, nothing written
-        ids = sys.argv[sys.argv.index("--try") + 1:]
-        with tempfile.TemporaryDirectory() as d:
-            root = pathlib.Path(d)
-            _snapshot(root)
-            for m in [m for m in MUTANTS if m[0] in ids] + [k for k in CONTROLS if k[0] in ids]:
-                r = run_one(root, m) if len(m) == 8 else run_control(root, m)
-                print(json.dumps({k: r.get(k) for k in ("id", "outcome", "good", "import", "honest", "named_failed",
-                                                        "reason_seen", "cell_kinds", "pytest")}), flush=True)
-        return 0
-    if "--write" in sys.argv:
-        t = campaign()
-        TABLE.parent.mkdir(exist_ok=True)
-        TABLE.write_text(render(t), encoding="utf-8")
-        print(f"wrote {TABLE.relative_to(ROOT)}: {json.dumps(t['summary'])} (body_sha256 {t['body_sha256']})")
-        for k in t["controls"]:
-            print(f"  {k['id']:42s} {k.get('outcome', ''):12s} good={k['good']}")
-        bad = problems()
-        for b in bad:
-            print(f"PROBLEM: {b}")
-        return 0 if not bad else 1
-    bad = problems()
-    for b in bad:
-        print(f"STALE: {b}")
-    if not bad:
-        t = json.loads(TABLE.read_text(encoding="utf-8"), object_pairs_hook=_strict_pairs)
-        print(f"{TABLE.relative_to(ROOT)} current: {json.dumps(t['summary'])} (body_sha256 {t['body_sha256']})")
-    return 1 if bad else 0
+    return SUBJECT_P.main(sys.argv)
 
 
 if __name__ == "__main__":

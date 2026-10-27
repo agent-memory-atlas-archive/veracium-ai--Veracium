@@ -1,0 +1,1470 @@
+{
+ "body_sha256": "ba6a917f499e93d227a5ff2048799519f9b0e2ca5f1a2b94435779017d75d958",
+ "controls": [
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel": "other: TypeError"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel"
+   ],
+   "definition_sha256": "bc3348cb71e3e1d56445e29d0b8f2fda2c72563c6b9bb349a9e9cf530d0ee10d",
+   "expected": "UNCLASSIFIED",
+   "file": "src/veracium/store/schema_version.py",
+   "good": true,
+   "id": "CTRL-unrelated-TypeError",
+   "import": "ok",
+   "kill_kind": null,
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel"
+   ],
+   "outcome": "UNCLASSIFIED",
+   "what": "an UNRELATED TypeError in the refusal text: a cell fails for no reason the row names"
+  }
+ ],
+ "header": {
+  "cells": {
+   "INV-SA1-SA12": [
+    "tests/test_0007_attestation_jobs.py::test_no_inventory_entry_carries_the_rewrite_class",
+    "tests/test_0007_runtime_status.py::test_a_near_miss_that_coincides_with_an_accepted_head_shape_refuses_the_build",
+    "tests/test_0007_runtime_status.py::test_a_record_canonicalised_on_one_side_only_matches_nothing",
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/release_migration.py:_classify_or_intercept]",
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/sqlite.py:__init__]",
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never",
+    "tests/test_0007_runtime_status.py::test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing",
+    "tests/test_0007_runtime_status.py::test_both_kernel_events_carry_the_gates_measurement_as_their_last_field[verified]",
+    "tests/test_0007_runtime_status.py::test_doctor_checks_the_sqlite_build_before_opening_any_store",
+    "tests/test_0007_runtime_status.py::test_doctor_reports_verified_at_info_and_refused_at_error[verified-info]",
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other",
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[an exception]",
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[discrimination]",
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[reproduction]",
+    "tests/test_0007_runtime_status.py::test_every_migration_step_has_a_campaign_matcher_or_a_named_reason",
+    "tests/test_0007_runtime_status.py::test_libc_comes_from_pt_interp_never_from_libc_ver",
+    "tests/test_0007_runtime_status.py::test_machine_is_read_from_the_process_never_a_runner_label",
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]",
+    "tests/test_0007_runtime_status.py::test_reproduction_compares_the_complete_manifestation_not_the_digest_alone",
+    "tests/test_0007_runtime_status.py::test_the_compile_options_come_from_the_probe_connection",
+    "tests/test_0007_runtime_status.py::test_the_compile_options_digest_ignores_the_order_the_build_returns_them_in",
+    "tests/test_0007_runtime_status.py::test_the_machine_canonicaliser_is_a_closed_two_entry_alias_map[i686-i686]",
+    "tests/test_0007_runtime_status.py::test_the_near_miss_set_covers_every_required_kind_and_each_is_the_head_with_one_change",
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel",
+    "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_stamp_refuses_at_the_stamp",
+    "tests/test_0013_sa10_gate.py::test_the_gate_passes_the_clean_ladder_on_every_path_and_entry",
+    "tests/test_schema_model.py::test_every_accepted_manifestation_comes_from_a_closed_set_of_sources",
+    "tests/test_store_versioning.py::test_inv_sa12_an_unreadable_platform_field_is_at_most_verified",
+    "tests/test_store_versioning.py::test_inv_sa1_an_attested_identity_does_not_skip_verification",
+    "tests/test_store_versioning.py::test_inv_sa4_a_build_that_cannot_tell_a_near_miss_apart_is_refused",
+    "tests/test_store_versioning.py::test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact"
+   ]
+  },
+  "clean": {
+   "first": {
+    "of": 33,
+    "ok": true,
+    "passed": 33
+   },
+   "last": {
+    "of": 33,
+    "ok": true,
+    "passed": 33
+   }
+  },
+  "commit": "e90515d8ebd7c2e36ef5b0b86e66c2064fda8ce0",
+  "control_definitions": {
+   "CTRL-unrelated-TypeError": "bc3348cb71e3e1d56445e29d0b8f2fda2c72563c6b9bb349a9e9cf530d0ee10d"
+  },
+  "definitions": {
+   "sa1-open-decides-shape-first": "295e9d05d8eff257ee2d547a4c8795a4b08a1dc91276916c8a67733a4cda39bc",
+   "sa1-preflight-decides-shape-first": "307372c57c0c52386ca3c9757a78ea9d0df8f7d50b8b4b59a827ec4095ef5308",
+   "sa1-skip-verification-when-attested": "99397e8601ac528e6aa99744921312c43b41438163539f11b4a07a1cb65a485f",
+   "sa10-a-step-with-no-matcher": "b917699aa5d161bbed73603479898aac51d7012da5717493b038df6d4f867ee3",
+   "sa10-a-vacuous-postcondition": "8b7622e2d503f33208651b65ee77ac9a6d5b353638d2a1bd953ea445bf6900d7",
+   "sa10-commit-before-revalidating": "a2fec9de94e02c9b6e567ce7e88f116f46d15ac6085b9a8f84fe025140b1c218",
+   "sa10-narrow-the-site-scope": "01bc1cc0538aba5387120b39c054b1f5d3d84d2c3ef9bd34277738099c62ec0e",
+   "sa10-skip-the-byte-match-unattested": "8ed4edcf5c931028b4652dc95a0ecfce512374a50e8503c983f52ffd2060d917",
+   "sa10-verified-takes-fewer-checks": "68a8da332b283acdb64dc0fdc600791ea605eae12719aad6243267122e39b29a",
+   "sa11-attested-on-a-verified-build": "bc68e7398ec97f1a2b622152f3bd26d4adcf227501096799e52d5a73586f2e1f",
+   "sa11-omit-the-key": "204cac7ed3edddf9bbd0304c4aa602501728aa317b7e46ceccd6898d438ef4b8",
+   "sa12-canonicalise-one-side": "577dff483540b89c56df5caa2fdcd2696477fa38aeeacd62ddaeb1a41786456a",
+   "sa12-drop-libc": "d03d60682ceb9475c1660f092b2f71e0e2e1380ed77a5e48970f85e9298de186",
+   "sa12-drop-machine": "a1b7914b367b3c8c0048e851cc1297723f8c8d4e852ee1a14682df639e064c8b",
+   "sa12-drop-system": "323e1685e40cff3027ed3fca92c933b5462bf462e2a779c709b54d7bc945fd92",
+   "sa12-libc-from-libc-ver": "d1bdd7c749850324985ca4bdbe2288334f3f97e2ad99dc03c31b757065a44b6c",
+   "sa12-machine-from-the-runner-label": "6f8626e57dcb324077686e8d7a2f41acf38e758f4855dafb46dfee28eead378f",
+   "sa12-omit-compile-options": "c3b58a1b04a8f90ba1d3c7758b8c7c38436b55f47ff1830ce24760ca037e6dab",
+   "sa12-options-from-another-read": "dfbe5e9cf23ec1632f2ea8939eb5787e463951e94356fbd270a4b480c12ded0d",
+   "sa12-options-in-returned-order": "cedd0d138d5bec40b4b2f2a6dfd53e454746dc56c4e05756994b8b4b296f2f35",
+   "sa12-unreadable-matches": "8347e530024ccd8212f467769f1b170fb9e0da3c2b6902707ef5ea21d63a1c32",
+   "sa12-version-and-source-id-alone": "5f44f3e9308c472d17393fc3d7d0cb93a8789b18e6badf87b22d09ef08f75c7a",
+   "sa12-widen-the-alias-map": "21355cc241767675317d2abbba157b4d5c2ad0e339e10a23f34cda06daaefcfb",
+   "sa2-exception-verified": "afb97dbf0bc27443e3ef220ceeeae25637c7367f49e28c56ed26d001a7bfb662",
+   "sa2-probes-alone": "7c46d057fbc76bda95fd5c1b698a15feb3c09c93cd4712211772ca9bb34d329e",
+   "sa2-reproduction-alone": "b1c430a2f32bf10fac3cd2723885721b845c199380233b100237208cac2a44b9",
+   "sa3-against-own-manifestation": "2475f5b662d5c12fa0b35ad99faa18b6f20a5aaf418b29881973c0b99ed28230",
+   "sa3-digests-only": "01b36fd332ef14436f0be4ace4ce1a5449b3ba54a6e4be6c0254a777131cc9d1",
+   "sa4-drop-a-near-miss": "2e17c27c096e4dd7c2131916b4efb25fa4f274c09cf76aacd346a320989eb889",
+   "sa4-equal-near-miss-passes": "48340a3ca238773fa9ca355624cec7692e87a0494828b71d90e8ef444204fef4",
+   "sa5-the-withdrawn-union": "7569c22234ce0d05b8f803ecbccf55764d7eeba857585e94a8c14630bcbd1b9d",
+   "sa6-a-rewrite-class-skip-left": "d772049032aef914da663cfb9fa2addc93c538e5cd8242b34e7e94760606790e",
+   "sa6-accept-a-conflicting-pair": "87c33ac6a8e5aeffb016c6e5c658113fcd0cf5b33419409561100611da6cd568",
+   "sa6-refuse-a-second-key": "9251ef69ac42b14e67e14ab456a2ff7241396330b3e74037001482d0c6ec2cdf",
+   "sa7-never-warn": "070fe449ef30ef4e20af0cc0416661ecab039f4247b9ec280c641b3010d0e1ee",
+   "sa7-warn-on-an-attested-build": "772b4934575f6a2f5d04491abb0084226f25032ad20993eea3d67378192182c7",
+   "sa7-warn-on-every-open": "f795e89ef7403dd243dcff1ef31f410f9fe8ee8cbc8bee24514e76c3394b34e9",
+   "sa8-a-file-outside-the-wheel": "a85634a091b24d3ac47fb0448824d7799494d8979c70fd66c8a6062ec71ac0cc",
+   "sa8-omit-the-step": "4c1d55ddad87248111878d8092cc8fbb97bb1d1bc0088dcdace44d231dd04805",
+   "sa9-report-after-opening": "6ee30adfa397e57300268e74bbe6f7aa2e172302926dfe9bcca4887a7589a130",
+   "sa9-verified-at-warn": "05e916fff141f58cd9d42aa32bedd441cc2e6700b28e029e31605c974ef6f095"
+  },
+  "digests": {
+   "specs/0007-store-schema-versioning.md": "dd2378545d194051e1dee1500440f519bb2ab3ecf68b2dc53f4a3931c92a28ad",
+   "specs/0013-store-migrations.md": "f41fc7331dab06b630c6340dbd82be37eb1ca1b8fbcc70e81d2808957ee74c7b",
+   "specs/evidence/0007/sa_mutants.py": "e822f5710b834dc6701b0498744654e573be1722107ece49c0a4fa28fe2a85f9",
+   "specs/evidence/0013/pa1_campaign.py": "1f381ba1f29979a598ef5cc666aa9b2a32b727402d8ce598e8a01e32854781c3",
+   "specs/evidence/0013/sa10_gate.py": "3d255cdfb8b2883bca3b7a34a9a31357cf830386a3532fb523ae27e7a0ff5146",
+   "specs/evidence/mutation_kinds.py": "46d4802f8ef82e797fa285dab7afde3581db230761c5377c826ce6cdc275c8ad",
+   "specs/evidence/mutation_protocol.py": "69b2aa50b14d9bc190a6dac42ac483289316991fb2f5ef723f3604be1acce9e0",
+   "specs/schema_evidence.py": "8f894a38e14fc5b123434987acfd4a1a733ab086fd3c5caece57b7d6cc71c476",
+   "specs/skip_inventory.py": "c2e8ad1469ab58df38eff01130b1039b3c203f722fef07ed0cb2d1f886fddf39",
+   "src/veracium/doctor.py": "88d68f4dbdf36d2f8a9b915b5b10ac17b2ef92e42faa167cd9000dc26f096da5",
+   "src/veracium/store/migration.py": "be5542418a560310b45af5555602b10f2e8cc6cb161730be45c6101495e6dc42",
+   "src/veracium/store/near_misses.py": "0fd9a18b22fc50c6c576610b714538ff0a1753546d6f15c1cb1b924b1623e07e",
+   "src/veracium/store/release_migration.py": "0e750325e0347d02dfea19dedecdc6c3bd0bce2733a25556f8df52a7e83f1ce4",
+   "src/veracium/store/schema_version.py": "e27ef0274eefec11ebae8ee1ea2ffa3c9511a42d09f184f54668f5badd2584f5",
+   "tests/test_0007_attestation_jobs.py": "80018a7d9d2e8cffddf2550fc43380a7a4529ad283d68d1e93c8cff98804ee26",
+   "tests/test_0007_attestation_writer.py": "396ff68c19787bf55477a3c861985ea91576ef2c664d7040f36bf9cb9532559c",
+   "tests/test_0007_runtime_status.py": "8a132361f5a11c236a2eb21784e6ae810fde511e2c3c73f139fc8c77a64f64e8",
+   "tests/test_0013_pa1_campaign_cells.py": "0df0af6e7812e379fab5c64f8c72528f015a114baeee652bd83350f25ec961b5",
+   "tests/test_0013_sa10_gate.py": "9fafb88045f4b632e69ea407761ff081a3988ac2a08a06a1b48dab967cf9c5c6",
+   "tests/test_schema_model.py": "3c20647e07ed47240f42553846d25f15671343209d89527552b7f041907a3b0e",
+   "tests/test_store_versioning.py": "cd94f3d5da0b7ad4ecadebeb0f87579b441c3bf6767f45d985317c4bf1097152"
+  },
+  "finding": "INV-SA1-SA12",
+  "honest_nodes": [],
+  "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
+  "python": "3.14.7",
+  "spec": "0007",
+  "sqlite": "3.45.1",
+  "tracked_changes": [
+   "specs/attestation_aggregate.py",
+   "specs/attestation_job.py",
+   "specs/evidence/0013/sa10_mutants.py",
+   "tests/test_0007_attestation_jobs.py",
+   "tests/test_0007_attestation_writer.py",
+   "tests/test_0007_runtime_status.py",
+   "tests/test_spec_gate.py"
+  ]
+ },
+ "rows": [
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_store_versioning.py::test_inv_sa1_an_attested_identity_does_not_skip_verification": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_store_versioning.py::test_inv_sa1_an_attested_identity_does_not_skip_verification"
+   ],
+   "definition_sha256": "99397e8601ac528e6aa99744921312c43b41438163539f11b4a07a1cb65a485f",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa1-skip-verification-when-attested",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_store_versioning.py::test_inv_sa1_an_attested_identity_does_not_skip_verification"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.52s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a matching attestation record short-circuits verification"
+  },
+  {
+   "anchor_counts": [
+    1,
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/sqlite.py:__init__]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/sqlite.py:__init__]"
+   ],
+   "definition_sha256": "295e9d05d8eff257ee2d547a4c8795a4b08a1dc91276916c8a67733a4cda39bc",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa1-open-decides-shape-first",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/sqlite.py:__init__]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.59s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "open_versioned decides the version (invalid, newer) before measuring the build"
+  },
+  {
+   "anchor_counts": [
+    1,
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/release_migration.py:_classify_or_intercept]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/release_migration.py:_classify_or_intercept]"
+   ],
+   "definition_sha256": "307372c57c0c52386ca3c9757a78ea9d0df8f7d50b8b4b59a827ec4095ef5308",
+   "file": "src/veracium/store/release_migration.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa1-preflight-decides-shape-first",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/release_migration.py:_classify_or_intercept]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.58s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the release preflight decides the version before measuring the build"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_near_miss_that_coincides_with_an_accepted_head_shape_refuses_the_build": "assertion",
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[discrimination]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_near_miss_that_coincides_with_an_accepted_head_shape_refuses_the_build",
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[discrimination]"
+   ],
+   "definition_sha256": "b1c430a2f32bf10fac3cd2723885721b845c199380233b100237208cac2a44b9",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa2-reproduction-alone",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[discrimination]",
+    "tests/test_0007_runtime_status.py::test_a_near_miss_that_coincides_with_an_accepted_head_shape_refuses_the_build"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 0.69s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "accept on reproduction alone: discrimination dropped"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[reproduction]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[reproduction]"
+   ],
+   "definition_sha256": "7c46d057fbc76bda95fd5c1b698a15feb3c09c93cd4712211772ca9bb34d329e",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa2-probes-alone",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[reproduction]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.60s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "accept on probes alone: reproduction and discrimination dropped"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[an exception]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[an exception]"
+   ],
+   "definition_sha256": "afb97dbf0bc27443e3ef220ceeeae25637c7367f49e28c56ed26d001a7bfb662",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa2-exception-verified",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[an exception]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.54s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "an exception inside verification returns verified"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_reproduction_compares_the_complete_manifestation_not_the_digest_alone": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_reproduction_compares_the_complete_manifestation_not_the_digest_alone"
+   ],
+   "definition_sha256": "01b36fd332ef14436f0be4ace4ce1a5449b3ba54a6e4be6c0254a777131cc9d1",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa3-digests-only",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_reproduction_compares_the_complete_manifestation_not_the_digest_alone"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.63s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "reproduction compares digests only (S69's rebuildable-index hole)"
+  },
+  {
+   "anchor_counts": [
+    1,
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[reproduction]": "assertion",
+    "tests/test_0007_runtime_status.py::test_reproduction_compares_the_complete_manifestation_not_the_digest_alone": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[reproduction]",
+    "tests/test_0007_runtime_status.py::test_reproduction_compares_the_complete_manifestation_not_the_digest_alone"
+   ],
+   "definition_sha256": "2475f5b662d5c12fa0b35ad99faa18b6f20a5aaf418b29881973c0b99ed28230",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa3-against-own-manifestation",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_verification_step_refuses_and_names_itself[reproduction]",
+    "tests/test_0007_runtime_status.py::test_reproduction_compares_the_complete_manifestation_not_the_digest_alone"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 0.73s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "reproduction compares the build against its own manifestation, not the accepted evidence"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_the_near_miss_set_covers_every_required_kind_and_each_is_the_head_with_one_change": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_the_near_miss_set_covers_every_required_kind_and_each_is_the_head_with_one_change"
+   ],
+   "definition_sha256": "2e17c27c096e4dd7c2131916b4efb25fa4f274c09cf76aacd346a320989eb889",
+   "file": "src/veracium/store/near_misses.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa4-drop-a-near-miss",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_the_near_miss_set_covers_every_required_kind_and_each_is_the_head_with_one_change"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.53s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "one required near-miss dropped from the set"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_near_miss_that_coincides_with_an_accepted_head_shape_refuses_the_build": "assertion",
+    "tests/test_store_versioning.py::test_inv_sa4_a_build_that_cannot_tell_a_near_miss_apart_is_refused": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_near_miss_that_coincides_with_an_accepted_head_shape_refuses_the_build",
+    "tests/test_store_versioning.py::test_inv_sa4_a_build_that_cannot_tell_a_near_miss_apart_is_refused"
+   ],
+   "definition_sha256": "48340a3ca238773fa9ca355624cec7692e87a0494828b71d90e8ef444204fef4",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa4-equal-near-miss-passes",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_a_near_miss_that_coincides_with_an_accepted_head_shape_refuses_the_build",
+    "tests/test_store_versioning.py::test_inv_sa4_a_build_that_cannot_tell_a_near_miss_apart_is_refused"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 0.77s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a near-miss equal to an accepted head shape passes"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_schema_model.py::test_every_accepted_manifestation_comes_from_a_closed_set_of_sources": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_schema_model.py::test_every_accepted_manifestation_comes_from_a_closed_set_of_sources"
+   ],
+   "definition_sha256": "7569c22234ce0d05b8f803ecbccf55764d7eeba857585e94a8c14630bcbd1b9d",
+   "file": "specs/schema_evidence.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa5-the-withdrawn-union",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_schema_model.py::test_every_accepted_manifestation_comes_from_a_closed_set_of_sources"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.55s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a runtime record's manifestation joins the accepted set (the withdrawn union's entry form)"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing"
+   ],
+   "definition_sha256": "9251ef69ac42b14e67e14ab456a2ff7241396330b3e74037001482d0c6ec2cdf",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa6-refuse-a-second-key",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.63s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "S66's single-active rule resurrected: a second key poisons the artifact"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_store_versioning.py::test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_store_versioning.py::test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact"
+   ],
+   "definition_sha256": "87c33ac6a8e5aeffb016c6e5c658113fcd0cf5b33419409561100611da6cd568",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa6-accept-a-conflicting-pair",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_store_versioning.py::test_inv_sa6_one_key_with_two_evidences_poisons_the_artifact"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.53s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "one key with different evidence is accepted"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_attestation_jobs.py::test_no_inventory_entry_carries_the_rewrite_class": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_attestation_jobs.py::test_no_inventory_entry_carries_the_rewrite_class"
+   ],
+   "definition_sha256": "d772049032aef914da663cfb9fa2addc93c538e5cd8242b34e7e94760606790e",
+   "file": "specs/skip_inventory.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa6-a-rewrite-class-skip-left",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_attestation_jobs.py::test_no_inventory_entry_carries_the_rewrite_class"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.51s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "an in-suite skip left in the rewrite class"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never"
+   ],
+   "definition_sha256": "f795e89ef7403dd243dcff1ef31f410f9fe8ee8cbc8bee24514e76c3394b34e9",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa7-warn-on-every-open",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.72s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "warn on every open"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never"
+   ],
+   "definition_sha256": "772b4934575f6a2f5d04491abb0084226f25032ad20993eea3d67378192182c7",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa7-warn-on-an-attested-build",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.83s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "warn on an attested build"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never"
+   ],
+   "definition_sha256": "070fe449ef30ef4e20af0cc0416661ecab039f4247b9ec280c641b3010d0e1ee",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa7-never-warn",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_a_verified_open_warns_once_per_process_and_an_attested_open_never"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.74s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "never warn"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel"
+   ],
+   "definition_sha256": "a85634a091b24d3ac47fb0448824d7799494d8979c70fd66c8a6062ec71ac0cc",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa8-a-file-outside-the-wheel",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.55s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the refusal text names schema_evidence.py"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel"
+   ],
+   "definition_sha256": "4c1d55ddad87248111878d8092cc8fbb97bb1d1bc0088dcdace44d231dd04805",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa8-omit-the-step",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_the_refusal_names_the_first_failing_step_and_no_file_outside_the_wheel"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.51s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the refusal text omits the failing step"
+  },
+  {
+   "anchor_counts": [
+    1,
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_doctor_checks_the_sqlite_build_before_opening_any_store": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_doctor_checks_the_sqlite_build_before_opening_any_store"
+   ],
+   "definition_sha256": "6ee30adfa397e57300268e74bbe6f7aa2e172302926dfe9bcca4887a7589a130",
+   "file": "src/veracium/doctor.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa9-report-after-opening",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_doctor_checks_the_sqlite_build_before_opening_any_store"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.57s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "doctor reports the SQLite status after opening a store"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_doctor_reports_verified_at_info_and_refused_at_error[verified-info]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_doctor_reports_verified_at_info_and_refused_at_error[verified-info]"
+   ],
+   "definition_sha256": "05e916fff141f58cd9d42aa32bedd441cc2e6700b28e029e31605c974ef6f095",
+   "file": "src/veracium/doctor.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa9-verified-at-warn",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_doctor_reports_verified_at_info_and_refused_at_error[verified-info]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.64s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "doctor reports a verified build at warn (doctor then exits 1 for every uv user)"
+  },
+  {
+   "anchor_counts": [
+    1,
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_both_kernel_events_carry_the_gates_measurement_as_their_last_field[verified]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_both_kernel_events_carry_the_gates_measurement_as_their_last_field[verified]"
+   ],
+   "definition_sha256": "204cac7ed3edddf9bbd0304c4aa602501728aa317b7e46ceccd6898d438ef4b8",
+   "file": "src/veracium/store/migration.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa11-omit-the-key",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_both_kernel_events_carry_the_gates_measurement_as_their_last_field[verified]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.57s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the attempted and committed events carry no runtime"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_both_kernel_events_carry_the_gates_measurement_as_their_last_field[verified]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_both_kernel_events_carry_the_gates_measurement_as_their_last_field[verified]"
+   ],
+   "definition_sha256": "bc68e7398ec97f1a2b622152f3bd26d4adcf227501096799e52d5a73586f2e1f",
+   "file": "src/veracium/store/migration.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa11-attested-on-a-verified-build",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_both_kernel_events_carry_the_gates_measurement_as_their_last_field[verified]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed, 1 warning in 0.66s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a verified build's migration records attested"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "definition_sha256": "5f44f3e9308c472d17393fc3d7d0cb93a8789b18e6badf87b22d09ef08f75c7a",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-version-and-source-id-alone",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.54s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "match on version and source id alone"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "definition_sha256": "c3b58a1b04a8f90ba1d3c7758b8c7c38436b55f47ff1830ce24760ca037e6dab",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-omit-compile-options",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.68s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the compile-options digest left out of the key"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_the_compile_options_digest_ignores_the_order_the_build_returns_them_in": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_the_compile_options_digest_ignores_the_order_the_build_returns_them_in"
+   ],
+   "definition_sha256": "cedd0d138d5bec40b4b2f2a6dfd53e454746dc56c4e05756994b8b4b296f2f35",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-options-in-returned-order",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_the_compile_options_digest_ignores_the_order_the_build_returns_them_in"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.56s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the options digested in the order the build returns them"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_the_compile_options_come_from_the_probe_connection": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_the_compile_options_come_from_the_probe_connection"
+   ],
+   "definition_sha256": "dfbe5e9cf23ec1632f2ea8939eb5787e463951e94356fbd270a4b480c12ded0d",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-options-from-another-read",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_the_compile_options_come_from_the_probe_connection"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.54s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the options read somewhere other than the one probe of the store's own library"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "definition_sha256": "a1b7914b367b3c8c0048e851cc1297723f8c8d4e852ee1a14682df639e064c8b",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-drop-machine",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.52s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "machine dropped from the key"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "definition_sha256": "323e1685e40cff3027ed3fca92c933b5462bf462e2a779c709b54d7bc945fd92",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-drop-system",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.83s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "system dropped from the key"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "definition_sha256": "d03d60682ceb9475c1660f092b2f71e0e2e1380ed77a5e48970f85e9298de186",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-drop-libc",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_each_key_field_separates_two_records_that_agree_on_every_other"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.64s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "libc dropped from the key"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_libc_comes_from_pt_interp_never_from_libc_ver": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_libc_comes_from_pt_interp_never_from_libc_ver"
+   ],
+   "definition_sha256": "d1bdd7c749850324985ca4bdbe2288334f3f97e2ad99dc03c31b757065a44b6c",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-libc-from-libc-ver",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_libc_comes_from_pt_interp_never_from_libc_ver"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.55s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "libc read from platform.libc_ver()"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_machine_is_read_from_the_process_never_a_runner_label": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_machine_is_read_from_the_process_never_a_runner_label"
+   ],
+   "definition_sha256": "6f8626e57dcb324077686e8d7a2f41acf38e758f4855dafb46dfee28eead378f",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-machine-from-the-runner-label",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_machine_is_read_from_the_process_never_a_runner_label"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.54s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "machine taken from the CI runner's label"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_record_canonicalised_on_one_side_only_matches_nothing": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_record_canonicalised_on_one_side_only_matches_nothing"
+   ],
+   "definition_sha256": "577dff483540b89c56df5caa2fdcd2696477fa38aeeacd62ddaeb1a41786456a",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-canonicalise-one-side",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_a_record_canonicalised_on_one_side_only_matches_nothing"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.52s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the running build's machine is not canonicalised (a record's is)"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_the_machine_canonicaliser_is_a_closed_two_entry_alias_map[i686-i686]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_the_machine_canonicaliser_is_a_closed_two_entry_alias_map[i686-i686]"
+   ],
+   "definition_sha256": "21355cc241767675317d2abbba157b4d5c2ad0e339e10a23f34cda06daaefcfb",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-widen-the-alias-map",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_the_machine_canonicaliser_is_a_closed_two_entry_alias_map[i686-i686]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.53s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "i686 aliased to x86_64"
+  },
+  {
+   "anchor_counts": [
+    1,
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_store_versioning.py::test_inv_sa12_an_unreadable_platform_field_is_at_most_verified": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_store_versioning.py::test_inv_sa12_an_unreadable_platform_field_is_at_most_verified"
+   ],
+   "definition_sha256": "8347e530024ccd8212f467769f1b170fb9e0da3c2b6902707ef5ea21d63a1c32",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa12-unreadable-matches",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_store_versioning.py::test_inv_sa12_an_unreadable_platform_field_is_at_most_verified"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.59s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "an unreadable key field matches a record carrying the same None"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_gate_passes_the_clean_ladder_on_every_path_and_entry": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_gate_passes_the_clean_ladder_on_every_path_and_entry"
+   ],
+   "definition_sha256": "01bc1cc0538aba5387120b39c054b1f5d3d84d2c3ef9bd34277738099c62ec0e",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa10-narrow-the-site-scope",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_gate_passes_the_clean_ladder_on_every_path_and_entry"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed, 1 warning in 13.90s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the gate attributes sites in migration.py only: it then refuses a correct tree"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_stamp_refuses_at_the_stamp": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_stamp_refuses_at_the_stamp"
+   ],
+   "definition_sha256": "8b7622e2d503f33208651b65ee77ac9a6d5b353638d2a1bd953ea445bf6900d7",
+   "file": "src/veracium/store/migration.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa10-a-vacuous-postcondition",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0013_pa1_campaign_cells.py::test_cell_a_perturbed_stamp_refuses_at_the_stamp"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed, 1 warning in 0.65s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the stamp's postcondition made vacuous: its problems are always empty"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_every_migration_step_has_a_campaign_matcher_or_a_named_reason": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_every_migration_step_has_a_campaign_matcher_or_a_named_reason"
+   ],
+   "definition_sha256": "b917699aa5d161bbed73603479898aac51d7012da5717493b038df6d4f867ee3",
+   "file": "src/veracium/store/migration.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa10-a-step-with-no-matcher",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_every_migration_step_has_a_campaign_matcher_or_a_named_reason"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.57s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a STEP_* name the campaign has no matcher for"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]": "assertion",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]": "expected-refusal-missing"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]"
+   ],
+   "definition_sha256": "8ed4edcf5c931028b4652dc95a0ecfce512374a50e8503c983f52ffd2060d917",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa10-skip-the-byte-match-unattested",
+   "import": "ok",
+   "kill_kind": "assertion+expected-refusal-missing",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed, 2 warnings in 0.80s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a verified build's migration skips the revalidation byte-match"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]": "assertion",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]"
+   ],
+   "definition_sha256": "a2fec9de94e02c9b6e567ce7e88f116f46d15ac6085b9a8f84fe025140b1c218",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa10-commit-before-revalidating",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed, 1 warning in 0.76s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the migration commits before it revalidates"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]"
+   ],
+   "definition_sha256": "68a8da332b283acdb64dc0fdc600791ea605eae12719aad6243267122e39b29a",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "INV-SA1-SA12",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "sa10-verified-takes-fewer-checks",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed, 1 warning in 0.71s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a verified build revalidates without the stamp requirement"
+  }
+ ],
+ "summary": {
+  "by_kind": {
+   "product": 41
+  },
+  "controls": 1,
+  "controls_good": 1,
+  "good": 41,
+  "killed": 41,
+  "rows": 41,
+  "seconds": 110
+ }
+}

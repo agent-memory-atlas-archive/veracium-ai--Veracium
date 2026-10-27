@@ -6,7 +6,8 @@ it, with this build's record when there is one, to `--out`.
     $PY specs/attestation_job.py --route R --runner-image I --expect-prefix P --run-id N --job-id K --out F
 
 In order, stopping at the first step that decides (research's stage-1 read of I5, BLOCKING 1–4):
-  0. the row is the route it claims: Python >= 3.14, and realpath(sys.base_prefix) lies under the row's declared
+  0. the job is non-root (else **wrong-job-state**, red: INV-SA6's job-state assertion), and the row is the route it
+     claims: Python >= 3.14, and realpath(sys.base_prefix) lies under the row's declared
      `--expect-prefix`; else **wrong-interpreter** (red);
   1. §4b verification, `sv.runtime_status()`: `refused` is **refused**, with the failing step. That is a census row, not a
      record, and the job exits 0 ("a job whose build fails verification records that result, it does not fail
@@ -51,7 +52,7 @@ import attestation_suite  # noqa: E402
 import skip_inventory  # noqa: E402
 
 OUTCOME_EXIT = {"evidence": 0, "refused": 0, "excluded": 0,
-                "wrong-interpreter": 1, "evidence-mismatch": 1, "suite-mismatch": 1, "unmapped-skip": 1,
+                "wrong-interpreter": 1, "wrong-job-state": 1, "evidence-mismatch": 1, "suite-mismatch": 1, "unmapped-skip": 1,
                 "failed-tests": 1, "confinement-failed": 1}
 """The CLOSED outcome set, and each one's exit code. (`unavailable`, an interpreter that could not be installed, is
 the workflow's: no job script ran, so the aggregator names the row from the workflow's matrix.)"""
@@ -146,8 +147,17 @@ def _head() -> str:
     return aw.run_git(["rev-parse", "HEAD"], ROOT)[1]
 
 
+def job_state_problem(euid=None) -> str | None:
+    """INV-SA6's job-state assertion (§4d job:runs): the attestation job runs NON-root, so the geteuid entries cannot
+    fire. A root job would skip the read-only-store tests and attest a suite it did not run, and two jobs of one key
+    (one root, one not) would read as "the key does not identify the build". run_row.sh refuses root too; this is
+    the check a matrix can mutate."""
+    euid = (os.geteuid() if hasattr(os, "geteuid") else None) if euid is None else euid
+    return "the attestation job is running as root (uid 0): it must run as a non-root user" if euid == 0 else None
+
+
 def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_suite=_run_suite, probes=None,
-           head=_head) -> dict:
+           head=_head, euid=None) -> dict:
     """The job's closed result. Every seam is injectable, so each outcome is a cell."""
     from veracium.store import schema_version as sv
     import attestation_writer as aw
@@ -159,6 +169,9 @@ def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_sui
         bad = interpreter_problem(args.expect_prefix)
         if bad:
             raise Decided("wrong-interpreter", bad)
+        bad = job_state_problem(euid)
+        if bad:
+            raise Decided("wrong-job-state", bad)
         result["key"] = list(sv.attestation_key(sv.attestation_identity()) or []) or None
         if st.status == "refused":
             raise Decided("refused", st.reason or "refused")

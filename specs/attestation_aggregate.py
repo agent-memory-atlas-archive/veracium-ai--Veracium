@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT / "specs"))
 
 from veracium.store import schema_version as sv  # noqa: E402
 
-FAILING = ("failed-tests", "evidence-mismatch", "confinement-failed")
+FAILING = ("failed-tests", "evidence-mismatch", "confinement-failed", "wrong-job-state")
 """Red job outcomes that still measured a key: members of their key's group, never a record (§4d step 3)."""
 
 

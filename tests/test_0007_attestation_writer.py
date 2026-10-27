@@ -127,6 +127,18 @@ def test_the_same_commit_with_equal_evidence_is_idempotent(tmp_path):
     assert path.read_bytes() == before
 
 
+def test_a_same_commit_re_record_from_another_job_is_idempotent():
+    """INV-SA6 (v19): ordering writes must not make provenance a conflict field. The same commit and equal evidence,
+    measured by ANOTHER job of the same run, is idempotent, not "different evidence"."""
+    other_job = record()
+    other_job["provenance"] = [dict(other_job["provenance"][0], route="deadsnakes", job_id=2)]
+    try:
+        out, outcome = aw.merged([record()], other_job, git=fake_git())
+    except aw.AttestationRefused as exc:                      # the defect itself: provenance read as evidence
+        pytest.fail(f"another job's provenance was read as different evidence: {exc}")
+    assert outcome == "idempotent"
+
+
 def test_an_ancestor_replaces_and_every_other_key_is_kept():
     """10(d)'s replacement-by-key, inverted from the legacy writer: an ancestor's record of THIS key is replaced; a
     record of another key (here another machine) is kept byte for byte."""
@@ -443,6 +455,14 @@ MUTANTS = {
         [(ARM, {"arm": "--is-ancestor unanswerable"}), ("test_real_an_unknown_commit_is_unanswerable_not_older", {})]),
     "any nonzero reverse read as 'sibling'": ([("        if rrc == 1:\n", "        if rrc != 0:\n")],
                                               [(ARM, {"arm": "the reverse unanswerable"})]),
+    "replace whatever the commit order (v18's behaviour, INV-SA6)": (
+        [('    rc, _ = git(["merge-base", "--is-ancestor", old_commit, new_commit], repo)\n    if rc == 0:',
+          '    rc = 0\n    if rc == 0:')],
+        [("test_real_an_older_writing_commit_refuses", {}), ("test_real_a_sibling_branch_refuses", {})]),
+    "compare provenance as evidence when ordering writes (INV-SA6)": (
+        [('    evidence = lambda r: (r["result_digest"], json.dumps(r["confinement"], sort_keys=True))   # noqa: E731',
+          '    evidence = lambda r: (r["result_digest"], json.dumps(r["confinement"], sort_keys=True), json.dumps(r["provenance"]))   # noqa: E731')],
+        [("test_a_same_commit_re_record_from_another_job_is_idempotent", {})]),
     "a claimed commit accepted": ([("    if rc != 0 or head != commit:\n", "    if rc != 0:\n")],
                                   [(ARM, {"arm": "the record's commit is not HEAD"}), ("test_real_the_records_commit_must_be_head", {})]),
     "fixture commit mark dropped": ([('j["commit"] == FIXTURE_COMMIT or ', "")],

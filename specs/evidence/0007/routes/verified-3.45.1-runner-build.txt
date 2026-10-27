@@ -1,0 +1,24 @@
+# 0007 I6 real route, 2026-10-27T02:52Z, tree e90515d + I6 working changes
+# command: <python> specs/evidence/0007/routes/route_probe.py   (python: python-3.14.7-gh)
+SQLite 3.45.1 (b82257ccalt1, x86_64, Linux, glibc) is not one of Veracium's attested builds. Veracium verified this build when opening the store: it reproduces all 16 schema versions and tells apart all 6 near-miss checks. Its CI has not run the full schema suite on this build. `veracium doctor` lists the attested builds.
+{
+ "python": "3.14.7",
+ "base_install": "python-3.14.7-gh",
+ "sqlite": "3.45.1",
+ "status": "verified",
+ "reason": null,
+ "key_readable": true,
+ "unreadable": [],
+ "doctor_runtime": [
+  [
+   "info",
+   "this interpreter's SQLite is not an attested build; it was verified on this run (it reproduces every schema version and tells apart every ne"
+  ]
+ ],
+ "opens": [
+  "opened",
+  "opened"
+ ],
+ "unattested_warnings": 1
+}
+# exit 0
