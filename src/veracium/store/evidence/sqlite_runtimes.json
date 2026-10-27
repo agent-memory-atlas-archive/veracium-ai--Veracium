@@ -31,28 +31,28 @@
       "manifest_algorithm": 13,
       "provenance": [
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 15,
           "route": "deadsnakes",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "ubuntu-24.04"
         },
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 13,
           "route": "pyenv",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "ubuntu-24.04"
         },
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 0,
           "route": "setup-python",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "ubuntu-24.04"
         }
       ],
-      "result_digest": "1d9bb9eab397639a2c20d26a276df6af07bcb5e842221ac005a967990587b294",
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
       "schema_version": 16,
       "source_id": "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1",
       "sqlite_version": "3.45.1",
@@ -89,14 +89,58 @@
       "manifest_algorithm": 13,
       "provenance": [
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 21,
           "route": "distro",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "rhel-10"
         }
       ],
-      "result_digest": "1d9bb9eab397639a2c20d26a276df6af07bcb5e842221ac005a967990587b294",
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
+      "schema_version": 16,
+      "source_id": "2024-08-13 09:16:08 c9c2ab54ba1f5f46360f1b4f35d849cd3f080e6fc2b6c60e91b16c63f69aalt1",
+      "sqlite_version": "3.46.1",
+      "system": "Linux"
+    },
+    {
+      "compile_options_digest": "e1e2a9b9f90f88f78637d4626ac5acedd27cdb56d0b614826fb69097837e0a2f",
+      "confinement": {
+        "authorizer_api_available": true,
+        "authorizer_restored": true,
+        "denies_attach": true,
+        "denies_begin": true,
+        "denies_commit": true,
+        "denies_detach": true,
+        "denies_end": true,
+        "denies_pragma": true,
+        "denies_release": true,
+        "denies_rollback": true,
+        "denies_savepoint": true,
+        "denies_temp_index": true,
+        "denies_temp_table": true,
+        "denies_temp_trigger": true,
+        "denies_temp_view": true,
+        "denies_temp_virtual_table": true
+      },
+      "features": {
+        "generated_columns": true,
+        "preserves_ddl_body": true,
+        "strict_tables": true,
+        "xinfo_exposes_generated": true
+      },
+      "libc": "glibc",
+      "machine": "aarch64",
+      "manifest_algorithm": 13,
+      "provenance": [
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 28,
+          "route": "docker",
+          "run_id": "40527873219",
+          "runner_image": "python:3.14-trixie (linux/arm64)"
+        }
+      ],
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
       "schema_version": 16,
       "source_id": "2024-08-13 09:16:08 c9c2ab54ba1f5f46360f1b4f35d849cd3f080e6fc2b6c60e91b16c63f69aalt1",
       "sqlite_version": "3.46.1",
@@ -133,14 +177,14 @@
       "manifest_algorithm": 13,
       "provenance": [
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 24,
           "route": "docker",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "python:3.14-trixie"
         }
       ],
-      "result_digest": "1d9bb9eab397639a2c20d26a276df6af07bcb5e842221ac005a967990587b294",
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
       "schema_version": 16,
       "source_id": "2024-08-13 09:16:08 c9c2ab54ba1f5f46360f1b4f35d849cd3f080e6fc2b6c60e91b16c63f69aalt1",
       "sqlite_version": "3.46.1",
@@ -177,14 +221,14 @@
       "manifest_algorithm": 13,
       "provenance": [
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 16,
           "route": "distro",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "ubuntu-26.04"
         }
       ],
-      "result_digest": "1d9bb9eab397639a2c20d26a276df6af07bcb5e842221ac005a967990587b294",
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
       "schema_version": 16,
       "source_id": "2024-08-13 09:16:08 c9c2ab54ba1f5f46360f1b4f35d849cd3f080e6fc2b6c60e91b16c63f69aalt1",
       "sqlite_version": "3.46.1",
@@ -221,18 +265,62 @@
       "manifest_algorithm": 13,
       "provenance": [
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 17,
           "route": "distro",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "fedora-43"
         }
       ],
-      "result_digest": "1d9bb9eab397639a2c20d26a276df6af07bcb5e842221ac005a967990587b294",
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
       "schema_version": 16,
       "source_id": "2025-06-28 14:00:48 2af157d77fb1304a74176eaee7fbc7c7e932d946bf25325e9c26c91db19ealt1",
       "sqlite_version": "3.50.2",
       "system": "Linux"
+    },
+    {
+      "compile_options_digest": "b212da371c6662c86088b31151167fcdcb8dd6e272f251aedacd1a1ca5fb81c2",
+      "confinement": {
+        "authorizer_api_available": true,
+        "authorizer_restored": true,
+        "denies_attach": true,
+        "denies_begin": true,
+        "denies_commit": true,
+        "denies_detach": true,
+        "denies_end": true,
+        "denies_pragma": true,
+        "denies_release": true,
+        "denies_rollback": true,
+        "denies_savepoint": true,
+        "denies_temp_index": true,
+        "denies_temp_table": true,
+        "denies_temp_trigger": true,
+        "denies_temp_view": true,
+        "denies_temp_virtual_table": true
+      },
+      "features": {
+        "generated_columns": true,
+        "preserves_ddl_body": true,
+        "strict_tables": true,
+        "xinfo_exposes_generated": true
+      },
+      "libc": "none",
+      "machine": "aarch64",
+      "manifest_algorithm": 13,
+      "provenance": [
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 7,
+          "route": "python.org",
+          "run_id": "40527873219",
+          "runner_image": "macos-latest"
+        }
+      ],
+      "result_digest": "9337e28043743dbfff4341cb5c36114407e087e796263106d5ba2da75a6c4f5b",
+      "schema_version": 16,
+      "source_id": "2025-07-30 19:33:53 4d8adfb30e03f9cf27f800a2c1ba3c48fb4ca1b08b0f5ed59a4d5ecbf45e20a3",
+      "sqlite_version": "3.50.4",
+      "system": "Darwin"
     },
     {
       "compile_options_digest": "5fdc7434e19f4990296625de1b3efc66e3f8b4c12a09b720f1cb3dca98080c0c",
@@ -265,17 +353,105 @@
       "manifest_algorithm": 13,
       "provenance": [
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 18,
           "route": "distro",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "fedora-44"
         }
       ],
-      "result_digest": "1d9bb9eab397639a2c20d26a276df6af07bcb5e842221ac005a967990587b294",
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
       "schema_version": 16,
       "source_id": "2026-01-09 17:27:48 b270f8339eb13b504d0b2ba154ebca966b7dde08e40c3ed7d559749818cbalt1",
       "sqlite_version": "3.51.2",
+      "system": "Linux"
+    },
+    {
+      "compile_options_digest": "80fff2e78423025979b078d5c9d4eb74d904d3fc117c8431b4161995ae236ddd",
+      "confinement": {
+        "authorizer_api_available": true,
+        "authorizer_restored": true,
+        "denies_attach": true,
+        "denies_begin": true,
+        "denies_commit": true,
+        "denies_detach": true,
+        "denies_end": true,
+        "denies_pragma": true,
+        "denies_release": true,
+        "denies_rollback": true,
+        "denies_savepoint": true,
+        "denies_temp_index": true,
+        "denies_temp_table": true,
+        "denies_temp_trigger": true,
+        "denies_temp_view": true,
+        "denies_temp_virtual_table": true
+      },
+      "features": {
+        "generated_columns": true,
+        "preserves_ddl_body": true,
+        "strict_tables": true,
+        "xinfo_exposes_generated": true
+      },
+      "libc": "none",
+      "machine": "aarch64",
+      "manifest_algorithm": 13,
+      "provenance": [
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 5,
+          "route": "uv",
+          "run_id": "40527873219",
+          "runner_image": "macos-latest"
+        }
+      ],
+      "result_digest": "9337e28043743dbfff4341cb5c36114407e087e796263106d5ba2da75a6c4f5b",
+      "schema_version": 16,
+      "source_id": "2026-05-05 10:34:17 c88b22011a54b4f6fbd149e9f8e4de77658ce58143a1af0e3785e4e6475127e9",
+      "sqlite_version": "3.53.1",
+      "system": "Darwin"
+    },
+    {
+      "compile_options_digest": "80fff2e78423025979b078d5c9d4eb74d904d3fc117c8431b4161995ae236ddd",
+      "confinement": {
+        "authorizer_api_available": true,
+        "authorizer_restored": true,
+        "denies_attach": true,
+        "denies_begin": true,
+        "denies_commit": true,
+        "denies_detach": true,
+        "denies_end": true,
+        "denies_pragma": true,
+        "denies_release": true,
+        "denies_rollback": true,
+        "denies_savepoint": true,
+        "denies_temp_index": true,
+        "denies_temp_table": true,
+        "denies_temp_trigger": true,
+        "denies_temp_view": true,
+        "denies_temp_virtual_table": true
+      },
+      "features": {
+        "generated_columns": true,
+        "preserves_ddl_body": true,
+        "strict_tables": true,
+        "xinfo_exposes_generated": true
+      },
+      "libc": "glibc",
+      "machine": "aarch64",
+      "manifest_algorithm": 13,
+      "provenance": [
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 26,
+          "route": "uv",
+          "run_id": "40527873219",
+          "runner_image": "ubuntu-24.04-arm"
+        }
+      ],
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
+      "schema_version": 16,
+      "source_id": "2026-05-05 10:34:17 c88b22011a54b4f6fbd149e9f8e4de77658ce58143a1af0e3785e4e6475127e9",
+      "sqlite_version": "3.53.1",
       "system": "Linux"
     },
     {
@@ -309,18 +485,201 @@
       "manifest_algorithm": 13,
       "provenance": [
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 4,
           "route": "uv",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "ubuntu-24.04"
         }
       ],
-      "result_digest": "1d9bb9eab397639a2c20d26a276df6af07bcb5e842221ac005a967990587b294",
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
       "schema_version": 16,
       "source_id": "2026-05-05 10:34:17 c88b22011a54b4f6fbd149e9f8e4de77658ce58143a1af0e3785e4e6475127e9",
       "sqlite_version": "3.53.1",
       "system": "Linux"
+    },
+    {
+      "compile_options_digest": "ce0a972a4ed9588ad9ea64e911be2550de32e29f84bd972f3fe075baecef52c9",
+      "confinement": {
+        "authorizer_api_available": true,
+        "authorizer_restored": true,
+        "denies_attach": true,
+        "denies_begin": true,
+        "denies_commit": true,
+        "denies_detach": true,
+        "denies_end": true,
+        "denies_pragma": true,
+        "denies_release": true,
+        "denies_rollback": true,
+        "denies_savepoint": true,
+        "denies_temp_index": true,
+        "denies_temp_table": true,
+        "denies_temp_trigger": true,
+        "denies_temp_view": true,
+        "denies_temp_virtual_table": true
+      },
+      "features": {
+        "generated_columns": true,
+        "preserves_ddl_body": true,
+        "strict_tables": true,
+        "xinfo_exposes_generated": true
+      },
+      "libc": "musl",
+      "machine": "aarch64",
+      "manifest_algorithm": 13,
+      "provenance": [
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 29,
+          "route": "docker",
+          "run_id": "40527873219",
+          "runner_image": "python:3.14-alpine (linux/arm64)"
+        }
+      ],
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
+      "schema_version": 16,
+      "source_id": "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+      "sqlite_version": "3.53.4",
+      "system": "Linux"
+    },
+    {
+      "compile_options_digest": "ce0a972a4ed9588ad9ea64e911be2550de32e29f84bd972f3fe075baecef52c9",
+      "confinement": {
+        "authorizer_api_available": true,
+        "authorizer_restored": true,
+        "denies_attach": true,
+        "denies_begin": true,
+        "denies_commit": true,
+        "denies_detach": true,
+        "denies_end": true,
+        "denies_pragma": true,
+        "denies_release": true,
+        "denies_rollback": true,
+        "denies_savepoint": true,
+        "denies_temp_index": true,
+        "denies_temp_table": true,
+        "denies_temp_trigger": true,
+        "denies_temp_view": true,
+        "denies_temp_virtual_table": true
+      },
+      "features": {
+        "generated_columns": true,
+        "preserves_ddl_body": true,
+        "strict_tables": true,
+        "xinfo_exposes_generated": true
+      },
+      "libc": "musl",
+      "machine": "x86_64",
+      "manifest_algorithm": 13,
+      "provenance": [
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 19,
+          "route": "distro",
+          "run_id": "40527873219",
+          "runner_image": "alpine-3.24"
+        },
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 25,
+          "route": "docker",
+          "run_id": "40527873219",
+          "runner_image": "python:3.14-alpine"
+        }
+      ],
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
+      "schema_version": 16,
+      "source_id": "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+      "sqlite_version": "3.53.4",
+      "system": "Linux"
+    },
+    {
+      "compile_options_digest": "5b967862be95f7add6c90617b241c69d01dddffb666b096dffceb796f7611c60",
+      "confinement": {
+        "authorizer_api_available": true,
+        "authorizer_restored": true,
+        "denies_attach": true,
+        "denies_begin": true,
+        "denies_commit": true,
+        "denies_detach": true,
+        "denies_end": true,
+        "denies_pragma": true,
+        "denies_release": true,
+        "denies_rollback": true,
+        "denies_savepoint": true,
+        "denies_temp_index": true,
+        "denies_temp_table": true,
+        "denies_temp_trigger": true,
+        "denies_temp_view": true,
+        "denies_temp_virtual_table": true
+      },
+      "features": {
+        "generated_columns": true,
+        "preserves_ddl_body": true,
+        "strict_tables": true,
+        "xinfo_exposes_generated": true
+      },
+      "libc": "none",
+      "machine": "aarch64",
+      "manifest_algorithm": 13,
+      "provenance": [
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 9,
+          "route": "homebrew",
+          "run_id": "40527873219",
+          "runner_image": "macos-latest"
+        }
+      ],
+      "result_digest": "9337e28043743dbfff4341cb5c36114407e087e796263106d5ba2da75a6c4f5b",
+      "schema_version": 16,
+      "source_id": "2026-10-09 15:46:58 be8d059e9a49089ab2dce5ed26dd87aaf598fdc5fbe0b107c0dd758464bcd5e3",
+      "sqlite_version": "3.54.0",
+      "system": "Darwin"
+    },
+    {
+      "compile_options_digest": "1366637602103ff6be306bc7d95b3dc94c33ed028abf97191b857a22d1908a15",
+      "confinement": {
+        "authorizer_api_available": true,
+        "authorizer_restored": true,
+        "denies_attach": true,
+        "denies_begin": true,
+        "denies_commit": true,
+        "denies_detach": true,
+        "denies_end": true,
+        "denies_pragma": true,
+        "denies_release": true,
+        "denies_rollback": true,
+        "denies_savepoint": true,
+        "denies_temp_index": true,
+        "denies_temp_table": true,
+        "denies_temp_trigger": true,
+        "denies_temp_view": true,
+        "denies_temp_virtual_table": true
+      },
+      "features": {
+        "generated_columns": true,
+        "preserves_ddl_body": true,
+        "strict_tables": true,
+        "xinfo_exposes_generated": true
+      },
+      "libc": "none",
+      "machine": "aarch64",
+      "manifest_algorithm": 13,
+      "provenance": [
+        {
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
+          "job_id": 11,
+          "route": "conda-forge",
+          "run_id": "40527873219",
+          "runner_image": "macos-latest"
+        }
+      ],
+      "result_digest": "9337e28043743dbfff4341cb5c36114407e087e796263106d5ba2da75a6c4f5b",
+      "schema_version": 16,
+      "source_id": "2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76",
+      "sqlite_version": "3.54.1",
+      "system": "Darwin"
     },
     {
       "compile_options_digest": "f0d89564ff0c84f4ffd834044c925606812323cf172689c7d2425485a48f9737",
@@ -353,14 +712,14 @@
       "manifest_algorithm": 13,
       "provenance": [
         {
-          "commit": "d5876003b33b54d14c4b0dfe1eec2bf51dce9507",
+          "commit": "0068e3d30f7f7c82af65aa2f4329e87bdc247f60",
           "job_id": 10,
           "route": "conda-forge",
-          "run_id": "40514117945",
+          "run_id": "40527873219",
           "runner_image": "ubuntu-24.04"
         }
       ],
-      "result_digest": "1d9bb9eab397639a2c20d26a276df6af07bcb5e842221ac005a967990587b294",
+      "result_digest": "d9e7ec88b17e04240c280703d4b104bfbddc8c50bcf53ebb888ff4e518dfda4a",
       "schema_version": 16,
       "source_id": "2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76",
       "sqlite_version": "3.54.1",
