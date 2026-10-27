@@ -50,9 +50,32 @@ def fixture_attestation():
                             "commit": "0" * 40}]}
 
 
+def _fixture_attestations():
+    """The fixture world's records: one for the RUNNING build and one for each build the committed path evidence
+    names as `generated_on`, deduplicated by full key (0007 dry run on uv's 3.53.1, 2026-10-27: with only the running
+    build's record, the evidence's `generated_on`, the 3.45.1 build that generated it, resolved nowhere on any OTHER
+    build, so ~40 model cells read migration-evidence-missing there and no other build's suite could pass). On the
+    generating build both are one record, as before."""
+    import json as _json
+    mine = fixture_attestation()
+    out, keys = [mine], {sv.attestation_key(mine)}
+    try:
+        paths = _json.loads(m.EVIDENCE_FILE.read_text()).get("paths", [])
+    except (OSError, ValueError):
+        paths = []
+    for r in paths if isinstance(paths, list) else []:
+        gen = r.get("generated_on") if isinstance(r, dict) else None
+        if isinstance(gen, dict):
+            cand = {**mine, **{k: gen[k] for k in sv.KEY_FIELDS if k in gen}}
+            if sv.attestation_key(cand) is not None and sv.attestation_key(cand) not in keys:
+                keys.add(sv.attestation_key(cand))
+                out.append(cand)
+    return out
+
+
 @pytest.fixture(autouse=True)
 def _a_fixture_attestation_for_this_build(monkeypatch):
-    monkeypatch.setattr(sv, "attestations", lambda: [fixture_attestation()])
+    monkeypatch.setattr(sv, "attestations", lambda: _fixture_attestations())
 
 
 @pytest.fixture(autouse=True)

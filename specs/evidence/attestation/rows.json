@@ -32,7 +32,7 @@
    "runs_on": "macos-latest",
    "install": "setup-python",
    "python": "python",
-   "expect_prefix": "${RUNNER_TOOL_CACHE}/Python"
+   "expect_prefix": "/Library/Frameworks/Python.framework/Versions/3.14"
   },
   {
    "spec_row": "`actions/setup-python` (what most users' CI runs)",
@@ -84,7 +84,7 @@
    "route": "python.org",
    "runner_image": "windows-latest",
    "runs_on": "windows-latest",
-   "install": "curl -LsSfo py.exe https://www.python.org/ftp/python/3.14.0/python-3.14.0-amd64.exe && ./py.exe /quiet InstallAllUsers=1 PrependPath=0 TargetDir='C:\\Python314'",
+   "install": "curl -LsSfo py.exe https://www.python.org/ftp/python/3.14.0/python-3.14.0-amd64.exe && cmd //c \"py.exe /quiet InstallAllUsers=1 PrependPath=0 Include_test=0 TargetDir=C:\\Python314\"",
    "python": "C:/Python314/python.exe",
    "expect_prefix": "C:/Python314"
   },
@@ -111,7 +111,7 @@
    "route": "conda-forge",
    "runner_image": "macos-latest",
    "runs_on": "macos-latest",
-   "install": "conda create -y -p \"$HOME/attest-conda\" -c conda-forge --override-channels python=3.14",
+   "install": "curl -LsSfo mf.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh && bash mf.sh -b -p \"$HOME/miniforge\" && \"$HOME/miniforge/bin/conda\" create -y -p \"$HOME/attest-conda\" -c conda-forge --override-channels python=3.14",
    "python": "$HOME/attest-conda/bin/python",
    "expect_prefix": "${HOME}/attest-conda"
   },
@@ -120,7 +120,7 @@
    "route": "conda-forge",
    "runner_image": "windows-latest",
    "runs_on": "windows-latest",
-   "install": "conda create -y -p \"$HOME/attest-conda\" -c conda-forge --override-channels python=3.14",
+   "install": "\"$CONDA/Scripts/conda.exe\" create -y -p \"$HOME/attest-conda\" -c conda-forge --override-channels python=3.14",
    "python": "$HOME/attest-conda/python.exe",
    "expect_prefix": "${HOME}/attest-conda"
   },

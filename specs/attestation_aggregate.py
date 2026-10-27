@@ -45,11 +45,14 @@ def _evidence(rec) -> tuple:
 def aggregate(results, rows=()) -> dict:
     """{records, disagreements, failed_keys, refused, excluded, unavailable, other_failures}."""
     groups, out = {}, {"records": [], "bootstrap_jobs": [], "disagreements": [], "failed_keys": [], "refused": [],
-                       "excluded": [], "unavailable": [], "other_failures": []}
+                       "unattestable": [], "excluded": [], "unavailable": [], "other_failures": []}
     seen_rows = set()
     for r in results:
         seen_rows.add((r.get("route"), r.get("runner_image")))
         outcome = r.get("outcome")
+        if outcome == "unattestable":
+            out["unattestable"].append(_job(r) + ": " + (r.get("reason") or ""))
+            continue
         if outcome == "excluded":
             out["excluded"].append(_job(r) + ": " + "; ".join(r.get("excluded_entries") or []))
             continue
@@ -117,7 +120,7 @@ def main(argv) -> int:
     results = [json.loads(p.read_text()) for p in sorted(pathlib.Path(a.results).glob("*.json"))]
     summary = aggregate(results, json.loads(pathlib.Path(a.rows).read_text())["rows"])   # rows.json, the one carrier
     pathlib.Path(a.out).write_text(json.dumps(summary, indent=1, sort_keys=True) + "\n")
-    for k in ("disagreements", "failed_keys", "other_failures", "unavailable", "refused", "excluded"):
+    for k in ("disagreements", "failed_keys", "other_failures", "unavailable", "refused", "unattestable", "excluded"):
         for item in summary[k]:
             print(f"{k}: {item}")
     print(f"{len(summary['records'])} record(s)")

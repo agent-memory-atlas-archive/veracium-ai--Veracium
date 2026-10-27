@@ -54,9 +54,32 @@ def fixture_attestation():
                             "commit": "0" * 40}]}
 
 
+def _fixture_attestations():
+    """The fixture world's records: one for the RUNNING build and one for each build the committed path evidence
+    names as `generated_on`, deduplicated by full key (0007 dry run on uv's 3.53.1, 2026-10-27: with only the running
+    build's record, the evidence's `generated_on`, the 3.45.1 build that generated it, resolved nowhere on any OTHER
+    build, so ~40 model cells read migration-evidence-missing there and no other build's suite could pass). On the
+    generating build both are one record, as before."""
+    import json as _json
+    mine = fixture_attestation()
+    out, keys = [mine], {sv.attestation_key(mine)}
+    try:
+        paths = _json.loads(m13.EVIDENCE_FILE.read_text()).get("paths", [])
+    except (OSError, ValueError):
+        paths = []
+    for r in paths if isinstance(paths, list) else []:
+        gen = r.get("generated_on") if isinstance(r, dict) else None
+        if isinstance(gen, dict):
+            cand = {**mine, **{k: gen[k] for k in sv.KEY_FIELDS if k in gen}}
+            if sv.attestation_key(cand) is not None and sv.attestation_key(cand) not in keys:
+                keys.add(sv.attestation_key(cand))
+                out.append(cand)
+    return out
+
+
 @pytest.fixture(autouse=True)
 def _a_fixture_attestation_for_this_build(monkeypatch):
-    monkeypatch.setattr(sv, "attestations", lambda: [fixture_attestation()])
+    monkeypatch.setattr(sv, "attestations", lambda: _fixture_attestations())
 
 
 @pytest.fixture(autouse=True)
@@ -4206,7 +4229,7 @@ def test_an_activated_receipt_lie_without_a_row_stays_not_consumed(monkeypatch):
     assert m13.migrate_store(p, auth) == "internal-error"
     # never consumed: a retry with the real sink migrates.
     monkeypatch.undo()
-    monkeypatch.setattr(sv, "attestations", lambda: [fixture_attestation()])      # undo() took the fixture too
+    monkeypatch.setattr(sv, "attestations", lambda: _fixture_attestations())      # undo() took the fixture too
     assert m13.migrate_store(p, auth) == "migrated"
 
 
@@ -4664,10 +4687,19 @@ def _with_attestations(monkeypatch, *records):
     monkeypatch.setattr(sv, "attestations", lambda: list(records))
 
 
+def _evidence_build_attestation(**over):
+    """A fixture record for the build the COMMITTED path evidence was generated on (its `generated_on` key), with
+    `over` applied. The evidence's world is that build's, not the running one's: a cell that rewrites generated_on
+    from the committed key must attest from the same key, or it holds only on the generating build (0007 dry run on
+    uv's 3.53.1, 2026-10-27). On the generating build this equals fixture_attestation(**over)."""
+    gen = json.loads(m13.EVIDENCE_FILE.read_text())["paths"][0]["generated_on"]
+    return {**fixture_attestation(), **{k: gen[k] for k in sv.KEY_FIELDS}, **over}
+
+
 def _generated_on_elsewhere(monkeypatch, machine="aarch64"):
     """The world of A1: the path evidence was generated on ANOTHER attested build (an `aarch64` key), and the
     running build has no record, so it is `verified`, not `attested`."""
-    other = dict(fixture_attestation(), machine=machine)
+    other = _evidence_build_attestation(machine=machine)
     _with_attestations(monkeypatch, other)
     art = json.loads(m13.EVIDENCE_FILE.read_text())
     for r in art["paths"]:
@@ -4729,7 +4761,10 @@ def test_a5_a_refused_build_is_refused_after_consumption_and_the_store_is_unchan
 def test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths(monkeypatch):
     """A10, and research's B5: no record at all; and a matching valid record beside an unrelated MALFORMED one (a
     poisoned attestation artifact attests nothing, for production and for the model alike)."""
-    for records in ([], [fixture_attestation(), dict(fixture_attestation(), machine="AMD64")]):
+    matching = _evidence_build_attestation()          # matches the evidence's generated_on on EVERY build (sweep)
+    _with_attestations(monkeypatch, matching)
+    assert m13.path_provenance_problems(json.loads(m13.EVIDENCE_FILE.read_text())) == []   # control: alone, it resolves
+    for records in ([], [matching, dict(matching, machine="AMD64")]):
         _with_attestations(monkeypatch, *records)
         art = json.loads(m13.EVIDENCE_FILE.read_text())
         assert m13.path_provenance_problems(art), records
@@ -4740,7 +4775,7 @@ def test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_path
 def test_a11_two_attested_keys_are_valid_and_each_resolves_separately(monkeypatch):
     """A11, research's item 8(c): records differing ONLY in `machine` are two keys; this build is attested by its own,
     and path evidence generated on the other resolves to exactly that one."""
-    mine, other = fixture_attestation(), dict(fixture_attestation(), machine="aarch64")
+    mine, other = fixture_attestation(), _evidence_build_attestation(machine="aarch64")
     _with_attestations(monkeypatch, mine, other)
     assert sv.attestation_artifact_problems([mine, other]) == []
     assert sv.runtime_status().status == "attested"
@@ -4763,7 +4798,7 @@ def test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probe
     real = m13.authorizer_probes
     monkeypatch.setattr(m13, "authorizer_probes", lambda: calls.append(1) or real())
     _generated_on_elsewhere(monkeypatch)                  # the path evidence resolves elsewhere; this record poisons
-    _with_attestations(monkeypatch, dict(fixture_attestation(), machine="aarch64"), bad)
+    _with_attestations(monkeypatch, _evidence_build_attestation(machine="aarch64"), bad)
     p = _v1_store()
     m13.migrate_store(p, m13.make_authority(p))
     assert calls, "the probes did not run live"
@@ -4859,6 +4894,36 @@ def test_check_evidence_ignores_generated_on_resolution_but_not_a_rederivation_d
     other["paths"][0]["provenance"] = "a different generator line"           # a re-derivation difference
     seeded.write_text(json.dumps(other, indent=1, sort_keys=True))
     assert m13.check_evidence() == 1
+
+
+def test_the_path_evidence_regenerates_equal_on_another_build(monkeypatch):
+    """0007 CI run 1 (2026-10-27): 22 of 30 rows failed --check-evidence on ONE string, each path record's provenance
+    naming the generating build's SQLite version. The record states one fact for every build (§5f.3); `generated_on`
+    names the build. So the label carries no build, and a regeneration under another SQLite version compares equal
+    with generated_on aside (B9's comparison, unchanged)."""
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    assert art["paths"]
+    real = sv.runtime_identity
+    monkeypatch.setattr(sv, "runtime_identity", lambda: {**real(), "sqlite_version": "3.99.0",
+                                                         "source_id": "2099-01-01 00:00:00 " + "f" * 64})
+    other, problems = m13._generate_artifact()
+
+    def comparable(a):          # research's general form: EVERY field, bar check_evidence's own drops (B9)
+        out = {k: v for k, v in a.items() if k not in ("generated_at", "generator")}
+        out["paths"] = [{f: v for f, v in r.items() if f != "generated_on"} for r in a["paths"]]
+        return out
+    assert problems == [] and comparable(other) == comparable(art), sorted(
+        k for k in set(comparable(other)) | set(comparable(art)) if comparable(other).get(k) != comparable(art).get(k))
+
+
+def test_check_evidence_rederives_on_a_build_whose_key_is_unreadable(monkeypatch):
+    """0007 v22 §4d: the re-derivation is owed on every verifying build and drops generated_on, so it does not need
+    this build's key (run 1: uv's aarch64 build was refused here before comparing). GENERATING still refuses."""
+    real = sv.attestation_identity
+    monkeypatch.setattr(sv, "attestation_identity", lambda: {**real(), "libc": None})
+    assert m13.check_evidence() == 0
+    _art, problems = m13._generate_artifact()
+    assert any("unreadable field" in p for p in problems)
 
 
 def test_the_first_failing_probe_does_not_depend_on_the_hash_seed():

@@ -1201,33 +1201,57 @@ def canonical_libc(system, interp) -> str | None:
 
 
 def _pt_interp(path: str) -> str | None:
-    """The `PT_INTERP` path of the ELF file at `path`, or None (not ELF, static, unreadable). Total."""
+    """The `PT_INTERP` path of the ELF file at `path`, or None (not ELF, static, unreadable, malformed). Total.
+
+    It SEEKS to the program headers and to the segment, never reading a fixed window: uv's python-build-standalone
+    aarch64 CPython keeps PT_INTERP at ~19.7 MiB in a 23 MB image, so the earlier 1 MiB window read b"" there and
+    every uv user on arm64 Linux read libc-unreadable (0007 CI run 1, 2026-10-27; research's measurement). The
+    segment's size is bounded, exactly that many bytes must be read, and they must end in one NUL: a short, empty or
+    unterminated INTERP is None, never ''."""
     try:
         with open(path, "rb") as f:
-            data = f.read(1 << 20)
-        if data[:4] != b"\x7fELF" or data[4] not in (1, 2) or data[5] not in (1, 2):
-            return None
-        wide, end = data[4] == 2, "<" if data[5] == 1 else ">"
-        if wide:
-            phoff, = struct.unpack_from(end + "Q", data, 0x20)
-            phentsize, phnum = struct.unpack_from(end + "HH", data, 0x36)
-        else:
-            phoff, = struct.unpack_from(end + "I", data, 0x1C)
-            phentsize, phnum = struct.unpack_from(end + "HH", data, 0x2A)
-        for i in range(phnum):
-            o = phoff + i * phentsize
-            if struct.unpack_from(end + "I", data, o)[0] != 3:          # PT_INTERP
-                continue
+            hdr = f.read(64)
+            if len(hdr) < 52 or hdr[:4] != b"\x7fELF" or hdr[4] not in (1, 2) or hdr[5] not in (1, 2):
+                return None
+            wide, end = hdr[4] == 2, "<" if hdr[5] == 1 else ">"
             if wide:
-                off, = struct.unpack_from(end + "Q", data, o + 8)
-                size, = struct.unpack_from(end + "Q", data, o + 32)
+                if len(hdr) < 64:
+                    return None
+                phoff, = struct.unpack_from(end + "Q", hdr, 0x20)
+                phentsize, phnum = struct.unpack_from(end + "HH", hdr, 0x36)
             else:
-                off, = struct.unpack_from(end + "I", data, o + 4)
-                size, = struct.unpack_from(end + "I", data, o + 16)
-            return data[off:off + size].rstrip(b"\0").decode("ascii")
+                phoff, = struct.unpack_from(end + "I", hdr, 0x1C)
+                phentsize, phnum = struct.unpack_from(end + "HH", hdr, 0x2A)
+            if phentsize < (56 if wide else 32) or not 0 < phnum <= _MAX_PHNUM:
+                return None
+            f.seek(phoff)
+            table = f.read(phentsize * phnum)
+            if len(table) != phentsize * phnum:
+                return None
+            for i in range(phnum):
+                o = i * phentsize
+                if struct.unpack_from(end + "I", table, o)[0] != 3:          # PT_INTERP
+                    continue
+                if wide:
+                    off, = struct.unpack_from(end + "Q", table, o + 8)
+                    size, = struct.unpack_from(end + "Q", table, o + 32)
+                else:
+                    off, = struct.unpack_from(end + "I", table, o + 4)
+                    size, = struct.unpack_from(end + "I", table, o + 16)
+                if not 2 <= size <= _MAX_INTERP:                       # a path and its NUL, bounded
+                    return None
+                f.seek(off)
+                raw = f.read(size)
+                if len(raw) != size or raw[-1:] != b"\0" or b"\0" in raw[:-1]:
+                    return None
+                return raw[:-1].decode("ascii")
+            return None
+    except (OSError, struct.error, UnicodeDecodeError, ValueError, OverflowError):
         return None
-    except (OSError, struct.error, UnicodeDecodeError, IndexError):
-        return None
+
+
+_MAX_PHNUM = 4096
+_MAX_INTERP = 4096
 
 
 PROCESS_IMAGE = "/proc/self/exe"

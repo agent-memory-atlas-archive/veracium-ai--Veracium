@@ -191,9 +191,16 @@ def write(new, *, path=None, repo=ROOT, git=run_git) -> str:
 ARTIFACT_REL = "src/veracium/store/evidence/sqlite_runtimes.json"
 
 
+def zero_current(records) -> bool:
+    """0007 v22 (N1): THE zero-current test, ONE function for the job's exemption and for the bootstrap derivation:
+    every record superseded (none counts). A current, malformed or future record makes it False."""
+    return isinstance(records, list) and all(sv.attestation_revision(r) == "superseded" for r in records)
+
+
 def is_bootstrap_record(r, *, repo=ROOT, git=run_git) -> bool:
-    """v21 (3): the bootstrap mark is DERIVED, never stored. A current record is a bootstrap record iff the committed
-    artifact AT ITS OWN COMMIT held no current record: any run at a zero-current state is a bootstrap run. Needs full
+    """v21 (3), v22 (N1): the bootstrap mark is DERIVED, never stored. A record is a bootstrap record iff the
+    committed artifact AT ITS OWN COMMIT was at a zero-current state, by the exemption's own test (zero_current): any
+    run at a zero-current state is a bootstrap run. Needs full
     history: a shallow repository, an unknown commit or an unreadable artifact at that commit is "unanswerable"
     (AttestationRefused), never "not bootstrap"."""
     commit = sv.record_commit(r)
@@ -218,7 +225,7 @@ def is_bootstrap_record(r, *, repo=ROOT, git=run_git) -> bool:
             raise ValueError("'attestations' is not a list")
     except (ValueError, KeyError, TypeError) as exc:
         raise AttestationRefused(f"unanswerable: the artifact at {commit} cannot be read ({exc})")
-    return not any(sv.attestation_revision(x) == "current" for x in then)
+    return zero_current(then)
 
 
 def _strict_pairs(pairs):
@@ -248,6 +255,10 @@ def write_records(news, *, path=None, repo=ROOT, git=run_git, fresh=False) -> di
                 raise AttestationRefused(f"a fresh write would drop a non-bootstrap current record "
                                          f"({r.get('sqlite_version')!r}, {r.get('machine')!r}): fresh mode replaces "
                                          f"only a bootstrap run's records")
+        for new in news:            # v22 (N2): the shipped set is never a bootstrap run's, whatever the input form
+            if is_bootstrap_record(new, repo=repo, git=git):
+                raise AttestationRefused("a fresh write was given a record that is itself a bootstrap record (its "
+                                         "commit's artifact was at a zero-current state): it never ships")
         records = []
     for new in news:
         records, outcome = merged(records, new, repo=repo, git=git)

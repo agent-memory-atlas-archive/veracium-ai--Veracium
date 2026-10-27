@@ -23,6 +23,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ROOTS = ("sqlite3", "veracium.store.schema_version", "veracium.store.migration", "veracium.store.release_migration",
          "schema_evidence", "migrations_0013")
 FILES = ("schema_evidence.py", "migrations_0013.py")
+GROUPS_DOC = ROOT / "specs" / "evidence" / "offline" / "JOINT-TEST-GROUPS.md"
+"""0007 v22 §4d: the ONE carrier of the joint test groups (written after 0041 round 9). The selection is CLOSED under
+them: a selected member brings every other member of its group, since the group's gate reads state the other members
+record in the same process."""
 
 
 def _is_root(name) -> bool:
@@ -46,11 +50,37 @@ def reasons(source: str) -> list:
     return sorted(why)
 
 
+def joint_groups(doc=None, tree=None) -> list:
+    """[[member, ...]] from the groups document's `| members |` rows: each backticked `tests/…py` in the row. A row
+    with none, a member that is not a file of `tree`, or a document with no group is refused (each would silently
+    close over nothing)."""
+    import re
+    doc = GROUPS_DOC if doc is None else pathlib.Path(doc)
+    tree = doc.parents[3] if tree is None else pathlib.Path(tree)
+    groups = []
+    for line in doc.read_text(encoding="utf-8").splitlines():
+        if line.startswith("| members |"):
+            members = re.findall(r"`(tests/[\w/]+\.py)`", line)
+            if not members:
+                raise ValueError(f"a members row names no test module: {line[:120]!r}")
+            missing = [m for m in members if not (tree / m).is_file()]
+            if missing:
+                raise ValueError(f"a joint test group names a module this tree does not have: {missing}")
+            groups.append(members)
+    if not groups:
+        raise ValueError(f"{doc} declares no joint test group")
+    return groups
+
+
 def suite(tree=ROOT) -> list:
-    """The suite's modules, as tree-relative paths, sorted."""
+    """The suite's modules, as tree-relative paths, sorted: the rule's selection, closed under the joint test groups."""
     tree = pathlib.Path(tree)
-    return [str(p.relative_to(tree)) for p in sorted((tree / "tests").rglob("test_*.py"))
-            if reasons(p.read_text(encoding="utf-8"))]
+    picked = {str(p.relative_to(tree)) for p in sorted((tree / "tests").rglob("test_*.py"))
+              if reasons(p.read_text(encoding="utf-8"))}
+    for members in joint_groups(tree / GROUPS_DOC.relative_to(ROOT), tree):
+        if picked & set(members):
+            picked |= set(members)
+    return sorted(picked)
 
 
 def junit_modules(junit_path) -> set:

@@ -81,8 +81,50 @@ def test_the_rule_agrees_with_researchs_frozen_implementation_at_this_tree():
     frozen = SPECS / "evidence" / "0007-sqlite-attestation" / "r1-repro-at-58dd7f6" / "suite_rule_v2.py"
     p = subprocess.run([sys.executable, "-I", str(frozen), str(ROOT)], capture_output=True, text=True, check=True)
     theirs = [line.split(" ", 1)[0] for line in p.stdout.splitlines() if line.strip()]
-    assert theirs == suite_rule.suite(ROOT)
+    selected = sorted(str(f.relative_to(ROOT)) for f in (ROOT / "tests").rglob("test_*.py")
+                      if suite_rule.reasons(f.read_text(encoding="utf-8")))
+    assert theirs == selected                        # the rule itself, before v22's joint-group closure
     assert len(theirs) == int(p.stderr.split("TOTAL")[-1].strip())
+
+
+def _groups_tree(tmp_path, rows):
+    """A planted tree: the groups document with `rows`, and the modules they and the rule name."""
+    (tmp_path / "specs" / "evidence" / "offline").mkdir(parents=True)
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "specs" / "evidence" / "offline" / "JOINT-TEST-GROUPS.md").write_text("\n".join(rows) + "\n")
+    (tmp_path / "tests" / "test_root.py").write_text("import sqlite3\n")
+    (tmp_path / "tests" / "test_partner.py").write_text("x = 1\n")
+    (tmp_path / "tests" / "test_alone.py").write_text("y = 1\n")
+    return tmp_path
+
+
+def test_the_joint_group_parser_refuses_a_missing_member_and_moves_with_the_document(tmp_path):
+    """Research's stage-2 (b), on planted trees: a member this tree lacks refuses (it would close over nothing); a group
+    of one changes nothing; a group added to the DOCUMENT grows the suite with no code change."""
+    t = _groups_tree(tmp_path / "a", ["| members | `tests/test_root.py` AND `tests/test_gone.py` |"])
+    with pytest.raises(ValueError, match="does not have"):
+        suite_rule.suite(t)
+    t = _groups_tree(tmp_path / "b", ["| members | `tests/test_alone.py` |"])
+    assert suite_rule.suite(t) == ["tests/test_root.py"]
+    t = _groups_tree(tmp_path / "c", ["| members | `tests/test_alone.py` |",
+                                      "| members | `tests/test_root.py` AND `tests/test_partner.py` |"])
+    assert suite_rule.suite(t) == ["tests/test_partner.py", "tests/test_root.py"]
+    t = _groups_tree(tmp_path / "d", ["no groups here"])
+    with pytest.raises(ValueError, match="declares no joint test group"):
+        suite_rule.suite(t)
+
+
+def test_the_suite_is_closed_under_the_joint_test_groups():
+    """0007 v22 §4d (run 1: the store driver alone failed its gate in every job): a selected member of a joint test
+    group brings the others, read from the ONE carrier, specs/evidence/offline/JOINT-TEST-GROUPS.md. Today that adds
+    exactly G1's base driver, and nothing outside a group."""
+    selected = {str(f.relative_to(ROOT)) for f in (ROOT / "tests").rglob("test_*.py")
+                if suite_rule.reasons(f.read_text(encoding="utf-8"))}
+    groups = suite_rule.joint_groups()
+    added = set(suite_rule.suite(ROOT)) - selected
+    assert added == {m for g in groups if selected & set(g) for m in g} - selected
+    assert "tests/test_seam_model_0029_0030.py" in added
+    assert any(len(g) > 1 for g in groups)
 
 
 def _junit(tmp_path, cases, modules=None):
@@ -215,6 +257,24 @@ def test_a_root_job_is_a_named_failure_before_anything_runs(tmp_path):
                    run_suite=lambda t: ran.append("suite"), head=lambda: "a" * 40, euid=0)
     assert (r["outcome"], ran) == ("wrong-job-state", []) and job.OUTCOME_EXIT["wrong-job-state"] == 1
     assert "root" in r["reason"] and job.job_state_problem(1000) is None
+
+
+def test_an_unreadable_key_is_unattestable_after_the_rederivation_and_runs_no_suite(tmp_path, monkeypatch):
+    """0007 v22 §4d: the re-derivation runs FIRST (owed on every verifying build), then a build whose key has an
+    unreadable field ends `unattestable`, exit 0, naming the field; no suite runs. A failing re-derivation stays red."""
+    agg_input = dict(_result(), outcome="unattestable", record=None)      # built while the key still reads
+    real = sv.attestation_identity
+    monkeypatch.setattr(sv, "attestation_identity", lambda: {**real(), "libc": None})
+    ran = []
+    r = job.decide(_args(), runtime_status=_status(), check_evidence=lambda: ran.append("ce") or (0, ""),
+                   run_suite=lambda t: ran.append("suite"), head=lambda: "a" * 40)
+    assert (r["outcome"], ran) == ("unattestable", ["ce"]) and job.OUTCOME_EXIT["unattestable"] == 0
+    assert "libc" in r["reason"] and r["record"] is None
+    red = job.decide(_args(), runtime_status=_status(), check_evidence=lambda: (1, "differs"),
+                     run_suite=lambda t: None, head=lambda: "a" * 40)
+    assert red["outcome"] == "evidence-mismatch"
+    out = agg.aggregate([dict(agg_input, reason=r["reason"])])
+    assert not agg.failed(out) and out["unattestable"] and not out["records"]
 
 
 def test_a_refused_build_is_a_census_row_and_runs_nothing(tmp_path):
@@ -588,6 +648,10 @@ def test_the_attestation_suite_rule_mutation_matrix(tmp_path_factory):
                                [(N, {"source": "X = 'specs/schema_evidence.py'"})]),
         "depth 0 only": ([("    for node in ast.walk(ast.parse(source)):", "    for node in ast.parse(source).body:")],
                          [(A, {"source": "def f():\n    import schema_evidence"})]),
+        "the joint-group closure dropped (v22)": ([("        if picked & set(members):\n            picked |= set(members)\n", "        pass\n")],
+                                                  [("test_the_suite_is_closed_under_the_joint_test_groups", {})]),
+        "a joint group's missing member accepted (v22)": ([("            if missing:\n", "            if False:\n")],
+                                                          [("test_the_joint_group_parser_refuses_a_missing_member_and_moves_with_the_document", {})]),
         "an extra module is not reported": ([('    out = [f"the job ran {m}, which the rule does not select" for m in sorted(ran - want)]', "    out = []")],
                                             [("test_the_job_must_have_run_exactly_the_rules_modules", {})]),
         "a missing module is not reported": ([('    out += [f"the rule selects {m}, which the job did not run" for m in sorted(want - ran)]', "")],
@@ -634,13 +698,19 @@ def test_the_attestation_job_mutation_matrix(tmp_path_factory):
                                                                [("test_the_bootstrap_exemption_never_covers_a_second_node", {})]),
         "the bootstrap exemption at a non-zero-current state (v21)": ([("        open_ = bootstrap_open(records)", "        open_ = True")],
                                                                       [("test_the_bootstrap_exemption_is_void_at_a_non_zero_current_state", {"kind": "current"})]),
-        "the bootstrap exemption only when the artifact is empty (v21)": ([('    return isinstance(records, list) and all(sv.attestation_revision(r) == "superseded" for r in records)', "    return records == []")],
+        "the bootstrap exemption only when the artifact is empty (v21)": ([("    return aw.zero_current(records)", "    return records == []")],
                                                                           [("test_the_bootstrap_node_failing_at_a_zero_current_state_is_bootstrap_pending", {})]),
         "the bootstrap exemption covers an <error> (v21)": ([('o == "failed" and n in BOOTSTRAP', 'o in ("failed", "error") and n in BOOTSTRAP')],
                                                             [("test_an_error_on_the_bootstrap_node_is_failed_tests", {})]),
         "a bootstrap record reported as evidence": ([('            result.update(outcome="bootstrap-pending", record=record,', '            result.update(outcome="evidence", record=record,')],
                                                     [("test_the_bootstrap_node_failing_at_a_zero_current_state_is_bootstrap_pending", {})]),
-        "refused fails the matrix": ([('"bootstrap-pending": 0, "refused": 0,', '"bootstrap-pending": 0, "refused": 1,')],
+        "unattestable decided before --check-evidence (v22)": (
+            [("        rc, tail = check_evidence()\n        if rc != 0:\n",
+              "        if sv.attestation_key(sv.attestation_identity()) is None:\n            raise Decided(\"unattestable\", \"early\")\n        rc, tail = check_evidence()\n        if rc != 0:\n")],
+            [("test_an_unreadable_key_is_unattestable_after_the_rederivation_and_runs_no_suite", {})]),
+        "an unreadable key ends the job red (v22)": ([('"bootstrap-pending": 0, "refused": 0, "unattestable": 0,', '"bootstrap-pending": 0, "refused": 0, "unattestable": 1,')],
+                                                     [("test_an_unreadable_key_is_unattestable_after_the_rederivation_and_runs_no_suite", {})]),
+        "refused fails the matrix": ([('"bootstrap-pending": 0, "refused": 0, "unattestable": 0,', '"bootstrap-pending": 0, "refused": 1, "unattestable": 0,')],
                                      [("test_a_refused_build_is_a_census_row_and_runs_nothing", {})]),
     }, tmp_path_factory)
 

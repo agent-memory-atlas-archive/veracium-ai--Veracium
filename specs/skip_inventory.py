@@ -58,7 +58,7 @@ INVENTORY = [
                          "spec as its normative counterpart; it skips only if "
                          "the seam-model tests are transplanted without "
                          "specs/ — a full checkout AND the extracted review "
-                         "package both carry the spec, so neither skips"),
+                         "package both carry the spec, so neither skips", "job:runs"),
     ("tests/test_0031_proposal_ddl.py", "skipif", "SyntaxError below",
      "host-conditional", "the TypeAlias-position battery (0031 pre-round-11 "
                          "red-team): its probe sources use the 3.12 `type` "

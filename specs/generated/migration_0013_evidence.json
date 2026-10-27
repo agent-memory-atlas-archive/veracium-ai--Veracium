@@ -1,9 +1,9 @@
 {
  "artifact": "specs/0013 draft evidence",
  "draft_schema_version": 2,
- "generated_at": "2026-10-26T19:54:49.264529+00:00",
+ "generated_at": "2026-10-27T10:50:53.560608+00:00",
  "generator": {
-  "repository_commit": "7f8d19e9fa84531067b03becbeb2b59e0f5e4cce",
+  "repository_commit": "ae98d42be49c5d89802c127fea9d93a063e4354f",
   "tool": "specs/migrations_0013.py"
  },
  "legacy_base_versions": [
@@ -290,7 +290,7 @@
      "type": "table"
     }
    },
-   "provenance": "migrations_0013.py --write-evidence on sqlite 3.45.1",
+   "provenance": "migrations_0013.py --write-evidence",
    "source_acceptance_digest": "910e49325716c1b599acb8efdeece10fe72cf2ffe2ae24e32cf6e910fa846299",
    "source_full_manifest_hash": "968acc9c78222b77037add376916595719ba916604116744a1064303cd6afc90",
    "to_version": 2

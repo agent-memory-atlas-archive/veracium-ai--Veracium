@@ -16,6 +16,12 @@
   spec 0013 INV-SA11), on both `migration_attempted` and `migration_committed`. A host whose `audit_sink` reads the
   fields by name, or the first six by position, is unaffected; one that unpacks exactly six must change. The 0018
   sidecar's `attempted` entry copies it as `runtime`.
+- **Fixed: uv's Python on arm64 Linux, and on musl, read its libc as unreadable.** The reader of the interpreter's ELF
+  `PT_INTERP` looked only at the first 1 MiB of the binary, and python-build-standalone's aarch64 (glibc and musl) and
+  x86_64 musl CPython 3.14 builds keep it at about 19–20 MiB. Every such build was at most `verified` and could never
+  be attested. Measured on the real 3.14.9 binaries: they read glibc, musl and musl now; the x86_64 glibc build and
+  the system interpreters were unaffected. The reader now seeks to the segment, and a short, empty or unterminated one
+  is unreadable rather than an empty path.
 - **Attestation records name one commit.** Every provenance entry of a record must carry the same commit (the commit
   the attestation suite ran at). A record mixing commits is malformed, and like any malformed record it poisons the
   artifact. `specs/attestation_writer.py` is the one way a record is written: it binds the record to the checkout's

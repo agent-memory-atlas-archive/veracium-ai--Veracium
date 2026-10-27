@@ -262,6 +262,19 @@ MUTANTS = [
        'MACHINE_ALIASES = {"amd64": "x86_64", "arm64": "aarch64", "i686": "x86_64"}')],
      [R("test_the_machine_canonicaliser_is_a_closed_two_entry_alias_map[i686-i686]")], [], None,
      "i686 aliased to x86_64"),
+    ("sa12-pt-interp-from-a-fixed-window", "product", SV,
+     [("                f.seek(off)\n                raw = f.read(size)\n",
+       "                if off + size > (1 << 20):\n                    return ''\n                f.seek(off)\n"
+       "                raw = f.read(size)\n")],
+     [R("test_pt_interp_is_read_wherever_the_segment_lies")], [], None,
+     "PT_INTERP read from a 1 MiB window at the start of the file (v22; run 1's aarch64 and musl builds)"),
+    ("sa12-a-short-segment-read-as-a-name", "product", SV,
+     [('                if len(raw) != size or raw[-1:] != b"\\0" or b"\\0" in raw[:-1]:\n                    return None\n'
+       '                return raw[:-1].decode("ascii")',
+       '                return raw.rstrip(b"\\0").decode("ascii")')],
+     [R("test_a_short_empty_or_unterminated_pt_interp_is_none_never_empty[truncated]"),
+      R("test_a_short_empty_or_unterminated_pt_interp_is_none_never_empty[unterminated]")], [], None,
+     "a short or unterminated PT_INTERP read as a name (v22)"),
     ("sa12-unreadable-matches", "product", SV,
      [("    if not isinstance(r, dict) or any(r.get(k) is None for k in KEY_FIELDS):", "    if not isinstance(r, dict):"),
       ('    if not all(isinstance(r[k], str) for k in KEY_FIELDS if k != "features"):',
@@ -314,6 +327,7 @@ CONTROLS = [
 
 WRITER_MATRIX = f"{WRITER}::MUTANTS"
 JOB_MATRIX = f"{JOBS}::test_the_attestation_job_mutation_matrix"
+SUITE_MATRIX = f"{JOBS}::test_the_attestation_suite_rule_mutation_matrix"
 AGG_MATRIX = f"{JOBS}::test_the_attestation_aggregate_mutation_matrix"
 SA10_TABLE = "specs/evidence/0013/sa10_mutants.py::MUTANTS"
 PA1_TABLE = "specs/evidence/0013/mutation-table.json::rows"
@@ -353,6 +367,14 @@ CARRIERS = {
     ("INV-SA6", 18): ("cite", f"{WRITER_MATRIX}::a fresh write accepts a bootstrap-pending job (v21)"),
     ("INV-SA6", 19): ("cite", f"{WRITER_MATRIX}::an unanswerable bootstrap derivation read as not bootstrap (v21)"),
     ("INV-SA6", 20): ("mutant", "sa6-ship-a-bootstrap-record"),
+    # ---- v22, what CI run 1 found (Quentin, 2026-10-27: "Adopt v22 now (Recommended)") -------------------------
+    ("INV-SA6", 21): ("cite", f"{SUITE_MATRIX}::the joint-group closure dropped (v22)"),
+    ("INV-SA6", 22): ("cite", f"{JOB_MATRIX}::unattestable decided before --check-evidence (v22)"),
+    ("INV-SA6", 23): ("cite", f"{JOB_MATRIX}::an unreadable key ends the job red (v22)"),
+    ("INV-SA6", 24): ("cite", f"{WRITER_MATRIX}::the bootstrap mark derived by a test other than the exemption's (v22)"),
+    ("INV-SA6", 25): ("cite", f"{WRITER_MATRIX}::a fresh write accepts a new bootstrap record (v22)"),
+    ("INV-SA12", 12): ("mutant", "sa12-pt-interp-from-a-fixed-window"),
+    ("INV-SA12", 13): ("mutant", "sa12-a-short-segment-read-as-a-name"),
     ("INV-SA7", 0): ("mutant", "sa7-warn-on-every-open"),
     ("INV-SA7", 1): ("mutant", "sa7-warn-on-an-attested-build"),
     ("INV-SA7", 2): ("mutant", "sa7-never-warn"),

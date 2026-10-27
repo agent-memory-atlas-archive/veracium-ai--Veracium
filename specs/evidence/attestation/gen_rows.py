@@ -28,7 +28,10 @@ def row(spec_row, route, runner_image, runs_on, install, python, expect_prefix, 
     rows.append(r)
 
 for img in ("ubuntu-24.04", "ubuntu-22.04", "macos-latest", "windows-latest"):
-    row(SP, "setup-python", img, img, "setup-python", "python", "${RUNNER_TOOL_CACHE}/Python")
+    # macOS (run 1, 2026-10-27, measured): setup-python installs 3.14 as a python.org FRAMEWORK build, outside the
+    # tool cache, so the row's declared location is the framework's
+    row(SP, "setup-python", img, img, "setup-python", "python",
+        "/Library/Frameworks/Python.framework/Versions/3.14" if img == "macos-latest" else "${RUNNER_TOOL_CACHE}/Python")
 row(PBS, "uv", "ubuntu-24.04", "ubuntu-24.04", UV_INSTALL, UV_PY, "${HOME}/.local/share/uv/python")
 row(PBS, "uv", "macos-latest", "macos-latest", UV_INSTALL, UV_PY, "${HOME}/.local/share/uv/python")
 row(PBS, "uv", "windows-latest", "windows-latest",
@@ -38,12 +41,21 @@ row(ORG, "python.org", "macos-latest", "macos-latest",
     "curl -LsSfo py.pkg https://www.python.org/ftp/python/3.14.0/python-3.14.0-macos11.pkg && sudo installer -pkg py.pkg -target /",
     "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3.14", "/Library/Frameworks/Python.framework/Versions/3.14")
 row(ORG, "python.org", "windows-latest", "windows-latest",
-    "curl -LsSfo py.exe https://www.python.org/ftp/python/3.14.0/python-3.14.0-amd64.exe && ./py.exe /quiet InstallAllUsers=1 PrependPath=0 TargetDir='C:\\Python314'",
+    # run 1 (2026-10-27): the installer launched from bash hung in /quiet (its quoted TargetDir); cmd passes it whole
+    "curl -LsSfo py.exe https://www.python.org/ftp/python/3.14.0/python-3.14.0-amd64.exe && "
+    "cmd //c \"py.exe /quiet InstallAllUsers=1 PrependPath=0 Include_test=0 TargetDir=C:\\Python314\"",
     "C:/Python314/python.exe", "C:/Python314")
 row(BREW, "homebrew", "macos-latest", "macos-latest", "brew install python@3.14",
     "$(brew --prefix python@3.14)/bin/python3.14", "$(brew --cellar)/python@3.14")
-for img in ("ubuntu-24.04", "macos-latest", "windows-latest"):
-    row(CONDA, "conda-forge", img, img, "conda create -y -p \"$HOME/attest-conda\" -c conda-forge --override-channels python=3.14",
+CONDA_CREATE = "create -y -p \"$HOME/attest-conda\" -c conda-forge --override-channels python=3.14"
+# run 1 (2026-10-27): `conda` is on PATH only on the Linux runner (exit 127 on macOS and Windows). macOS-latest has no
+# conda: Miniforge is installed; Windows has the runner's own under $CONDA.
+for img, conda in (("ubuntu-24.04", "conda"),
+                   ("macos-latest", "curl -LsSfo mf.sh https://github.com/conda-forge/miniforge/releases/latest/download/"
+                                    "Miniforge3-MacOSX-arm64.sh && bash mf.sh -b -p \"$HOME/miniforge\" && "
+                                    "\"$HOME/miniforge/bin/conda\""),
+                   ("windows-latest", "\"$CONDA/Scripts/conda.exe\"")):
+    row(CONDA, "conda-forge", img, img, f"{conda} {CONDA_CREATE}",
         "$HOME/attest-conda/bin/python" if img != "windows-latest" else "$HOME/attest-conda/python.exe", "${HOME}/attest-conda")
 row(PYENV, "pyenv", "ubuntu-24.04", "ubuntu-24.04",
     "sudo apt-get update -q && sudo apt-get install -yq libsqlite3-dev libssl-dev libbz2-dev libreadline-dev libffi-dev zlib1g-dev liblzma-dev && curl -fsSL https://pyenv.run | bash && ~/.pyenv/bin/pyenv install 3.14",

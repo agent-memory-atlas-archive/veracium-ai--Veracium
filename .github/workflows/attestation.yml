@@ -47,12 +47,14 @@ jobs:
       - if: ${{ !matrix.image && matrix.install == 'setup-python' }}
         id: setup
         continue-on-error: true
+        timeout-minutes: 20
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
       - if: ${{ !matrix.image && matrix.install != 'setup-python' }}
         id: install
         continue-on-error: true
+        timeout-minutes: 20      # run 1: the Windows python.org installer hung in /quiet; a hang is `unavailable`
         run: ${{ matrix.install }}
       - if: ${{ !matrix.image && (steps.setup.outcome == 'success' || steps.install.outcome == 'success') }}
         run: |
@@ -66,6 +68,7 @@ jobs:
       - if: ${{ matrix.image }}
         id: cinstall
         continue-on-error: true
+        timeout-minutes: 20
         run: docker exec row sh -c '${{ matrix.install }}'
       - if: ${{ matrix.image && steps.cinstall.outcome == 'success' }}
         run: |

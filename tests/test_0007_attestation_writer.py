@@ -457,6 +457,32 @@ def test_real_a_fresh_write_drops_bootstrap_records_and_refuses_a_non_bootstrap_
         aw.write_records([record(commit=head)], path=path, repo=repo["path"], fresh=True)
 
 
+def test_real_the_bootstrap_derivation_and_the_exemption_are_one_predicate(repo):
+    """0007 v22 (N1): over every artifact state, the derivation's answer at a commit EQUALS the job's exemption test on
+    that artifact (one function). The two v21 readings disagreed on a future-only and a malformed-only artifact."""
+    import importlib.util as _ilu
+    spec = _ilu.spec_from_file_location("veracium_attestation_job_n1", ROOT / "specs" / "attestation_job.py")
+    jobmod = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(jobmod)
+    base = record(commit=repo["A1"], machine="aarch64")
+    states = {"empty": [], "superseded": [dict(base, manifest_algorithm=sv.MANIFEST_ALGORITHM - 1)], "current": [base],
+              "future": [dict(base, schema_version=sv.SCHEMA_VERSION + 1)], "malformed": [{"manifest_algorithm": True}]}
+    for name, artifact in states.items():
+        at = _commit_artifact(repo, artifact)
+        derived = aw.is_bootstrap_record(record(commit=at), repo=repo["path"])
+        assert derived is jobmod.bootstrap_open(artifact) is aw.zero_current(artifact), name
+    assert [n for n, a in states.items() if aw.zero_current(a)] == ["empty", "superseded"]
+
+
+def test_real_a_fresh_write_refuses_a_new_record_that_is_itself_a_bootstrap_record(repo, tmp_path):
+    """0007 v22 (N2): whatever the input form (here a bare list, no aggregate), a fresh write refuses a NEW record whose
+    commit's artifact was at a zero-current state: the shipped set is never a bootstrap run's."""
+    path = tmp_path / "out.json"
+    path.write_text(json.dumps({"attestations": []}))
+    with pytest.raises(aw.AttestationRefused, match="itself a bootstrap record"):
+        aw.write_records([record(commit=repo["A1"])], path=path, repo=repo["path"], fresh=True)
+
+
 def test_real_an_unanswerable_bootstrap_derivation_refuses(repo, tmp_path):
     """v21 (3): an unknown commit, or a shallow clone, is "unanswerable", never "not a bootstrap record"."""
     with pytest.raises(aw.AttestationRefused, match="unanswerable: the record's commit"):
@@ -567,6 +593,12 @@ MUTANTS = {
         [('        raise AttestationRefused(f"unanswerable: the record\'s commit {commit} is not in this repository")',
           "        return False")],
         [("test_real_an_unanswerable_bootstrap_derivation_refuses", {})]),
+    "the bootstrap mark derived by a test other than the exemption's (v22)": (
+        [("    return zero_current(then)", '    return not any(sv.attestation_revision(x) == "current" for x in then)')],
+        [("test_real_the_bootstrap_derivation_and_the_exemption_are_one_predicate", {})]),
+    "a fresh write accepts a new bootstrap record (v22)": (
+        [("        for new in news:            # v22 (N2)", "        for new in []:            # v22 (N2)")],
+        [("test_real_a_fresh_write_refuses_a_new_record_that_is_itself_a_bootstrap_record", {})]),
     "a claimed commit accepted": ([("    if rc != 0 or head != commit:\n", "    if rc != 0:\n")],
                                   [(ARM, {"arm": "the record's commit is not HEAD"}), ("test_real_the_records_commit_must_be_head", {})]),
     "fixture commit mark dropped": ([('j["commit"] == FIXTURE_COMMIT or ', "")],

@@ -51,7 +51,7 @@ sys.path.insert(0, str(SPECS))
 import attestation_suite  # noqa: E402
 import skip_inventory  # noqa: E402
 
-OUTCOME_EXIT = {"evidence": 0, "bootstrap-pending": 0, "refused": 0, "excluded": 0,
+OUTCOME_EXIT = {"evidence": 0, "bootstrap-pending": 0, "refused": 0, "unattestable": 0, "excluded": 0,
                 "wrong-interpreter": 1, "wrong-job-state": 1, "evidence-mismatch": 1, "suite-mismatch": 1, "unmapped-skip": 1,
                 "failed-tests": 1, "confinement-failed": 1}
 """The CLOSED outcome set, and each one's exit code. (`unavailable`, an interpreter that could not be installed, is
@@ -170,11 +170,12 @@ def bootstrap_open(records=None) -> bool:
     the only one the bootstrap exemption applies in. A current, malformed or future record closes it, so poisoning the
     artifact cannot re-open it, and an unreadable artifact is not "empty"."""
     from veracium.store import schema_version as sv
+    import attestation_writer as aw
     try:
         records = sv.attestations() if records is None else records
     except (OSError, ValueError):
         return False
-    return isinstance(records, list) and all(sv.attestation_revision(r) == "superseded" for r in records)
+    return aw.zero_current(records)                    # v22 (N1): the ONE predicate the bootstrap derivation uses
 
 
 def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_suite=_run_suite, probes=None,
@@ -199,6 +200,12 @@ def decide(args, *, runtime_status=None, check_evidence=_check_evidence, run_sui
         rc, tail = check_evidence()
         if rc != 0:
             raise Decided("evidence-mismatch", f"--check-evidence exited {rc}: {tail.strip()[-400:]}")
+        # 0007 v22 §4d: AFTER the re-derivation (owed on every verifying build), a build whose key has an unreadable
+        # field cannot be attested: a named census row, exit 0, and no suite.
+        ident = sv.attestation_identity()
+        if sv.attestation_key(ident) is None:
+            raise Decided("unattestable", "this build's attestation key has an unreadable field: "
+                                          + ", ".join(k for k in sv.KEY_FIELDS if ident.get(k) is None))
         with tempfile.TemporaryDirectory() as td:
             junit = pathlib.Path(td) / "junit.xml"
             run_suite(junit)

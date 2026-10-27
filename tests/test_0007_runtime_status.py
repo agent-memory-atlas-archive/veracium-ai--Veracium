@@ -869,3 +869,40 @@ def test_every_migration_step_has_a_campaign_matcher_or_a_named_reason():
     declared = {v for k, v in vars(mig).items() if k.startswith("STEP_") and isinstance(v, str)}
     covered = set(camp._steps()) | set(camp.WRITELESS_STEPS)
     assert declared and declared <= covered, sorted(declared - covered)
+
+
+def _synthetic_elf(path, interp: bytes, interp_off: int, size: int | None = None):
+    """A minimal ELF64 little-endian image: one program header, PT_INTERP at `interp_off` (the file is sparse)."""
+    import struct
+    size = len(interp) if size is None else size
+    hdr = bytearray(64)
+    hdr[:4], hdr[4], hdr[5], hdr[6] = b"\x7fELF", 2, 1, 1
+    struct.pack_into("<Q", hdr, 0x20, 64)                      # e_phoff: the table right after the header
+    struct.pack_into("<HH", hdr, 0x36, 56, 1)                  # e_phentsize, e_phnum
+    ph = bytearray(56)
+    struct.pack_into("<I", ph, 0, 3)                           # PT_INTERP
+    struct.pack_into("<Q", ph, 8, interp_off)                  # p_offset
+    struct.pack_into("<Q", ph, 32, size)                       # p_filesz
+    with open(path, "wb") as f:
+        f.write(bytes(hdr) + bytes(ph))
+        f.seek(interp_off)
+        f.write(interp)
+
+
+def test_pt_interp_is_read_wherever_the_segment_lies(tmp_path):
+    """0007 CI run 1 (2026-10-27; research measured uv's aarch64 CPython: PT_INTERP at ~19.7 MiB in a 23 MB image).
+    The reader seeks: an interpreter 20 MiB into the file reads, and canonicalises to glibc."""
+    p = tmp_path / "far"
+    _synthetic_elf(p, b"/lib/ld-linux-aarch64.so.1\0", 20 << 20)
+    assert sv._pt_interp(str(p)) == "/lib/ld-linux-aarch64.so.1"
+    assert sv.canonical_libc("Linux", sv._pt_interp(str(p))) == "glibc"
+
+
+@pytest.mark.parametrize("interp, size", [(b"/lib/ld-linux-aarch64.so", 40), (b"\0", 1), (b"", 0),
+                                          (b"/lib/ld-linux-aarch64.so.1", None)],
+                         ids=["truncated", "empty-path", "zero-size", "unterminated"])
+def test_a_short_empty_or_unterminated_pt_interp_is_none_never_empty(tmp_path, interp, size):
+    """A short read, an empty path or a missing NUL is None (unreadable), never '' or a partial path."""
+    p = tmp_path / "bad"
+    _synthetic_elf(p, interp, 4096, size)
+    assert sv._pt_interp(str(p)) is None

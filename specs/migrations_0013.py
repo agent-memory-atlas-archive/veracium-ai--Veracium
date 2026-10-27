@@ -3848,16 +3848,20 @@ def _constructor_accepted(version: int) -> dict:
             "provenance": f"constructor v{version}"}
 
 
-def _generate_artifact() -> tuple:
+def _generate_artifact(for_check: bool = False) -> tuple:
     """Build the prospective artifact by MEASURING this runtime: constructor
     manifestations, authorizer behaviours, and one executed migration per
     (declared step × accepted source). Returns (artifact, problems) — problems
-    refuse generation, they are never written."""
+    refuse generation, they are never written.
+
+    `for_check` (0007 v22 §4d): --check-evidence re-derives on EVERY verifying build, and its comparison drops
+    `generated_on`, so only GENERATING needs this build's key. A build whose key has an unreadable field still
+    re-derives (and the job then ends `unattestable`); it cannot WRITE path evidence."""
     problems = []
     me = sv.runtime_identity()
     ident = sv.attestation_identity()
     generated_on = {k: ident[k] for k in sv.KEY_FIELDS}
-    if sv.attestation_key(generated_on) is None:
+    if sv.attestation_key(generated_on) is None and not for_check:
         problems.append(f"this build's attestation key has an unreadable field "
                         f"({[k for k in sv.KEY_FIELDS if ident[k] is None]}); it cannot generate path evidence")
     status = sv.runtime_status()
@@ -3906,8 +3910,9 @@ def _generate_artifact() -> tuple:
                     "output_manifestation": out,
                     "migration_declaration_digest":
                         migration_declaration_digest(mig),
-                    "provenance": f"migrations_0013.py --write-evidence on "
-                                  f"sqlite {me['sqlite_version']}",
+                    # Build-INDEPENDENT (0007 run 1, 2026-10-27): `generated_on` names the generating build, and a
+                    # version here made every other build's --check-evidence differ in this one string (22 rows).
+                    "provenance": "migrations_0013.py --write-evidence",
                 })
     art = {
         "artifact": "specs/0013 draft evidence",
@@ -3923,7 +3928,10 @@ def _generate_artifact() -> tuple:
     }
     with _registry():
         problems += [f"artifact: {p}" for p in schema_evidence_problems(art)]
-        problems += [f"paths: {p}" for p in path_evidence_problems(art)]
+        # for_check (v22 §4d): this build's OWN unreadable generated_on is exactly what the comparison drops; every
+        # other path problem still refuses the re-derivation
+        own = set(generated_on_problems(generated_on)) if for_check else set()
+        problems += [f"paths: {p}" for p in path_evidence_problems(art) if p not in own]
         problems += [f"paths: {p}" for p in expected_path_problems(art)]
     return art, problems
 
@@ -4067,7 +4075,7 @@ def check_evidence() -> int:
         print(f"this build is refused ({status.reason}); structural checks pass, re-derivation needs a build that "
               f"verifies")
         return 2
-    expected, gen_problems = _generate_artifact()
+    expected, gen_problems = _generate_artifact(for_check=True)
     if gen_problems:
         for p in gen_problems:
             print(f"  - regeneration: {p}")
