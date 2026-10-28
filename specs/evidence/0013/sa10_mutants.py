@@ -21,8 +21,14 @@ The protocol is pa1_campaign.py's part (B), on a copy of the tracked tree (TMPDI
            KILLED iff the classifier says so AND every named cell failed AND, where the row declares a REASON, that
            text is in a named cell's failure (a clean-ladder cell fails on ANY problem, so its kill is pinned to the
            problem the mutant must cause); the file is restored byte-identically.
-`--check` is FAST and re-runs nothing: definitions, anchors, digests, the named cells' existence, every row good.
+THE PHRASE COMPLEMENT (`CARRIERS`, `carrier_problems()`; 0007's sa_mutants.py is the model): §5f.1's "gate mutant it
+kills" column is read from the spec at run time and split by mutant; every phrase has exactly one carrier (a row of this
+table, or ABSENT with a reason and a cell) and every carrier's phrase exists, so a named mutant with no row fails by
+NAME in `--check`, `--write` and the table test, never by review.
+`--check` is FAST and re-runs nothing: the phrase complement, definitions, anchors, digests, the named cells'
+existence, every row good.
     $PY specs/evidence/0013/sa10_mutants.py --check
+    $PY specs/evidence/0013/sa10_mutants.py --phrases      # each §5f.1 phrase and its carrier
     TMPDIR=/dev/shm $PY specs/evidence/0013/sa10_mutants.py --write
 """
 from __future__ import annotations
@@ -34,6 +40,7 @@ import json
 import os
 import pathlib
 import platform
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -284,14 +291,19 @@ MUTANTS += [
      [("        if not first or not declare_vtab_probe():\n", "        if not first:\n")],
      [C("test_the_declare_vtab_sequence_is_a_write_on_a_build_whose_probe_does_not_reproduce")], [], None,
      "v37: the sequence attributed on a build whose own probe does not reproduce it"),
+    # one mutant, all four variants: the window's callback CODES drawn from the sequence's (UPDATE, READ), arguments
+    # and order unchecked. The superseded definition compared the codes as a tuple, which a sixth UPDATE column
+    # still fails (six UPDATEs are not five and a READ), so it could not fail the [sixth-column] cell.
     ("v37-a-loose-sequence", "gate", GATE,
      [("                if (a[0] == sqlite3.SQLITE_SELECT and tuple(rec.acts[i + 1:i + 1 + n]) == DECLARE_VTAB_SEQ\n",
-       "                if (a[0] == sqlite3.SQLITE_SELECT and tuple(x[0] for x in rec.acts[i + 1:i + 1 + n])\n"
-       "                        == tuple(x[0] for x in DECLARE_VTAB_SEQ)\n")],
-     [C("test_a_variant_of_the_declare_vtab_sequence_stays_a_write[another-table]"),
+       "                if (a[0] == sqlite3.SQLITE_SELECT and {x[0] for x in rec.acts[i + 1:i + 1 + n]}\n"
+       "                        <= {x[0] for x in DECLARE_VTAB_SEQ}\n")],
+     [C("test_a_variant_of_the_declare_vtab_sequence_stays_a_write[sixth-column]"),
+      C("test_a_variant_of_the_declare_vtab_sequence_stays_a_write[another-table]"),
       C("test_a_variant_of_the_declare_vtab_sequence_stays_a_write[another-database]"),
       C("test_a_variant_of_the_declare_vtab_sequence_stays_a_write[trigger-argument]")], [], None,
-     "v37: a sequence with another table, database or a trigger argument accepted"),
+     "v37: a loose sequence (callback codes only, from UPDATE/READ) accepts a sixth column, another table, another "
+     "database or a trigger argument"),
     ("v37-a-second-use", "gate", GATE,
      [("        first = mods - self.vtab_used[cid]\n", "        first = mods\n")],
      [C("test_the_declare_vtab_sequence_is_bookkeeping_only_on_a_connections_first_use")], [], None,
@@ -304,6 +316,65 @@ MUTANTS += [
      [("    return reproduces and before == after\n", "    return reproduces\n")],
      [C("test_the_declare_vtab_probe_needs_the_exact_sequence_and_no_change")], [], None,
      "v37: the probe's no-change check dropped"),
+]
+
+MUTANTS += [
+    # ---- §5f.1's named mutants no row carried until the phrase complement below (CARRIERS) found them ---------------
+    ("N2-row-count-postcondition", "gate", GATE,
+     [('    problems += [f"orphan {k} on connection {cid}: {str(x)[:100]}" for k, cid, x in census.orphans]\n',
+       "    def _counts(p):\n"
+       "        with contextlib.closing(sqlite3.connect(p)) as c:\n"
+       "            return {t: c.execute(f'SELECT count(*) FROM \"{t}\"').fetchone()[0] for (t,) in c.execute(\n"
+       "                \"SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'\").fetchall()}\n"
+       "    named = {a[2] if a[0] == sqlite3.SQLITE_ALTER_TABLE else a[1] for rec in calls if rec.cls == \"OUTSIDE\"\n"
+       "             for a in rec.acts if CODE_CLASS.get(a[0]) == \"schema\"}\n"
+       "    before, after = _counts(pre), _counts(store)\n"
+       "    if all(before[t] == after[t] for t in named if t in before and t in after):\n"
+       "        problems = [p for p in problems if not p.endswith(\"a schema write that is not class (a) or (b) by its "
+       "text\")]\n"
+       '    problems += [f"orphan {k} on connection {cid}: {str(x)[:100]}" for k, cid, x in census.orphans]\n')],
+     [C("test_n2_a_count_preserving_rebuild_is_refused_statement_by_statement")], [HARNESS], None,
+     "N2: a row-count postcondition in place of the list: a schema write outside the text classes is admitted when "
+     "every table the outside writes name keeps, over the path, the row count it had before"),
+    ("N11-attribute-by-trace-sequence", "gate", GATE,
+     [("        def auth(code, a1, a2, db, trig):\n            cur = self.cur\n",
+       "        def auth(code, a1, a2, db, trig):\n            cur = self.cur or getattr(self, \"last_traced\", None)\n"),
+      ("        def trace(text):\n            cur = self.cur\n",
+       "        def trace(text):\n            cur = self.cur or getattr(self, \"last_traced\", None)\n"),
+      ("                cur.traces.append(text)\n",
+       "                cur.traces.append(text)\n                self.last_traced = cur\n")],
+     [C("test_n11_a_statement_around_the_proxy_is_an_orphan")], [HARNESS], None,
+     "N11: actions attributed by trace sequence: a callback that arrives while no proxied call runs joins the call "
+     "that traced last (on its connection), instead of being an orphan"),
+    ("C2-fixture-out-of-scope", "gate", GATE,
+     [('    out = [(lab, "migrate_store", lambda p, lab=lab: (_clear(p), pa1.fresh_fixture(p, lab))) for lab in labels]\n'
+       '    for mode, c in (("wrong", "C2"), ("missing", "C3")):\n',
+       '    out = [(lab, "migrate_store", lambda p, lab=lab: (_clear(p), pa1.fresh_fixture(p, lab))) for lab in labels]\n'
+       '    for mode, c in (("missing", "C3"),):\n'),
+      ('            out.append((lab, "release", lambda p, lab=lab: (_clear(p), pa1.fresh_fixture(p, lab))))\n'
+       '    for mode, c in (("wrong", "C2"), ("missing", "C3")):\n',
+       '            out.append((lab, "release", lambda p, lab=lab: (_clear(p), pa1.fresh_fixture(p, lab))))\n'
+       '    for mode, c in (("missing", "C3"),):\n')],
+     [CLEAN_GATE], [HARNESS], "C2: no (b2) statement carrying a DROP_INDEX action was observed",
+     "C2: a gate with no C2 fixture (`wrong`) in scope, on either entry: the clean ladder then fails as no (b2) "
+     "observed"),
+    ("C3-refuse-every-disagreement", "gate", GATE,
+     [('        if lab == "DDL" and cls == "read" and not rec.acts and tc == "b2":\n', "        if False:\n")],
+     [CLEAN_GATE, RULE(22)], [HARNESS], "C3-missing: execute 'DROP INDEX IF EXISTS ",
+     "C3: every label/SQLite disagreement refused in both directions (rule 6's one exception, the (b2) no-op of an "
+     "index already absent, dropped): the clean ladder's C3 path refuses"),
+    # ---- I1: the pragma vocabulary is frozen by name AND argument shape (rule 5); N9's row admits every pragma ----
+    ("I1-pragma-unlisted-name-reads", "gate", GATE,
+     [("        if PRAGMA_READS.get(name) != shape or shape is None:\n",
+       "        if PRAGMA_READS.get(name, shape) != shape or shape is None:\n")],
+     [C("test_n9_writable_schema_at_a_declared_site_is_off_the_pragma_vocabulary"), RULE(8), RULE(11)], [HARNESS],
+     None, "I1: a pragma name off the list is a read when its argument has a well-formed shape (the shape still "
+           "checked for a listed name)"),
+    ("I1-pragma-another-shape-reads", "gate", GATE,
+     [("        if PRAGMA_READS.get(name) != shape or shape is None:\n",
+       "        if name not in PRAGMA_READS or shape is None:\n")],
+     [RULE(25)], [HARNESS], None,
+     "I1: a listed pragma is a read with any well-formed argument shape (the vocabulary frozen by name only)"),
 ]
 
 # (id, file, [(anchor, replacement)], named cells, what, the outcome the classifier must give)
@@ -330,7 +401,6 @@ named_cells = SUBJECT_P.named_cells
 honest_nodes = SUBJECT_P.honest_nodes
 _digests = SUBJECT_P.digests
 campaign = SUBJECT_P.campaign
-problems = SUBJECT_P.problems
 
 
 def defined_tests(root: pathlib.Path = ROOT) -> set:
@@ -338,8 +408,220 @@ def defined_tests(root: pathlib.Path = ROOT) -> set:
     return {n.split("::")[1] for n in SUBJECT_P.defined_tests(root)}
 
 
-def main() -> int:
-    return SUBJECT_P.main(sys.argv)
+# ---- the phrase complement: §5f.1's "gate mutant it kills" column, read from the spec at run time -----------------------
+# 0007's sa_mutants.py `phrases()` / `CARRIERS` / `carrier_problems()` is the model. A phrase is ONE named mutant: the
+# column's cell, cut at its first sentence end (C2's cell goes on to explain the step table's fixture), version markers
+# stripped, split at parenthesis depth 0 on "; ", ", or " and " or " (never on " and ": N4's "allow `executescript` and
+# classify the script by its first statement" is one edit). Keyed by (row, phrase TEXT), so a reworded, added, removed
+# or reordered phrase fails by name in both directions; an index key would let a reorder pass silently.
+#   "—"         no mutant (C1, the control the census itself is): the row yields no phrase, and any other empty cell
+#               is a problem;
+#   "the same"  N7's first half, N14 and N15: the PREVIOUS row's mutant. It stays its own phrase (the row's cell must
+#               still be demonstrated against it), its text names the referent, and its carrier MUST equal the
+#               referent's carrier (it is the same edit). A "the same" whose previous row has more than one phrase is
+#               ambiguous and refuses.
+SPEC = "specs/0013-store-migrations.md"
+TABLE_HEADER = "| # | cell | expected | gate mutant it kills |"
+NO_MUTANT = "—"
+SAME = "the same"
+_SEPS = ("; ", ", or ", " or ")                      # ", or " before " or ": the comma is consumed with its separator
+_MARKER = re.compile(r"\*\*\((?:v[0-9.]+)\)\*\*\s*")
+
+
+def _split_depth0(text: str) -> list:
+    """`text` split on _SEPS at parenthesis depth 0. Unbalanced parentheses raise (a phrase would be cut wrongly)."""
+    out, cur, depth, i = [], [], 0, 0
+    while i < len(text):
+        if depth == 0:
+            sep = next((s for s in _SEPS if text.startswith(s, i)), None)
+            if sep is not None:
+                out.append("".join(cur))
+                cur, i = [], i + len(sep)
+                continue
+        ch = text[i]
+        depth += (ch == "(") - (ch == ")")
+        if depth < 0:
+            raise ValueError(f"unbalanced ')' at {i} in {text!r}")
+        cur.append(ch)
+        i += 1
+    if depth != 0:
+        raise ValueError(f"unbalanced '(' in {text!r}")
+    out.append("".join(cur))
+    return out
+
+
+def _first_sentence(text: str) -> str:
+    depth = 0
+    for i, ch in enumerate(text):
+        depth += (ch == "(") - (ch == ")")
+        if ch == "." and depth == 0 and text[i + 1:i + 2] == " " and text[i + 2:i + 3].isupper():
+            return text[:i]
+    return text
+
+
+def section_rows(root: pathlib.Path = ROOT) -> list:
+    """[(row id, the "gate mutant it kills" cell)] of §5f.1's negative-cell table, in order. Refuses (ValueError) a
+    missing or repeated header, a row that is not exactly four cells, or a table with no rows."""
+    lines = (root / SPEC).read_text(encoding="utf-8").splitlines()
+    at = [i for i, ln in enumerate(lines) if ln.strip() == TABLE_HEADER]
+    if len(at) != 1:
+        raise ValueError(f"{SPEC}: the §5f.1 header {TABLE_HEADER!r} occurs {len(at)} time(s), not once")
+    body = lines[at[0] + 1:]
+    if not body or not re.fullmatch(r"\|(-+\|){4}", body[0].strip()):
+        raise ValueError(f"{SPEC}: the §5f.1 header is not followed by its |---| separator")
+    rows = []
+    for ln in body[1:]:
+        if not ln.strip().startswith("|"):
+            break
+        cells = [c.strip() for c in ln.strip().split("|")]
+        if len(cells) != 6 or cells[0] or cells[-1] or not re.fullmatch(r"[A-Z]\d+", cells[1]):
+            raise ValueError(f"{SPEC}: a §5f.1 table row is not `| id | cell | expected | mutant |`: {ln[:100]!r}")
+        rows.append((cells[1], cells[4]))
+    if not rows:
+        raise ValueError(f"{SPEC}: the §5f.1 table has no rows")
+    return rows
+
+
+def phrases(root: pathlib.Path = ROOT) -> dict:
+    """{(row, phrase): referent}: every named mutant of §5f.1's table. `referent` is None for a phrase of its own row,
+    else (the previous row, its phrase) for a "the same", resolved through a chain (N15 -> N14 -> N13)."""
+    out, prev, seen = {}, None, set()
+    for row, cell in section_rows(root):
+        if row in seen:
+            raise ValueError(f"§5f.1 row {row} occurs twice")
+        seen.add(row)
+        text = _MARKER.sub("", _first_sentence(cell)).strip()
+        mine = []
+        if text != NO_MUTANT:
+            for p in (q.strip() for q in _split_depth0(text)):
+                if not p:
+                    raise ValueError(f"§5f.1 row {row}: an empty phrase in {text!r}")
+                if p == SAME:
+                    if prev is None or len(prev[1]) != 1:
+                        raise ValueError(f"§5f.1 row {row}: 'the same' needs a previous row with exactly one phrase")
+                    (pk, pref), = prev[1]
+                    ref = pref or pk
+                    out[(row, p)] = ref
+                else:
+                    out[(row, p)] = None
+                mine.append(((row, p), out[(row, p)]))
+        prev = (row, mine)
+    return out
+
+
+CARRIERS = {
+    # (row, phrase) -> ("mutant", id) | ("absent", reason, cell). Several phrases share ONE row only where one edit
+    # genuinely realises each of them; each share is justified beside it.
+    ("N1", "admit every statement at a declared class-(b) site"): ("mutant", "N1-site-admits-schema-writes"),
+    ("N2", "match (b1) by prefix rather than byte-equality"): ("mutant", "N2-b1-by-prefix"),
+    ("N2", "a row-count postcondition in place of the list"): ("mutant", "N2-row-count-postcondition"),
+    ("N3", "widen (b2) to every index"): ("mutant", "N3-b2-every-index"),
+    # SHARED (N4, N8): the one edit is "executescript allowed, the script classified by its first statement"; N8's
+    # phrase is the second half of N4's, and no gate can classify a script it does not allow
+    ("N4", "allow `executescript` and classify the script by its first statement"):
+        ("mutant", "N4-N8-executescript-by-first-statement"),
+    ("N8", "classify a script by its first statement"): ("mutant", "N4-N8-executescript-by-first-statement"),
+    # SHARED (N5, N10): both are "drop the assertion", the same constructor assertion; N10's parenthesis says what its
+    # absence costs, not a second edit
+    ("N5", "drop the assertion"): ("mutant", "N5-N10-constructor-assertion-dropped"),
+    ("N10", "drop the assertion (a recreate of an existing name becomes a silent no-op, a second legitimate-looking "
+            "no-op beside (b2)'s)"): ("mutant", "N5-N10-constructor-assertion-dropped"),
+    # SHARED (N6, N7 "the same"): the spec says it is the same mutant; the row names both cells
+    ("N6", "classify by the leading keyword"): ("mutant", "N6-N7-leading-keyword"),
+    ("N7", "the same"): ("mutant", "N6-N7-leading-keyword"),
+    ("N7", "a write complement over labelled DML only"): ("mutant", "N7-complement-over-labelled-DML"),
+    ("N9", "treat every pragma other than the stamp as a read"): ("mutant", "N9-every-pragma-reads"),
+    ("N11", "attribute actions by trace sequence"): ("mutant", "N11-attribute-by-trace-sequence"),
+    ("N11", "skip the orphan check"): ("mutant", "N11-orphans-skipped"),
+    ("N12", "classify a `sqlite_master`-only write as a read"): ("mutant", "N12-schema-table-write-reads"),
+    ("N12", "drop the `getconfig` assertion"): ("mutant", "N12-getconfig-dropped"),
+    # SHARED (N13, N14 and N15 "the same"): the spec says it is the same mutant; the row names all three cases
+    ("N13", "forward every name the proxy does not list to the real connection"):
+        ("mutant", "N13-N15-forward-unknown-attributes"),
+    ("N14", "the same"): ("mutant", "N13-N15-forward-unknown-attributes"),
+    ("N15", "the same"): ("mutant", "N13-N15-forward-unknown-attributes"),
+    ("W1", "`__enter__` returns the real connection's `__enter__()`"): ("mutant", "enter-returns-real"),
+    ("W2", "`execute` returns the real cursor"): ("mutant", "execute-returns-real-cursor"),
+    ("W2", "the wrapper's `__iter__` returns the real cursor"): ("mutant", "cursor-iter-returns-real"),
+    ("W3", "the allowlist written in `__getattr__`, with the real connection stored as an instance attribute (Python "
+           "consults `__getattr__` only for a name the object lacks)"): ("mutant", "W3-allowlist-in-getattr"),
+    ("W3", "a `__setattr__` that forwards every name to the real connection"): ("mutant", "W3-setattr-forwards"),
+    ("C2", "a gate with no such fixture in scope (C2 then fails as \"no (b2) observed\")"):
+        ("mutant", "C2-fixture-out-of-scope"),
+    ("C3", "refuse every label/SQLite disagreement in both directions"): ("mutant", "C3-refuse-every-disagreement"),
+}
+"""Every §5f.1 phrase's ONE carrier: a row of THIS table, or ABSENT with its reason and a cell (none today)."""
+
+_N_CELL = re.compile(r"(?:_n|\[N)(\d+)")
+
+
+def carrier_problems(root: pathlib.Path = ROOT) -> list:
+    """The complement check: §5f.1's phrase set EQUALS CARRIERS' key set, each carrier resolves (a mutant of this table,
+    or an ABSENT cell that exists), a "the same" phrase has its referent's carrier, and an N-row's carrier names a cell
+    of that N (the `_n<k>` / `[N<k>` the cells file uses)."""
+    try:
+        ph = phrases(root)
+    except (OSError, ValueError) as e:
+        return [f"the §5f.1 phrases cannot be read: {e}"]
+    out = []
+    out += [f"{k[0]} phrase {k[1]!r} has no carrier" for k in sorted(set(ph) - set(CARRIERS))]
+    out += [f"{k[0]} carrier {k[1]!r} has no phrase in the spec" for k in sorted(set(CARRIERS) - set(ph))]
+    by_id = {m[0]: m for m in MUTANTS}
+    tests = SUBJECT_P.defined_tests(root)
+    for k, c in sorted(CARRIERS.items()):
+        if k not in ph:
+            continue
+        if c[0] == "mutant" and len(c) == 2:
+            m = by_id.get(c[1])
+            if m is None:
+                out.append(f"{k[0]} phrase {k[1]!r}: no mutant {c[1]!r} in this table")
+            elif k[0].startswith("N") and not any(
+                    int(x) == int(k[0][1:]) for n in m[4] for x in _N_CELL.findall(n.split("::")[-1])):
+                out.append(f"{k[0]} phrase {k[1]!r}: its carrier {c[1]!r} names no {k[0]} cell")
+        elif c[0] == "absent" and len(c) == 3:
+            f, name = c[2].split("::")[0], c[2].split("::")[-1].split("[")[0]
+            if f"{f}::{name}" not in tests:
+                out.append(f"{k[0]} phrase {k[1]!r}: the ABSENT cell {c[2]} is not a test in {f}")
+        else:
+            out.append(f"{k[0]} phrase {k[1]!r}: carrier {c!r} is not ('mutant', id) or ('absent', reason, cell)")
+        ref = ph[k]
+        if ref is not None and CARRIERS.get(ref) != c:
+            out.append(f"{k[0]} phrase {k[1]!r} is the same mutant as {ref[0]}'s {ref[1]!r} but has another carrier")
+    return out
+
+
+def problems(path=None, root: pathlib.Path = ROOT) -> list:
+    """The table check (`--check`): the phrase complement, then the protocol's checks of the committed table."""
+    return carrier_problems(root) + SUBJECT_P.problems(path, root)
+
+
+def main(argv=None) -> int:
+    argv = sys.argv if argv is None else argv
+    if "--phrases" in argv:
+        ph = phrases()
+        for k in sorted(ph, key=lambda k: list(ph).index(k)):
+            c = CARRIERS.get(k, ("MISSING",))
+            same = f"  [= {ph[k][0]}: {ph[k][1]}]" if ph[k] else ""
+            print(f"{k[0]:4s} {c[0]:7s} {c[1] if len(c) > 1 else '':40s} {k[1]}{same}")
+        bad = carrier_problems()
+        for b in bad:
+            print(f"CARRIER: {b}")
+        return 1 if bad else 0
+    bad = carrier_problems()
+    if bad and ("--write" in argv or "--try" in argv):
+        for b in bad:
+            print(f"CARRIER: {b}")
+        return 1
+    if "--write" in argv or "--try" in argv:
+        return SUBJECT_P.main(argv)
+    probs = problems()
+    for b in probs:
+        print(f"STALE: {b}")
+    if probs:
+        return 1
+    t = json.loads(TABLE.read_text(encoding="utf-8"), object_pairs_hook=_strict_pairs)
+    print(f"{TABLE.relative_to(ROOT)} current: {json.dumps(t['summary'])} (body_sha256 {t['body_sha256']})")
+    return 0
 
 
 if __name__ == "__main__":

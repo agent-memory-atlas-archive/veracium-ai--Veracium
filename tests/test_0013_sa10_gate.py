@@ -181,13 +181,18 @@ def _cases():
          "the prefix label says DDL"),
         ("a TXN call with a write action", None, [(A.SQLITE_INSERT, "episodes", None, "main", None)], _DECLARED, "txn",
          "non-transaction actions"),
+        # I1: the vocabulary is frozen by name AND argument shape: a listed name with another WELL-FORMED shape (no
+        # argument where the list says one identifier) refuses, so the shape is not implied by the name
+        ("a listed pragma with another well-formed argument shape", "PRAGMA table_xinfo",
+         [(A.SQLITE_PRAGMA, "table_xinfo", None, None, None)], _DECLARED, "pragma-read",
+         "PRAGMA table_xinfo(None) is not on the read vocabulary"),
     ]
 
 
-@pytest.mark.parametrize("case", range(25))
+@pytest.mark.parametrize("case", range(26))
 def test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one(case):
     cases = _cases()
-    assert len(cases) == 25
+    assert len(cases) == 26
     name, sql, acts, site, want_cls, want = cases[case]
     how = "commit" if sql is None else "execute"
     cls, probs = _classify(sql=sql, acts=acts, site=site, how=how, traces=() if how == "commit" else ("t",))
@@ -564,10 +569,22 @@ def test_n1_the_reviewers_drop_and_recreate_at_a_declared_site_is_refused(tmp_pa
 
 
 def test_n2_a_count_preserving_rebuild_is_refused_statement_by_statement(tmp_path, monkeypatch):
-    """N2: CREATE ... AS SELECT, DROP, ALTER ... RENAME: all three outside. Gate mutant: match (b1) by prefix."""
+    """N2: CREATE ... AS SELECT, DROP, ALTER ... RENAME: all three outside. Gate mutants: match (b1) by prefix; a
+    row-count postcondition in place of the list. The rebuild PRESERVES every count it touches (asserted here, from
+    the files, independently of the gate), so a count check is satisfied by construction and only the frozen list can
+    refuse it."""
     stmts = ("CREATE TABLE episodes_rebuild AS SELECT * FROM episodes", "DROP TABLE episodes",
              "ALTER TABLE episodes_rebuild RENAME TO episodes")
     r = _n_run(tmp_path, monkeypatch, _run_all(*stmts))
+    counts = []
+    for f in ("pre.db", "store.db"):
+        c = sqlite3.connect(str(tmp_path / "n" / f))
+        try:
+            counts.append(c.execute("SELECT count(*) FROM episodes").fetchone()[0])
+            assert c.execute("SELECT count(*) FROM sqlite_master WHERE name = 'episodes_rebuild'").fetchone()[0] == 0
+        finally:
+            c.close()
+    assert counts[0] == counts[1] >= 1, counts                 # the count-preserving premise holds on the files
     for s in stmts:
         assert any(p.startswith(_outside(s)) and p.endswith("not class (a) or (b) by its text")
                    for p in r["problems"]), (s, r["problems"])
