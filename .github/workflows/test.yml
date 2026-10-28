@@ -38,6 +38,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,mcp]"
       - name: Run tests
+        # TMPDIR on the RUNNER's filesystem (2026-10-28): runs 40601278498 and 40627846765 drew ubuntu-26.04 image
+        # 20261012.163.1, where /tmp is another filesystem, and 0026's bootstrap test (it hard-links a fixture into
+        # tmp_path) refused with EXDEV, as its own message prescribes; 55af957's run drew 20261025.179.1 and passed.
+        # TMPDIR, not --basetemp: the closure-evidence row re-runs that test in a nested pytest, which inherits the
+        # environment but not the option, and a shared --basetemp would be cleared by the inner session. Each
+        # session still gets its own numbered pytest-of-<user> directory under $RUNNER_TEMP, outside the package tree.
+        env:
+          TMPDIR: ${{ runner.temp }}
         run: pytest -q
         # The live LLM acceptance eval is opt-in (VERACIUM_EVAL=1) and needs a
         # provider + key, so it stays skipped here; the offline suite is the gate.
@@ -73,6 +81,7 @@ jobs:
       - name: Run tests at the floor
         env:
           VERACIUM_MIN_DEP_JOB: "1"
+          TMPDIR: ${{ runner.temp }}          # the same, see "Run tests" above
         run: pytest -q
 
   build:
