@@ -1,5 +1,5 @@
 {
- "body_sha256": "eac1251c450f7728b81af05e67989f7fb09e31b58cee07aeb474613c262885de",
+ "body_sha256": "153284e9e09b2fa41e17e0567ce8855b55655bdb6f38cf49a76aca94a98b00a9",
  "controls": [
   {
    "anchor_counts": [
@@ -41,9 +41,12 @@
     "tests/test_0013_sa10_gate.py::test_an_orphan_callback_and_a_cross_connection_callback_are_refusals",
     "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[11]",
     "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[13]",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[15]",
     "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[22]",
     "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[25]",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[26]",
     "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[2]",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[5]",
     "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[6]",
     "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[8]",
     "tests/test_0013_sa10_gate.py::test_execute_hands_back_the_cursor_wrapper_never_the_real_cursor",
@@ -70,6 +73,7 @@
     "tests/test_0013_sa10_gate.py::test_site_coverage_reports_an_unobserved_site_in_a_function_the_census_entered",
     "tests/test_0013_sa10_gate.py::test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses",
     "tests/test_0013_sa10_gate.py::test_the_allowlist_refuses_each_connection_route_and_replay_still_sees_the_file_routes[raw file I/O corrupting only an index page]",
+    "tests/test_0013_sa10_gate.py::test_the_census_disables_the_statement_cache",
     "tests/test_0013_sa10_gate.py::test_the_clean_control_admits_a_call_whose_nested_pragma_traces_twice",
     "tests/test_0013_sa10_gate.py::test_the_comparator_refuses_another_build_and_names_each_section",
     "tests/test_0013_sa10_gate.py::test_the_configuration_guard_sees_setconfig_which_no_statement_shows",
@@ -95,25 +99,29 @@
   },
   "clean": {
    "first": {
-    "of": 59,
+    "of": 63,
     "ok": true,
-    "passed": 59
+    "passed": 63
    },
    "last": {
-    "of": 59,
+    "of": 63,
     "ok": true,
-    "passed": 59
+    "passed": 63
    }
   },
-  "commit": "27b117fdd669f9c0b6fd654f1612ead6e2492142",
+  "commit": "f149bb2e3c5ecf88630ffe2e7a18d561f88890aa",
   "control_definitions": {
    "CTRL-unrelated-TypeError": "0f24898c8e6fa5c5dc15ab1345e97221888f49a8bcf6510939b41c1ee59e8ed3"
   },
   "definitions": {
    "C2-fixture-out-of-scope": "3efd6d7bc4cc852128cd2c8a9e362f3d5a57798e1ad6feb429ed3b2f3038fa31",
    "C3-refuse-every-disagreement": "5186f8503e9d60445c3cc57f6104d9424d0c3f3b018ee535665557ff4dff6ec5",
+   "I1-a-listed-code-reclassed": "bba60506713960f399e44dc24a265f504f0ebac884d9a2277c3bbb5c86acda99",
    "I1-pragma-another-shape-reads": "550136e2c035bd1ebb89263362eafb9ed92bf7b08cbdbf956f20047766b00fb8",
    "I1-pragma-unlisted-name-reads": "eb3e3dbbe03deb2a3ecbb2dcc91f6e7fb9da45853cc7e99d39faedcf487329a1",
+   "I1-reindex-paired-by-any-create-index": "82403b6268de7c99369aadba16fc1f8a65fd2ce992d1fb530ccd8e8eb3cb4e09",
+   "I1-schema-branch-only": "2219f4bd649f2fc897ee75923feaab3834a2bf33463d4ec4ceccdb5c4bfa9581",
+   "I1-statement-cache-left-on": "b3a49edd7171fe90178e31f20680d43b829465750ba4d3ca50dc7f1e2e50b2b4",
    "N1-site-admits-schema-writes": "d767478b922c3ac696ecdbc3c6d8a7682f094e080e2cee7931bcfe46aec18250",
    "N11-attribute-by-trace-sequence": "9a3a904101b7487626ec8b42e425a48bfad6b3d93a462763981572f1213e5e02",
    "N11-orphans-skipped": "2226b778c3d5d4e24558961406d2a1f043daedef25e466f4511fa5e8020c664e",
@@ -166,14 +174,14 @@
    "specs/evidence/0013/pa1_campaign.py": "1f381ba1f29979a598ef5cc666aa9b2a32b727402d8ce598e8a01e32854781c3",
    "specs/evidence/0013/sa10_digest.py": "b3267bc12cf0b45b2c407747f01c0b1d51381edb549bf0a0e798b4e42ecf5f3e",
    "specs/evidence/0013/sa10_gate.py": "ca88ce35bca6bf29588f7f3bbb707d57a28aa6de4a72c1af3d2929db1bfda28c",
-   "specs/evidence/0013/sa10_mutants.py": "f5751a69b8b3650f030cae266a0caba24da2baaec2d440da8306885902cb0e01",
+   "specs/evidence/0013/sa10_mutants.py": "e50e29b6eb7f01be7f5e854579728a9d6974e1b089997a2977f1685a8a47186c",
    "specs/evidence/0013/steptable.py": "3bd0703a285479090d542883fecd10c1165eb4857dc70c7f4f0ef1c3a5cdab29",
    "specs/evidence/mutation_kinds.py": "46d4802f8ef82e797fa285dab7afde3581db230761c5377c826ce6cdc275c8ad",
    "specs/evidence/mutation_protocol.py": "69b2aa50b14d9bc190a6dac42ac483289316991fb2f5ef723f3604be1acce9e0",
    "src/veracium/store/migration.py": "be5542418a560310b45af5555602b10f2e8cc6cb161730be45c6101495e6dc42",
    "src/veracium/store/release_migration.py": "0e750325e0347d02dfea19dedecdc6c3bd0bce2733a25556f8df52a7e83f1ce4",
    "src/veracium/store/schema_version.py": "452a7750f8fc23173b4c65e1fc86a68ccd4ae6241d656f191e9adade92968a05",
-   "tests/test_0013_sa10_gate.py": "c15216617f11392704b580a86fd6eb163289934528e5ace684a43b31e6ad4df0"
+   "tests/test_0013_sa10_gate.py": "b28d85f09fc68666810dd60a31128227d41ce8fc2f62d9ec589937ea882d4797"
   },
   "finding": "INV-SA10",
   "honest_nodes": [
@@ -185,9 +193,14 @@
   "spec": "0013",
   "sqlite": "3.45.1",
   "tracked_changes": [
+   "specs/evidence/0007/routes/route_probe.py",
+   "specs/evidence/0007/routes/verified-3.45.1-runner-build.txt",
+   "specs/evidence/0007/routes/verified-3.53.1-python-build-standalone.txt",
+   "specs/evidence/0007/sa/mutation-table.json",
+   "specs/evidence/0013/sa10/mutation-table.json",
    "specs/evidence/0013/sa10_mutants.py",
-   "tests/test_0013_sa10_gate.py",
-   "tests/test_0013_sa10_mutants.py"
+   "tests/test_0007_attestation_writer.py",
+   "tests/test_0013_sa10_gate.py"
   ]
  },
  "rows": [
@@ -222,7 +235,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 1.12s",
+   "pytest": "2 failed in 1.18s",
    "reason": null,
    "reason_seen": null,
    "what": "N1: class (b) decided by the site: every schema write at a declared site is admitted"
@@ -255,7 +268,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.84s",
+   "pytest": "1 failed in 0.97s",
    "reason": null,
    "reason_seen": null,
    "what": "N2: (b1) matched by its prefix, not byte-equality to a head constructor"
@@ -288,7 +301,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.85s",
+   "pytest": "1 failed in 0.88s",
    "reason": null,
    "reason_seen": null,
    "what": "N3: (b2) widened from the rebuildable indexes to every index"
@@ -327,7 +340,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "3 failed in 1.16s",
+   "pytest": "3 failed in 1.32s",
    "reason": null,
    "reason_seen": null,
    "what": "N4/N8: executescript allowed, the script classified by its first statement"
@@ -363,7 +376,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 0.58s",
+   "pytest": "2 failed in 0.61s",
    "reason": null,
    "reason_seen": null,
    "what": "N5/N10: the gate no longer asserts its head constructors are plain creates"
@@ -432,7 +445,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.81s",
+   "pytest": "1 failed in 0.86s",
    "reason": null,
    "reason_seen": null,
    "what": "N7: the write complement runs over labelled DML only"
@@ -468,7 +481,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 0.87s",
+   "pytest": "2 failed in 0.90s",
    "reason": null,
    "reason_seen": null,
    "what": "N9: every pragma other than the stamp is a read"
@@ -501,7 +514,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.85s",
+   "pytest": "1 failed in 0.86s",
    "reason": null,
    "reason_seen": null,
    "what": "N11: the orphan check skipped"
@@ -537,7 +550,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 0.87s",
+   "pytest": "2 failed in 0.95s",
    "reason": null,
    "reason_seen": null,
    "what": "N12: a write to sqlite_master alone is classified as a read"
@@ -573,7 +586,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 1.16s",
+   "pytest": "2 failed in 1.09s",
    "reason": null,
    "reason_seen": null,
    "what": "N12: the getconfig assertion after every call dropped"
@@ -621,7 +634,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "6 failed in 1.36s",
+   "pytest": "6 failed in 1.43s",
    "reason": null,
    "reason_seen": null,
    "what": "N13\u2013N15: the connection proxy forwards every name it does not list to the real connection"
@@ -658,7 +671,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 0.62s",
+   "pytest": "2 failed in 0.61s",
    "reason": null,
    "reason_seen": null,
    "what": "stage-1 4(g): the superseded shape, the allowlist in __getattr__ with the real connection an instance attribute, so a name the object HAS (`_real`, `__dict__`) never reaches the allowlist"
@@ -694,7 +707,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 0.57s",
+   "pytest": "2 failed in 0.61s",
    "reason": null,
    "reason_seen": null,
    "what": "the proxy's __setattr__ forwards every name to the real connection: setting `_real` or `autocommit` is admitted"
@@ -727,7 +740,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.55s",
+   "pytest": "1 failed in 0.59s",
    "reason": null,
    "reason_seen": null,
    "what": "stage-1 4(f): `with conn as c` binds the real connection"
@@ -763,7 +776,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 0.91s",
+   "pytest": "2 failed in 0.66s",
    "reason": null,
    "reason_seen": null,
    "what": "stage-1 4(f): execute returns the real cursor, whose .connection is the real connection"
@@ -796,7 +809,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.81s",
+   "pytest": "1 failed in 0.60s",
    "reason": null,
    "reason_seen": null,
    "what": "stage-1 4(f) note: iter() of the cursor wrapper is the real cursor"
@@ -829,7 +842,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.84s",
+   "pytest": "1 failed in 0.55s",
    "reason": null,
    "reason_seen": null,
    "what": "the comparator's column lookup misses every table: rows digest as rowids"
@@ -862,7 +875,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.69s",
+   "pytest": "1 failed in 0.65s",
    "reason": null,
    "reason_seen": null,
    "what": "the comparator digests values without their storage class"
@@ -895,7 +908,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.58s",
+   "pytest": "1 failed in 1.10s",
    "reason": null,
    "reason_seen": null,
    "what": "the comparator digests physical placement (rootpage) with the schema rows"
@@ -928,7 +941,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.44s",
+   "pytest": "1 failed in 0.32s",
    "reason": null,
    "reason_seen": null,
    "what": "the comparator does not assert the census's SQLite build"
@@ -964,7 +977,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 1.36s",
+   "pytest": "2 failed in 1.07s",
    "reason": null,
    "reason_seen": null,
    "what": "integrity_check on the census file is not asserted"
@@ -997,7 +1010,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.63s",
+   "pytest": "1 failed in 0.64s",
    "reason": null,
    "reason_seen": null,
    "what": "replay re-runs nothing"
@@ -1030,7 +1043,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.66s",
+   "pytest": "1 failed in 0.62s",
    "reason": null,
    "reason_seen": null,
    "what": "replay does not compare each call's outcome"
@@ -1063,7 +1076,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.81s",
+   "pytest": "1 failed in 0.61s",
    "reason": null,
    "reason_seen": null,
    "what": "parameters recorded by reference: a later mutation reaches the replay"
@@ -1099,7 +1112,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 0.90s",
+   "pytest": "2 failed in 0.88s",
    "reason": null,
    "reason_seen": null,
    "what": "a call that ran untraced and unauthorized is not refused"
@@ -1132,7 +1145,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.88s",
+   "pytest": "1 failed in 0.61s",
    "reason": null,
    "reason_seen": null,
    "what": "an allowed name may hand back a real Connection, Cursor or Blob"
@@ -1165,7 +1178,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.96s",
+   "pytest": "1 failed in 0.63s",
    "reason": null,
    "reason_seen": null,
    "what": "site coverage reports no unobserved site"
@@ -1198,7 +1211,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.84s",
+   "pytest": "1 failed in 0.56s",
    "reason": null,
    "reason_seen": null,
    "what": "an authorizer callback from another connection is attributed to the current call"
@@ -1231,7 +1244,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.04s",
+   "pytest": "1 failed in 0.68s",
    "reason": null,
    "reason_seen": null,
    "what": "an action code outside the closed table reads as a read"
@@ -1264,7 +1277,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.60s",
+   "pytest": "1 failed in 1.14s",
    "reason": null,
    "reason_seen": null,
    "what": "a gate run with no real (b2) observed passes"
@@ -1297,7 +1310,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.04s",
+   "pytest": "1 failed in 0.68s",
    "reason": null,
    "reason_seen": null,
    "what": "a stamp below the head is admitted"
@@ -1330,7 +1343,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.03s",
+   "pytest": "1 failed in 0.64s",
    "reason": null,
    "reason_seen": null,
    "what": "a schema write from an undeclared site is admitted"
@@ -1363,7 +1376,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.29s",
+   "pytest": "1 failed in 0.98s",
    "reason": null,
    "reason_seen": null,
    "what": "release_migration's own connections bypass the seam"
@@ -1396,7 +1409,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.76s",
+   "pytest": "1 failed in 0.66s",
    "reason": null,
    "reason_seen": null,
    "what": "a row write two steps' matchers both claim is admitted (exact-one ownership)"
@@ -1429,7 +1442,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.36s",
+   "pytest": "1 failed in 0.85s",
    "reason": "the call traced more than once",
    "reason_seen": true,
    "what": "\u00a75f.1 rule 3: a per-call trace count refuses the nested table-valued pragma"
@@ -1462,7 +1475,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.32s",
+   "pytest": "1 failed in 0.85s",
    "reason": "a row write on ['episodes'] maps to 0 steps",
    "reason_seen": true,
    "what": "a ladder write that maps to no step, after the stamp postcondition"
@@ -1495,7 +1508,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 18.16s",
+   "pytest": "1 failed in 14.10s",
    "reason": "site never observed on any path: veracium/store/migration.py:_apply_forward:",
    "reason_seen": true,
    "what": "the same write behind a condition no fixture satisfies (dev's mutant2-conditional): the site check alone"
@@ -1528,7 +1541,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.19s",
+   "pytest": "1 failed in 0.90s",
    "reason": "a schema write from a site not declared to issue DDL",
    "reason_seen": true,
    "what": "(b2) and (b1) texts issued from _drop_wiki_cache, a site not declared to issue DDL"
@@ -1561,7 +1574,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.54s",
+   "pytest": "1 failed in 1.01s",
    "reason": "veracium/store/release_migration.py:_observe:",
    "reason_seen": true,
    "what": "a write added to release_migration's _observe, inside its BEGIN IMMEDIATE ... ROLLBACK"
@@ -1592,7 +1605,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.38s",
+   "pytest": "1 failed in 0.24s",
    "reason": null,
    "reason_seen": null,
    "what": "v37: the sequence attributed on a build whose own probe does not reproduce it"
@@ -1632,7 +1645,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "4 failed in 0.59s",
+   "pytest": "4 failed in 0.34s",
    "reason": null,
    "reason_seen": null,
    "what": "v37: a loose sequence (callback codes only, from UPDATE/READ) accepts a sixth column, another table, another database or a trigger argument"
@@ -1663,7 +1676,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.40s",
+   "pytest": "1 failed in 0.25s",
    "reason": null,
    "reason_seen": null,
    "what": "v37: the sequence accepted on a second use on one connection"
@@ -1694,7 +1707,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.24s",
+   "pytest": "1 failed in 0.27s",
    "reason": null,
    "reason_seen": null,
    "what": "v37: the sequence accepted outside a prepare"
@@ -1725,7 +1738,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.39s",
+   "pytest": "1 failed in 0.25s",
    "reason": null,
    "reason_seen": null,
    "what": "v37: the probe's no-change check dropped"
@@ -1758,7 +1771,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.98s",
+   "pytest": "1 failed in 0.90s",
    "reason": null,
    "reason_seen": null,
    "what": "N2: a row-count postcondition in place of the list: a schema write outside the text classes is admitted when every table the outside writes name keeps, over the path, the row count it had before"
@@ -1793,7 +1806,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 0.92s",
+   "pytest": "1 failed in 0.91s",
    "reason": null,
    "reason_seen": null,
    "what": "N11: actions attributed by trace sequence: a callback that arrives while no proxied call runs joins the call that traced last (on its connection), instead of being an orphan"
@@ -1827,7 +1840,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 18.28s",
+   "pytest": "1 failed in 13.32s",
    "reason": "C2: no (b2) statement carrying a DROP_INDEX action was observed",
    "reason_seen": true,
    "what": "C2: a gate with no C2 fixture (`wrong`) in scope, on either entry: the clean ladder then fails as no (b2) observed"
@@ -1863,7 +1876,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "2 failed in 18.59s",
+   "pytest": "2 failed in 13.75s",
    "reason": "C3-missing: execute 'DROP INDEX IF EXISTS ",
    "reason_seen": true,
    "what": "C3: every label/SQLite disagreement refused in both directions (rule 6's one exception, the (b2) no-op of an index already absent, dropped): the clean ladder's C3 path refuses"
@@ -1902,7 +1915,7 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "3 failed in 1.44s",
+   "pytest": "3 failed in 0.95s",
    "reason": null,
    "reason_seen": null,
    "what": "I1: a pragma name off the list is a read when its argument has a well-formed shape (the shape still checked for a listed name)"
@@ -1935,22 +1948,155 @@
    ],
    "named_failed": true,
    "outcome": "KILLED",
-   "pytest": "1 failed in 1.01s",
+   "pytest": "1 failed in 0.68s",
    "reason": null,
    "reason_seen": null,
    "what": "I1: a listed pragma is a read with any well-formed argument shape (the vocabulary frozen by name only)"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[15]": "assertion",
+    "tests/test_0013_sa10_gate.py::test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[15]",
+    "tests/test_0013_sa10_gate.py::test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses"
+   ],
+   "definition_sha256": "bba60506713960f399e44dc24a265f504f0ebac884d9a2277c3bbb5c86acda99",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "I1-a-listed-code-reclassed",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses",
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[15]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 0.66s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "I1: a listed code (ATTACH) re-classed from refused to read in the closed table"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[5]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[5]"
+   ],
+   "definition_sha256": "2219f4bd649f2fc897ee75923feaab3834a2bf33463d4ec4ceccdb5c4bfa9581",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "I1-schema-branch-only",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[5]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.61s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "I1: a call with both effects evaluated by its schema branch only (its row writes dropped)"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_the_census_disables_the_statement_cache": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_the_census_disables_the_statement_cache"
+   ],
+   "definition_sha256": "b3a49edd7171fe90178e31f20680d43b829465750ba4d3ca50dc7f1e2e50b2b4",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "n/a",
+   "honest_nodes": [],
+   "id": "I1-statement-cache-left-on",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_the_census_disables_the_statement_cache"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.54s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "I1: the census leaves the statement cache at its default (a cached PREPARE gives no authorizer callback)"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[26]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[26]"
+   ],
+   "definition_sha256": "82403b6268de7c99369aadba16fc1f8a65fd2ce992d1fb530ccd8e8eb3cb4e09",
+   "file": "specs/evidence/0013/sa10_gate.py",
+   "finding": "INV-SA10",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0013_sa10_gate.py::test_the_control_harness_is_green_without_a_channel[allowlist]"
+   ],
+   "id": "I1-reindex-paired-by-any-create-index",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "gate",
+   "named_cells": [
+    "tests/test_0013_sa10_gate.py::test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one[26]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.61s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "I1: REINDEX paired with ANY CREATE_INDEX in the call, not the one of its name"
   }
  ],
  "summary": {
   "by_kind": {
-   "gate": 47,
+   "gate": 51,
    "tree": 4
   },
   "controls": 1,
   "controls_good": 1,
-  "good": 51,
-  "killed": 51,
-  "rows": 51,
-  "seconds": 273
+  "good": 55,
+  "killed": 55,
+  "rows": 55,
+  "seconds": 232
  }
 }

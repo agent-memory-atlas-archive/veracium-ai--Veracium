@@ -377,6 +377,31 @@ MUTANTS += [
      "I1: a listed pragma is a read with any well-formed argument shape (the vocabulary frozen by name only)"),
 ]
 
+# ---- I1's clauses with a cell and no NAMED mutant (research's stage-1 read of the round-3 drafts): each is
+# demonstrated red anyway, so "implement X" never rests on a cell nobody has shown failing ------------------------------
+MUTANTS += [
+    ("I1-a-listed-code-reclassed", "gate", GATE,
+     [('    "SQLITE_ATTACH": "refused", "SQLITE_DETACH": "refused",', '    "SQLITE_ATTACH": "read", "SQLITE_DETACH": "refused",')],
+     [C("test_the_action_table_is_a_closed_partition_of_the_33_codes_and_any_other_code_refuses"), RULE(15)], [HARNESS],
+     None, "I1: a listed code (ATTACH) re-classed from refused to read in the closed table"),
+    ("I1-schema-branch-only", "gate", GATE,
+     [('    rows = [a for a in by_class["row"] if a[1] not in SCHEMA_TABLE_NAMES]\n',
+       '    rows = [] if by_class["schema"] else [a for a in by_class["row"] if a[1] not in SCHEMA_TABLE_NAMES]\n')],
+     [RULE(5)], [HARNESS], None,
+     "I1: a call with both effects evaluated by its schema branch only (its row writes dropped)"),
+    # NO honest probe, by necessity: with the cache on, a repeated statement's PREPARE gives no authorizer callback, so
+    # the heartbeat (rule 7) refuses the CLEAN ladder too (measured: the harness probe fails under this mutant). The
+    # named cell carries its own control (Python's default cache, no second callback), so the kill is not vacuous.
+    ("I1-statement-cache-left-on", "gate", GATE,
+     [('        kw2["cached_statements"] = 0\n', "")],
+     [C("test_the_census_disables_the_statement_cache")], [], None,
+     "I1: the census leaves the statement cache at its default (a cached PREPARE gives no authorizer callback)"),
+    ("I1-reindex-paired-by-any-create-index", "gate", GATE,
+     [("        if a[1] not in made:\n", "        if not made:\n")],
+     [RULE(26)], [HARNESS], None,
+     "I1: REINDEX paired with ANY CREATE_INDEX in the call, not the one of its name"),
+]
+
 # (id, file, [(anchor, replacement)], named cells, what, the outcome the classifier must give)
 CONTROLS = [
     ("CTRL-unrelated-TypeError", GATE,

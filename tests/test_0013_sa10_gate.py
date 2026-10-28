@@ -186,13 +186,18 @@ def _cases():
         ("a listed pragma with another well-formed argument shape", "PRAGMA table_xinfo",
          [(A.SQLITE_PRAGMA, "table_xinfo", None, None, None)], _DECLARED, "pragma-read",
          "PRAGMA table_xinfo(None) is not on the read vocabulary"),
+        # rule 4's pairing is by NAME: a REINDEX of one index beside the CREATE_INDEX of another is not legitimate
+        # (research's stage-1 read of the round-3 drafts: "pair REINDEX by any CREATE_INDEX" had no cell to fail)
+        ("a REINDEX of another index beside a CREATE_INDEX", i.ddl,
+         mk_i[:2] + [(A.SQLITE_REINDEX, i.key[1] + "_other", None, "main", None)], _DECLARED, "b1",
+         "without CREATE_INDEX of the same name"),
     ]
 
 
-@pytest.mark.parametrize("case", range(26))
+@pytest.mark.parametrize("case", range(27))
 def test_each_classification_rule_refuses_its_case_and_admits_its_legitimate_one(case):
     cases = _cases()
-    assert len(cases) == 26
+    assert len(cases) == 27
     name, sql, acts, site, want_cls, want = cases[case]
     how = "commit" if sql is None else "execute"
     cls, probs = _classify(sql=sql, acts=acts, site=site, how=how, traces=() if how == "commit" else ("t",))
