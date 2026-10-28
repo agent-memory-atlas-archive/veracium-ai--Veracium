@@ -154,6 +154,24 @@ def test_an_ancestor_replaces_and_every_other_key_is_kept():
     assert sv.record_commit(out[1]) == A
 
 
+def test_a_later_suite_revision_with_a_changed_result_digest_replaces_and_keeps_every_other_key():
+    """I4 (round 2's frozen obligations): "Test a later suite revision with changed result digest: do not append two
+    current records for one key or silently lose other keys." An ancestor's record of this key (commit B, digest e…)
+    beside another key's; the later run's record of this key (commit A, digest f…) REPLACES the ancestor's: exactly one
+    record for the key, carrying the new digest, and the other key's record kept byte for byte. Every other replacement
+    cell uses the fixture's one digest, so none of them could see a changed result."""
+    old, other, new = record(commit=B), record(commit=B, machine=OTHER_MACHINE), record(digest="f" * 64)
+    assert old["result_digest"] != new["result_digest"] and sv.attestation_key(old) == sv.attestation_key(new)
+    try:
+        out, outcome = aw.merged([old, other], new, git=fake_git(ancestor={(B, A): 0}))
+    except aw.AttestationRefused as exc:                # the later revision must be RECORDED, never refused
+        raise AssertionError(f"a later suite revision with a changed result digest was refused: {exc}") from None
+    assert outcome == "replaced"
+    mine = [r for r in out if sv.attestation_key(r) == sv.attestation_key(new)]
+    assert len(mine) == 1 and mine[0]["result_digest"] == "f" * 64 and sv.record_commit(mine[0]) == A, mine
+    assert [r for r in out if sv.attestation_key(r) != sv.attestation_key(new)] == [other]
+
+
 def test_a_superseded_revision_is_replaced_only_on_the_full_key():
     """W7 / 10(a): an OLDER-revision record of the same full key is superseded; one sharing (version, source_id) on
     ANOTHER key is kept."""
@@ -562,6 +580,22 @@ SHALLOW = ('''    rc, out = git(["rev-parse", "--is-shallow-repository"], repo)
 ARM = "test_each_cross_run_arm_refuses_with_its_message"
 MUTANTS = {
     # name: ([(anchor, replacement), ...], [(killing cell, its parameters), ...])
+    # ---- I4: a later suite revision with a changed result digest (round 2's obligation; the three failure words) -----
+    "keep the replaced record beside the new one (two current records for one key)": (
+        [('        outcome = "replaced"                          # this current record is replaced by the new one\n',
+          '        out.append(r)\n        outcome = "replaced"\n')],
+        [("test_a_later_suite_revision_with_a_changed_result_digest_replaces_and_keeps_every_other_key", {})]),
+    "drop every other key's record on a replacement (silently lose other keys)": (
+        [("    # Both checks run on the idempotent list too", '    if outcome == "replaced":\n'
+          "        out = [x for x in out if not isinstance(x, dict) or sv.attestation_key(x) == key]\n"
+          "    # Both checks run on the idempotent list too")],
+        [("test_a_later_suite_revision_with_a_changed_result_digest_replaces_and_keeps_every_other_key", {})]),
+    "refuse a changed result digest as a conflict (a later revision cannot be recorded)": (
+        [("        decision = _ordered(r, new, commit, repo, git, fmt)\n",
+          '        if r.get("result_digest") != new.get("result_digest"):\n'
+          '            raise AttestationRefused("a different result digest for this key")\n'
+          "        decision = _ordered(r, new, commit, repo, git, fmt)\n")],
+        [("test_a_later_suite_revision_with_a_changed_result_digest_replaces_and_keeps_every_other_key", {})]),
     "shallow check dropped": ([('    if rc != 0 or out != "false":\n', "    if False:\n")],
                               [(ARM, {"arm": "shallow"}), ("test_real_a_shallow_clone_is_unanswerable_before_any_ancestry", {})]),
     "shallow check after the ancestry": (

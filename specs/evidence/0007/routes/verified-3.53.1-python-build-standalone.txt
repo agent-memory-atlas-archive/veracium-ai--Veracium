@@ -1,10 +1,13 @@
-# 0007 I6 real route, 2026-10-27T02:52Z, tree e90515d + I6 working changes
+# 0007 I6 route (real: uv's python-build-standalone 3.14.7, a build no record matches), 2026-10-27T23:52Z, tree 27b117f + the round-3 fix batch's working changes
 # command: <python> specs/evidence/0007/routes/route_probe.py   (python: cpython-3.14.7-linux-x86_64-gnu)
 SQLite 3.53.1 (e4e6475127e9, x86_64, Linux, glibc) is not one of Veracium's attested builds. Veracium verified this build when opening the store: it reproduces all 16 schema versions and tells apart all 6 near-miss checks. Its CI has not run the full schema suite on this build. `veracium doctor` lists the attested builds.
 {
  "python": "3.14.7",
  "base_install": "cpython-3.14.7-linux-x86_64-gnu",
  "sqlite": "3.53.1",
+ "source_id": "2026-05-05 10:34:17 c88b22011a54b4f6fbd149e9f8e4de77658ce58143a1af0e3785e4e6475127e9",
+ "library": null,
+ "library_control": "N/A: statically linked (no libsqlite3 in /proc/self/maps)",
  "status": "verified",
  "reason": null,
  "key_readable": true,

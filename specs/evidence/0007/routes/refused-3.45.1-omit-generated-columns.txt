@@ -1,0 +1,27 @@
+# 0007 I6 route (constructed: the amalgamation with SQLITE_OMIT_GENERATED_COLUMNS), 2026-10-27T23:52Z, tree 27b117f + the round-3 fix batch's working changes
+# command: LD_LIBRARY_PATH=<work>/lib-omit-generated-columns <python> specs/evidence/0007/routes/route_probe.py   (python: python-3.14.7-gh)
+# the library: specs/evidence/0007/routes/build_route_libs.sh <work> builds <work>/lib-omit-generated-columns from sqlite.org's sqlite-amalgamation-3450100.zip (sha256 5592243caf28b2cd…, checked by the script); a CONSTRUCTED route, not a CI matrix row
+{
+ "python": "3.14.7",
+ "base_install": "python-3.14.7-gh",
+ "sqlite": "3.45.1",
+ "source_id": "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257cc467a",
+ "library": "<work>/lib-omit-generated-columns/libsqlite3.so.0",
+ "library_control": "PASS: the mapped library's own sqlite3_sourceid() equals sqlite_source_id()",
+ "status": "refused",
+ "reason": "feature probe xinfo_exposes_generated is False",
+ "key_readable": true,
+ "unreadable": [],
+ "doctor_runtime": [
+  [
+   "error",
+   "this interpreter's SQLite cannot be verified for the store: feature probe xinfo_exposes_generated is False"
+  ]
+ ],
+ "opens": [
+  "refused: unsupported-sqlite",
+  "refused: unsupported-sqlite"
+ ],
+ "unattested_warnings": 0
+}
+# exit 0

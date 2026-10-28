@@ -1,0 +1,28 @@
+# 0007 I6 route (constructed: sqlite.org's amalgamation as is), 2026-10-27T23:52Z, tree 27b117f + the round-3 fix batch's working changes
+# command: LD_LIBRARY_PATH=<work>/lib-default <python> specs/evidence/0007/routes/route_probe.py   (python: python-3.14.7-gh)
+# the library: specs/evidence/0007/routes/build_route_libs.sh <work> builds <work>/lib-default from sqlite.org's sqlite-amalgamation-3450100.zip (sha256 5592243caf28b2cd…, checked by the script); a CONSTRUCTED route, not a CI matrix row
+SQLite 3.45.1 (b82257cc467a, x86_64, Linux, glibc) is not one of Veracium's attested builds. Veracium verified this build when opening the store: it reproduces all 16 schema versions and tells apart all 6 near-miss checks. Its CI has not run the full schema suite on this build. `veracium doctor` lists the attested builds.
+{
+ "python": "3.14.7",
+ "base_install": "python-3.14.7-gh",
+ "sqlite": "3.45.1",
+ "source_id": "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257cc467a",
+ "library": "<work>/lib-default/libsqlite3.so.0",
+ "library_control": "PASS: the mapped library's own sqlite3_sourceid() equals sqlite_source_id()",
+ "status": "verified",
+ "reason": null,
+ "key_readable": true,
+ "unreadable": [],
+ "doctor_runtime": [
+  [
+   "info",
+   "this interpreter's SQLite is not an attested build; it was verified on this run (it reproduces every schema version and tells apart every ne"
+  ]
+ ],
+ "opens": [
+  "opened",
+  "opened"
+ ],
+ "unattested_warnings": 1
+}
+# exit 0
