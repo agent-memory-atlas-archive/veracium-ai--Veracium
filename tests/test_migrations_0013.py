@@ -497,11 +497,19 @@ def test_a_data_destructive_alteration_cannot_authorize_itself(monkeypatch):
 
 
 def test_a_side_effect_free_alteration_is_still_not_evidenced(monkeypatch):
+    """A14 (0013 §5f.3, M14): an altered declaration that produces the identical schema is
+    `migration-evidence-missing`, data and stamp untouched. Mutant: drop the declaration digest from the key."""
     _patch_migration(monkeypatch, m13.Migration(
         1, 2, m13.MIGRATION_1_TO_2.statements + ("SELECT 1",)))
-    p = _v1_store()
+    p = _v1_store(rows=3)
+    before = Path(p).read_bytes()
     assert m13.migrate_store(p, m13.make_authority(p)) \
         == "migration-evidence-missing"
+    assert Path(p).read_bytes() == before
+    c = sqlite3.connect(p)
+    assert c.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert c.execute("SELECT COUNT(*) FROM edges").fetchone()[0] == 3
+    c.close()
 
 
 def test_a_zeroed_source_hash_is_consulted_and_refuses(monkeypatch):
@@ -518,25 +526,74 @@ def test_a_zeroed_source_hash_is_consulted_and_refuses(monkeypatch):
 
 
 def test_an_absent_path_record_refuses(monkeypatch):
+    """A6 (0013 §5f.3): no path record for this source × declaration is `migration-evidence-missing`, and the store's
+    data and stamp are untouched (its bytes, its user_version, its rows). Mutant: re-derive the record from live code
+    (0013 round 3's hole)."""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
     art["paths"] = []
     _patch_artifact(monkeypatch, art)
-    p = _v1_store()
+    p = _v1_store(rows=3)
+    before = Path(p).read_bytes()
     assert m13.migrate_store(p, m13.make_authority(p)) \
         == "migration-evidence-missing"
+    assert Path(p).read_bytes() == before
+    c = sqlite3.connect(p)
+    assert c.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert c.execute("SELECT COUNT(*) FROM edges").fetchone()[0] == 3
+    c.close()
 
 
 def test_a_duplicate_path_record_refuses(monkeypatch):
+    """A7 (0013 §5f.3): two identical current path records for one key are an ARTIFACT-WIDE refusal, named as a
+    duplicate by the artifact validator (cardinality's own count refuses too, so the name is what the row asserts).
+    Mutant: deduplicate silently."""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
     art["paths"].append(copy.deepcopy(art["paths"][0]))
+    with m13._registry():
+        assert "duplicate path record for one selection key" in m13.path_evidence_problems(art)
     _patch_artifact(monkeypatch, art)
     p = _v1_store()
     assert m13.migrate_store(p, m13.make_authority(p)) \
         == "migration-evidence-missing"
 
 
-def test_a_stale_algorithm_record_is_superseded_not_consumed(monkeypatch):
+def test_a8_two_current_path_records_for_one_key_with_different_outputs_refuse(monkeypatch):
+    """A8 (0013 §5f.3): two current path records under ONE selection key that declare different outputs (the second
+    a rebuildable-index variant of the first's output, its full-manifest hash recomputed, so it differs only there)
+    are an artifact-wide refusal, named as a contradiction; neither is taken. Mutant: take the first."""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
+    other = copy.deepcopy(art["paths"][0])
+    out = other["output_manifestation"]
+    idx = next(k for k in out if k.startswith("index:"))
+    out[idx] = dict(out[idx], sql=out[idx]["sql"] + " ")
+    other["output_full_manifest_hash"] = m13.full_manifest_hash(out)
+    assert other["output_full_manifest_hash"] != art["paths"][0]["output_full_manifest_hash"]
+    assert m13._path_key(other) == m13._path_key(art["paths"][0])           # one selection key
+    art["paths"].append(other)
+    with m13._registry():
+        probs = m13.path_evidence_problems(art)
+    assert any("share a selection key but declare different outputs" in x for x in probs), probs
+    _patch_artifact(monkeypatch, art)
+    p = _v1_store(rows=3)
+    before = Path(p).read_bytes()
+    assert m13.migrate_store(p, m13.make_authority(p)) == "migration-evidence-missing"
+    assert Path(p).read_bytes() == before
+
+
+def test_a_stale_algorithm_record_is_superseded_not_consumed(monkeypatch):
+    """A13 (0013 §5f.3): a stale-algorithm path record is superseded, not consumed: alone it evidences nothing, and
+    beside the valid record it poisons nothing and is not counted (cardinality counts current records only), so the
+    migration runs. Mutant: consume it."""
+    art = json.loads(m13.EVIDENCE_FILE.read_text())
+    stale = copy.deepcopy(art["paths"][0])
+    stale["migration_evidence_algorithm"] = 0
+    beside = dict(art, paths=[art["paths"][0], stale])
+    with m13._registry():
+        assert m13.path_evidence_problems(beside) == []
+        assert m13.expected_path_problems(beside) == []
+    _patch_artifact(monkeypatch, beside)
+    p = _v1_store()
+    assert m13.migrate_store(p, m13.make_authority(p)) == "migrated"
     art["paths"][0]["migration_evidence_algorithm"] = 0
     _patch_artifact(monkeypatch, art)
     p = _v1_store()
@@ -817,15 +874,22 @@ def test_registry_validation_is_total_over_malformed_keys():
 # --- round 4, finding 2: malformed current migration-runtime records poison -
 
 
-def test_a_missing_algorithm_field_is_malformed_not_superseded():
+def test_a_missing_algorithm_field_is_malformed_not_superseded(monkeypatch):
     """M18's poisoning rule, kept (the migration-runtime class it was written over is withdrawn; the rule now governs
-    the path records): a missing algorithm field is malformed, never superseded."""
+    the path records): a missing algorithm field is malformed, never superseded. A9 (0013 §5f.3): the malformed
+    record sits BESIDE the valid one, the path class is poisoned and the migration refuses, the store untouched.
+    Mutant: filter the malformed record and select the valid one (0013 round 4's hole)."""
     art = json.loads(m13.EVIDENCE_FILE.read_text())
     rec = copy.deepcopy(art["paths"][0])
     del rec["migration_evidence_algorithm"]
     art["paths"] = [art["paths"][0], rec]
     with m13._registry():
         assert any("malformed, not" in p for p in m13.path_evidence_problems(art))
+    _patch_artifact(monkeypatch, art)
+    p = _v1_store(rows=3)
+    before = Path(p).read_bytes()
+    assert m13.migrate_store(p, m13.make_authority(p)) == "migration-evidence-missing"
+    assert Path(p).read_bytes() == before
 
 
 # --- round 4, finding 3: path cardinality is exact across the artifact -----

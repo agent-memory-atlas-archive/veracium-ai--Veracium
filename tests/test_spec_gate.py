@@ -2815,6 +2815,9 @@ def test_every_evidence_artifact_declares_a_mutation_matrix():
         root / "specs" / "evidence" / "attestation" / "gen_rows.py",
         # 0007 I6: INV-SA1–SA12's mutation table, whose --check verdicts the table and the spec-phrase complement
         root / "specs" / "evidence" / "0007" / "sa_mutants.py",
+        # 0013 §5f.3: the A1–A16/P1–P3 acceptance matrix's mutation table, whose --check verdicts the table and the
+        # spec-phrase complement
+        root / "specs" / "evidence" / "0013" / "a_matrix_mutants.py",
     ]
     for f in EXPLICIT_ARTIFACTS:
         assert f.exists(), f"EXPLICIT_ARTIFACTS names a missing file: {f}"

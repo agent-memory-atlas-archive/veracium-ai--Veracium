@@ -1,0 +1,891 @@
+{
+ "body_sha256": "5631406f23a37d39c5f2fe4d13ed4e6942714498e72ec680fa9628bf623e5f17",
+ "controls": [
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths": "other: TypeError"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths"
+   ],
+   "definition_sha256": "a01256bf9e58e26f267def3e17a6dbdfc5835320a1a14bf48685ae91aa597edf",
+   "expected": "UNCLASSIFIED",
+   "file": "specs/migrations_0013.py",
+   "good": true,
+   "id": "CTRL-unrelated-TypeError",
+   "import": "ok",
+   "kill_kind": null,
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths"
+   ],
+   "outcome": "UNCLASSIFIED",
+   "what": "an UNRELATED TypeError in the provenance validator: a cell fails for no reason the row names"
+  }
+ ],
+ "header": {
+  "cells": {
+   "A1-A16-P1-P3": [
+    "tests/test_0007_runtime_status.py::test_a16_production_evidence_refuses_two_accepted_manifestations_sharing_an_acceptance_digest",
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/release_migration.py:_classify_or_intercept]",
+    "tests/test_0007_runtime_status.py::test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing",
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]",
+    "tests/test_0007_runtime_status.py::test_p2_a_refused_build_refuses_migrate_store_and_the_release_before_touching_the_store",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]",
+    "tests/test_migrations_0013.py::test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths",
+    "tests/test_migrations_0013.py::test_a11_two_attested_keys_are_valid_and_each_resolves_separately",
+    "tests/test_migrations_0013.py::test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probes_still_run_live",
+    "tests/test_migrations_0013.py::test_a15_an_extra_current_path_record_outside_the_expected_set_is_a_cardinality_refusal",
+    "tests/test_migrations_0013.py::test_a16_two_accepted_manifestations_sharing_an_acceptance_digest_are_refused",
+    "tests/test_migrations_0013.py::test_a1_a_verified_build_migrates_and_its_row_says_verified",
+    "tests/test_migrations_0013.py::test_a5_a_refused_build_is_refused_after_consumption_and_the_store_is_unchanged",
+    "tests/test_migrations_0013.py::test_a8_two_current_path_records_for_one_key_with_different_outputs_refuse",
+    "tests/test_migrations_0013.py::test_a_coerced_path_algorithm_poisons_the_paths",
+    "tests/test_migrations_0013.py::test_a_data_destructive_alteration_cannot_authorize_itself",
+    "tests/test_migrations_0013.py::test_a_duplicate_path_record_refuses",
+    "tests/test_migrations_0013.py::test_a_missing_algorithm_field_is_malformed_not_superseded",
+    "tests/test_migrations_0013.py::test_a_side_effect_free_alteration_is_still_not_evidenced",
+    "tests/test_migrations_0013.py::test_a_stale_algorithm_record_is_superseded_not_consumed",
+    "tests/test_migrations_0013.py::test_an_absent_path_record_refuses",
+    "tests/test_migrations_0013.py::test_an_authorizer_allowing_temp_triggers_fails_qualification",
+    "tests/test_migrations_0013.py::test_an_authorizer_allowing_temp_vtables_fails_qualification",
+    "tests/test_migrations_0013.py::test_the_migration_runtime_gate_is_independent_of_0007s"
+   ]
+  },
+  "clean": {
+   "first": {
+    "of": 28,
+    "ok": true,
+    "passed": 28
+   },
+   "last": {
+    "of": 28,
+    "ok": true,
+    "passed": 28
+   }
+  },
+  "commit": "27b117fdd669f9c0b6fd654f1612ead6e2492142",
+  "control_definitions": {
+   "CTRL-unrelated-TypeError": "a01256bf9e58e26f267def3e17a6dbdfc5835320a1a14bf48685ae91aa597edf"
+  },
+  "definitions": {
+   "a1-require-a-record": "c263c6a85a82b6080bbef58ad66af1dfef2d0d7684431ec730203c8ed72a7e48",
+   "a10-ignore-generated-on": "6712604cec30cfdf5a7565628d0a6b4f99b05f2865ba91fe02d74ba5e4ff3720",
+   "a11-single-active-runtime": "34c037f94d42328dae65251811a2ef9dad31ed565db98c0ef86471715264b156",
+   "a12-recorded-false-is-a-pass": "a2c9cd8a670caab55d7419249498c56328a1fb87493b56b1761198bff3544887",
+   "a12-recorded-false-is-authority": "3c026d68fc63ecb993d34bea1c0c712218d72cfb5505e09f203ebf946b9ca6a7",
+   "a13-consume-the-stale-record": "5cb9013506fe27b39753903d11e1db7fba693bf84f12643e3069f565be7e2d01",
+   "a14-drop-the-declaration-digest": "79ac5f29bde56cc2995dd86cdab5ff5d8e35d2f6eb85acc3613007af37f1963b",
+   "a15-count-only-expected-keys": "ab58e00114c13abe185d29b5a28a864da124574654750a5802db5b7980ee9a62",
+   "a16-model-admit-it": "c47a07bba18c30f2b7c47aef7ea11add045eb2c4fe75ece4bafef622467b3341",
+   "a16-production-admit-it": "1b8a364ebc69df8527d4e63cd71820ed073c7d974b28e83e6ad285feeb4bcd0b",
+   "a3-runtime-status-alone": "897de5de24b2e04132b6e7922da129fdeaf2a56b96781561b5e029330199b897",
+   "a4-collapse-the-temp-probes": "121e27a27ef178e55c0b794e528610028867ba9dfd067d2546f38b4771975914",
+   "a5-confinement-first": "2a37d4b7bb2c87c428a4630749b26b0bdb539850fc26278c3b432fa6e191711b",
+   "a6-rederive-the-record-live": "99143d5c8bc862f8bdd510c06e7c80d3e2926886ec0acc87aae31dda4c93d3ef",
+   "a7-deduplicate-silently": "782f981cae9fc0d902ded1e5c59aa4f494f458d966acbbf3e6089576c87176a2",
+   "a8-take-the-first": "94a62f499ff5e5a960f15b98f2921d658f196aa95e972052e3c8aa5623451c5b",
+   "a9-filter-the-malformed-record": "425d5c67b5f87fc0dbaeae708bbd00a7f83a767b9836b35b2e7eb4aea2bf2be4",
+   "p1-runtime-supported-as-the-gate": "1846c29cb914114a6eee23f75a6c5a7c63564150400e6eea25b2199723302ba0",
+   "p1-skip-validated-current-verified": "6861d65d35a5826324c0044443b156830ddf52f7d08d5a55d6170b57606c53f8",
+   "p2-gate-only-open-versioned": "d561a0291c163a0713fbe430d4fb23a316b8326547b49fc09bbbe81bccc64a99",
+   "p3-commit-before-revalidating-verified": "e15418edb8aac9b5328ee0885bb1ed7e8665e17373a41389c1eb9cf80126ff89",
+   "p3-require-stamp-false-verified": "67071ea6c550f1cbef9af2aed82babe81cb002fcd583e651d5ca62890f401bf1"
+  },
+  "digests": {
+   "specs/0013-store-migrations.md": "782233c19d32806af6cde2c78b3859537a6ec50428ead83863e1cfa57b648770",
+   "specs/evidence/0013/a_matrix_mutants.py": "48f361791274de79bbe0c1eb61d6821602fd630993f17881ac4c609c62d8bb45",
+   "specs/evidence/mutation_kinds.py": "46d4802f8ef82e797fa285dab7afde3581db230761c5377c826ce6cdc275c8ad",
+   "specs/evidence/mutation_protocol.py": "69b2aa50b14d9bc190a6dac42ac483289316991fb2f5ef723f3604be1acce9e0",
+   "specs/generated/migration_0013_evidence.json": "1bcee3ba98f59fd57e9608344759bbab36d838f679fbff09092387e4b838faf1",
+   "specs/migrations_0013.py": "d9f6944c79000c79b937ff9dc4415d58b06c301da1d7b435efc0160a9f7bcfa2",
+   "specs/schema_evidence.py": "0a7c8716da03616d6a8c814d8ce0b76dab91c444c97d154dc1d9d891197c6a29",
+   "src/veracium/store/migration.py": "be5542418a560310b45af5555602b10f2e8cc6cb161730be45c6101495e6dc42",
+   "src/veracium/store/release_migration.py": "0e750325e0347d02dfea19dedecdc6c3bd0bce2733a25556f8df52a7e83f1ce4",
+   "src/veracium/store/schema_version.py": "452a7750f8fc23173b4c65e1fc86a68ccd4ae6241d656f191e9adade92968a05",
+   "tests/test_0007_runtime_status.py": "19488db3c628ccd98e1ed76cd00abf55f48c0632e82d33e3e25d17e298f34105",
+   "tests/test_migrations_0013.py": "1247032a09bf7f29e51a29986850ae5d7128a98fc0e698c71a2f31d4156c5ac8"
+  },
+  "finding": "A1-A16-P1-P3",
+  "honest_nodes": [
+   "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[attested]",
+   "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]",
+   "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested",
+   "tests/test_migrations_0013.py::test_the_authorizer_probes_all_hold_on_this_runner"
+  ],
+  "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
+  "python": "3.14.7",
+  "spec": "0013",
+  "sqlite": "3.45.1",
+  "tracked_changes": [
+   "tests/test_0007_runtime_status.py",
+   "tests/test_migrations_0013.py",
+   "tests/test_spec_gate.py"
+  ]
+ },
+ "rows": [
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a1_a_verified_build_migrates_and_its_row_says_verified": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a1_a_verified_build_migrates_and_its_row_says_verified"
+   ],
+   "definition_sha256": "c263c6a85a82b6080bbef58ad66af1dfef2d0d7684431ec730203c8ed72a7e48",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a1-require-a-record",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a1_a_verified_build_migrates_and_its_row_says_verified"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.31s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the model at 58dd7f6: migration requires a record for the running build (attested), so a verified one refuses"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_the_migration_runtime_gate_is_independent_of_0007s": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_the_migration_runtime_gate_is_independent_of_0007s"
+   ],
+   "definition_sha256": "897de5de24b2e04132b6e7922da129fdeaf2a56b96781561b5e029330199b897",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a3-runtime-status-alone",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_the_migration_runtime_gate_is_independent_of_0007s"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.23s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "migration gated on runtime_status() alone: the sixteen live probes are never consulted"
+  },
+  {
+   "anchor_counts": [
+    1,
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_an_authorizer_allowing_temp_triggers_fails_qualification": "assertion",
+    "tests/test_migrations_0013.py::test_an_authorizer_allowing_temp_vtables_fails_qualification": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_an_authorizer_allowing_temp_triggers_fails_qualification",
+    "tests/test_migrations_0013.py::test_an_authorizer_allowing_temp_vtables_fails_qualification"
+   ],
+   "definition_sha256": "121e27a27ef178e55c0b794e528610028867ba9dfd067d2546f38b4771975914",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested",
+    "tests/test_migrations_0013.py::test_the_authorizer_probes_all_hold_on_this_runner"
+   ],
+   "id": "a4-collapse-the-temp-probes",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_an_authorizer_allowing_temp_triggers_fails_qualification",
+    "tests/test_migrations_0013.py::test_an_authorizer_allowing_temp_vtables_fails_qualification"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.23s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the TEMP trigger and TEMP virtual-table probes report the TEMP table probe's answer (one probe for three classes)"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a5_a_refused_build_is_refused_after_consumption_and_the_store_is_unchanged": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a5_a_refused_build_is_refused_after_consumption_and_the_store_is_unchanged"
+   ],
+   "definition_sha256": "2a37d4b7bb2c87c428a4630749b26b0bdb539850fc26278c3b432fa6e191711b",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a5-confinement-first",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a5_a_refused_build_is_refused_after_consumption_and_the_store_is_unchanged"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.22s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "confinement runs first and, when its probes pass, a refused build migrates"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_an_absent_path_record_refuses": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_an_absent_path_record_refuses"
+   ],
+   "definition_sha256": "99143d5c8bc862f8bdd510c06e7c80d3e2926886ec0acc87aae31dda4c93d3ef",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a6-rederive-the-record-live",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_an_absent_path_record_refuses"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.26s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "0013 round 3's hole: when no recorded path record covers the source x declaration, derive it from live code"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a_duplicate_path_record_refuses": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a_duplicate_path_record_refuses"
+   ],
+   "definition_sha256": "782f981cae9fc0d902ded1e5c59aa4f494f458d966acbbf3e6089576c87176a2",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a7-deduplicate-silently",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a_duplicate_path_record_refuses"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.07s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "two identical current records for one key: the artifact validator says nothing"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a8_two_current_path_records_for_one_key_with_different_outputs_refuse": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a8_two_current_path_records_for_one_key_with_different_outputs_refuse"
+   ],
+   "definition_sha256": "94a62f499ff5e5a960f15b98f2921d658f196aa95e972052e3c8aa5623451c5b",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a8-take-the-first",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a8_two_current_path_records_for_one_key_with_different_outputs_refuse"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.09s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "two current records for one key with different outputs: the first is kept, the contradiction unreported"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a_coerced_path_algorithm_poisons_the_paths": "assertion",
+    "tests/test_migrations_0013.py::test_a_missing_algorithm_field_is_malformed_not_superseded": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a_coerced_path_algorithm_poisons_the_paths",
+    "tests/test_migrations_0013.py::test_a_missing_algorithm_field_is_malformed_not_superseded"
+   ],
+   "definition_sha256": "425d5c67b5f87fc0dbaeae708bbd00a7f83a767b9836b35b2e7eb4aea2bf2be4",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a9-filter-the-malformed-record",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a_missing_algorithm_field_is_malformed_not_superseded",
+    "tests/test_migrations_0013.py::test_a_coerced_path_algorithm_poisons_the_paths"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.10s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "0013 round 4's hole: a malformed current-algorithm record (a missing algorithm field, or a record failing its own rules) is filtered out, poisoning nothing, and the valid record is selected"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths"
+   ],
+   "definition_sha256": "6712604cec30cfdf5a7565628d0a6b4f99b05f2865ba91fe02d74ba5e4ff3720",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a10-ignore-generated-on",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a10_a_generated_on_that_resolves_to_no_attested_record_poisons_the_paths"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.06s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a path record's generated_on is never resolved: provenance poisons nothing"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probes_still_run_live": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probes_still_run_live"
+   ],
+   "definition_sha256": "3c026d68fc63ecb993d34bea1c0c712218d72cfb5505e09f203ebf946b9ca6a7",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a12-recorded-false-is-authority",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probes_still_run_live"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.22s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a recorded False probe is AUTHORITY: the migration refuses on the record, without running the probes live"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a_stale_algorithm_record_is_superseded_not_consumed": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a_stale_algorithm_record_is_superseded_not_consumed"
+   ],
+   "definition_sha256": "5cb9013506fe27b39753903d11e1db7fba693bf84f12643e3069f565be7e2d01",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a13-consume-the-stale-record",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a_stale_algorithm_record_is_superseded_not_consumed"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.04s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a stale-algorithm record is current: validated, counted and selectable"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a_data_destructive_alteration_cannot_authorize_itself": "assertion",
+    "tests/test_migrations_0013.py::test_a_side_effect_free_alteration_is_still_not_evidenced": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a_data_destructive_alteration_cannot_authorize_itself",
+    "tests/test_migrations_0013.py::test_a_side_effect_free_alteration_is_still_not_evidenced"
+   ],
+   "definition_sha256": "79ac5f29bde56cc2995dd86cdab5ff5d8e35d2f6eb85acc3613007af37f1963b",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a14-drop-the-declaration-digest",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a_side_effect_free_alteration_is_still_not_evidenced",
+    "tests/test_migrations_0013.py::test_a_data_destructive_alteration_cannot_authorize_itself"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.36s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the path key without the migration declaration digest: an altered declaration selects the recorded evidence"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a15_an_extra_current_path_record_outside_the_expected_set_is_a_cardinality_refusal": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a15_an_extra_current_path_record_outside_the_expected_set_is_a_cardinality_refusal"
+   ],
+   "definition_sha256": "ab58e00114c13abe185d29b5a28a864da124574654750a5802db5b7980ee9a62",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a15-count-only-expected-keys",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a15_an_extra_current_path_record_outside_the_expected_set_is_a_cardinality_refusal"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.04s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "cardinality counts only expected keys: a current record outside the expected set is not refused"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a16_two_accepted_manifestations_sharing_an_acceptance_digest_are_refused": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a16_two_accepted_manifestations_sharing_an_acceptance_digest_are_refused"
+   ],
+   "definition_sha256": "c47a07bba18c30f2b7c47aef7ea11add045eb2c4fe75ece4bafef622467b3341",
+   "file": "specs/migrations_0013.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a16-model-admit-it",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "model",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a16_two_accepted_manifestations_sharing_an_acceptance_digest_are_refused"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.03s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the model's evidence validator admits two accepted manifestations sharing one acceptance digest"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing": "assertion",
+    "tests/test_migrations_0013.py::test_a11_two_attested_keys_are_valid_and_each_resolves_separately": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing",
+    "tests/test_migrations_0013.py::test_a11_two_attested_keys_are_valid_and_each_resolves_separately"
+   ],
+   "definition_sha256": "34c037f94d42328dae65251811a2ef9dad31ed565db98c0ef86471715264b156",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a11-single-active-runtime",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a11_two_attested_keys_are_valid_and_each_resolves_separately",
+    "tests/test_0007_runtime_status.py::test_any_number_of_keys_is_valid_and_another_keys_record_attests_nothing"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 1.25s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "S66's single-active-runtime count kept: a second attested key poisons the attestation artifact"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_migrations_0013.py::test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probes_still_run_live": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_migrations_0013.py::test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probes_still_run_live"
+   ],
+   "definition_sha256": "a2c9cd8a670caab55d7419249498c56328a1fb87493b56b1761198bff3544887",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a12-recorded-false-is-a-pass",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_migrations_0013.py::test_a12_an_attestation_record_with_a_false_probe_is_malformed_and_the_probes_still_run_live"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 1.04s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "an attestation record carrying a probe result False is well-formed: the recorded False passes"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a16_production_evidence_refuses_two_accepted_manifestations_sharing_an_acceptance_digest": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a16_production_evidence_refuses_two_accepted_manifestations_sharing_an_acceptance_digest"
+   ],
+   "definition_sha256": "1b8a364ebc69df8527d4e63cd71820ed073c7d974b28e83e6ad285feeb4bcd0b",
+   "file": "specs/schema_evidence.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_migrations_0013.py::test_a2_the_attested_build_migrates_and_its_row_says_attested"
+   ],
+   "id": "a16-production-admit-it",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_a16_production_evidence_refuses_two_accepted_manifestations_sharing_an_acceptance_digest"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.60s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "production's evidence check admits two accepted manifestations sharing one acceptance digest"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]"
+   ],
+   "definition_sha256": "1846c29cb914114a6eee23f75a6c5a7c63564150400e6eea25b2199723302ba0",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[attested]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]"
+   ],
+   "id": "p1-runtime-supported-as-the-gate",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed in 0.67s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "the withdrawn runtime_supported() kept as the open gate: only an attested build opens, so a verified one cannot migrate"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]"
+   ],
+   "definition_sha256": "6861d65d35a5826324c0044443b156830ddf52f7d08d5a55d6170b57606c53f8",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[attested]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]"
+   ],
+   "id": "p1-skip-validated-current-verified",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[verified]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed, 1 warning in 0.76s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a verified build's migration skips _validated_current"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/release_migration.py:_classify_or_intercept]": "assertion",
+    "tests/test_0007_runtime_status.py::test_p2_a_refused_build_refuses_migrate_store_and_the_release_before_touching_the_store": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/release_migration.py:_classify_or_intercept]",
+    "tests/test_0007_runtime_status.py::test_p2_a_refused_build_refuses_migrate_store_and_the_release_before_touching_the_store"
+   ],
+   "definition_sha256": "d561a0291c163a0713fbe430d4fb23a316b8326547b49fc09bbbe81bccc64a99",
+   "file": "src/veracium/store/release_migration.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[attested]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]"
+   ],
+   "id": "p2-gate-only-open-versioned",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_p2_a_refused_build_refuses_migrate_store_and_the_release_before_touching_the_store",
+    "tests/test_0007_runtime_status.py::test_a_refused_build_is_refused_before_any_version_decision[store/release_migration.py:_classify_or_intercept]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "2 failed in 0.67s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "only open_versioned gates: the release preflight never reads the measured status, so a refused build reaches it"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]": "assertion"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]"
+   ],
+   "definition_sha256": "e15418edb8aac9b5328ee0885bb1ed7e8665e17373a41389c1eb9cf80126ff89",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[attested]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]"
+   ],
+   "id": "p3-commit-before-revalidating-verified",
+   "import": "ok",
+   "kill_kind": "assertion",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed, 1 warning in 0.66s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a verified build's migration commits before _validated_current runs"
+  },
+  {
+   "anchor_counts": [
+    1
+   ],
+   "cell_kinds": {
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]": "expected-refusal-missing"
+   },
+   "cells_errored": [],
+   "cells_failed": [
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]"
+   ],
+   "definition_sha256": "67071ea6c550f1cbef9af2aed82babe81cb002fcd583e651d5ca62890f401bf1",
+   "file": "src/veracium/store/schema_version.py",
+   "finding": "A1-A16-P1-P3",
+   "good": true,
+   "honest": "pass",
+   "honest_nodes": [
+    "tests/test_0007_runtime_status.py::test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does[attested]",
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[attested]"
+   ],
+   "id": "p3-require-stamp-false-verified",
+   "import": "ok",
+   "kill_kind": "expected-refusal-missing",
+   "kind": "product",
+   "named_cells": [
+    "tests/test_0007_runtime_status.py::test_p3_a_stamp_below_head_is_refused_by_revalidation_and_rolls_back[verified]"
+   ],
+   "named_failed": true,
+   "outcome": "KILLED",
+   "pytest": "1 failed, 1 warning in 0.69s",
+   "reason": null,
+   "reason_seen": null,
+   "what": "a verified build's revalidation passes require_stamp=False"
+  }
+ ],
+ "summary": {
+  "by_kind": {
+   "model": 14,
+   "product": 8
+  },
+  "controls": 1,
+  "controls_good": 1,
+  "good": 22,
+  "killed": 22,
+  "rows": 22,
+  "seconds": 84
+ }
+}

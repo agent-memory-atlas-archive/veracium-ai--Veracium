@@ -250,7 +250,11 @@ def test_p1_a_verified_build_migrates_a_base_store_as_the_attested_build_does(mo
     monkeypatch.setattr(sv, "_validated_current", lambda *a, **k: (seen.append(k.get("require_stamp")),
                                                                     real(*a, **k))[1])
     p = store_at(tmp_path / "s.db", HEAD - 1)
-    assert str(mig.migrate_store(p)) == "migrated"
+    try:                    # a gate that refuses this build is the row's failure, asserted, never an escaping raise
+        out = str(mig.migrate_store(p))
+    except sv.StoreVersionError as e:
+        out = f"refused {e.reason}"
+    assert out == "migrated", out
     assert seen == [True]
 
 
@@ -263,8 +267,14 @@ def test_p2_a_refused_build_refuses_migrate_store_and_the_release_before_touchin
     with pytest.raises(sv.StoreVersionError) as e:
         mig.migrate_store(p)
     assert e.value.reason == "unsupported-sqlite" and sha(p) == before
+    # "before touching the store", for the release path: its preflight refuses before ANY connection to the store
+    # opens (the open gate further down refuses too, with the same tuple and bytes, so only this tells the two apart)
+    opened, real_connect = [], sqlite3.connect
+    monkeypatch.setattr(sqlite3, "connect", lambda db, *a, **k: (opened.append(str(db)), real_connect(db, *a, **k))[1])
     r = rm.run_release_migration(p, host_attestation=rm.MigrationAttestation(quiesced=True, backup_ref="t"))
+    monkeypatch.setattr(sqlite3, "connect", real_connect)
     assert tuple(r)[:5] == ("unsupported-sqlite", False, False, "unknown", None) and sha(p) == before
+    assert not [d for d in opened if pathlib.Path(p).name in d], opened
 
 
 @pytest.mark.parametrize("status", ["verified", "attested"])
